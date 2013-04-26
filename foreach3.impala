@@ -1,0 +1,26 @@
+/*
+foreach a parameterized generator
+*/
+def count<T>(n : T, yield : pi(T, pi()), ret : pi()) {
+    def loop(i : T) {
+        if (true)
+            yield(i, lambda() { loop(i); });
+        else
+            ret();
+    }
+    loop(n);
+}
+
+def main() -> int {
+    b : float = 2.0f;
+    foreach (x : float  <- count(10.0f)) {
+        b += x;
+    }
+
+    a : int = 0;
+    x : int = 42;
+    foreach (x <- count(10)) {
+        a += x;
+    }
+    return a;
+}

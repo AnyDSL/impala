@@ -1,0 +1,31 @@
+/*
+three nested foreachs with break and continue
+expected result: 190
+*/
+def count(n : int, yield : pi(int, pi()), ret : pi()) {
+    def loop(i : int) {
+        if (i < n)
+            yield(i, lambda() { loop(i+1); });
+        else
+            ret();
+    }
+    loop(0);
+}
+
+def main() -> int {
+    b : int = 0;
+    foreach (x : int  <- count(10)) {
+        b += x;
+        foreach (y : int  <- count(x)) {
+            b += y;
+            if (y > 3)
+                continue;
+            foreach (z : int  <- count(y)) {
+                b += z;
+                if (z > 5)
+                    break;
+            }
+        }
+    }
+    return b;
+}

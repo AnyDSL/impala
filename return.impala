@@ -1,0 +1,11 @@
+def extern f() -> void {
+}
+
+def extern g() -> int {
+}
+
+def h() {
+}
+
+def i(a : int) {
+}

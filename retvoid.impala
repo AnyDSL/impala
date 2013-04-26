@@ -1,0 +1,2 @@
+def extern f(i : int) -> void {
+}
