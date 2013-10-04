@@ -1,6 +1,7 @@
 #include "type.h"
 
 #include <sstream>
+#include <iostream>
 
 using namespace anydsl2;
 
@@ -23,6 +24,8 @@ bool Type::equal(const Type* other) const {
     }
     return false;
 }
+
+void Type::dump() const { std::cout << to_string() << std::endl; }
 
 //------------------------------------------------------------------------------
 

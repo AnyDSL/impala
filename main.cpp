@@ -11,9 +11,9 @@ int main() {
     const Type* t3 = tt.tupletype3(tt.type_float(), tt.type_float(), t1);// tuple(float, float, tuple(int, bool))
 
     // dump those types
-    std::cout << t1->to_string() << std::endl;
-    std::cout << t2->to_string() << std::endl;
-    std::cout << t3->to_string() << std::endl;
+    t1->dump();
+    t2->dump();
+    t3->dump();
 
     // check for equality
     std::cout << (t1 == t2) << std::endl; // 0
