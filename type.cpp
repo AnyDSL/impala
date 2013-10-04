@@ -1,6 +1,5 @@
 #include "type.h"
 
-#include <sstream>
 #include <iostream>
 
 using namespace anydsl2;
@@ -38,16 +37,15 @@ std::string PrimType::to_string() const {
 }
 
 std::string CompoundType::elems_to_string() const {
-    std::ostringstream oss;
+    std::string result;
     const char* separator = "(";
     for (auto elem : elems()) {
-        oss << separator;
-        oss << elem->to_string();
+        result += separator;
+        result += elem->to_string();
         separator = ", ";
     }
-    oss << ")";
 
-    return oss.str();
+    return result + ')';
 }
 
 //------------------------------------------------------------------------------
