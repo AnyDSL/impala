@@ -34,7 +34,6 @@ std::string PrimType::to_string() const {
     }
 }
 
-
 std::string CompoundType::elems_to_string() const {
     std::ostringstream oss;
     const char* separator = "(";
