@@ -3,6 +3,8 @@
 
 #include <unordered_set>
 
+#include "anydsl2/util/array.h"
+#include "anydsl2/util/cast.h"
 #include "anydsl2/util/hash.h"
 
 class FnType;
@@ -14,7 +16,20 @@ class TypeTable;
 
 //------------------------------------------------------------------------------
 
-class Type : public anydsl2::Node {
+enum Kind {
+#define PRIMTYPE(T) Type_##T,
+#include "primtypes.h"
+    Type_error,
+    Type_fn,
+    Type_tuple,
+};
+
+enum PrimTypeKind {
+#define PRIMTYPE(T) PrimType_##T = Type_##T,
+#include "primtypes.h"
+};
+
+class Type : public anydsl2::MagicCast {
 private:
     Type& operator = (const Type&); ///< Do not copy-assign a \p Type instance.
     Type(const Type& node);         ///< Do not copy-construct a \p Type.
@@ -25,47 +40,51 @@ protected:
         , kind_(kind)
         , ops_(size)
     {}
-    virtual ~Type() {}
+
+    void set(size_t i, const Type* n) { ops_[i] = n; }
 
 public:
-    enum Kind {
-#define PRIMTYPE(T) Type_##T,
-#include "primtypes.h"
-        Type_error,
-        Type_fn,
-        Type_tuple,
-    };
-
-    TokenKind kind() const { return (TokenKind) anydsl2::Node::kind(); }
-    anydsl2::ArrayRef<const Type*> elems() const { return ops_ref<const Type*>(); }
+    TypeTable& typetable() const { return typetable_; }
+    Kind kind() const { return kind_; }
+    anydsl2::ArrayRef<const Type*> elems() const { return anydsl2::ArrayRef<const Type*>(ops_); }
     const Type* elem(size_t i) const { return elems()[i]; }
+    size_t size() const { return ops_.size(); }
+    bool empty() const { return ops_.empty(); }
     void dump() const;
-    void set(size_t i, const Type* t) { Node::set(i, t); }
+    virtual size_t hash() const;
+    virtual bool equal(const Type*) const;
+    virtual std::string to_string() const = 0;
 
-protected:
+private:
     TypeTable& typetable_;
+    Kind kind_;
+    std::vector<const Type*> ops_;
+
+    friend class TypeTable;
 };
 
 class TypeError : public Type {
 private:
     TypeError(TypeTable& typetable) 
-        : Type(typetable, Token::TYPE_error, 0)
+        : Type(typetable, Type_error, 0)
     {}
+
+public:
+    virtual std::string to_string() const { return "<type error>"; }
 
     friend class TypeTable;
 };
 
 class PrimType : public Type {
-public:
-    enum Kind {
-#define PRIMTYPE(T) PrimType_##T = Type_##T,
-#include "primtypes.h"
-    };
-
 private:
     PrimType(TypeTable& typetable, PrimTypeKind kind)
-        : Type(typetable, kind, 0)
+        : Type(typetable, (Kind) kind, 0)
     {}
+
+    PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
+
+public:
+    virtual std::string to_string() const;
 
     friend class TypeTable;
 };
@@ -79,6 +98,8 @@ protected:
         for (auto elem : elems)
             set(i++, elem);
     }
+
+    std::string elems_to_string() const;
 };
 
 class FnType : public CompoundType {
@@ -88,7 +109,7 @@ private:
     {}
 
 public:
-    const Type* return_type() const;
+    virtual std::string to_string() const { return std::string("fn") + elems_to_string(); }
 
     friend class TypeTable;
 };
@@ -98,6 +119,9 @@ private:
     TupleType(TypeTable& typetable, anydsl2::ArrayRef<const Type*> elems)
         : CompoundType(typetable, Type_tuple, elems)
     {}
+
+public:
+    virtual std::string to_string() const { return std::string("tuple") + elems_to_string(); }
 
     friend class TypeTable;
 };
@@ -124,9 +148,34 @@ public:
 #define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
     const FnType* fntype0() { return fntype(anydsl2::ArrayRef<const Type*>(nullptr, 0)); }
-    const FnType* fntype1(const Type*);
-    const FnType* fntype(anydsl2::ArrayRef<const Type*> elems);
-    const TupleType* tupletype(anydsl2::ArrayRef<const Type*> elems);
+    const FnType* fntype1(const Type* elem1) { 
+        const Type* elems[1] = { elem1 }; 
+        return fntype(elems); 
+    }
+    const FnType* fntype2(const Type* elem1, const Type* elem2) { 
+        const Type* elems[2] = { elem1, elem2 }; 
+        return fntype(elems); 
+    }
+    const FnType* fntype3(const Type* elem1, const Type* elem2, const Type* elem3) { 
+        const Type* elems[3] = { elem1, elem2, elem3 }; 
+        return fntype(elems); 
+    }
+    const FnType* fntype(anydsl2::ArrayRef<const Type*> elems) { return unify(new FnType(*this, elems)); }
+
+    const TupleType* tupletype0() { return tupletype(anydsl2::ArrayRef<const Type*>(nullptr, 0)); }
+    const TupleType* tupletype1(const Type* elem1) { 
+        const Type* elems[1] = { elem1 }; 
+        return tupletype(elems); 
+    }
+    const TupleType* tupletype2(const Type* elem1, const Type* elem2) { 
+        const Type* elems[2] = { elem1, elem2 }; 
+        return tupletype(elems); 
+    }
+    const TupleType* tupletype3(const Type* elem1, const Type* elem2, const Type* elem3) { 
+        const Type* elems[3] = { elem1, elem2, elem3 }; 
+        return tupletype(elems); 
+    }
+    const TupleType* tupletype(anydsl2::ArrayRef<const Type*> elems) { return unify(new TupleType(*this, elems)); }
 
 private:
     const Type* unify_base(const Type* type);
@@ -140,7 +189,5 @@ private:
 };
 
 //------------------------------------------------------------------------------
-
-} // namespace impala
 
 #endif

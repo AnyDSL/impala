@@ -1,22 +1,20 @@
 #include "type.h"
 
-#include <typeinfo>
-
-//#include <sstream>
+#include <sstream>
 
 using namespace anydsl2;
 
 //------------------------------------------------------------------------------
 
 size_t Type::hash() const {
-    size_t seed = hash_combine(hash_value(kind()), size());
+    size_t seed = hash_combine(hash_value((int) kind()), size());
     for (auto op : ops_)
         seed = hash_combine(seed, op);
     return seed;
 }
 
-bool Type::equal(const Node* other) const {
-    if (typeid(*this) == typeid(*other) && this->size() == other->size()) {
+bool Type::equal(const Type* other) const {
+    if (this->kind() == other->kind() && this->size() == other->size()) {
         for (size_t i = 0, e = size(); i != e; ++i) {
             if (this->ops_[i] != other->ops_[i])
                 return false;
@@ -28,10 +26,34 @@ bool Type::equal(const Node* other) const {
 
 //------------------------------------------------------------------------------
 
+std::string PrimType::to_string() const {
+    switch (primtype_kind()) {
+#define PRIMTYPE(T) case PrimType_##T: return #T;
+#include "primtypes.h"
+        default: ANYDSL2_UNREACHABLE;
+    }
+}
+
+
+std::string CompoundType::elems_to_string() const {
+    std::ostringstream oss;
+    const char* separator = "(";
+    for (auto elem : elems()) {
+        oss << separator;
+        oss << elem->to_string();
+        separator = ", ";
+    }
+    oss << ")";
+
+    return oss.str();
+}
+
+//------------------------------------------------------------------------------
+
 TypeTable::TypeTable()
     : types_()
-#define IMPALA_TYPE(itype, atype) ,itype##_(unify(new PrimType(*this, Token::TYPE_##itype)))
-#include "impala/tokenlist.h"
+#define PRIMTYPE(T) , T##_(unify(new PrimType(*this, PrimType_##T)))
+#include "primtypes.h"
     , type_error_(unify(new TypeError(*this)))
 {}
 
@@ -52,16 +74,12 @@ const Type* TypeTable::unify_base(const Type* type) {
     return type;
 }
 
-const PrimType* TypeTable::primtype(TokenKind kind) {
+const PrimType* TypeTable::primtype(PrimTypeKind kind) {
     switch (kind) {
-#define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return itype##_;
-#include "impala/tokenlist.h"
+#define PRIMTYPE(T) case PrimType_##T: return T##_;
+#include "primtypes.h"
         default: ANYDSL2_UNREACHABLE;
     }
 }
-
-const FnType* TypeTable::fntype1(const Type* elem) { const Type* elems[1] = { elem }; return fntype(elems); }
-const FnType* TypeTable::fntype(anydsl2::ArrayRef<const Type*> elems) { return unify(new FnType(*this, elems)); }
-const TupleType* TypeTable::tupletype(anydsl2::ArrayRef<const Type*> elems) { return unify(new TupleType(*this, elems)); }
 
 //------------------------------------------------------------------------------
