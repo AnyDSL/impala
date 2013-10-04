@@ -31,25 +31,27 @@ enum PrimTypeKind {
 
 class Type : public anydsl2::MagicCast {
 private:
-    Type& operator = (const Type&); ///< Do not copy-assign a \p Type instance.
+    Type& operator = (const Type&); ///< Do not copy-assign a \p Type.
     Type(const Type& node);         ///< Do not copy-construct a \p Type.
 
 protected:
     Type(TypeTable& typetable, Kind kind, size_t size)
         : typetable_(typetable)
         , kind_(kind)
-        , ops_(size)
+        , elems_(size)
     {}
 
-    void set(size_t i, const Type* n) { ops_[i] = n; }
+    void set(size_t i, const Type* n) { elems_[i] = n; }
 
 public:
     TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
-    anydsl2::ArrayRef<const Type*> elems() const { return anydsl2::ArrayRef<const Type*>(ops_); }
+    anydsl2::ArrayRef<const Type*> elems() const { return anydsl2::ArrayRef<const Type*>(elems_); }
     const Type* elem(size_t i) const { return elems()[i]; }
-    size_t size() const { return ops_.size(); }
-    bool empty() const { return ops_.empty(); }
+    /// Returns number of \p Type operands (\p elems_).
+    size_t size() const { return elems_.size(); }
+    /// Returns true if this \p Type does not have any \p Type operands (\p elems_).
+    bool empty() const { return elems_.empty(); }
     void dump() const;
     virtual size_t hash() const;
     virtual bool equal(const Type*) const;
@@ -58,7 +60,7 @@ public:
 private:
     TypeTable& typetable_;
     Kind kind_;
-    std::vector<const Type*> ops_;
+    std::vector<const Type*> elems_; ///< The operands of this type constructor.
 
     friend class TypeTable;
 };
@@ -141,7 +143,7 @@ typedef std::unordered_set<const Type*, TypeHash, TypeEqual> TypeSet;
 class TypeTable {
 public:
     TypeTable();
-    ~TypeTable();
+    ~TypeTable() { for (auto type : types_) delete type; }
 
     const TypeError* type_error() { return type_error_; }
     const PrimType* primtype(PrimTypeKind kind);

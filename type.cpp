@@ -8,20 +8,16 @@ using namespace anydsl2;
 
 size_t Type::hash() const {
     size_t seed = hash_combine(hash_value((int) kind()), size());
-    for (auto op : ops_)
-        seed = hash_combine(seed, op);
+    for (auto elem : elems())
+        seed = hash_combine(seed, elem);
     return seed;
 }
 
 bool Type::equal(const Type* other) const {
-    if (this->kind() == other->kind() && this->size() == other->size()) {
-        for (size_t i = 0, e = size(); i != e; ++i) {
-            if (this->ops_[i] != other->ops_[i])
-                return false;
-        }
-        return true;
-    }
-    return false;
+    bool result = this->kind() == other->kind() && this->size() == other->size();
+    for (size_t i = 0, e = size(); i != e && result; ++i)
+        result &= this->elem(i) == other->elem(i);
+    return result;
 }
 
 void Type::dump() const { std::cout << to_string() << std::endl; }
@@ -40,11 +36,9 @@ std::string CompoundType::elems_to_string() const {
     std::string result;
     const char* separator = "(";
     for (auto elem : elems()) {
-        result += separator;
-        result += elem->to_string();
+        result = separator + elem->to_string();
         separator = ", ";
     }
-
     return result + ')';
 }
 
@@ -56,11 +50,6 @@ TypeTable::TypeTable()
 #include "primtypes.h"
     , type_error_(unify(new TypeError(*this)))
 {}
-
-TypeTable::~TypeTable() {
-    for (auto type : types_)
-        delete type;
-}
 
 const Type* TypeTable::unify_base(const Type* type) {
     auto i = types_.find(type);
