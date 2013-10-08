@@ -22,6 +22,8 @@ enum Kind {
     Type_error,
     Type_fn,
     Type_tuple,
+    Type_var,
+    Type_generic,
 };
 
 enum PrimTypeKind {
@@ -128,6 +130,29 @@ public:
     friend class TypeTable;
 };
 
+class TypeVar : public Type {
+private:
+	TypeVar(TypeTable& typetable) : Type(typetable, Type_var, 0) {
+		id = counter++;
+	}
+
+	static int counter;
+
+	int id;
+	Type* boundAt;
+
+public:
+	void bind(Type* t) { boundAt = t; }
+
+	virtual std::string to_string() const {
+		return std::string("a") + std::to_string(id);
+	}
+
+
+
+	friend class TypeTable;
+};
+
 //------------------------------------------------------------------------------
 
 struct TypeHash { size_t operator () (const Type* t) const { return t->hash(); } };
@@ -141,22 +166,42 @@ public:
 
     const TypeError* type_error() { return type_error_; }
     const PrimType* primtype(PrimTypeKind kind);
+
 #define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
-    const FnType* fntype0() { return fntype(anydsl2::ArrayRef<const Type*>(nullptr, 0)); }
+
+    TypeVar* typevar() {
+    	return new TypeVar(*this);
+    }
+
+
+    const FnType* fntype0() { return fntype(anydsl2::ArrayRef<TypeVar*>(nullptr, 0), anydsl2::ArrayRef<const Type*>(nullptr, 0)); }
     const FnType* fntype1(const Type* elem1) { 
         const Type* elems[1] = { elem1 }; 
-        return fntype(elems); 
+        return fntype(anydsl2::ArrayRef<TypeVar*>(nullptr, 0), elems);
     }
     const FnType* fntype2(const Type* elem1, const Type* elem2) { 
         const Type* elems[2] = { elem1, elem2 }; 
-        return fntype(elems); 
+        return fntype(anydsl2::ArrayRef<TypeVar*>(nullptr, 0), elems);
     }
     const FnType* fntype3(const Type* elem1, const Type* elem2, const Type* elem3) { 
         const Type* elems[3] = { elem1, elem2, elem3 }; 
-        return fntype(elems); 
+        return fntype(anydsl2::ArrayRef<TypeVar*>(nullptr, 0), elems);
     }
-    const FnType* fntype(anydsl2::ArrayRef<const Type*> elems) { return unify(new FnType(*this, elems)); }
+
+    const FnType* gen1_fntype2(TypeVar* tv, const Type* param1, const Type* param2) {
+    	TypeVar* tvars[1] = { tv };
+    	const Type* params[2] = { param1, param2 };
+        return fntype(tvars, params);
+    }
+
+    const FnType* fntype(anydsl2::ArrayRef<TypeVar*> tvars, anydsl2::ArrayRef<const Type*> params) {
+    	FnType* f = new FnType(*this, params);
+    	for (auto v : tvars) {
+    		v->bind(f);
+    	}
+    	return unify(f);
+    }
 
     const TupleType* tupletype0() { return tupletype(anydsl2::ArrayRef<const Type*>(nullptr, 0)); }
     const TupleType* tupletype1(const Type* elem1) { 

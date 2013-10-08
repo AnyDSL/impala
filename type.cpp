@@ -4,6 +4,8 @@
 
 using namespace anydsl2;
 
+int TypeVar::counter = 0;
+
 //------------------------------------------------------------------------------
 
 size_t Type::hash() const {

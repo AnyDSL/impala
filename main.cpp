@@ -19,4 +19,11 @@ int main() {
     std::cout << (t1 == t2) << std::endl; // 0
     std::cout << (t1 == t3) << std::endl; // 0
     std::cout << (t2 == t3) << std::endl; // 1
+
+
+    // create an forall a, a -> a type
+    TypeVar* a = tt.typevar();
+    const FnType* f = tt.gen1_fntype2(a, a, tt.fntype1(a));
+
+    f->dump();
 }
