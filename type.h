@@ -31,7 +31,7 @@ enum PrimTypeKind {
 #include "primtypes.h"
 };
 
-class Type : public anydsl2::MagicCast {
+class Type : public anydsl2::MagicCast<Type> {
 private:
     Type& operator = (const Type&); ///< Do not copy-assign a \p Type.
     Type(const Type& node);         ///< Do not copy-construct a \p Type.
@@ -170,31 +170,9 @@ public:
 #define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
-    TypeVar* typevar() {
-    	return new TypeVar(*this);
-    }
+    TypeVar* typevar() { return new TypeVar(*this); }
 
-
-    const FnType* fntype0() { return fntype(anydsl2::ArrayRef<TypeVar*>(nullptr, 0), anydsl2::ArrayRef<const Type*>(nullptr, 0)); }
-    const FnType* fntype1(const Type* elem1) { 
-        const Type* elems[1] = { elem1 }; 
-        return fntype(anydsl2::ArrayRef<TypeVar*>(nullptr, 0), elems);
-    }
-    const FnType* fntype2(const Type* elem1, const Type* elem2) { 
-        const Type* elems[2] = { elem1, elem2 }; 
-        return fntype(anydsl2::ArrayRef<TypeVar*>(nullptr, 0), elems);
-    }
-    const FnType* fntype3(const Type* elem1, const Type* elem2, const Type* elem3) { 
-        const Type* elems[3] = { elem1, elem2, elem3 }; 
-        return fntype(anydsl2::ArrayRef<TypeVar*>(nullptr, 0), elems);
-    }
-
-    const FnType* gen1_fntype2(TypeVar* tv, const Type* param1, const Type* param2) {
-    	TypeVar* tvars[1] = { tv };
-    	const Type* params[2] = { param1, param2 };
-        return fntype(tvars, params);
-    }
-
+    const FnType* fntype(anydsl2::ArrayRef<const Type*> params) { return fntype({}, params); }
     const FnType* fntype(anydsl2::ArrayRef<TypeVar*> tvars, anydsl2::ArrayRef<const Type*> params) {
     	FnType* f = new FnType(*this, params);
     	for (auto v : tvars) {
@@ -203,19 +181,6 @@ public:
     	return unify(f);
     }
 
-    const TupleType* tupletype0() { return tupletype(anydsl2::ArrayRef<const Type*>(nullptr, 0)); }
-    const TupleType* tupletype1(const Type* elem1) { 
-        const Type* elems[1] = { elem1 }; 
-        return tupletype(elems); 
-    }
-    const TupleType* tupletype2(const Type* elem1, const Type* elem2) { 
-        const Type* elems[2] = { elem1, elem2 }; 
-        return tupletype(elems); 
-    }
-    const TupleType* tupletype3(const Type* elem1, const Type* elem2, const Type* elem3) { 
-        const Type* elems[3] = { elem1, elem2, elem3 }; 
-        return tupletype(elems); 
-    }
     const TupleType* tupletype(anydsl2::ArrayRef<const Type*> elems) { return unify(new TupleType(*this, elems)); }
 
 private:

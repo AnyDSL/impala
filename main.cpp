@@ -6,9 +6,9 @@ int main() {
     TypeTable tt;
 
     // create some test types
-    const Type* t1 = tt.tupletype2(tt.type_int(), tt.type_bool());       // tuple(int, bool)
-    const Type* t2 = tt.tupletype3(tt.type_float(), tt.type_float(), t1);// tuple(float, float, tuple(int, bool))
-    const Type* t3 = tt.tupletype3(tt.type_float(), tt.type_float(), t1);// tuple(float, float, tuple(int, bool))
+    const Type* t1 = tt.tupletype({tt.type_int(), tt.type_bool()});       // tuple(int, bool)
+    const Type* t2 = tt.tupletype({tt.type_float(), tt.type_float(), t1});// tuple(float, float, tuple(int, bool))
+    const Type* t3 = tt.tupletype({tt.type_float(), tt.type_float(), t1});// tuple(float, float, tuple(int, bool))
 
     // dump those types
     t1->dump();
@@ -23,7 +23,7 @@ int main() {
 
     // create an forall a, a -> a type
     TypeVar* a = tt.typevar();
-    const FnType* f = tt.gen1_fntype2(a, a, tt.fntype1(a));
+    const FnType* f = tt.fntype({ a, a }, { tt.fntype({a}) });
 
     f->dump();
 }
