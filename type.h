@@ -10,9 +10,13 @@
 class FnType;
 class PrimType;
 class TupleType;
+class TypeVar;
 class Type;
 class TypeError;
 class TypeTable;
+
+typedef anydsl2::ArrayRef<const Type*> TypeArray;
+typedef anydsl2::ArrayRef<TypeVar*> TypeVarArray;
 
 //------------------------------------------------------------------------------
 
@@ -139,10 +143,10 @@ private:
 	static int counter;
 
 	int id;
-	Type* boundAt;
+	const Type* boundAt;
 
 public:
-	void bind(Type* t) { boundAt = t; }
+	void bind(const Type* t) { boundAt = t; }
 
 	virtual std::string to_string() const {
 		return std::string("a") + std::to_string(id);
@@ -159,6 +163,11 @@ struct TypeHash { size_t operator () (const Type* t) const { return t->hash(); }
 struct TypeEqual { bool operator () (const Type* t1, const Type* t2) const { return t1->equal(t2); } };
 typedef std::unordered_set<const Type*, TypeHash, TypeEqual> TypeSet;
 
+struct GenTypeReturn {
+	anydsl2::ArrayRef<TypeVar*> type_vars;
+	const Type* generic_type;
+};
+
 class TypeTable {
 public:
     TypeTable();
@@ -170,15 +179,74 @@ public:
 #define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
-    TypeVar* typevar() { return new TypeVar(*this); }
+    //TypeVar* typevar() { return new TypeVar(*this); }
 
-    const FnType* fntype(anydsl2::ArrayRef<const Type*> params) { return fntype({}, params); }
-    const FnType* fntype(anydsl2::ArrayRef<TypeVar*> tvars, anydsl2::ArrayRef<const Type*> params) {
-    	FnType* f = new FnType(*this, params);
-    	for (auto v : tvars) {
-    		v->bind(f);
+    const FnType* fntype(TypeArray params) { return unify(new FnType(*this, params)); }
+
+    /**
+     * A shortcut to create function types with a return type.
+     *
+     * Actually for a Type fn(int)->int a type fn(int, fn(int)) will be created
+     * (continuation passing style).
+     */
+    const FnType* fntype_simple(TypeArray params, const Type* return_type) {
+    	const FnType* retfun = fntype({return_type});
+
+    	size_t psize = params.size();
+
+    	const Type** p = new const Type*[psize + 1];
+
+    	for (int i = 0; i < psize; ++i) {
+    		p[i] = params[i];
     	}
-    	return unify(f);
+    	p[psize] = retfun;
+
+    	return fntype(TypeArray(p, psize + 1));
+    }
+
+    /**
+     * Create a generic type.
+     *
+     * This method ensures that the same type is never created twice using hash
+     * consing.
+     *
+     * Example Usage: Creation of generic type 'forall a b, fn(a, b)'
+     * @code{.cpp}
+     * gentype(2, [](TypeVarArray tvars, TypeTable& tt) -> const Type* {
+     *   return tt.fntype({tvars[0], tvars[1]});
+     * });
+     * @endcode
+     *
+     * @param tvar_num Number of quantified type variables
+     * @param create_type The callback function that actually creates the
+     * 				desired type with given generic type variables.
+     * @return The created generic type and the quantified type variables used
+     * 		in this type.
+     */
+    const GenTypeReturn gentype(int tvar_num, const Type* (*create_type)(TypeVarArray, TypeTable&)) {
+    	TypeVar** tvars_ptr = new TypeVar*[tvar_num];
+
+    	for (int i = 0; i < tvar_num; ++i) {
+    		tvars_ptr[i] = new TypeVar(*this);
+    	}
+
+    	TypeVarArray tvars = TypeVarArray(tvars_ptr, tvar_num);
+    	const Type* the_type = create_type(tvars, *this);
+
+    	for (auto v : tvars) {
+    		v->bind(the_type);
+    	}
+
+    	GenTypeReturn ret;
+    	ret.generic_type = unify(the_type);
+
+    	if (ret.generic_type != the_type) {
+    		// TODO get the new type variables
+    	} else {
+    		ret.type_vars = tvars;
+    	}
+
+    	return ret;
     }
 
     const TupleType* tupletype(anydsl2::ArrayRef<const Type*> elems) { return unify(new TupleType(*this, elems)); }
