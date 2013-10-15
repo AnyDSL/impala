@@ -23,7 +23,7 @@ int main() {
     // create an forall a b, fn(a, b)
     TypeVarRef* a = tt.typevar();
     TypeVarRef* b = tt.typevar();
-    const Type* f = tt.fntype({a, b});
-    const Type* gen_f = tt.gentype({a, b}, f);
+    const FnType* f = tt.fntype({a, b});
+    const FnType* gen_f = tt.gentype({a, b}, f);
     gen_f->dump();
 }

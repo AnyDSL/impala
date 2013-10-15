@@ -241,8 +241,7 @@ public:
      * gentype({A}, fntype({A}));
      * @endcode
      */
-    const Type* gentype(TypeVarArray tvars, const Type* type) {
-        // TODO use templates to make return type == given param type
+    template<class T> const T* gentype(TypeVarArray tvars, const T* type) {
         for (auto v : tvars) {
             v->bind(type);
         }
