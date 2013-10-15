@@ -40,7 +40,7 @@ std::string CompoundType::elems_to_string() const {
     std::string result;
     const char* separator = "(";
     for (auto elem : elems()) {
-        result = separator + elem->to_string();
+        result += separator + elem->to_string();
         separator = ", ";
     }
     return result + ')';
