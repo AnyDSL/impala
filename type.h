@@ -141,24 +141,24 @@ class TypeVar {
 private:
     TypeVar()
     {
-        id = counter++;
+        id_ = counter++;
     }
 
     static int counter;
 
     /// used for unambiguous dumping
-    int id;
+    int id_;
 
-    const Type* boundAt = nullptr;
+    const Type* bound_at_ = nullptr;
 public:
     void bind(const Type* const t) {
         // TODO mayby do a real pre-condition instead of assert
-        assert(boundAt == nullptr && "type variables can only be bound once!");
-        boundAt = t;
+        assert(bound_at_ == nullptr && "type variables can only be bound once!");
+        bound_at_ = t;
     }
 
     std::string to_string() const {
-        return std::string("a") + std::to_string(id);
+        return std::string("a") + std::to_string(id_);
     }
 
     friend class TypeVarRef;
