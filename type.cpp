@@ -56,11 +56,17 @@ TypeTable::TypeTable()
 {}
 
 const Type* TypeTable::unify_base(const Type* type) {
-    // TODO unify only closed types (i.e. only types where all type variables have been bound)
+    // unify only closed types (i.e. only types where all type variables have been bound)
+    if (! type->is_closed()) {
+        return type;
+    }
+
     auto i = types_.find(type);
 
     if (i != types_.end()) {
         if (*i != type) {
+            // TODO reset the representative of the type variables
+
             delete type;
         }
         return *i;

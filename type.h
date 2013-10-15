@@ -52,7 +52,7 @@ protected:
 public:
     TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
-    anydsl2::ArrayRef<const Type*> elems() const { return anydsl2::ArrayRef<const Type*>(elems_); }
+    TypeArray elems() const { return TypeArray(elems_); }
     const Type* elem(size_t i) const { return elems()[i]; }
 
     /// Returns number of \p Type operands (\p elems_).
@@ -65,6 +65,18 @@ public:
     virtual size_t hash() const;
     virtual bool equal(const Type*) const;
     virtual std::string to_string() const = 0;
+
+    /**
+     * A type is closed if it contains no unbound type variables.
+     */
+    virtual bool is_closed() const {
+        for (auto t : elems_) {
+            if (! t->is_closed()) {
+                return false;
+            }
+        }
+        return true;
+    }
 
 private:
     TypeTable& typetable_;
@@ -157,9 +169,9 @@ public:
         bound_at_ = t;
     }
 
-    std::string to_string() const {
-        return std::string("a") + std::to_string(id_);
-    }
+    std::string to_string() const { return std::string("a") + std::to_string(id_); }
+
+    bool is_closed() const { return bound_at_ != nullptr; }
 
     friend class TypeVarRef;
 };
@@ -180,11 +192,12 @@ private:
     TypeVar* representative;
 
 public:
-    void bind(const Type* const t) { representative->bind(t); }
     const TypeVar* get_representative() const { return representative; }
     void set_representative(TypeVar* repr) { representative = repr; }
 
+    void bind(const Type* const t) { representative->bind(t); }
     virtual std::string to_string() const { return representative->to_string(); }
+    virtual bool is_closed() const { return representative->is_closed(); }
 
     friend class TypeTable;
 };
