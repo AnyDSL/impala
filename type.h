@@ -54,10 +54,13 @@ public:
     Kind kind() const { return kind_; }
     anydsl2::ArrayRef<const Type*> elems() const { return anydsl2::ArrayRef<const Type*>(elems_); }
     const Type* elem(size_t i) const { return elems()[i]; }
+
     /// Returns number of \p Type operands (\p elems_).
     size_t size() const { return elems_.size(); }
+
     /// Returns true if this \p Type does not have any \p Type operands (\p elems_).
     bool empty() const { return elems_.empty(); }
+
     void dump() const;
     virtual size_t hash() const;
     virtual bool equal(const Type*) const;
