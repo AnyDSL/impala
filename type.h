@@ -10,13 +10,13 @@
 class FnType;
 class PrimType;
 class TupleType;
-class TypeVar;
+class TypeVarRef;
 class Type;
 class TypeError;
 class TypeTable;
 
 typedef anydsl2::ArrayRef<const Type*> TypeArray;
-typedef anydsl2::ArrayRef<TypeVar*> TypeVarArray;
+typedef anydsl2::ArrayRef<TypeVarRef*> TypeVarArray;
 
 //------------------------------------------------------------------------------
 
@@ -134,25 +134,54 @@ public:
     friend class TypeTable;
 };
 
-class TypeVar: public Type {
+class TypeVar {
 private:
-    TypeVar(TypeTable& typetable)
-            : Type(typetable, Type_var, 0)
+    TypeVar()
     {
         id = counter++;
     }
 
     static int counter;
 
+    /// used for unambiguous dumping
     int id;
-    const Type* boundAt;
 
+    const Type* boundAt = nullptr;
 public:
-    void bind(const Type* const t) { boundAt = t; }
+    void bind(const Type* const t) {
+        // TODO mayby do a real pre-condition instead of assert
+        assert(boundAt == nullptr && "type variables can only be bound once!");
+        boundAt = t;
+    }
 
-    virtual std::string to_string() const {
+    std::string to_string() const {
         return std::string("a") + std::to_string(id);
     }
+
+    friend class TypeVarRef;
+};
+
+/**
+ * A reference to a type variable (the representative).
+ *
+ * The additional abstraction layer is needed for the unification of type
+ * variables.
+ */
+class TypeVarRef: public Type {
+private:
+    TypeVarRef(TypeTable& typetable)
+        : Type(typetable, Type_var, 0)
+    {
+        representative = new TypeVar();
+    }
+    TypeVar* representative;
+
+public:
+    void bind(const Type* const t) { representative->bind(t); }
+    const TypeVar* get_representative() const { return representative; }
+    void set_representative(TypeVar* repr) { representative = repr; }
+
+    virtual std::string to_string() const { return representative->to_string(); }
 
     friend class TypeTable;
 };
@@ -162,11 +191,6 @@ public:
 struct TypeHash { size_t operator () (const Type* t) const { return t->hash(); } };
 struct TypeEqual { bool operator () (const Type* t1, const Type* t2) const { return t1->equal(t2); } };
 typedef std::unordered_set<const Type*, TypeHash, TypeEqual> TypeSet;
-
-struct GenTypeReturn {
-    anydsl2::ArrayRef<TypeVar*> type_vars;
-    const Type* generic_type;
-};
 
 class TypeTable {
 public:
@@ -179,7 +203,7 @@ public:
 #define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
-    //TypeVar* typevar() { return new TypeVar(*this); }
+    TypeVarRef* typevar() { return new TypeVarRef(*this); }
 
     const FnType* fntype(TypeArray params) { return unify(new FnType(*this, params)); }
 
@@ -205,51 +229,24 @@ public:
     }
 
     /**
-     * Create a generic type.
+     * Create a generic type given the quantified type variables and the type
+     * using them.
      *
-     * This method ensures that the same type is never created twice using hash
-     * consing.
-     *
-     * Example Usage: Creation of generic type 'forall a b, fn(a, b)'
+     * Example: create 'forall A, fn(A)'
      * @code{.cpp}
-     * gentype(2, [](TypeVarArray tvars, TypeTable& tt) -> const Type* {
-     *   return tt.fntype({tvars[0], tvars[1]});
-     * });
+     * TypeVarRef* A = typevar();
+     * gentype({A}, fntype({A}));
      * @endcode
-     *
-     * @param tvar_num Number of quantified type variables
-     * @param create_type The callback function that actually creates the
-     *          desired type with given generic type variables.
-     * @return The created generic type and the quantified type variables used
-     *      in this type.
      */
-    const GenTypeReturn gentype(int tvar_num, const Type* (*create_type)(TypeVarArray, TypeTable&)) {
-        TypeVar** tvars_ptr = new TypeVar*[tvar_num];
-
-        for (int i = 0; i < tvar_num; ++i) {
-            tvars_ptr[i] = new TypeVar(*this);
-        }
-
-        TypeVarArray tvars = TypeVarArray(tvars_ptr, tvar_num);
-        const Type* the_type = create_type(tvars, *this);
-
+    const Type* gentype(TypeVarArray tvars, const Type* type) {
+        // TODO use templates to make return type == given param type
         for (auto v : tvars) {
-            v->bind(the_type);
+            v->bind(type);
         }
-
-        GenTypeReturn ret;
-        ret.generic_type = unify(the_type);
-
-        if (ret.generic_type != the_type) {
-            // TODO get the new type variables
-        } else {
-            ret.type_vars = tvars;
-        }
-
-        return ret;
+        return unify(type);
     }
 
-    const TupleType* tupletype(anydsl2::ArrayRef<const Type*> elems) { return unify(new TupleType(*this, elems)); }
+    const TupleType* tupletype(TypeArray elems) { return unify(new TupleType(*this, elems)); }
 
 private:
     const Type* unify_base(const Type* type);

@@ -56,6 +56,7 @@ TypeTable::TypeTable()
 {}
 
 const Type* TypeTable::unify_base(const Type* type) {
+    // TODO unify only closed types (i.e. only types where all type variables have been bound)
     auto i = types_.find(type);
 
     if (i != types_.end()) {

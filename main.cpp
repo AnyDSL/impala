@@ -21,9 +21,9 @@ int main() {
     std::cout << (t2 == t3) << std::endl; // 1
 
     // create an forall a b, fn(a, b)
-    GenTypeReturn gtr = tt.gentype(2, [](TypeVarArray tvars, TypeTable& tt) -> const Type* {
-        const Type* f = tt.fntype( {tvars[0], tvars[1]});
-        return f;
-    });
-    gtr.generic_type->dump();
+    TypeVarRef* a = tt.typevar();
+    TypeVarRef* b = tt.typevar();
+    const Type* f = tt.fntype({a, b});
+    const Type* gen_f = tt.gentype({a, b}, f);
+    gen_f->dump();
 }
