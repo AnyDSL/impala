@@ -134,27 +134,27 @@ public:
     friend class TypeTable;
 };
 
-class TypeVar : public Type {
+class TypeVar: public Type {
 private:
-	TypeVar(TypeTable& typetable) : Type(typetable, Type_var, 0) {
-		id = counter++;
-	}
+    TypeVar(TypeTable& typetable)
+            : Type(typetable, Type_var, 0)
+    {
+        id = counter++;
+    }
 
-	static int counter;
+    static int counter;
 
-	int id;
-	const Type* boundAt;
+    int id;
+    const Type* boundAt;
 
 public:
-	void bind(const Type* t) { boundAt = t; }
+    void bind(const Type* const t) { boundAt = t; }
 
-	virtual std::string to_string() const {
-		return std::string("a") + std::to_string(id);
-	}
+    virtual std::string to_string() const {
+        return std::string("a") + std::to_string(id);
+    }
 
-
-
-	friend class TypeTable;
+    friend class TypeTable;
 };
 
 //------------------------------------------------------------------------------
@@ -164,8 +164,8 @@ struct TypeEqual { bool operator () (const Type* t1, const Type* t2) const { ret
 typedef std::unordered_set<const Type*, TypeHash, TypeEqual> TypeSet;
 
 struct GenTypeReturn {
-	anydsl2::ArrayRef<TypeVar*> type_vars;
-	const Type* generic_type;
+    anydsl2::ArrayRef<TypeVar*> type_vars;
+    const Type* generic_type;
 };
 
 class TypeTable {
@@ -190,18 +190,18 @@ public:
      * (continuation passing style).
      */
     const FnType* fntype_simple(TypeArray params, const Type* return_type) {
-    	const FnType* retfun = fntype({return_type});
+        const FnType* retfun = fntype( { return_type });
 
-    	size_t psize = params.size();
+        size_t psize = params.size();
 
-    	const Type** p = new const Type*[psize + 1];
+        const Type** p = new const Type*[psize + 1];
 
-    	for (int i = 0; i < psize; ++i) {
-    		p[i] = params[i];
-    	}
-    	p[psize] = retfun;
+        for (int i = 0; i < psize; ++i) {
+            p[i] = params[i];
+        }
+        p[psize] = retfun;
 
-    	return fntype(TypeArray(p, psize + 1));
+        return fntype(TypeArray(p, psize + 1));
     }
 
     /**
@@ -219,34 +219,34 @@ public:
      *
      * @param tvar_num Number of quantified type variables
      * @param create_type The callback function that actually creates the
-     * 				desired type with given generic type variables.
+     *          desired type with given generic type variables.
      * @return The created generic type and the quantified type variables used
-     * 		in this type.
+     *      in this type.
      */
     const GenTypeReturn gentype(int tvar_num, const Type* (*create_type)(TypeVarArray, TypeTable&)) {
-    	TypeVar** tvars_ptr = new TypeVar*[tvar_num];
+        TypeVar** tvars_ptr = new TypeVar*[tvar_num];
 
-    	for (int i = 0; i < tvar_num; ++i) {
-    		tvars_ptr[i] = new TypeVar(*this);
-    	}
+        for (int i = 0; i < tvar_num; ++i) {
+            tvars_ptr[i] = new TypeVar(*this);
+        }
 
-    	TypeVarArray tvars = TypeVarArray(tvars_ptr, tvar_num);
-    	const Type* the_type = create_type(tvars, *this);
+        TypeVarArray tvars = TypeVarArray(tvars_ptr, tvar_num);
+        const Type* the_type = create_type(tvars, *this);
 
-    	for (auto v : tvars) {
-    		v->bind(the_type);
-    	}
+        for (auto v : tvars) {
+            v->bind(the_type);
+        }
 
-    	GenTypeReturn ret;
-    	ret.generic_type = unify(the_type);
+        GenTypeReturn ret;
+        ret.generic_type = unify(the_type);
 
-    	if (ret.generic_type != the_type) {
-    		// TODO get the new type variables
-    	} else {
-    		ret.type_vars = tvars;
-    	}
+        if (ret.generic_type != the_type) {
+            // TODO get the new type variables
+        } else {
+            ret.type_vars = tvars;
+        }
 
-    	return ret;
+        return ret;
     }
 
     const TupleType* tupletype(anydsl2::ArrayRef<const Type*> elems) { return unify(new TupleType(*this, elems)); }

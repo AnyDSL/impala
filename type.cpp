@@ -9,7 +9,7 @@ int TypeVar::counter = 0;
 //------------------------------------------------------------------------------
 
 size_t Type::hash() const {
-	// TODO take type variables of generic types into the equation
+    // TODO take type variables of generic types into the equation
     size_t seed = hash_combine(hash_value((int) kind()), size());
     for (auto elem : elems())
         seed = hash_combine(seed, elem);
@@ -17,7 +17,7 @@ size_t Type::hash() const {
 }
 
 bool Type::equal(const Type* other) const {
-	// TODO define equality for generic types
+    // TODO define equality for generic types
     bool result = this->kind() == other->kind() && this->size() == other->size();
     for (size_t i = 0, e = size(); i != e && result; ++i)
         result &= this->elem(i) == other->elem(i);
@@ -59,10 +59,10 @@ const Type* TypeTable::unify_base(const Type* type) {
     auto i = types_.find(type);
 
     if (i != types_.end()) {
-    	if (*i != type) {
-			delete type;
-		}
-		return *i;
+        if (*i != type) {
+            delete type;
+        }
+        return *i;
     }
 
     auto p = types_.insert(type);
