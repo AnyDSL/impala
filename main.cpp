@@ -2,6 +2,39 @@
 
 #include "type.h"
 
+using namespace std;
+
+void test_unification1() {
+    TypeTable tt;
+
+    TypeVar* A = tt.typevar();
+    FnType* f = tt.fntype({A});         // fn(A)
+    FnType* gf = tt.gentype({A}, f);    // fn<A>(A)
+
+    // will fail because A is already bound!
+    // TODO assert this failure
+    FnType* gf2 = tt.gentype({A}, f);
+}
+
+void test_unification2() {
+    TypeTable tt;
+
+    TypeVar* A = tt.typevar();
+    FnType* f = tt.fntype({A});         // fn(A)
+    FnType* gf = tt.gentype({A}, f);    // fn<A>(A)
+
+    TypeVar* B = tt.typevar();
+    FnType* g = tt.fntype({B});         // fn(B)
+    FnType* gg = tt.gentype({B}, g);    // fn<B>(B)
+
+    gf->dump();
+    gg->dump();
+
+    assert(gg->equal(gf));
+
+    cout << "test_unification2 [okay]" << endl;
+}
+
 int main() {
     TypeTable tt;
 
@@ -26,4 +59,7 @@ int main() {
     FnType* f = tt.fntype({a, b});
     const FnType* gen_f = tt.gentype({a, b}, f);
     gen_f->dump();
+
+    //test_unification1();
+    test_unification2();
 }
