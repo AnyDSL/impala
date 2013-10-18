@@ -45,16 +45,13 @@ bool Type::equal(const Type* other) const {
     return result;
 }
 
-void Type::dump() const { std::cout << to_string() << std::endl; }
-
-//------------------------------------------------------------------------------
-
-std::string PrimType::to_string() const {
-    switch (primtype_kind()) {
-#define PRIMTYPE(T) case PrimType_##T: return #T;
-#include "primtypes.h"
-        default: ANYDSL2_UNREACHABLE;
+bool Type::is_closed() const {
+    for (auto t : elems_) {
+        if (! t->is_closed()) {
+            return false;
+        }
     }
+    return true;
 }
 
 std::string Type::bound_vars_to_string() const {
@@ -67,6 +64,19 @@ std::string Type::bound_vars_to_string() const {
     return result + '>';
 }
 
+
+void Type::dump() const { std::cout << to_string() << std::endl; }
+
+//------------------------------------------------------------------------------
+
+std::string PrimType::to_string() const {
+    switch (primtype_kind()) {
+#define PRIMTYPE(T) case PrimType_##T: return #T;
+#include "primtypes.h"
+        default: ANYDSL2_UNREACHABLE;
+    }
+}
+
 std::string CompoundType::elems_to_string() const {
     std::string result;
     const char* separator = "(";
@@ -77,6 +87,17 @@ std::string CompoundType::elems_to_string() const {
     return result + ')';
 }
 
+bool TypeVar::equal(const Type* other) const {
+    // TODO is this correct for a instanceof-equivalent?
+    if (const TypeVar* t = other->isa<TypeVar>()) {
+        // we do not use && because for performance reasons we only set the
+        // equiv_var on one side (even the right side of the || should never
+        // be executed)
+        return (*this->equiv_var_ == t) || (*t->equiv_var_ == this);
+    }
+    return false;
+}
+
 //------------------------------------------------------------------------------
 
 TypeTable::TypeTable()
@@ -85,6 +106,21 @@ TypeTable::TypeTable()
 #include "primtypes.h"
     , type_error_(unify(new TypeError(*this)))
 {}
+
+FnType* TypeTable::fntype_simple(TypeArray params, Type* return_type) {
+    FnType* retfun = fntype( { return_type });
+
+    size_t psize = params.size();
+
+    Type** p = new Type*[psize + 1];
+
+    for (int i = 0; i < psize; ++i) {
+        p[i] = params[i];
+    }
+    p[psize] = retfun;
+
+    return fntype(TypeArray(p, psize + 1));
+}
 
 void TypeTable::insert_new(Type* type) {
     assert(!type->is_unified());

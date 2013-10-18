@@ -98,14 +98,7 @@ public:
     /**
      * A type is closed if it contains no unbound type variables.
      */
-    virtual bool is_closed() const {
-        for (auto t : elems_) {
-            if (! t->is_closed()) {
-                return false;
-            }
-        }
-        return true;
-    }
+    virtual bool is_closed() const;
 
     /**
      * Get the unambiguous representative of this type.
@@ -123,9 +116,7 @@ public:
     void set_representative(const Type* repr) {
         // TODO does this really hold? (is it set only once?)
         assert(representative_ == nullptr);
-
         representative_ = repr;
-
         assert((representative_)->is_final_representative());
     }
 
@@ -235,16 +226,7 @@ private:
     const TypeVar** const equiv_var_ = new const TypeVar*();
 
 public:
-    virtual bool equal(const Type* other) const {
-        // TODO is this correct for a instanceof-equivalent?
-        if (const TypeVar* t = other->isa<TypeVar>()) {
-            // we do not use && because for performance reasons we only set the
-            // equiv_var on one side (even the right side of the || should never
-            // be executed)
-            return (*this->equiv_var_ == t) || (*t->equiv_var_ == this);
-        }
-        return false;
-    }
+    virtual bool equal(const Type* other) const;
 
     void bind(const Type* const t) {
         // TODO mayby do a real pre-condition instead of assert
@@ -289,20 +271,7 @@ public:
      * Actually for a Type fn(int)->int a type fn(int, fn(int)) will be created
      * (continuation passing style).
      */
-    FnType* fntype_simple(TypeArray params, Type* return_type) {
-        FnType* retfun = fntype( { return_type });
-
-        size_t psize = params.size();
-
-        Type** p = new Type*[psize + 1];
-
-        for (int i = 0; i < psize; ++i) {
-            p[i] = params[i];
-        }
-        p[psize] = retfun;
-
-        return fntype(TypeArray(p, psize + 1));
-    }
+    FnType* fntype_simple(TypeArray params, Type* return_type);
 
     /**
      * Create a generic type given the quantified type variables and the type
