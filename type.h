@@ -84,8 +84,14 @@ public:
 
     /// Returns true if this \p Type does not have any \p Type operands (\p elems_).
     bool is_empty() const {
-        assert (elems_.empty() == bound_vars_.empty());
+        assert (!elems_.empty() || bound_vars_.empty());
         return elems_.empty();
+    }
+
+    /// Returns true if this \p Type does have any bound type variabes (\p bound_vars_).
+    bool is_generic() const {
+        assert (!elems_.empty() || bound_vars_.empty());
+        return !bound_vars_.empty();
     }
 
     virtual bool equal(const Type*) const;
