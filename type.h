@@ -66,6 +66,8 @@ protected:
 
     void set(size_t i, Type* n) { elems_[i] = n; }
 
+    std::string bound_vars_to_string() const;
+
 public:
     TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
@@ -195,7 +197,7 @@ private:
 public:
     virtual void accept(TypeVisitor& v) { v.visit(*this); }
 
-    virtual std::string to_string() const { return std::string("fn") + elems_to_string(); }
+    virtual std::string to_string() const { return std::string("fn") + bound_vars_to_string() + elems_to_string(); }
 
     friend class TypeTable;
 };
@@ -208,7 +210,7 @@ private:
 
 public:
     virtual void accept(TypeVisitor& v) { v.visit(*this); }
-    virtual std::string to_string() const { return std::string("tuple") + elems_to_string(); }
+    virtual std::string to_string() const { return std::string("tuple") + bound_vars_to_string() + elems_to_string(); }
 
     friend class TypeTable;
 };

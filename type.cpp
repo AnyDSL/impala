@@ -57,6 +57,16 @@ std::string PrimType::to_string() const {
     }
 }
 
+std::string Type::bound_vars_to_string() const {
+    std::string result;
+    const char* separator = "<";
+    for (auto v : bound_vars()) {
+        result += separator + v->to_string();
+        separator = ", ";
+    }
+    return result + '>';
+}
+
 std::string CompoundType::elems_to_string() const {
     std::string result;
     const char* separator = "(";
