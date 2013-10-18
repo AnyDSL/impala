@@ -30,7 +30,7 @@ bool Type::equal(const Type* other) const {
 
     // set equivalence constraints for type variables
     for (size_t i = 0, e = num_bound_vars(); i != e; ++i) {
-        *this->bound_var(i)->equiv_var_ = other->bound_var(i);
+        this->bound_var(i)->set_equiv_variable(other->bound_var(i));
     }
 
     for (size_t i = 0, e = size(); i != e && result; ++i) {
@@ -39,7 +39,7 @@ bool Type::equal(const Type* other) const {
 
     // unset equivalence constraints for type variables
     for (size_t i = 0, e = num_bound_vars(); i != e; ++i) {
-        *this->bound_var(i)->equiv_var_ = nullptr;
+        this->bound_var(i)->unset_equiv_variable();
     }
 
     return result;

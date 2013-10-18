@@ -231,6 +231,17 @@ private:
     /// Used to define equivalence constraints when checking equality of types
     const TypeVar** const equiv_var_ = new const TypeVar*();
 
+    void set_equiv_variable(const TypeVar* v) const {
+        assert(*equiv_var_ == nullptr);
+        assert(v != nullptr);
+        *equiv_var_ = v;
+    }
+
+    void unset_equiv_variable() const {
+        assert(*equiv_var_ != nullptr);
+        *equiv_var_ = nullptr;
+    }
+
 public:
     virtual bool equal(const Type* other) const;
 
