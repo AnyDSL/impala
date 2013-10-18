@@ -300,7 +300,7 @@ public:
      * gentype({A}, fntype({A}));
      * @endcode
      */
-    template<class T> const T* gentype(TypeVarArray tvars, T* type) {
+    template<class T> T* gentype(TypeVarArray tvars, T* type) {
         for (auto v : tvars) {
             v->bind(type);
             type->add_bound_var(v);
