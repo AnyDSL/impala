@@ -9,18 +9,39 @@ int TypeVar::counter = 0;
 //------------------------------------------------------------------------------
 
 size_t Type::hash() const {
-    // TODO take type variables of generic types into the equation
+    // TODO take type variables of generic types better into the equation
     size_t seed = hash_combine(hash_value((int) kind()), size());
+    seed = hash_combine(seed, num_bound_vars());
     for (auto elem : elems())
         seed = hash_combine(seed, elem);
     return seed;
 }
 
 bool Type::equal(const Type* other) const {
-    // TODO define equality for generic types
-    bool result = this->kind() == other->kind() && this->size() == other->size();
-    for (size_t i = 0, e = size(); i != e && result; ++i)
-        result &= this->elem(i) == other->elem(i);
+    if (this->get_representative() == other->get_representative()) {
+        return true;
+    } else if (this->is_unified() && other->is_unified()) {
+        return false;
+    }
+
+    bool result = this->kind() == other->kind();
+    result &= this->size() == other->size();
+    result &= this->num_bound_vars() == other->num_bound_vars();
+
+    // set equivalence constraints for type variables
+    for (size_t i = 0, e = num_bound_vars(); i != e; ++i) {
+        *this->bound_var(i)->equiv_var_ = other->bound_var(i);
+    }
+
+    for (size_t i = 0, e = size(); i != e && result; ++i) {
+        result &= this->elem(i)->equal(other->elem(i));
+    }
+
+    // unset equivalence constraints for type variables
+    for (size_t i = 0, e = num_bound_vars(); i != e; ++i) {
+        *this->bound_var(i)->equiv_var_ = nullptr;
+    }
+
     return result;
 }
 
@@ -55,29 +76,71 @@ TypeTable::TypeTable()
     , type_error_(unify(new TypeError(*this)))
 {}
 
-const Type* TypeTable::unify_base(const Type* type) {
+void TypeTable::insert_new(Type* type) {
+    assert(!type->is_unified());
+
+    // TODO is this a correct instanceof test? -- maybe use a virtual method instead?
+    if (type->isa<TypeVar>())
+        return;
+
+    for (auto elem : type->elems()) {
+        if (!elem->is_unified()) {
+            insert_new(elem);
+        }
+    }
+
+    type->set_representative(type);
+
+    auto p = types_.insert(type);
+    assert(p.second && "hash/equal broken");
+}
+
+/**
+ * Recursivly change the representatives of the not-unified types in t to the
+ * corresponding types in repr.
+ */
+void change_repr(const Type* repr, Type* t) {
+    assert(repr->is_final_representative());
+
+    if (t->is_unified()) {
+        assert(t == repr);
+        return;
+    }
+
+    for (size_t i = 0, e = t->size(); i != e; ++i) {
+        change_repr(repr->elem(i), t->elem(i));
+    }
+
+    t->set_representative(repr);
+}
+
+Type* TypeTable::unify_base(Type* type) {
     // unify only closed types (i.e. only types where all type variables have been bound)
     if (! type->is_closed()) {
         return type;
     }
 
+    assert(!type->is_unified());
+
     auto i = types_.find(type);
 
     if (i != types_.end()) {
         if (*i != type) {
-            // TODO reset the representative of the type variables
+            // TODO reset the representative of all not-unified (sub-)types
+            assert((*i)->is_final_representative());
 
-            delete type;
+            change_repr(*i, type);
         }
         return *i;
     }
 
-    auto p = types_.insert(type);
-    assert(p.second && "hash/equal broken");
+    insert_new(type);
+
+    assert(type->is_unified());
     return type;
 }
 
-const PrimType* TypeTable::primtype(PrimTypeKind kind) {
+PrimType* TypeTable::primtype(PrimTypeKind kind) {
     switch (kind) {
 #define PRIMTYPE(T) case PrimType_##T: return T##_;
 #include "primtypes.h"

@@ -10,13 +10,14 @@
 class FnType;
 class PrimType;
 class TupleType;
-class TypeVarRef;
+class TypeVar;
 class Type;
 class TypeError;
 class TypeTable;
 
-typedef anydsl2::ArrayRef<const Type*> TypeArray;
-typedef anydsl2::ArrayRef<TypeVarRef*> TypeVarArray;
+typedef anydsl2::ArrayRef<Type*> TypeArray;
+typedef anydsl2::ArrayRef<TypeVar*> TypeVarArray;
+
 
 //------------------------------------------------------------------------------
 
@@ -35,6 +36,16 @@ enum PrimTypeKind {
 #include "primtypes.h"
 };
 
+class TypeVisitor {
+public:
+    virtual ~TypeVisitor() {}
+    virtual void visit(TypeError&) {}
+    virtual void visit(PrimType&) {}
+    virtual void visit(FnType&) {}
+    virtual void visit(TupleType&) {}
+    virtual void visit(TypeVar&) {}
+};
+
 class Type : public anydsl2::MagicCast<Type> {
 private:
     Type& operator = (const Type&); ///< Do not copy-assign a \p Type.
@@ -45,26 +56,37 @@ protected:
         : typetable_(typetable)
         , kind_(kind)
         , elems_(size)
+        , representative_(nullptr)
     {}
 
-    void set(size_t i, const Type* n) { elems_[i] = n; }
+    void set(size_t i, Type* n) { elems_[i] = n; }
 
 public:
     TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
     TypeArray elems() const { return TypeArray(elems_); }
-    const Type* elem(size_t i) const { return elems()[i]; }
+    Type* elem(size_t i) const { return elems()[i]; }
+
+    anydsl2::ArrayRef<const TypeVar*> bound_vars() const { return anydsl2::ArrayRef<const TypeVar*>(bound_vars_); }
+    const TypeVar* bound_var(size_t i) const { return bound_vars()[i]; }
+    void add_bound_var(const TypeVar* v) { bound_vars_.push_back(v); }
 
     /// Returns number of \p Type operands (\p elems_).
     size_t size() const { return elems_.size(); }
+    size_t num_bound_vars() const { return bound_vars_.size(); }
 
     /// Returns true if this \p Type does not have any \p Type operands (\p elems_).
-    bool empty() const { return elems_.empty(); }
+    bool is_empty() const {
+        assert (elems_.empty() == bound_vars_.empty());
+        return elems_.empty();
+    }
+
+    virtual bool equal(const Type*) const;
+    size_t hash() const;
 
     void dump() const;
-    virtual size_t hash() const;
-    virtual bool equal(const Type*) const;
     virtual std::string to_string() const = 0;
+    virtual void accept(TypeVisitor&) = 0;
 
     /**
      * A type is closed if it contains no unbound type variables.
@@ -78,10 +100,41 @@ public:
         return true;
     }
 
+    /**
+     * Get the unambiguous representative of this type.
+     * All operations should only be done with this representative.
+     *
+     * (representative == nullptr) means that this type has not yet been unified.
+     * Otherwise it either points to itself of to another type.
+     */
+    const Type* get_representative() const {
+        assert((representative_ == nullptr) || representative_->is_final_representative());
+        return representative_;
+    }
+
+    /// @see get_representative()
+    void set_representative(const Type* repr) {
+        // TODO does this really hold? (is it set only once?)
+        assert(representative_ == nullptr);
+
+        representative_ = repr;
+
+        assert((representative_)->is_final_representative());
+    }
+
+    bool is_final_representative() const {
+        return representative_ == this;
+    }
+
+    /// @see get_representative()
+    bool is_unified() const { return get_representative() != nullptr; }
+
 private:
     TypeTable& typetable_;
-    Kind kind_;
-    std::vector<const Type*> elems_; ///< The operands of this type constructor.
+    const Kind kind_;
+    const Type* representative_;
+    std::vector<Type*> elems_; ///< The operands of this type constructor.
+    std::vector<const TypeVar*> bound_vars_;
 
     friend class TypeTable;
 };
@@ -93,6 +146,7 @@ private:
     {}
 
 public:
+    virtual void accept(TypeVisitor& v) { v.visit(*this); }
     virtual std::string to_string() const { return "<type error>"; }
 
     friend class TypeTable;
@@ -109,12 +163,14 @@ private:
 public:
     virtual std::string to_string() const;
 
+    virtual void accept(TypeVisitor& v) { v.visit(*this); }
+
     friend class TypeTable;
 };
 
 class CompoundType : public Type {
 protected:
-    CompoundType(TypeTable& typetable, Kind kind, anydsl2::ArrayRef<const Type*> elems)
+    CompoundType(TypeTable& typetable, Kind kind, TypeArray elems)
         : Type(typetable, kind, elems.size())
     {
         size_t i = 0;
@@ -127,11 +183,13 @@ protected:
 
 class FnType : public CompoundType {
 private:
-    FnType(TypeTable& typetable, anydsl2::ArrayRef<const Type*> elems)
+    FnType(TypeTable& typetable, TypeArray elems)
         : CompoundType(typetable, Type_fn, elems)
     {}
 
 public:
+    virtual void accept(TypeVisitor& v) { v.visit(*this); }
+
     virtual std::string to_string() const { return std::string("fn") + elems_to_string(); }
 
     friend class TypeTable;
@@ -139,19 +197,22 @@ public:
 
 class TupleType : public CompoundType {
 private:
-    TupleType(TypeTable& typetable, anydsl2::ArrayRef<const Type*> elems)
+    TupleType(TypeTable& typetable, TypeArray elems)
         : CompoundType(typetable, Type_tuple, elems)
     {}
 
 public:
+    virtual void accept(TypeVisitor& v) { v.visit(*this); }
     virtual std::string to_string() const { return std::string("tuple") + elems_to_string(); }
 
     friend class TypeTable;
 };
 
-class TypeVar {
+class TypeVar : public Type {
 private:
-    TypeVar()
+    TypeVar(TypeTable& tt)
+        : Type(tt, Type_var, 0)
+        , bound_at_(nullptr)
     {
         id_ = counter++;
     }
@@ -161,67 +222,59 @@ private:
     /// used for unambiguous dumping
     int id_;
 
-    const Type* bound_at_ = nullptr;
+    const Type* bound_at_;
+
+    /// Used to define equivalence constraints when checking equality of types
+    const TypeVar** const equiv_var_ = new const TypeVar*();
+
 public:
+    virtual bool equal(const Type* other) const {
+        // TODO is this correct for a instanceof-equivalent?
+        if (const TypeVar* t = other->isa<TypeVar>()) {
+            // we do not use && because for performance reasons we only set the
+            // equiv_var on one side (even the right side of the || should never
+            // be executed)
+            return (*this->equiv_var_ == t) || (*t->equiv_var_ == this);
+        }
+        return false;
+    }
+
     void bind(const Type* const t) {
         // TODO mayby do a real pre-condition instead of assert
         assert(bound_at_ == nullptr && "type variables can only be bound once!");
         bound_at_ = t;
     }
 
+    virtual void accept(TypeVisitor& v) { v.visit(*this); }
     std::string to_string() const { return std::string("a") + std::to_string(id_); }
 
-    bool is_closed() const { return bound_at_ != nullptr; }
-
-    friend class TypeVarRef;
-};
-
-/**
- * A reference to a type variable (the representative).
- *
- * The additional abstraction layer is needed for the unification of type
- * variables.
- */
-class TypeVarRef: public Type {
-private:
-    TypeVarRef(TypeTable& typetable)
-        : Type(typetable, Type_var, 0)
-    {
-        representative = new TypeVar();
-    }
-    TypeVar* representative;
-
-public:
-    const TypeVar* get_representative() const { return representative; }
-    void set_representative(TypeVar* repr) { representative = repr; }
-
-    void bind(const Type* const t) { representative->bind(t); }
-    virtual std::string to_string() const { return representative->to_string(); }
-    virtual bool is_closed() const { return representative->is_closed(); }
+    virtual bool is_closed() const { return bound_at_ != nullptr; }
 
     friend class TypeTable;
+    friend class Type;
 };
+
 
 //------------------------------------------------------------------------------
 
 struct TypeHash { size_t operator () (const Type* t) const { return t->hash(); } };
 struct TypeEqual { bool operator () (const Type* t1, const Type* t2) const { return t1->equal(t2); } };
-typedef std::unordered_set<const Type*, TypeHash, TypeEqual> TypeSet;
+typedef std::unordered_set<Type*, TypeHash, TypeEqual> TypeSet;
 
 class TypeTable {
 public:
     TypeTable();
     ~TypeTable() { for (auto type : types_) delete type; }
 
-    const TypeError* type_error() { return type_error_; }
-    const PrimType* primtype(PrimTypeKind kind);
+    TypeError* type_error() { return type_error_; }
+    PrimType* primtype(PrimTypeKind kind);
 
-#define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
+#define PRIMTYPE(T) PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
-    TypeVarRef* typevar() { return new TypeVarRef(*this); }
+    TypeVar* typevar() { return new TypeVar(*this); }
 
-    const FnType* fntype(TypeArray params) { return unify(new FnType(*this, params)); }
+    FnType* fntype(TypeArray params) { return unify(new FnType(*this, params)); }
 
     /**
      * A shortcut to create function types with a return type.
@@ -229,12 +282,12 @@ public:
      * Actually for a Type fn(int)->int a type fn(int, fn(int)) will be created
      * (continuation passing style).
      */
-    const FnType* fntype_simple(TypeArray params, const Type* return_type) {
-        const FnType* retfun = fntype( { return_type });
+    FnType* fntype_simple(TypeArray params, Type* return_type) {
+        FnType* retfun = fntype( { return_type });
 
         size_t psize = params.size();
 
-        const Type** p = new const Type*[psize + 1];
+        Type** p = new Type*[psize + 1];
 
         for (int i = 0; i < psize; ++i) {
             p[i] = params[i];
@@ -248,30 +301,34 @@ public:
      * Create a generic type given the quantified type variables and the type
      * using them.
      *
-     * Example: create 'forall A, fn(A)'
+     * Example: create 'fn<A>(A)'
      * @code{.cpp}
      * TypeVarRef* A = typevar();
      * gentype({A}, fntype({A}));
      * @endcode
      */
-    template<class T> const T* gentype(TypeVarArray tvars, const T* type) {
+    template<class T> const T* gentype(TypeVarArray tvars, T* type) {
         for (auto v : tvars) {
             v->bind(type);
+            type->add_bound_var(v);
         }
         return unify(type);
     }
 
-    const TupleType* tupletype(TypeArray elems) { return unify(new TupleType(*this, elems)); }
+    TupleType* tupletype(TypeArray elems) { return unify(new TupleType(*this, elems)); }
 
 private:
-    const Type* unify_base(const Type* type);
-    template<class T> const T* unify(const T* type) { return unify_base(type)->template as<T>(); }
+    /// insert all not-unified types contained in type
+    void insert_new(Type* type);
+
+    Type* unify_base(Type* type);
+    template<class T> T* unify(T* type) { return unify_base(type)->template as<T>(); }
 
     TypeSet types_;
 
-#define PRIMTYPE(T) const PrimType* T##_;
+#define PRIMTYPE(T) PrimType* T##_;
 #include "primtypes.h"
-    const TypeError* type_error_;
+    TypeError* type_error_;
 };
 
 //------------------------------------------------------------------------------
