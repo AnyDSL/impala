@@ -56,6 +56,10 @@ bool Type::is_closed() const {
 
 std::string Type::bound_vars_to_string() const {
     std::string result;
+
+    if (!is_generic())
+        return result;
+
     const char* separator = "<";
     for (auto v : bound_vars()) {
         result += separator + v->to_string();
@@ -79,6 +83,10 @@ std::string PrimType::to_string() const {
 
 std::string CompoundType::elems_to_string() const {
     std::string result;
+
+    if (is_empty())
+        return result;
+
     const char* separator = "(";
     for (auto elem : elems()) {
         result += separator + elem->to_string();
