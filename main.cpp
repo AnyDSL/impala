@@ -67,6 +67,8 @@ void test_unification2() {
 
     assert(A->get_representative() == B->get_representative());
 
+    check_sanity({A, f, gf, B, g, gg});
+
     cout << "test_unification2 [okay]" << endl;
 }
 
@@ -118,7 +120,7 @@ void test_unification3() {
     FnType* k2 = tt.fntype({G, k1});        // fn(G, fn(G, H))
     FnType* gk2 = tt.gentype({G, H}, k2);   // fn<G,H>(G, fn(G, H))
 
-    gk2->dump();
+    //gk2->dump();
 
     assert(gf2 != gk2);
     assert(!gf2->equal(gk2));
@@ -128,12 +130,47 @@ void test_unification3() {
     assert(!gf1->equal(k1));
     assert(gf1->get_representative() != k1->get_representative());
 
+    check_sanity({A, B, f1, gf1, f2, gf2, C, D, g1, gg1, g2, gg2, E, F, h1, gh1, h2, gh2, G, H, k1, k2, gk2});
+
     cout << "test_unification3 [okay]" << endl;
+}
+
+void test_type_sanity1() {
+    TypeTable tt;
+
+    TypeVar* A = tt.typevar();
+    FnType* g = tt.fntype({tt.type_int()}); // fn(int)
+    FnType* gg = tt.gentype({A}, g);        // fn<A>(int)
+
+    // TODO legal?
+    cout << "test_type_sanity1[okay]" << endl;
+}
+
+void test_type_sanity2() {
+    TypeTable tt;
+
+    TypeVar* A = tt.typevar();
+    FnType* f = tt.fntype({A});         // fn(A)
+    FnType* g = tt.fntype({A});         // fn(A)
+    FnType* gg = tt.gentype({A}, g);    // fn<A>(A)
+    // TODO f is now a type that is sane but not unified!
+
+    gg->dump();
+
+    FnType* h = tt.fntype({gg, f});         // fn(fn<A>(A), fn(A)) -> INVALID
+
+    h->dump();
+
+    // TODO h must not be built
+
+    cout << "test_type_sanity1[okay]" << endl;
 }
 
 int main() {
     //simple_tests();
     //test_unification1();
-    //test_unification2();
+    test_unification2();
     test_unification3();
+    //test_type_sanity1();
+    //test_type_sanity2();
 }

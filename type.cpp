@@ -70,7 +70,6 @@ std::string Type::bound_vars_to_string() const {
     return result + '>';
 }
 
-
 void Type::dump() const { std::cout << to_string() << std::endl; }
 
 //------------------------------------------------------------------------------
@@ -214,4 +213,21 @@ PrimType* TypeTable::primtype(PrimTypeKind kind) {
     }
 }
 
+void TypeTable::check_sanity() const {
+    for (auto t : types_) {
+        // TODO assert(t->is_sane()); if t->is_sane() is implemented
+        assert(t->is_final_representative());
+    }
+}
+
 //------------------------------------------------------------------------------
+
+void check_sanity(TypeArray types) {
+    for (auto t1 : types) {
+        for (auto t2 : types) {
+            if (t1->is_unified() && t2->is_unified()) {
+                assert((!t1->equal(t2)) || (t1->get_representative() == t2->get_representative()));
+            }
+        }
+    }
+}

@@ -133,6 +133,8 @@ public:
     /// @see get_representative()
     bool is_unified() const { return get_representative() != nullptr; }
 
+    // TODO bool is_sane() const;
+
 private:
     TypeTable& typetable_;
     const Kind kind_;
@@ -311,6 +313,11 @@ public:
 
     TupleType* tupletype(TypeArray elems) { return unify(new TupleType(*this, elems)); }
 
+    /**
+     * Checks if all types in the type tables are sane and correctly unified.
+     */
+    void check_sanity() const;
+
 private:
     /// insert all not-unified types contained in type
     void insert_new(Type* type);
@@ -326,5 +333,11 @@ private:
 };
 
 //------------------------------------------------------------------------------
+
+/**
+ * Checks if for all combination of types t1, t2 in 'types' it holds that if
+ * both are unified and t1 equals t2 then they have the same representative.
+ */
+void check_sanity(TypeArray types);
 
 #endif
