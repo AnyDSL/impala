@@ -162,7 +162,7 @@ void TypeTable::insert_new(Type* type) {
  * Recursivly change the representatives of the not-unified types in t to the
  * corresponding types in repr.
  */
-void change_repr(const Type* repr, Type* t) {
+void change_repr(Type* t, const Type* repr) {
     assert(repr->is_final_representative());
 
     if (t->is_unified()) {
@@ -171,7 +171,7 @@ void change_repr(const Type* repr, Type* t) {
     }
 
     for (size_t i = 0, e = t->size(); i != e; ++i) {
-        change_repr(repr->elem(i), t->elem(i));
+        change_repr(t->elem(i), repr->elem(i));
     }
 
     t->set_representative(repr);
@@ -192,7 +192,7 @@ Type* TypeTable::unify_base(Type* type) {
             // TODO reset the representative of all not-unified (sub-)types
             assert((*i)->is_final_representative());
 
-            change_repr(*i, type);
+            change_repr(type, *i);
         }
         return *i;
     }
