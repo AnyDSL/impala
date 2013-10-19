@@ -217,6 +217,7 @@ private:
     TypeVar(TypeTable& tt)
         : Type(tt, Type_var, 0)
         , bound_at_(nullptr)
+        , equiv_var_(new const TypeVar*())
     {
         id_ = counter++;
     }
@@ -229,7 +230,7 @@ private:
     const Type* bound_at_;
 
     /// Used to define equivalence constraints when checking equality of types
-    const TypeVar** const equiv_var_ = new const TypeVar*();
+    const TypeVar** const equiv_var_;
 
     void set_equiv_variable(const TypeVar* v) const {
         assert(*equiv_var_ == nullptr);
@@ -252,7 +253,7 @@ public:
     }
 
     virtual void accept(TypeVisitor& v) { v.visit(*this); }
-    std::string to_string() const { return std::string("a") + std::to_string(id_); }
+    std::string to_string() const;
 
     virtual bool is_closed() const { return bound_at_ != nullptr; }
 

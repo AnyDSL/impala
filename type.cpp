@@ -10,10 +10,12 @@ int TypeVar::counter = 0;
 
 size_t Type::hash() const {
     // TODO take type variables of generic types better into the equation
+    // TODO perhaps store this hash so it does not need to be recomputed all the time
     size_t seed = hash_combine(hash_value((int) kind()), size());
     seed = hash_combine(seed, num_bound_vars());
     for (auto elem : elems())
-        seed = hash_combine(seed, elem);
+        seed = hash_combine(seed, elem->hash());
+
     return seed;
 }
 
@@ -106,6 +108,14 @@ bool TypeVar::equal(const Type* other) const {
     return false;
 }
 
+std::string TypeVar::to_string() const {
+    if (id_ < 26) {
+        return std::string(1, 'A' + id_);
+    } else {
+        return std::string("Z") + std::to_string(id_);
+    }
+}
+
 //------------------------------------------------------------------------------
 
 TypeTable::TypeTable()
@@ -133,10 +143,6 @@ FnType* TypeTable::fntype_simple(TypeArray params, Type* return_type) {
 void TypeTable::insert_new(Type* type) {
     assert(!type->is_unified());
 
-    // TODO is this a correct instanceof test? -- maybe use a virtual method instead?
-    if (type->isa<TypeVar>())
-        return;
-
     for (auto elem : type->elems()) {
         if (!elem->is_unified()) {
             insert_new(elem);
@@ -145,8 +151,11 @@ void TypeTable::insert_new(Type* type) {
 
     type->set_representative(type);
 
-    auto p = types_.insert(type);
-    assert(p.second && "hash/equal broken");
+    // TODO is this a correct instanceof test? -- maybe use a virtual method instead?
+    if (!type->isa<TypeVar>()) {
+        auto p = types_.insert(type);
+        assert(p.second && "hash/equal broken");
+    }
 }
 
 /**
