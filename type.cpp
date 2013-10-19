@@ -65,7 +65,7 @@ std::string Type::bound_vars_to_string() const {
     const char* separator = "<";
     for (auto v : bound_vars()) {
         result += separator + v->to_string();
-        separator = ", ";
+        separator = ",";
     }
     return result + '>';
 }
@@ -161,15 +161,18 @@ void TypeTable::insert_new(Type* type) {
 /**
  * Recursivly change the representatives of the not-unified types in t to the
  * corresponding types in repr.
+ *
+ * This assumes that t is equal to repr.
  */
 void change_repr(Type* t, const Type* repr) {
     assert(repr->is_final_representative());
 
     if (t->is_unified()) {
-        assert(t == repr);
+        assert(t->get_representative() == repr);
         return;
     }
 
+    assert(t->size() == repr->size());
     for (size_t i = 0, e = t->size(); i != e; ++i) {
         change_repr(t->elem(i), repr->elem(i));
     }
