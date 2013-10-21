@@ -102,7 +102,7 @@ bool TypeVar::equal(const Type* other) const {
         // we do not use && because for performance reasons we only set the
         // equiv_var on one side (even the right side of the || should never
         // be executed)
-        return (*this->equiv_var_ == t) || (*t->equiv_var_ == this);
+        return (this->equiv_var_ == t) || (t->equiv_var_ == this);
     }
     return false;
 }
@@ -124,12 +124,12 @@ TypeTable::TypeTable()
     , type_error_(unify(new TypeError(*this)))
 {}
 
-FnType* TypeTable::fntype_simple(TypeArray params, Type* return_type) {
-    FnType* retfun = fntype( { return_type });
+const FnType* TypeTable::fntype_simple(TypeArray params, const Type* return_type) {
+    const FnType* retfun = fntype( { return_type });
 
     size_t psize = params.size();
 
-    Type** p = new Type*[psize + 1];
+    const Type** p = new const Type*[psize + 1];
 
     for (int i = 0; i < psize; ++i) {
         p[i] = params[i];
@@ -139,7 +139,7 @@ FnType* TypeTable::fntype_simple(TypeArray params, Type* return_type) {
     return fntype(TypeArray(p, psize + 1));
 }
 
-void TypeTable::insert_new(Type* type) {
+void TypeTable::insert_new(const Type* type) {
     assert(!type->is_unified());
 
     for (auto elem : type->elems()) {
@@ -157,13 +157,7 @@ void TypeTable::insert_new(Type* type) {
     }
 }
 
-/**
- * Recursivly change the representatives of the not-unified types in t to the
- * corresponding types in repr.
- *
- * This assumes that t is equal to repr.
- */
-void change_repr(Type* t, const Type* repr) {
+void TypeTable::change_repr(const Type* t, const Type* repr) const {
     assert(repr->is_final_representative());
 
     if (t->is_unified()) {
@@ -179,7 +173,7 @@ void change_repr(Type* t, const Type* repr) {
     t->set_representative(repr);
 }
 
-Type* TypeTable::unify_base(Type* type) {
+const Type* TypeTable::unify_base(const Type* type) {
     // unify only closed types (i.e. only types where all type variables have been bound)
     if (! type->is_closed()) {
         return type;
@@ -205,7 +199,7 @@ Type* TypeTable::unify_base(Type* type) {
     return type;
 }
 
-PrimType* TypeTable::primtype(PrimTypeKind kind) {
+const PrimType* TypeTable::primtype(const PrimTypeKind kind) {
     switch (kind) {
 #define PRIMTYPE(T) case PrimType_##T: return T##_;
 #include "primtypes.h"

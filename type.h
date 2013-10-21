@@ -20,8 +20,8 @@ class Type;
 class TypeError;
 class TypeTable;
 
-typedef anydsl2::ArrayRef<Type*> TypeArray;
-typedef anydsl2::ArrayRef<TypeVar*> TypeVarArray;
+typedef anydsl2::ArrayRef<const Type*> TypeArray;
+typedef anydsl2::ArrayRef<const TypeVar*> TypeVarArray;
 
 
 //------------------------------------------------------------------------------
@@ -64,7 +64,7 @@ protected:
         , representative_(nullptr)
     {}
 
-    void set(size_t i, Type* n) { elems_[i] = n; }
+    void set(size_t i, const Type* n) { elems_[i] = n; }
 
     std::string bound_vars_to_string() const;
 
@@ -72,11 +72,10 @@ public:
     TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
     TypeArray elems() const { return TypeArray(elems_); }
-    Type* elem(size_t i) const { return elems()[i]; }
+    const Type* elem(size_t i) const { return elems()[i]; }
 
     anydsl2::ArrayRef<const TypeVar*> bound_vars() const { return anydsl2::ArrayRef<const TypeVar*>(bound_vars_); }
     const TypeVar* bound_var(size_t i) const { return bound_vars()[i]; }
-    void add_bound_var(const TypeVar* v) { bound_vars_.push_back(v); }
 
     /// Returns number of \p Type operands (\p elems_).
     size_t size() const { return elems_.size(); }
@@ -118,14 +117,6 @@ public:
         return representative_;
     }
 
-    /// @see get_representative()
-    void set_representative(const Type* repr) {
-        // TODO does this really hold? (is it set only once?)
-        assert(representative_ == nullptr);
-        representative_ = repr;
-        assert((representative_)->is_final_representative());
-    }
-
     bool is_final_representative() const {
         return representative_ == this;
     }
@@ -138,9 +129,19 @@ public:
 private:
     TypeTable& typetable_;
     const Kind kind_;
-    const Type* representative_;
-    std::vector<Type*> elems_; ///< The operands of this type constructor.
-    std::vector<const TypeVar*> bound_vars_;
+    mutable const Type* representative_;
+    std::vector<const Type*> elems_; ///< The operands of this type constructor.
+    mutable std::vector<const TypeVar*> bound_vars_;
+
+    void add_bound_var(const TypeVar* v) const { bound_vars_.push_back(v); }
+
+    /// @see get_representative()
+    void set_representative(const Type* repr) const {
+        // TODO does this really hold? (is it set only once?)
+        assert(representative_ == nullptr);
+        representative_ = repr;
+        assert((representative_)->is_final_representative());
+    }
 
     friend class TypeTable;
 };
@@ -219,7 +220,7 @@ private:
     TypeVar(TypeTable& tt)
         : Type(tt, Type_var, 0)
         , bound_at_(nullptr)
-        , equiv_var_(new const TypeVar*())
+        , equiv_var_(nullptr)
     {
         id_ = counter++;
     }
@@ -229,30 +230,30 @@ private:
     /// used for unambiguous dumping
     int id_;
 
-    const Type* bound_at_;
+    mutable const Type* bound_at_;
 
     /// Used to define equivalence constraints when checking equality of types
-    const TypeVar** const equiv_var_;
+    mutable const TypeVar* equiv_var_;
 
     void set_equiv_variable(const TypeVar* v) const {
-        assert(*equiv_var_ == nullptr);
+        assert(equiv_var_ == nullptr);
         assert(v != nullptr);
-        *equiv_var_ = v;
+        equiv_var_ = v;
     }
 
     void unset_equiv_variable() const {
-        assert(*equiv_var_ != nullptr);
-        *equiv_var_ = nullptr;
+        assert(equiv_var_ != nullptr);
+        equiv_var_ = nullptr;
     }
 
-public:
-    virtual bool equal(const Type* other) const;
-
-    void bind(const Type* const t) {
+    void bind(const Type* const t) const {
         // TODO mayby do a real pre-condition instead of assert
         assert(bound_at_ == nullptr && "type variables can only be bound once!");
         bound_at_ = t;
     }
+
+public:
+    virtual bool equal(const Type* other) const;
 
     virtual void accept(TypeVisitor& v) { v.visit(*this); }
     std::string to_string() const;
@@ -268,22 +269,22 @@ public:
 
 struct TypeHash { size_t operator () (const Type* t) const { return t->hash(); } };
 struct TypeEqual { bool operator () (const Type* t1, const Type* t2) const { return t1->equal(t2); } };
-typedef std::unordered_set<Type*, TypeHash, TypeEqual> TypeSet;
+typedef std::unordered_set<const Type*, TypeHash, TypeEqual> TypeSet;
 
 class TypeTable {
 public:
     TypeTable();
     ~TypeTable() { for (auto type : types_) delete type; }
 
-    TypeError* type_error() { return type_error_; }
-    PrimType* primtype(PrimTypeKind kind);
+    const TypeError* type_error() { return type_error_; }
+    const PrimType* primtype(PrimTypeKind kind);
 
-#define PRIMTYPE(T) PrimType* type_##T() { return T##_; }
+#define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
-    TypeVar* typevar() { return new TypeVar(*this); }
+    const TypeVar* typevar() { return new TypeVar(*this); }
 
-    FnType* fntype(TypeArray params) { return unify(new FnType(*this, params)); }
+    const FnType* fntype(TypeArray params) { return unify(new FnType(*this, params)); }
 
     /**
      * A shortcut to create function types with a return type.
@@ -291,7 +292,7 @@ public:
      * Actually for a Type fn(int)->int a type fn(int, fn(int)) will be created
      * (continuation passing style).
      */
-    FnType* fntype_simple(TypeArray params, Type* return_type);
+    const FnType* fntype_simple(TypeArray params, const Type* return_type);
 
     /**
      * Create a generic type given the quantified type variables and the type
@@ -303,7 +304,7 @@ public:
      * gentype({A}, fntype({A}));
      * @endcode
      */
-    template<class T> T* gentype(TypeVarArray tvars, T* type) {
+    template<class T> const T* gentype(TypeVarArray tvars, const T* type) {
         for (auto v : tvars) {
             v->bind(type);
             type->add_bound_var(v);
@@ -311,7 +312,7 @@ public:
         return unify(type);
     }
 
-    TupleType* tupletype(TypeArray elems) { return unify(new TupleType(*this, elems)); }
+    const TupleType* tupletype(TypeArray elems) { return unify(new TupleType(*this, elems)); }
 
     /**
      * Checks if all types in the type tables are sane and correctly unified.
@@ -320,16 +321,24 @@ public:
 
 private:
     /// insert all not-unified types contained in type
-    void insert_new(Type* type);
+    void insert_new(const Type* type);
 
-    Type* unify_base(Type* type);
-    template<class T> T* unify(T* type) { return unify_base(type)->template as<T>(); }
+    /**
+     * Recursivly change the representatives of the not-unified types in t to the
+     * corresponding types in repr.
+     *
+     * This assumes that t is equal to repr.
+     */
+    void change_repr(const Type* t, const Type* repr) const;
+
+    const Type* unify_base(const Type* type);
+    template<class T> const T* unify(const T* type) { return unify_base(type)->template as<const T>(); }
 
     TypeSet types_;
 
-#define PRIMTYPE(T) PrimType* T##_;
+#define PRIMTYPE(T) const PrimType* T##_;
 #include "primtypes.h"
-    TypeError* type_error_;
+    const TypeError* type_error_;
 };
 
 //------------------------------------------------------------------------------

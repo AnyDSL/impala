@@ -8,9 +8,9 @@ void simple_tests() {
     TypeTable tt;
 
     // create some test types
-    Type* t1 = tt.tupletype( { tt.type_int(), tt.type_bool() }); // tuple(int, bool)
-    Type* t2 = tt.tupletype( { tt.type_float(), tt.type_float(), t1 }); // tuple(float, float, tuple(int, bool))
-    Type* t3 = tt.tupletype( { tt.type_float(), tt.type_float(), t1 }); // tuple(float, float, tuple(int, bool))
+    const Type* t1 = tt.tupletype( { tt.type_int(), tt.type_bool() }); // tuple(int, bool)
+    const Type* t2 = tt.tupletype( { tt.type_float(), tt.type_float(), t1 }); // tuple(float, float, tuple(int, bool))
+    const Type* t3 = tt.tupletype( { tt.type_float(), tt.type_float(), t1 }); // tuple(float, float, tuple(int, bool))
 
     // dump those types
     t1->dump();
@@ -23,9 +23,9 @@ void simple_tests() {
     std::cout << (t2 == t3) << std::endl; // 1
 
     // create an fn<a,b>(a, b)
-    TypeVar* a = tt.typevar();
-    TypeVar* b = tt.typevar();
-    FnType* f = tt.fntype({a, b});
+    const TypeVar* a = tt.typevar();
+    const TypeVar* b = tt.typevar();
+    const FnType* f = tt.fntype({a, b});
     const FnType* gen_f = tt.gentype({a, b}, f);
     gen_f->dump();
 }
@@ -33,25 +33,25 @@ void simple_tests() {
 void test_unification1() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
-    FnType* f = tt.fntype({A});         // fn(A)
-    FnType* gf = tt.gentype({A}, f);    // fn<A>(A)
+    const TypeVar* A = tt.typevar();
+    const FnType* f = tt.fntype({A});         // fn(A)
+    const FnType* gf = tt.gentype({A}, f);    // fn<A>(A)
 
     // will fail because A is already bound!
     // TODO assert this failure
-    FnType* gf2 = tt.gentype({A}, f);
+    const FnType* gf2 = tt.gentype({A}, f);
 }
 
 void test_unification2() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
-    FnType* f = tt.fntype({A});         // fn(A)
-    FnType* gf = tt.gentype({A}, f);    // fn<A>(A)
+    const TypeVar* A = tt.typevar();
+    const FnType* f = tt.fntype({A});         // fn(A)
+    const FnType* gf = tt.gentype({A}, f);    // fn<A>(A)
 
-    TypeVar* B = tt.typevar();
-    FnType* g = tt.fntype({B});         // fn(B)
-    FnType* gg = tt.gentype({B}, g);    // fn<B>(B)
+    const TypeVar* B = tt.typevar();
+    const FnType* g = tt.fntype({B});         // fn(B)
+    const FnType* gg = tt.gentype({B}, g);    // fn<B>(B)
 
     /*gf->dump();
     gf->get_representative()->dump();
@@ -75,19 +75,19 @@ void test_unification2() {
 void test_unification3() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
-    TypeVar* B = tt.typevar();
-    FnType* f1 = tt.fntype({A, B});     // fn(A, B)
-    FnType* gf1 = tt.gentype({B}, f1);  // fn<B>(A, B)
-    FnType* f2 = tt.fntype({A, gf1});   // fn(A, fn<B>(A, B))
-    FnType* gf2 = tt.gentype({A}, f2);  // fn<A>(A, fn<B>(A, B))
+    const TypeVar* A = tt.typevar();
+    const TypeVar* B = tt.typevar();
+    const FnType* f1 = tt.fntype({A, B});     // fn(A, B)
+    const FnType* gf1 = tt.gentype({B}, f1);  // fn<B>(A, B)
+    const FnType* f2 = tt.fntype({A, gf1});   // fn(A, fn<B>(A, B))
+    const FnType* gf2 = tt.gentype({A}, f2);  // fn<A>(A, fn<B>(A, B))
 
-    TypeVar* C = tt.typevar();
-    TypeVar* D = tt.typevar();
-    FnType* g1 = tt.fntype({C, D});     // fn(C, D)
-    FnType* gg1 = tt.gentype({D}, g1);  // fn<D>(C, D)
-    FnType* g2 = tt.fntype({C, gg1});   // fn(C, fn<D>(C, D))
-    FnType* gg2 = tt.gentype({C}, g2);  // fn<C>(C, fn<D>(C, D))
+    const TypeVar* C = tt.typevar();
+    const TypeVar* D = tt.typevar();
+    const FnType* g1 = tt.fntype({C, D});     // fn(C, D)
+    const FnType* gg1 = tt.gentype({D}, g1);  // fn<D>(C, D)
+    const FnType* g2 = tt.fntype({C, gg1});   // fn(C, fn<D>(C, D))
+    const FnType* gg2 = tt.gentype({C}, g2);  // fn<C>(C, fn<D>(C, D))
 
     //gf2->dump();
     //gg2->dump();
@@ -97,12 +97,12 @@ void test_unification3() {
     assert(gf1->equal(gg1));
     assert(gf1->get_representative() == gg1->get_representative());
 
-    TypeVar* E = tt.typevar();
-    TypeVar* F = tt.typevar();
-    FnType* h1 = tt.fntype({F, E});     // fn(F, E)
-    FnType* gh1 = tt.gentype({F}, h1);  // fn<F>(F, E)
-    FnType* h2 = tt.fntype({E, gh1});   // fn(E, fn<F>(F, E))
-    FnType* gh2 = tt.gentype({E}, h2);  // fn<E>(E, fn<F>(F, E))
+    const TypeVar* E = tt.typevar();
+    const TypeVar* F = tt.typevar();
+    const FnType* h1 = tt.fntype({F, E});     // fn(F, E)
+    const FnType* gh1 = tt.gentype({F}, h1);  // fn<F>(F, E)
+    const FnType* h2 = tt.fntype({E, gh1});   // fn(E, fn<F>(F, E))
+    const FnType* gh2 = tt.gentype({E}, h2);  // fn<E>(E, fn<F>(F, E))
 
     //gh2->dump();
 
@@ -114,11 +114,11 @@ void test_unification3() {
     assert(!gf1->equal(gh1));
     assert(gf1->get_representative() != gh1->get_representative());
 
-    TypeVar* G = tt.typevar();
-    TypeVar* H = tt.typevar();
-    FnType* k1 = tt.fntype({G, H});         // fn(G, H)
-    FnType* k2 = tt.fntype({G, k1});        // fn(G, fn(G, H))
-    FnType* gk2 = tt.gentype({G, H}, k2);   // fn<G,H>(G, fn(G, H))
+    const TypeVar* G = tt.typevar();
+    const TypeVar* H = tt.typevar();
+    const FnType* k1 = tt.fntype({G, H});         // fn(G, H)
+    const FnType* k2 = tt.fntype({G, k1});        // fn(G, fn(G, H))
+    const FnType* gk2 = tt.gentype({G, H}, k2);   // fn<G,H>(G, fn(G, H))
 
     //gk2->dump();
 
@@ -138,9 +138,9 @@ void test_unification3() {
 void test_type_sanity1() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
-    FnType* g = tt.fntype({tt.type_int()}); // fn(int)
-    FnType* gg = tt.gentype({A}, g);        // fn<A>(int)
+    const TypeVar* A = tt.typevar();
+    const FnType* g = tt.fntype({tt.type_int()}); // fn(int)
+    const FnType* gg = tt.gentype({A}, g);        // fn<A>(int)
 
     // TODO legal?
     cout << "test_type_sanity1[okay]" << endl;
@@ -149,15 +149,15 @@ void test_type_sanity1() {
 void test_type_sanity2() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
-    FnType* f = tt.fntype({A});         // fn(A)
-    FnType* g = tt.fntype({A});         // fn(A)
-    FnType* gg = tt.gentype({A}, g);    // fn<A>(A)
+    const TypeVar* A = tt.typevar();
+    const FnType* f = tt.fntype({A});         // fn(A)
+    const FnType* g = tt.fntype({A});         // fn(A)
+    const FnType* gg = tt.gentype({A}, g);    // fn<A>(A)
     // TODO f is now a type that is sane but not unified!
 
     gg->dump();
 
-    FnType* h = tt.fntype({gg, f});         // fn(fn<A>(A), fn(A)) -> INVALID
+    const FnType* h = tt.fntype({gg, f});     // fn(fn<A>(A), fn(A)) -> INVALID
 
     h->dump();
 
