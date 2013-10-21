@@ -150,8 +150,9 @@ void TypeTable::insert_new(const Type* type) {
 
     type->set_representative(type);
 
-    // TODO is this a correct instanceof test? -- maybe use a virtual method instead?
-    if (!type->isa<TypeVar>()) {
+    if (type->kind() == Type_var) {
+        // TODO is this a correct instanceof test?
+        assert(!type->isa<TypeVar>());
         auto p = types_.insert(type);
         assert(p.second && "hash/equal broken");
     }
