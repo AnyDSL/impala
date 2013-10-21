@@ -129,9 +129,10 @@ public:
 private:
     TypeTable& typetable_;
     const Kind kind_;
-    mutable const Type* representative_;
     std::vector<const Type*> elems_; ///< The operands of this type constructor.
     mutable std::vector<const TypeVar*> bound_vars_;
+
+    mutable const Type* representative_;
 
     void add_bound_var(const TypeVar* v) const { bound_vars_.push_back(v); }
 
