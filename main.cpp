@@ -142,8 +142,8 @@ void test_type_sanity1() {
     const FnType* g = tt.fntype({tt.type_int()}); // fn(int)
     const FnType* gg = tt.gentype({A}, g);        // fn<A>(int)
 
-    // TODO legal?
-    cout << "test_type_sanity1[okay]" << endl;
+    // TODO not legal!
+    cout << "test_type_sanity1 [okay]" << endl;
 }
 
 void test_type_sanity2() {
@@ -163,7 +163,7 @@ void test_type_sanity2() {
 
     // TODO h must not be built
 
-    cout << "test_type_sanity1[okay]" << endl;
+    cout << "test_type_sanity2 [okay]" << endl;
 }
 
 int main() {

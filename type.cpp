@@ -225,3 +225,19 @@ void check_sanity(TypeArray types) {
         }
     }
 }
+
+const Type* TypeTable::gentype_base(TypeVarArray tvars, const Type* type) {
+   // all closed types should be unified and the other way round!
+   assert(type->is_unified() == type->is_closed());
+
+   // TODO make this more than assertions
+   assert(!type->is_unified());
+   assert(type->kind() != Type_var); // forbid 'forall a, a' types
+
+   for (auto v : tvars) {
+       // TODO assert v is subtype of type
+       v->bind(type);
+       type->add_bound_var(v);
+   }
+   return unify(type);
+}

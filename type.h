@@ -305,13 +305,7 @@ public:
      * gentype({A}, fntype({A}));
      * @endcode
      */
-    template<class T> const T* gentype(TypeVarArray tvars, const T* type) {
-        for (auto v : tvars) {
-            v->bind(type);
-            type->add_bound_var(v);
-        }
-        return unify(type);
-    }
+    template<class T> const T* gentype(TypeVarArray tvars, const T* type) { return gentype_base(tvars, type)->template as<const T>(); }
 
     const TupleType* tupletype(TypeArray elems) { return unify(new TupleType(*this, elems)); }
 
@@ -321,6 +315,8 @@ public:
     void check_sanity() const;
 
 private:
+    const Type* gentype_base(TypeVarArray tvars, const Type* type);
+
     /// insert all not-unified types contained in type
     void insert_new(const Type* type);
 
