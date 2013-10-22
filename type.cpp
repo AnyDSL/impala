@@ -20,10 +20,8 @@ size_t Type::hash() const {
 }
 
 bool Type::equal(const Type* other) const {
-    if (this->get_representative() == other->get_representative()) {
-        return true;
-    } else if (this->is_unified() && other->is_unified()) {
-        return false;
+    if (this->is_unified() && other->is_unified()) {
+        return this->get_representative() == other->get_representative();
     }
 
     bool result = this->kind() == other->kind();
@@ -121,6 +119,10 @@ std::string CompoundType::elems_to_string() const {
 }
 
 bool TypeVar::equal(const Type* other) const {
+    if (this->is_unified() && other->is_unified()) {
+        return this->get_representative() == other->get_representative();
+    }
+
     // TODO is this correct for a instanceof-equivalent?
     if (const TypeVar* t = other->isa<TypeVar>()) {
         if ((this->equiv_var_ == nullptr) && (t->equiv_var_ == nullptr)) {
@@ -270,7 +272,11 @@ void check_sanity(TypeArray types) {
     for (auto t1 : types) {
         for (auto t2 : types) {
             if (t1->is_unified() && t2->is_unified()) {
-                assert((!t1->equal(t2)) || (t1->get_representative() == t2->get_representative()));
+                if (!((!t1->equal(t2)) || (t1->get_representative() == t2->get_representative()))) {
+                    t1->dump();
+                    t2->dump();
+                    assert(false);
+                }
             }
         }
     }
