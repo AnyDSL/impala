@@ -34,26 +34,6 @@ void simple_tests() {
     cout << "simple_tests [okay]" << endl;
 }
 
-void test_unification1() {
-    TypeTable tt;
-
-    const TypeVar* A = tt.typevar();
-    const FnType* f = tt.fntype({A});         // fn(A)
-    const FnType* gf = tt.gentype({A}, f);    // fn<A>(A)
-
-    try {
-        // must fail because A is already bound!
-        const FnType* gf2 = tt.gentype({A}, f);
-
-        assert(false && "Previous statement should have failed!");
-    } catch (IllegalTypeException& e) {
-    }
-
-    tt.check_sanity();
-
-    cout << "test_unification1 [okay]" << endl;
-}
-
 void test_unification2() {
     TypeTable tt;
 
@@ -161,6 +141,10 @@ void test_type_sanity1() {
 
         assert(false && "Previous statement should have failed!");
     } catch (IllegalTypeException& e) {
+        assert(g->is_closed());
+        assert(g->is_unified());
+        assert(!A->is_unified());
+        assert(A->bound_at() == nullptr);
     }
 
     tt.check_sanity();
@@ -169,6 +153,35 @@ void test_type_sanity1() {
 }
 
 void test_type_sanity2() {
+    TypeTable tt;
+
+    const TypeVar* A = tt.typevar();
+
+    try {
+        tt.gentype({A}, A);         // forall A, A
+        assert(false && "Previous statement should have failed!");
+    } catch (IllegalTypeException& e) {
+        assert(!A->is_closed());
+        assert(!A->is_unified());
+        assert(A->bound_at() == nullptr);
+    }
+
+    const TypeVar* B = tt.typevar();
+    const TypeVar* C = tt.typevar();
+    try {
+        tt.gentype({B}, C); // forall B, C
+        assert(false && "Previous statement should have failed!");
+    } catch (IllegalTypeException& e) {
+        assert(B->bound_at() == nullptr);
+    }
+
+
+    tt.check_sanity();
+
+    cout << "test_type_sanity2 [okay]" << endl;
+}
+
+void test_type_sanity3() {
     TypeTable tt;
 
     const TypeVar* A = tt.typevar();
@@ -191,14 +204,59 @@ void test_type_sanity2() {
     tt.check_sanity();
     check_sanity({A, f, g, gg});
 
-    cout << "test_type_sanity2 [okay]" << endl;
+    cout << "test_type_sanity3 [okay]" << endl;
+}
+
+void test_type_sanity4() {
+    TypeTable tt;
+
+    const TypeVar* A = tt.typevar();
+    const FnType* f = tt.fntype({A});         // fn(A)
+    const FnType* gf = tt.gentype({A}, f);    // fn<A>(A)
+
+    const TypeVar* B = tt.typevar();
+    const FnType* g = tt.fntype({A, B});   // fn(A, B)
+
+    try {
+        // must fail because A is already bound!
+        const FnType* gf2 = tt.gentype({A}, g);
+
+        assert(false && "Previous statement should have failed!");
+    } catch (IllegalTypeException& e) {
+    }
+
+    tt.check_sanity();
+
+    cout << "test_type_sanity4 [okay]" << endl;
+}
+
+void test_type_sanity5() {
+    TypeTable tt;
+
+    const TypeVar* A = tt.typevar();
+    const TypeVar* B = tt.typevar();
+    const FnType* g = tt.fntype({B});   // fn(B)
+
+    try {
+        // must fail because A is not a subtype of g
+        const FnType* gf2 = tt.gentype({A}, g);
+
+        assert(false && "Previous statement should have failed!");
+    } catch (IllegalTypeException& e) {
+    }
+
+    tt.check_sanity();
+
+    cout << "test_type_sanity5 [okay]" << endl;
 }
 
 int main() {
     //simple_tests();
-    test_unification1();
     test_unification2();
     test_unification3();
     test_type_sanity1();
     test_type_sanity2();
+    //test_type_sanity3();
+    test_type_sanity4();
+    test_type_sanity5();
 }
