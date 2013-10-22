@@ -154,11 +154,17 @@ void test_type_sanity1() {
 
     const TypeVar* A = tt.typevar();
     const FnType* g = tt.fntype({tt.type_int()}); // fn(int)
-    const FnType* gg = tt.gentype({A}, g);        // fn<A>(int)
+
+    try {
+        // illegal
+        const FnType* gg = tt.gentype({A}, g);    // fn<A>(int)
+
+        assert(false && "Previous statement should have failed!");
+    } catch (IllegalTypeException& e) {
+    }
 
     tt.check_sanity();
 
-    // TODO not legal!
     cout << "test_type_sanity1 [okay]" << endl;
 }
 
@@ -173,13 +179,17 @@ void test_type_sanity2() {
 
     gg->dump();
 
-    const FnType* h = tt.fntype({gg, f});     // fn(fn<A>(A), fn(A)) -> INVALID
+    try {
+        const FnType* h = tt.fntype({gg, f});     // fn(fn<A>(A), fn(A)) -> INVALID
 
-    h->dump();
+        h->dump();
 
-    // TODO h must not be built
+        assert(false && "Previous statement should have failed!");
+    } catch (IllegalTypeException& e) {
+    }
 
     tt.check_sanity();
+    check_sanity({A, f, g, gg});
 
     cout << "test_type_sanity2 [okay]" << endl;
 }
@@ -189,6 +199,6 @@ int main() {
     test_unification1();
     test_unification2();
     test_unification3();
-    //test_type_sanity1();
-    //test_type_sanity2();
+    test_type_sanity1();
+    test_type_sanity2();
 }
