@@ -57,7 +57,7 @@ bool Type::is_closed() const {
 bool Type::is_subtype(const Type* super_type) const {
     assert(super_type != nullptr);
 
-    if (this->equal(super_type))
+    if (this == super_type)
         return true;
 
     for (auto t : super_type->elems()) {
@@ -248,9 +248,8 @@ const Type* TypeTable::gentype_base(TypeVarArray tvars, const Type* type) {
        throw IllegalTypeException("Types like 'forall a, a' are forbidden!");
 
    for (auto v : tvars) {
-       // TODO
-       //if (!v->is_subtype(type))
-       //    throw IllegalTypeException("Type variables can only be bound at t if they are a subtype of t!");
+       if (!v->is_subtype(type))
+           throw IllegalTypeException("Type variables can only be bound at t if they are a subtype of t!");
 
        v->bind(type);
        type->add_bound_var(v);
