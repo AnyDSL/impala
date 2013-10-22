@@ -119,7 +119,16 @@ public:
     /// @see get_representative()
     bool is_unified() const { return get_representative() != nullptr; }
 
-    // TODO bool is_sane() const;
+    /// @return true if this is a subtype of super_type.
+    bool is_subtype(const Type* super_type) const;
+
+    /**
+     * A type is sane if all type variables are bound correctly,
+     * i.e. forall type variables v, v is a subtype of v.bound_at().
+     *
+     * This also means that a sane type is always closed!
+     */
+    virtual bool is_sane() const;
 
 private:
     TypeTable& typetable_;
@@ -249,12 +258,16 @@ private:
     }
 
 public:
+    const Type* bound_at() const { return bound_at_; }
+
     virtual bool equal(const Type* other) const;
 
     virtual void accept(TypeVisitor& v) { v.visit(*this); }
     std::string to_string() const;
 
     virtual bool is_closed() const { return bound_at_ != nullptr; }
+
+    virtual bool is_sane() const { return is_closed() && this->is_subtype(bound_at()); }
 
     friend class TypeTable;
     friend class Type;

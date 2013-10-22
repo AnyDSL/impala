@@ -56,6 +56,30 @@ bool Type::is_closed() const {
     return true;
 }
 
+bool Type::is_subtype(const Type* super_type) const {
+    assert(super_type != nullptr);
+
+    if (this->equal(super_type))
+        return true;
+
+    for (auto t : super_type->elems()) {
+        if (this->is_subtype(t)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Type::is_sane() const {
+    for (auto t : elems()) {
+        if (!t->is_sane()) {
+            return false;
+        }
+    }
+    assert(is_closed());
+    return true;
+}
+
 std::string Type::bound_vars_to_string() const {
     std::string result;
 
@@ -157,7 +181,7 @@ void TypeTable::insert_new(const Type* type) {
 
     if (type->kind() == Type_var) {
         // TODO is this a correct instanceof test?
-        assert(!type->isa<TypeVar>());
+        assert(type->isa<TypeVar>());
         auto p = types_.insert(type);
         assert(p.second && "hash/equal broken");
     }
@@ -191,7 +215,6 @@ const Type* TypeTable::unify_base(const Type* type) {
 
     if (i != types_.end()) {
         if (*i != type) {
-            // TODO reset the representative of all not-unified (sub-)types
             assert((*i)->is_final_representative());
 
             change_repr(type, *i);
@@ -213,25 +236,6 @@ const PrimType* TypeTable::primtype(const PrimTypeKind kind) {
     }
 }
 
-void TypeTable::check_sanity() const {
-    for (auto t : types_) {
-        // TODO assert(t->is_sane()); if t->is_sane() is implemented
-        assert(t->is_final_representative());
-    }
-}
-
-//------------------------------------------------------------------------------
-
-void check_sanity(TypeArray types) {
-    for (auto t1 : types) {
-        for (auto t2 : types) {
-            if (t1->is_unified() && t2->is_unified()) {
-                assert((!t1->equal(t2)) || (t1->get_representative() == t2->get_representative()));
-            }
-        }
-    }
-}
-
 const Type* TypeTable::gentype_base(TypeVarArray tvars, const Type* type) {
    // all closed types should be unified and the other way round!
    assert(type->is_unified() == type->is_closed());
@@ -246,4 +250,28 @@ const Type* TypeTable::gentype_base(TypeVarArray tvars, const Type* type) {
        type->add_bound_var(v);
    }
    return unify(type);
+}
+
+void TypeTable::check_sanity() const {
+    for (auto t : types_) {
+        assert(t->is_unified());
+        assert(t->is_final_representative());
+        assert(t->is_sane());
+    }
+}
+
+//------------------------------------------------------------------------------
+
+void check_sanity(TypeArray types) {
+    for (auto t : types) {
+        assert(t->is_sane());
+    }
+
+    for (auto t1 : types) {
+        for (auto t2 : types) {
+            if (t1->is_unified() && t2->is_unified()) {
+                assert((!t1->equal(t2)) || (t1->get_representative() == t2->get_representative()));
+            }
+        }
+    }
 }

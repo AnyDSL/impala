@@ -28,6 +28,10 @@ void simple_tests() {
     const FnType* f = tt.fntype({a, b});
     const FnType* gen_f = tt.gentype({a, b}, f);
     gen_f->dump();
+
+    tt.check_sanity();
+
+    cout << "simple_tests [okay]" << endl;
 }
 
 void test_unification1() {
@@ -40,6 +44,10 @@ void test_unification1() {
     // will fail because A is already bound!
     // TODO assert this failure
     const FnType* gf2 = tt.gentype({A}, f);
+
+    tt.check_sanity();
+
+    cout << "test_unification1 [okay]" << endl;
 }
 
 void test_unification2() {
@@ -67,6 +75,7 @@ void test_unification2() {
 
     assert(A->get_representative() == B->get_representative());
 
+    tt.check_sanity();
     check_sanity({A, f, gf, B, g, gg});
 
     cout << "test_unification2 [okay]" << endl;
@@ -130,6 +139,7 @@ void test_unification3() {
     assert(!gf1->equal(k1));
     assert(gf1->get_representative() != k1->get_representative());
 
+    tt.check_sanity();
     check_sanity({A, B, f1, gf1, f2, gf2, C, D, g1, gg1, g2, gg2, E, F, h1, gh1, h2, gh2, G, H, k1, k2, gk2});
 
     cout << "test_unification3 [okay]" << endl;
@@ -141,6 +151,8 @@ void test_type_sanity1() {
     const TypeVar* A = tt.typevar();
     const FnType* g = tt.fntype({tt.type_int()}); // fn(int)
     const FnType* gg = tt.gentype({A}, g);        // fn<A>(int)
+
+    tt.check_sanity();
 
     // TODO not legal!
     cout << "test_type_sanity1 [okay]" << endl;
@@ -162,6 +174,8 @@ void test_type_sanity2() {
     h->dump();
 
     // TODO h must not be built
+
+    tt.check_sanity();
 
     cout << "test_type_sanity2 [okay]" << endl;
 }
