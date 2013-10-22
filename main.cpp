@@ -185,15 +185,18 @@ void test_type_sanity3() {
     TypeTable tt;
 
     const TypeVar* A = tt.typevar();
-    const FnType* f = tt.fntype({A});         // fn(A)
-    const FnType* g = tt.fntype({A});         // fn(A)
-    const FnType* gg = tt.gentype({A}, g);    // fn<A>(A)
-    // TODO f is now a type that is sane but not unified!
+    const FnType* f = tt.fntype({A});       // fn(A)
+    const FnType* gf = tt.gentype({A}, f);  // fn<A>(A)
 
-    gg->dump();
+    const FnType* g = tt.fntype({A});       // fn(A)
+
+    assert(g->is_unified());
+    assert(g != gf);
+    assert(g->get_representative() != gf->get_representative());
+    assert(!g->equal(gf));
 
     try {
-        const FnType* h = tt.fntype({gg, f});     // fn(fn<A>(A), fn(A)) -> INVALID
+        const FnType* h = tt.fntype({gf, g});     // fn(fn<A>(A), fn(A)) -> INVALID
 
         h->dump();
 
@@ -202,7 +205,7 @@ void test_type_sanity3() {
     }
 
     tt.check_sanity();
-    check_sanity({A, f, g, gg});
+    check_sanity({A, f, gf, g});
 
     cout << "test_type_sanity3 [okay]" << endl;
 }
@@ -250,13 +253,28 @@ void test_type_sanity5() {
     cout << "test_type_sanity5 [okay]" << endl;
 }
 
+void test_type_sanity6() {
+    TypeTable tt;
+
+    const TypeVar* A = tt.typevar();
+    const FnType* f = tt.fntype({A});         // fn(A)
+    const FnType* g = tt.fntype({A});         // fn(A)
+    const FnType* gg = tt.gentype({A}, g);    // fn<A>(A)
+    // TODO f is now a type that is sane but not unified!
+
+    /*tt.check_sanity();
+
+    cout << "test_type_sanity6 [okay]" << endl;*/
+}
+
 int main() {
     //simple_tests();
     test_unification2();
     test_unification3();
     test_type_sanity1();
     test_type_sanity2();
-    //test_type_sanity3();
+    test_type_sanity3();
     test_type_sanity4();
     test_type_sanity5();
+    test_type_sanity6();
 }
