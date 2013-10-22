@@ -41,9 +41,13 @@ void test_unification1() {
     const FnType* f = tt.fntype({A});         // fn(A)
     const FnType* gf = tt.gentype({A}, f);    // fn<A>(A)
 
-    // will fail because A is already bound!
-    // TODO assert this failure
-    const FnType* gf2 = tt.gentype({A}, f);
+    try {
+        // must fail because A is already bound!
+        const FnType* gf2 = tt.gentype({A}, f);
+
+        assert(false && "Previous statement should have failed!");
+    } catch (IllegalTypeException& e) {
+    }
 
     tt.check_sanity();
 
@@ -182,7 +186,7 @@ void test_type_sanity2() {
 
 int main() {
     //simple_tests();
-    //test_unification1();
+    test_unification1();
     test_unification2();
     test_unification3();
     //test_type_sanity1();

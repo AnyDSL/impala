@@ -2,6 +2,7 @@
 #define TYPE_H
 
 #include <unordered_set>
+#include <exception>
 
 #include "anydsl2/util/array.h"
 #include "anydsl2/util/cast.h"
@@ -18,6 +19,20 @@ class TypeTable;
 typedef anydsl2::ArrayRef<const Type*> TypeArray;
 typedef anydsl2::ArrayRef<const TypeVar*> TypeVarArray;
 
+//-----------------------------------------------------------------------------
+
+class IllegalTypeException : public std::exception {
+public:
+    IllegalTypeException(const char* what)
+        : std::exception()
+        , what_(what)
+    {}
+
+    virtual const char* what() const throw () { return what_; }
+
+private:
+    const char* const what_;
+};
 
 //------------------------------------------------------------------------------
 
@@ -252,8 +267,9 @@ private:
     }
 
     void bind(const Type* const t) const {
-        // TODO mayby do a real pre-condition instead of assert
-        assert(bound_at_ == nullptr && "type variables can only be bound once!");
+        if (bound_at_ != nullptr) {
+            throw IllegalTypeException("type variables can only be bound once!");
+        }
         bound_at_ = t;
     }
 
