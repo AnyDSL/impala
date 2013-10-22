@@ -7,11 +7,6 @@
 #include "anydsl2/util/cast.h"
 #include "anydsl2/util/hash.h"
 
-// TODO there should be a way to get the const's back!
-// e.g. one could use a set to store all not types that are not yet unified as
-// non-const value and give out the values only as const ones... something like
-// that, but my first try did not work!
-
 class FnType;
 class PrimType;
 class TupleType;
