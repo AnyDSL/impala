@@ -300,6 +300,8 @@ void test_type_sanity6() {
 
 int main() {
     //simple_tests();
+    //return 0;
+
     test_unification1();
     test_unification2();
     test_unification3();

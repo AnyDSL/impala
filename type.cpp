@@ -150,9 +150,9 @@ std::string TypeVar::to_string() const {
 
 TypeTable::TypeTable()
     : types_()
-#define PRIMTYPE(T) , T##_(unify(new PrimType(*this, PrimType_##T)))
+#define PRIMTYPE(T) , T##_(unify_new(new PrimType(*this, PrimType_##T)))
 #include "primtypes.h"
-    , type_error_(unify(new TypeError(*this)))
+    , type_error_(unify_new(new TypeError(*this)))
 {}
 
 const FnType* TypeTable::fntype_simple(TypeArray params, const Type* return_type) {
