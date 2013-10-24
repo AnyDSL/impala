@@ -129,6 +129,10 @@ bool TypeVar::equal(const Type* other) const {
 
     // TODO is this correct for a instanceof-equivalent?
     if (const TypeVar* t = other->isa<TypeVar>()) {
+        if (!this->restricted_by()->equal(t->restricted_by())) {
+            return false;
+        }
+
         if ((this->equiv_var_ == nullptr) && (t->equiv_var_ == nullptr)) {
             assert(this->bound_at_ != nullptr);
             return this->bound_at_->equal(t->bound_at_);

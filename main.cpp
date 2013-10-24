@@ -166,6 +166,38 @@ void test_unification3() {
     cout << "test_unification3 [okay]" << endl;
 }
 
+void test_unification4() {
+    TypeTable tt;
+
+    const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
+    const TypeVar* A = tt.typevar(clonable);
+    const FnType* f = tt.gentype({A}, tt.fntype({A})); // fn<A:Clonable>(A)
+
+    const TypeTrait* clonable2 = tt.typetrait(std::string("Clonable"));
+    const TypeVar* B = tt.typevar(clonable);
+    const FnType* g = tt.gentype({B}, tt.fntype({B})); // fn<B:Clonable>(B)
+
+    assert(clonable == clonable2);
+    assert(clonable->get_representative() == clonable2->get_representative());
+
+    assert(f->get_representative() == g->get_representative());
+
+    const TypeTrait* st = tt.typetrait(std::string("SomeTrait"));
+    const TypeVar* C = tt.typevar(st);
+    const FnType* h = tt.gentype({C}, tt.fntype({C})); // fn<B:SomeTrait>(B)
+
+    assert(st != clonable);
+    assert(!st->equal(clonable));
+    assert(st->get_representative() != clonable->get_representative());
+
+    assert(h->get_representative() != g->get_representative());
+
+    tt.check_sanity();
+    check_sanity({clonable, A, f, clonable2, B, g, st, C, h});
+
+    cout << "test_unification4 [okay]" << endl;
+}
+
 void test_type_sanity1() {
     TypeTable tt;
 
@@ -305,12 +337,13 @@ void test_type_sanity6() {
 }
 
 int main() {
-    simple_tests();
+    //simple_tests();
     //return 0;
 
     test_unification1();
     test_unification2();
     test_unification3();
+    test_unification4();
     test_type_sanity1();
     test_type_sanity2();
     //test_type_sanity3();
