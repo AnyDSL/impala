@@ -173,13 +173,14 @@ const FnType* TypeTable::fntype_simple(TypeArray params, const Type* return_type
 void TypeTable::insert_new(const Type* type) {
     assert(!type->is_unified());
 
+    type->set_representative(type);
+
     for (auto elem : type->elems()) {
         if (!elem->is_unified()) {
-            insert_new(elem);
+            unify(elem);
+            assert(elem->is_unified());
         }
     }
-
-    type->set_representative(type);
 
     if (type->kind() != Type_var) {
         // TODO is this a correct instanceof test?
