@@ -357,7 +357,7 @@ private:
 
     /// like unify but deletes the given type if unification returned a different one
     template<class T> const T* unify_new(const T* type) {
-        Type* unified_type = unify(type);
+        const T* unified_type = unify(type);
         if (unified_type != type)
             delete type;
         return unified_type;
