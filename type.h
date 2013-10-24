@@ -309,7 +309,7 @@ public:
 
     const TypeVar* typevar() { return new TypeVar(*this); }
 
-    const FnType* fntype(TypeArray params) { return unify(new FnType(*this, params)); }
+    const FnType* fntype(TypeArray params) { return unify_new(new FnType(*this, params)); }
 
     /**
      * A shortcut to create function types with a return type.
@@ -331,7 +331,7 @@ public:
      */
     template<class T> const T* gentype(TypeVarArray tvars, const T* type) { return gentype_base(tvars, type)->template as<const T>(); }
 
-    const TupleType* tupletype(TypeArray elems) { return unify(new TupleType(*this, elems)); }
+    const TupleType* tupletype(TypeArray elems) { return unify_new(new TupleType(*this, elems)); }
 
     /**
      * Checks if all types in the type tables are sane and correctly unified.
@@ -354,6 +354,14 @@ private:
 
     const Type* unify_base(const Type* type);
     template<class T> const T* unify(const T* type) { return unify_base(type)->template as<const T>(); }
+
+    /// like unify but deletes the given type if unification returned a different one
+    template<class T> const T* unify_new(const T* type) {
+        Type* unified_type = unify(type);
+        if (unified_type != type)
+            delete type;
+        return unified_type;
+    }
 
     TypeSet types_;
 
