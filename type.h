@@ -252,6 +252,8 @@ public:
     virtual bool equal(const Type* t) const;
     virtual size_t hash() const;
 
+    virtual std::string to_string() const { return name_; }
+
     friend class TypeTable;
 };
 
@@ -327,7 +329,7 @@ public:
 #define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
-    const TypeTrait* typetrait();
+    const TypeTrait* typetrait(std::string& name) { return unify_new(new TypeTrait(*this, name)); }
 
     const TypeVar* typevar() { return new TypeVar(*this); }
 
