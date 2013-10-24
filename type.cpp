@@ -146,6 +146,20 @@ std::string TypeVar::to_string() const {
     }
 }
 
+bool TypeTrait::equal(const Type* other) const {
+    if (this->is_unified() && other->is_unified()) {
+        return this->get_representative() == other->get_representative();
+    }
+
+    // TODO is this correct for a instanceof-equivalent?
+    if (const TypeTrait* t = other->isa<TypeTrait>()) {
+        return name_.compare(t->name_) == 0;
+    }
+    return false;
+}
+
+size_t TypeTrait::hash() const { return hash_combine(hash_value((int) kind()), hash_value(name_)); }
+
 //------------------------------------------------------------------------------
 
 TypeTable::TypeTable()
@@ -285,3 +299,4 @@ void check_sanity(TypeArray types) {
         }
     }
 }
+

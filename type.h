@@ -11,6 +11,7 @@
 class FnType;
 class PrimType;
 class TupleType;
+class TypeTrait;
 class TypeVar;
 class Type;
 class TypeError;
@@ -43,7 +44,7 @@ enum Kind {
     Type_fn,
     Type_tuple,
     Type_var,
-    Type_generic,
+    Type_trait,
 };
 
 enum PrimTypeKind {
@@ -58,6 +59,7 @@ public:
     virtual void visit(PrimType&) {}
     virtual void visit(FnType&) {}
     virtual void visit(TupleType&) {}
+    virtual void visit(TypeTrait&) {}
     virtual void visit(TypeVar&) {}
 };
 
@@ -104,7 +106,7 @@ public:
     }
 
     virtual bool equal(const Type*) const;
-    size_t hash() const;
+    virtual size_t hash() const;
 
     void dump() const;
     virtual std::string to_string() const = 0;
@@ -235,6 +237,24 @@ public:
     friend class TypeTable;
 };
 
+class TypeTrait : public Type {
+private:
+    TypeTrait(TypeTable& tt, std::string& name)
+        : Type(tt, Type_trait, 0)
+        , name_(name)
+    {}
+
+    std::string name_;
+
+public:
+    virtual void accept(TypeVisitor& v) { v.visit(*this); }
+
+    virtual bool equal(const Type* t) const;
+    virtual size_t hash() const;
+
+    friend class TypeTable;
+};
+
 class TypeVar : public Type {
 private:
     TypeVar(TypeTable& tt)
@@ -306,6 +326,8 @@ public:
 
 #define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
+
+    const TypeTrait* typetrait();
 
     const TypeVar* typevar() { return new TypeVar(*this); }
 
