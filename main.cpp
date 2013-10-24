@@ -22,12 +22,18 @@ void simple_tests() {
     std::cout << (t1 == t3) << std::endl; // 0
     std::cout << (t2 == t3) << std::endl; // 1
 
-    // create an fn<a,b>(a, b)
+    // create an fn<A,B>(A, B)
     const TypeVar* a = tt.typevar();
     const TypeVar* b = tt.typevar();
     const FnType* f = tt.fntype({a, b});
     const FnType* gen_f = tt.gentype({a, b}, f);
     gen_f->dump();
+
+    // create an fn<C:Clonable>(C)
+    const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
+    const TypeVar* C = tt.typevar(clonable);
+    const FnType* g = tt.gentype({C}, tt.fntype({C}));
+    g->dump();
 
     tt.check_sanity();
 
@@ -299,7 +305,7 @@ void test_type_sanity6() {
 }
 
 int main() {
-    //simple_tests();
+    simple_tests();
     //return 0;
 
     test_unification1();

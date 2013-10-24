@@ -239,12 +239,21 @@ public:
 
 class TypeTrait : public Type {
 private:
-    TypeTrait(TypeTable& tt, std::string& name)
+    /// create the global super type trait (like Object in java)
+    TypeTrait(TypeTable& tt)
+        : Type(tt, Type_trait, 0)
+        , name_(super_type_name)
+    {}
+
+    TypeTrait(TypeTable& tt, std::string name)
         : Type(tt, Type_trait, 0)
         , name_(name)
     {}
 
     std::string name_;
+
+    // TODO make this const
+    static std::string super_type_name;
 
 public:
     virtual void accept(TypeVisitor& v) { v.visit(*this); }
@@ -254,24 +263,29 @@ public:
 
     virtual std::string to_string() const { return name_; }
 
+    // TODO find better names
+    /// true if this is the global super type trait (like Object in java)
+    bool is_object_trait() const { return name_.compare(super_type_name) == 0; } // TODO this might be unsafe..
+
     friend class TypeTable;
 };
 
 class TypeVar : public Type {
 private:
-    TypeVar(TypeTable& tt)
+    TypeVar(TypeTable& tt, const TypeTrait* restriction)
         : Type(tt, Type_var, 0)
+        , id_(counter++)
+        , restricted_by_(restriction)
         , bound_at_(nullptr)
         , equiv_var_(nullptr)
-    {
-        id_ = counter++;
-    }
+    {}
 
     static int counter;
 
     /// used for unambiguous dumping
-    int id_;
+    const int id_;
 
+    const TypeTrait* const restricted_by_;
     mutable const Type* bound_at_;
 
     /// Used to define equivalence constraints when checking equality of types
@@ -296,6 +310,7 @@ private:
     }
 
 public:
+    const TypeTrait* restricted_by() const { return restricted_by_; }
     const Type* bound_at() const { return bound_at_; }
 
     virtual bool equal(const Type* other) const;
@@ -304,7 +319,6 @@ public:
     std::string to_string() const;
 
     virtual bool is_closed() const { return bound_at_ != nullptr; }
-
     virtual bool is_sane() const { return is_closed() && this->is_subtype(bound_at()); }
 
     friend class TypeTable;
@@ -329,9 +343,10 @@ public:
 #define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
-    const TypeTrait* typetrait(std::string& name) { return unify_new(new TypeTrait(*this, name)); }
+    const TypeTrait* typetrait(std::string name) { return unify_new(new TypeTrait(*this, name)); }
 
-    const TypeVar* typevar() { return new TypeVar(*this); }
+    const TypeVar* typevar(const TypeTrait* restriction) { return new TypeVar(*this, restriction); }
+    const TypeVar* typevar() { return new TypeVar(*this, object_trait_); }
 
     const FnType* fntype(TypeArray params) { return unify_new(new FnType(*this, params)); }
 
@@ -392,6 +407,7 @@ private:
 #define PRIMTYPE(T) const PrimType* T##_;
 #include "primtypes.h"
     const TypeError* type_error_;
+    const TypeTrait* object_trait_; // TODO possibly find a better name
 };
 
 //------------------------------------------------------------------------------
