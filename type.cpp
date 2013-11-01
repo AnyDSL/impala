@@ -4,7 +4,7 @@
 
 using namespace anydsl2;
 
-std::string TypeTrait::super_type_name = std::string("");
+std::string TypeTrait::top_trait_name = std::string("");
 int TypeVar::counter = 0;
 
 //------------------------------------------------------------------------------
@@ -88,7 +88,7 @@ std::string Type::bound_vars_to_string() const {
     const char* separator = "<";
     for (auto v : bound_vars()) {
         result += separator + v->to_string();
-        if (!v->restricted_by()->is_object_trait()) {
+        if (!v->restricted_by()->is_top_trait()) {
             result += ":" + v->restricted_by()->to_string();
         }
         separator = ",";
@@ -175,7 +175,7 @@ TypeTable::TypeTable()
 #define PRIMTYPE(T) , T##_(unify_new(new PrimType(*this, PrimType_##T)))
 #include "primtypes.h"
     , type_error_(unify_new(new TypeError(*this)))
-    , object_trait_(unify_new(new TypeTrait(*this, std::string(""))))
+    , top_trait_(unify_new(new TypeTrait(*this, std::string(""))))
 {}
 
 const FnType* TypeTable::fntype_simple(TypeArray params, const Type* return_type) {

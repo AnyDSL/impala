@@ -239,10 +239,10 @@ public:
 
 class TypeTrait : public Type {
 private:
-    /// create the global super type trait (like Object in java)
+    /// create the global top type trait (like Object in java)
     TypeTrait(TypeTable& tt)
         : Type(tt, Type_trait, 0)
-        , name_(super_type_name)
+        , name_(top_trait_name)
     {}
 
     TypeTrait(TypeTable& tt, std::string name)
@@ -253,7 +253,7 @@ private:
     std::string name_;
 
     // TODO make this const
-    static std::string super_type_name;
+    static std::string top_trait_name;
 
 public:
     virtual void accept(TypeVisitor& v) { v.visit(*this); }
@@ -263,9 +263,8 @@ public:
 
     virtual std::string to_string() const { return name_; }
 
-    // TODO find better names
     /// true if this is the global super type trait (like Object in java)
-    bool is_object_trait() const { return name_.compare(super_type_name) == 0; } // TODO this might be unsafe..
+    bool is_top_trait() const { return name_.compare(top_trait_name) == 0; } // TODO this might be unsafe..
 
     friend class TypeTable;
 };
@@ -346,7 +345,7 @@ public:
     const TypeTrait* typetrait(std::string name) { return unify_new(new TypeTrait(*this, name)); }
 
     const TypeVar* typevar(const TypeTrait* restriction) { return new TypeVar(*this, restriction); }
-    const TypeVar* typevar() { return new TypeVar(*this, object_trait_); }
+    const TypeVar* typevar() { return new TypeVar(*this, top_trait_); }
 
     const FnType* fntype(TypeArray params) { return unify_new(new FnType(*this, params)); }
 
@@ -407,7 +406,7 @@ private:
 #define PRIMTYPE(T) const PrimType* T##_;
 #include "primtypes.h"
     const TypeError* type_error_;
-    const TypeTrait* object_trait_; // TODO possibly find a better name
+    const TypeTrait* top_trait_; // TODO possibly find a better name
 };
 
 //------------------------------------------------------------------------------
