@@ -175,7 +175,7 @@ TypeTable::TypeTable()
 #define PRIMTYPE(T) , T##_(unify_new(new PrimType(*this, PrimType_##T)))
 #include "primtypes.h"
     , type_error_(unify_new(new TypeError(*this)))
-    , top_trait_(unify_new(new TypeTrait(*this, std::string(""))))
+    , top_trait_(unify_new(new TypeTrait(*this)))
 {}
 
 const FnType* TypeTable::fntype_simple(TypeArray params, const Type* return_type) {
