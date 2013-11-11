@@ -154,28 +154,21 @@ std::string TypeVar::to_string() const {
     }
 }
 
-bool TypeTrait::equal(const Type* other) const {
-    if (this->is_unified() && other->is_unified()) {
-        return this->get_representative() == other->get_representative();
-    }
-
-    // TODO is this correct for a instanceof-equivalent?
-    if (const TypeTrait* t = other->isa<TypeTrait>()) {
-        return name_.compare(t->name_) == 0;
-    }
-    return false;
+bool TypeTrait::equal(const TypeTrait* other) const {
+    return name_.compare(other->name_) == 0;
 }
 
-size_t TypeTrait::hash() const { return hash_combine(hash_value((int) kind()), hash_value(name_)); }
+size_t TypeTrait::hash() const { return hash_value(name_); }
 
 //------------------------------------------------------------------------------
 
 TypeTable::TypeTable()
     : types_()
+    , traits_()
 #define PRIMTYPE(T) , T##_(unify_new(new PrimType(*this, PrimType_##T)))
 #include "primtypes.h"
     , type_error_(unify_new(new TypeError(*this)))
-    , top_trait_(unify_new(new TypeTrait(*this)))
+    , top_trait_(unify_trait(new TypeTrait(*this)))
 {}
 
 const FnType* TypeTable::fntype_simple(TypeArray params, const Type* return_type) {
@@ -252,6 +245,18 @@ const Type* TypeTable::unify_base(const Type* type) {
 
     assert(type->is_unified());
     return type;
+}
+
+const TypeTrait* TypeTable::unify_trait(const TypeTrait* trait) {
+    auto i = traits_.find(trait);
+    if (i != traits_.end()) {
+        delete trait;
+        return *i;
+    }
+
+    auto p = traits_.insert(trait);
+    assert(p.second && "hash/equal broken");
+    return trait;
 }
 
 const PrimType* TypeTable::primtype(const PrimTypeKind kind) {

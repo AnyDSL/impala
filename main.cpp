@@ -178,7 +178,6 @@ void test_unification4() {
     const FnType* g = tt.gentype({B}, tt.fntype({B})); // fn<B:Clonable>(B)
 
     assert(clonable == clonable2);
-    assert(clonable->get_representative() == clonable2->get_representative());
 
     assert(f->get_representative() == g->get_representative());
 
@@ -188,12 +187,11 @@ void test_unification4() {
 
     assert(st != clonable);
     assert(!st->equal(clonable));
-    assert(st->get_representative() != clonable->get_representative());
 
     assert(h->get_representative() != g->get_representative());
 
     tt.check_sanity();
-    check_sanity({clonable, A, f, clonable2, B, g, st, C, h});
+    check_sanity({A, f, B, g, C, h});
 
     cout << "test_unification4 [okay]" << endl;
 }

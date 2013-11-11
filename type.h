@@ -19,6 +19,7 @@ class TypeTable;
 
 typedef anydsl2::ArrayRef<const Type*> TypeArray;
 typedef anydsl2::ArrayRef<const TypeVar*> TypeVarArray;
+typedef anydsl2::ArrayRef<const TypeTrait*> TypeTraitArray;
 
 //-----------------------------------------------------------------------------
 
@@ -44,7 +45,6 @@ enum Kind {
     Type_fn,
     Type_tuple,
     Type_var,
-    Type_trait,
 };
 
 enum PrimTypeKind {
@@ -59,7 +59,6 @@ public:
     virtual void visit(PrimType&) {}
     virtual void visit(FnType&) {}
     virtual void visit(TupleType&) {}
-    virtual void visit(TypeTrait&) {}
     virtual void visit(TypeVar&) {}
 };
 
@@ -237,34 +236,42 @@ public:
     friend class TypeTable;
 };
 
-class TypeTrait : public Type {
+class TypeTrait {
 private:
     /// create the global top type trait (like Object in java)
     TypeTrait(TypeTable& tt)
-        : Type(tt, Type_trait, 0)
+        : typetable_(tt)
         , name_(top_trait_name)
+        , super_traits_({}) // TODO is this correct?
     {}
 
-    TypeTrait(TypeTable& tt, std::string name)
-        : Type(tt, Type_trait, 0)
+    TypeTrait(TypeTable& tt, std::string name, TypeTraitArray super_traits)
+        : typetable_(tt)
         , name_(name)
+        , super_traits_(super_traits)
     {}
 
+    TypeTrait& operator = (const Type&); ///< Do not copy-assign a \p TypeTrait.
+    TypeTrait(const Type& node);         ///< Do not copy-construct a \p TypeTrait.
+
+    TypeTable& typetable_;
     std::string name_;
+    TypeTraitArray super_traits_;
 
     // TODO make this const
     static std::string top_trait_name;
 
 public:
-    virtual void accept(TypeVisitor& v) { v.visit(*this); }
+    bool equal(const TypeTrait* t) const;
+    size_t hash() const;
 
-    virtual bool equal(const Type* t) const;
-    virtual size_t hash() const;
-
-    virtual std::string to_string() const { return name_; }
+    std::string to_string() const { return name_; }
 
     /// true if this is the global super type trait (like Object in java)
-    bool is_top_trait() const { return name_.compare(top_trait_name) == 0; } // TODO this might be unsafe..
+    bool is_top_trait() const {
+        assert(super_traits_.size() != 0 || name_.compare(top_trait_name) == 0);
+        return super_traits_.size() == 0;
+    }
 
     friend class TypeTable;
 };
@@ -331,6 +338,10 @@ struct TypeHash { size_t operator () (const Type* t) const { return t->hash(); }
 struct TypeEqual { bool operator () (const Type* t1, const Type* t2) const { return t1->equal(t2); } };
 typedef std::unordered_set<const Type*, TypeHash, TypeEqual> TypeSet;
 
+struct TypeTraitHash { size_t operator () (const TypeTrait* t) const { return t->hash(); } };
+struct TypeTraitEqual { bool operator () (const TypeTrait* t1, const TypeTrait* t2) const { return t1->equal(t2); } };
+typedef std::unordered_set<const TypeTrait*, TypeTraitHash, TypeTraitEqual> TypeTraitSet;
+
 class TypeTable {
 public:
     TypeTable();
@@ -342,7 +353,10 @@ public:
 #define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
-    const TypeTrait* typetrait(std::string name) { return unify_new(new TypeTrait(*this, name)); }
+    const TypeTrait* typetrait(std::string name, TypeTraitArray super_traits) {
+        return unify_trait(new TypeTrait(*this, name, super_traits));
+    }
+    const TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}); }
 
     const TypeVar* typevar(const TypeTrait* restriction) { return new TypeVar(*this, restriction); }
     const TypeVar* typevar() { return new TypeVar(*this, top_trait_); }
@@ -401,7 +415,10 @@ private:
         return unified_type;
     }
 
+    const TypeTrait* unify_trait(const TypeTrait* type);
+
     TypeSet types_;
+    TypeTraitSet traits_;
 
 #define PRIMTYPE(T) const PrimType* T##_;
 #include "primtypes.h"
