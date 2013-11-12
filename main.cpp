@@ -31,8 +31,10 @@ void simple_tests() {
 
     // create an fn<C:Clonable>(C)
     const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
-    const TypeVar* C = tt.typevar(clonable);
-    const FnType* g = tt.gentype({C}, tt.fntype({C}));
+    const TypeTrait* eq = tt.typetrait(std::string("Equality"));
+    const TypeVar* C = tt.typevar({clonable, eq});
+    const TypeVar* D = tt.typevar();
+    const FnType* g = tt.gentype({C, D}, tt.fntype({C, D}));
     g->dump();
 
     tt.check_sanity();
@@ -170,11 +172,11 @@ void test_unification4() {
     TypeTable tt;
 
     const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
-    const TypeVar* A = tt.typevar(clonable);
+    const TypeVar* A = tt.typevar({clonable});
     const FnType* f = tt.gentype({A}, tt.fntype({A})); // fn<A:Clonable>(A)
 
     const TypeTrait* clonable2 = tt.typetrait(std::string("Clonable"));
-    const TypeVar* B = tt.typevar(clonable);
+    const TypeVar* B = tt.typevar({clonable});
     const FnType* g = tt.gentype({B}, tt.fntype({B})); // fn<B:Clonable>(B)
 
     assert(clonable == clonable2);
@@ -182,7 +184,7 @@ void test_unification4() {
     assert(f->get_representative() == g->get_representative());
 
     const TypeTrait* st = tt.typetrait(std::string("SomeTrait"));
-    const TypeVar* C = tt.typevar(st);
+    const TypeVar* C = tt.typevar({st});
     const FnType* h = tt.gentype({C}, tt.fntype({C})); // fn<B:SomeTrait>(B)
 
     assert(st != clonable);
@@ -335,7 +337,7 @@ void test_type_sanity6() {
 }
 
 int main() {
-    //simple_tests();
+    simple_tests();
     //return 0;
 
     test_unification1();

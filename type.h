@@ -20,6 +20,7 @@ class TypeTable;
 typedef anydsl2::ArrayRef<const Type*> TypeArray;
 typedef anydsl2::ArrayRef<const TypeVar*> TypeVarArray;
 typedef anydsl2::ArrayRef<const TypeTrait*> TypeTraitArray;
+typedef std::unordered_set<const TypeTrait*> TypeTraitSet;
 
 //-----------------------------------------------------------------------------
 
@@ -85,7 +86,7 @@ public:
     TypeArray elems() const { return TypeArray(elems_); }
     const Type* elem(size_t i) const { return elems()[i]; }
 
-    anydsl2::ArrayRef<const TypeVar*> bound_vars() const { return anydsl2::ArrayRef<const TypeVar*>(bound_vars_); }
+    TypeVarArray bound_vars() const { return TypeVarArray(bound_vars_); }
     const TypeVar* bound_var(size_t i) const { return bound_vars()[i]; }
 
     /// Returns number of \p Type operands (\p elems_).
@@ -242,10 +243,10 @@ private:
     TypeTrait(TypeTable& tt)
         : typetable_(tt)
         , name_(top_trait_name)
-        , super_traits_({}) // TODO is this correct?
+        , super_traits_() // TODO is this correct?
     {}
 
-    TypeTrait(TypeTable& tt, std::string name, TypeTraitArray super_traits)
+    TypeTrait(TypeTable& tt, std::string name, const TypeTraitSet super_traits)
         : typetable_(tt)
         , name_(name)
         , super_traits_(super_traits)
@@ -256,7 +257,7 @@ private:
 
     TypeTable& typetable_;
     std::string name_;
-    TypeTraitArray super_traits_;
+    const TypeTraitSet super_traits_;
 
     // TODO make this const
     static std::string top_trait_name;
@@ -278,7 +279,7 @@ public:
 
 class TypeVar : public Type {
 private:
-    TypeVar(TypeTable& tt, const TypeTrait* restriction)
+    TypeVar(TypeTable& tt, const TypeTraitSet restriction)
         : Type(tt, Type_var, 0)
         , id_(counter++)
         , restricted_by_(restriction)
@@ -291,7 +292,7 @@ private:
     /// used for unambiguous dumping
     const int id_;
 
-    const TypeTrait* const restricted_by_;
+    const TypeTraitSet restricted_by_;
     mutable const Type* bound_at_;
 
     /// Used to define equivalence constraints when checking equality of types
@@ -316,7 +317,7 @@ private:
     }
 
 public:
-    const TypeTrait* restricted_by() const { return restricted_by_; }
+    const TypeTraitSet* restricted_by() const { return &restricted_by_; }
     const Type* bound_at() const { return bound_at_; }
 
     virtual bool equal(const Type* other) const;
@@ -340,7 +341,7 @@ typedef std::unordered_set<const Type*, TypeHash, TypeEqual> TypeSet;
 
 struct TypeTraitHash { size_t operator () (const TypeTrait* t) const { return t->hash(); } };
 struct TypeTraitEqual { bool operator () (const TypeTrait* t1, const TypeTrait* t2) const { return t1->equal(t2); } };
-typedef std::unordered_set<const TypeTrait*, TypeTraitHash, TypeTraitEqual> TypeTraitSet;
+typedef std::unordered_set<const TypeTrait*, TypeTraitHash, TypeTraitEqual> TraitTableSet;
 
 class TypeTable {
 public:
@@ -353,13 +354,13 @@ public:
 #define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
-    const TypeTrait* typetrait(std::string name, TypeTraitArray super_traits) {
+    const TypeTrait* typetrait(std::string name, TypeTraitSet super_traits) {
         return unify_trait(new TypeTrait(*this, name, super_traits));
     }
     const TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}); }
 
-    const TypeVar* typevar(const TypeTrait* restriction) { return new TypeVar(*this, restriction); }
-    const TypeVar* typevar() { return new TypeVar(*this, top_trait_); }
+    const TypeVar* typevar(TypeTraitSet restriction) { return new TypeVar(*this, restriction); }
+    const TypeVar* typevar() { return typevar({top_trait_}); }
 
     const FnType* fntype(TypeArray params) { return unify_new(new FnType(*this, params)); }
 
@@ -418,7 +419,7 @@ private:
     const TypeTrait* unify_trait(const TypeTrait* type);
 
     TypeSet types_;
-    TypeTraitSet traits_;
+    TraitTableSet traits_;
 
 #define PRIMTYPE(T) const PrimType* T##_;
 #include "primtypes.h"

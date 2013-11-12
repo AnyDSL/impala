@@ -88,9 +88,22 @@ std::string Type::bound_vars_to_string() const {
     const char* separator = "<";
     for (auto v : bound_vars()) {
         result += separator + v->to_string();
-        if (!v->restricted_by()->is_top_trait()) {
-            result += ":" + v->restricted_by()->to_string();
+
+        const TypeTraitSet* restr = v->restricted_by();
+
+        // should at least contain the top trait if nothing else
+        assert(restr->size() > 0);
+
+        // do not print restrictions if only restricted by top trait
+        if ((restr->size() != 1) || (!(*restr->begin())->is_top_trait())) {
+            auto inner_sep = ":";
+            for (auto t : *restr) {
+                result += inner_sep + t->to_string();
+                inner_sep = "+";
+            }
+
         }
+
         separator = ",";
     }
     return result + '>';
@@ -129,8 +142,17 @@ bool TypeVar::equal(const Type* other) const {
 
     // TODO is this correct for a instanceof-equivalent?
     if (const TypeVar* t = other->isa<TypeVar>()) {
-        if (!this->restricted_by()->equal(t->restricted_by())) {
+        auto trestr = t->restricted_by();
+
+        if (this->restricted_by()->size() != trestr->size()) {
             return false;
+        } else {
+            // this->restricted_by() subset of trestr
+            for (auto r : *this->restricted_by()) {
+                if (trestr->find(r) == trestr->end()) {
+                    return false;
+                }
+            }
         }
 
         if ((this->equiv_var_ == nullptr) && (t->equiv_var_ == nullptr)) {
