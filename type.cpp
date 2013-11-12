@@ -4,7 +4,7 @@
 
 using namespace anydsl2;
 
-std::string TypeTrait::top_trait_name = std::string("");
+const std::string TypeTrait::top_trait_name = std::string("");
 int TypeVar::counter = 0;
 
 //------------------------------------------------------------------------------

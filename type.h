@@ -243,7 +243,7 @@ private:
     TypeTrait(TypeTable& tt)
         : typetable_(tt)
         , name_(top_trait_name)
-        , super_traits_() // TODO is this correct?
+        , super_traits_()
     {}
 
     TypeTrait(TypeTable& tt, std::string name, const TypeTraitSet super_traits)
@@ -259,8 +259,7 @@ private:
     std::string name_;
     const TypeTraitSet super_traits_;
 
-    // TODO make this const
-    static std::string top_trait_name;
+    static const std::string top_trait_name;
 
 public:
     bool equal(const TypeTrait* t) const;
@@ -424,7 +423,7 @@ private:
 #define PRIMTYPE(T) const PrimType* T##_;
 #include "primtypes.h"
     const TypeError* type_error_;
-    const TypeTrait* top_trait_; // TODO possibly find a better name
+    const TypeTrait* top_trait_;
 };
 
 //------------------------------------------------------------------------------
