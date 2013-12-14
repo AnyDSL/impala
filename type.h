@@ -250,12 +250,22 @@ private:
         , equiv_var_(nullptr)
     {}
 
+    TypeVar(TypeTable& tt)
+        : TypeVar(tt, {})
+    {}
+
     static int counter;
 
     /// used for unambiguous dumping
     const int id_;
 
-    const TypeTraitInstSet restricted_by_;
+    /// All traits that restrict the instatiation of this variable
+    mutable TypeTraitInstSet restricted_by_;
+
+    /**
+     * The type where this variable is bound.
+     * If such a type is set, then the variable must not be changed anymore!
+     */
     mutable const Type* bound_at_;
 
     /// Used to define equivalence constraints when checking equality of types
@@ -283,12 +293,19 @@ public:
     const TypeTraitInstSet* restricted_by() const { return &restricted_by_; }
     const Type* bound_at() const { return bound_at_; }
 
+    void add_restriction(const TypeTraitInstance* restrictrion) const;
+
     virtual bool equal(const Type* other) const;
 
     virtual void accept(TypeVisitor& v) { v.visit(*this); }
     std::string to_string() const;
 
+    /**
+     * A type variable is closed if it is bound.
+     * If a type variable is closed it must not be changed anymore!
+     */
     virtual bool is_closed() const { return bound_at_ != nullptr; }
+
     virtual bool is_sane() const { return is_closed() && this->is_subtype(bound_at()); }
 
     friend class TypeTable;

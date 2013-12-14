@@ -168,6 +168,13 @@ bool TypeVar::equal(const Type* other) const {
     return false;
 }
 
+void TypeVar::add_restriction(const TypeTraitInstance* restrictrion) const {
+    if (is_closed())
+        throw IllegalTypeException("Closed type variables must not be changed!");
+    auto p = restricted_by_.insert(restrictrion);
+    assert(p.second && "hash/equal broken");
+}
+
 std::string TypeVar::to_string() const {
     if (id_ < 26) {
         return std::string(1, 'A' + id_);

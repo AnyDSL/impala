@@ -20,9 +20,18 @@ std::string TypeTrait::to_string() const {
     return name_;
 }
 
-// TODO
 bool TypeTraitInstance::equal(const TypeTraitInstance* other) const {
-    return false;
+    if (trait_ != other->trait_)
+        return false;
+
+    assert(var_instances_.size() == other->var_instances_.size());
+
+    for (int i = 0; i < var_instances_.size(); ++i) {
+        if (! var_instances_[i]->equal(other->var_instances_[i])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // TODO

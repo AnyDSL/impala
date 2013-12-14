@@ -91,6 +91,7 @@ public:
  */
 class TypeTraitInstance {
 private:
+    // TODO raise exception if var_intances.size != trait.bound_vars.size
     /// create the global top type trait (like Object in java)
     TypeTraitInstance(const TypeTrait* trait, TypeArray var_instances)
         : trait_(trait)
