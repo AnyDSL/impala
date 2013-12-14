@@ -15,13 +15,13 @@ class TypeVar;
 class Type;
 class TypeError;
 
-class TypeTrait;
+class TypeTraitInstance;
 class TypeTable;
 
 typedef anydsl2::ArrayRef<const Type*> TypeArray;
 typedef anydsl2::ArrayRef<const TypeVar*> TypeVarArray;
-typedef anydsl2::ArrayRef<const TypeTrait*> TypeTraitArray;
-typedef std::unordered_set<const TypeTrait*> TypeTraitSet;
+//typedef anydsl2::ArrayRef<const TypeTraitInstance*> TypeTraitInstArray;
+typedef std::unordered_set<const TypeTraitInstance*> TypeTraitInstSet;
 
 //------------------------------------------------------------------------------
 
@@ -242,7 +242,7 @@ public:
 
 class TypeVar : public Type {
 private:
-    TypeVar(TypeTable& tt, const TypeTraitSet restriction)
+    TypeVar(TypeTable& tt, const TypeTraitInstSet restriction)
         : Type(tt, Type_var, 0)
         , id_(counter++)
         , restricted_by_(restriction)
@@ -255,7 +255,7 @@ private:
     /// used for unambiguous dumping
     const int id_;
 
-    const TypeTraitSet restricted_by_;
+    const TypeTraitInstSet restricted_by_;
     mutable const Type* bound_at_;
 
     /// Used to define equivalence constraints when checking equality of types
@@ -280,7 +280,7 @@ private:
     }
 
 public:
-    const TypeTraitSet* restricted_by() const { return &restricted_by_; }
+    const TypeTraitInstSet* restricted_by() const { return &restricted_by_; }
     const Type* bound_at() const { return bound_at_; }
 
     virtual bool equal(const Type* other) const;

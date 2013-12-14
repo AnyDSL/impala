@@ -11,17 +11,22 @@
 #include "type.h"
 #include "trait.h"
 
-struct TypeHash { size_t operator () (const Type* t) const { return t->hash(); } };
-struct TypeEqual { bool operator () (const Type* t1, const Type* t2) const { return t1->equal(t2); } };
-typedef std::unordered_set<const Type*, TypeHash, TypeEqual> TypeSet;
-
 struct TypeTraitHash { size_t operator () (const TypeTrait* t) const { return t->hash(); } };
 struct TypeTraitEqual { bool operator () (const TypeTrait* t1, const TypeTrait* t2) const { return t1->equal(t2); } };
 typedef std::unordered_set<const TypeTrait*, TypeTraitHash, TypeTraitEqual> TraitTableSet;
 
+struct TypeTraitInstanceHash { size_t operator () (const TypeTraitInstance* t) const { return t->hash(); } };
+struct TypeTraitInstanceEqual { bool operator () (const TypeTraitInstance* t1, const TypeTraitInstance* t2) const { return t1->equal(t2); } };
+typedef std::unordered_set<const TypeTraitInstance*, TypeTraitInstanceHash, TypeTraitInstanceEqual> TraitInstanceTableSet;
+
+struct TypeHash { size_t operator () (const Type* t) const { return t->hash(); } };
+struct TypeEqual { bool operator () (const Type* t1, const Type* t2) const { return t1->equal(t2); } };
+typedef std::unordered_set<const Type*, TypeHash, TypeEqual> TypeSet;
+
 class TypeTable {
 public:
     TypeTable();
+    // TODO also delete traits & trait instances
     ~TypeTable() { for (auto type : types_) delete type; }
 
     const TypeError* type_error() { return type_error_; }
@@ -30,13 +35,19 @@ public:
 #define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
-    const TypeTrait* typetrait(std::string name, TypeTraitSet super_traits) {
-        return unify_trait(new TypeTrait(*this, name, super_traits));
+    const TypeTrait* typetrait(std::string name, TypeTraitSet super_traits, TypeVarArray bound_vars) {
+        return unify_trait(new TypeTrait(*this, name, super_traits, bound_vars));
     }
-    const TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}); }
+    const TypeTrait* typetrait(std::string name, TypeTraitSet super_traits) { return typetrait(name, super_traits, {}); }
+    const TypeTrait* typetrait(std::string name, TypeVarArray bound_vars) { return typetrait(name, {top_trait_}, bound_vars); }
+    const TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}, {}); }
 
-    const TypeVar* typevar(TypeTraitSet restriction) { return new TypeVar(*this, restriction); }
-    const TypeVar* typevar() { return typevar({top_trait_}); }
+    const TypeTraitInstance* instantiate_trait(const TypeTrait* trait, TypeArray var_instances) {
+        return unify_trait_inst(new TypeTraitInstance(trait, var_instances));
+    }
+
+    const TypeVar* typevar(TypeTraitInstSet restriction) { return new TypeVar(*this, restriction); }
+    const TypeVar* typevar() { return typevar({top_trait_inst_}); }
 
     const FnType* fntype(TypeArray params) { return unify_new(new FnType(*this, params)); }
 
@@ -93,14 +104,17 @@ private:
     }
 
     const TypeTrait* unify_trait(const TypeTrait* type);
+    const TypeTraitInstance* unify_trait_inst(const TypeTraitInstance* type);
 
     TypeSet types_;
     TraitTableSet traits_;
+    TraitInstanceTableSet trait_instances_;
 
 #define PRIMTYPE(T) const PrimType* T##_;
 #include "primtypes.h"
     const TypeError* type_error_;
     const TypeTrait* top_trait_;
+    const TypeTraitInstance* top_trait_inst_;
 };
 
 

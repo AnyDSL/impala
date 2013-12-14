@@ -30,12 +30,12 @@ void simple_tests() {
     gen_f->dump();
 
     // create an fn<C:Clonable>(C)
-    const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
+    /*const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
     const TypeTrait* eq = tt.typetrait(std::string("Equality"));
     const TypeVar* C = tt.typevar({clonable, eq});
     const TypeVar* D = tt.typevar();
     const FnType* g = tt.gentype({C, D}, tt.fntype({C, D}));
-    g->dump();
+    g->dump();*/
 
     tt.check_sanity();
 
@@ -168,7 +168,7 @@ void test_unification3() {
     cout << "test_unification3 [okay]" << endl;
 }
 
-void test_unification4() {
+/*void test_unification4() {
     TypeTable tt;
 
     const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
@@ -196,7 +196,7 @@ void test_unification4() {
     check_sanity({A, f, B, g, C, h});
 
     cout << "test_unification4 [okay]" << endl;
-}
+}*/
 
 void test_type_sanity1() {
     TypeTable tt;
@@ -343,7 +343,7 @@ int main() {
     test_unification1();
     test_unification2();
     test_unification3();
-    test_unification4();
+    //test_unification4();
     test_type_sanity1();
     test_type_sanity2();
     //test_type_sanity3();

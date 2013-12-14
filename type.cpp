@@ -89,7 +89,7 @@ std::string Type::bound_vars_to_string() const {
     for (auto v : bound_vars()) {
         result += separator + v->to_string();
 
-        const TypeTraitSet* restr = v->restricted_by();
+        const TypeTraitInstSet* restr = v->restricted_by();
 
         // should at least contain the top trait if nothing else
         assert(restr->size() > 0);

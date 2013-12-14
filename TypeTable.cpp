@@ -14,6 +14,7 @@ TypeTable::TypeTable()
 #include "primtypes.h"
     , type_error_(unify_new(new TypeError(*this)))
     , top_trait_(unify_trait(new TypeTrait(*this)))
+    , top_trait_inst_(instantiate_trait(top_trait_, {}))
 {}
 
 const FnType* TypeTable::fntype_simple(TypeArray params, const Type* return_type) {
@@ -102,6 +103,18 @@ const TypeTrait* TypeTable::unify_trait(const TypeTrait* trait) {
     auto p = traits_.insert(trait);
     assert(p.second && "hash/equal broken");
     return trait;
+}
+
+const TypeTraitInstance* TypeTable::unify_trait_inst(const TypeTraitInstance* trait_inst) {
+    auto i = trait_instances_.find(trait_inst);
+    if (i != trait_instances_.end()) {
+        delete trait_inst;
+        return *i;
+    }
+
+    auto p = trait_instances_.insert(trait_inst);
+    assert(p.second && "hash/equal broken");
+    return trait_inst;
 }
 
 const PrimType* TypeTable::primtype(const PrimTypeKind kind) {

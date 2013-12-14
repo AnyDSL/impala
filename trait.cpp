@@ -14,3 +14,21 @@ bool TypeTrait::equal(const TypeTrait* other) const {
 }
 
 size_t TypeTrait::hash() const { return anydsl2::hash_value(name_); }
+
+// TODO
+std::string TypeTrait::to_string() const {
+    return name_;
+}
+
+// TODO
+bool TypeTraitInstance::equal(const TypeTraitInstance* other) const {
+    return false;
+}
+
+// TODO
+size_t TypeTraitInstance::hash() const { return 0; }
+
+// TODO
+std::string TypeTraitInstance::to_string() const {
+    return trait_->to_string();
+}
