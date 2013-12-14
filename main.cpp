@@ -29,13 +29,15 @@ void simple_tests() {
     const FnType* gen_f = tt.gentype({a, b}, f);
     gen_f->dump();
 
-    // create an fn<C:Clonable>(C)
-    /*const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
+    // create an fn<C:Clonable+Equality, D>(C)
+    const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
+    const TypeTraitInstance* clonableInst = tt.instantiate_trait(clonable, {});
     const TypeTrait* eq = tt.typetrait(std::string("Equality"));
-    const TypeVar* C = tt.typevar({clonable, eq});
+    const TypeTraitInstance* eqInst = tt.instantiate_trait(eq, {});
+    const TypeVar* C = tt.typevar({clonableInst, eqInst});
     const TypeVar* D = tt.typevar();
     const FnType* g = tt.gentype({C, D}, tt.fntype({C, D}));
-    g->dump();*/
+    g->dump();
 
     tt.check_sanity();
 
@@ -168,23 +170,27 @@ void test_unification3() {
     cout << "test_unification3 [okay]" << endl;
 }
 
-/*void test_unification4() {
+void test_unification4() {
     TypeTable tt;
 
     const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
-    const TypeVar* A = tt.typevar({clonable});
+    const TypeTraitInstance* clonableInst = tt.instantiate_trait(clonable, {});
+    const TypeVar* A = tt.typevar({clonableInst});
     const FnType* f = tt.gentype({A}, tt.fntype({A})); // fn<A:Clonable>(A)
 
     const TypeTrait* clonable2 = tt.typetrait(std::string("Clonable"));
-    const TypeVar* B = tt.typevar({clonable});
+    const TypeTraitInstance* clonable2Inst = tt.instantiate_trait(clonable2, {});
+    const TypeVar* B = tt.typevar({clonable2Inst});
     const FnType* g = tt.gentype({B}, tt.fntype({B})); // fn<B:Clonable>(B)
 
     assert(clonable == clonable2);
+    assert(clonableInst == clonable2Inst);
 
     assert(f->get_representative() == g->get_representative());
 
     const TypeTrait* st = tt.typetrait(std::string("SomeTrait"));
-    const TypeVar* C = tt.typevar({st});
+    const TypeTraitInstance* stInst = tt.instantiate_trait(st, {});
+    const TypeVar* C = tt.typevar({stInst});
     const FnType* h = tt.gentype({C}, tt.fntype({C})); // fn<B:SomeTrait>(B)
 
     assert(st != clonable);
@@ -196,7 +202,7 @@ void test_unification3() {
     check_sanity({A, f, B, g, C, h});
 
     cout << "test_unification4 [okay]" << endl;
-}*/
+}
 
 void test_type_sanity1() {
     TypeTable tt;
@@ -343,7 +349,7 @@ int main() {
     test_unification1();
     test_unification2();
     test_unification3();
-    //test_unification4();
+    test_unification4();
     test_type_sanity1();
     test_type_sanity2();
     //test_type_sanity3();
