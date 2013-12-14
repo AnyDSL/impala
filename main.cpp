@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "type.h"
+#include "TypeTable.h"
 
 using namespace std;
 
