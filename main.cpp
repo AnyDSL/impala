@@ -204,6 +204,50 @@ void test_unification4() {
     cout << "test_unification4 [okay]" << endl;
 }
 
+/// fn<A:S<B>, B:S<A>>(A, B)
+void test_unification5() {
+    TypeTable tt;
+
+    const TypeVar* X = tt.typevar();
+    const TypeTrait* S = tt.typetrait(std::string("S"), {X});   // trait S<X>
+
+    const TypeVar* A = tt.typevar();
+    const TypeVar* B = tt.typevar();
+
+    const TypeTraitInstance* SA = tt.instantiate_trait(S, {A}); // S<A>
+    const TypeTraitInstance* SB = tt.instantiate_trait(S, {B}); // S<B>
+
+    A->add_restriction(SB);
+    B->add_restriction(SA);
+
+    /// fn<A:S<B>, B:S<A>>(A, B)
+    const FnType* f = tt.gentype({A, B}, tt.fntype({A, B}));
+
+    f->dump();
+
+    tt.check_sanity();
+    check_sanity({A, B, f});
+
+    cout << "test_unification5 [okay]" << endl;
+}
+
+void test_trait_instatiation1() {
+    TypeTable tt;
+
+    const TypeVar* A = tt.typevar();
+    const TypeTrait* T = tt.typetrait(std::string("T"), {A});   // trait T<A>
+    try {
+        // illegal, must instantiate A
+        const TypeTraitInstance* Ti = tt.instantiate_trait(T, {});
+        assert(false && "Previous statement should have failed!");
+    } catch (exception& e) {
+    }
+
+    tt.check_sanity();
+
+    cout << "test_type_sanity1 [okay]" << endl;
+}
+
 void test_type_sanity1() {
     TypeTable tt;
 
@@ -350,6 +394,7 @@ int main() {
     test_unification2();
     test_unification3();
     test_unification4();
+    test_unification5();
     test_type_sanity1();
     test_type_sanity2();
     //test_type_sanity3();
