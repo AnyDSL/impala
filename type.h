@@ -4,9 +4,9 @@
 #include <unordered_set>
 #include <exception>
 
-#include "anydsl2/util/array.h"
-#include "anydsl2/util/cast.h"
-#include "anydsl2/util/hash.h"
+#include "thorin/util/array.h"
+#include "thorin/util/cast.h"
+#include "thorin/util/hash.h"
 
 class FnType;
 class PrimType;
@@ -18,9 +18,9 @@ class TypeError;
 class TypeTraitInstance;
 class TypeTable;
 
-typedef anydsl2::ArrayRef<const Type*> TypeArray;
-typedef anydsl2::ArrayRef<const TypeVar*> TypeVarArray;
-//typedef anydsl2::ArrayRef<const TypeTraitInstance*> TypeTraitInstArray;
+typedef thorin::ArrayRef<const Type*> TypeArray;
+typedef thorin::ArrayRef<const TypeVar*> TypeVarArray;
+//typedef thorin::ArrayRef<const TypeTraitInstance*> TypeTraitInstArray;
 typedef std::unordered_set<const TypeTraitInstance*> TypeTraitInstSet;
 
 //------------------------------------------------------------------------------
@@ -64,7 +64,7 @@ public:
     virtual void visit(TypeVar&) {}
 };
 
-class Type : public anydsl2::MagicCast<Type> {
+class Type : public thorin::MagicCast<Type> {
 private:
     Type& operator = (const Type&); ///< Do not copy-assign a \p Type.
     Type(const Type& node);         ///< Do not copy-construct a \p Type.

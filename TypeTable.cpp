@@ -121,7 +121,7 @@ const PrimType* TypeTable::primtype(const PrimTypeKind kind) {
     switch (kind) {
 #define PRIMTYPE(T) case PrimType_##T: return T##_;
 #include "primtypes.h"
-        default: ANYDSL2_UNREACHABLE;
+        default: THORIN_UNREACHABLE;
     }
 }
 

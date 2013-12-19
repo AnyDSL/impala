@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-using namespace anydsl2;
+using namespace thorin;
 
 int TypeVar::counter = 0;
 
@@ -117,7 +117,7 @@ std::string PrimType::to_string() const {
     switch (primtype_kind()) {
 #define PRIMTYPE(T) case PrimType_##T: return #T;
 #include "primtypes.h"
-        default: ANYDSL2_UNREACHABLE;
+        default: THORIN_UNREACHABLE;
     }
 }
 

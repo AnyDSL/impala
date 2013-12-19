@@ -13,7 +13,7 @@ bool TypeTrait::equal(const TypeTrait* other) const {
     return name_.compare(other->name_) == 0;
 }
 
-size_t TypeTrait::hash() const { return anydsl2::hash_value(name_); }
+size_t TypeTrait::hash() const { return thorin::hash_value(name_); }
 
 // TODO
 std::string TypeTrait::to_string() const {
