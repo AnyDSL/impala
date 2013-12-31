@@ -18,7 +18,7 @@ class TypeError;
 class TypeTraitInstance;
 class TypeTable;
 
-typedef thorin::ArrayRef<const Type*> TypeArray;
+typedef thorin::ArrayRef<Type*> TypeArray;
 typedef thorin::ArrayRef<const TypeVar*> TypeVarArray;
 //typedef thorin::ArrayRef<const TypeTraitInstance*> TypeTraitInstArray;
 typedef std::unordered_set<const TypeTraitInstance*> TypeTraitInstSet;
@@ -100,13 +100,16 @@ protected:
         , representative_(nullptr)
     {}
 
-    void set(size_t i, const Type* n) { elems_[i] = n; }
+    std::vector<Type*> elems_; ///< The operands of this type constructor.
+
+    void set(size_t i, Type* n) { elems_[i] = n; }
+    Type* elem_(size_t i) const { return elems_[i]; }
 
 public:
     TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
-    TypeArray elems() const { return TypeArray(elems_); }
-    const Type* elem(size_t i) const { return elems()[i]; }
+    //TypeArray elems() const { return TypeArray(elems_); }
+    const Type* elem(size_t i) const { return elems_[i]; }
 
     /// Returns number of \p Type operands (\p elems_).
     size_t size() const { return elems_.size(); }
@@ -168,7 +171,6 @@ public:
 private:
     TypeTable& typetable_;
     const Kind kind_;
-    std::vector<const Type*> elems_; ///< The operands of this type constructor.
 
     mutable const Type* representative_;
 

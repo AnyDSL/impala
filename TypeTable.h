@@ -21,7 +21,7 @@ typedef std::unordered_set<const TypeTraitInstance*, TypeTraitInstanceHash, Type
 
 struct TypeHash { size_t operator () (const Type* t) const { return t->hash(); } };
 struct TypeEqual { bool operator () (const Type* t1, const Type* t2) const { return t1->equal(t2); } };
-typedef std::unordered_set<const Type*, TypeHash, TypeEqual> TypeSet;
+typedef std::unordered_set<Type*, TypeHash, TypeEqual> TypeSet;
 
 class TypeTable {
 public:
@@ -32,7 +32,7 @@ public:
     const TypeError* type_error() { return type_error_; }
     const PrimType* primtype(PrimTypeKind kind);
 
-#define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
+#define PRIMTYPE(T) PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
     TypeTrait* typetrait(std::string name, TypeTraitSet super_traits) {
@@ -44,9 +44,9 @@ public:
         return unify_trait_inst(new TypeTraitInstance(trait, var_instances));
     }
 
-    TypeVar* typevar() { return new TypeVar(); }
+    TypeVar* typevar() { return new TypeVar(*this); }
 
-    const FnType* fntype(TypeArray params) { return unify_new(new FnType(*this, params)); }
+    FnType* fntype(TypeArray params) { return new FnType(*this, params); }
 
     /**
      * A shortcut to create function types with a return type.
@@ -54,32 +54,23 @@ public:
      * Actually for a Type fn(int)->int a type fn(int, fn(int)) will be created
      * (continuation passing style).
      */
-    const FnType* fntype_simple(TypeArray params, const Type* return_type);
+    FnType* fntype_simple(TypeArray params, Type* return_type);
 
-    /**
-     * Create a generic type given the quantified type variables and the type
-     * using them.
-     *
-     * Example: create 'fn<A>(A)'
-     * @code{.cpp}
-     * TypeVarRef* A = typevar();
-     * gentype({A}, fntype({A}));
-     * @endcode
-     */
-    template<class T> const T* gentype(TypeVarArray tvars, const T* type) { return gentype_base(tvars, type)->template as<const T>(); }
-
-    const TupleType* tupletype(TypeArray elems) { return unify_new(new TupleType(*this, elems)); }
+    // TODO review this
+    //const TupleType* tupletype(TypeArray elems) { return unify_new(new TupleType(*this, elems)); }
 
     /**
      * Checks if all types in the type tables are sane and correctly unified.
      */
     void check_sanity() const;
 
-private:
-    const Type* gentype_base(TypeVarArray tvars, const Type* type);
+    template<class T> T* unify(T* type) { return unify_base(type)->template as<T>(); }
+    const TypeTrait* unify_trait(TypeTrait* type);
+    const TypeTraitInstance* unify_trait_inst(TypeTraitInstance* type);
 
+private:
     /// insert all not-unified types contained in type
-    void insert_new(const Type* type);
+    void insert_new(Type* type);
 
     /**
      * Recursivly change the representatives of the not-unified types in t to the
@@ -87,27 +78,23 @@ private:
      *
      * This assumes that t is equal to repr.
      */
-    void change_repr(const Type* t, const Type* repr) const;
+    void change_repr(Type* t, const Type* repr) const;
 
-    const Type* unify_base(const Type* type);
-    template<class T> const T* unify(const T* type) { return unify_base(type)->template as<const T>(); }
+    Type* unify_base(Type* type);
 
     /// like unify but deletes the given type if unification returned a different one
-    template<class T> const T* unify_new(const T* type) {
-        const T* unified_type = unify(type);
+    template<class T> T* unify_new(T* type) {
+        T* unified_type = unify(type);
         if (unified_type != type)
             delete type;
         return unified_type;
     }
 
-    const TypeTrait* unify_trait(const TypeTrait* type);
-    const TypeTraitInstance* unify_trait_inst(const TypeTraitInstance* type);
-
     TypeSet types_;
     TraitTableSet traits_;
     TraitInstanceTableSet trait_instances_;
 
-#define PRIMTYPE(T) const PrimType* T##_;
+#define PRIMTYPE(T) PrimType* T##_;
 #include "primtypes.h"
     const TypeError* type_error_;
     const TypeTrait* top_trait_;

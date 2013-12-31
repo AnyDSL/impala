@@ -54,7 +54,7 @@ size_t Type::hash() const {
     // TODO perhaps store this hash so it does not need to be recomputed all the time
     size_t seed = hash_combine(hash_value((int) kind()), size());
     seed = hash_combine(seed, num_bound_vars());
-    for (auto elem : elems())
+    for (auto elem : elems_)
         seed = hash_combine(seed, elem->hash());
 
     return seed;
@@ -109,7 +109,7 @@ bool Type::is_subtype(const Type* super_type) const {
     if (this == super_type)
         return true;
 
-    for (auto t : super_type->elems()) {
+    for (auto t : super_type->elems_) {
         if (this->is_subtype(t)) {
             return true;
         }
@@ -118,7 +118,7 @@ bool Type::is_subtype(const Type* super_type) const {
 }
 
 bool Type::is_sane() const {
-    for (auto t : elems()) {
+    for (auto t : elems_) {
         if (!t->is_sane()) {
             return false;
         }
@@ -146,7 +146,7 @@ std::string CompoundType::elems_to_string() const {
         return result;
 
     const char* separator = "(";
-    for (auto elem : elems()) {
+    for (auto elem : elems_) {
         result += separator + elem->to_string();
         separator = ", ";
     }
@@ -204,7 +204,7 @@ std::string TypeVar::to_string() const {
 
 //------------------------------------------------------------------------------
 
-void check_sanity(TypeArray types) {
+void check_sanity(thorin::ArrayRef<const Type*> types) {
     for (auto t : types) {
         assert(t->is_sane());
     }

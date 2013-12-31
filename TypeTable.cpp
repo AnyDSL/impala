@@ -17,12 +17,12 @@ TypeTable::TypeTable()
     , top_trait_inst_(instantiate_trait(top_trait_, {}))
 {}
 
-const FnType* TypeTable::fntype_simple(TypeArray params, const Type* return_type) {
-    const FnType* retfun = fntype( { return_type });
+FnType* TypeTable::fntype_simple(TypeArray params, Type* return_type) {
+    FnType* retfun = fntype({return_type});
 
     size_t psize = params.size();
 
-    const Type** p = new const Type*[psize + 1];
+    Type** p = new Type*[psize + 1];
 
     for (int i = 0; i < psize; ++i) {
         p[i] = params[i];
@@ -32,17 +32,19 @@ const FnType* TypeTable::fntype_simple(TypeArray params, const Type* return_type
     return fntype(TypeArray(p, psize + 1));
 }
 
-void TypeTable::insert_new(const Type* type) {
+void TypeTable::insert_new(Type* type) {
     assert(!type->is_unified());
 
     type->set_representative(type);
 
-    for (auto elem : type->elems()) {
+    for (auto elem : type->elems_) {
         if (!elem->is_unified()) {
             unify(elem);
             assert(elem->is_unified());
         }
     }
+
+    // TODO unify traits
 
     if (type->kind() != Type_var) {
         // TODO is this a correct instanceof test?
@@ -52,7 +54,7 @@ void TypeTable::insert_new(const Type* type) {
     }
 }
 
-void TypeTable::change_repr(const Type* t, const Type* repr) const {
+void TypeTable::change_repr(Type* t, const Type* repr) const {
     assert(repr->is_final_representative());
 
     if (t->is_unified()) {
@@ -62,38 +64,38 @@ void TypeTable::change_repr(const Type* t, const Type* repr) const {
 
     assert(t->size() == repr->size());
     for (size_t i = 0, e = t->size(); i != e; ++i) {
-        change_repr(t->elem(i), repr->elem(i));
+        change_repr(t->elem_(i), repr->elem(i));
     }
+
+    // TODO unify trait instances
 
     t->set_representative(repr);
 }
 
-const Type* TypeTable::unify_base(const Type* type) {
-    // unify only closed types (i.e. only types where all type variables have been bound)
-    if (! type->is_closed()) {
-        return type;
+Type* TypeTable::unify_base(Type* type) {
+    if (type->is_unified()) {
+        throw new IllegalTypeException("Type is already unified!");
     }
 
-    assert(!type->is_unified());
+    // unify only closed types (i.e. only types where all type variables have been bound)
+    if (! type->is_closed()) {
+        throw new IllegalTypeException("Only closed types can be unified!");
+    }
 
     auto i = types_.find(type);
 
     if (i != types_.end()) {
-        if (*i != type) {
-            assert((*i)->is_final_representative());
-
-            change_repr(type, *i);
-        }
+        assert(*i != type);
+        change_repr(type, *i);
         return *i;
+    } else {
+        insert_new(type);
+        assert(type->is_unified());
+        return type;
     }
-
-    insert_new(type);
-
-    assert(type->is_unified());
-    return type;
 }
 
-const TypeTrait* TypeTable::unify_trait(const TypeTrait* trait) {
+const TypeTrait* TypeTable::unify_trait(TypeTrait* trait) {
     auto i = traits_.find(trait);
     if (i != traits_.end()) {
         delete trait;
@@ -105,7 +107,7 @@ const TypeTrait* TypeTable::unify_trait(const TypeTrait* trait) {
     return trait;
 }
 
-const TypeTraitInstance* TypeTable::unify_trait_inst(const TypeTraitInstance* trait_inst) {
+const TypeTraitInstance* TypeTable::unify_trait_inst(TypeTraitInstance* trait_inst) {
     auto i = trait_instances_.find(trait_inst);
     if (i != trait_instances_.end()) {
         delete trait_inst;
@@ -125,7 +127,7 @@ const PrimType* TypeTable::primtype(const PrimTypeKind kind) {
     }
 }
 
-const Type* TypeTable::gentype_base(TypeVarArray tvars, const Type* type) {
+/*const Type* TypeTable::gentype_base(TypeVarArray tvars, const Type* type) {
    // all closed types should be unified and the other way round!
    assert(type->is_unified() == type->is_closed());
 
@@ -142,7 +144,7 @@ const Type* TypeTable::gentype_base(TypeVarArray tvars, const Type* type) {
        type->add_bound_var(v);
    }
    return unify(type);
-}
+}*/
 
 void TypeTable::check_sanity() const {
     for (auto t : types_) {

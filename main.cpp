@@ -7,10 +7,11 @@ using namespace std;
 void simple_tests() {
     TypeTable tt;
 
+    /*
     // create some test types
-    const Type* t1 = tt.tupletype( { tt.type_int(), tt.type_bool() }); // tuple(int, bool)
-    const Type* t2 = tt.tupletype( { tt.type_float(), tt.type_float(), t1 }); // tuple(float, float, tuple(int, bool))
-    const Type* t3 = tt.tupletype( { tt.type_float(), tt.type_float(), t1 }); // tuple(float, float, tuple(int, bool))
+    Type* t1 = tt.tupletype( { tt.type_int(), tt.type_bool() }); // tuple(int, bool)
+    Type* t2 = tt.tupletype( { tt.type_float(), tt.type_float(), t1 }); // tuple(float, float, tuple(int, bool))
+    Type* t3 = tt.tupletype( { tt.type_float(), tt.type_float(), t1 }); // tuple(float, float, tuple(int, bool))
 
     // dump those types
     t1->dump();
@@ -20,23 +21,36 @@ void simple_tests() {
     // check for equality
     std::cout << (t1 == t2) << std::endl; // 0
     std::cout << (t1 == t3) << std::endl; // 0
-    std::cout << (t2 == t3) << std::endl; // 1
+    std::cout << (t2 == t3) << std::endl; // 1*/
 
     // create an fn<A,B>(A, B)
-    const TypeVar* a = tt.typevar();
-    const TypeVar* b = tt.typevar();
-    const FnType* f = tt.fntype({a, b});
-    const FnType* gen_f = tt.gentype({a, b}, f);
-    gen_f->dump();
+    TypeVar* A = tt.typevar();
+    TypeVar* B = tt.typevar();
+    FnType* f = tt.fntype({A, B});
+    f->add_bound_var(A);
+    f->add_bound_var(B);
+    // TODO unify
+    f->dump();
 
     // create an fn<C:Clonable+Equality, D>(C)
     const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
-    const TypeTraitInstance* clonableInst = tt.instantiate_trait(clonable, {});
     const TypeTrait* eq = tt.typetrait(std::string("Equality"));
+
+    TypeVar* C = tt.typevar();
+    TypeVar* D = tt.typevar();
+
+    const TypeTraitInstance* clonableInst = tt.instantiate_trait(clonable, {});
     const TypeTraitInstance* eqInst = tt.instantiate_trait(eq, {});
-    const TypeVar* C = tt.typevar({clonableInst, eqInst});
-    const TypeVar* D = tt.typevar();
-    const FnType* g = tt.gentype({C, D}, tt.fntype({C, D}));
+
+    C->add_restriction(clonableInst);
+    C->add_restriction(eqInst);
+
+    FnType* g = tt.fntype({C, D});
+    g->add_bound_var(C);
+    g->add_bound_var(D);
+
+    // TODO unify g
+
     g->dump();
 
     tt.check_sanity();
@@ -44,7 +58,7 @@ void simple_tests() {
     cout << "simple_tests [okay]" << endl;
 }
 
-void test_unification1() {
+/*void test_unification1() {
     TypeTable tt;
 
     const TypeVar* A = tt.typevar();
@@ -53,10 +67,10 @@ void test_unification1() {
     const FnType* h = tt.fntype({f, g});    // fn(fn(A), fn(A))
     const FnType* gh = tt.gentype({A}, h);  // fn<A>(fn(A), fn(A))
 
-    /*gh->dump();
-    gh->get_representative()->dump();
-    h->dump();
-    h->get_representative()->dump();*/
+    //gh->dump();
+    //gh->get_representative()->dump();
+    //h->dump();
+    //h->get_representative()->dump();
 
     assert(f->is_unified());
     assert(g->is_unified());
@@ -86,10 +100,10 @@ void test_unification2() {
     const FnType* g = tt.fntype({B});         // fn(B)
     const FnType* gg = tt.gentype({B}, g);    // fn<B>(B)
 
-    /*gf->dump();
-    gf->get_representative()->dump();
-    g->dump();
-    g->get_representative()->dump();*/
+    //gf->dump();
+    //gf->get_representative()->dump();
+    //g->dump();
+    //g->get_representative()->dump();
 
     assert(gf == f);
     assert(gf == gg);
@@ -251,12 +265,12 @@ void test_trait_instatiation1() {
 void test_type_sanity1() {
     TypeTable tt;
 
-    const TypeVar* A = tt.typevar();
-    const FnType* g = tt.fntype({tt.type_int()}); // fn(int)
+    TypeVar* A = tt.typevar();
+    FnType* g = tt.fntype({tt.type_int()}); // fn(int)
 
     try {
         // illegal
-        const FnType* gg = tt.gentype({A}, g);    // fn<A>(int)
+        g->add_bound_var(A);    // fn<A>(int)
 
         assert(false && "Previous statement should have failed!");
     } catch (IllegalTypeException& e) {
@@ -277,7 +291,7 @@ void test_type_sanity2() {
     const TypeVar* A = tt.typevar();
 
     try {
-        tt.gentype({A}, A);         // forall A, A
+        A->add_bound_var(A);         // forall A, A
         assert(false && "Previous statement should have failed!");
     } catch (IllegalTypeException& e) {
         assert(!A->is_closed());
@@ -288,7 +302,7 @@ void test_type_sanity2() {
     const TypeVar* B = tt.typevar();
     const TypeVar* C = tt.typevar();
     try {
-        tt.gentype({B}, C); // forall B, C
+        C->add_bound_var(B); // forall B, C
         assert(false && "Previous statement should have failed!");
     } catch (IllegalTypeException& e) {
         assert(B->bound_at() == nullptr);
@@ -303,11 +317,13 @@ void test_type_sanity2() {
 void test_type_sanity3() {
     TypeTable tt;
 
-    const TypeVar* A = tt.typevar();
-    const FnType* f = tt.fntype({A});       // fn(A)
-    const FnType* gf = tt.gentype({A}, f);  // fn<A>(A)
+    TypeVar* A = tt.typevar();
+    FnType* f = tt.fntype({A}); // fn(A)
+    f->add_bound_var(A);        // fn<A>(A)
 
-    const FnType* g = tt.fntype({A});       // fn(A)
+    FnType* g = tt.fntype({A}); // fn(A)
+
+    // TODO unify
 
     assert(g->is_unified());
     assert(g != gf);
@@ -315,7 +331,8 @@ void test_type_sanity3() {
     assert(!g->equal(gf));
 
     try {
-        const FnType* h = tt.fntype({gf, g});     // fn(fn<A>(A), fn(A)) -> INVALID
+        FnType* h = tt.fntype({gf, g});     // fn(fn<A>(A), fn(A)) -> INVALID
+        // TODO unify
 
         h->dump();
 
@@ -332,16 +349,16 @@ void test_type_sanity3() {
 void test_type_sanity4() {
     TypeTable tt;
 
-    const TypeVar* A = tt.typevar();
-    const FnType* f = tt.fntype({A});         // fn(A)
-    const FnType* gf = tt.gentype({A}, f);    // fn<A>(A)
+    TypeVar* A = tt.typevar();
+    FnType* f = tt.fntype({A}); // fn(A)
+    f->add_bound_var(A);        // fn<A>(A)
 
-    const TypeVar* B = tt.typevar();
-    const FnType* g = tt.fntype({A, B});   // fn(A, B)
+    TypeVar* B = tt.typevar();
+    FnType* g = tt.fntype({A, B});   // fn(A, B)
 
     try {
         // must fail because A is already bound!
-        const FnType* gf2 = tt.gentype({A}, g);
+        g->add_bound_var(A);
 
         assert(false && "Previous statement should have failed!");
     } catch (IllegalTypeException& e) {
@@ -355,13 +372,13 @@ void test_type_sanity4() {
 void test_type_sanity5() {
     TypeTable tt;
 
-    const TypeVar* A = tt.typevar();
-    const TypeVar* B = tt.typevar();
-    const FnType* g = tt.fntype({B});   // fn(B)
+    TypeVar* A = tt.typevar();
+    TypeVar* B = tt.typevar();
+    FnType* g = tt.fntype({B});   // fn(B)
 
     try {
         // must fail because A is not a subtype of g
-        const FnType* gf2 = tt.gentype({A}, g);
+        g->add_bound_var(A);
 
         assert(false && "Previous statement should have failed!");
     } catch (IllegalTypeException& e) {
@@ -375,22 +392,23 @@ void test_type_sanity5() {
 void test_type_sanity6() {
     TypeTable tt;
 
-    const TypeVar* A = tt.typevar();
-    const FnType* f = tt.fntype({A});         // fn(A)
-    const FnType* g = tt.fntype({A});         // fn(A)
-    const FnType* gg = tt.gentype({A}, g);    // fn<A>(A)
+    TypeVar* A = tt.typevar();
+    FnType* f = tt.fntype({A});         // fn(A)
+    FnType* g = tt.fntype({A});         // fn(A)
+    g->add_bound_var(A);
+    // TODO unify g
     // TODO f is now a type that is sane but not unified!
 
-    /*tt.check_sanity();
+    //tt.check_sanity();
 
-    cout << "test_type_sanity6 [okay]" << endl;*/
-}
+    //cout << "test_type_sanity6 [okay]" << endl;
+}*/
 
 int main() {
     simple_tests();
     //return 0;
 
-    test_unification1();
+    /*test_unification1();
     test_unification2();
     test_unification3();
     test_unification4();
@@ -400,5 +418,5 @@ int main() {
     //test_type_sanity3();
     test_type_sanity4();
     test_type_sanity5();
-    //test_type_sanity6();
+    //test_type_sanity6();*/
 }
