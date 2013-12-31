@@ -35,19 +35,16 @@ public:
 #define PRIMTYPE(T) const PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
-    const TypeTrait* typetrait(std::string name, TypeTraitSet super_traits, TypeVarArray bound_vars) {
-        return unify_trait(new TypeTrait(*this, name, super_traits, bound_vars));
+    TypeTrait* typetrait(std::string name, TypeTraitSet super_traits) {
+        return new TypeTrait(*this, name, super_traits);
     }
-    const TypeTrait* typetrait(std::string name, TypeTraitSet super_traits) { return typetrait(name, super_traits, {}); }
-    const TypeTrait* typetrait(std::string name, TypeVarArray bound_vars) { return typetrait(name, {top_trait_}, bound_vars); }
-    const TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}, {}); }
+    const TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}); }
 
     const TypeTraitInstance* instantiate_trait(const TypeTrait* trait, TypeArray var_instances) {
         return unify_trait_inst(new TypeTraitInstance(trait, var_instances));
     }
 
-    const TypeVar* typevar(TypeTraitInstSet restriction) { return new TypeVar(*this, restriction); }
-    const TypeVar* typevar() { return typevar({top_trait_inst_}); }
+    TypeVar* typevar() { return new TypeVar(); }
 
     const FnType* fntype(TypeArray params) { return unify_new(new FnType(*this, params)); }
 

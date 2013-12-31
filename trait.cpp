@@ -9,6 +9,14 @@
 
 const std::string TypeTrait::top_trait_name = std::string("");
 
+bool TypeTrait::equal(const GenericElement* other) const {
+    // TODO is this correct for a instanceof-equivalent?
+    if (const TypeTrait* t = other->isa<TypeTrait>()) {
+        return equal(t);
+    }
+    return false;
+}
+
 bool TypeTrait::equal(const TypeTrait* other) const {
     return name_.compare(other->name_) == 0;
 }
@@ -18,6 +26,17 @@ size_t TypeTrait::hash() const { return thorin::hash_value(name_); }
 // TODO
 std::string TypeTrait::to_string() const {
     return name_;
+}
+
+void TypeTrait::add_method(const std::string name, const FnType* type) {
+    if (! type->is_unified()) {
+        throw new IllegalTypeException("Method types must be closed");
+    }
+    assert(type->is_closed());
+    TypeTraitMethod* m = new TypeTraitMethod();
+    m->name = name;
+    m->type = type;
+    methods_.push_back(m);
 }
 
 bool TypeTraitInstance::equal(const TypeTraitInstance* other) const {

@@ -9,6 +9,46 @@ int TypeVar::counter = 0;
 
 //------------------------------------------------------------------------------
 
+std::string GenericElement::bound_vars_to_string() const {
+    std::string result;
+
+    if (!is_generic())
+        return result;
+
+    const char* separator = "<";
+    for (auto v : bound_vars()) {
+        result += separator + v->to_string();
+
+        const TypeTraitInstSet* restr = v->restricted_by();
+
+        // should at least contain the top trait if nothing else
+        assert(restr->size() > 0);
+
+        // do not print restrictions if only restricted by top trait
+        if ((restr->size() != 1) || (!(*restr->begin())->is_top_trait())) {
+            auto inner_sep = ":";
+            for (auto t : *restr) {
+                result += inner_sep + t->to_string();
+                inner_sep = "+";
+            }
+
+        }
+
+        separator = ",";
+    }
+    return result + '>';
+}
+
+void GenericElement::add_bound_var(TypeVar* v) {
+    if (v->is_closed())
+        throw new IllegalTypeException("Type variables already bound");
+
+    v->bind(this);
+    bound_vars_.push_back(v);
+}
+
+//------------------------------------------------------------------------------
+
 size_t Type::hash() const {
     // TODO take type variables of generic types better into the equation
     // TODO perhaps store this hash so it does not need to be recomputed all the time
@@ -18,6 +58,14 @@ size_t Type::hash() const {
         seed = hash_combine(seed, elem->hash());
 
     return seed;
+}
+
+bool Type::equal(const GenericElement* other) const {
+    // TODO is this correct for a instanceof-equivalent?
+    if (const Type* t = other->isa<Type>()) {
+        return equal(t);
+    }
+    return false;
 }
 
 bool Type::equal(const Type* other) const {
@@ -79,36 +127,6 @@ bool Type::is_sane() const {
     return true;
 }
 
-std::string Type::bound_vars_to_string() const {
-    std::string result;
-
-    if (!is_generic())
-        return result;
-
-    const char* separator = "<";
-    for (auto v : bound_vars()) {
-        result += separator + v->to_string();
-
-        const TypeTraitInstSet* restr = v->restricted_by();
-
-        // should at least contain the top trait if nothing else
-        assert(restr->size() > 0);
-
-        // do not print restrictions if only restricted by top trait
-        if ((restr->size() != 1) || (!(*restr->begin())->is_top_trait())) {
-            auto inner_sep = ":";
-            for (auto t : *restr) {
-                result += inner_sep + t->to_string();
-                inner_sep = "+";
-            }
-
-        }
-
-        separator = ",";
-    }
-    return result + '>';
-}
-
 void Type::dump() const { std::cout << to_string() << std::endl; }
 
 //------------------------------------------------------------------------------
@@ -168,10 +186,11 @@ bool TypeVar::equal(const Type* other) const {
     return false;
 }
 
-void TypeVar::add_restriction(const TypeTraitInstance* restrictrion) const {
+void TypeVar::add_restriction(const TypeTraitInstance* restriction) {
     if (is_closed())
         throw IllegalTypeException("Closed type variables must not be changed!");
-    auto p = restricted_by_.insert(restrictrion);
+
+    auto p = restricted_by_.insert(restriction);
     assert(p.second && "hash/equal broken");
 }
 

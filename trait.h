@@ -34,22 +34,19 @@ struct TypeTraitMethod {
  *
  * @see TypeTraitInstance
  */
-class TypeTrait {
+class TypeTrait : public GenericElement {
 private:
     /// create the global top type trait (like Object in java)
     TypeTrait(TypeTable& tt)
         : typetable_(tt)
         , name_(top_trait_name)
         , super_traits_()
-        , bound_vars_()
     {}
 
-    TypeTrait(TypeTable& tt, std::string name, const TypeTraitSet super_traits,
-            const TypeVarArray bound_vars)
+    TypeTrait(TypeTable& tt, std::string name, const TypeTraitSet super_traits)
         : typetable_(tt)
         , name_(name)
         , super_traits_(super_traits)
-        , bound_vars_(bound_vars)
     {}
 
     TypeTrait& operator = (const TypeTrait&); ///< Do not copy-assign a \p TypeTrait.
@@ -58,23 +55,18 @@ private:
     TypeTable& typetable_;
     std::string name_;
     const TypeTraitSet super_traits_;
-    const TypeVarArray bound_vars_;
-    mutable std::vector<const TypeTraitMethod*> methods_;
+    std::vector<const TypeTraitMethod*> methods_;
 
     static const std::string top_trait_name;
 
-    void addMethod(const std::string name, const FnType* type) const {
-        TypeTraitMethod* m = new TypeTraitMethod();
-        m->name = name;
-        m->type = type;
-        methods_.push_back(m);
-    }
-
 public:
+    virtual bool equal(const GenericElement* t) const;
     bool equal(const TypeTrait* t) const;
     size_t hash() const;
 
     std::string to_string() const;
+
+    void add_method(const std::string name, const FnType* type);
 
     /// true if this is the top type trait (like Object in java)
     bool is_top_trait() const {

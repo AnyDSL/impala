@@ -40,6 +40,29 @@ private:
 
 //------------------------------------------------------------------------------
 
+class GenericElement : public thorin::MagicCast<GenericElement> {
+protected:
+    std::vector<const TypeVar*> bound_vars_;
+
+    std::string bound_vars_to_string() const;
+
+public:
+    size_t num_bound_vars() const { return bound_vars_.size(); }
+
+    TypeVarArray bound_vars() const { return TypeVarArray(bound_vars_); }
+    const TypeVar* bound_var(size_t i) const { return bound_vars()[i]; }
+
+    /// Returns true if this \p Type does have any bound type variabes (\p bound_vars_).
+    bool is_generic() const { return !bound_vars_.empty(); }
+
+    void add_bound_var(TypeVar* v);
+
+    virtual bool equal(const GenericElement*) const = 0;
+    virtual size_t hash() const = 0;
+};
+
+//------------------------------------------------------------------------------
+
 enum Kind {
 #define PRIMTYPE(T) Type_##T,
 #include "primtypes.h"
@@ -64,7 +87,7 @@ public:
     virtual void visit(TypeVar&) {}
 };
 
-class Type : public thorin::MagicCast<Type> {
+class Type : public GenericElement {
 private:
     Type& operator = (const Type&); ///< Do not copy-assign a \p Type.
     Type(const Type& node);         ///< Do not copy-construct a \p Type.
@@ -79,20 +102,14 @@ protected:
 
     void set(size_t i, const Type* n) { elems_[i] = n; }
 
-    std::string bound_vars_to_string() const;
-
 public:
     TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
     TypeArray elems() const { return TypeArray(elems_); }
     const Type* elem(size_t i) const { return elems()[i]; }
 
-    TypeVarArray bound_vars() const { return TypeVarArray(bound_vars_); }
-    const TypeVar* bound_var(size_t i) const { return bound_vars()[i]; }
-
     /// Returns number of \p Type operands (\p elems_).
     size_t size() const { return elems_.size(); }
-    size_t num_bound_vars() const { return bound_vars_.size(); }
 
     /// Returns true if this \p Type does not have any \p Type operands (\p elems_).
     bool is_empty() const {
@@ -100,18 +117,18 @@ public:
         return elems_.empty();
     }
 
-    /// Returns true if this \p Type does have any bound type variabes (\p bound_vars_).
-    bool is_generic() const {
-        assert (!elems_.empty() || bound_vars_.empty());
-        return !bound_vars_.empty();
-    }
-
+    virtual bool equal(const GenericElement*) const;
     virtual bool equal(const Type*) const;
     virtual size_t hash() const;
 
     void dump() const;
     virtual std::string to_string() const = 0;
     virtual void accept(TypeVisitor&) = 0;
+
+    bool is_generic() const {
+        assert (!elems_.empty() || bound_vars_.empty());
+        return GenericElement::is_generic();
+    }
 
     /**
      * A type is closed if it contains no unbound type variables.
@@ -152,11 +169,8 @@ private:
     TypeTable& typetable_;
     const Kind kind_;
     std::vector<const Type*> elems_; ///< The operands of this type constructor.
-    mutable std::vector<const TypeVar*> bound_vars_;
 
     mutable const Type* representative_;
-
-    void add_bound_var(const TypeVar* v) const { bound_vars_.push_back(v); }
 
     /// @see get_representative()
     void set_representative(const Type* repr) const {
@@ -242,16 +256,12 @@ public:
 
 class TypeVar : public Type {
 private:
-    TypeVar(TypeTable& tt, const TypeTraitInstSet restriction)
+    TypeVar(TypeTable& tt)
         : Type(tt, Type_var, 0)
         , id_(counter++)
-        , restricted_by_(restriction)
+        , restricted_by_()
         , bound_at_(nullptr)
         , equiv_var_(nullptr)
-    {}
-
-    TypeVar(TypeTable& tt)
-        : TypeVar(tt, {})
     {}
 
     static int counter;
@@ -259,14 +269,14 @@ private:
     /// used for unambiguous dumping
     const int id_;
 
-    /// All traits that restrict the instatiation of this variable
-    mutable TypeTraitInstSet restricted_by_;
+    /// All traits that restrict the instantiation of this variable
+    TypeTraitInstSet restricted_by_;
 
     /**
      * The type where this variable is bound.
      * If such a type is set, then the variable must not be changed anymore!
      */
-    mutable const Type* bound_at_;
+    const GenericElement* bound_at_;
 
     /// Used to define equivalence constraints when checking equality of types
     mutable const TypeVar* equiv_var_;
@@ -282,18 +292,18 @@ private:
         equiv_var_ = nullptr;
     }
 
-    void bind(const Type* const t) const {
+    void bind(const GenericElement* const e) {
         if (bound_at_ != nullptr) {
             throw IllegalTypeException("type variables can only be bound once!");
         }
-        bound_at_ = t;
+        bound_at_ = e;
     }
 
 public:
     const TypeTraitInstSet* restricted_by() const { return &restricted_by_; }
-    const Type* bound_at() const { return bound_at_; }
+    const GenericElement* bound_at() const { return bound_at_; }
 
-    void add_restriction(const TypeTraitInstance* restrictrion) const;
+    void add_restriction(const TypeTraitInstance* restriction);
 
     virtual bool equal(const Type* other) const;
 
@@ -306,10 +316,12 @@ public:
      */
     virtual bool is_closed() const { return bound_at_ != nullptr; }
 
-    virtual bool is_sane() const { return is_closed() && this->is_subtype(bound_at()); }
+    // TODO this->is_subtype(bound_at()); if bound_at is a Type, else it should occur in the method signatures
+    virtual bool is_sane() const { return is_closed(); }
 
     friend class TypeTable;
     friend class Type;
+    friend class GenericElement;
 };
 
 //------------------------------------------------------------------------------
