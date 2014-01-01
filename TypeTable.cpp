@@ -82,17 +82,6 @@ Type* TypeTable::unify_base(Type* type) {
         throw new IllegalTypeException("Only closed types can be unified!");
     }
 
-    // restrict type variables by top trait if there are no other restrictions
-    if (type->kind() == Type_var) {
-        // TODO is this a correct instanceof test?
-        assert(type->isa<TypeVar>());
-
-        TypeVar* v = type->isa<TypeVar>();
-        if (v->restricted_by()->empty()) {
-            v->add_restriction_unchecked(top_trait_inst_);
-        }
-    }
-
     auto i = types_.find(type);
 
     if (i != types_.end()) {

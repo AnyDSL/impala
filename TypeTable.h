@@ -35,6 +35,9 @@ public:
 #define PRIMTYPE(T) PrimType* type_##T() { return T##_; }
 #include "primtypes.h"
 
+    const TypeTrait* top_trait() const { return top_trait_; }
+    const TypeTraitInstance* top_trait_inst() const { return top_trait_inst_; }
+
     TypeTrait* typetrait(std::string name, TypeTraitSet super_traits) {
         return new TypeTrait(*this, name, super_traits);
     }

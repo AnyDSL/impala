@@ -294,14 +294,7 @@ private:
         equiv_var_ = nullptr;
     }
 
-    void bind(const GenericElement* const e) {
-        if (bound_at_ != nullptr) {
-            throw IllegalTypeException("type variables can only be bound once!");
-        }
-        bound_at_ = e;
-    }
-
-    void add_restriction_unchecked(const TypeTraitInstance* restriction);
+    void bind(const GenericElement* const e);
 
 public:
     const TypeTraitInstSet* restricted_by() const { return &restricted_by_; }
@@ -334,6 +327,6 @@ public:
  * Checks if for all combination of types t1, t2 in 'types' it holds that if
  * both are unified and t1 equals t2 then they have the same representative.
  */
-void check_sanity(TypeArray types);
+void check_sanity(thorin::ArrayRef<const Type*> types);
 
 #endif

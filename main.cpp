@@ -58,14 +58,15 @@ void simple_tests() {
     cout << "simple_tests [okay]" << endl;
 }
 
-/*void test_unification1() {
+void test_unification1() {
     TypeTable tt;
 
-    const TypeVar* A = tt.typevar();
-    const FnType* f = tt.fntype({A});       // fn(A)
-    const FnType* g = tt.fntype({A});       // fn(A)
-    const FnType* h = tt.fntype({f, g});    // fn(fn(A), fn(A))
-    const FnType* gh = tt.gentype({A}, h);  // fn<A>(fn(A), fn(A))
+    TypeVar* A = tt.typevar();
+    FnType* f = tt.fntype({A});       // fn(A)
+    FnType* g = tt.fntype({A});       // fn(A)
+    FnType* h = tt.fntype({f, g});    // fn(fn(A), fn(A))
+    h->add_bound_var(A);              // fn<A>(fn(A), fn(A))
+    FnType* gh = tt.unify(h);
 
     //gh->dump();
     //gh->get_representative()->dump();
@@ -92,35 +93,37 @@ void simple_tests() {
 void test_unification2() {
     TypeTable tt;
 
-    const TypeVar* A = tt.typevar();
-    const FnType* f = tt.fntype({A});         // fn(A)
-    const FnType* gf = tt.gentype({A}, f);    // fn<A>(A)
+    TypeVar* A = tt.typevar();
+    FnType* f = tt.fntype({A});     // fn(A)
+    f->add_bound_var(A);            // fn<A>(A)
+    FnType* uf = tt.unify(f);
 
-    const TypeVar* B = tt.typevar();
-    const FnType* g = tt.fntype({B});         // fn(B)
-    const FnType* gg = tt.gentype({B}, g);    // fn<B>(B)
+    TypeVar* B = tt.typevar();
+    FnType* g = tt.fntype({B});     // fn(B)
+    g->add_bound_var(B);            // fn<B>(B)
+    FnType* ug = tt.unify(g);
 
-    //gf->dump();
-    //gf->get_representative()->dump();
+    //uf->dump();
+    //uf->get_representative()->dump();
     //g->dump();
     //g->get_representative()->dump();
 
-    assert(gf == f);
-    assert(gf == gg);
+    assert(uf == f);
+    assert(uf == ug);
 
-    assert(g != gg);
-    assert(g->equal(gg));
-    assert(g->get_representative() == gg->get_representative());
+    assert(g != ug);
+    assert(g->equal(ug));
+    assert(g->get_representative() == ug->get_representative());
 
     assert(A->get_representative() == B->get_representative());
 
     tt.check_sanity();
-    check_sanity({A, f, gf, B, g, gg});
+    check_sanity({A, f, uf, B, g, ug});
 
     cout << "test_unification2 [okay]" << endl;
 }
 
-void test_unification3() {
+/*void test_unification3() {
     TypeTable tt;
 
     const TypeVar* A = tt.typevar();
@@ -408,9 +411,9 @@ int main() {
     simple_tests();
     //return 0;
 
-    /*test_unification1();
+    test_unification1();
     test_unification2();
-    test_unification3();
+    /*test_unification3();
     test_unification4();
     test_unification5();
     test_type_sanity1();

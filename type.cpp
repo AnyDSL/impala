@@ -1,5 +1,6 @@
 #include "type.h"
 #include "trait.h"
+#include "TypeTable.h"
 
 #include <iostream>
 
@@ -186,15 +187,23 @@ bool TypeVar::equal(const Type* other) const {
     return false;
 }
 
-void TypeVar::add_restriction_unchecked(const TypeTraitInstance* restriction) {
-    auto p = restricted_by_.insert(restriction);
-    assert(p.second && "hash/equal broken");
+void TypeVar::bind(const GenericElement* const e) {
+    if (bound_at_ != nullptr) {
+        throw IllegalTypeException("type variables can only be bound once!");
+    }
+    // restrict type variables by top trait if there are no other restrictions
+    if (restricted_by()->empty()) {
+        add_restriction(typetable().top_trait_inst());
+    }
+    bound_at_ = e;
 }
 
 void TypeVar::add_restriction(const TypeTraitInstance* restriction) {
     if (is_closed())
         throw IllegalTypeException("Closed type variables must not be changed!");
-    add_restriction_unchecked(restriction);
+
+    auto p = restricted_by_.insert(restriction);
+    assert(p.second && "hash/equal broken");
 }
 
 std::string TypeVar::to_string() const {
