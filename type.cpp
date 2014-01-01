@@ -21,8 +21,8 @@ std::string GenericElement::bound_vars_to_string() const {
 
         const TypeTraitInstSet* restr = v->restricted_by();
 
-        // should at least contain the top trait if nothing else
-        assert(restr->size() > 0);
+        // if v is unified it should at least be restricted by the top trait
+        assert((!v->is_unified()) || (restr->size() > 0));
 
         // do not print restrictions if only restricted by top trait
         if ((restr->size() != 1) || (!(*restr->begin())->is_top_trait())) {
@@ -186,12 +186,15 @@ bool TypeVar::equal(const Type* other) const {
     return false;
 }
 
+void TypeVar::add_restriction_unchecked(const TypeTraitInstance* restriction) {
+    auto p = restricted_by_.insert(restriction);
+    assert(p.second && "hash/equal broken");
+}
+
 void TypeVar::add_restriction(const TypeTraitInstance* restriction) {
     if (is_closed())
         throw IllegalTypeException("Closed type variables must not be changed!");
-
-    auto p = restricted_by_.insert(restriction);
-    assert(p.second && "hash/equal broken");
+    add_restriction_unchecked(restriction);
 }
 
 std::string TypeVar::to_string() const {

@@ -301,6 +301,8 @@ private:
         bound_at_ = e;
     }
 
+    void add_restriction_unchecked(const TypeTraitInstance* restriction);
+
 public:
     const TypeTraitInstSet* restricted_by() const { return &restricted_by_; }
     const GenericElement* bound_at() const { return bound_at_; }

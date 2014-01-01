@@ -29,7 +29,7 @@ void simple_tests() {
     FnType* f = tt.fntype({A, B});
     f->add_bound_var(A);
     f->add_bound_var(B);
-    // TODO unify
+    tt.unify(f);
     f->dump();
 
     // create an fn<C:Clonable+Equality, D>(C)
@@ -49,7 +49,7 @@ void simple_tests() {
     g->add_bound_var(C);
     g->add_bound_var(D);
 
-    // TODO unify g
+    tt.unify(g);
 
     g->dump();
 
