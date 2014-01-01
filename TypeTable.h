@@ -41,7 +41,7 @@ public:
     TypeTrait* typetrait(std::string name, TypeTraitSet super_traits) {
         return new TypeTrait(*this, name, super_traits);
     }
-    const TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}); }
+    TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}); }
 
     const TypeTraitInstance* instantiate_trait(const TypeTrait* trait, TypeArray var_instances) {
         return unify_trait_inst(new TypeTraitInstance(trait, var_instances));

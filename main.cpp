@@ -203,28 +203,38 @@ void test_unification3() {
     cout << "test_unification3 [okay]" << endl;
 }
 
-/*void test_unification4() {
+void test_unification4() {
     TypeTable tt;
 
     const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
     const TypeTraitInstance* clonableInst = tt.instantiate_trait(clonable, {});
-    const TypeVar* A = tt.typevar({clonableInst});
-    const FnType* f = tt.gentype({A}, tt.fntype({A})); // fn<A:Clonable>(A)
+    TypeVar* A = tt.typevar();
+    A->add_restriction(clonableInst);
+    FnType* f = tt.fntype({A});
+    f->add_bound_var(A); // fn<A:Clonable>(A)
+    FnType* uf = tt.unify(f);
 
     const TypeTrait* clonable2 = tt.typetrait(std::string("Clonable"));
     const TypeTraitInstance* clonable2Inst = tt.instantiate_trait(clonable2, {});
-    const TypeVar* B = tt.typevar({clonable2Inst});
-    const FnType* g = tt.gentype({B}, tt.fntype({B})); // fn<B:Clonable>(B)
+    TypeVar* B = tt.typevar();
+    B->add_restriction(clonable2Inst);
+    FnType* g = tt.fntype({B});
+    g->add_bound_var(B); // fn<B:Clonable>(B)
+    FnType* ug = tt.unify(g);
 
     assert(clonable == clonable2);
     assert(clonableInst == clonable2Inst);
 
+    assert(uf == ug);
     assert(f->get_representative() == g->get_representative());
 
     const TypeTrait* st = tt.typetrait(std::string("SomeTrait"));
     const TypeTraitInstance* stInst = tt.instantiate_trait(st, {});
-    const TypeVar* C = tt.typevar({stInst});
-    const FnType* h = tt.gentype({C}, tt.fntype({C})); // fn<B:SomeTrait>(B)
+    TypeVar* C = tt.typevar();
+    C->add_restriction(stInst);
+    FnType* h = tt.fntype({C});
+    h->add_bound_var(C); // fn<B:SomeTrait>(B)
+    FnType* uh = tt.unify(h);
 
     assert(st != clonable);
     assert(!st->equal(clonable));
@@ -232,7 +242,7 @@ void test_unification3() {
     assert(h->get_representative() != g->get_representative());
 
     tt.check_sanity();
-    check_sanity({A, f, B, g, C, h});
+    check_sanity({A, f, B, g, C, h, uf, ug, uh});
 
     cout << "test_unification4 [okay]" << endl;
 }
@@ -241,11 +251,12 @@ void test_unification3() {
 void test_unification5() {
     TypeTable tt;
 
-    const TypeVar* X = tt.typevar();
-    const TypeTrait* S = tt.typetrait(std::string("S"), {X});   // trait S<X>
+    TypeVar* X = tt.typevar();
+    TypeTrait* S = tt.typetrait(std::string("S"));  // trait S
+    S->add_bound_var(X);                            // trait S<X>
 
-    const TypeVar* A = tt.typevar();
-    const TypeVar* B = tt.typevar();
+    TypeVar* A = tt.typevar();
+    TypeVar* B = tt.typevar();
 
     const TypeTraitInstance* SA = tt.instantiate_trait(S, {A}); // S<A>
     const TypeTraitInstance* SB = tt.instantiate_trait(S, {B}); // S<B>
@@ -254,12 +265,15 @@ void test_unification5() {
     B->add_restriction(SA);
 
     /// fn<A:S<B>, B:S<A>>(A, B)
-    const FnType* f = tt.gentype({A, B}, tt.fntype({A, B}));
+    FnType* f = tt.fntype({A, B});
+    f->add_bound_var(A);
+    f->add_bound_var(B);
+    FnType* uf = tt.unify(f);
 
     f->dump();
 
     tt.check_sanity();
-    check_sanity({A, B, f});
+    check_sanity({A, B, f, uf});
 
     cout << "test_unification5 [okay]" << endl;
 }
@@ -267,8 +281,9 @@ void test_unification5() {
 void test_trait_instatiation1() {
     TypeTable tt;
 
-    const TypeVar* A = tt.typevar();
-    const TypeTrait* T = tt.typetrait(std::string("T"), {A});   // trait T<A>
+    TypeVar* A = tt.typevar();
+    TypeTrait* T = tt.typetrait(std::string("T"));  // trait T
+    T->add_bound_var(A);                            // trait T<A>
     try {
         // illegal, must instantiate A
         const TypeTraitInstance* Ti = tt.instantiate_trait(T, {});
@@ -307,7 +322,7 @@ void test_type_sanity1() {
 void test_type_sanity2() {
     TypeTable tt;
 
-    const TypeVar* A = tt.typevar();
+    TypeVar* A = tt.typevar();
 
     try {
         A->add_bound_var(A);         // forall A, A
@@ -318,8 +333,8 @@ void test_type_sanity2() {
         assert(A->bound_at() == nullptr);
     }
 
-    const TypeVar* B = tt.typevar();
-    const TypeVar* C = tt.typevar();
+    TypeVar* B = tt.typevar();
+    TypeVar* C = tt.typevar();
     try {
         C->add_bound_var(B); // forall B, C
         assert(false && "Previous statement should have failed!");
@@ -339,19 +354,21 @@ void test_type_sanity3() {
     TypeVar* A = tt.typevar();
     FnType* f = tt.fntype({A}); // fn(A)
     f->add_bound_var(A);        // fn<A>(A)
+    FnType* uf = tt.unify(f);
 
     FnType* g = tt.fntype({A}); // fn(A)
+    FnType* ug = tt.unify(g);
 
-    // TODO unify
+    assert(ug == g);
 
     assert(g->is_unified());
-    assert(g != gf);
-    assert(g->get_representative() != gf->get_representative());
-    assert(!g->equal(gf));
+    assert(g != uf);
+    assert(g->get_representative() != uf->get_representative());
+    assert(!g->equal(uf));
 
     try {
-        FnType* h = tt.fntype({gf, g});     // fn(fn<A>(A), fn(A)) -> INVALID
-        // TODO unify
+        FnType* h = tt.fntype({uf, g});     // fn(fn<A>(A), fn(A)) -> INVALID
+        tt.unify(h);
 
         h->dump();
 
@@ -360,7 +377,7 @@ void test_type_sanity3() {
     }
 
     tt.check_sanity();
-    check_sanity({A, f, gf, g});
+    check_sanity({A, f, uf, g});
 
     cout << "test_type_sanity3 [okay]" << endl;
 }
@@ -371,6 +388,7 @@ void test_type_sanity4() {
     TypeVar* A = tt.typevar();
     FnType* f = tt.fntype({A}); // fn(A)
     f->add_bound_var(A);        // fn<A>(A)
+    tt.unify(f);
 
     TypeVar* B = tt.typevar();
     FnType* g = tt.fntype({A, B});   // fn(A, B)
@@ -415,13 +433,13 @@ void test_type_sanity6() {
     FnType* f = tt.fntype({A});         // fn(A)
     FnType* g = tt.fntype({A});         // fn(A)
     g->add_bound_var(A);
-    // TODO unify g
+    tt.unify(g);
     // TODO f is now a type that is sane but not unified!
 
     //tt.check_sanity();
 
     //cout << "test_type_sanity6 [okay]" << endl;
-}*/
+}
 
 int main() {
     simple_tests();
@@ -430,12 +448,12 @@ int main() {
     test_unification1();
     test_unification2();
     test_unification3();
-    /*test_unification4();
+    test_unification4();
     test_unification5();
     test_type_sanity1();
     test_type_sanity2();
     //test_type_sanity3();
     test_type_sanity4();
     test_type_sanity5();
-    //test_type_sanity6();*/
+    //test_type_sanity6();
 }
