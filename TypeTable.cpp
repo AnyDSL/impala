@@ -44,7 +44,14 @@ void TypeTable::insert_new(Type* type) {
         }
     }
 
-    // TODO unify traits
+    for (auto v : type->bound_vars()) {
+        for (auto r : v->restricted_by_) {
+            if (!r->is_unified()) {
+                unify(r);
+                assert(r->is_unified());
+            }
+        }
+    }
 
     if (type->kind() != Type_var) {
         // TODO is this a correct instanceof test?
@@ -54,7 +61,41 @@ void TypeTable::insert_new(Type* type) {
     }
 }
 
-void TypeTable::change_repr(Type* t, const Type* repr) const {
+void TypeTable::insert_new(TypeTraitInstance* tti) {
+    assert(!tti->is_unified());
+
+    tti->set_representative(tti);
+
+    for (size_t i = 0, e = tti->var_inst_size(); i != e; ++i) {
+        auto vi = tti->var_inst_(i);
+        if (!vi->is_unified()) {
+            unify(vi);
+            assert(vi->is_unified());
+        }
+    }
+
+    auto p = trait_instances_.insert(tti);
+    assert(p.second && "hash/equal broken");
+}
+
+void TypeTable::change_repr_rec(Type* t, const Type* repr) const {
+    assert(t->size() == repr->size());
+    for (size_t i = 0, e = t->size(); i != e; ++i) {
+        change_repr(t->elem_(i), repr->elem(i));
+    }
+
+    // TODO unify trait instances
+}
+
+void TypeTable::change_repr_rec(TypeTraitInstance* tti, const TypeTraitInstance* repr) const {
+    assert(tti->var_inst_size() == repr->var_inst_size());
+    for (size_t i = 0, e = tti->var_inst_size(); i != e; ++i) {
+        change_repr(tti->var_inst_(i), repr->var_inst(i));
+    }
+}
+
+template<class T>
+void TypeTable::change_repr(T* t, const T* repr) const {
     assert(repr->is_final_representative());
 
     if (t->is_unified()) {
@@ -62,12 +103,7 @@ void TypeTable::change_repr(Type* t, const Type* repr) const {
         return;
     }
 
-    assert(t->size() == repr->size());
-    for (size_t i = 0, e = t->size(); i != e; ++i) {
-        change_repr(t->elem_(i), repr->elem(i));
-    }
-
-    // TODO unify trait instances
+    change_repr_rec(t, repr);
 
     t->set_representative(repr);
 }
@@ -92,7 +128,7 @@ Type* TypeTable::unify_base(Type* type) {
     } else {
         insert_new(type);
         assert(type->is_unified());
-        assert(type->get_representative() == type);
+        assert(type->is_final_representative());
         return type;
     }
 }
@@ -109,16 +145,24 @@ Type* TypeTable::unify_base(Type* type) {
     return trait;
 }*/
 
-const TypeTraitInstance* TypeTable::unify_trait_inst(TypeTraitInstance* trait_inst) {
-    auto i = trait_instances_.find(trait_inst);
-    if (i != trait_instances_.end()) {
-        delete trait_inst;
-        return *i;
+//const TypeTraitInstance* TypeTable::unify_trait_inst(TypeTraitInstance* trait_inst) {
+TypeTraitInstance* TypeTable::unify_base(TypeTraitInstance* trait_inst) {
+    if (trait_inst->is_unified()) {
+        throw new IllegalTypeException("trait instance already unified");
     }
 
-    auto p = trait_instances_.insert(trait_inst);
-    assert(p.second && "hash/equal broken");
-    return trait_inst;
+    auto i = trait_instances_.find(trait_inst);
+    if (i != trait_instances_.end()) {
+        assert(*i != trait_inst);
+        change_repr(trait_inst, *i);
+        assert(trait_inst->get_representative() == *i);
+        return *i;
+    } else {
+        insert_new(trait_inst);
+        assert(trait_inst->is_unified());
+        assert(trait_inst->is_final_representative());
+        return trait_inst;
+    }
 }
 
 const PrimType* TypeTable::primtype(const PrimTypeKind kind) {

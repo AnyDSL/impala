@@ -83,7 +83,7 @@ public:
  * An instance of a trait is a trait where all generic type variables are
  * instantiated by concrete types.
  */
-class TypeTraitInstance {
+class TypeTraitInstance : public Unifiable<TypeTraitInstance>, public thorin::MagicCast<TypeTraitInstance> {
 private:
     // TODO raise exception if var_intances.size != trait.bound_vars.size
     /// create the global top type trait (like Object in java)
@@ -98,9 +98,16 @@ private:
     const TypeTrait* trait_;
     TypeArray var_instances_;
 
+    Type* var_inst_(size_t i) const { return var_instances_[i]; }
+
 public:
     bool equal(const TypeTraitInstance* t) const;
     size_t hash() const;
+
+    const Type* var_inst(size_t i) const { return var_instances_[i]; }
+
+    /// Returns number of variables instances.
+    size_t var_inst_size() const { return var_instances_.size(); }
 
     std::string to_string() const;
 

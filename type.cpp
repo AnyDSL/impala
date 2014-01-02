@@ -158,7 +158,7 @@ void TypeVar::bind(const GenericElement* const e) {
     bound_at_ = e;
 }
 
-void TypeVar::add_restriction(const TypeTraitInstance* restriction) {
+void TypeVar::add_restriction(TypeTraitInstance* restriction) {
     if (is_closed())
         throw IllegalTypeException("Closed type variables must not be changed!");
 

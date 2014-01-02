@@ -39,8 +39,8 @@ void simple_tests() {
     TypeVar* C = tt.typevar();
     TypeVar* D = tt.typevar();
 
-    const TypeTraitInstance* clonableInst = tt.instantiate_trait(clonable, {});
-    const TypeTraitInstance* eqInst = tt.instantiate_trait(eq, {});
+    TypeTraitInstance* clonableInst = tt.instantiate_trait(clonable, {});
+    TypeTraitInstance* eqInst = tt.instantiate_trait(eq, {});
 
     C->add_restriction(clonableInst);
     C->add_restriction(eqInst);
@@ -235,14 +235,14 @@ void test_unification5() {
 
     const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
 
-    const TypeTraitInstance* clonableInst = tt.instantiate_trait(clonable, {});
+    TypeTraitInstance* clonableInst = tt.instantiate_trait(clonable, {});
     TypeVar* A = tt.typevar();
     A->add_restriction(clonableInst);
     FnType* f = tt.fntype({A});
     f->add_bound_var(A); // fn<A:Clonable>(A)
     FnType* uf = tt.unify(f);
 
-    const TypeTraitInstance* clonableInst2 = tt.instantiate_trait(clonable, {});
+    TypeTraitInstance* clonableInst2 = tt.instantiate_trait(clonable, {});
     TypeVar* B = tt.typevar();
     B->add_restriction(clonableInst2);
     FnType* g = tt.fntype({B});
@@ -255,7 +255,7 @@ void test_unification5() {
     assert(f->get_representative() == g->get_representative());
 
     const TypeTrait* st = tt.typetrait(std::string("SomeTrait"));
-    const TypeTraitInstance* stInst = tt.instantiate_trait(st, {});
+    TypeTraitInstance* stInst = tt.instantiate_trait(st, {});
     TypeVar* C = tt.typevar();
     C->add_restriction(stInst);
     FnType* h = tt.fntype({C});
@@ -284,8 +284,8 @@ void test_unification6() {
     TypeVar* A = tt.typevar();
     TypeVar* B = tt.typevar();
 
-    const TypeTraitInstance* SA = tt.instantiate_trait(S, {A}); // S<A>
-    const TypeTraitInstance* SB = tt.instantiate_trait(S, {B}); // S<B>
+    TypeTraitInstance* SA = tt.instantiate_trait(S, {A}); // S<A>
+    TypeTraitInstance* SB = tt.instantiate_trait(S, {B}); // S<B>
 
     A->add_restriction(SB);
     B->add_restriction(SA);

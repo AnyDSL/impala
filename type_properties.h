@@ -46,7 +46,7 @@ public:
      * All operations should only be done with this representative.
      *
      * (representative == nullptr) means that this type has not yet been unified.
-     * Otherwise it either points to itself of to another type.
+     * Otherwise it either points to itself or to another type.
      */
     const T* get_representative() const {
         assert((representative_ == nullptr) || representative_->is_final_representative());

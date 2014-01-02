@@ -17,7 +17,7 @@
 
 struct TypeTraitInstanceHash { size_t operator () (const TypeTraitInstance* t) const { return t->hash(); } };
 struct TypeTraitInstanceEqual { bool operator () (const TypeTraitInstance* t1, const TypeTraitInstance* t2) const { return t1->equal(t2); } };
-typedef std::unordered_set<const TypeTraitInstance*, TypeTraitInstanceHash, TypeTraitInstanceEqual> TraitInstanceTableSet;
+typedef std::unordered_set<TypeTraitInstance*, TypeTraitInstanceHash, TypeTraitInstanceEqual> TraitInstanceTableSet;
 
 struct TypeHash { size_t operator () (const Type* t) const { return t->hash(); } };
 struct TypeEqual { bool operator () (const Type* t1, const Type* t2) const { return t1->equal(t2); } };
@@ -36,7 +36,7 @@ public:
 #include "primtypes.h"
 
     const TypeTrait* top_trait() const { return top_trait_; }
-    const TypeTraitInstance* top_trait_inst() const { return top_trait_inst_; }
+    TypeTraitInstance* top_trait_inst() const { return top_trait_inst_; }
 
     // TODO maybe seperate traits completely from the TypeTable
     TypeTrait* typetrait(std::string name, TypeTraitSet super_traits) {
@@ -69,11 +69,12 @@ public:
     void check_sanity() const;
 
     template<class T> T* unify(T* type) { return unify_base(type)->template as<T>(); }
-    const TypeTraitInstance* unify_trait_inst(TypeTraitInstance* type);
+    //const TypeTraitInstance* unify_trait_inst(TypeTraitInstance* type);
 
 private:
     /// insert all not-unified types contained in type
     void insert_new(Type* type);
+    void insert_new(TypeTraitInstance* tti);
 
     /**
      * Recursivly change the representatives of the not-unified types in t to the
@@ -81,9 +82,12 @@ private:
      *
      * This assumes that t is equal to repr.
      */
-    void change_repr(Type* t, const Type* repr) const;
+    template<class T> void change_repr(T* t, const T* repr) const;
+    void change_repr_rec(Type* t, const Type* repr) const;
+    void change_repr_rec(TypeTraitInstance* t, const TypeTraitInstance* repr) const;
 
     Type* unify_base(Type* type);
+    TypeTraitInstance* unify_base(TypeTraitInstance* trait_inst);
 
     /// like unify but deletes the given type if unification returned a different one
     template<class T> T* unify_new(T* type) {
@@ -101,7 +105,7 @@ private:
 #include "primtypes.h"
     const TypeError* type_error_;
     const TypeTrait* top_trait_;
-    const TypeTraitInstance* top_trait_inst_;
+    TypeTraitInstance* top_trait_inst_;
 };
 
 

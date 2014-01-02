@@ -21,7 +21,7 @@ class TypeTable;
 
 typedef thorin::ArrayRef<Type*> TypeArray;
 //typedef thorin::ArrayRef<const TypeTraitInstance*> TypeTraitInstArray;
-typedef std::unordered_set<const TypeTraitInstance*> TypeTraitInstSet;
+typedef std::unordered_set<TypeTraitInstance*> TypeTraitInstSet;
 
 //------------------------------------------------------------------------------
 
@@ -247,7 +247,7 @@ public:
     const TypeTraitInstSet* restricted_by() const { return &restricted_by_; }
     const GenericElement* bound_at() const { return bound_at_; }
 
-    void add_restriction(const TypeTraitInstance* restriction);
+    void add_restriction(TypeTraitInstance* restriction);
 
     virtual bool equal(const Type* other) const;
 
