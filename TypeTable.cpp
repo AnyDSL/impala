@@ -9,11 +9,11 @@
 
 TypeTable::TypeTable()
     : types_()
-    , traits_()
+//    , traits_()
 #define PRIMTYPE(T) , T##_(unify_new(new PrimType(*this, PrimType_##T)))
 #include "primtypes.h"
     , type_error_(unify_new(new TypeError(*this)))
-    , top_trait_(unify_trait(new TypeTrait(*this)))
+    , top_trait_(new TypeTrait(*this))
     , top_trait_inst_(instantiate_trait(top_trait_, {}))
 {}
 
@@ -97,7 +97,7 @@ Type* TypeTable::unify_base(Type* type) {
     }
 }
 
-const TypeTrait* TypeTable::unify_trait(TypeTrait* trait) {
+/*TypeTrait* TypeTable::unify_trait(TypeTrait* trait) {
     auto i = traits_.find(trait);
     if (i != traits_.end()) {
         delete trait;
@@ -107,7 +107,7 @@ const TypeTrait* TypeTable::unify_trait(TypeTrait* trait) {
     auto p = traits_.insert(trait);
     assert(p.second && "hash/equal broken");
     return trait;
-}
+}*/
 
 const TypeTraitInstance* TypeTable::unify_trait_inst(TypeTraitInstance* trait_inst) {
     auto i = trait_instances_.find(trait_inst);

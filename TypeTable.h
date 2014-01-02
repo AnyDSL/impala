@@ -11,9 +11,9 @@
 #include "type.h"
 #include "trait.h"
 
-struct TypeTraitHash { size_t operator () (const TypeTrait* t) const { return t->hash(); } };
-struct TypeTraitEqual { bool operator () (const TypeTrait* t1, const TypeTrait* t2) const { return t1->equal(t2); } };
-typedef std::unordered_set<const TypeTrait*, TypeTraitHash, TypeTraitEqual> TraitTableSet;
+//struct TypeTraitHash { size_t operator () (const TypeTrait* t) const { return t->hash(); } };
+//struct TypeTraitEqual { bool operator () (const TypeTrait* t1, const TypeTrait* t2) const { return t1->equal(t2); } };
+//typedef std::unordered_set<TypeTrait*, TypeTraitHash, TypeTraitEqual> TraitTableSet;
 
 struct TypeTraitInstanceHash { size_t operator () (const TypeTraitInstance* t) const { return t->hash(); } };
 struct TypeTraitInstanceEqual { bool operator () (const TypeTraitInstance* t1, const TypeTraitInstance* t2) const { return t1->equal(t2); } };
@@ -38,13 +38,14 @@ public:
     const TypeTrait* top_trait() const { return top_trait_; }
     const TypeTraitInstance* top_trait_inst() const { return top_trait_inst_; }
 
+    // TODO maybe seperate traits completely from the TypeTable
     TypeTrait* typetrait(std::string name, TypeTraitSet super_traits) {
         return new TypeTrait(*this, name, super_traits);
     }
     TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}); }
 
-    const TypeTraitInstance* instantiate_trait(const TypeTrait* trait, TypeArray var_instances) {
-        return unify_trait_inst(new TypeTraitInstance(trait, var_instances));
+    TypeTraitInstance* instantiate_trait(const TypeTrait* trait, TypeArray var_instances) {
+        return new TypeTraitInstance(trait, var_instances);
     }
 
     TypeVar* typevar() { return new TypeVar(*this); }
@@ -68,7 +69,6 @@ public:
     void check_sanity() const;
 
     template<class T> T* unify(T* type) { return unify_base(type)->template as<T>(); }
-    const TypeTrait* unify_trait(TypeTrait* type);
     const TypeTraitInstance* unify_trait_inst(TypeTraitInstance* type);
 
 private:
@@ -94,7 +94,7 @@ private:
     }
 
     TypeSet types_;
-    TraitTableSet traits_;
+    //TraitTableSet traits_;
     TraitInstanceTableSet trait_instances_;
 
 #define PRIMTYPE(T) PrimType* T##_;

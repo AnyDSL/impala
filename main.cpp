@@ -203,10 +203,38 @@ void test_unification3() {
     cout << "test_unification3 [okay]" << endl;
 }
 
+/// test trait instance unification
 void test_unification4() {
     TypeTable tt;
 
     const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
+    const TypeTraitInstance* inst  = tt.instantiate_trait(clonable, {});
+    const TypeTraitInstance* inst2 = tt.instantiate_trait(clonable, {});
+
+    assert(inst == inst2);
+
+    TypeTrait* A = tt.typetrait(std::string("A"));
+    TypeVar* X = tt.typevar();
+    A->add_bound_var(X);
+
+    try {
+        const TypeTraitInstance* inst  = tt.instantiate_trait(clonable, {});
+        assert(false && "Previous statement should have failed!");
+    } catch (IllegalTypeException& e) {
+    }
+
+    try {
+        const TypeTraitInstance* inst  = tt.instantiate_trait(clonable, {tt.type_int(), tt.type_int()});
+        assert(false && "Previous statement should have failed!");
+    } catch (IllegalTypeException& e) {
+    }
+}
+
+void test_unification5() {
+    TypeTable tt;
+
+    const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
+
     const TypeTraitInstance* clonableInst = tt.instantiate_trait(clonable, {});
     TypeVar* A = tt.typevar();
     A->add_restriction(clonableInst);
@@ -214,16 +242,14 @@ void test_unification4() {
     f->add_bound_var(A); // fn<A:Clonable>(A)
     FnType* uf = tt.unify(f);
 
-    const TypeTrait* clonable2 = tt.typetrait(std::string("Clonable"));
-    const TypeTraitInstance* clonable2Inst = tt.instantiate_trait(clonable2, {});
+    const TypeTraitInstance* clonableInst2 = tt.instantiate_trait(clonable, {});
     TypeVar* B = tt.typevar();
-    B->add_restriction(clonable2Inst);
+    B->add_restriction(clonableInst2);
     FnType* g = tt.fntype({B});
     g->add_bound_var(B); // fn<B:Clonable>(B)
     FnType* ug = tt.unify(g);
 
-    assert(clonable == clonable2);
-    assert(clonableInst == clonable2Inst);
+    assert(clonableInst == clonableInst2);
 
     assert(uf == ug);
     assert(f->get_representative() == g->get_representative());
@@ -248,7 +274,7 @@ void test_unification4() {
 }
 
 /// fn<A:S<B>, B:S<A>>(A, B)
-void test_unification5() {
+void test_unification6() {
     TypeTable tt;
 
     TypeVar* X = tt.typevar();

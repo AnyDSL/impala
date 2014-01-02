@@ -47,7 +47,9 @@ private:
         : typetable_(tt)
         , name_(name)
         , super_traits_(super_traits)
-    {}
+    {
+        assert(!super_traits.empty() && "Supertraits must at least contain top trait");
+    }
 
     TypeTrait& operator = (const TypeTrait&); ///< Do not copy-assign a \p TypeTrait.
     TypeTrait(const TypeTrait& node);         ///< Do not copy-construct a \p TypeTrait.
