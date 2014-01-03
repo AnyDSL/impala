@@ -43,6 +43,11 @@ bool Type::equal(const Type* other) const {
         this->bound_var(i)->set_equiv_variable(other->bound_var(i));
     }
 
+    // check equality of the restrictions of the type variables
+    for (size_t i = 0, e = num_bound_vars(); i != e; ++i) {
+        result &= this->bound_var(i)->restrictions_equal(other->bound_var(i));
+    }
+
     for (size_t i = 0, e = size(); i != e && result; ++i) {
         result &= this->elem(i)->equal(other->elem(i));
     }
@@ -56,6 +61,14 @@ bool Type::equal(const Type* other) const {
 }
 
 bool Type::is_closed() const {
+    for (auto v : bound_vars()) {
+        for (auto r : *v->restricted_by()) {
+            if (! r->is_closed()) {
+                return false;
+            }
+        }
+    }
+
     for (auto t : elems_) {
         if (! t->is_closed()) {
             return false;
@@ -114,6 +127,29 @@ std::string CompoundType::elems_to_string() const {
     return result + ')';
 }
 
+bool TypeVar::restrictions_equal(const TypeVar* other) const {
+    auto trestr = other->restricted_by();
+
+    if (this->restricted_by()->size() != trestr->size())
+        return false;
+
+    TraitInstanceTableSet ttis;
+    for (auto r : *trestr) {
+        auto p = ttis.insert(r);
+        assert(p.second && "hash/equal broken");
+    }
+
+    // TODO this will not work!
+    // this->restricted_by() subset of trestr
+    for (auto r : *this->restricted_by()) {
+        if (ttis.find(r) == ttis.end()) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool TypeVar::equal(const Type* other) const {
     if (this->is_unified() && other->is_unified()) {
         return this->get_representative() == other->get_representative();
@@ -121,19 +157,6 @@ bool TypeVar::equal(const Type* other) const {
 
     // TODO is this correct for a instanceof-equivalent?
     if (const TypeVar* t = other->isa<TypeVar>()) {
-        auto trestr = t->restricted_by();
-
-        if (this->restricted_by()->size() != trestr->size()) {
-            return false;
-        } else {
-            // this->restricted_by() subset of trestr
-            for (auto r : *this->restricted_by()) {
-                if (trestr->find(r) == trestr->end()) {
-                    return false;
-                }
-            }
-        }
-
         if ((this->equiv_var_ == nullptr) && (t->equiv_var_ == nullptr)) {
             assert(this->bound_at_ != nullptr);
             return this->bound_at_->equal(t->bound_at_);
@@ -164,6 +187,10 @@ void TypeVar::add_restriction(TypeTraitInstance* restriction) {
 
     auto p = restricted_by_.insert(restriction);
     assert(p.second && "hash/equal broken");
+}
+
+bool TypeVar::is_closed() const {
+    return bound_at_ != nullptr;
 }
 
 std::string TypeVar::to_string() const {

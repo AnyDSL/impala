@@ -253,6 +253,10 @@ void test_unification5() {
     f->add_bound_var(A); // fn<A:Clonable>(A)
     FnType* uf = tt.unify(f);
 
+    assert(f->is_unified());
+    assert(uf == f);
+    assert(clonableInst->is_unified());
+
     TypeTraitInstance* clonableInst2 = tt.instantiate_trait(clonable, {});
     TypeVar* B = tt.typevar();
     B->add_restriction(clonableInst2);
@@ -260,10 +264,14 @@ void test_unification5() {
     g->add_bound_var(B); // fn<B:Clonable>(B)
     FnType* ug = tt.unify(g);
 
-    assert(clonableInst == clonableInst2);
+    assert(g->is_unified());
+    assert(clonableInst2->is_unified());
 
-    assert(uf == ug);
+    assert(clonableInst->equal(clonableInst2));
+    assert(clonableInst->get_representative() == clonableInst2->get_representative());
+
     assert(f->get_representative() == g->get_representative());
+    assert(ug == uf);
 
     const TypeTrait* st = tt.typetrait(std::string("SomeTrait"));
     TypeTraitInstance* stInst = tt.instantiate_trait(st, {});
@@ -273,8 +281,13 @@ void test_unification5() {
     h->add_bound_var(C); // fn<B:SomeTrait>(B)
     FnType* uh = tt.unify(h);
 
-    assert(st != clonable);
+    assert(h->is_unified());
+    assert(stInst->is_unified());
+
     assert(!st->equal(clonable));
+    assert(!stInst->equal(clonableInst));
+    assert(!stInst->equal(clonableInst2));
+    assert(stInst->get_representative() != clonableInst->get_representative());
 
     assert(h->get_representative() != g->get_representative());
 

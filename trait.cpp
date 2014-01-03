@@ -61,6 +61,14 @@ bool TypeTraitInstance::equal(const TypeTraitInstance* other) const {
 // TODO
 size_t TypeTraitInstance::hash() const { return 0; }
 
+bool TypeTraitInstance::is_closed() const {
+    for (auto i : var_instances_) {
+        if (!i->is_closed())
+            return false;
+    }
+    return true;
+}
+
 // TODO
 std::string TypeTraitInstance::to_string() const {
     return trait_->to_string();

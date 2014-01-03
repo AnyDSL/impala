@@ -112,6 +112,8 @@ public:
     /// Returns number of variables instances.
     size_t var_inst_size() const { return var_instances_.size(); }
 
+    bool is_closed() const;
+
     std::string to_string() const;
 
     /// true if this is an instance of the top type trait (like Object in Java)

@@ -243,6 +243,8 @@ private:
 
     void bind(const GenericElement* const e);
 
+    bool restrictions_equal(const TypeVar* other) const;
+
 public:
     const TypeTraitInstSet* restricted_by() const { return &restricted_by_; }
     const GenericElement* bound_at() const { return bound_at_; }
@@ -255,10 +257,10 @@ public:
     std::string to_string() const;
 
     /**
-     * A type variable is closed if it is bound.
+     * A type variable is closed if it is bound and all restrictions are closed.
      * If a type variable is closed it must not be changed anymore!
      */
-    virtual bool is_closed() const { return bound_at_ != nullptr; }
+    virtual bool is_closed() const;
 
     // TODO this->is_subtype(bound_at()); if bound_at is a Type, else it should occur in the method signatures
     virtual bool is_sane() const { return is_closed(); }
