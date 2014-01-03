@@ -193,26 +193,6 @@ const PrimType* TypeTable::primtype(const PrimTypeKind kind) {
     }
 }
 
-// TODO consider this
-/*const Type* TypeTable::gentype_base(TypeVarArray tvars, const Type* type) {
-   // all closed types should be unified and the other way round!
-   assert(type->is_unified() == type->is_closed());
-
-   if (type->is_unified())
-       throw IllegalTypeException("Cannot create a generic type from an already unified one!");
-   if (type->kind() == Type_var)
-       throw IllegalTypeException("Types like 'forall a, a' are forbidden!");
-
-   for (auto v : tvars) {
-       if (!v->is_subtype(type))
-           throw IllegalTypeException("Type variables can only be bound at t if they are a subtype of t!");
-
-       v->bind(type);
-       type->add_bound_var(v);
-   }
-   return unify(type);
-}*/
-
 void TypeTable::check_sanity() const {
     for (auto t : types_) {
         assert(t->is_unified());

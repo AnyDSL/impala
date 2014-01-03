@@ -500,10 +500,10 @@ int main() {
     test_unification3();
     test_unification4();
     test_unification5();
-    test_type_sanity1();
-    test_type_sanity2();
+    //test_type_sanity1();
+    //test_type_sanity2();
     //test_type_sanity3();
     test_type_sanity4();
-    test_type_sanity5();
+    //test_type_sanity5();
     //test_type_sanity6();
 }

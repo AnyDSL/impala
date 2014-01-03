@@ -45,6 +45,14 @@ void GenericElement::add_bound_var(TypeVar* v) {
     if (v->is_closed())
         throw IllegalTypeException("Type variables already bound");
 
+    // TODO should variables only be bound in this case? does this also hold for traits?
+    //if (!v->is_subtype(this))
+    //   throw IllegalTypeException("Type variables can only be bound at t if they are a subtype of t!");
+
+    // TODO should this be forbidden?
+    //if (type->kind() == Type_var)
+    //   throw IllegalTypeException("Types like 'forall a, a' are forbidden!");
+
     v->bind(this);
     bound_vars_.push_back(v);
 }
