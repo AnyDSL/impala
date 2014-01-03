@@ -43,7 +43,7 @@ private:
         , super_traits_()
     {}
 
-    TypeTrait(TypeTable& tt, std::string name, const TypeTraitSet super_traits)
+    TypeTrait(TypeTable& tt, const std::string name, const TypeTraitSet super_traits)
         : typetable_(tt)
         , name_(name)
         , super_traits_(super_traits)
@@ -55,7 +55,7 @@ private:
     TypeTrait(const TypeTrait& node);         ///< Do not copy-construct a \p TypeTrait.
 
     TypeTable& typetable_;
-    std::string name_;
+    const std::string name_;
     const TypeTraitSet super_traits_;
     std::vector<const TypeTraitMethod*> methods_;
 
@@ -66,6 +66,7 @@ public:
     bool equal(const TypeTrait* t) const;
     size_t hash() const;
 
+    const std::string name() const { return name_; }
     std::string to_string() const;
 
     void add_method(const std::string name, const FnType* type);

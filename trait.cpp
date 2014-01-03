@@ -49,6 +49,7 @@ bool TypeTraitInstance::equal(const TypeTraitInstance* other) const {
         return false;
 
     assert(var_instances_.size() == other->var_instances_.size());
+    assert((this == other) || !(var_instances_ == other->var_instances_));
 
     for (int i = 0; i < var_instances_.size(); ++i) {
         if (! var_instances_[i]->equal(other->var_instances_[i])) {
@@ -58,8 +59,8 @@ bool TypeTraitInstance::equal(const TypeTraitInstance* other) const {
     return true;
 }
 
-// TODO
-size_t TypeTraitInstance::hash() const { return 0; }
+// TODO better hash function
+size_t TypeTraitInstance::hash() const { return trait_->hash(); }
 
 bool TypeTraitInstance::is_closed() const {
     for (auto i : var_instances_) {
@@ -71,5 +72,13 @@ bool TypeTraitInstance::is_closed() const {
 
 // TODO
 std::string TypeTraitInstance::to_string() const {
-    return trait_->to_string();
+    std::string result = trait_->name();
+
+    const char* separator = "<";
+    for (auto v : var_instances_) {
+        result += separator + v->to_string();
+        separator = ",";
+    }
+
+    return result + ">";
 }

@@ -239,6 +239,10 @@ void test_unification4() {
         assert(false && "Previous statement should have failed!");
     } catch (IllegalTypeException& e) {
     }
+
+    tt.check_sanity();
+
+    cout << "test_unification4 [okay]" << endl;
 }
 
 void test_unification5() {
@@ -294,7 +298,7 @@ void test_unification5() {
     tt.check_sanity();
     check_sanity({A, f, B, g, C, h, uf, ug, uh});
 
-    cout << "test_unification4 [okay]" << endl;
+    cout << "test_unification5 [okay]" << endl;
 }
 
 /// fn<A:S<B>, B:S<A>>(A, B)
@@ -318,14 +322,27 @@ void test_unification6() {
     FnType* f = tt.fntype({A, B});
     f->add_bound_var(A);
     f->add_bound_var(B);
+
+    assert(!SB->equal(SA));
+    assert(!SA->equal(SB));
+
     FnType* uf = tt.unify(f);
 
     f->dump();
 
+    assert(f->is_unified());
+    assert(A->is_unified());
+    assert(B->is_unified());
+    assert(SA->is_unified());
+    assert(SB->is_unified());
+
+    assert(A->get_representative() != B->get_representative());
+    assert(SA->get_representative() != SB->get_representative());
+
     tt.check_sanity();
     check_sanity({A, B, f, uf});
 
-    cout << "test_unification5 [okay]" << endl;
+    cout << "test_unification6 [okay]" << endl;
 }
 
 void test_trait_instatiation1() {
@@ -492,7 +509,7 @@ void test_type_sanity6() {
 }
 
 int main() {
-    simple_tests();
+    //simple_tests();
     //return 0;
 
     test_unification1();
@@ -500,10 +517,13 @@ int main() {
     test_unification3();
     test_unification4();
     test_unification5();
+    test_unification6();
     //test_type_sanity1();
     //test_type_sanity2();
     //test_type_sanity3();
     test_type_sanity4();
     //test_type_sanity5();
     //test_type_sanity6();
+
+    return 0;
 }
