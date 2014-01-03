@@ -133,13 +133,13 @@ bool TypeVar::restrictions_equal(const TypeVar* other) const {
     if (this->restricted_by()->size() != trestr->size())
         return false;
 
+    // TODO this does work but seems too much effort
     TraitInstanceTableSet ttis;
     for (auto r : *trestr) {
         auto p = ttis.insert(r);
         assert(p.second && "hash/equal broken");
     }
 
-    // TODO this will not work!
     // this->restricted_by() subset of trestr
     for (auto r : *this->restricted_by()) {
         if (ttis.find(r) == ttis.end()) {

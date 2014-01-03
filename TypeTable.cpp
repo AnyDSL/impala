@@ -79,12 +79,32 @@ void TypeTable::insert_new(TypeTraitInstance* tti) {
 }
 
 void TypeTable::change_repr_rec(Type* t, const Type* repr) const {
+    assert(t->bound_vars().size() == repr->bound_vars().size());
+    for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
+        auto tv = t->bound_var(i);
+        auto reprv = repr->bound_var(i);
+
+        assert(tv->restricted_by()->size() == reprv->restricted_by()->size());
+
+        // TODO this does work but seems too much effort
+        TraitInstanceTableSet ttis;
+        for (auto r : *reprv->restricted_by()) {
+            auto p = ttis.insert(r);
+            assert(p.second && "hash/equal broken");
+        }
+
+        // this->restricted_by() subset of trestr
+        for (auto restr : *tv->restricted_by()) {
+            auto repr_restr = ttis.find(restr);
+            assert(repr_restr != ttis.end());
+            change_repr(restr, *repr_restr);
+        }
+    }
+
     assert(t->size() == repr->size());
     for (size_t i = 0, e = t->size(); i != e; ++i) {
         change_repr(t->elem_(i), repr->elem(i));
     }
-
-    // TODO unify trait instances
 }
 
 void TypeTable::change_repr_rec(TypeTraitInstance* tti, const TypeTraitInstance* repr) const {
