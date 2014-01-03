@@ -110,12 +110,12 @@ void TypeTable::change_repr(T* t, const T* repr) const {
 
 Type* TypeTable::unify_base(Type* type) {
     if (type->is_unified()) {
-        throw new IllegalTypeException("Type is already unified!");
+        throw IllegalTypeException("Type is already unified!");
     }
 
     // unify only closed types (i.e. only types where all type variables have been bound)
     if (! type->is_closed()) {
-        throw new IllegalTypeException("Only closed types can be unified!");
+        throw IllegalTypeException("Only closed types can be unified!");
     }
 
     auto i = types_.find(type);
@@ -148,7 +148,7 @@ Type* TypeTable::unify_base(Type* type) {
 //const TypeTraitInstance* TypeTable::unify_trait_inst(TypeTraitInstance* trait_inst) {
 TypeTraitInstance* TypeTable::unify_base(TypeTraitInstance* trait_inst) {
     if (trait_inst->is_unified()) {
-        throw new IllegalTypeException("trait instance already unified");
+        throw IllegalTypeException("trait instance already unified");
     }
 
     auto i = trait_instances_.find(trait_inst);

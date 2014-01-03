@@ -90,7 +90,10 @@ private:
     TypeTraitInstance(const TypeTrait* trait, TypeArray var_instances)
         : trait_(trait)
         , var_instances_(var_instances)
-    {}
+    {
+        if (var_instances.size() != trait->bound_vars().size())
+            throw IllegalTypeException("Wrong number of instances for bound type variables");
+    }
 
     TypeTraitInstance& operator = (const TypeTraitInstance&); ///< Do not copy-assign a \p TypeTraitInstance.
     TypeTraitInstance(const TypeTraitInstance& node);         ///< Do not copy-construct a \p TypeTraitInstance.

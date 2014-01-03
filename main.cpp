@@ -208,23 +208,34 @@ void test_unification4() {
     TypeTable tt;
 
     const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
-    const TypeTraitInstance* inst  = tt.instantiate_trait(clonable, {});
-    const TypeTraitInstance* inst2 = tt.instantiate_trait(clonable, {});
+    TypeTraitInstance* inst = tt.instantiate_trait(clonable, {});
+    const TypeTraitInstance* uinst = tt.unify(inst);
 
-    assert(inst == inst2);
+    assert(inst->is_unified());
+    assert(uinst == inst);
+
+    TypeTraitInstance* inst2 = tt.instantiate_trait(clonable, {});
+    const TypeTraitInstance* uinst2 = tt.unify(inst2);
+
+    assert(inst2->is_unified());
+    assert(uinst == uinst2);
+
+    assert(inst->equal(inst2));
+    assert(inst->get_representative() == inst2->get_representative());
+    assert(inst2->get_representative() == uinst);
 
     TypeTrait* A = tt.typetrait(std::string("A"));
     TypeVar* X = tt.typevar();
     A->add_bound_var(X);
 
     try {
-        const TypeTraitInstance* inst  = tt.instantiate_trait(clonable, {});
+        const TypeTraitInstance* inst = tt.instantiate_trait(A, {});
         assert(false && "Previous statement should have failed!");
     } catch (IllegalTypeException& e) {
     }
 
     try {
-        const TypeTraitInstance* inst  = tt.instantiate_trait(clonable, {tt.type_int(), tt.type_int()});
+        const TypeTraitInstance* inst = tt.instantiate_trait(A, {tt.type_int(), tt.type_int()});
         assert(false && "Previous statement should have failed!");
     } catch (IllegalTypeException& e) {
     }

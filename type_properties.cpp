@@ -43,7 +43,7 @@ std::string GenericElement::bound_vars_to_string() const {
 
 void GenericElement::add_bound_var(TypeVar* v) {
     if (v->is_closed())
-        throw new IllegalTypeException("Type variables already bound");
+        throw IllegalTypeException("Type variables already bound");
 
     v->bind(this);
     bound_vars_.push_back(v);

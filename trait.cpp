@@ -30,7 +30,7 @@ std::string TypeTrait::to_string() const {
 
 void TypeTrait::add_method(const std::string name, const FnType* type) {
     if (! type->is_unified()) {
-        throw new IllegalTypeException("Method types must be closed");
+        throw IllegalTypeException("Method types must be closed");
     }
     assert(type->is_closed());
     TypeTraitMethod* m = new TypeTraitMethod();
@@ -40,6 +40,11 @@ void TypeTrait::add_method(const std::string name, const FnType* type) {
 }
 
 bool TypeTraitInstance::equal(const TypeTraitInstance* other) const {
+    if (this->is_unified() && other->is_unified()) {
+        return this->get_representative() == other->get_representative();
+    }
+
+    // TODO use equal?
     if (trait_ != other->trait_)
         return false;
 
