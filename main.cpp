@@ -328,7 +328,7 @@ void test_unification6() {
 
     FnType* uf = tt.unify(f);
 
-    f->dump();
+    //f->dump();
 
     assert(f->is_unified());
     assert(A->is_unified());
@@ -376,6 +376,55 @@ void test_unification6() {
     check_sanity({A, B, C, D, f, uf, g, ug});
 
     cout << "test_unification6 [okay]" << endl;
+}
+
+/// fn<A:S<A>>(A)
+void test_unification7() {
+    TypeTable tt;
+
+    TypeVar* X = tt.typevar();
+    TypeTrait* S = tt.typetrait(std::string("S"));  // trait S
+    S->add_bound_var(X);                            // trait S<X>
+
+    TypeVar* A = tt.typevar();
+
+    TypeTraitInstance* SA = tt.instantiate_trait(S, {A}); // S<A>
+    A->add_restriction(SA);
+
+    /// fn<A:S<A>>(A)
+    FnType* f = tt.fntype({A});
+    f->add_bound_var(A);
+    FnType* uf = tt.unify(f);
+
+    //f->dump();
+
+    assert(f->is_unified());
+    assert(A->is_unified());
+    assert(SA->is_unified());
+
+    TypeVar* B = tt.typevar();
+
+    TypeTraitInstance* SB = tt.instantiate_trait(S, {B}); // S<C>
+    B->add_restriction(SB);
+
+    /// fn<C:S<C>>(C)
+    FnType* g = tt.fntype({B});
+    g->add_bound_var(B);
+    FnType* ug = tt.unify(g);
+
+    assert(g->is_unified());
+    assert(B->is_unified());
+    assert(SB->is_unified());
+
+    assert(ug == uf);
+    assert(g->get_representative() == f->get_representative());
+    assert(B->get_representative() == A->get_representative());
+    assert(SB->get_representative() == SA->get_representative());
+
+    tt.check_sanity();
+    check_sanity({A, B, f, uf, g, ug});
+
+    cout << "test_unification7 [okay]" << endl;
 }
 
 void test_trait_instatiation1() {
@@ -551,6 +600,7 @@ int main() {
     test_unification4();
     test_unification5();
     test_unification6();
+    test_unification7();
     //test_type_sanity1();
     //test_type_sanity2();
     //test_type_sanity3();
