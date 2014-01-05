@@ -15,11 +15,11 @@
 
 class TypeVar;
 
-typedef thorin::ArrayRef<const TypeVar*> TypeVarArray;
+typedef thorin::ArrayRef<TypeVar*> TypeVarArray;
 
 class GenericElement : public thorin::MagicCast<GenericElement> {
 protected:
-    std::vector<const TypeVar*> bound_vars_;
+    std::vector<TypeVar*> bound_vars_;
 
     std::string bound_vars_to_string() const;
 
@@ -27,7 +27,7 @@ public:
     size_t num_bound_vars() const { return bound_vars_.size(); }
 
     TypeVarArray bound_vars() const { return TypeVarArray(bound_vars_); }
-    const TypeVar* bound_var(size_t i) const { return bound_vars()[i]; }
+    TypeVar* bound_var(size_t i) const { return bound_vars_[i]; }
 
     /// Returns true if this \p Type does have any bound type variabes (\p bound_vars_).
     bool is_generic() const { return !bound_vars_.empty(); }

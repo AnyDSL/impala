@@ -339,8 +339,41 @@ void test_unification6() {
     assert(A->get_representative() != B->get_representative());
     assert(SA->get_representative() != SB->get_representative());
 
+
+    TypeVar* C = tt.typevar();
+    TypeVar* D = tt.typevar();
+
+    TypeTraitInstance* SC = tt.instantiate_trait(S, {C}); // S<C>
+    TypeTraitInstance* SD = tt.instantiate_trait(S, {D}); // S<D>
+
+    C->add_restriction(SD);
+    D->add_restriction(SC);
+
+    /// fn<C:S<D>, D:S<C>>(C, D)
+    FnType* g = tt.fntype({C, D});
+    g->add_bound_var(C);
+    g->add_bound_var(D);
+
+    FnType* ug = tt.unify(g);
+
+    assert(g->is_unified());
+    assert(C->is_unified());
+    assert(D->is_unified());
+    assert(SC->is_unified());
+    assert(SD->is_unified());
+
+    assert(C->get_representative() != D->get_representative());
+    assert(SC->get_representative() != SD->get_representative());
+
+    assert(ug == uf);
+    assert(g->get_representative() == f->get_representative());
+    assert(C->get_representative() == A->get_representative());
+    assert(D->get_representative() == B->get_representative());
+    assert(SC->get_representative() == SA->get_representative());
+    assert(SD->get_representative() == SB->get_representative());
+
     tt.check_sanity();
-    check_sanity({A, B, f, uf});
+    check_sanity({A, B, C, D, f, uf, g, ug});
 
     cout << "test_unification6 [okay]" << endl;
 }

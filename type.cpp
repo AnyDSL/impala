@@ -158,7 +158,7 @@ bool TypeVar::equal(const Type* other) const {
     // TODO is this correct for a instanceof-equivalent?
     if (const TypeVar* t = other->isa<TypeVar>()) {
         if ((this->equiv_var_ == nullptr) && (t->equiv_var_ == nullptr)) {
-            if (this->bound_at_ != nullptr) {
+            if (this->bound_at_ == nullptr) {
                 return false;
             } else {
                 //return this->bound_at_->equal(t->bound_at_); TODO AND: they must be bound at the same position!

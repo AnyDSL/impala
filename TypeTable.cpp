@@ -79,6 +79,13 @@ void TypeTable::insert_new(TypeTraitInstance* tti) {
 }
 
 void TypeTable::change_repr_rec(Type* t, const Type* repr) const {
+    // first unify all bounded variables
+    assert(t->bound_vars().size() == repr->bound_vars().size());
+    for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
+        change_repr(t->bound_var(i), repr->bound_var(i));
+    }
+
+    // unify restrictions of bounded variables
     assert(t->bound_vars().size() == repr->bound_vars().size());
     for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
         auto tv = t->bound_var(i);
@@ -101,6 +108,7 @@ void TypeTable::change_repr_rec(Type* t, const Type* repr) const {
         }
     }
 
+    // unify sub elements
     assert(t->size() == repr->size());
     for (size_t i = 0, e = t->size(); i != e; ++i) {
         change_repr(t->elem_(i), repr->elem(i));
