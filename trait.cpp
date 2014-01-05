@@ -39,6 +39,19 @@ void TypeTrait::add_method(const std::string name, const FnType* type) {
     methods_.push_back(m);
 }
 
+
+TypeTraitInstance::TypeTraitInstance(const TypeTrait* trait, TypeArray var_instances)
+    : trait_(trait)
+    , var_instances_(var_instances.size())
+{
+    if (var_instances.size() != trait->bound_vars().size())
+        throw IllegalTypeException("Wrong number of instances for bound type variables");
+
+    size_t i = 0;
+    for (auto elem : var_instances)
+        var_instances_[i++] = elem;
+}
+
 bool TypeTraitInstance::equal(const TypeTraitInstance* other) const {
     if (this->is_unified() && other->is_unified()) {
         return this->get_representative() == other->get_representative();
@@ -49,8 +62,6 @@ bool TypeTraitInstance::equal(const TypeTraitInstance* other) const {
         return false;
 
     assert(var_instances_.size() == other->var_instances_.size());
-    assert((this == other) || !(var_instances_ == other->var_instances_));
-
     for (int i = 0; i < var_instances_.size(); ++i) {
         if (! var_instances_[i]->equal(other->var_instances_[i])) {
             return false;

@@ -86,21 +86,13 @@ public:
  */
 class TypeTraitInstance : public Unifiable<TypeTraitInstance>, public thorin::MagicCast<TypeTraitInstance> {
 private:
-    // TODO raise exception if var_intances.size != trait.bound_vars.size
-    /// create the global top type trait (like Object in java)
-    TypeTraitInstance(const TypeTrait* trait, TypeArray var_instances)
-        : trait_(trait)
-        , var_instances_(var_instances)
-    {
-        if (var_instances.size() != trait->bound_vars().size())
-            throw IllegalTypeException("Wrong number of instances for bound type variables");
-    }
+    TypeTraitInstance(const TypeTrait* trait, TypeArray var_instances);
 
     TypeTraitInstance& operator = (const TypeTraitInstance&); ///< Do not copy-assign a \p TypeTraitInstance.
     TypeTraitInstance(const TypeTraitInstance& node);         ///< Do not copy-construct a \p TypeTraitInstance.
 
     const TypeTrait* trait_;
-    TypeArray var_instances_;
+    std::vector<Type*> var_instances_;
 
     Type* var_inst_(size_t i) const { return var_instances_[i]; }
 
