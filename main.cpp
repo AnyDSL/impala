@@ -32,7 +32,7 @@ void simple_tests() {
     tt.unify(f);
     f->dump();
 
-    // create an fn<C:Clonable+Equality, D>(C)
+    // create an fn<C:Clonable+Equality, D>(C, D)
     const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
     const TypeTrait* eq = tt.typetrait(std::string("Equality"));
 
