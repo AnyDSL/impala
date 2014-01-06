@@ -51,7 +51,7 @@ public:
 
     TypeVarNode* typevar() { return new TypeVarNode(*this); }
 
-    FnTypeNode* fntype(TypeArray params) { return FnType(new FnTypeNode(*this, params)); }
+    FnType fntype(TypeArray params) { return FnType(new FnTypeNode(*this, params)); }
 
     /**
      * A shortcut to create function types with a return type.
@@ -70,7 +70,7 @@ public:
     void check_sanity() const;
 
     void unify(TypeTraitInstance tti);
-    template<class T> void unify(Unifiable<T> type) { unify_base((Type) type); }
+    template<class T> void unify(UnifiableProxy<T> type) { unify_base(type); }
 
     //const TypeTraitInstance* unify_trait_inst(TypeTraitInstance* type);
 
@@ -85,8 +85,8 @@ private:
      *
      * This assumes that t is equal to repr.
      */
-    template<class T> void change_repr(Unifiable<T> t, T* repr) const;
-    template<class T> void change_repr_rec(Unifiable<T> t, T* repr) const;
+    template<class T> void change_repr(UnifiableProxy<T> t, T* repr) const;
+    template<class T> void change_repr_rec(UnifiableProxy<T> t, T* repr) const;
     void change_repr_rec(TypeTraitInstance t, TypeTraitInstanceNode* repr) const;
 
     void unify_base(Type type);

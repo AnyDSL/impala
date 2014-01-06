@@ -16,37 +16,31 @@
 
 class TypeTable;
 class TypeNode;
+template<class T> class UnifiableProxy;
 
 template<class T>
 class Unifiable {
 public:
-    Unifiable()
-        : node_(nullptr)
-        , unified_(false)
-    {}
-
     Unifiable(T* node)
-        : node_(node)
+        : representative_(node)
         , unified_(false)
     {}
 
-    bool empty() const { return node_ == nullptr; }
-    T* node() const { return node_; }
-    T* get_representative() const { return node(); }
+    Unifiable(T* node, bool unified)
+        : representative_(node)
+        , unified_(unified)
+    {}
+
+    T* get_representative() const { return representative_; }
 
     template<class U> bool equal(Unifiable<U> other) const {
         if (this->is_unified() && other.is_unified()) {
-            return this->node() == other.node();
+            return this->get_representative() == other.get_representative();
         }
-        return node()->equal(other.node());
+        return get_representative()->equal(other.get_representative());
     }
 
-    T* operator *() const { return node(); }
-    bool operator == (const T* other) const { return this->node() == other; }
-    operator T*() const { return node(); }
-    T* operator -> () const { return node(); }
-
-    template<class U> operator Unifiable() { return UnificationProxy(node_); }
+    template<class U> operator Unifiable<U>() { return Unifiable<U>((U*) representative_, unified_); }
 
     /// @see get_representative()
     bool is_unified() const { return unified_; }
@@ -55,7 +49,7 @@ private:
     void set_representative(T* repr) {
         // TODO does this really hold? (is it set only once?)
         assert(!unified_);
-        node_ = repr;
+        representative_ = repr;
         unified_ = true;
     }
 
@@ -64,8 +58,48 @@ private:
         unified_ = true;
     }
 
-    T* node_;
+    T* representative_;
     bool unified_;
+
+    friend class UnifiableProxy<T>;
+};
+
+template<class T>
+class UnifiableProxy {
+public:
+    UnifiableProxy()
+        : node_(nullptr)
+    {}
+
+    UnifiableProxy(Unifiable<T>* node)
+        : node_(node)
+    {}
+
+    UnifiableProxy(T* node)
+        : node_(new Unifiable<T>(node))
+    {}
+
+    bool empty() const { return node_ == nullptr; }
+    T* deref() const { return node_->get_representative(); }
+    T* operator *() const { return deref(); }
+    bool operator == (const T* other) const { return deref() == other; } // TODO
+    operator T*() const { return deref(); }
+    T* operator -> () const { return deref(); }
+
+    template<class U> operator UnifiableProxy<U>() { return UnifiableProxy<U>((Unifiable<U>*) node_); }
+
+    template<class U> bool equal(const UnifiableProxy<U>* other) const { return node()->equal(other->node()); }
+    T* get_representative() const { return node()->get_representative(); }
+    bool is_unified() const { return node()->is_unified(); }
+
+    Unifiable<T>* node() const { return node_; } // TODO make private
+private:
+
+
+    void set_representative(T* repr) { node()->set_representative(repr); }
+    void set_unified() { node_->set_unified(); }
+
+    Unifiable<T>* node_;
 
     friend class TypeTable;
 };
@@ -84,13 +118,13 @@ class TypeTraitInstanceNode;
 
 class TypeTable;
 
-typedef Unifiable<TypeNode> Type;
-typedef Unifiable<TypeErrorNode> TypeError;
-typedef Unifiable<PrimTypeNode> PrimType;
-typedef Unifiable<FnTypeNode> FnType;
-typedef Unifiable<TupleTypeNode> TupleType;
-typedef Unifiable<TypeVarNode> TypeVar;
-typedef Unifiable<TypeTraitInstanceNode> TypeTraitInstance;
+typedef UnifiableProxy<TypeNode> Type;
+typedef UnifiableProxy<TypeErrorNode> TypeError;
+typedef UnifiableProxy<PrimTypeNode> PrimType;
+typedef UnifiableProxy<FnTypeNode> FnType;
+typedef UnifiableProxy<TupleTypeNode> TupleType;
+typedef UnifiableProxy<TypeVarNode> TypeVar;
+typedef UnifiableProxy<TypeTraitInstanceNode> TypeTraitInstance;
 
 typedef thorin::ArrayRef<Type> TypeArray;
 typedef thorin::ArrayRef<TypeNode*> TypeNodeArray;

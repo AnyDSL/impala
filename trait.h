@@ -12,7 +12,7 @@
 
 struct TypeTraitMethod {
     std::string name;
-    const FnTypeNode* type;
+    FnType type;
 };
 
 /**
@@ -64,7 +64,7 @@ public:
     const std::string name() const { return name_; }
     std::string to_string() const;
 
-    void add_method(const std::string name, const FnType type);
+    void add_method(const std::string name, FnType type);
 
     /// true if this is the top type trait (like Object in java)
     bool is_top_trait() const {

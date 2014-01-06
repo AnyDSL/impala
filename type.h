@@ -8,8 +8,8 @@
 
 #include "type_properties.h"
 
-struct TypeTraitInstanceHash { size_t operator () (const TypeTraitInstance t) const { return thorin::hash_value(t.node()); } };
-struct TypeTraitInstanceEqual { bool operator () (const TypeTraitInstance t1, const TypeTraitInstance t2) const { return t1.node() == t2.node(); } };
+struct TypeTraitInstanceHash { size_t operator () (const TypeTraitInstance t) const { return thorin::hash_value(t.get_representative()); } };
+struct TypeTraitInstanceEqual { bool operator () (const TypeTraitInstance t1, const TypeTraitInstance t2) const { return t1.get_representative() == t2.get_representative(); } };
 typedef std::unordered_set<TypeTraitInstance, TypeTraitInstanceHash, TypeTraitInstanceEqual> TypeTraitInstSet;
 
 //------------------------------------------------------------------------------
@@ -215,7 +215,7 @@ private:
 
     void bind(const GenericElement* const e);
 
-    bool restrictions_equal(const TypeVarNode* other) const;
+    bool restrictions_equal(const TypeVar other) const;
 
 public:
     const TypeTraitInstSet* restricted_by() const { return &restricted_by_; }

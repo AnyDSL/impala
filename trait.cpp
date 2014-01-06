@@ -28,7 +28,7 @@ std::string TypeTrait::to_string() const {
     return name_;
 }
 
-void TypeTrait::add_method(const std::string name, const FnType type) {
+void TypeTrait::add_method(const std::string name, FnType type) {
     if (! type.is_unified()) {
         throw IllegalTypeException("Method types must be closed");
     }
@@ -59,7 +59,7 @@ bool TypeTraitInstanceNode::equal(const TypeTraitInstanceNode* other) const {
 
     assert(var_instances_.size() == other->var_instances_.size());
     for (int i = 0; i < var_instances_.size(); ++i) {
-        if (! var_instances_[i]->equal(other->var_instances_[i])) {
+        if (! var_instances_[i].get_representative()->equal(other->var_instances_[i].get_representative())) {
             return false;
         }
     }
