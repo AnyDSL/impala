@@ -11,7 +11,7 @@
 
 class FnTypeNode;
 class PrimType;
-class TupleType;
+class TupleTypeNode;
 class TypeVarNode;
 class TypeNode;
 class TypeError;
@@ -60,7 +60,7 @@ public:
     virtual void visit(TypeError&) {}
     virtual void visit(PrimType&) {}
     virtual void visit(FnTypeNode&) {}
-    virtual void visit(TupleType&) {}
+    virtual void visit(TupleTypeNode&) {}
     virtual void visit(TypeVarNode&) {}
 };
 
@@ -188,9 +188,9 @@ public:
     friend class TypeTable;
 };
 
-class TupleType : public CompoundType {
+class TupleTypeNode : public CompoundType {
 private:
-    TupleType(TypeTable& typetable, TypeNodeArray elems)
+    TupleTypeNode(TypeTable& typetable, TypeNodeArray elems)
         : CompoundType(typetable, Type_tuple, elems)
     {}
 
