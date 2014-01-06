@@ -86,21 +86,21 @@ public:
  */
 class TypeTraitInstance : public Unifiable<TypeTraitInstance>, public thorin::MagicCast<TypeTraitInstance> {
 private:
-    TypeTraitInstance(const TypeTrait* trait, TypeArray var_instances);
+    TypeTraitInstance(const TypeTrait* trait, TypeNodeArray var_instances);
 
     TypeTraitInstance& operator = (const TypeTraitInstance&); ///< Do not copy-assign a \p TypeTraitInstance.
     TypeTraitInstance(const TypeTraitInstance& node);         ///< Do not copy-construct a \p TypeTraitInstance.
 
     const TypeTrait* trait_;
-    std::vector<Type*> var_instances_;
+    std::vector<TypeNode*> var_instances_;
 
-    Type* var_inst_(size_t i) const { return var_instances_[i]; }
+    TypeNode* var_inst_(size_t i) const { return var_instances_[i]; }
 
 public:
     bool equal(const TypeTraitInstance* t) const;
     size_t hash() const;
 
-    const Type* var_inst(size_t i) const { return var_instances_[i]; }
+    const TypeNode* var_inst(size_t i) const { return var_instances_[i]; }
 
     /// Returns number of variables instances.
     size_t var_inst_size() const { return var_instances_.size(); }

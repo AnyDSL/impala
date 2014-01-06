@@ -19,9 +19,9 @@ struct TypeTraitInstanceHash { size_t operator () (const TypeTraitInstance* t) c
 struct TypeTraitInstanceEqual { bool operator () (const TypeTraitInstance* t1, const TypeTraitInstance* t2) const { return t1->equal(t2); } };
 typedef std::unordered_set<TypeTraitInstance*, TypeTraitInstanceHash, TypeTraitInstanceEqual> TraitInstanceTableSet;
 
-struct TypeHash { size_t operator () (const Type* t) const { return t->hash(); } };
-struct TypeEqual { bool operator () (const Type* t1, const Type* t2) const { return t1->equal(t2); } };
-typedef std::unordered_set<Type*, TypeHash, TypeEqual> TypeSet;
+struct TypeNodeHash { size_t operator () (const TypeNode* t) const { return t->hash(); } };
+struct TypeNodeEqual { bool operator () (const TypeNode* t1, const TypeNode* t2) const { return t1->equal(t2); } };
+typedef std::unordered_set<TypeNode*, TypeNodeHash, TypeNodeEqual> TypeNodeSet;
 
 class TypeTable {
 public:
@@ -44,13 +44,13 @@ public:
     }
     TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}); }
 
-    TypeTraitInstance* instantiate_trait(const TypeTrait* trait, TypeArray var_instances) {
+    TypeTraitInstance* instantiate_trait(const TypeTrait* trait, TypeNodeArray var_instances) {
         return new TypeTraitInstance(trait, var_instances);
     }
 
     TypeVar* typevar() { return new TypeVar(*this); }
 
-    FnType* fntype(TypeArray params) { return new FnType(*this, params); }
+    FnType* fntype(TypeNodeArray params) { return new FnType(*this, params); }
 
     /**
      * A shortcut to create function types with a return type.
@@ -58,7 +58,7 @@ public:
      * Actually for a Type fn(int)->int a type fn(int, fn(int)) will be created
      * (continuation passing style).
      */
-    FnType* fntype_simple(TypeArray params, Type* return_type);
+    FnType* fntype_simple(TypeNodeArray params, TypeNode* return_type);
 
     // TODO review this
     //const TupleType* tupletype(TypeArray elems) { return unify_new(new TupleType(*this, elems)); }
@@ -73,7 +73,7 @@ public:
 
 private:
     /// insert all not-unified types contained in type
-    void insert_new(Type* type);
+    void insert_new(TypeNode* type);
     void insert_new(TypeTraitInstance* tti);
 
     /**
@@ -83,10 +83,10 @@ private:
      * This assumes that t is equal to repr.
      */
     template<class T> void change_repr(T* t, const T* repr) const;
-    void change_repr_rec(Type* t, const Type* repr) const;
+    void change_repr_rec(TypeNode* t, const TypeNode* repr) const;
     void change_repr_rec(TypeTraitInstance* t, const TypeTraitInstance* repr) const;
 
-    Type* unify_base(Type* type);
+    TypeNode* unify_base(TypeNode* type);
     TypeTraitInstance* unify_base(TypeTraitInstance* trait_inst);
 
     /// like unify but deletes the given type if unification returned a different one
@@ -97,7 +97,7 @@ private:
         return unified_type;
     }
 
-    TypeSet types_;
+    TypeNodeSet types_;
     //TraitTableSet traits_;
     TraitInstanceTableSet trait_instances_;
 

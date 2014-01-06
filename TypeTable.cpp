@@ -17,22 +17,22 @@ TypeTable::TypeTable()
     , top_trait_inst_(instantiate_trait(top_trait_, {}))
 {}
 
-FnType* TypeTable::fntype_simple(TypeArray params, Type* return_type) {
+FnType* TypeTable::fntype_simple(TypeNodeArray params, TypeNode* return_type) {
     FnType* retfun = fntype({return_type});
 
     size_t psize = params.size();
 
-    Type** p = new Type*[psize + 1];
+    TypeNode** p = new TypeNode*[psize + 1];
 
     for (int i = 0; i < psize; ++i) {
         p[i] = params[i];
     }
     p[psize] = retfun;
 
-    return fntype(TypeArray(p, psize + 1));
+    return fntype(TypeNodeArray(p, psize + 1));
 }
 
-void TypeTable::insert_new(Type* type) {
+void TypeTable::insert_new(TypeNode* type) {
     assert(!type->is_unified());
 
     type->set_representative(type);
@@ -78,7 +78,7 @@ void TypeTable::insert_new(TypeTraitInstance* tti) {
     assert(p.second && "hash/equal broken");
 }
 
-void TypeTable::change_repr_rec(Type* t, const Type* repr) const {
+void TypeTable::change_repr_rec(TypeNode* t, const TypeNode* repr) const {
     // first unify all bounded variables
     assert(t->bound_vars().size() == repr->bound_vars().size());
     for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
@@ -136,7 +136,7 @@ void TypeTable::change_repr(T* t, const T* repr) const {
     t->set_representative(repr);
 }
 
-Type* TypeTable::unify_base(Type* type) {
+TypeNode* TypeTable::unify_base(TypeNode* type) {
     if (type->is_unified()) {
         throw IllegalTypeException("Type is already unified!");
     }

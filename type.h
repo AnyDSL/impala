@@ -13,13 +13,13 @@ class FnType;
 class PrimType;
 class TupleType;
 class TypeVar;
-class Type;
+class TypeNode;
 class TypeError;
 
 class TypeTraitInstance;
 class TypeTable;
 
-typedef thorin::ArrayRef<Type*> TypeArray;
+typedef thorin::ArrayRef<TypeNode*> TypeNodeArray;
 //typedef thorin::ArrayRef<const TypeTraitInstance*> TypeTraitInstArray;
 typedef std::unordered_set<TypeTraitInstance*> TypeTraitInstSet;
 
@@ -64,40 +64,40 @@ public:
     virtual void visit(TypeVar&) {}
 };
 
-class Type : public GenericElement, public Unifiable<Type> {
+class TypeNode : public GenericElement, public Unifiable<TypeNode> {
 private:
-    Type& operator = (const Type&); ///< Do not copy-assign a \p Type.
-    Type(const Type& node);         ///< Do not copy-construct a \p Type.
+    TypeNode& operator = (const TypeNode&); ///< Do not copy-assign a \p Type.
+    TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p Type.
 
 protected:
-    Type(TypeTable& typetable, Kind kind, size_t size)
+    TypeNode(TypeTable& typetable, Kind kind, size_t size)
         : typetable_(typetable)
         , kind_(kind)
         , elems_(size)
     {}
 
-    std::vector<Type*> elems_; ///< The operands of this type constructor.
+    std::vector<TypeNode*> elems_; ///< The operands of this type constructor.
 
-    void set(size_t i, Type* n) { elems_[i] = n; }
-    Type* elem_(size_t i) const { return elems_[i]; }
+    void set(size_t i, TypeNode* n) { elems_[i] = n; }
+    TypeNode* elem_(size_t i) const { return elems_[i]; }
 
 public:
     TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
-    //TypeArray elems() const { return TypeArray(elems_); }
-    const Type* elem(size_t i) const { return elems_[i]; }
+    //TypeNodeArray elems() const { return TypeNodeArray(elems_); }
+    const TypeNode* elem(size_t i) const { return elems_[i]; }
 
-    /// Returns number of \p Type operands (\p elems_).
+    /// Returns number of \p TypeNode operands (\p elems_).
     size_t size() const { return elems_.size(); }
 
-    /// Returns true if this \p Type does not have any \p Type operands (\p elems_).
+    /// Returns true if this \p TypeNode does not have any \p TypeNode operands (\p elems_).
     bool is_empty() const {
         assert (!elems_.empty() || bound_vars_.empty());
         return elems_.empty();
     }
 
     virtual bool equal(const GenericElement*) const;
-    virtual bool equal(const Type*) const;
+    virtual bool equal(const TypeNode*) const;
     virtual size_t hash() const;
 
     void dump() const;
@@ -115,7 +115,7 @@ public:
     virtual bool is_closed() const;
 
     /// @return true if this is a subtype of super_type.
-    bool is_subtype(const Type* super_type) const;
+    bool is_subtype(const TypeNode* super_type) const;
 
     /**
      * A type is sane if all type variables are bound correctly,
@@ -132,10 +132,10 @@ private:
     friend class TypeTable;
 };
 
-class TypeError : public Type {
+class TypeError : public TypeNode {
 private:
     TypeError(TypeTable& typetable) 
-        : Type(typetable, Type_error, 0)
+        : TypeNode(typetable, Type_error, 0)
     {}
 
 public:
@@ -145,10 +145,10 @@ public:
     friend class TypeTable;
 };
 
-class PrimType : public Type {
+class PrimType : public TypeNode {
 private:
     PrimType(TypeTable& typetable, PrimTypeKind kind)
-        : Type(typetable, (Kind) kind, 0)
+        : TypeNode(typetable, (Kind) kind, 0)
     {}
 
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
@@ -161,10 +161,10 @@ public:
     friend class TypeTable;
 };
 
-class CompoundType : public Type {
+class CompoundType : public TypeNode {
 protected:
-    CompoundType(TypeTable& typetable, Kind kind, TypeArray elems)
-        : Type(typetable, kind, elems.size())
+    CompoundType(TypeTable& typetable, Kind kind, TypeNodeArray elems)
+        : TypeNode(typetable, kind, elems.size())
     {
         size_t i = 0;
         for (auto elem : elems)
@@ -176,7 +176,7 @@ protected:
 
 class FnType : public CompoundType {
 private:
-    FnType(TypeTable& typetable, TypeArray elems)
+    FnType(TypeTable& typetable, TypeNodeArray elems)
         : CompoundType(typetable, Type_fn, elems)
     {}
 
@@ -190,7 +190,7 @@ public:
 
 class TupleType : public CompoundType {
 private:
-    TupleType(TypeTable& typetable, TypeArray elems)
+    TupleType(TypeTable& typetable, TypeNodeArray elems)
         : CompoundType(typetable, Type_tuple, elems)
     {}
 
@@ -203,10 +203,10 @@ public:
 
 
 
-class TypeVar : public Type {
+class TypeVar : public TypeNode {
 private:
     TypeVar(TypeTable& tt)
-        : Type(tt, Type_var, 0)
+        : TypeNode(tt, Type_var, 0)
         , id_(counter++)
         , restricted_by_()
         , bound_at_(nullptr)
@@ -251,7 +251,7 @@ public:
 
     void add_restriction(TypeTraitInstance* restriction);
 
-    virtual bool equal(const Type* other) const;
+    virtual bool equal(const TypeNode* other) const;
 
     virtual void accept(TypeVisitor& v) { v.visit(*this); }
     std::string to_string() const;
@@ -266,7 +266,7 @@ public:
     virtual bool is_sane() const { return is_closed(); }
 
     friend class TypeTable;
-    friend class Type;
+    friend class TypeNode;
     friend class GenericElement;
 };
 
@@ -276,6 +276,6 @@ public:
  * Checks if for all combination of types t1, t2 in 'types' it holds that if
  * both are unified and t1 equals t2 then they have the same representative.
  */
-void check_sanity(thorin::ArrayRef<const Type*> types);
+void check_sanity(thorin::ArrayRef<const TypeNode*> types);
 
 #endif

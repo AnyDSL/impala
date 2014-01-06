@@ -10,7 +10,7 @@ int TypeVar::counter = 0;
 
 //------------------------------------------------------------------------------
 
-size_t Type::hash() const {
+size_t TypeNode::hash() const {
     // TODO take type variables of generic types better into the equation
     // TODO perhaps store this hash so it does not need to be recomputed all the time
     size_t seed = hash_combine(hash_value((int) kind()), size());
@@ -21,15 +21,15 @@ size_t Type::hash() const {
     return seed;
 }
 
-bool Type::equal(const GenericElement* other) const {
+bool TypeNode::equal(const GenericElement* other) const {
     // TODO is this correct for a instanceof-equivalent?
-    if (const Type* t = other->isa<Type>()) {
+    if (const TypeNode* t = other->isa<TypeNode>()) {
         return equal(t);
     }
     return false;
 }
 
-bool Type::equal(const Type* other) const {
+bool TypeNode::equal(const TypeNode* other) const {
     if (this->is_unified() && other->is_unified()) {
         return this->get_representative() == other->get_representative();
     }
@@ -60,7 +60,7 @@ bool Type::equal(const Type* other) const {
     return result;
 }
 
-bool Type::is_closed() const {
+bool TypeNode::is_closed() const {
     for (auto v : bound_vars()) {
         for (auto r : *v->restricted_by()) {
             if (! r->is_closed()) {
@@ -77,7 +77,7 @@ bool Type::is_closed() const {
     return true;
 }
 
-bool Type::is_subtype(const Type* super_type) const {
+bool TypeNode::is_subtype(const TypeNode* super_type) const {
     assert(super_type != nullptr);
 
     if (this == super_type)
@@ -91,7 +91,7 @@ bool Type::is_subtype(const Type* super_type) const {
     return false;
 }
 
-bool Type::is_sane() const {
+bool TypeNode::is_sane() const {
     for (auto t : elems_) {
         if (!t->is_sane()) {
             return false;
@@ -101,7 +101,7 @@ bool Type::is_sane() const {
     return true;
 }
 
-void Type::dump() const { std::cout << to_string() << std::endl; }
+void TypeNode::dump() const { std::cout << to_string() << std::endl; }
 
 //------------------------------------------------------------------------------
 
@@ -150,7 +150,7 @@ bool TypeVar::restrictions_equal(const TypeVar* other) const {
     return true;
 }
 
-bool TypeVar::equal(const Type* other) const {
+bool TypeVar::equal(const TypeNode* other) const {
     if (this->is_unified() && other->is_unified()) {
         return this->get_representative() == other->get_representative();
     }
@@ -208,7 +208,7 @@ std::string TypeVar::to_string() const {
 
 //------------------------------------------------------------------------------
 
-void check_sanity(thorin::ArrayRef<const Type*> types) {
+void check_sanity(thorin::ArrayRef<const TypeNode*> types) {
     for (auto t : types) {
         assert(t->is_sane());
     }
