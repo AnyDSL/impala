@@ -17,8 +17,8 @@ TypeTable::TypeTable()
     , top_trait_inst_(instantiate_trait(top_trait_, {}))
 {}
 
-FnType* TypeTable::fntype_simple(TypeNodeArray params, TypeNode* return_type) {
-    FnType* retfun = fntype({return_type});
+FnTypeNode* TypeTable::fntype_simple(TypeNodeArray params, TypeNode* return_type) {
+    FnTypeNode* retfun = fntype({return_type});
 
     size_t psize = params.size();
 

@@ -50,7 +50,7 @@ public:
 
     TypeVarNode* typevar() { return new TypeVarNode(*this); }
 
-    FnType* fntype(TypeNodeArray params) { return new FnType(*this, params); }
+    FnTypeNode* fntype(TypeNodeArray params) { return new FnTypeNode(*this, params); }
 
     /**
      * A shortcut to create function types with a return type.
@@ -58,7 +58,7 @@ public:
      * Actually for a Type fn(int)->int a type fn(int, fn(int)) will be created
      * (continuation passing style).
      */
-    FnType* fntype_simple(TypeNodeArray params, TypeNode* return_type);
+    FnTypeNode* fntype_simple(TypeNodeArray params, TypeNode* return_type);
 
     // TODO review this
     //const TupleType* tupletype(TypeArray elems) { return unify_new(new TupleType(*this, elems)); }

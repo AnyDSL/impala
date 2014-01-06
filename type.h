@@ -9,7 +9,7 @@
 
 #include "type_properties.h"
 
-class FnType;
+class FnTypeNode;
 class PrimType;
 class TupleType;
 class TypeVarNode;
@@ -59,7 +59,7 @@ public:
     virtual ~TypeVisitor() {}
     virtual void visit(TypeError&) {}
     virtual void visit(PrimType&) {}
-    virtual void visit(FnType&) {}
+    virtual void visit(FnTypeNode&) {}
     virtual void visit(TupleType&) {}
     virtual void visit(TypeVarNode&) {}
 };
@@ -174,9 +174,9 @@ protected:
     std::string elems_to_string() const;
 };
 
-class FnType : public CompoundType {
+class FnTypeNode : public CompoundType {
 private:
-    FnType(TypeTable& typetable, TypeNodeArray elems)
+    FnTypeNode(TypeTable& typetable, TypeNodeArray elems)
         : CompoundType(typetable, Type_fn, elems)
     {}
 

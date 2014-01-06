@@ -28,7 +28,7 @@ std::string TypeTrait::to_string() const {
     return name_;
 }
 
-void TypeTrait::add_method(const std::string name, const FnType* type) {
+void TypeTrait::add_method(const std::string name, const FnTypeNode* type) {
     if (! type->is_unified()) {
         throw IllegalTypeException("Method types must be closed");
     }
