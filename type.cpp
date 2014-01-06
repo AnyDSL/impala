@@ -30,10 +30,6 @@ bool TypeNode::equal(const GenericElement* other) const {
 }
 
 bool TypeNode::equal(const TypeNode* other) const {
-    if (this->is_unified() && other->is_unified()) {
-        return this->get_representative() == other->get_representative();
-    }
-
     bool result = this->kind() == other->kind();
     result &= this->size() == other->size();
     result &= this->num_bound_vars() == other->num_bound_vars();
@@ -105,7 +101,7 @@ void TypeNode::dump() const { std::cout << to_string() << std::endl; }
 
 //------------------------------------------------------------------------------
 
-std::string PrimType::to_string() const {
+std::string PrimTypeNode::to_string() const {
     switch (primtype_kind()) {
 #define PRIMTYPE(T) case PrimType_##T: return #T;
 #include "primtypes.h"
@@ -133,10 +129,10 @@ bool TypeVarNode::restrictions_equal(const TypeVarNode* other) const {
     if (this->restricted_by()->size() != trestr->size())
         return false;
 
-    // TODO this does work but seems too much effort
-    TraitInstanceTableSet ttis;
+    // TODO this does work but seems too much effort, at least use a set that uses representatives
+    TraitInstanceNodeTableSet ttis;
     for (auto r : *trestr) {
-        auto p = ttis.insert(r);
+        auto p = ttis.insert(r.node());
         assert(p.second && "hash/equal broken");
     }
 
@@ -151,10 +147,6 @@ bool TypeVarNode::restrictions_equal(const TypeVarNode* other) const {
 }
 
 bool TypeVarNode::equal(const TypeNode* other) const {
-    if (this->is_unified() && other->is_unified()) {
-        return this->get_representative() == other->get_representative();
-    }
-
     // TODO is this correct for a instanceof-equivalent?
     if (const TypeVarNode* t = other->isa<TypeVarNode>()) {
         if ((this->equiv_var_ == nullptr) && (t->equiv_var_ == nullptr)) {
@@ -186,7 +178,7 @@ void TypeVarNode::bind(const GenericElement* const e) {
     bound_at_ = e;
 }
 
-void TypeVarNode::add_restriction(TypeTraitInstance* restriction) {
+void TypeVarNode::add_restriction(TypeTraitInstance restriction) {
     if (is_closed())
         throw IllegalTypeException("Closed type variables must not be changed!");
 
@@ -208,15 +200,15 @@ std::string TypeVarNode::to_string() const {
 
 //------------------------------------------------------------------------------
 
-void check_sanity(thorin::ArrayRef<const TypeNode*> types) {
+void check_sanity(thorin::ArrayRef<const Type> types) {
     for (auto t : types) {
         assert(t->is_sane());
     }
 
     for (auto t1 : types) {
         for (auto t2 : types) {
-            if (t1->is_unified() && t2->is_unified()) {
-                if (!((!t1->equal(t2)) || (t1->get_representative() == t2->get_representative()))) {
+            if (t1.is_unified() && t2.is_unified()) {
+                if (!((!t1.node()->equal(t2.node())) || (t1.node() == t2.node()))) {
                     t1->dump();
                     t2->dump();
                     assert(false);

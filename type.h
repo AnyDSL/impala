@@ -1,7 +1,6 @@
 #ifndef TYPE_H
 #define TYPE_H
 
-#include <unordered_set>
 #include <exception>
 
 #include "thorin/util/array.h"
@@ -9,19 +8,9 @@
 
 #include "type_properties.h"
 
-class FnTypeNode;
-class PrimType;
-class TupleTypeNode;
-class TypeVarNode;
-class TypeNode;
-class TypeError;
-
-class TypeTraitInstance;
-class TypeTable;
-
-typedef thorin::ArrayRef<TypeNode*> TypeNodeArray;
-//typedef thorin::ArrayRef<const TypeTraitInstance*> TypeTraitInstArray;
-typedef std::unordered_set<TypeTraitInstance*> TypeTraitInstSet;
+struct TypeTraitInstanceHash { size_t operator () (const TypeTraitInstance t) const { return thorin::hash_value(t.node()); } };
+struct TypeTraitInstanceEqual { bool operator () (const TypeTraitInstance t1, const TypeTraitInstance t2) const { return t1.node() == t2.node(); } };
+typedef std::unordered_set<TypeTraitInstance, TypeTraitInstanceHash, TypeTraitInstanceEqual> TypeTraitInstSet;
 
 //------------------------------------------------------------------------------
 
@@ -54,17 +43,7 @@ enum PrimTypeKind {
 #include "primtypes.h"
 };
 
-class TypeVisitor {
-public:
-    virtual ~TypeVisitor() {}
-    virtual void visit(TypeError&) {}
-    virtual void visit(PrimType&) {}
-    virtual void visit(FnTypeNode&) {}
-    virtual void visit(TupleTypeNode&) {}
-    virtual void visit(TypeVarNode&) {}
-};
-
-class TypeNode : public GenericElement, public Unifiable<TypeNode> {
+class TypeNode : public GenericElement {
 private:
     TypeNode& operator = (const TypeNode&); ///< Do not copy-assign a \p Type.
     TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p Type.
@@ -76,16 +55,16 @@ protected:
         , elems_(size)
     {}
 
-    std::vector<TypeNode*> elems_; ///< The operands of this type constructor.
+    std::vector<Type> elems_; ///< The operands of this type constructor.
 
-    void set(size_t i, TypeNode* n) { elems_[i] = n; }
-    TypeNode* elem_(size_t i) const { return elems_[i]; }
+    void set(size_t i, Type n) { elems_[i] = n; }
+    Type elem_(size_t i) const { return elems_[i]; }
 
 public:
     TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
     //TypeNodeArray elems() const { return TypeNodeArray(elems_); }
-    const TypeNode* elem(size_t i) const { return elems_[i]; }
+    const Type elem(size_t i) const { return elems_[i]; }
 
     /// Returns number of \p TypeNode operands (\p elems_).
     size_t size() const { return elems_.size(); }
@@ -102,7 +81,6 @@ public:
 
     void dump() const;
     virtual std::string to_string() const = 0;
-    virtual void accept(TypeVisitor&) = 0;
 
     bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());
@@ -132,22 +110,21 @@ private:
     friend class TypeTable;
 };
 
-class TypeError : public TypeNode {
+class TypeErrorNode : public TypeNode {
 private:
-    TypeError(TypeTable& typetable) 
+    TypeErrorNode(TypeTable& typetable)
         : TypeNode(typetable, Type_error, 0)
     {}
 
 public:
-    virtual void accept(TypeVisitor& v) { v.visit(*this); }
     virtual std::string to_string() const { return "<type error>"; }
 
     friend class TypeTable;
 };
 
-class PrimType : public TypeNode {
+class PrimTypeNode : public TypeNode {
 private:
-    PrimType(TypeTable& typetable, PrimTypeKind kind)
+    PrimTypeNode(TypeTable& typetable, PrimTypeKind kind)
         : TypeNode(typetable, (Kind) kind, 0)
     {}
 
@@ -156,14 +133,12 @@ private:
 public:
     virtual std::string to_string() const;
 
-    virtual void accept(TypeVisitor& v) { v.visit(*this); }
-
     friend class TypeTable;
 };
 
 class CompoundType : public TypeNode {
 protected:
-    CompoundType(TypeTable& typetable, Kind kind, TypeNodeArray elems)
+    CompoundType(TypeTable& typetable, Kind kind, TypeArray elems)
         : TypeNode(typetable, kind, elems.size())
     {
         size_t i = 0;
@@ -176,13 +151,11 @@ protected:
 
 class FnTypeNode : public CompoundType {
 private:
-    FnTypeNode(TypeTable& typetable, TypeNodeArray elems)
+    FnTypeNode(TypeTable& typetable, TypeArray elems)
         : CompoundType(typetable, Type_fn, elems)
     {}
 
 public:
-    virtual void accept(TypeVisitor& v) { v.visit(*this); }
-
     virtual std::string to_string() const { return std::string("fn") + bound_vars_to_string() + elems_to_string(); }
 
     friend class TypeTable;
@@ -190,12 +163,11 @@ public:
 
 class TupleTypeNode : public CompoundType {
 private:
-    TupleTypeNode(TypeTable& typetable, TypeNodeArray elems)
+    TupleTypeNode(TypeTable& typetable, TypeArray elems)
         : CompoundType(typetable, Type_tuple, elems)
     {}
 
 public:
-    virtual void accept(TypeVisitor& v) { v.visit(*this); }
     virtual std::string to_string() const { return std::string("tuple") + bound_vars_to_string() + elems_to_string(); }
 
     friend class TypeTable;
@@ -249,11 +221,10 @@ public:
     const TypeTraitInstSet* restricted_by() const { return &restricted_by_; }
     const GenericElement* bound_at() const { return bound_at_; }
 
-    void add_restriction(TypeTraitInstance* restriction);
+    void add_restriction(TypeTraitInstance restriction);
 
     virtual bool equal(const TypeNode* other) const;
 
-    virtual void accept(TypeVisitor& v) { v.visit(*this); }
     std::string to_string() const;
 
     /**
@@ -272,17 +243,10 @@ public:
 
 //------------------------------------------------------------------------------
 
-typedef UnifiableProxy<TypeNode> Type;
-typedef UnifiableProxy<FnTypeNode> FnType;
-typedef UnifiableProxy<TupleTypeNode> TupleType;
-typedef UnifiableProxy<TypeVarNode> TypeVar;
-
-//------------------------------------------------------------------------------
-
 /**
  * Checks if for all combination of types t1, t2 in 'types' it holds that if
  * both are unified and t1 equals t2 then they have the same representative.
  */
-void check_sanity(thorin::ArrayRef<const TypeNode*> types);
+void check_sanity(thorin::ArrayRef<const Type> types);
 
 #endif

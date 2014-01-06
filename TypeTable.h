@@ -15,9 +15,9 @@
 //struct TypeTraitEqual { bool operator () (const TypeTrait* t1, const TypeTrait* t2) const { return t1->equal(t2); } };
 //typedef std::unordered_set<TypeTrait*, TypeTraitHash, TypeTraitEqual> TraitTableSet;
 
-struct TypeTraitInstanceHash { size_t operator () (const TypeTraitInstance* t) const { return t->hash(); } };
-struct TypeTraitInstanceEqual { bool operator () (const TypeTraitInstance* t1, const TypeTraitInstance* t2) const { return t1->equal(t2); } };
-typedef std::unordered_set<TypeTraitInstance*, TypeTraitInstanceHash, TypeTraitInstanceEqual> TraitInstanceTableSet;
+struct TypeTraitInstanceNodeHash { size_t operator () (const TypeTraitInstanceNode* t) const { return t->hash(); } };
+struct TypeTraitInstanceNodeEqual { bool operator () (const TypeTraitInstanceNode* t1, const TypeTraitInstanceNode* t2) const { return t1->equal(t2); } };
+typedef std::unordered_set<TypeTraitInstanceNode*, TypeTraitInstanceNodeHash, TypeTraitInstanceNodeEqual> TraitInstanceNodeTableSet;
 
 struct TypeNodeHash { size_t operator () (const TypeNode* t) const { return t->hash(); } };
 struct TypeNodeEqual { bool operator () (const TypeNode* t1, const TypeNode* t2) const { return t1->equal(t2); } };
@@ -29,14 +29,15 @@ public:
     // TODO also delete traits & trait instances
     ~TypeTable() { for (auto type : types_) delete type; }
 
-    const TypeError* type_error() { return type_error_; }
-    const PrimType* primtype(PrimTypeKind kind);
+    TypeError type_error() { return type_error_; }
+    PrimType primtype(PrimTypeKind kind);
 
-#define PRIMTYPE(T) PrimType* type_##T() { return T##_; }
+#define PRIMTYPE(T) PrimType type_##T() { return T##_; }
 #include "primtypes.h"
 
     const TypeTrait* top_trait() const { return top_trait_; }
-    TypeTraitInstance* top_trait_inst() const { return top_trait_inst_; }
+    // TODO store the proxy
+    TypeTraitInstance top_trait_inst() const { return top_trait_inst_; }
 
     // TODO maybe seperate traits completely from the TypeTable
     TypeTrait* typetrait(std::string name, TypeTraitSet super_traits) {
@@ -44,13 +45,13 @@ public:
     }
     TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}); }
 
-    TypeTraitInstance* instantiate_trait(const TypeTrait* trait, TypeNodeArray var_instances) {
-        return new TypeTraitInstance(trait, var_instances);
+    TypeTraitInstance instantiate_trait(const TypeTrait* trait, TypeArray var_instances) {
+        return TypeTraitInstance(new TypeTraitInstanceNode(trait, var_instances));
     }
 
     TypeVarNode* typevar() { return new TypeVarNode(*this); }
 
-    FnTypeNode* fntype(TypeNodeArray params) { return new FnTypeNode(*this, params); }
+    FnTypeNode* fntype(TypeArray params) { return FnType(new FnTypeNode(*this, params)); }
 
     /**
      * A shortcut to create function types with a return type.
@@ -58,7 +59,7 @@ public:
      * Actually for a Type fn(int)->int a type fn(int, fn(int)) will be created
      * (continuation passing style).
      */
-    FnTypeNode* fntype_simple(TypeNodeArray params, TypeNode* return_type);
+    FnType fntype_simple(TypeArray params, Type return_type);
 
     // TODO review this
     //const TupleType* tupletype(TypeArray elems) { return unify_new(new TupleType(*this, elems)); }
@@ -68,13 +69,15 @@ public:
      */
     void check_sanity() const;
 
-    template<class T> T* unify(T* type) { return unify_base(type)->template as<T>(); }
+    void unify(TypeTraitInstance tti);
+    template<class T> void unify(UnificationProxy<T> type) { unify_base((Type) type); }
+
     //const TypeTraitInstance* unify_trait_inst(TypeTraitInstance* type);
 
 private:
     /// insert all not-unified types contained in type
-    void insert_new(TypeNode* type);
-    void insert_new(TypeTraitInstance* tti);
+    void insert_new(Type type);
+    void insert_new(TypeTraitInstance tti);
 
     /**
      * Recursivly change the representatives of the not-unified types in t to the
@@ -82,30 +85,29 @@ private:
      *
      * This assumes that t is equal to repr.
      */
-    template<class T> void change_repr(T* t, const T* repr) const;
-    void change_repr_rec(TypeNode* t, const TypeNode* repr) const;
-    void change_repr_rec(TypeTraitInstance* t, const TypeTraitInstance* repr) const;
+    template<class T> void change_repr(UnificationProxy<T> t, T* repr) const;
+    template<class T> void change_repr_rec(UnificationProxy<T> t, T* repr) const;
+    void change_repr_rec(TypeTraitInstance t, TypeTraitInstanceNode* repr) const;
 
-    TypeNode* unify_base(TypeNode* type);
-    TypeTraitInstance* unify_base(TypeTraitInstance* trait_inst);
+    void unify_base(Type type);
 
     /// like unify but deletes the given type if unification returned a different one
-    template<class T> T* unify_new(T* type) {
+    /*template<class T>  unify_new(T* type) {
         T* unified_type = unify(type);
         if (unified_type != type)
             delete type;
         return unified_type;
-    }
+    }*/
 
     TypeNodeSet types_;
     //TraitTableSet traits_;
-    TraitInstanceTableSet trait_instances_;
+    TraitInstanceNodeTableSet trait_instances_;
 
-#define PRIMTYPE(T) PrimType* T##_;
+#define PRIMTYPE(T) PrimType T##_;
 #include "primtypes.h"
-    const TypeError* type_error_;
+    TypeError type_error_;
     const TypeTrait* top_trait_;
-    TypeTraitInstance* top_trait_inst_;
+    TypeTraitInstance top_trait_inst_;
 };
 
 

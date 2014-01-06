@@ -28,8 +28,8 @@ std::string TypeTrait::to_string() const {
     return name_;
 }
 
-void TypeTrait::add_method(const std::string name, const FnTypeNode* type) {
-    if (! type->is_unified()) {
+void TypeTrait::add_method(const std::string name, const FnType type) {
+    if (! type.is_unified()) {
         throw IllegalTypeException("Method types must be closed");
     }
     assert(type->is_closed());
@@ -40,7 +40,7 @@ void TypeTrait::add_method(const std::string name, const FnTypeNode* type) {
 }
 
 
-TypeTraitInstance::TypeTraitInstance(const TypeTrait* trait, TypeNodeArray var_instances)
+TypeTraitInstanceNode::TypeTraitInstanceNode(const TypeTrait* trait, TypeArray var_instances)
     : trait_(trait)
     , var_instances_(var_instances.size())
 {
@@ -52,11 +52,7 @@ TypeTraitInstance::TypeTraitInstance(const TypeTrait* trait, TypeNodeArray var_i
         var_instances_[i++] = elem;
 }
 
-bool TypeTraitInstance::equal(const TypeTraitInstance* other) const {
-    if (this->is_unified() && other->is_unified()) {
-        return this->get_representative() == other->get_representative();
-    }
-
+bool TypeTraitInstanceNode::equal(const TypeTraitInstanceNode* other) const {
     // TODO use equal?
     if (trait_ != other->trait_)
         return false;
@@ -71,9 +67,9 @@ bool TypeTraitInstance::equal(const TypeTraitInstance* other) const {
 }
 
 // TODO better hash function
-size_t TypeTraitInstance::hash() const { return trait_->hash(); }
+size_t TypeTraitInstanceNode::hash() const { return trait_->hash(); }
 
-bool TypeTraitInstance::is_closed() const {
+bool TypeTraitInstanceNode::is_closed() const {
     for (auto i : var_instances_) {
         if (!i->is_closed())
             return false;
@@ -82,7 +78,7 @@ bool TypeTraitInstance::is_closed() const {
 }
 
 // TODO
-std::string TypeTraitInstance::to_string() const {
+std::string TypeTraitInstanceNode::to_string() const {
     std::string result = trait_->name();
 
     const char* separator = "<";

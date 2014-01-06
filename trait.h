@@ -10,11 +10,6 @@
 
 #include "type.h"
 
-class TypeTrait;
-class TypeTable;
-
-typedef std::unordered_set<const TypeTrait*> TypeTraitSet;
-
 struct TypeTraitMethod {
     std::string name;
     const FnTypeNode* type;
@@ -69,7 +64,7 @@ public:
     const std::string name() const { return name_; }
     std::string to_string() const;
 
-    void add_method(const std::string name, const FnTypeNode* type);
+    void add_method(const std::string name, const FnType type);
 
     /// true if this is the top type trait (like Object in java)
     bool is_top_trait() const {
@@ -84,23 +79,23 @@ public:
  * An instance of a trait is a trait where all generic type variables are
  * instantiated by concrete types.
  */
-class TypeTraitInstance : public Unifiable<TypeTraitInstance>, public thorin::MagicCast<TypeTraitInstance> {
+class TypeTraitInstanceNode : public thorin::MagicCast<TypeTraitInstanceNode> {
 private:
-    TypeTraitInstance(const TypeTrait* trait, TypeNodeArray var_instances);
+    TypeTraitInstanceNode(const TypeTrait* trait, TypeArray var_instances);
 
-    TypeTraitInstance& operator = (const TypeTraitInstance&); ///< Do not copy-assign a \p TypeTraitInstance.
-    TypeTraitInstance(const TypeTraitInstance& node);         ///< Do not copy-construct a \p TypeTraitInstance.
+    TypeTraitInstanceNode& operator = (const TypeTraitInstanceNode&); ///< Do not copy-assign a \p TypeTraitInstance.
+    TypeTraitInstanceNode(const TypeTraitInstanceNode& node);         ///< Do not copy-construct a \p TypeTraitInstance.
 
     const TypeTrait* trait_;
-    std::vector<TypeNode*> var_instances_;
+    std::vector<Type> var_instances_;
 
-    TypeNode* var_inst_(size_t i) const { return var_instances_[i]; }
+    Type var_inst_(size_t i) const { return var_instances_[i]; }
 
 public:
-    bool equal(const TypeTraitInstance* t) const;
+    bool equal(const TypeTraitInstanceNode* t) const;
     size_t hash() const;
 
-    const TypeNode* var_inst(size_t i) const { return var_instances_[i]; }
+    const Type var_inst(size_t i) const { return var_instances_[i]; }
 
     /// Returns number of variables instances.
     size_t var_inst_size() const { return var_instances_.size(); }

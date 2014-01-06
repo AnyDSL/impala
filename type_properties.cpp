@@ -24,7 +24,7 @@ std::string GenericElement::bound_vars_to_string() const {
         const TypeTraitInstSet* restr = v->restricted_by();
 
         // if v is unified it should at least be restricted by the top trait
-        assert((!v->is_unified()) || (restr->size() > 0));
+        assert((!v.is_unified()) || (restr->size() > 0));
 
         // do not print restrictions if only restricted by top trait
         if ((restr->size() != 1) || (!(*restr->begin())->is_top_trait())) {
@@ -41,7 +41,7 @@ std::string GenericElement::bound_vars_to_string() const {
     return result + '>';
 }
 
-void GenericElement::add_bound_var(TypeVarNode* v) {
+void GenericElement::add_bound_var(TypeVar v) {
     if (v->is_closed())
         throw IllegalTypeException("Type variables already bound");
 

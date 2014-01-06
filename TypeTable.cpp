@@ -10,79 +10,91 @@
 TypeTable::TypeTable()
     : types_()
 //    , traits_()
-#define PRIMTYPE(T) , T##_(unify_new(new PrimType(*this, PrimType_##T)))
+#define PRIMTYPE(T) , T##_(PrimType(new PrimTypeNode(*this, PrimType_##T)))
 #include "primtypes.h"
-    , type_error_(unify_new(new TypeError(*this)))
+    , type_error_(TypeError(new TypeErrorNode(*this)))
     , top_trait_(new TypeTrait(*this))
     , top_trait_inst_(instantiate_trait(top_trait_, {}))
-{}
+{
+#define PRIMTYPE(T) unify(T##_);
+#include "primtypes.h"
+    unify(type_error_);
+}
 
-FnTypeNode* TypeTable::fntype_simple(TypeNodeArray params, TypeNode* return_type) {
-    FnTypeNode* retfun = fntype({return_type});
+FnType TypeTable::fntype_simple(TypeArray params, Type return_type) {
+    FnType retfun = fntype({return_type});
 
     size_t psize = params.size();
 
-    TypeNode** p = new TypeNode*[psize + 1];
+    Type* p = new Type[psize + 1]; // TODO delete this array
 
     for (int i = 0; i < psize; ++i) {
         p[i] = params[i];
     }
-    p[psize] = retfun;
+    p[psize] = (Type) retfun;
 
-    return fntype(TypeNodeArray(p, psize + 1));
+    return fntype(TypeArray(p, psize + 1));
 }
 
-void TypeTable::insert_new(TypeNode* type) {
-    assert(!type->is_unified());
+void TypeTable::insert_new(Type type) {
+    assert(!type.is_unified());
 
-    type->set_representative(type);
+    type.set_unified();
 
     for (auto elem : type->elems_) {
-        if (!elem->is_unified()) {
+        if (!elem.is_unified()) {
             unify(elem);
-            assert(elem->is_unified());
+            assert(elem.is_unified());
         }
     }
 
     for (auto v : type->bound_vars()) {
         for (auto r : v->restricted_by_) {
-            if (!r->is_unified()) {
+            if (!r.is_unified()) {
                 unify(r);
-                assert(r->is_unified());
+                assert(r.is_unified());
             }
         }
     }
 
     if (type->kind() != Type_var) {
         // TODO is this a correct instanceof test?
-        assert(!type->isa<TypeVarNode>());
-        auto p = types_.insert(type);
+        assert(!type.node()->isa<TypeVarNode>());
+        auto p = types_.insert(type.node());
         assert(p.second && "hash/equal broken");
     }
 }
 
-void TypeTable::insert_new(TypeTraitInstance* tti) {
-    assert(!tti->is_unified());
+void TypeTable::insert_new(TypeTraitInstance tti) {
+    assert(!tti.is_unified());
 
-    tti->set_representative(tti);
+    tti.set_unified();
 
     for (size_t i = 0, e = tti->var_inst_size(); i != e; ++i) {
         auto vi = tti->var_inst_(i);
-        if (!vi->is_unified()) {
+        if (!vi.is_unified()) {
             unify(vi);
-            assert(vi->is_unified());
+            assert(vi.is_unified());
         }
     }
 
-    auto p = trait_instances_.insert(tti);
+    auto p = trait_instances_.insert(tti.node());
     assert(p.second && "hash/equal broken");
 }
 
-void TypeTable::change_repr_rec(TypeNode* t, const TypeNode* repr) const {
+void TypeTable::change_repr_rec(TypeTraitInstance tti, TypeTraitInstanceNode* repr) const {
+    assert(tti->var_inst_size() == repr->var_inst_size());
+    for (size_t i = 0, e = tti->var_inst_size(); i != e; ++i) {
+        change_repr(tti->var_inst_(i), repr->var_inst_(i).node());
+    }
+}
+
+// change_repr_rec for types, but because TypeVar !< Type we need templates here
+template<class T> void TypeTable::change_repr_rec(UnificationProxy<T> t, T* repr) const {
     // first unify all bounded variables
     assert(t->bound_vars().size() == repr->bound_vars().size());
     for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
-        change_repr(t->bound_var(i), repr->bound_var(i));
+        change_repr(t->bound_var(i), repr->bound_var(i).node());
     }
 
     // unify restrictions of bounded variables
@@ -94,9 +106,9 @@ void TypeTable::change_repr_rec(TypeNode* t, const TypeNode* repr) const {
         assert(tv->restricted_by()->size() == reprv->restricted_by()->size());
 
         // TODO this does work but seems too much effort
-        TraitInstanceTableSet ttis;
+        TraitInstanceNodeTableSet ttis;
         for (auto r : *reprv->restricted_by()) {
-            auto p = ttis.insert(r);
+            auto p = ttis.insert(r.node());
             assert(p.second && "hash/equal broken");
         }
 
@@ -111,33 +123,24 @@ void TypeTable::change_repr_rec(TypeNode* t, const TypeNode* repr) const {
     // unify sub elements
     assert(t->size() == repr->size());
     for (size_t i = 0, e = t->size(); i != e; ++i) {
-        change_repr(t->elem_(i), repr->elem(i));
-    }
-}
-
-void TypeTable::change_repr_rec(TypeTraitInstance* tti, const TypeTraitInstance* repr) const {
-    assert(tti->var_inst_size() == repr->var_inst_size());
-    for (size_t i = 0, e = tti->var_inst_size(); i != e; ++i) {
-        change_repr(tti->var_inst_(i), repr->var_inst(i));
+        change_repr(t->elem_(i), repr->elem(i).node());
     }
 }
 
 template<class T>
-void TypeTable::change_repr(T* t, const T* repr) const {
-    assert(repr->is_final_representative());
-
-    if (t->is_unified()) {
-        assert(t->get_representative() == repr);
+void TypeTable::change_repr(UnificationProxy<T> t, T* repr) const {
+    if (t.is_unified()) {
+        assert(t.node() == repr);
         return;
     }
 
     change_repr_rec(t, repr);
 
-    t->set_representative(repr);
+    t.set_representative(repr);
 }
 
-TypeNode* TypeTable::unify_base(TypeNode* type) {
-    if (type->is_unified()) {
+void TypeTable::unify_base(Type type) {
+    if (type.is_unified()) {
         throw IllegalTypeException("Type is already unified!");
     }
 
@@ -146,18 +149,15 @@ TypeNode* TypeTable::unify_base(TypeNode* type) {
         throw IllegalTypeException("Only closed types can be unified!");
     }
 
-    auto i = types_.find(type);
+    auto i = types_.find(type.node());
 
     if (i != types_.end()) {
-        assert(*i != type);
+        assert(*i != type.node());
         change_repr(type, *i);
-        assert(type->get_representative() == *i);
-        return *i;
+        assert(type.node() == (*i));
     } else {
         insert_new(type);
-        assert(type->is_unified());
-        assert(type->is_final_representative());
-        return type;
+        assert(type.is_unified());
     }
 }
 
@@ -174,26 +174,23 @@ TypeNode* TypeTable::unify_base(TypeNode* type) {
 }*/
 
 //const TypeTraitInstance* TypeTable::unify_trait_inst(TypeTraitInstance* trait_inst) {
-TypeTraitInstance* TypeTable::unify_base(TypeTraitInstance* trait_inst) {
-    if (trait_inst->is_unified()) {
+void TypeTable::unify(TypeTraitInstance trait_inst) {
+    if (trait_inst.is_unified()) {
         throw IllegalTypeException("trait instance already unified");
     }
 
-    auto i = trait_instances_.find(trait_inst);
+    auto i = trait_instances_.find(trait_inst.node());
     if (i != trait_instances_.end()) {
-        assert(*i != trait_inst);
+        assert(*i != trait_inst.node());
         change_repr(trait_inst, *i);
-        assert(trait_inst->get_representative() == *i);
-        return *i;
+        assert(trait_inst.node() == *i);
     } else {
         insert_new(trait_inst);
-        assert(trait_inst->is_unified());
-        assert(trait_inst->is_final_representative());
-        return trait_inst;
+        assert(trait_inst.is_unified());
     }
 }
 
-const PrimType* TypeTable::primtype(const PrimTypeKind kind) {
+PrimType TypeTable::primtype(const PrimTypeKind kind) {
     switch (kind) {
 #define PRIMTYPE(T) case PrimType_##T: return T##_;
 #include "primtypes.h"
@@ -203,8 +200,6 @@ const PrimType* TypeTable::primtype(const PrimTypeKind kind) {
 
 void TypeTable::check_sanity() const {
     for (auto t : types_) {
-        assert(t->is_unified());
-        assert(t->is_final_representative());
         assert(t->is_sane());
     }
 }
