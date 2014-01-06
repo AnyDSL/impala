@@ -18,14 +18,14 @@ class TypeTable;
 class TypeNode;
 
 template<class T>
-class UnificationProxy {
+class Unifiable {
 public:
-    UnificationProxy()
+    Unifiable()
         : node_(nullptr)
         , unified_(false)
     {}
 
-    UnificationProxy(T* node)
+    Unifiable(T* node)
         : node_(node)
         , unified_(false)
     {}
@@ -34,7 +34,7 @@ public:
     T* node() const { return node_; }
     T* get_representative() const { return node(); }
 
-    template<class U> bool equal(UnificationProxy<U> other) const {
+    template<class U> bool equal(Unifiable<U> other) const {
         if (this->is_unified() && other.is_unified()) {
             return this->node() == other.node();
         }
@@ -46,7 +46,7 @@ public:
     operator T*() const { return node(); }
     T* operator -> () const { return node(); }
 
-    template<class U> operator UnificationProxy() { return UnificationProxy(node_); }
+    template<class U> operator Unifiable() { return UnificationProxy(node_); }
 
     /// @see get_representative()
     bool is_unified() const { return unified_; }
@@ -84,13 +84,13 @@ class TypeTraitInstanceNode;
 
 class TypeTable;
 
-typedef UnificationProxy<TypeNode> Type;
-typedef UnificationProxy<TypeErrorNode> TypeError;
-typedef UnificationProxy<PrimTypeNode> PrimType;
-typedef UnificationProxy<FnTypeNode> FnType;
-typedef UnificationProxy<TupleTypeNode> TupleType;
-typedef UnificationProxy<TypeVarNode> TypeVar;
-typedef UnificationProxy<TypeTraitInstanceNode> TypeTraitInstance;
+typedef Unifiable<TypeNode> Type;
+typedef Unifiable<TypeErrorNode> TypeError;
+typedef Unifiable<PrimTypeNode> PrimType;
+typedef Unifiable<FnTypeNode> FnType;
+typedef Unifiable<TupleTypeNode> TupleType;
+typedef Unifiable<TypeVarNode> TypeVar;
+typedef Unifiable<TypeTraitInstanceNode> TypeTraitInstance;
 
 typedef thorin::ArrayRef<Type> TypeArray;
 typedef thorin::ArrayRef<TypeNode*> TypeNodeArray;

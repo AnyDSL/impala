@@ -90,7 +90,7 @@ void TypeTable::change_repr_rec(TypeTraitInstance tti, TypeTraitInstanceNode* re
 }
 
 // change_repr_rec for types, but because TypeVar !< Type we need templates here
-template<class T> void TypeTable::change_repr_rec(UnificationProxy<T> t, T* repr) const {
+template<class T> void TypeTable::change_repr_rec(Unifiable<T> t, T* repr) const {
     // first unify all bounded variables
     assert(t->bound_vars().size() == repr->bound_vars().size());
     for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
@@ -128,7 +128,7 @@ template<class T> void TypeTable::change_repr_rec(UnificationProxy<T> t, T* repr
 }
 
 template<class T>
-void TypeTable::change_repr(UnificationProxy<T> t, T* repr) const {
+void TypeTable::change_repr(Unifiable<T> t, T* repr) const {
     if (t.is_unified()) {
         assert(t.node() == repr);
         return;

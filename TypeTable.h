@@ -70,7 +70,7 @@ public:
     void check_sanity() const;
 
     void unify(TypeTraitInstance tti);
-    template<class T> void unify(UnificationProxy<T> type) { unify_base((Type) type); }
+    template<class T> void unify(Unifiable<T> type) { unify_base((Type) type); }
 
     //const TypeTraitInstance* unify_trait_inst(TypeTraitInstance* type);
 
@@ -85,8 +85,8 @@ private:
      *
      * This assumes that t is equal to repr.
      */
-    template<class T> void change_repr(UnificationProxy<T> t, T* repr) const;
-    template<class T> void change_repr_rec(UnificationProxy<T> t, T* repr) const;
+    template<class T> void change_repr(Unifiable<T> t, T* repr) const;
+    template<class T> void change_repr_rec(Unifiable<T> t, T* repr) const;
     void change_repr_rec(TypeTraitInstance t, TypeTraitInstanceNode* repr) const;
 
     void unify_base(Type type);
