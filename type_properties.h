@@ -77,4 +77,36 @@ private:
     const T* representative_;
 };
 
+/**
+ * This class acts as a proxy for \p TypeNode pointers.
+ * This proxy hides that a \p TypeNode may have been replaced by another one.
+ * It automatically forwards to the replaced node.
+ * If in doubt use a \p UnifiableProxy instead of \p TypeNode*.
+ * You almost never have to use a \p TypeNode* directly.
+ */
+template<class T>
+class UnifiableProxy {
+public:
+    UnifiableProxy()
+        : node_(nullptr)
+    {}
+    UnifiableProxy(T* node)
+        : node_(node)
+    {}
+
+    bool empty() const { return node_ == nullptr; }
+    T* node() const { return node_; }
+    T* deref() const {
+        T* r = node()->get_representative();
+        return (r == nullptr) ? node() : r;
+    }
+    T* operator *() const { return deref(); }
+    bool operator == (const T* other) const { return this->deref() == other; }
+    operator T*() const { return deref(); }
+    T* operator -> () const { return deref(); }
+
+private:
+    mutable T* node_;
+};
+
 #endif /* TYPE_PROPERTIES_H_ */

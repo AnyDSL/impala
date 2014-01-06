@@ -272,6 +272,13 @@ public:
 
 //------------------------------------------------------------------------------
 
+typedef UnifiableProxy<TypeNode> Type;
+typedef UnifiableProxy<FnTypeNode> FnType;
+typedef UnifiableProxy<TupleTypeNode> TupleType;
+typedef UnifiableProxy<TypeVarNode> TypeVar;
+
+//------------------------------------------------------------------------------
+
 /**
  * Checks if for all combination of types t1, t2 in 'types' it holds that if
  * both are unified and t1 equals t2 then they have the same representative.
