@@ -24,8 +24,8 @@ void simple_tests() {
     std::cout << (t2 == t3) << std::endl; // 1*/
 
     // create an fn<A,B>(A, B)
-    TypeVar* A = tt.typevar();
-    TypeVar* B = tt.typevar();
+    TypeVarNode* A = tt.typevar();
+    TypeVarNode* B = tt.typevar();
     FnType* f = tt.fntype({A, B});
     f->add_bound_var(A);
     f->add_bound_var(B);
@@ -36,8 +36,8 @@ void simple_tests() {
     const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
     const TypeTrait* eq = tt.typetrait(std::string("Equality"));
 
-    TypeVar* C = tt.typevar();
-    TypeVar* D = tt.typevar();
+    TypeVarNode* C = tt.typevar();
+    TypeVarNode* D = tt.typevar();
 
     TypeTraitInstance* clonableInst = tt.instantiate_trait(clonable, {});
     TypeTraitInstance* eqInst = tt.instantiate_trait(eq, {});
@@ -61,7 +61,7 @@ void simple_tests() {
 void test_unification1() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
+    TypeVarNode* A = tt.typevar();
     FnType* f = tt.fntype({A});       // fn(A)
     FnType* g = tt.fntype({A});       // fn(A)
     FnType* h = tt.fntype({f, g});    // fn(fn(A), fn(A))
@@ -93,12 +93,12 @@ void test_unification1() {
 void test_unification2() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
+    TypeVarNode* A = tt.typevar();
     FnType* f = tt.fntype({A});     // fn(A)
     f->add_bound_var(A);            // fn<A>(A)
     FnType* uf = tt.unify(f);
 
-    TypeVar* B = tt.typevar();
+    TypeVarNode* B = tt.typevar();
     FnType* g = tt.fntype({B});     // fn(B)
     g->add_bound_var(B);            // fn<B>(B)
     FnType* ug = tt.unify(g);
@@ -126,16 +126,16 @@ void test_unification2() {
 void test_unification3() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
-    TypeVar* B = tt.typevar();
+    TypeVarNode* A = tt.typevar();
+    TypeVarNode* B = tt.typevar();
     FnType* f1 = tt.fntype({A, B});     // fn(A, B)
     f1->add_bound_var(B);               // fn<B>(A, B)
     FnType* f2 = tt.fntype({A, f1});    // fn(A, fn<B>(A, B))
     f2->add_bound_var(A);               // fn<A>(A, fn<B>(A, B))
     FnType* uf2 = tt.unify(f2);
 
-    TypeVar* C = tt.typevar();
-    TypeVar* D = tt.typevar();
+    TypeVarNode* C = tt.typevar();
+    TypeVarNode* D = tt.typevar();
     FnType* g1 = tt.fntype({C, D});     // fn(C, D)
     g1->add_bound_var(D);               // fn<D>(C, D)
     FnType* g2 = tt.fntype({C, g1});    // fn(C, fn<D>(C, D))
@@ -157,8 +157,8 @@ void test_unification3() {
     assert(f1->equal(g1));
     assert(f1->get_representative() == g1->get_representative());
 
-    TypeVar* E = tt.typevar();
-    TypeVar* F = tt.typevar();
+    TypeVarNode* E = tt.typevar();
+    TypeVarNode* F = tt.typevar();
     FnType* h1 = tt.fntype({F, E});     // fn(F, E)
     h1->add_bound_var(F);               // fn<F>(F, E)
     FnType* h2 = tt.fntype({E, h1});    // fn(E, fn<F>(F, E))
@@ -177,8 +177,8 @@ void test_unification3() {
     assert(!f1->equal(h1));
     assert(f1->get_representative() != h1->get_representative());
 
-    TypeVar* G = tt.typevar();
-    TypeVar* H = tt.typevar();
+    TypeVarNode* G = tt.typevar();
+    TypeVarNode* H = tt.typevar();
     FnType* k1 = tt.fntype({G, H});     // fn(G, H)
     FnType* k2 = tt.fntype({G, k1});    // fn(G, fn(G, H))
     k2->add_bound_var(G);               // fn<G>(G, fn(G, H))
@@ -225,7 +225,7 @@ void test_unification4() {
     assert(inst2->get_representative() == uinst);
 
     TypeTrait* A = tt.typetrait(std::string("A"));
-    TypeVar* X = tt.typevar();
+    TypeVarNode* X = tt.typevar();
     A->add_bound_var(X);
 
     try {
@@ -251,7 +251,7 @@ void test_unification5() {
     const TypeTrait* clonable = tt.typetrait(std::string("Clonable"));
 
     TypeTraitInstance* clonableInst = tt.instantiate_trait(clonable, {});
-    TypeVar* A = tt.typevar();
+    TypeVarNode* A = tt.typevar();
     A->add_restriction(clonableInst);
     FnType* f = tt.fntype({A});
     f->add_bound_var(A); // fn<A:Clonable>(A)
@@ -262,7 +262,7 @@ void test_unification5() {
     assert(clonableInst->is_unified());
 
     TypeTraitInstance* clonableInst2 = tt.instantiate_trait(clonable, {});
-    TypeVar* B = tt.typevar();
+    TypeVarNode* B = tt.typevar();
     B->add_restriction(clonableInst2);
     FnType* g = tt.fntype({B});
     g->add_bound_var(B); // fn<B:Clonable>(B)
@@ -279,7 +279,7 @@ void test_unification5() {
 
     const TypeTrait* st = tt.typetrait(std::string("SomeTrait"));
     TypeTraitInstance* stInst = tt.instantiate_trait(st, {});
-    TypeVar* C = tt.typevar();
+    TypeVarNode* C = tt.typevar();
     C->add_restriction(stInst);
     FnType* h = tt.fntype({C});
     h->add_bound_var(C); // fn<B:SomeTrait>(B)
@@ -305,12 +305,12 @@ void test_unification5() {
 void test_unification6() {
     TypeTable tt;
 
-    TypeVar* X = tt.typevar();
+    TypeVarNode* X = tt.typevar();
     TypeTrait* S = tt.typetrait(std::string("S"));  // trait S
     S->add_bound_var(X);                            // trait S<X>
 
-    TypeVar* A = tt.typevar();
-    TypeVar* B = tt.typevar();
+    TypeVarNode* A = tt.typevar();
+    TypeVarNode* B = tt.typevar();
 
     TypeTraitInstance* SA = tt.instantiate_trait(S, {A}); // S<A>
     TypeTraitInstance* SB = tt.instantiate_trait(S, {B}); // S<B>
@@ -340,8 +340,8 @@ void test_unification6() {
     assert(SA->get_representative() != SB->get_representative());
 
 
-    TypeVar* C = tt.typevar();
-    TypeVar* D = tt.typevar();
+    TypeVarNode* C = tt.typevar();
+    TypeVarNode* D = tt.typevar();
 
     TypeTraitInstance* SC = tt.instantiate_trait(S, {C}); // S<C>
     TypeTraitInstance* SD = tt.instantiate_trait(S, {D}); // S<D>
@@ -382,11 +382,11 @@ void test_unification6() {
 void test_unification7() {
     TypeTable tt;
 
-    TypeVar* X = tt.typevar();
+    TypeVarNode* X = tt.typevar();
     TypeTrait* S = tt.typetrait(std::string("S"));  // trait S
     S->add_bound_var(X);                            // trait S<X>
 
-    TypeVar* A = tt.typevar();
+    TypeVarNode* A = tt.typevar();
 
     TypeTraitInstance* SA = tt.instantiate_trait(S, {A}); // S<A>
     A->add_restriction(SA);
@@ -402,7 +402,7 @@ void test_unification7() {
     assert(A->is_unified());
     assert(SA->is_unified());
 
-    TypeVar* B = tt.typevar();
+    TypeVarNode* B = tt.typevar();
 
     TypeTraitInstance* SB = tt.instantiate_trait(S, {B}); // S<C>
     B->add_restriction(SB);
@@ -430,7 +430,7 @@ void test_unification7() {
 void test_trait_instatiation1() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
+    TypeVarNode* A = tt.typevar();
     TypeTrait* T = tt.typetrait(std::string("T"));  // trait T
     T->add_bound_var(A);                            // trait T<A>
     try {
@@ -448,7 +448,7 @@ void test_trait_instatiation1() {
 void test_type_sanity1() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
+    TypeVarNode* A = tt.typevar();
     FnType* g = tt.fntype({tt.type_int()}); // fn(int)
 
     try {
@@ -471,7 +471,7 @@ void test_type_sanity1() {
 void test_type_sanity2() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
+    TypeVarNode* A = tt.typevar();
 
     try {
         A->add_bound_var(A);         // forall A, A
@@ -482,8 +482,8 @@ void test_type_sanity2() {
         assert(A->bound_at() == nullptr);
     }
 
-    TypeVar* B = tt.typevar();
-    TypeVar* C = tt.typevar();
+    TypeVarNode* B = tt.typevar();
+    TypeVarNode* C = tt.typevar();
     try {
         C->add_bound_var(B); // forall B, C
         assert(false && "Previous statement should have failed!");
@@ -500,7 +500,7 @@ void test_type_sanity2() {
 void test_type_sanity3() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
+    TypeVarNode* A = tt.typevar();
     FnType* f = tt.fntype({A}); // fn(A)
     f->add_bound_var(A);        // fn<A>(A)
     FnType* uf = tt.unify(f);
@@ -534,12 +534,12 @@ void test_type_sanity3() {
 void test_type_sanity4() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
+    TypeVarNode* A = tt.typevar();
     FnType* f = tt.fntype({A}); // fn(A)
     f->add_bound_var(A);        // fn<A>(A)
     tt.unify(f);
 
-    TypeVar* B = tt.typevar();
+    TypeVarNode* B = tt.typevar();
     FnType* g = tt.fntype({A, B});   // fn(A, B)
 
     try {
@@ -558,8 +558,8 @@ void test_type_sanity4() {
 void test_type_sanity5() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
-    TypeVar* B = tt.typevar();
+    TypeVarNode* A = tt.typevar();
+    TypeVarNode* B = tt.typevar();
     FnType* g = tt.fntype({B});   // fn(B)
 
     try {
@@ -578,7 +578,7 @@ void test_type_sanity5() {
 void test_type_sanity6() {
     TypeTable tt;
 
-    TypeVar* A = tt.typevar();
+    TypeVarNode* A = tt.typevar();
     FnType* f = tt.fntype({A});         // fn(A)
     FnType* g = tt.fntype({A});         // fn(A)
     g->add_bound_var(A);

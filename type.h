@@ -12,7 +12,7 @@
 class FnType;
 class PrimType;
 class TupleType;
-class TypeVar;
+class TypeVarNode;
 class TypeNode;
 class TypeError;
 
@@ -61,7 +61,7 @@ public:
     virtual void visit(PrimType&) {}
     virtual void visit(FnType&) {}
     virtual void visit(TupleType&) {}
-    virtual void visit(TypeVar&) {}
+    virtual void visit(TypeVarNode&) {}
 };
 
 class TypeNode : public GenericElement, public Unifiable<TypeNode> {
@@ -203,9 +203,9 @@ public:
 
 
 
-class TypeVar : public TypeNode {
+class TypeVarNode : public TypeNode {
 private:
-    TypeVar(TypeTable& tt)
+    TypeVarNode(TypeTable& tt)
         : TypeNode(tt, Type_var, 0)
         , id_(counter++)
         , restricted_by_()
@@ -228,9 +228,9 @@ private:
     const GenericElement* bound_at_;
 
     /// Used to define equivalence constraints when checking equality of types
-    mutable const TypeVar* equiv_var_;
+    mutable const TypeVarNode* equiv_var_;
 
-    void set_equiv_variable(const TypeVar* v) const {
+    void set_equiv_variable(const TypeVarNode* v) const {
         assert(equiv_var_ == nullptr);
         assert(v != nullptr);
         equiv_var_ = v;
@@ -243,7 +243,7 @@ private:
 
     void bind(const GenericElement* const e);
 
-    bool restrictions_equal(const TypeVar* other) const;
+    bool restrictions_equal(const TypeVarNode* other) const;
 
 public:
     const TypeTraitInstSet* restricted_by() const { return &restricted_by_; }

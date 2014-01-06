@@ -6,7 +6,7 @@
 
 using namespace thorin;
 
-int TypeVar::counter = 0;
+int TypeVarNode::counter = 0;
 
 //------------------------------------------------------------------------------
 
@@ -127,7 +127,7 @@ std::string CompoundType::elems_to_string() const {
     return result + ')';
 }
 
-bool TypeVar::restrictions_equal(const TypeVar* other) const {
+bool TypeVarNode::restrictions_equal(const TypeVarNode* other) const {
     auto trestr = other->restricted_by();
 
     if (this->restricted_by()->size() != trestr->size())
@@ -150,13 +150,13 @@ bool TypeVar::restrictions_equal(const TypeVar* other) const {
     return true;
 }
 
-bool TypeVar::equal(const TypeNode* other) const {
+bool TypeVarNode::equal(const TypeNode* other) const {
     if (this->is_unified() && other->is_unified()) {
         return this->get_representative() == other->get_representative();
     }
 
     // TODO is this correct for a instanceof-equivalent?
-    if (const TypeVar* t = other->isa<TypeVar>()) {
+    if (const TypeVarNode* t = other->isa<TypeVarNode>()) {
         if ((this->equiv_var_ == nullptr) && (t->equiv_var_ == nullptr)) {
             if (this->bound_at_ == nullptr) {
                 return false;
@@ -175,7 +175,7 @@ bool TypeVar::equal(const TypeNode* other) const {
     return false;
 }
 
-void TypeVar::bind(const GenericElement* const e) {
+void TypeVarNode::bind(const GenericElement* const e) {
     if (bound_at_ != nullptr) {
         throw IllegalTypeException("type variables can only be bound once!");
     }
@@ -186,7 +186,7 @@ void TypeVar::bind(const GenericElement* const e) {
     bound_at_ = e;
 }
 
-void TypeVar::add_restriction(TypeTraitInstance* restriction) {
+void TypeVarNode::add_restriction(TypeTraitInstance* restriction) {
     if (is_closed())
         throw IllegalTypeException("Closed type variables must not be changed!");
 
@@ -194,11 +194,11 @@ void TypeVar::add_restriction(TypeTraitInstance* restriction) {
     assert(p.second && "hash/equal broken");
 }
 
-bool TypeVar::is_closed() const {
+bool TypeVarNode::is_closed() const {
     return bound_at_ != nullptr;
 }
 
-std::string TypeVar::to_string() const {
+std::string TypeVarNode::to_string() const {
     if (id_ < 26) {
         return std::string(1, 'A' + id_);
     } else {

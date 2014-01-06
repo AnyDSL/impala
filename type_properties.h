@@ -13,26 +13,26 @@
 #include "thorin/util/array.h"
 #include "thorin/util/cast.h"
 
-class TypeVar;
+class TypeVarNode;
 
-typedef thorin::ArrayRef<TypeVar*> TypeVarArray;
+typedef thorin::ArrayRef<TypeVarNode*> TypeVarNodeArray;
 
 class GenericElement : public thorin::MagicCast<GenericElement> {
 protected:
-    std::vector<TypeVar*> bound_vars_;
+    std::vector<TypeVarNode*> bound_vars_;
 
     std::string bound_vars_to_string() const;
 
 public:
     size_t num_bound_vars() const { return bound_vars_.size(); }
 
-    TypeVarArray bound_vars() const { return TypeVarArray(bound_vars_); }
-    TypeVar* bound_var(size_t i) const { return bound_vars_[i]; }
+    TypeVarNodeArray bound_vars() const { return TypeVarNodeArray(bound_vars_); }
+    TypeVarNode* bound_var(size_t i) const { return bound_vars_[i]; }
 
     /// Returns true if this \p Type does have any bound type variabes (\p bound_vars_).
     bool is_generic() const { return !bound_vars_.empty(); }
 
-    void add_bound_var(TypeVar* v);
+    void add_bound_var(TypeVarNode* v);
 
     virtual bool equal(const GenericElement*) const = 0;
     virtual size_t hash() const = 0;

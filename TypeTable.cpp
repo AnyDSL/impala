@@ -55,7 +55,7 @@ void TypeTable::insert_new(TypeNode* type) {
 
     if (type->kind() != Type_var) {
         // TODO is this a correct instanceof test?
-        assert(!type->isa<TypeVar>());
+        assert(!type->isa<TypeVarNode>());
         auto p = types_.insert(type);
         assert(p.second && "hash/equal broken");
     }

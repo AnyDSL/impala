@@ -48,7 +48,7 @@ public:
         return new TypeTraitInstance(trait, var_instances);
     }
 
-    TypeVar* typevar() { return new TypeVar(*this); }
+    TypeVarNode* typevar() { return new TypeVarNode(*this); }
 
     FnType* fntype(TypeNodeArray params) { return new FnType(*this, params); }
 
