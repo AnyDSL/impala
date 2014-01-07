@@ -124,6 +124,10 @@ template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) 
         }
     }
 
+    for (auto vr : var_restrictions) {
+        delete vr;
+    }
+
     // unify sub elements
     assert(t->size() == repr->size());
     for (size_t i = 0, e = t->size(); i != e; ++i) {
