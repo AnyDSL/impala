@@ -92,22 +92,22 @@ void TypeTable::change_repr_rec(TypeTraitInstance tti, TypeTraitInstanceNode* re
 // change_repr_rec for types, but because TypeVar !< Type we need templates here
 template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) const {
     // first unify all bounded variables but remember the old ones
-    std::vector<TypeVarNode*> vars;
+    std::vector<TypeTraitInstSet*> var_restrictions;
     assert(t->bound_vars().size() == repr->bound_vars().size());
     for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
-        vars.push_back(t->bound_var(i).get_representative());
+        var_restrictions.push_back(new TypeTraitInstSet(*t->bound_var(i)->restricted_by()));
         change_repr(t->bound_var(i), repr->bound_var(i).get_representative());
     }
 
     // unify restrictions of bounded variables
-    size_t num_bound_vars = vars.size();
+    size_t num_bound_vars = var_restrictions.size();
     assert(num_bound_vars == repr->bound_vars().size());
 
     for (size_t i = 0; i != num_bound_vars; ++i) {
-        auto tv = vars[i];
+        auto tv_restrs = var_restrictions[i];
         auto reprv = repr->bound_var(i);
 
-        assert(tv->restricted_by()->size() == reprv->restricted_by()->size());
+        assert(tv_restrs->size() == reprv->restricted_by()->size());
 
         // TODO this does work but seems too much effort
         TraitInstanceNodeTableSet ttis;
@@ -117,7 +117,7 @@ template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) 
         }
 
         // this->restricted_by() subset of trestr
-        for (auto restr : *tv->restricted_by()) {
+        for (auto restr : *tv_restrs) {
             auto repr_restr = ttis.find(restr);
             assert(repr_restr != ttis.end());
             change_repr(restr, *repr_restr);

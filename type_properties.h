@@ -49,6 +49,7 @@ private:
     void set_representative(T* repr) {
         // TODO does this really hold? (is it set only once?)
         assert(!unified_);
+        delete representative_;
         representative_ = repr;
         unified_ = true;
     }
