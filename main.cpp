@@ -84,18 +84,18 @@ void test_unification1() {
 
     cout << "test_unification1 [okay]" << endl;
 }
-/*
+
 
 void test_unification2() {
     TypeTable tt;
 
     TypeVar A = tt.typevar();
-    FnType f = tt.fntype({(Type) A});     // fn(A)
+    FnType f = tt.fntype({A});     // fn(A)
     f->add_bound_var(A);            // fn<A>(A)
     tt.unify(f);
 
     TypeVar B = tt.typevar();
-    FnType g = tt.fntype({(Type) B});     // fn(B)
+    FnType g = tt.fntype({B});     // fn(B)
     g->add_bound_var(B);            // fn<B>(B)
     tt.unify(g);
 
@@ -108,7 +108,7 @@ void test_unification2() {
     assert(A.get_representative() == B.get_representative());
 
     tt.check_sanity();
-    check_sanity({(Type) A, (Type) f, (Type) B, (Type) g});
+    check_sanity({A, f, B, g});
 
     cout << "test_unification2 [okay]" << endl;
 }
@@ -118,18 +118,18 @@ void test_unification3() {
 
     TypeVar A = tt.typevar();
     TypeVar B = tt.typevar();
-    FnType f1 = tt.fntype({(Type) A, (Type) B});     // fn(A, B)
-    f1->add_bound_var(B);               // fn<B>(A, B)
-    FnType f2 = tt.fntype({(Type) A, (Type) f1});    // fn(A, fn<B>(A, B))
-    f2->add_bound_var(A);               // fn<A>(A, fn<B>(A, B))
+    FnType f1 = tt.fntype({A, B});  // fn(A, B)
+    f1->add_bound_var(B);           // fn<B>(A, B)
+    FnType f2 = tt.fntype({A, f1}); // fn(A, fn<B>(A, B))
+    f2->add_bound_var(A);           // fn<A>(A, fn<B>(A, B))
     tt.unify(f2);
 
     TypeVar C = tt.typevar();
     TypeVar D = tt.typevar();
-    FnType g1 = tt.fntype({(Type) C, (Type) D});     // fn(C, D)
-    g1->add_bound_var(D);               // fn<D>(C, D)
-    FnType g2 = tt.fntype({(Type) C, (Type) g1});    // fn(C, fn<D>(C, D))
-    g2->add_bound_var(C);               // fn<C>(C, fn<B>(C, D))
+    FnType g1 = tt.fntype({C, D});  // fn(C, D)
+    g1->add_bound_var(D);           // fn<D>(C, D)
+    FnType g2 = tt.fntype({C, g1}); // fn(C, fn<D>(C, D))
+    g2->add_bound_var(C);           // fn<C>(C, fn<D>(C, D))
     tt.unify(g2);
 
     //uf2->dump();
@@ -137,18 +137,19 @@ void test_unification3() {
 
     assert(f1.is_unified());
     assert(g1.is_unified());
+    assert(f2.is_unified());
+    assert(g2.is_unified());
 
     assert(f2.get_representative() == g2.get_representative());
 
-    assert(f1 != g1);
     assert(f1->equal(g1));
     assert(f1.get_representative() == g1.get_representative());
 
     TypeVar E = tt.typevar();
     TypeVar F = tt.typevar();
-    FnType h1 = tt.fntype({(Type) F, (Type) E});     // fn(F, E)
+    FnType h1 = tt.fntype({F, E});     // fn(F, E)
     h1->add_bound_var(F);               // fn<F>(F, E)
-    FnType h2 = tt.fntype({(Type) E, (Type) h1});    // fn(E, fn<F>(F, E))
+    FnType h2 = tt.fntype({E, h1});    // fn(E, fn<F>(F, E))
     h2->add_bound_var(E);               // fn<E>(E, fn<F>(F, E))
     tt.unify(h2);
 
@@ -165,8 +166,8 @@ void test_unification3() {
 
     TypeVar G = tt.typevar();
     TypeVar H = tt.typevar();
-    FnType k1 = tt.fntype({(Type) G, (Type) H});     // fn(G, H)
-    FnType k2 = tt.fntype({(Type) G, (Type) k1});    // fn(G, fn(G, H))
+    FnType k1 = tt.fntype({G, H});     // fn(G, H)
+    FnType k2 = tt.fntype({G, k1});    // fn(G, fn(G, H))
     k2->add_bound_var(G);               // fn<G>(G, fn(G, H))
     k2->add_bound_var(H);               // fn<G,H>(G, fn(G, H))
     tt.unify(k2);
@@ -183,10 +184,10 @@ void test_unification3() {
     assert(f1.get_representative() != k1.get_representative());
 
     tt.check_sanity();
-    check_sanity({(Type) A, (Type) B, (Type) f1, (Type) f2,
-        (Type) C, (Type) D, (Type) g1, (Type) g2,
-        (Type) E, (Type) F, (Type) h1, (Type) h2,
-        (Type) G, (Type) H, (Type) k1, (Type) k2});
+    check_sanity({A, B, f1, f2,
+        C, D, g1, g2,
+        E, F, h1, h2,
+        G, H, k1, k2});
 
     cout << "test_unification3 [okay]" << endl;
 }
@@ -220,7 +221,7 @@ void test_unification4() {
     }
 
     try {
-        const TypeTraitInstance inst = tt.instantiate_trait(A, {(Type) tt.type_int(), (Type) tt.type_int()});
+        const TypeTraitInstance inst = tt.instantiate_trait(A, {tt.type_int(), tt.type_int()});
         assert(false && "Previous statement should have failed!");
     } catch (IllegalTypeException& e) {
     }
@@ -238,7 +239,7 @@ void test_unification5() {
     TypeTraitInstance clonableInst = tt.instantiate_trait(clonable, {});
     TypeVar A = tt.typevar();
     A->add_restriction(clonableInst);
-    FnType f = tt.fntype({(Type) A});
+    FnType f = tt.fntype({A});
     f->add_bound_var(A); // fn<A:Clonable>(A)
     tt.unify(f);
 
@@ -248,10 +249,11 @@ void test_unification5() {
     TypeTraitInstance clonableInst2 = tt.instantiate_trait(clonable, {});
     TypeVar B = tt.typevar();
     B->add_restriction(clonableInst2);
-    FnType g = tt.fntype({(Type) B});
+    FnType g = tt.fntype({B});
     g->add_bound_var(B); // fn<B:Clonable>(B)
     tt.unify(g);
 
+    assert(B.is_unified());
     assert(g.is_unified());
     assert(clonableInst2.is_unified());
 
@@ -264,7 +266,7 @@ void test_unification5() {
     TypeTraitInstance stInst = tt.instantiate_trait(st, {});
     TypeVar C = tt.typevar();
     C->add_restriction(stInst);
-    FnType h = tt.fntype({(Type) C});
+    FnType h = tt.fntype({C});
     h->add_bound_var(C); // fn<B:SomeTrait>(B)
     tt.unify(h);
 
@@ -279,7 +281,7 @@ void test_unification5() {
     assert(h.get_representative() != g.get_representative());
 
     tt.check_sanity();
-    check_sanity({(Type) A, (Type) f, (Type) B, (Type) g, (Type) C, (Type) h});
+    check_sanity({A, f, B, g, C, h});
 
     cout << "test_unification5 [okay]" << endl;
 }
@@ -295,14 +297,14 @@ void test_unification6() {
     TypeVar A = tt.typevar();
     TypeVar B = tt.typevar();
 
-    TypeTraitInstance SA = tt.instantiate_trait(S, {(Type) A}); // S<A>
-    TypeTraitInstance SB = tt.instantiate_trait(S, {(Type) B}); // S<B>
+    TypeTraitInstance SA = tt.instantiate_trait(S, {A}); // S<A>
+    TypeTraitInstance SB = tt.instantiate_trait(S, {B}); // S<B>
 
     A->add_restriction(SB);
     B->add_restriction(SA);
 
     /// fn<A:S<B>, B:S<A>>(A, B)
-    FnType f = tt.fntype({(Type) A, (Type) B});
+    FnType f = tt.fntype({A, B});
     f->add_bound_var(A);
     f->add_bound_var(B);
 
@@ -326,14 +328,14 @@ void test_unification6() {
     TypeVar C = tt.typevar();
     TypeVar D = tt.typevar();
 
-    TypeTraitInstance SC = tt.instantiate_trait(S, {(Type) C}); // S<C>
-    TypeTraitInstance SD = tt.instantiate_trait(S, {(Type) D}); // S<D>
+    TypeTraitInstance SC = tt.instantiate_trait(S, {C}); // S<C>
+    TypeTraitInstance SD = tt.instantiate_trait(S, {D}); // S<D>
 
     C->add_restriction(SD);
     D->add_restriction(SC);
 
     /// fn<C:S<D>, D:S<C>>(C, D)
-    FnType g = tt.fntype({(Type) C, (Type) D});
+    FnType g = tt.fntype({C, D});
     g->add_bound_var(C);
     g->add_bound_var(D);
 
@@ -355,7 +357,7 @@ void test_unification6() {
     assert(SD.get_representative() == SB.get_representative());
 
     tt.check_sanity();
-    check_sanity({(Type) A, (Type) B, (Type) C, (Type) D, (Type) f, (Type) g});
+    check_sanity({A, B, C, D, f, g});
 
     cout << "test_unification6 [okay]" << endl;
 }
@@ -370,11 +372,11 @@ void test_unification7() {
 
     TypeVar A = tt.typevar();
 
-    TypeTraitInstance SA = tt.instantiate_trait(S, {(Type) A}); // S<A>
+    TypeTraitInstance SA = tt.instantiate_trait(S, {A}); // S<A>
     A->add_restriction(SA);
 
     /// fn<A:S<A>>(A)
-    FnType f = tt.fntype({(Type) A});
+    FnType f = tt.fntype({A});
     f->add_bound_var(A);
     tt.unify(f);
 
@@ -386,11 +388,11 @@ void test_unification7() {
 
     TypeVar B = tt.typevar();
 
-    TypeTraitInstance SB = tt.instantiate_trait(S, {(Type) B}); // S<C>
+    TypeTraitInstance SB = tt.instantiate_trait(S, {B}); // S<C>
     B->add_restriction(SB);
 
     /// fn<C:S<C>>(C)
-    FnType g = tt.fntype({(Type) B});
+    FnType g = tt.fntype({B});
     g->add_bound_var(B);
     tt.unify(g);
 
@@ -403,7 +405,7 @@ void test_unification7() {
     assert(SB.get_representative() == SA.get_representative());
 
     tt.check_sanity();
-    check_sanity({(Type) A, (Type) B, (Type) f, (Type) g});
+    check_sanity({A, B, f, g});
 
     cout << "test_unification7 [okay]" << endl;
 }
@@ -430,7 +432,7 @@ void test_type_sanity1() {
     TypeTable tt;
 
     TypeVar A = tt.typevar();
-    FnType g = tt.fntype({(Type) tt.type_int()}); // fn(int)
+    FnType g = tt.fntype({tt.type_int()}); // fn(int)
 
     try {
         // illegal
@@ -482,11 +484,11 @@ void test_type_sanity3() {
     TypeTable tt;
 
     TypeVar A = tt.typevar();
-    FnType f = tt.fntype({(Type) A}); // fn(A)
+    FnType f = tt.fntype({A}); // fn(A)
     f->add_bound_var(A);        // fn<A>(A)
     tt.unify(f);
 
-    FnType g = tt.fntype({(Type) A}); // fn(A)
+    FnType g = tt.fntype({A}); // fn(A)
     tt.unify(g);
 
     assert(g.is_unified());
@@ -494,7 +496,7 @@ void test_type_sanity3() {
     assert(!g->equal(f));
 
     try {
-        FnType h = tt.fntype({(Type) f, (Type) g});     // fn(fn<A>(A), fn(A)) -> INVALID
+        FnType h = tt.fntype({f, g});     // fn(fn<A>(A), fn(A)) -> INVALID
         tt.unify(h);
 
         h->dump();
@@ -504,7 +506,7 @@ void test_type_sanity3() {
     }
 
     tt.check_sanity();
-    check_sanity({(Type) A, (Type) f, (Type) g});
+    check_sanity({A, f, g});
 
     cout << "test_type_sanity3 [okay]" << endl;
 }
@@ -513,12 +515,12 @@ void test_type_sanity4() {
     TypeTable tt;
 
     TypeVar A = tt.typevar();
-    FnType f = tt.fntype({(Type) A}); // fn(A)
+    FnType f = tt.fntype({A}); // fn(A)
     f->add_bound_var(A);        // fn<A>(A)
     tt.unify(f);
 
     TypeVar B = tt.typevar();
-    FnType g = tt.fntype({(Type) A, (Type) B});   // fn(A, B)
+    FnType g = tt.fntype({A, B});   // fn(A, B)
 
     try {
         // must fail because A is already bound!
@@ -538,7 +540,7 @@ void test_type_sanity5() {
 
     TypeVar A = tt.typevar();
     TypeVar B = tt.typevar();
-    FnType g = tt.fntype({(Type) B});   // fn(B)
+    FnType g = tt.fntype({B});   // fn(B)
 
     try {
         // must fail because A is not a subtype of g
@@ -557,8 +559,8 @@ void test_type_sanity6() {
     TypeTable tt;
 
     TypeVar A = tt.typevar();
-    FnType f = tt.fntype({(Type) A});         // fn(A)
-    FnType g = tt.fntype({(Type) A});         // fn(A)
+    FnType f = tt.fntype({A});         // fn(A)
+    FnType g = tt.fntype({A});         // fn(A)
     g->add_bound_var(A);
     tt.unify(g);
     // TODO f is now a type that is sane but not unified!
@@ -567,13 +569,13 @@ void test_type_sanity6() {
 
     //cout << "test_type_sanity6 [okay]" << endl;
 }
-*/
+
 int main() {
     //simple_tests();
     //return 0;
 
     test_unification1();
-    /*test_unification2();
+    test_unification2();
     test_unification3();
     test_unification4();
     test_unification5();
@@ -584,7 +586,7 @@ int main() {
     //test_type_sanity3();
     test_type_sanity4();
     //test_type_sanity5();
-    //test_type_sanity6();*/
+    //test_type_sanity6();
 
     /*TypeTable tt;
     PrimType pt = tt.type_int();
