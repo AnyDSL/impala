@@ -91,16 +91,20 @@ void TypeTable::change_repr_rec(TypeTraitInstance tti, TypeTraitInstanceNode* re
 
 // change_repr_rec for types, but because TypeVar !< Type we need templates here
 template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) const {
-    // first unify all bounded variables
+    // first unify all bounded variables but remember the old ones
+    std::vector<TypeVarNode*> vars;
     assert(t->bound_vars().size() == repr->bound_vars().size());
     for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
+        vars.push_back(t->bound_var(i).get_representative());
         change_repr(t->bound_var(i), repr->bound_var(i).get_representative());
     }
 
     // unify restrictions of bounded variables
-    assert(t->bound_vars().size() == repr->bound_vars().size());
-    for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
-        auto tv = t->bound_var(i);
+    size_t num_bound_vars = vars.size();
+    assert(num_bound_vars == repr->bound_vars().size());
+
+    for (size_t i = 0; i != num_bound_vars; ++i) {
+        auto tv = vars[i];
         auto reprv = repr->bound_var(i);
 
         assert(tv->restricted_by()->size() == reprv->restricted_by()->size());
