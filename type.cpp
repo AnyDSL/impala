@@ -34,6 +34,9 @@ bool TypeNode::equal(const TypeNode* other) const {
     result &= this->size() == other->size();
     result &= this->num_bound_vars() == other->num_bound_vars();
 
+    if (!result)
+        return false;
+
     // set equivalence constraints for type variables
     for (size_t i = 0, e = num_bound_vars(); i != e; ++i) {
         this->bound_var(i)->set_equiv_variable(other->bound_var(i).get_representative());
@@ -147,6 +150,9 @@ bool TypeVarNode::restrictions_equal(const TypeVar other) const {
 }
 
 bool TypeVarNode::equal(const TypeNode* other) const {
+    if (this == other)
+        return true;
+
     // TODO is this correct for a instanceof-equivalent?
     if (const TypeVarNode* t = other->isa<TypeVarNode>()) {
         if ((this->equiv_var_ == nullptr) && (t->equiv_var_ == nullptr)) {
