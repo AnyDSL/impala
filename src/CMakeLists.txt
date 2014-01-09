@@ -1,0 +1,49 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.1 FATAL_ERROR)
+
+OPTION ( BUILD_IMPALA "Builds the Impala frontend." ON )
+
+INCLUDE_DIRECTORIES ( ${PROJ_SOURCE_DIR} )
+LINK_DIRECTORIES ( ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} )
+
+IF (NOT MSVC)
+    ADD_DEFINITIONS ( "-std=c++11" )
+ELSE ()
+    ADD_DEFINITIONS ( -D_SCL_SECURE_NO_WARNINGS )
+ENDIF ()
+
+# check for wfv2
+FIND_PACKAGE ( WFV2 QUIET )
+
+IF ( WFV2_FOUND )
+    MESSAGE ( STATUS "Building with WFV2." )
+    ADD_DEFINITIONS ( "-DWFV2_SUPPORT" )
+    INCLUDE_DIRECTORIES ( ${WFV2_INCLUDE_DIR} )
+    LINK_DIRECTORIES ( ${WFV2_LIBRARY_DIR} )
+ELSE ()
+    MESSAGE ( STATUS "Building without WFV2. Specify WFV2_DIR to compile with WFV2." )
+ENDIF ()
+
+# check for possible llvm extension
+FIND_PACKAGE ( LLVM QUIET )
+
+IF ( LLVM_FOUND )
+    MESSAGE ( STATUS "Building with LLVM." )
+    ADD_DEFINITIONS ( ${LLVM_DEFINITIONS} )
+    ADD_DEFINITIONS ( "-DLLVM_SUPPORT" )
+    INCLUDE_DIRECTORIES ( ${LLVM_INCLUDE_DIRS} )
+    LINK_DIRECTORIES ( ${LLVM_LIBRARY_DIRS} )
+ELSE ()
+    MESSAGE ( STATUS "Building without LLVM. Specify LLVM_DIR to compile with LLVM." )
+ENDIF ()
+
+INCLUDE ( thorin-shared )
+
+# build thorin lib
+ADD_SUBDIRECTORY ( thorin )
+
+# build impala frontend
+IF ( BUILD_IMPALA )
+    ADD_SUBDIRECTORY ( impala )
+ENDIF ()
+
+ADD_SUBDIRECTORY ( intrinsicgen )
