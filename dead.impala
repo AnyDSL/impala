@@ -1,0 +1,8 @@
+extern fn f(i : int, dead : int) -> int {
+    return i;
+}
+
+extern fn g(i : int) -> int {
+    return f(i, 42);
+}
+

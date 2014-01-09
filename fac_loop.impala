@@ -1,0 +1,15 @@
+fn fac(n : int) -> int {
+    if (n <= 1) 
+        return 1;
+
+    let mut r = 1;
+    foreach range(2, n+1) |i : int| -> void {
+        r *= i;
+    }
+    return r;
+}
+
+
+fn main(i: int) -> int {
+    return @fac(5);
+}

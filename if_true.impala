@@ -1,0 +1,8 @@
+fn main(i : int) -> int {
+    if (3 == 4) {
+        i++;
+    } else
+        --i;
+
+    return i;
+}

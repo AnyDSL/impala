@@ -1,0 +1,10 @@
+fn f<T>(a : T) -> T {
+    fn g(a : T) -> T {
+        return a;
+    }
+    return g(a);
+}
+
+fn main(i : int) -> int { 
+    return f(i);
+}

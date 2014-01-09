@@ -1,0 +1,11 @@
+extern fn f() -> void {
+}
+
+extern fn g() -> int {
+}
+
+fn h() {
+}
+
+fn i(a : int) {
+}

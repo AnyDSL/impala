@@ -1,0 +1,8 @@
+fn get<T>() -> T {
+    let tuple: (T, T);
+    return tuple[0];
+}
+
+fn main() -> int {
+    return get();
+}
