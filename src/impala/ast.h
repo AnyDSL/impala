@@ -31,15 +31,15 @@ class Expr;
 class Fn;
 class Global;
 class Printer;
-class ModItem;
+class Item;
 class Block;
 class ScopeStmt;
 class Stmt;
 class Sema;
-class VarDecl;
+class Param;
 //class GenericDecl;
 
-typedef thorin::AutoVector<const VarDecl*> VarDecls;
+typedef thorin::AutoVector<const Param*> Params;
 typedef thorin::AutoVector<const Expr*> Exprs;
 typedef thorin::AutoVector<const Stmt*> Stmts;
 //typedef thorin::AutoVector<const GenericDecl*> GenericDecls;
@@ -118,38 +118,41 @@ protected:
 class TypeDecl : public Decl {
 };
 
-class FnBody {
+class Fn {
 public:
-    const Expr* expr() const { return expr_; }
+    const Param* param(size_t i) const { return params_[i]; }
+    const Params& params() const { return params_; }
+    const Expr* body() const { return body_; }
     thorin::Lambda* lambda() const { return lambda_; }
+    const thorin::Param* ret_param() const { return ret_param_; }
     const thorin::Enter* frame() const { return frame_; }
+    void emit(CodeGen& cg) const;
 
 private:
-    thorin::AutoPtr<const Expr> expr_;
+    Params params_;
+    thorin::AutoPtr<const Expr> body_;
     mutable thorin::Lambda* lambda_;
+    mutable const thorin::Param* ret_param_;
     mutable const thorin::Enter* frame_;
 
     friend class Parser;
-    friend class Sema;
-    friend class CodeGen;
-    //friend class GenericDecl;
-    friend class FnExpr;
-    friend class ForeachStmt;
 };
 
 //------------------------------------------------------------------------------
 
 class ModContents : public ASTNode {
 public:
+    const Item* item(size_t i) const { return items_[i]; }
+    const thorin::AutoVector<const Item*>& items() const { return items_; }
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    thorin::AutoVector<const ModItem*> mod_items_;
+    thorin::AutoVector<const Item*> items_;
 
     friend class Parser;
 };
 
-class ModItem : virtual public ASTNode {
+class Item : virtual public ASTNode {
 public:
     Visibility visibility() const { return  visibility_; }
 
@@ -159,7 +162,7 @@ private:
     friend class Parser;
 };
 
-class ModDecl : public ModItem, public PathDecl {
+class ModDecl : public Item, public PathDecl {
 public:
     const ModContents* mod_contents() const { return mod_contents_; }
     virtual std::ostream& print(Printer& p) const;
@@ -170,31 +173,31 @@ private:
     friend class Parser;
 };
 
-class ForeignMod : public ModItem, public PathDecl {
+class ForeignMod : public Item, public PathDecl {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class Typedef : public ModItem, public TypeDecl {
+class Typedef : public Item, public TypeDecl {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class StructDecl : public ModItem, public TypeDecl {
+class StructDecl : public Item, public TypeDecl {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class EnumDecl : public ModItem, public TypeDecl {
+class EnumDecl : public Item, public TypeDecl {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class TraitDecl : public ModItem, public TypeDecl {
+class TraitDecl : public Item, public TypeDecl {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class ConstItem : public ModItem {
+class ConstItem : public Item {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class Impl : public ModItem {
+class Impl : public Item {
     virtual std::ostream& print(Printer& p) const;
 };
 
@@ -209,141 +212,23 @@ class Param : public LocalDecl {
     friend class Parser;
 };
 
-class FnDecl : public ModItem, public VarDecl {
+class FnDecl : public Item, public VarDecl {
 public:
     FnDecl(TypeTable& typetable);
 
-    const FnBody& body() const { return body_; }
-    const VarDecl* param(size_t i) const { return params_[i]; }
-    const VarDecls& params() const { return params_; }
-    const FnType* orig_fntype() const { return orig_type_->as<FnType>(); }
-    const FnType* refined_fntype() const { return refined_type_->as<FnType>(); }
-    //const GenericDecls& generics() const { return generics_; }
+    const Fn& fn() const { return fn_; }
     bool is_extern() const { return extern_; }
-    bool is_continuation() const { return orig_fntype()->return_type()->isa<NoRet>() != nullptr; }
-    thorin::Lambda* lambda() const { return lambda_; }
-    const thorin::Param* ret_param() const { return ret_param_; }
     void check_head(Sema&) const;
     virtual void check(Sema& sema) const;
     virtual std::ostream& print(Printer& p) const;
     virtual void emit(CodeGen& cg) const;
 
-    const thorin::Enter* frame() const { return frame_; }
-
 private:
-    VarDecls params_;
-    FnBody body_;
+    Fn fn_;
     bool extern_;
-    //GenericDecls generics_;
-    mutable thorin::Lambda* lambda_;
-    mutable const thorin::Param* ret_param_;
-    //mutable GenericBuilder generic_builder_;
-    //mutable GenericMap generic_map_;
-    mutable const thorin::Enter* frame_;
-    const Type* orig_type_;
-    const Type* refined_type_;
 
     friend class Parser;
 };
-
-//------------------------------------------------------------------------------
-
-#if 0
-//------------------------------------------------------------------------------
-
-class GenericDecl : public TypeDecl {
-public:
-    GenericDecl(const Token& tok)
-        : handle_(-1)
-    {
-        symbol_ = tok.symbol();
-        set_loc(tok.loc());
-    }
-
-    size_t handle() const { return handle_; }
-    const Fn* fn() const { return fn_; }
-    virtual void check(Sema& sema) const;
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    mutable size_t handle_;
-    mutable const Fn* fn_;
-
-    friend class Fn;
-    friend class Sema;
-};
-
-class Fn : public LetDecl {
-public:
-    Fn(TypeTable& typetable)
-        : generic_builder_(typetable)
-    {}
-
-    const Scope* body() const { return body_; }
-    const VarDecl* param(size_t i) const { return params_[i]; }
-    const VarDecls& params() const { return params_; }
-    const FnType* orig_fntype() const { return orig_type_->as<FnType>(); }
-    const FnType* refined_fntype() const { return refined_type_->as<FnType>(); }
-    const GenericDecls& generics() const { return generics_; }
-    bool is_extern() const { return extern_; }
-    bool is_continuation() const { return orig_fntype()->return_type()->isa<NoRet>() != nullptr; }
-    bool is_lambda() const { return symbol_ == thorin::Symbol("<lambda>"); }
-    thorin::Lambda* lambda() const { return lambda_; }
-    const thorin::Param* ret_param() const { return ret_param_; }
-    void check_head(Sema&) const;
-    virtual void check(Sema& sema) const;
-    virtual std::ostream& print(Printer& p) const;
-    const thorin::Enter* frame() const { return frame_; }
-
-private:
-    VarDecls params_;
-    thorin::AutoPtr<const Scope> body_;
-    bool extern_;
-    GenericDecls generics_;
-    mutable thorin::Lambda* lambda_;
-    mutable const thorin::Param* ret_param_;
-    mutable GenericBuilder generic_builder_;
-    mutable GenericMap generic_map_;
-    mutable const thorin::Enter* frame_;
-
-    friend class Parser;
-    friend class Sema;
-    friend class CodeGen;
-    friend class GenericDecl;
-    friend class FnExpr;
-    friend class ForeachStmt;
-};
-
-class VarDecl : public LetDecl {
-public:
-    VarDecl(size_t handle, bool is_mut, const Token& tok, const Type* orig_type, const thorin::Position& pos2)
-        : handle_(handle)
-        , is_mut_(is_mut)
-        , is_address_taken_(false)
-    {
-        symbol_ = tok.symbol();
-        orig_type_ = orig_type;
-        set_loc(tok.pos1(), pos2);
-    }
-
-    size_t handle() const { return handle_; }
-    bool is_mut() const { return is_mut_; }
-    bool is_address_taken() const { return is_address_taken_; }
-    const Fn* fn() const { return fn_; }
-    virtual void check(Sema& sema) const;
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    size_t handle_;
-    bool is_mut_;
-    mutable bool is_address_taken_;
-    mutable const Fn* fn_;
-
-    friend class Id;
-    friend class ForeachStmt;
-};
-
-#endif
 
 //------------------------------------------------------------------------------
 
@@ -377,6 +262,9 @@ protected:
 
 class Block : public Expr {
 public:
+    Block() {}
+    Block(thorin::Location loc) { loc_ = loc; }
+
     const Stmts& stmts() const { return stmts_; }
     const Expr* expr() const { return expr_; }
     const Stmt* stmt(size_t i) const { return stmts_[i]; }
@@ -435,24 +323,24 @@ private:
     thorin::Box box_;
 };
 
-//class FnExpr : public Expr {
-//public:
-    //FnExpr(TypeTable& typetable)
-        ////: fn_(new Fn(typetable))
-    //{}
+class FnExpr : public Expr {
+public:
+    FnExpr(TypeTable& typetable)
+        //: fn_(new Fn(typetable))
+    {}
 
-    //virtual bool is_lvalue() const { return false; }
-    //virtual std::ostream& print(Printer& p) const;
-    //const Fn* fn() const { return fn_; }
+    virtual bool is_lvalue() const { return false; }
+    virtual std::ostream& print(Printer& p) const;
+    const Fn& fn() const { return fn_; }
 
-//private:
-    //virtual const Type* check(Sema& sema) const;
-    //virtual thorin::RefPtr emit(CodeGen& cg) const;
+private:
+    virtual const Type* check(Sema& sema) const;
+    virtual thorin::RefPtr emit(CodeGen& cg) const;
 
-    //thorin::AutoPtr<Fn> fn_;
+    Fn fn_;
 
-    //friend class Parser;
-//};
+    friend class Parser;
+};
 
 class ArrayExpr : public Expr {
 public:
@@ -624,9 +512,9 @@ public:
     const Expr* arg(size_t i) const { return op(i+1); }
     thorin::Location args_location() const;
     bool is_continuation_call() const;
+    thorin::Lambda* callee() const { return callee_; }
     virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
-    thorin::Lambda* callee() const { return callee_; }
 
 private:
     virtual const Type* check(Sema& sema) const;
@@ -635,9 +523,46 @@ private:
     mutable thorin::Lambda* callee_;
 };
 
+class IfElseExpr: public Expr {
+public:
+    const Expr* cond() const { return cond_; }
+    const Block* then_block() const { return then_block_; }
+    const Block* else_block() const { return else_block_; }
+    virtual std::ostream& print(Printer& p) const;
+    virtual bool is_lvalue() const { return false; }
+
+private:
+    virtual const Type* check(Sema& sema) const;
+    virtual thorin::RefPtr emit(CodeGen& cg) const;
+
+    thorin::AutoPtr<const Expr> cond_;
+    thorin::AutoPtr<const Block> then_block_;
+    thorin::AutoPtr<const Block> else_block_;
+
+    friend class Parser;
+};
+
+class ForExpr : public Expr {
+public:
+    ForExpr() {}
+
+    const Expr* expr() const { return expr_; }
+    const Fn& fn() const { return fn_; }
+    virtual std::ostream& print(Printer& p) const;
+    virtual bool is_lvalue() const { return false; }
+
+private:
+    virtual const Type* check(Sema& sema) const;
+    virtual thorin::RefPtr emit(CodeGen& cg) const;
+
+    thorin::AutoPtr<const Expr> expr_;
+    Fn fn_;
+
+    friend class Parser;
+};
+
 //------------------------------------------------------------------------------
 
-#if 0
 class Stmt : public ASTNode {
 private:
     virtual void check(Sema& sema) const = 0;
@@ -645,20 +570,6 @@ private:
 
     friend class Sema;
     friend class CodeGen;
-};
-
-class ItemStmt : public Stmt {
-public:
-    //const Item* item() const { return item_; }
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    virtual void check(Sema& sema) const;
-    virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
-
-    //thorin::AutoPtr<const Item> item_;
-
-    friend class Parser;
 };
 
 class ExprStmt : public Stmt {
@@ -682,7 +593,21 @@ private:
     friend class Parser;
 };
 
-class InitStmt : public Stmt {
+class ItemStmt : public Stmt {
+public:
+    const Item* item() const { return item_; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    virtual void check(Sema& sema) const;
+    virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
+
+    thorin::AutoPtr<const Item> item_;
+
+    friend class Parser;
+};
+
+class LetStmt : public Stmt {
 public:
     const VarDecl* var_decl() const { return var_decl_; }
     const Expr* init() const { return init_; }
@@ -697,120 +622,6 @@ private:
 
     friend class Parser;
 };
-
-class IfElseStmt: public Stmt {
-public:
-    const Expr* cond() const { return cond_; }
-    const Scope* then_scope() const { return then_scope_; }
-    const Scope* else_scope() const { return else_scope_; }
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    virtual void check(Sema& sema) const;
-    virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
-
-    thorin::AutoPtr<const Expr> cond_;
-    thorin::AutoPtr<const Scope> then_scope_;
-    thorin::AutoPtr<const Scope> else_scope_;
-
-    friend class Parser;
-};
-
-class Loop : public Stmt {
-public:
-    Loop() {}
-    const Expr* cond() const { return cond_; }
-    const Scope* body() const { return body_; }
-
-private:
-    thorin::AutoPtr<const Expr> cond_;
-    thorin::AutoPtr<const Scope> body_;
-
-    friend class Parser;
-};
-
-class ForeachStmt : public Stmt {
-public:
-    ForeachStmt() {}
-
-    const Call* call() const { return call_; }
-    const FnExpr* fn_expr() const { return fn_expr_; }
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    virtual void check(Sema& sema) const;
-    virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
-
-    thorin::AutoPtr<const Call> call_;
-    thorin::AutoPtr<const FnExpr> fn_expr_;
-    mutable const FnType* fntype_;
-
-    friend class Parser;
-};
-
-class BreakStmt : public Stmt {
-public:
-    const Loop* loop() const { return loop_; }
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    virtual void check(Sema& sema) const;
-    virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
-
-    const Loop* loop_;
-
-    friend class Parser;
-};
-
-class ContinueStmt : public Stmt {
-public:
-    const Loop* loop() const { return loop_; }
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    virtual void check(Sema& sema) const;
-    virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
-
-    const Loop* loop_;
-
-    friend class Parser;
-};
-
-class ReturnStmt : public Stmt {
-public:
-    const Expr* expr() const { return expr_; }
-    const Fn* fn() const { return fn_; }
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    virtual void check(Sema& sema) const;
-    virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
-
-    thorin::AutoPtr<const Expr> expr_;
-    const Fn* fn_;
-
-    friend class Parser;
-};
-
-class ScopeStmt : public Stmt {
-public:
-    ScopeStmt() {}
-    ScopeStmt(const thorin::Location& loc) {
-        loc_ = loc;
-    }
-
-    const Scope* scope() const { return scope_; }
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    virtual void check(Sema& sema) const;
-    virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
-
-    thorin::AutoPtr<const Scope> scope_;
-
-    friend class Parser;
-};
-#endif
 
 //------------------------------------------------------------------------------
 

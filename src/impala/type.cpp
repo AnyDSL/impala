@@ -1,3 +1,4 @@
+#if 0
 #include "impala/type.h"
 
 #include <sstream>
@@ -291,3 +292,4 @@ const thorin::Type* GenericRef::convert(thorin::World& world) const {
 //------------------------------------------------------------------------------
 
 } // namespace impala
+#endif

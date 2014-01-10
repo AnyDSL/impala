@@ -1,3 +1,4 @@
+#if 0
 #include "impala/dump.h"
 
 #include "impala/ast.h"
@@ -365,3 +366,4 @@ std::ostream& operator << (std::ostream& o, const Type* type) { return Printer(o
 //------------------------------------------------------------------------------
 
 } // namespace impala
+#endif

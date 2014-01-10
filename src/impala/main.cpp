@@ -114,8 +114,8 @@ int main(int argc, char** argv) {
         }
 #endif
 
-        thorin::AutoPtr<impala::Scope> prg = new impala::Scope();
-        prg->set_loc(thorin::Location(infiles[0], 1, 1, 1, 1));
+        //thorin::AutoPtr<impala::Scope> prg = new impala::Scope();
+        //prg->set_loc(thorin::Location(infiles[0], 1, 1, 1, 1));
 
         bool result = true;
         for (auto infile : infiles) {
@@ -125,11 +125,11 @@ int main(int argc, char** argv) {
             //TODO
         }
 
-        if (emit_ast)
-            dump_prg(prg, fancy);
+        //if (emit_ast)
+            //dump_prg(prg, fancy);
 
-        result &= check(init.typetable, prg, nossa);
-        result &= result ? emit(init.world, prg) : false;
+        //result &= check(init.typetable, prg, nossa);
+        //result &= result ? emit(init.world, prg) : false;
 
         if (result) {
             if (!nocleanup)
