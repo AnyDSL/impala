@@ -571,16 +571,10 @@ const Expr* Parser::parse_infix_expr(const Expr* lhs) {
 
 const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
     if (accept(Token::L_PAREN)) {
-        auto call = loc(new Call());
-        call->ops_.push_back(lhs);
-        parse_comma_list(Token::R_PAREN, "arguments of a function call", [&]{ call->append_arg(parse_expr()); });
-        return call;
-    } else if (accept(Token::L_BRACKET)) {
-        auto expr = loc(new IndexExpr());
-        expr->ops_.push_back(lhs);
-        expr->ops_.push_back(parse_expr());
-        expect(Token::R_BRACKET, "index expression");
-        return expr;
+        auto map = loc(new Map());
+        map->ops_.push_back(lhs);
+        parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&]{ map->append_arg(parse_expr()); });
+        return map;
     } else {
         auto expr = loc(new PostfixExpr());
         expr->ops_.push_back(lhs);

@@ -451,7 +451,7 @@ private:
 
 /**
  * Just for expr++ and expr--.
- * For indexing and fnction calls use \p IndexExpr or \p Call, respectively.
+ * For indexing and fnction calls use \p Map.
  */
 class PostfixExpr : public Expr {
 public:
@@ -494,19 +494,7 @@ private:
     virtual thorin::RefPtr emit(CodeGen& cg) const;
 };
 
-class IndexExpr : public Expr {
-public:
-    const Expr* lhs() const { return ops_[0]; }
-    const Expr* index() const { return ops_[1]; }
-    virtual bool is_lvalue() const { return true; }
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
-};
-
-class Call : public Expr {
+class Map : public Expr {
 public:
     void append_arg(const Expr* expr) { ops_.push_back(expr); }
     const Expr* to() const { return ops_.front(); }
@@ -514,9 +502,7 @@ public:
     thorin::ArrayRef<const Expr*> args() const { return thorin::ArrayRef<const Expr*>(&*ops_.begin() + 1, num_args()); }
     const Expr* arg(size_t i) const { return op(i+1); }
     thorin::Location args_location() const;
-    bool is_continuation_call() const;
-    thorin::Lambda* callee() const { return callee_; }
-    virtual bool is_lvalue() const { return false; }
+    virtual bool is_lvalue() const;
     virtual std::ostream& print(Printer& p) const;
 
 private:
