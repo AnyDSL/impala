@@ -135,16 +135,17 @@ public:
 
     // mod
     const ModContents* parse_mod_contents();
-    const ModItem* parse_mod_item();
-    const ModDecl* parse_mod_decl();
-    const ForeignMod* parse_foreign_mod();
-    const FnItem* parse_fn_item();
-    const Typedef* parse_typedef();
-    const StructDecl* parse_struct_decl();
-    const TraitDecl* parse_trait_decl();
-    const EnumDecl* parse_enum_decl();
-    const ConstItem* parse_const_item();
-    const Impl* parse_impl();
+    ModItem* parse_mod_item();
+    ConstItem* parse_const_item();
+    EnumDecl* parse_enum_decl();
+    FnItem* parse_fn_item();
+    ForeignMod* parse_foreign_mod();
+    Impl* parse_impl();
+    ModDecl* parse_mod_decl();
+    ModItem* parse_foreign_mod_or_fn_item();
+    StructDecl* parse_struct_decl();
+    TraitDecl* parse_trait_decl();
+    Typedef* parse_typedef();
 
     const Scope* parse_scope();
     const Scope* try_scope(const std::string& context);
@@ -315,7 +316,7 @@ const ModContents* Parser::parse_mod_contents() {
     return mod_contents;
 }
 
-const ModItem* Parser::parse_mod_item() {
+ModItem* Parser::parse_mod_item() {
     Position pos1 = la().pos1();
     Visibility visibility;
     switch (la()) {
@@ -323,26 +324,66 @@ const ModItem* Parser::parse_mod_item() {
         default:         visibility = Visibility::None;
     }
 
-    const ModItem* mod_item = nullptr;
+    ModItem* mod_item = nullptr;
     switch (la()) {
-        case Token::MOD:       mod_item = parse_mod_decl();    break;
-        case Token::EXTERN:    mod_item = parse_fn_item();     break;
-        case Token::TYPE:      mod_item = parse_typedef();     break;
-        case Token::STRUCT:    mod_item = parse_struct_decl(); break;
-        case Token::TRAIT:     mod_item = parse_trait_decl();  break;
-        case Token::ENUM:      mod_item = parse_enum_decl();   break;
-        case Token::STATIC:    mod_item = parse_const_item();  break;
-        case Token::IMPL:      mod_item = parse_impl();        break;
+        case Token::ENUM:      mod_item = parse_enum_decl();              break;
+        case Token::EXTERN:    mod_item = parse_foreign_mod_or_fn_item(); break;
+        case Token::FN:        mod_item = parse_fn_item();                break;
+        case Token::IMPL:      mod_item = parse_impl();                   break;
+        case Token::MOD:       mod_item = parse_mod_decl();               break;
+        case Token::STATIC:    mod_item = parse_const_item();             break;
+        case Token::STRUCT:    mod_item = parse_struct_decl();            break;
+        case Token::TRAIT:     mod_item = parse_trait_decl();             break;
+        case Token::TYPE:      mod_item = parse_typedef();                break;
         default: THORIN_UNREACHABLE;
     }
 
-    ModItem* item = const_cast<ModItem*>(mod_item);
-    item->set_pos1(pos1);
-    item->visibility_ = visibility;
+    mod_item->set_pos1(pos1);
+    mod_item->visibility_ = visibility;
     return mod_item;
 }
 
-const ModDecl* Parser::parse_mod_decl() {
+EnumDecl* Parser::parse_enum_decl() {
+    assert(false && "TODO");
+    return 0;
+}
+
+ModItem* Parser::parse_foreign_mod_or_fn_item() {
+    Position pos1 = lex().pos1();
+    eat(Token::EXTERN);
+    ModItem* mod_item;
+    if (la() == Token::FN) {
+        auto fn_item = parse_fn_item();
+        fn_item->fn_->extern_ = true;
+        mod_item = fn_item;
+    } else
+        mod_item = parse_fn_item();
+
+    mod_item->set_pos1(pos1);
+    return mod_item;
+}
+
+ForeignMod* Parser::parse_foreign_mod() {
+    assert(false && "TODO");
+    return 0;
+}
+
+FnItem* Parser::parse_fn_item() {
+    auto fi = loc(new FnItem(typetable));
+    fi->fn_->extern_ = accept(Token::EXTERN);
+    eat(Token::FN);
+    fi->fn_->symbol_ = try_id("function identifier").symbol();
+    parse_generics_list(fi->fn_->generics_);
+    parse_fn(fi->fn_);
+    return fi;
+}
+
+Impl* Parser::parse_impl() {
+    assert(false && "TODO");
+    return 0;
+}
+
+ModDecl* Parser::parse_mod_decl() {
     auto mod_decl = loc(new ModDecl());
     eat(Token::MOD);
     mod_decl->symbol_ = try_id("module declaration").symbol();
@@ -359,10 +400,22 @@ const ModDecl* Parser::parse_mod_decl() {
     return mod_decl;
 }
 
-const ForeignMod* Parser::parse_foreign_mod() {
-    //auto foreign_mod = loc(new ForeignMod());
-    //eat(Token::EXTERN);
-    //return foreign_mod;
+ConstItem* Parser::parse_const_item() {
+    assert(false && "TODO");
+    return 0;
+}
+
+StructDecl* Parser::parse_struct_decl() {
+    assert(false && "TODO");
+    return 0;
+}
+
+TraitDecl* Parser::parse_trait_decl() {
+    assert(false && "TODO");
+    return 0;
+}
+
+Typedef* Parser::parse_typedef() {
     assert(false && "TODO");
     return 0;
 }
@@ -906,20 +959,6 @@ const Stmt* Parser::parse_return() {
     }
 
     return ret;
-}
-
-/*
- * items
- */
-
-const FnItem* Parser::parse_fn_item() {
-    auto fi = loc(new FnItem(typetable));
-    fi->fn_->extern_ = accept(Token::EXTERN);
-    eat(Token::FN);
-    fi->fn_->symbol_ = try_id("function identifier").symbol();
-    parse_generics_list(fi->fn_->generics_);
-    parse_fn(fi->fn_);
-    return fi;
 }
 
 } // namespace impala
