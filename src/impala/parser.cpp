@@ -135,14 +135,19 @@ public:
         }
     }
 
-    const Block* parse_block();
-    const Block* try_block(const std::string& context);
     //void parse_generics_list(GenericDecls&);
     const Param* parse_param();
     void parse_param_list(Params& params, TokenKind delimiter = Token::R_PAREN);
-
-    // module stuff and module itemes
     const ModContents* parse_mod_contents();
+
+    // types
+    const Type* parse_type();
+    const Type* parse_array_type();
+    const Type* parse_fn_type();
+    const Type* parse_tuple_type();
+    const Type* parse_return_type();
+
+    // items
     Item*       parse_item();
     ConstItem*  parse_const_item();
     EnumDecl*   parse_enum_decl();
@@ -155,32 +160,24 @@ public:
     TraitDecl*  parse_trait_decl();
     Typedef*    parse_typedef();
 
-    // types
-    const Type* parse_type();
-    const Type* parse_array_type();
-    const Type* parse_fn_type();
-    const Type* parse_tuple_type();
-    const Type* parse_return_type();
-
     // expressions
     bool is_infix();
-    const Expr* parse_expr(Prec prec);
-    const Expr* parse_expr() { return parse_expr(BOTTOM, false); }
-    const Expr* parse_expr(Prec prec, bool no_bars) {
-        THORIN_PUSH(no_bars_, no_bars);
-        return parse_expr(prec); 
-    }
-    const Expr* parse_prefix_expr();
-    const Expr* parse_infix_expr(const Expr* lhs);
-    const Expr* parse_postfix_expr(const Expr* lhs);
-    const Expr* parse_primary_expr();
-    const Expr* parse_literal();
-    const FnExpr* parse_fn_expr();
-    const IfElseExpr* parse_if_else();
-    const ForExpr* parse_for();
+    const Expr*    parse_expr(Prec prec);
+    const Expr*    parse_expr() { return parse_expr(BOTTOM, false); }
+    const Expr*    parse_expr(Prec prec, bool no_bars) { THORIN_PUSH(no_bars_, no_bars); return parse_expr(prec); }
+    const Expr*    parse_prefix_expr();
+    const Expr*    parse_infix_expr(const Expr* lhs);
+    const Expr*    parse_postfix_expr(const Expr* lhs);
+    const Expr*    parse_primary_expr();
+    const Literal* parse_literal();
+    const FnExpr*  parse_fn_expr();
+    const IfElse*  parse_if_else();
+    const For*     parse_for();
+    const Block*   parse_block();
+    const Block*   try_block(const std::string& context);
 
     // statements
-    const Stmt* parse_stmt();
+    const Stmt*     parse_stmt();
     const ExprStmt* parse_expr_stmt();
     const ItemStmt* parse_item_stmt();
     const LetStmt*  parse_let_stmt();
@@ -279,9 +276,19 @@ Symbol Parser::try_id(const std::string& what) {
         //});
 //}
 
-/*
- * module + module items
- */
+const Param* Parser::parse_param() {
+    auto param = loc(new Param(cur_var_handle++));
+    param->mut_ = accept(Token::MUT);
+    param->symbol_ = try_id("parameter name");
+    if (accept(Token::COLON))
+        param->orig_type_ = parse_type();
+
+    return param;
+}
+
+void Parser::parse_param_list(Params& params, TokenKind delimiter) {
+    parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param()); });
+}
 
 const ModContents* Parser::parse_mod_contents() {
     auto mod_contents = loc(new ModContents());
@@ -302,6 +309,10 @@ const ModContents* Parser::parse_mod_contents() {
 
     return mod_contents;
 }
+
+/*
+ * items
+ */
 
 Item* Parser::parse_item() {
     Position pos1 = la().pos1();
@@ -353,20 +364,6 @@ Item* Parser::parse_foreign_mod_or_fn_decl() {
 ForeignMod* Parser::parse_foreign_mod() {
     assert(false && "TODO");
     return 0;
-}
-
-const Param* Parser::parse_param() {
-    auto param = loc(new Param(cur_var_handle++));
-    param->mut_ = accept(Token::MUT);
-    param->symbol_ = try_id("parameter name");
-    if (accept(Token::COLON))
-        param->orig_type_ = parse_type();
-
-    return param;
-}
-
-void Parser::parse_param_list(Params& params, TokenKind delimiter) {
-    parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param()); });
 }
 
 FnDecl* Parser::parse_fn_decl() {
@@ -440,45 +437,6 @@ TraitDecl* Parser::parse_trait_decl() {
 Typedef* Parser::parse_typedef() {
     assert(false && "TODO");
     return 0;
-}
-
-//------------------------------------------------------------------------------
-
-const Block* Parser::try_block(const std::string& context) {
-    if (la() == Token::L_BRACE)
-        return parse_block();
-
-    error("block", context);
-    auto block = new Block();
-    block->set_loc(prev_loc());
-    return block;
-}
-
-const Block* Parser::parse_block() {
-    eat(Token::L_BRACE);
-    auto scope = loc(new Block());
-    while (true) {
-        switch (la()) {
-            case Token::SEMICOLON:  lex(); continue; // ignore semicolon
-            case STMT:              scope->stmts_.push_back(parse_stmt()); continue;
-            //case STMT_NO_EXPR:      scope->stmts_.push_back(parse_stmt()); continue;
-            //case EXPR: {
-                //auto expr = parse_expr();
-                //if (accept(Token::SEMICOLON)) {
-                    //scope->stmts_.push_back(new ExprStmt(expr));
-                    //scope->set_loc(expr->pos1(), prev_loc().pos2());
-                    //continue;
-                //} else {
-                    //assert(false && "TODO");
-                    ////scope->expr_ = expr;
-                //}
-                //// FALLTHROUGH
-            //} 
-            default:
-                expect(Token::R_BRACE, "scope statement");
-                return scope;
-        }
-    }
 }
 
 /*
@@ -666,7 +624,7 @@ const Expr* Parser::parse_primary_expr() {
     }
 }
 
-const Expr* Parser::parse_literal() {
+const Literal* Parser::parse_literal() {
     Literal::Kind kind;
     Box box;
 
@@ -708,8 +666,8 @@ const FnExpr* Parser::parse_fn_expr() {
     return fn_expr;
 }
 
-const IfElseExpr* Parser::parse_if_else() {
-    auto ifelse = loc(new IfElseExpr());
+const IfElse* Parser::parse_if_else() {
+    auto ifelse = loc(new IfElse());
     eat(Token::IF);
     ifelse->cond_ = parse_expr();
     ifelse->then_block_ = parse_block();
@@ -717,14 +675,50 @@ const IfElseExpr* Parser::parse_if_else() {
     return ifelse;
 }
 
-const ForExpr* Parser::parse_for() {
-    auto for_expr = loc(new ForExpr());
+const For* Parser::parse_for() {
+    auto for_expr = loc(new For());
     auto& fn = for_expr->fn_;
     eat(Token::FOR);
     parse_param_list(fn.params_, Token::IN);
     for_expr->expr_ = parse_expr();
     fn.body_ = try_block("body of function");
     return for_expr;
+}
+
+const Block* Parser::parse_block() {
+    eat(Token::L_BRACE);
+    auto block = loc(new Block());
+    auto& stmts = block->stmts_;
+    while (true) {
+        switch (la()) {
+            case Token::SEMICOLON:  lex(); continue; // ignore semicolon
+            case STMT_NO_EXPR:      stmts.push_back(parse_stmt()); continue;
+            case EXPR: {
+                auto expr = parse_expr();
+                if (accept(Token::SEMICOLON)) {
+                    auto expr_stmt = new ExprStmt();
+                    expr_stmt->set_loc(expr->pos1(), prev_loc().pos2());
+                    expr_stmt->expr_ = expr;
+                    continue;
+                } else
+                    block->expr_ = expr;
+                // FALLTHROUGH
+            } 
+            default:
+                expect(Token::R_BRACE, "block");
+                return block;
+        }
+    }
+}
+
+const Block* Parser::try_block(const std::string& context) {
+    if (la() == Token::L_BRACE)
+        return parse_block();
+
+    error("block", context);
+    auto block = new Block();
+    block->set_loc(prev_loc());
+    return block;
 }
 
 /*

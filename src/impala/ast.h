@@ -525,7 +525,7 @@ private:
     mutable thorin::Lambda* callee_;
 };
 
-class IfElseExpr: public Expr {
+class IfElse: public Expr {
 public:
     const Expr* cond() const { return cond_; }
     const Block* then_block() const { return then_block_; }
@@ -544,9 +544,9 @@ private:
     friend class Parser;
 };
 
-class ForExpr : public Expr {
+class For : public Expr {
 public:
-    ForExpr() {}
+    For() {}
 
     const Expr* expr() const { return expr_; }
     const Fn& fn() const { return fn_; }
@@ -576,13 +576,6 @@ private:
 
 class ExprStmt : public Stmt {
 public:
-    ExprStmt() {}
-    ExprStmt(const Expr* expr)
-        : expr_(expr)
-    {
-        set_loc(expr->loc());
-    }
-
     const Expr* expr() const { return expr_; }
     virtual std::ostream& print(Printer& p) const;
 
