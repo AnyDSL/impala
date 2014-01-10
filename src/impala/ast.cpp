@@ -6,8 +6,8 @@ using namespace thorin;
 
 namespace impala {
 
-FnItem::FnItem(TypeTable& typetable)
-    : fn_(new Fn(typetable))
+FnDecl::FnDecl(TypeTable& typetable)
+    //: generic_builder_(typetable)
 {}
 
 TokenKind Literal::literal2type() const {
@@ -24,8 +24,8 @@ bool Call::is_continuation_call() const { return type()->isa<NoRet>() != nullptr
 
 bool Id::is_lvalue() const { 
     assert(decl());
-    if (auto vardecl = decl()->isa<VarDecl>())
-        return vardecl->is_mut();
+    //if (auto vardecl = decl()->isa<VarDecl>())
+        //return vardecl->is_mut();
     return false;
 }
 
@@ -33,12 +33,6 @@ Location Call::args_location() const {
     if (ops().size() == 1)
         return Location(pos2());
     return Location(op(1)->pos1(), ops_.back()->pos2());
-}
-
-bool ForStmt::is_while() const { 
-    if (const ExprStmt* expr_stmt = init()->isa<ExprStmt>())
-        return expr_stmt->expr()->isa<EmptyExpr>() && step()->isa<EmptyExpr>();
-    return false;
 }
 
 uint64_t Literal::get_u64() const { return bcast<uint64_t, Box>(box()); }

@@ -57,12 +57,7 @@
     case MOD_ITEM: \
     case Token::IF: \
     case Token::FOR: \
-    case Token::FOREACH: \
     case Token::DO: \
-    case Token::WHILE: \
-    case Token::BREAK: \
-    case Token::CONTINUE: \
-    case Token::RETURN: \
     case Token::L_BRACE
 
 #define STMT \
@@ -94,8 +89,8 @@ public:
     Parser(TypeTable& typetable, std::istream& stream, const std::string& filename)
         : typetable(typetable)
         , lexer(stream, filename)
-        , cur_loop(nullptr)
-        , cur_fn(nullptr)
+        //, cur_loop(nullptr)
+        , cur_fn_body_(nullptr)
         , cur_var_handle(2) // reserve 1 for conditionals, 0 for mem
         , no_bars_(false)
         , result_(true)
@@ -121,44 +116,9 @@ public:
     bool result() const { return result_; }
     template<class T>
     Loc<T> loc(T* node) { return Loc<T>(*this, node); }
-    const ExprStmt* lex_as_empty_expr_stmt() { return new ExprStmt(new EmptyExpr(lex().loc())); }
-    const ExprStmt* create_empty_expr_stmt() { return new ExprStmt(new EmptyExpr(prev_loc())); }
+    //const ExprStmt* lex_as_empty_expr_stmt() { return new ExprStmt(new EmptyExpr(lex().loc())); }
+    //const ExprStmt* create_empty_expr_stmt() { return new ExprStmt(new EmptyExpr(prev_loc())); }
 
-    // misc
-    Token try_id(const std::string& what);
-    bool is_expr() const {
-        switch (la()) {
-            case EXPR: return true;
-            default:   return false;
-        }
-    }
-
-    // mod
-    const ModContents* parse_mod_contents();
-    ModItem* parse_mod_item();
-    ConstItem* parse_const_item();
-    EnumDecl* parse_enum_decl();
-    FnItem* parse_fn_item();
-    ForeignMod* parse_foreign_mod();
-    Impl* parse_impl();
-    ModDecl* parse_mod_decl();
-    ModItem* parse_foreign_mod_or_fn_item();
-    StructDecl* parse_struct_decl();
-    TraitDecl* parse_trait_decl();
-    Typedef* parse_typedef();
-
-    const Scope* parse_scope();
-    const Scope* try_scope(const std::string& context);
-    const Scope* parse_stmt_as_scope(const std::string& what);
-    void parse_generics_list(GenericDecls&);
-    const Type* parse_type();
-    const Type* parse_array_type();
-    const Type* parse_fn_type();
-    const Type* parse_tuple_type();
-    const Type* parse_return_type();
-    const VarDecl* parse_var_decl(bool is_param);
-    void parse_proto(Proto* proto);
-    void parse_fn(Fn* fn);
     void parse_comma_list(TokenKind delimiter, const char* context, std::function<void()> f) {
         if (la() != delimiter) {
             do { f(); }
@@ -166,6 +126,40 @@ public:
         }
         expect(delimiter, context);
     }
+
+    // misc
+    Symbol try_id(const std::string& what);
+    bool is_expr() const {
+        switch (la()) {
+            case EXPR: return true;
+            default:   return false;
+        }
+    }
+
+    const Block* parse_block();
+    const Block* try_block(const std::string& context);
+
+    // mod
+    const ModContents* parse_mod_contents();
+    ModItem* parse_mod_item();
+    ConstItem* parse_const_item();
+    EnumDecl* parse_enum_decl();
+    FnDecl* parse_fn_decl();
+    const Param* parse_param();
+    ForeignMod* parse_foreign_mod();
+    Impl* parse_impl();
+    ModDecl* parse_mod_decl();
+    ModItem* parse_foreign_mod_or_fn_decl();
+    StructDecl* parse_struct_decl();
+    TraitDecl* parse_trait_decl();
+    Typedef* parse_typedef();
+
+    //void parse_generics_list(GenericDecls&);
+    const Type* parse_type();
+    const Type* parse_array_type();
+    const Type* parse_fn_type();
+    const Type* parse_tuple_type();
+    const Type* parse_return_type();
 
     // expressions
     bool is_infix();
@@ -180,23 +174,15 @@ public:
     const Expr* parse_postfix_expr(const Expr* lhs);
     const Expr* parse_primary_expr();
     const Expr* parse_literal();
-    const FnExpr* parse_fn_expr();
+    //const FnExpr* parse_fn_expr();
 
     // statements
     const Stmt* parse_stmt();
-    const ItemStmt* parse_item_stmt();
-    const ExprStmt* parse_expr_stmt();
-    const Stmt* parse_init_stmt();
-    const Stmt* parse_if_else();
-    const Stmt* parse_while();
-    const Stmt* parse_do_while();
-    const Stmt* parse_for();
-    const Stmt* parse_foreach();
-    const Stmt* parse_break();
-    const Stmt* parse_continue();
-    const Stmt* parse_return();
-    const Stmt* parse_label_stmt();
-    const ScopeStmt* parse_scope_stmt();
+    //const ItemStmt* parse_item_stmt();
+    //const ExprStmt* parse_expr_stmt();
+    //const Stmt* parse_init_stmt();
+    //const Stmt* parse_if_else();
+    //const Stmt* parse_for();
 
     // items
     //const Item* parse_item();
@@ -212,8 +198,8 @@ private:
     TypeTable& typetable;
     Lexer lexer;       ///< invoked in order to get next token
     Token lookahead[2];///< LL(2) look ahead
-    const Loop* cur_loop;
-    const Fn* cur_fn;
+    //const Loop* cur_loop;
+    const FnBody* cur_fn_body_;
     size_t cur_var_handle;
     bool no_bars_;
     thorin::Location prev_loc_;
@@ -280,7 +266,7 @@ void Parser::error(const std::string& what, const std::string& context) {
     os << "\n";
 }
 
-Token Parser::try_id(const std::string& what) {
+Symbol Parser::try_id(const std::string& what) {
     Token name;
     if (la() == Token::ID)
         name = lex();
@@ -289,11 +275,18 @@ Token Parser::try_id(const std::string& what) {
         name = Token(la().loc(), "<error_id>");
     }
 
-    return name;
+    return name.symbol();
 }
 
+//void Parser::parse_generics_list(GenericDecls& generic_decls) {
+    //if (accept(Token::L_BRACE))
+        //parse_comma_list(Token::R_BRACE, "generics list", [&] {
+            //generic_decls.push_back(new GenericDecl(try_id("generic identifier")));
+        //});
+//}
+
 /*
- * module
+ * module + module items
  */
 
 const ModContents* Parser::parse_mod_contents() {
@@ -327,8 +320,8 @@ ModItem* Parser::parse_mod_item() {
     ModItem* mod_item = nullptr;
     switch (la()) {
         case Token::ENUM:      mod_item = parse_enum_decl();              break;
-        case Token::EXTERN:    mod_item = parse_foreign_mod_or_fn_item(); break;
-        case Token::FN:        mod_item = parse_fn_item();                break;
+        case Token::EXTERN:    mod_item = parse_foreign_mod_or_fn_decl(); break;
+        case Token::FN:        mod_item = parse_fn_decl();                break;
         case Token::IMPL:      mod_item = parse_impl();                   break;
         case Token::MOD:       mod_item = parse_mod_decl();               break;
         case Token::STATIC:    mod_item = parse_const_item();             break;
@@ -348,16 +341,16 @@ EnumDecl* Parser::parse_enum_decl() {
     return 0;
 }
 
-ModItem* Parser::parse_foreign_mod_or_fn_item() {
+ModItem* Parser::parse_foreign_mod_or_fn_decl() {
     Position pos1 = lex().pos1();
     eat(Token::EXTERN);
     ModItem* mod_item;
     if (la() == Token::FN) {
-        auto fn_item = parse_fn_item();
-        fn_item->fn_->extern_ = true;
-        mod_item = fn_item;
+        auto fn_decl = parse_fn_decl();
+        fn_decl->extern_ = true;
+        mod_item = fn_decl;
     } else
-        mod_item = parse_fn_item();
+        mod_item = parse_fn_decl();
 
     mod_item->set_pos1(pos1);
     return mod_item;
@@ -368,14 +361,52 @@ ForeignMod* Parser::parse_foreign_mod() {
     return 0;
 }
 
-FnItem* Parser::parse_fn_item() {
-    auto fi = loc(new FnItem(typetable));
-    fi->fn_->extern_ = accept(Token::EXTERN);
+const Param* Parser::parse_param() {
+    auto param = loc(new Param(cur_var_handle++));
+    param->mut_ = accept(Token::MUT);
+    param->symbol_ = try_id("parameter name");
+    expect(Token::COLON, "parameter");
+    param->orig_type_ = parse_type();
+
+    return param;
+}
+
+FnDecl* Parser::parse_fn_decl() {
+    auto fn_decl = loc(new FnDecl(typetable));
     eat(Token::FN);
-    fi->fn_->symbol_ = try_id("function identifier").symbol();
-    parse_generics_list(fi->fn_->generics_);
-    parse_fn(fi->fn_);
-    return fi;
+    fn_decl->symbol_ = try_id("function identifier");
+
+    THORIN_PUSH(cur_var_handle, cur_var_handle);
+    //parse_generics_list(fn_decl->generics_);
+
+    std::vector<const Type*> arg_types;
+    expect(Token::L_PAREN, "function head");
+    parse_comma_list(Token::R_PAREN, "parameter list", [&] {
+        auto param = parse_param();
+        fn_decl->params_.push_back(param);
+        arg_types.push_back(param->orig_type());
+    });
+
+    // return-continuation
+    if (accept(Token::ARROW)) {
+        Position pos1 = prev_loc().pos1();
+        auto type = parse_return_type();
+        arg_types.push_back(type);
+        Position pos2 = prev_loc().pos2();
+        auto param = new Param(cur_var_handle++);
+        param->mut_ = false;
+        param->symbol_ = "return";
+        param->orig_type_ = type;
+        param->set_loc(pos1, pos2);
+        fn_decl->params_.push_back(param);
+    }
+
+    fn_decl->orig_type_ = typetable.fntype(arg_types);
+
+    THORIN_PUSH(cur_fn_body_, &fn_decl->body_);
+    fn_decl->body_.expr_ = try_block("body of function");
+
+    return fn_decl;
 }
 
 Impl* Parser::parse_impl() {
@@ -386,7 +417,7 @@ Impl* Parser::parse_impl() {
 ModDecl* Parser::parse_mod_decl() {
     auto mod_decl = loc(new ModDecl());
     eat(Token::MOD);
-    mod_decl->symbol_ = try_id("module declaration").symbol();
+    mod_decl->symbol_ = try_id("module declaration");
     switch (la()) {
         case MOD_CONTENTS: 
             expect(Token::L_BRACE, "module");
@@ -422,29 +453,19 @@ Typedef* Parser::parse_typedef() {
 
 //------------------------------------------------------------------------------
 
-const Scope* Parser::try_scope(const std::string& context) {
+const Block* Parser::try_block(const std::string& context) {
     if (la() == Token::L_BRACE)
-        return parse_scope();
-    error("scope", context);
-    return new Scope(prev_loc());
+        return parse_block();
+
+    error("block", context);
+    auto block = new Block();
+    block->set_loc(prev_loc());
+    return block;
 }
 
-const Scope* Parser::parse_stmt_as_scope(const std::string& what) {
-    if (la() == Token::L_BRACE)
-        return parse_scope();
-    switch (la()) {
-        case STMT: {
-            auto scope = loc(new Scope());
-            scope->stmts_.push_back(parse_stmt());
-            return scope;
-        }
-        default: return new Scope(prev_loc());
-    }
-}
-
-const Scope* Parser::parse_scope() {
+const Block* Parser::parse_block() {
     eat(Token::L_BRACE);
-    auto scope = loc(new Scope());
+    auto scope = loc(new Block());
     while (true) {
         switch (la()) {
             case Token::SEMICOLON:  lex(); continue; // ignore semicolon
@@ -537,74 +558,6 @@ const Type* Parser::parse_tuple_type() {
 const Type* Parser::parse_return_type() {
     auto ret_type = parse_type();
     return ret_type->is_void() ? typetable.fntype({}) : typetable.fntype({ret_type});
-}
-
-/*
- * delcs
- */
-
-const VarDecl* Parser::parse_var_decl(bool is_param) {
-    bool is_mut = accept(Token::MUT);
-    Token tok = la();
-    expect(Token::ID, "declaration");
-    const Type* type;
-    if (!is_param) {
-        type = accept(Token::COLON) ? parse_type() : nullptr;
-    } else {
-        expect(Token::COLON, "declaration");
-        type = parse_type();
-    }
-    return new VarDecl(cur_var_handle++, is_mut, tok, type, prev_loc().pos2());
-}
-
-void Parser::parse_proto(Proto* proto) {
-    std::vector<const Type*> types;
-    loc(proto);
-
-    expect(Token::L_PAREN, "prototype");
-    parse_comma_list(Token::R_PAREN, "type list", [&] {
-        types.push_back(parse_type());
-    });
-    expect(Token::ARROW, "prototype");
-
-    const Type* ret_type = parse_type();
-    if (ret_type->is_void())
-        types.push_back(typetable.fntype({}));
-    else
-        types.push_back(typetable.fntype({ret_type}));
-
-    proto->orig_type_ = typetable.fntype(types);
-}
-
-void Parser::parse_generics_list(GenericDecls& generic_decls) {
-    if (accept(Token::LT))
-        parse_comma_list(Token::GT, "generics list", [&] {
-            generic_decls.push_back(new GenericDecl(try_id("generic identifier")));
-        });
-}
-
-void Parser::parse_fn(Fn* f) {
-    THORIN_PUSH(cur_fn, f);
-    THORIN_PUSH(cur_var_handle, cur_var_handle);
-    auto fn = loc(f);
-    std::vector<const Type*> arg_types;
-    expect(Token::L_PAREN, "function head");
-    parse_comma_list(Token::R_PAREN, "parameter list", [&] {
-        const VarDecl* param = parse_var_decl(true);
-        fn->params_.push_back(param);
-        arg_types.push_back(param->orig_type());
-    });
-
-    // return-continuation
-    if (accept(Token::ARROW)) {
-        Position pos1 = prev_loc().pos1();
-        arg_types.push_back(parse_return_type());
-        Position pos2 = prev_loc().pos2();
-        fn->params_.push_back(new VarDecl(cur_var_handle++, true, Token(pos1, "return"), arg_types.back(), pos2));
-    }
-
-    fn->orig_type_ = typetable.fntype(arg_types);
-    fn->body_ = try_scope("body of function");
 }
 
 /*
@@ -744,7 +697,7 @@ const FnExpr* Parser::parse_fn_expr() {
     auto e = loc(new FnExpr(typetable));
     auto fn = loc(e->fn_.get());
 
-    THORIN_PUSH(cur_fn, fn);
+    THORIN_PUSH(cur_fn_body_, fn);
     THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     std::vector<const Type*> arg_types;
@@ -766,7 +719,7 @@ const FnExpr* Parser::parse_fn_expr() {
     }
 
     fn->orig_type_ = typetable.fntype(arg_types);
-    fn->body_ = try_scope("body of function");
+    fn->body_ = try_block("body of function");
     e->fn_->extern_ = false;
     e->fn_->symbol_ = "lambda";
 
@@ -782,32 +735,16 @@ const Stmt* Parser::parse_stmt() {
         case EXPR:              return parse_expr_stmt();
         //case ITEM:              return parse_item_stmt();
         case Token::LET:        return parse_init_stmt();
-        case Token::BREAK:      return parse_break();
-        case Token::CONTINUE:   return parse_continue();
         case Token::DO:         return parse_do_while();
         case Token::FOR:        return parse_for();
-        case Token::FOREACH:    return parse_foreach();
         case Token::IF:         return parse_if_else();
         case Token::L_BRACE:    return parse_scope_stmt();
-        case Token::RETURN:     return parse_return();
         case Token::WHILE:      return parse_while();
         case Token::SEMICOLON:                                                      return lex_as_empty_expr_stmt();
         case Token::ELSE:       error("'else' without matching 'if'", "statement"); return lex_as_empty_expr_stmt();
         default:                error("statement", "");                             return lex_as_empty_expr_stmt();
     }
 }
-
-const ScopeStmt* Parser::parse_scope_stmt() {
-    auto s = loc(new ScopeStmt());
-    s->scope_ = parse_scope();
-    return s;
-}
-
-//const ItemStmt* Parser::parse_item_stmt() {
-    //auto s = loc(new ItemStmt());
-    //s->item_ = parse_item();
-    //return s;
-//}
 
 const ExprStmt* Parser::parse_expr_stmt() {
     auto s = loc(new ExprStmt());
@@ -827,94 +764,17 @@ const Stmt* Parser::parse_init_stmt() {
     return s;
 }
 
-const Expr* Parser::parse_cond(const std::string& what) {
-    expect(Token::L_PAREN, "condition in " + what);
-    auto cond = parse_expr();
-    expect(Token::R_PAREN, "condition in " + what);
-    return cond;
-}
-
 const Stmt* Parser::parse_if_else() {
     eat(Token::IF);
     auto ifelse = loc(new IfElseStmt());
     ifelse->cond_ = parse_cond("if statement");
     ifelse->then_scope_ = parse_stmt_as_scope("if clause");
-    ifelse->else_scope_ = accept(Token::ELSE) ? parse_stmt_as_scope("else clause") : new Scope(prev_loc());
+    ifelse->else_scope_ = accept(Token::ELSE) ? parse_stmt_as_scope("else clause") : new Block(prev_loc());
     return ifelse;
-}
-
-const Stmt* Parser::parse_while() {
-    eat(Token::WHILE);
-    auto loop = loc(new ForStmt());
-    loop->init_ = create_empty_expr_stmt();
-    loop->cond_ = parse_cond("while statement");
-    loop->step_ = new EmptyExpr(loop->pos1());
-    THORIN_PUSH(cur_loop, loop);
-    loop->body_ = parse_stmt_as_scope("body of while statement");
-
-    return loop;
-}
-
-const Stmt* Parser::parse_do_while() {
-    eat(Token::DO);
-    auto loop = loc(new DoWhileStmt());
-    THORIN_PUSH(cur_loop, loop);
-    loop->body_ = parse_stmt_as_scope("body of do-while statement");
-    expect(Token::WHILE, "do-while statement");
-    loop->cond_ = parse_cond("do-while statement");
-    expect(Token::SEMICOLON, "do-while statement");
-
-    return loop;
 }
 
 const Stmt* Parser::parse_for() {
     eat(Token::FOR);
-    auto loop = loc(new ForStmt());
-    expect(Token::L_PAREN, "for statement");
-
-    THORIN_PUSH(cur_loop, loop);
-
-    // clause 1: decl or expr_opt ';'
-    switch (la()) {
-        case EXPR:              loop->init_ = parse_expr_stmt(); break;
-        case Token::LET:        loop->init_ = parse_init_stmt(); break;
-        case Token::SEMICOLON:  loop->init_ = lex_as_empty_expr_stmt(); break;
-        default: error("expression or delcaration statement", "first clause in for statement");
-    }
-
-    // clause 2: expr_opt ';'
-    if (accept(Token::SEMICOLON)) { 
-        // do nothing: no expr given, semicolon consumed, but create true cond
-        loop->cond_ = new Literal(prev_loc(), Literal::LIT_bool, Box(true));
-    } else if (is_expr()) {
-        loop->cond_ = parse_expr();
-        expect(Token::SEMICOLON, "second clause in for statement");
-    } else {
-        error("expression or nothing", 
-                "second clause in for statement");
-        loop->cond_ = new Literal(prev_loc(), Literal::LIT_bool, Box(true));
-    }
-
-    // clause 3: expr_opt ';'
-    if (accept(Token::R_PAREN)) { 
-        // do nothing: no expr given, semicolon consumed
-        loop->step_ = new EmptyExpr(prev_loc());
-    } else if (is_expr()) {
-        loop->step_ = parse_expr();
-        expect(Token::R_PAREN, "for statement");
-    } else {
-        error("expression or nothing",
-                "third clause in for statement");
-        loop->step_ = new EmptyExpr(prev_loc());
-    }
-
-    loop->body_ = parse_stmt_as_scope("body of for statement");
-
-    return loop;
-}
-
-const Stmt* Parser::parse_foreach() {
-    eat(Token::FOREACH);
     auto foreach = loc(new ForeachStmt());
 
     auto expr = parse_expr(BOTTOM, true);
@@ -931,35 +791,4 @@ const Stmt* Parser::parse_foreach() {
     return foreach;
 }
 
-const Stmt* Parser::parse_break() {
-    auto s = loc(new BreakStmt());
-    s->loop_ = cur_loop;
-    eat(Token::BREAK).pos1();
-    expect(Token::SEMICOLON, "break statement");
-    return s;
-}
-
-const Stmt* Parser::parse_continue() {
-    auto s = loc(new ContinueStmt());
-    s->loop_ = cur_loop;
-    eat(Token::CONTINUE);
-    expect(Token::SEMICOLON, "continue statement");
-    return s;
-}
-
-const Stmt* Parser::parse_return() {
-    auto ret = loc(new ReturnStmt());
-    ret->fn_ = cur_fn;
-    eat(Token::RETURN);
-    if (accept(Token::SEMICOLON))
-        ret->expr_ = nullptr;
-    else {
-        ret->expr_ = parse_expr();
-        expect(Token::SEMICOLON, "return statement");
-    }
-
-    return ret;
-}
-
 } // namespace impala
-
