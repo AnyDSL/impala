@@ -278,7 +278,7 @@ Symbol Parser::try_id(const std::string& what) {
 
 const Param* Parser::parse_param() {
     auto param = loc(new Param(cur_var_handle++));
-    param->mut_ = accept(Token::MUT);
+    param->is_mut_ = accept(Token::MUT);
     param->symbol_ = try_id("parameter name");
     if (accept(Token::COLON))
         param->orig_type_ = parse_type();
@@ -384,7 +384,7 @@ FnDecl* Parser::parse_fn_decl() {
         auto type = parse_return_type();
         Position pos2 = prev_loc().pos2();
         auto param = new Param(cur_var_handle++);
-        param->mut_ = false;
+        param->is_mut_ = false;
         param->symbol_ = "return";
         param->orig_type_ = type;
         param->set_loc(pos1, pos2);
@@ -744,11 +744,15 @@ const ExprStmt* Parser::parse_expr_stmt() {
 const LetStmt* Parser::parse_let_stmt() {
     auto let_stmt = loc(new LetStmt());
     eat(Token::LET);
-    //let_stmt->var_decl_ = parse_var_decl(false);
-    //if (accept(Token::ASGN))
-        //let_stmt->init_ = parse_expr();
+    bool is_mut = accept(Token::MUT);
+    parse_comma_list(Token::SEMICOLON, "let bindings", [&] { 
+        auto local = loc(new Local(cur_var_handle++));
+        local->is_mut_ = is_mut;
+        if (accept(Token::ASGN))
+            local->init_ = parse_expr();
+        let_stmt->locals_.push_back(local);
+    });
 
-    //expect(Token::SEMICOLON, "the end of an initialization statement");
     return let_stmt;
 }
 

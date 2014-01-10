@@ -26,21 +26,22 @@ namespace thorin {
 
 namespace impala {
 
+class Block;
 class CodeGen;
 class Expr;
 class Fn;
-class Global;
-class Printer;
 class Item;
-class Block;
-class ScopeStmt;
-class Stmt;
-class Sema;
+class Local;
 class Param;
+class Printer;
+class Sema;
+class Stmt;
 //class GenericDecl;
 
-typedef thorin::AutoVector<const Param*> Params;
 typedef thorin::AutoVector<const Expr*> Exprs;
+typedef thorin::AutoVector<const Item*> Items;
+typedef thorin::AutoVector<const Local*> Locals;
+typedef thorin::AutoVector<const Param*> Params;
 typedef thorin::AutoVector<const Stmt*> Stmts;
 //typedef thorin::AutoVector<const GenericDecl*> GenericDecls;
 
@@ -85,17 +86,17 @@ public:
     VarDecl()
         : orig_type_(nullptr)
         , refined_type_(nullptr)
-        , mut_(false)
+        , is_mut_(false)
     {}
 
     const Type* orig_type() const { return orig_type_; }
     const Type* refined_type() const { return refined_type_; }
-    bool is_mut() const { return mut_; }
+    bool is_mut() const { return is_mut_; }
 
 protected:
     const Type* orig_type_;
     mutable const Type* refined_type_;
-    bool mut_;
+    bool is_mut_;
 
     friend class Parser;
 };
@@ -156,11 +157,11 @@ private:
 class ModContents : public ASTNode {
 public:
     const Item* item(size_t i) const { return items_[i]; }
-    const thorin::AutoVector<const Item*>& items() const { return items_; }
+    const Items& items() const { return items_; }
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    thorin::AutoVector<const Item*> items_;
+    Items items_;
 
     friend class Parser;
 };
@@ -602,18 +603,31 @@ private:
     friend class Parser;
 };
 
-class LetStmt : public Stmt {
+class Local : public LocalDecl {
 public:
-    const VarDecl* var_decl() const { return var_decl_; }
+    Local(size_t handle)
+        : LocalDecl(handle)
+    {}
+
     const Expr* init() const { return init_; }
     virtual std::ostream& print(Printer& p) const;
+
+private:
+    thorin::AutoPtr<const Expr> init_;
+
+    friend class Parser;
+};
+
+class LetStmt : public Stmt {
+public:
+    virtual std::ostream& print(Printer& p) const;
+    const Locals& locals() const { return locals_; }
 
 private:
     virtual void check(Sema& sema) const;
     virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
-    thorin::AutoPtr<const VarDecl> var_decl_;
-    thorin::AutoPtr<const Expr> init_;
+    Locals locals_;
 
     friend class Parser;
 };
