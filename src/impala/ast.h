@@ -118,6 +118,19 @@ protected:
 class TypeDecl : public Decl {
 };
 
+//------------------------------------------------------------------------------
+
+class Param : public LocalDecl {
+    Param(size_t handle)
+        : LocalDecl(handle)
+    {}
+
+    virtual std::ostream& print(Printer& p) const;
+    mutable const Fn* fn_;
+
+    friend class Parser;
+};
+
 class Fn {
 public:
     const Param* param(size_t i) const { return params_[i]; }
@@ -199,17 +212,6 @@ class ConstItem : public Item {
 
 class Impl : public Item {
     virtual std::ostream& print(Printer& p) const;
-};
-
-class Param : public LocalDecl {
-    Param(size_t handle)
-        : LocalDecl(handle)
-    {}
-
-    virtual std::ostream& print(Printer& p) const;
-    mutable const Fn* fn_;
-
-    friend class Parser;
 };
 
 class FnDecl : public Item, public VarDecl {

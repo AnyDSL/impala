@@ -13,15 +13,18 @@
 #include "impala/type.h"
 
 #define VISIBILITY \
-         Token::PUB: \
-    case Token::PRIV
+         Token::PRIV: \
+    case Token::PUB
 
 #define ITEM \
-         Token::FN: \
+         Token::ENUM: \
     case Token::EXTERN: \
-    case Token::INTRINSIC: \
-    case Token::TRAIT: \
-    case Token::STRUCT
+    case Token::FN: \
+    case Token::IMPL: \
+    case Token::MOD: \
+    case Token::STATIC: \
+    case Token::STRUCT: \
+    case Token::TRAIT
 
 #define MOD_CONTENTS \
          VISIBILITY: \
@@ -49,16 +52,14 @@
     case Token::ID: \
     case Token::RUN: \
     case Token::HALT: \
+    case Token::IF: \
+    case Token::FOR: \
     case Token::L_PAREN: \
     case Token::L_BRACKET
     
 #define STMT_NO_EXPR \
          Token::LET: \
-    case ITEM: \
-    case Token::IF: \
-    case Token::FOR: \
-    case Token::DO: \
-    case Token::L_BRACE
+    case ITEM
 
 #define STMT \
         STMT_NO_EXPR: \
