@@ -557,15 +557,7 @@ const Expr* Parser::parse_prefix_expr() {
 
 const Expr* Parser::parse_infix_expr(const Expr* lhs) {
     Token op = lex();
-    if (op == Token::QUESTION_MARK) {
-        auto t_expr = parse_expr();
-        expect(Token::COLON, "conditional expression");
-        auto f_expr = parse_expr(PrecTable::infix_r[op]);
-        return new ConditionalExpr(lhs, t_expr, f_expr);
-    }
-
     auto rhs = parse_expr(PrecTable::infix_r[op]);
-
     return new InfixExpr(lhs, (InfixExpr::Kind) op.kind(), rhs);
 }
 
