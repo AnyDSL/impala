@@ -571,7 +571,7 @@ const Expr* Parser::parse_infix_expr(const Expr* lhs) {
 
 const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
     if (accept(Token::L_PAREN)) {
-        auto map = loc(new Map());
+        auto map = loc(new MapExpr());
         map->ops_.push_back(lhs);
         parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&]{ map->append_arg(parse_expr()); });
         return map;

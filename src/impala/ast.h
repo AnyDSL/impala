@@ -494,7 +494,7 @@ private:
     virtual thorin::RefPtr emit(CodeGen& cg) const;
 };
 
-class Map : public Expr {
+class MapExpr : public Expr {
 public:
     void append_arg(const Expr* expr) { ops_.push_back(expr); }
     const Expr* to() const { return ops_.front(); }

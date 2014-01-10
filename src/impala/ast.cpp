@@ -29,7 +29,7 @@ bool Id::is_lvalue() const {
 
 uint64_t Literal::get_u64() const { return bcast<uint64_t, Box>(box()); }
 
-bool Map::is_lvalue() const {
+bool MapExpr::is_lvalue() const {
     assert(false && "TODO");
     return true;
 }
