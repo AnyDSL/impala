@@ -1,3 +1,4 @@
+#if 0
 #include "impala/ast.h"
 
 #include <iostream>
@@ -579,3 +580,4 @@ void ProtoItem::emit(CodeGen& cg) const { }
 void StructItem::emit(CodeGen& cg) const { assert( false && "todo"); }
 
 } // namespace impala
+#endif

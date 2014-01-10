@@ -6,6 +6,10 @@ using namespace thorin;
 
 namespace impala {
 
+FnItem::FnItem(TypeTable& typetable)
+    : fn_(new Fn(typetable))
+{}
+
 TokenKind Literal::literal2type() const {
     switch (kind()) {
 #define IMPALA_LIT(itype, atype) \

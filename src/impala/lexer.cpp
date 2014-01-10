@@ -98,7 +98,7 @@ Token Lexer::lex() {
             return Token(loc_, Token:: tok1); \
         }
         IMPALA_LEX_OP('*', MUL, MUL_ASGN)
-        IMPALA_LEX_OP('%', MOD, MOD_ASGN)
+        IMPALA_LEX_OP('%', REM, REM_ASGN)
         IMPALA_LEX_OP('^', XOR, XOR_ASGN)
         IMPALA_LEX_OP('=', ASGN, EQ)
         IMPALA_LEX_OP('!', L_N,  NE)

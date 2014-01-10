@@ -70,7 +70,7 @@ TokenKind Token::separate_assign(TokenKind kind) {
         case SUB_ASGN: return SUB;
         case MUL_ASGN: return MUL;
         case DIV_ASGN: return DIV;
-        case MOD_ASGN: return MOD;
+        case REM_ASGN: return REM;
         case AND_ASGN: return AND;
         case  OR_ASGN: return OR;
         case XOR_ASGN: return XOR;
@@ -88,7 +88,7 @@ int Token::to_binop(Kind kind) {
         case SUB: return ArithOp_sub;
         case MUL: return ArithOp_mul;
         case DIV: return ArithOp_div;
-        case MOD: return ArithOp_rem;
+        case REM: return ArithOp_rem;
         case AND: return ArithOp_and;
         case  OR: return ArithOp_or;
         case XOR: return ArithOp_xor;

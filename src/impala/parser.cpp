@@ -12,25 +12,20 @@
 #include "impala/prec.h"
 #include "impala/type.h"
 
-#define TYPE \
-         Token::TYPE_int8: \
-    case Token::TYPE_int16: \
-    case Token::TYPE_int32: \
-    case Token::TYPE_int64: \
-    case Token::TYPE_float: \
-    case Token::TYPE_double: \
-    case Token::TYPE_bool: \
-    case Token::FN: \
-    case Token::L_PAREN: \
-    case Token::L_BRACKET: \
-    case Token::ID
+#define VISIBILITY \
+         Token::PUB: \
+    case Token::PRIV
 
-#define ITEM \
+#define MOD_ITEM \
          Token::FN: \
     case Token::EXTERN: \
     case Token::INTRINSIC: \
     case Token::TRAIT: \
     case Token::STRUCT
+
+#define MOD_CONTENTS \
+         VISIBILITY: \
+    case MOD_ITEM
 
 #define EXPR \
          Token::LIT_int8: \
@@ -59,7 +54,7 @@
     
 #define STMT_NO_EXPR \
          Token::LET: \
-    case ITEM: \
+    case MOD_ITEM: \
     case Token::IF: \
     case Token::FOR: \
     case Token::FOREACH: \
@@ -100,7 +95,7 @@ public:
         : typetable(typetable)
         , lexer(stream, filename)
         , cur_loop(nullptr)
-        , cur_fun(nullptr)
+        , cur_fn(nullptr)
         , cur_var_handle(2) // reserve 1 for conditionals, 0 for mem
         , no_bars_(false)
         , result_(true)
@@ -137,7 +132,20 @@ public:
             default:   return false;
         }
     }
-    bool parse_prg(Scope*);
+
+    // mod
+    const ModContents* parse_mod_contents();
+    const ModItem* parse_mod_item();
+    const ModDecl* parse_mod_decl();
+    const ForeignMod* parse_foreign_mod();
+    const FnItem* parse_fn_item();
+    const Typedef* parse_typedef();
+    const StructDecl* parse_struct_decl();
+    const TraitDecl* parse_trait_decl();
+    const EnumDecl* parse_enum_decl();
+    const ConstItem* parse_const_item();
+    const Impl* parse_impl();
+
     const Scope* parse_scope();
     const Scope* try_scope(const std::string& context);
     const Scope* parse_stmt_as_scope(const std::string& what);
@@ -149,7 +157,7 @@ public:
     const Type* parse_return_type();
     const VarDecl* parse_var_decl(bool is_param);
     void parse_proto(Proto* proto);
-    void parse_fun(Fun* fun);
+    void parse_fn(Fn* fn);
     void parse_comma_list(TokenKind delimiter, const char* context, std::function<void()> f) {
         if (la() != delimiter) {
             do { f(); }
@@ -171,7 +179,7 @@ public:
     const Expr* parse_postfix_expr(const Expr* lhs);
     const Expr* parse_primary_expr();
     const Expr* parse_literal();
-    const FunExpr* parse_fun_expr();
+    const FnExpr* parse_fn_expr();
 
     // statements
     const Stmt* parse_stmt();
@@ -190,10 +198,8 @@ public:
     const ScopeStmt* parse_scope_stmt();
 
     // items
-    const Item* parse_item();
-    const ProtoItem* parse_proto_item();
-    const FunItem* parse_fun_item();
-    const StructItem* parse_struct_item();
+    //const Item* parse_item();
+    //const ProtoItem* parse_proto_item();
 
     /// helper for condition in if/while/do-while
     const Expr* parse_cond(const std::string& what);
@@ -206,7 +212,7 @@ private:
     Lexer lexer;       ///< invoked in order to get next token
     Token lookahead[2];///< LL(2) look ahead
     const Loop* cur_loop;
-    const Fun* cur_fun;
+    const Fn* cur_fn;
     size_t cur_var_handle;
     bool no_bars_;
     thorin::Location prev_loc_;
@@ -227,8 +233,8 @@ Loc<T>::~Loc() { node_->set_pos2(parser_.prev_loc().pos2()); }
 
 //------------------------------------------------------------------------------
 
-bool parse(TypeTable& typetable, std::istream& i, const std::string& filename, Scope* prg) {
-    return Parser(typetable, i, filename).parse_prg(prg);
+const ModContents* parse(TypeTable& typetable, std::istream& i, const std::string& filename) {
+    return Parser(typetable, i, filename).parse_mod_contents();
 }
 
 //------------------------------------------------------------------------------
@@ -286,25 +292,82 @@ Token Parser::try_id(const std::string& what) {
 }
 
 /*
- * scope
+ * module
  */
 
-bool Parser::parse_prg(Scope* scope) {
-    if (scope->empty())
-        scope->set_pos1(la().pos1());
+const ModContents* Parser::parse_mod_contents() {
+    auto mod_contents = loc(new ModContents());
 
     while (true) {
         switch (la()) {
-            case Token::END_OF_FILE: scope->set_pos2(prev_loc().pos2()); return result();
-            case ITEM:               scope->stmts_.push_back(parse_item_stmt()); continue;
-            case Token::SEMICOLON:   lex(); continue;
+            case VISIBILITY:
+            case MOD_ITEM:
+                mod_contents->mod_items_.push_back(parse_mod_item());
+                continue;
+            case Token::SEMICOLON:  
+                lex(); 
+                continue;
             default:
-                error("item", "program");
-                lex();
-                continue; // consume token nobody wants
+                break;
         }
     }
+
+    return mod_contents;
 }
+
+const ModItem* Parser::parse_mod_item() {
+    Position pos1 = la().pos1();
+    Visibility visibility;
+    switch (la()) {
+        case VISIBILITY: visibility = (Visibility) lex().kind();
+        default:         visibility = Visibility::None;
+    }
+
+    const ModItem* mod_item = nullptr;
+    switch (la()) {
+        case Token::MOD:       mod_item = parse_mod_decl();    break;
+        case Token::EXTERN:    mod_item = parse_fn_item();     break;
+        case Token::TYPE:      mod_item = parse_typedef();     break;
+        case Token::STRUCT:    mod_item = parse_struct_decl(); break;
+        case Token::TRAIT:     mod_item = parse_trait_decl();  break;
+        case Token::ENUM:      mod_item = parse_enum_decl();   break;
+        case Token::STATIC:    mod_item = parse_const_item();  break;
+        case Token::IMPL:      mod_item = parse_impl();        break;
+        default: THORIN_UNREACHABLE;
+    }
+
+    ModItem* item = const_cast<ModItem*>(mod_item);
+    item->set_pos1(pos1);
+    item->visibility_ = visibility;
+    return mod_item;
+}
+
+const ModDecl* Parser::parse_mod_decl() {
+    auto mod_decl = loc(new ModDecl());
+    eat(Token::MOD);
+    mod_decl->symbol_ = try_id("module declaration").symbol();
+    switch (la()) {
+        case MOD_CONTENTS: 
+            expect(Token::L_BRACE, "module");
+            mod_decl->mod_contents_ = parse_mod_contents();
+            expect(Token::R_BRACE, "module");
+            break;
+        default:
+            expect(Token::SEMICOLON, "module declaration");
+    }
+
+    return mod_decl;
+}
+
+const ForeignMod* Parser::parse_foreign_mod() {
+    //auto foreign_mod = loc(new ForeignMod());
+    //eat(Token::EXTERN);
+    //return foreign_mod;
+    assert(false && "TODO");
+    return 0;
+}
+
+//------------------------------------------------------------------------------
 
 const Scope* Parser::try_scope(const std::string& context) {
     if (la() == Token::L_BRACE)
@@ -467,15 +530,15 @@ void Parser::parse_generics_list(GenericDecls& generic_decls) {
         });
 }
 
-void Parser::parse_fun(Fun* f) {
-    THORIN_PUSH(cur_fun, f);
+void Parser::parse_fn(Fn* f) {
+    THORIN_PUSH(cur_fn, f);
     THORIN_PUSH(cur_var_handle, cur_var_handle);
-    auto fun = loc(f);
+    auto fn = loc(f);
     std::vector<const Type*> arg_types;
     expect(Token::L_PAREN, "function head");
     parse_comma_list(Token::R_PAREN, "parameter list", [&] {
         const VarDecl* param = parse_var_decl(true);
-        fun->params_.push_back(param);
+        fn->params_.push_back(param);
         arg_types.push_back(param->orig_type());
     });
 
@@ -484,11 +547,11 @@ void Parser::parse_fun(Fun* f) {
         Position pos1 = prev_loc().pos1();
         arg_types.push_back(parse_return_type());
         Position pos2 = prev_loc().pos2();
-        fun->params_.push_back(new VarDecl(cur_var_handle++, true, Token(pos1, "return"), arg_types.back(), pos2));
+        fn->params_.push_back(new VarDecl(cur_var_handle++, true, Token(pos1, "return"), arg_types.back(), pos2));
     }
 
-    fun->orig_type_ = typetable.fntype(arg_types);
-    fun->body_ = try_scope("body of function");
+    fn->orig_type_ = typetable.fntype(arg_types);
+    fn->body_ = try_scope("body of function");
 }
 
 /*
@@ -530,7 +593,7 @@ const Expr* Parser::parse_expr(Prec prec) {
 
 const Expr* Parser::parse_prefix_expr() {
     if (la() == Token::OR || la() == Token::L_O)
-        return parse_fun_expr();
+        return parse_fn_expr();
     Token op = lex();
     auto rhs = parse_expr(PrecTable::prefix_r[op]);
 
@@ -624,18 +687,18 @@ const Expr* Parser::parse_literal() {
     }
 }
 
-const FunExpr* Parser::parse_fun_expr() {
-    auto e = loc(new FunExpr(typetable));
-    auto fun = loc(e->fun_.get());
+const FnExpr* Parser::parse_fn_expr() {
+    auto e = loc(new FnExpr(typetable));
+    auto fn = loc(e->fn_.get());
 
-    THORIN_PUSH(cur_fun, fun);
+    THORIN_PUSH(cur_fn, fn);
     THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     std::vector<const Type*> arg_types;
     if (accept(Token::OR)) {
         parse_comma_list(Token::OR, "parameter list of function expression", [&] {
             const VarDecl* param = parse_var_decl(true);
-            fun->params_.push_back(param);
+            fn->params_.push_back(param);
             arg_types.push_back(param->orig_type());
         });
     } else
@@ -646,13 +709,13 @@ const FunExpr* Parser::parse_fun_expr() {
         Position pos1 = prev_loc().pos1();
         arg_types.push_back(parse_return_type());
         Position pos2 = prev_loc().pos2();
-        fun->params_.push_back(new VarDecl(cur_var_handle++, true, Token(pos1, "return"), arg_types.back(), pos2));
+        fn->params_.push_back(new VarDecl(cur_var_handle++, true, Token(pos1, "return"), arg_types.back(), pos2));
     }
 
-    fun->orig_type_ = typetable.fntype(arg_types);
-    fun->body_ = try_scope("body of function");
-    e->fun_->extern_ = false;
-    e->fun_->symbol_ = "lambda";
+    fn->orig_type_ = typetable.fntype(arg_types);
+    fn->body_ = try_scope("body of function");
+    e->fn_->extern_ = false;
+    e->fn_->symbol_ = "lambda";
 
     return e;
 }
@@ -664,7 +727,7 @@ const FunExpr* Parser::parse_fun_expr() {
 const Stmt* Parser::parse_stmt() {
     switch (la()) {
         case EXPR:              return parse_expr_stmt();
-        case ITEM:              return parse_item_stmt();
+        //case ITEM:              return parse_item_stmt();
         case Token::LET:        return parse_init_stmt();
         case Token::BREAK:      return parse_break();
         case Token::CONTINUE:   return parse_continue();
@@ -687,11 +750,11 @@ const ScopeStmt* Parser::parse_scope_stmt() {
     return s;
 }
 
-const ItemStmt* Parser::parse_item_stmt() {
-    auto s = loc(new ItemStmt());
-    s->item_ = parse_item();
-    return s;
-}
+//const ItemStmt* Parser::parse_item_stmt() {
+    //auto s = loc(new ItemStmt());
+    //s->item_ = parse_item();
+    //return s;
+//}
 
 const ExprStmt* Parser::parse_expr_stmt() {
     auto s = loc(new ExprStmt());
@@ -810,7 +873,7 @@ const Stmt* Parser::parse_foreach() {
         foreach->call_ = nullptr; // TODO
     }
 
-    foreach->fun_expr_ = parse_fun_expr();
+    foreach->fn_expr_ = parse_fn_expr();
 
     return foreach;
 }
@@ -833,7 +896,7 @@ const Stmt* Parser::parse_continue() {
 
 const Stmt* Parser::parse_return() {
     auto ret = loc(new ReturnStmt());
-    ret->fun_ = cur_fun;
+    ret->fn_ = cur_fn;
     eat(Token::RETURN);
     if (accept(Token::SEMICOLON))
         ret->expr_ = nullptr;
@@ -849,40 +912,14 @@ const Stmt* Parser::parse_return() {
  * items
  */
 
-const Item* Parser::parse_item() {
-    switch (la()) {
-        case Token::FN:        return parse_fun_item();
-        case Token::EXTERN:
-        case Token::INTRINSIC: return parse_proto_item();
-        case Token::STRUCT:    return parse_struct_item();
-        default:               THORIN_UNREACHABLE;
-    }
-}
-
-const ProtoItem* Parser::parse_proto_item() {
-    auto kind = lex();
-    auto proto = loc(new ProtoItem(try_id("prototype").symbol()));
-    proto->proto_->kind_ = kind;
-    parse_proto(proto->proto_ );
-    expect(Token::SEMICOLON, "end of proto expected");
-    return proto;
-}
-
-const FunItem* Parser::parse_fun_item() {
-    auto fi = loc(new FunItem(typetable));
-    fi->fun_->extern_ = accept(Token::EXTERN);
+const FnItem* Parser::parse_fn_item() {
+    auto fi = loc(new FnItem(typetable));
+    fi->fn_->extern_ = accept(Token::EXTERN);
     eat(Token::FN);
-    fi->fun_->symbol_ = try_id("function identifier").symbol();
-    parse_generics_list(fi->fun_->generics_);
-    parse_fun(fi->fun_);
+    fi->fn_->symbol_ = try_id("function identifier").symbol();
+    parse_generics_list(fi->fn_->generics_);
+    parse_fn(fi->fn_);
     return fi;
-}
-
-const StructItem* Parser::parse_struct_item() {
-    auto s = loc(new StructItem());
-    // TODO
-    expect(Token::STRUCT, "struct");
-    return 0;
 }
 
 } // namespace impala
