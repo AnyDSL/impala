@@ -62,6 +62,8 @@ public:
     void dump() const;
 };
 
+//------------------------------------------------------------------------------
+
 class Decl : virtual public ASTNode {
 public:
     thorin::Symbol symbol() const { return symbol_; }
@@ -78,12 +80,18 @@ private:
     friend class Sema;
 };
 
+/// Base class for all module declarations.
 class PathDecl : public Decl {
 };
 
-class VarDecl : public Decl {
+/// Base class for all \p Type declarations.
+class TypeDecl : public Decl {
+};
+
+/// Base class for all declarations which have a type.
+class ValueDecl : public Decl {
 public:
-    VarDecl()
+    ValueDecl()
         : orig_type_(nullptr)
         , refined_type_(nullptr)
         , is_mut_(false)
@@ -101,7 +109,8 @@ protected:
     friend class Parser;
 };
 
-class LocalDecl : public VarDecl {
+/// Base class for all Values which may be mutated within a function.
+class LocalDecl : public ValueDecl {
 public:
     LocalDecl(size_t handle)
         : handle_(handle)
@@ -114,9 +123,6 @@ protected:
     mutable bool is_address_taken_;
 
     friend class Parser;
-};
-
-class TypeDecl : public Decl {
 };
 
 //------------------------------------------------------------------------------
@@ -215,7 +221,7 @@ class Impl : public Item {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class FnDecl : public Item, public VarDecl {
+class FnDecl : public Item, public ValueDecl {
 public:
     FnDecl(TypeTable& typetable);
 

@@ -57,12 +57,12 @@
     case Token::L_PAREN: \
     case Token::L_BRACKET
     
-#define STMT_NO_EXPR \
+#define STMT_NOT_EXPR \
          Token::LET: \
     case ITEM
 
 #define STMT \
-        STMT_NO_EXPR: \
+        STMT_NOT_EXPR: \
     case EXPR
 
 using namespace thorin;
@@ -177,7 +177,7 @@ public:
     const Block*   try_block(const std::string& context);
 
     // statements
-    const Stmt*     parse_stmt();
+    const Stmt*     parse_stmt_not_expr();
     const ExprStmt* parse_expr_stmt();
     const ItemStmt* parse_item_stmt();
     const LetStmt*  parse_let_stmt();
@@ -678,7 +678,7 @@ const Block* Parser::parse_block() {
     while (true) {
         switch (la()) {
             case Token::SEMICOLON:  lex(); continue; // ignore semicolon
-            case STMT_NO_EXPR:      stmts.push_back(parse_stmt()); continue;
+            case STMT_NOT_EXPR:     stmts.push_back(parse_stmt_not_expr()); continue;
             case EXPR: {
                 auto expr = parse_expr();
                 if (accept(Token::SEMICOLON)) {
@@ -711,9 +711,8 @@ const Block* Parser::try_block(const std::string& context) {
  * statements
  */
 
-const Stmt* Parser::parse_stmt() {
+const Stmt* Parser::parse_stmt_not_expr() {
     switch (la()) {
-        case EXPR:       return parse_expr_stmt();
         case ITEM:       return parse_item_stmt();
         case Token::LET: return parse_let_stmt();
         default:         THORIN_UNREACHABLE;
