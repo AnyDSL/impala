@@ -549,29 +549,37 @@ const Expr* Parser::parse_expr(Prec prec) {
 const Expr* Parser::parse_prefix_expr() {
     if (la() == Token::OR || la() == Token::L_O)
         return parse_fn_expr();
-    Token op = lex();
-    auto rhs = parse_expr(PrecTable::prefix_r[op]);
 
-    return new PrefixExpr(op.pos1(), (PrefixExpr::Kind) op.kind(), rhs);
+    auto expr = loc(new PrefixExpr());
+    auto kind = lex().kind();
+    expr->kind_ = (PrefixExpr::Kind) kind;
+    expr->rhs_ = parse_expr(PrecTable::prefix_r[kind]);
+
+    return expr;
 }
 
 const Expr* Parser::parse_infix_expr(const Expr* lhs) {
-    Token op = lex();
-    auto rhs = parse_expr(PrecTable::infix_r[op]);
-    return new InfixExpr(lhs, (InfixExpr::Kind) op.kind(), rhs);
+    auto expr = new InfixExpr();
+    auto kind = lex().kind();
+    expr->kind_ = (InfixExpr::Kind) kind;
+    auto rhs = parse_expr(PrecTable::infix_r[kind]);
+    expr->set_loc(lhs->pos1(), rhs->pos2());
+    return expr;
 }
 
 const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
     if (accept(Token::L_PAREN)) {
-        auto map = loc(new MapExpr());
-        map->ops_.push_back(lhs);
-        parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&]{ map->append_arg(parse_expr()); });
+        auto map = new MapExpr();
+        map->lhs_ = lhs;
+        parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&]{ map->ops_.push_back(parse_expr()); });
+        map->set_loc(lhs->pos1(), prev_loc().pos2());
         return map;
     } else {
-        auto expr = loc(new PostfixExpr());
-        expr->ops_.push_back(lhs);
+        auto expr = new PostfixExpr();
+        expr->lhs_ = lhs;
         assert(la() == Token::INC || la() == Token::DEC); 
         expr->kind_ = (PostfixExpr::Kind) lex().kind();
+        expr->set_loc(lhs->pos1(), prev_loc().pos2());
         return expr;
     }
 }

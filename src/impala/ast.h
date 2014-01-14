@@ -247,10 +247,6 @@ public:
         : type_(nullptr) 
     {}
 
-    const Exprs& ops() const { return ops_; }
-    const Expr* op(size_t i) const { return ops_[i]; }
-    size_t size() const { return ops_.size(); }
-    bool empty() const { return size() == 0; }
     const Type* type() const { return type_; }
     virtual bool is_lvalue() const = 0;
 
@@ -261,7 +257,6 @@ private:
 protected:
     virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
-    Exprs ops_;
     mutable const Type* type_;
 
     friend class Parser;
@@ -351,30 +346,6 @@ private:
     friend class Parser;
 };
 
-class ArrayExpr : public Expr {
-public:
-    virtual bool is_lvalue() const { return false; }
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
-
-    friend class Parser;
-};
-
-class Tuple : public Expr {
-public:
-    virtual bool is_lvalue() const { return false; }
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
-
-    friend class Parser;
-};
-
 class Id : public Expr {
 public:
     Id(const Token& tok)
@@ -405,14 +376,7 @@ public:
 #include "impala/tokenlist.h"
     };
 
-    PrefixExpr(const thorin::Position& pos1, Kind kind, const Expr* rhs)
-        : kind_(kind)
-    {
-        ops_.push_back(rhs);
-        set_loc(pos1, rhs->pos2());
-    }
-
-    const Expr* rhs() const { return ops_[0]; }
+    const Expr* rhs() const { return rhs_;; }
     Kind kind() const { return kind_; }
     virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
@@ -423,6 +387,9 @@ private:
     virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
     Kind kind_;
+    thorin::AutoPtr<const Expr> rhs_;
+
+    friend class Parser;
 };
 
 class InfixExpr : public Expr {
@@ -433,17 +400,9 @@ public:
 #include "impala/tokenlist.h"
     };
 
-    InfixExpr(const Expr* lhs, Kind kind, const Expr* rhs)
-        : kind_(kind)
-    {
-        ops_.push_back(lhs);
-        ops_.push_back(rhs);
-        set_loc(lhs->pos1(), rhs->pos2());
-    }
-
-    const Expr* lhs() const { return ops_[0]; }
-    const Expr* rhs() const { return ops_[1]; }
     Kind kind() const { return kind_; }
+    const Expr* lhs() const { return lhs_; }
+    const Expr* rhs() const { return rhs_; }
     virtual bool is_lvalue() const { return Token::is_assign((TokenKind) kind()); }
     virtual std::ostream& print(Printer& p) const;
 
@@ -453,11 +412,15 @@ private:
     virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
     Kind kind_;
+    thorin::AutoPtr<const Expr> lhs_;
+    thorin::AutoPtr<const Expr> rhs_;
+
+    friend class Parser;
 };
 
 /**
  * Just for expr++ and expr--.
- * For indexing and fnction calls use \p Map.
+ * For indexing/function calls use \p MapExpr.
  */
 class PostfixExpr : public Expr {
 public:
@@ -466,8 +429,8 @@ public:
         DEC = Token::DEC
     };
 
-    const Expr* lhs() const { return ops_[0]; }
     Kind kind() const { return kind_; }
+    const Expr* lhs() const { return lhs_; }
     virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
 
@@ -476,18 +439,47 @@ private:
     virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     Kind kind_;
+    thorin::AutoPtr<const Expr> lhs_;
 
     friend class Parser;
 };
 
-class MapExpr : public Expr {
+class OpsExpr : public Expr {
 public:
-    void append_arg(const Expr* expr) { ops_.push_back(expr); }
-    const Expr* to() const { return ops_.front(); }
-    size_t num_args() const { return size() - 1; }
-    thorin::ArrayRef<const Expr*> args() const { return thorin::ArrayRef<const Expr*>(&*ops_.begin() + 1, num_args()); }
-    const Expr* arg(size_t i) const { return op(i+1); }
-    thorin::Location args_location() const;
+    const Exprs& ops() const { return ops_; }
+    const Expr* op(size_t i) const { return ops_[i]; }
+
+protected:
+    Exprs ops_;
+};
+
+class ArrayExpr : public OpsExpr {
+public:
+    virtual bool is_lvalue() const { return false; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    virtual const Type* check(Sema& sema) const;
+    virtual thorin::RefPtr emit(CodeGen& cg) const;
+
+    friend class Parser;
+};
+
+class Tuple : public OpsExpr {
+public:
+    virtual bool is_lvalue() const { return false; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    virtual const Type* check(Sema& sema) const;
+    virtual thorin::RefPtr emit(CodeGen& cg) const;
+
+    friend class Parser;
+};
+
+class MapExpr : public OpsExpr {
+public:
+    const Expr* lhs() const { return lhs_; }
     virtual bool is_lvalue() const;
     virtual std::ostream& print(Printer& p) const;
 
@@ -495,7 +487,9 @@ private:
     virtual const Type* check(Sema& sema) const;
     virtual thorin::RefPtr emit(CodeGen& cg) const;
 
-    mutable thorin::Lambda* callee_;
+    thorin::AutoPtr<const Expr> lhs_;
+
+    friend class Parser;
 };
 
 class IfElse: public Expr {
