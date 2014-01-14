@@ -56,27 +56,35 @@ std::ostream& Param::print(Printer& p) const {
     return p.stream() << symbol();
 }
 
+std::ostream& Fn::print_params(Printer& p) const {
+    p.dump_list([&] (const Param* param) { param->print(p); }, params());
+}
+
 std::ostream& Local::print(Printer& p) const {
     return p.stream() << symbol();
-}
-
-std::ostream& ModDecl::print(Printer& p) const {
-    return p.stream() << symbol();
-}
-
-std::ostream& ModContents::print(Printer& p) const {
-    //for (auto item : items())
-        //p.prin
 }
 
 /*
  * Items
  */
 
+std::ostream& ModDecl::print(Printer& p) const {
+    return p.stream() << symbol();
+}
+
+std::ostream& ModContents::print(Printer& p) const {
+    for (auto item : items())
+        item->print(p);
+}
+
 std::ostream& FnDecl::print(Printer& p) const {
-    //p.stream() << "fn " << fun()->symbol(); 
+    p.stream() << "fn " << symbol();
     //if (!fun()->generics().empty())
         //p.dump_list([&] (const GenericDecl* generic_decl) { generic_decl->print(p); }, fun()->generics(), "<", ">");
+
+    p.stream() << '(';
+    fn().print_params(p);
+    p.stream() << ')';
 
     //return fun()->print(p);
     return p.stream();

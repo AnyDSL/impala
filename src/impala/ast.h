@@ -148,6 +148,7 @@ public:
     thorin::Lambda* lambda() const { return lambda_; }
     const thorin::Param* ret_param() const { return ret_param_; }
     const thorin::Enter* frame() const { return frame_; }
+    std::ostream& print_params(Printer& p) const;
     //void emit(CodeGen& cg) const;
 
 private:
