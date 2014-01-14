@@ -613,7 +613,7 @@ const Expr* Parser::parse_primary_expr() {
 #include "impala/tokenlist.h"
         case Token::TRUE:
         case Token::FALSE:      return parse_literal_expr();
-        case Token::ID:         return new Id(lex());
+        case Token::ID:         return new IdExpr(lex());
         default:                error("expression", ""); return new EmptyExpr(lex().loc());
     }
 }

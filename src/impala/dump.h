@@ -23,7 +23,6 @@ public:
 
     std::ostream& print_type(const impala::Type*);
 
-private:
     Prec prec;
 };
 

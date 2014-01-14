@@ -132,7 +132,10 @@ class Param : public LocalDecl {
         : LocalDecl(handle)
     {}
 
+public:
     virtual std::ostream& print(Printer& p) const;
+
+private:
     mutable const Fn* fn_;
 
     friend class Parser;
@@ -272,7 +275,7 @@ public:
     const Stmts& stmts() const { return stmts_; }
     const Expr* expr() const { return expr_; }
     const Stmt* stmt(size_t i) const { return stmts_[i]; }
-    bool empty() const { return stmts_.empty(); }
+    bool empty() const { return stmts_.empty() && expr_ == nullptr; }
     virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
     virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -346,9 +349,9 @@ private:
     friend class Parser;
 };
 
-class Id : public Expr {
+class IdExpr : public Expr {
 public:
-    Id(const Token& tok)
+    IdExpr(const Token& tok)
         : symbol_(tok.symbol())
         , decl_(nullptr)
     {

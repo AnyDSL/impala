@@ -1,4 +1,3 @@
-#if 0
 #include "impala/dump.h"
 
 #include "impala/ast.h"
@@ -46,31 +45,36 @@ std::ostream& Printer::print_type(const Type* type) {
     THORIN_UNREACHABLE;
 }
 
-std::ostream& BlockExpr::print(Printer& p) {
-        stream() << "{";
-        up();
-        s->print(*this);
-        down();
-        stream() << "}";
-    }
-
-    return stream();
-}
-
 //------------------------------------------------------------------------------
 
 void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; }
 void Type::dump() const { Printer p(std::cout, true); p.print_type(this) << std::endl; }
 
-std::ostream& VarDecl::print(Printer& p) const { 
-    p.stream() << (is_mut() ? "mut " : "");
-    p.stream() << symbol();
-    if (orig_type())
-        p.stream() << ": " << orig_type(); 
+//------------------------------------------------------------------------------
+
+/*
+ * Items
+ */
+
+std::ostream& FnDecl::print(Printer& p) const {
+    //p.stream() << "fn " << fun()->symbol(); 
+    //if (!fun()->generics().empty())
+        //p.dump_list([&] (const GenericDecl* generic_decl) { generic_decl->print(p); }, fun()->generics(), "<", ">");
+
+    //return fun()->print(p);
     return p.stream();
 }
 
-std::ostream& Scope::print(Printer& p) const {
+std::ostream& StructDecl::print(Printer& p) const {
+    assert( false && "todo" );
+    return p.stream();
+}
+
+/*
+ * Expr
+ */
+
+std::ostream& BlockExpr::print(Printer& p) const {
     p.stream() << "{";
     p.up();
     if (!empty()) {
@@ -84,11 +88,7 @@ std::ostream& Scope::print(Printer& p) const {
     return p.down() << "}";
 }
 
-/*
- * Expr
- */
-
-std::ostream& Literal::print(Printer& p) const {
+std::ostream& LiteralExpr::print(Printer& p) const {
     switch (kind()) {
 #define IMPALA_LIT(itype, atype) \
         case LIT_##itype: return p.stream() << box().get_##atype();
@@ -98,10 +98,10 @@ std::ostream& Literal::print(Printer& p) const {
     }
 }
 
-std::ostream& Id::print(Printer& p) const { return p.stream() << symbol(); }
+std::ostream& IdExpr   ::print(Printer& p) const { return p.stream() << symbol(); }
 std::ostream& EmptyExpr::print(Printer& p) const { return p.stream() << "/*empty*/"; }
 std::ostream& ArrayExpr::print(Printer& p) const { return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "[", "]"); }
-std::ostream& Tuple::print(Printer& p) const { return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "(", ")"); }
+std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "(", ")"); }
 
 std::ostream& PrefixExpr::print(Printer& p) const {
     Prec r = PrecTable::prefix_r[kind()];
@@ -178,10 +178,29 @@ std::ostream& PostfixExpr::print(Printer& p) const {
 
 std::ostream& MapExpr::print(Printer& p) const {
     lhs()->print(p);
-    return p.dump_list([&](const Expr* expr) { expr->print(p); }, args(), "(", ")");
+    return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "(", ")");
 }
 
-std::ostream& FunExpr::print(Printer& p) const { return fun()->print(p); }
+std::ostream& FnExpr::print(Printer& p) const { /*...*/ }
+
+std::ostream& IfElseExpr::print(Printer& p) const {
+    p.stream() << "if " << cond() << " ";
+    then_block()->print(p);
+
+    if (!else_block()->empty()) {
+        p.stream() << " else ";
+        else_block()->print(p);
+    }
+
+    return p.stream();
+}
+
+std::ostream& ForExpr::print(Printer& p) const {
+    p.stream() << "for ";
+    p.dump_list([&](const Param* param) { param->print(p); }, fn().params());
+    expr()->print(p) << ' ';
+    return fn().body()->print(p);
+}
 
 /*
  * Stmt
@@ -189,13 +208,13 @@ std::ostream& FunExpr::print(Printer& p) const { return fun()->print(p); }
 
 std::ostream& ItemStmt::print(Printer& p) const { return item()->print(p); }
 
-std::ostream& InitStmt::print(Printer& p) const {
+std::ostream& LetStmt::print(Printer& p) const {
     p.stream() << "let ";
-    var_decl()->print(p);
-    if (init()) {
-        p.stream() << " = ";
-        init()->print(p) << ";";
-    }
+    //var_decl()->print(p);
+    //if (init()) {
+        //p.stream() << " = ";
+        //init()->print(p) << ";";
+    //}
     return p.stream();
 }
 
@@ -204,89 +223,14 @@ std::ostream& ExprStmt::print(Printer& p) const {
     return p.stream() << ";";
 }
 
-std::ostream& IfElseStmt::print(Printer& p) const {
-    p.stream() << "if (" << cond() << ") ";
-    then_scope()->print(p);
-
-    if (!else_scope()->empty()) {
-        p.stream() << " else ";
-        else_scope()->print(p);
-    }
-
-    return p.stream();
-}
-
-std::ostream& DoWhileStmt::print(Printer& p) const {
-    p.stream() << "do ";
-    body()->print(p);
-    p.stream() << " while (";
-    cond()->print(p);
-    return p.stream() << ");";
-}
-
-std::ostream& ForStmt::print(Printer& p) const {
-    if (is_while()) {
-        p.stream() << "while (";
-        cond()->print(p);
-    } else {
-        p.stream() << "for (";
-        init()->print(p);
-        p.stream() << " ";
-        cond()->print(p);
-        p.stream() << "; ";
-        step()->print(p);
-    }
-
-    p.stream() << ") ";
-    return body()->print(p);
-}
-
-std::ostream& ForeachStmt::print(Printer& p) const {
-    p.stream() << "foreach ";
-    call()->print(p) << ' ';
-    return fun_expr()->print(p);
-}
-
-std::ostream& BreakStmt::print(Printer& p) const { return p.stream() << "break;"; }
-std::ostream& ContinueStmt::print(Printer& p) const { return p.stream() << "continue;"; }
-std::ostream& ScopeStmt::print(Printer& p) const { return scope()->print(p); }
-
-std::ostream& ReturnStmt::print(Printer& p) const {
-    p.stream() << "return";
-
-    if (expr()) {
-        p.stream() << " ";
-        expr()->print(p);
-    }
-
-    return p.stream() << ";";
-}
-
-//------------------------------------------------------------------------------
-
-std::ostream& ProtoItem::print(Printer& p) const { return proto()->print(p); }
-
-std::ostream& FunItem::print(Printer& p) const {
-    p.stream() << "fn " << fun()->symbol(); 
-    //if (!fun()->generics().empty())
-        //p.dump_list([&] (const GenericDecl* generic_decl) { generic_decl->print(p); }, fun()->generics(), "<", ">");
-
-    return fun()->print(p);
-}
-
-std::ostream& StructItem::print(Printer& p) const {
-    assert( false && "todo" );
-    return p.stream();
-}
-
 //------------------------------------------------------------------------------
 
 void dump_prg(const Scope* scope, bool fancy, std::ostream& o) { 
     Printer p(o, fancy);
-    for (auto stmt : scope->stmts()) {
-        stmt->print(p);
-        p.newline();
-    }
+    //for (auto stmt : scope->stmts()) {
+        //stmt->print(p);
+        //p.newline();
+    //}
 }
 
 void dump(const ASTNode* n, bool fancy, std::ostream& o) { Printer p(o, fancy); n->print(p); }
@@ -296,4 +240,3 @@ std::ostream& operator << (std::ostream& o, const Type* type) { return Printer(o
 //------------------------------------------------------------------------------
 
 } // namespace impala
-#endif
