@@ -1,4 +1,3 @@
-#if 0
 #include "impala/type.h"
 
 #include <sstream>
@@ -56,63 +55,7 @@ const IndefiniteArray* TypeTable::indefinite_array(const Type* elem_type) {
 }
 const FnType* TypeTable::fntype(thorin::ArrayRef<const Type*> elems) { return unify(new FnType(*this, elems)); }
 const TupleType* TypeTable::tupletype(thorin::ArrayRef<const Type*> elems) { return unify(new TupleType(*this, elems)); }
-const Generic* TypeTable::generic(size_t index) { return unify(new Generic(*this, index)); }
-const GenericRef* TypeTable::genericref(const Fun* fun, const Generic* generic) { 
-    return unify(new GenericRef(*this, fun, generic)); 
-}
 const IdType* TypeTable::idtype(Symbol symbol) { return unify(new IdType(*this, symbol)); }
-
-//------------------------------------------------------------------------------
-
-size_t GenericBuilder::new_def() {
-    size_t handle = index2generic_.size();
-    index2generic_.push_back(nullptr);
-    return handle;
-}
-
-const Generic* GenericBuilder::use(size_t handle) {
-    assert(handle < index2generic_.size());
-    const Generic*& ref = index2generic_[handle];
-    if (auto generic = ref)
-        return generic;
-
-    return ref = typetable().generic(index_++);
-}
-
-//------------------------------------------------------------------------------
-
-const Type*& GenericMap::operator [] (const Generic* generic) const {
-    size_t i = generic->index();
-    if (i >= types_.size())
-        types_.resize(i+1, nullptr);
-    return types_[i];
-}
-
-bool GenericMap::is_empty() const {
-    for (size_t i = 0, e = types_.size(); i != e; ++i)
-        if (!types_[i])
-            return false;
-
-    return true;
-}
-
-const char* GenericMap::to_string() const {
-    std::ostringstream o;
-    bool first = true;
-    for (size_t i = 0, e = types_.size(); i != e; ++i) {
-        if (auto type = types_[i]) {
-            if (first)
-                first = false;
-            else
-                o << ", ";
-            o << Generic::to_string(i) << " = " << type;
-        }
-    }
-
-    return o.str().c_str();
-}
-
-const GenericRef* Generic::genericref(const Fun* fun) const { return typetable_.genericref(fun, this); }
 
 //------------------------------------------------------------------------------
 
@@ -160,59 +103,6 @@ const Type* FnType::return_type() const {
     return typetable_.noret();
 }
 
-bool Type::check_with(const Type* other) const {
-    if (this == other || this->isa<Generic>() || this->isa<GenericRef>())
-        return true;
-
-    if (this->kind() != other->kind() || this->size() != other->size())
-        return false;
-
-    for (size_t i = 0, e = size(); i != e; ++i)
-        if (!this->elem(i)->check_with(other->elem(i)))
-            return false;
-
-    return true;
-}
-
-bool Type::infer_with(GenericMap& map, const Type* other) const {
-    if (auto genericref = this->isa<GenericRef>())
-        return genericref->generic()->infer_with(map, other);
-    if (auto genericref = other->isa<GenericRef>())
-        other = genericref->generic();
-
-    size_t num_elems = this->size();
-    assert(this->isa<Generic>() || num_elems == other->size());
-    assert(this->isa<Generic>() || this->kind() == other->kind());
-
-    if (this == other)
-        return true;
-
-    if (auto generic = this->isa<Generic>()) {
-        const Type*& mapped = map[generic];
-        if (!mapped) {
-            mapped = other;
-            return true;
-        } else
-            return mapped == other;
-    }
-
-    for (size_t i = 0; i < num_elems; ++i) {
-        if (!this->elem(i)->infer_with(map, other->elem(i)))
-            return false;
-    }
-
-    return true;
-}
-
-/*static*/ std::string Generic::to_string(size_t index) {
-    std::ostringstream oss;
-    if (index < 26)
-        oss << char('a' + index) << '\'';
-    else
-        oss << 'T' << index << '\'';
-    return oss.str();
-}
-
 #define THORIN_REFINE_SPECIALIZE(T, constr) \
     const Type* T::refine(const Sema& sema) const { \
         thorin::Array<const Type*> nelems(size()); \
@@ -227,8 +117,8 @@ bool Type::infer_with(GenericMap& map, const Type* other) const {
         return typetable_.constr(nelems); \
     }
 
-THORIN_REFINE_SPECIALIZE(TupleType, tupletype)
-THORIN_REFINE_SPECIALIZE(FnType, fntype)
+//THORIN_REFINE_SPECIALIZE(TupleType, tupletype)
+//THORIN_REFINE_SPECIALIZE(FnType, fntype)
 
 const Type* DefiniteArray::refine(const Sema& sema) const {
     return typetable_.definite_array(elem_type()->refine(sema), dim());
@@ -236,14 +126,6 @@ const Type* DefiniteArray::refine(const Sema& sema) const {
 
 const Type* IndefiniteArray::refine(const Sema& sema) const {
     return typetable_.indefinite_array(elem_type()->refine(sema));
-}
-
-const Type* DefiniteArray::specialize(const GenericMap& map) const {
-    return typetable_.definite_array(elem_type()->specialize(map), dim());
-}
-
-const Type* IndefiniteArray::specialize(const GenericMap& map) const {
-    return typetable_.indefinite_array(elem_type()->specialize(map));
 }
 
 //------------------------------------------------------------------------------
@@ -281,15 +163,6 @@ const thorin::Type* TupleType::convert(World& world) const {
     return world.sigma(elems);
 }
 
-const thorin::Type* Generic::convert(thorin::World& world) const {
-    return world.generic(index());
-}
-
-const thorin::Type* GenericRef::convert(thorin::World& world) const {
-    return world.generic_ref(generic()->convert(world)->as<thorin::Generic>(), fun()->lambda());
-}
-
 //------------------------------------------------------------------------------
 
 } // namespace impala
-#endif

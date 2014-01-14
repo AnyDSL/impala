@@ -21,9 +21,9 @@ public:
         , prec(BOTTOM)
     {}
 
-    std::ostream& print_block(const impala::Stmt*);
     std::ostream& print_type(const impala::Type*);
 
+private:
     Prec prec;
 };
 

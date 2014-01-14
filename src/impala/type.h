@@ -10,7 +10,6 @@
 #include "impala/token.h"
 
 namespace thorin {
-    class GenericMap;
     class Type;
     class World;
 }
@@ -19,8 +18,6 @@ namespace impala {
 
 class FnType;
 class Fun;
-class Generic;
-class GenericRef;
 class IdType;
 class NoRet;
 class Void;
@@ -33,50 +30,11 @@ class TypeError;
 
 //------------------------------------------------------------------------------
 
-class GenericBuilder {
-public:
-    GenericBuilder(TypeTable& typetable)
-        : typetable_(&typetable)
-        , index_(0)
-    {}
-
-    size_t new_def();
-    const Generic* use(size_t handle);
-    const Generic* get(size_t handle) { assert(handle < index2generic_.size()); return index2generic_[handle]; }
-    void pop(size_t num) { index2generic_.resize(index2generic_.size() - num); }
-    TypeTable& typetable() const { return *typetable_; }
-
-private:
-    TypeTable* typetable_;
-    size_t index_;
-    typedef std::vector<const Generic*> Index2Generic;
-    Index2Generic index2generic_;
-};
-
-//------------------------------------------------------------------------------
-
-class GenericMap {
-public:
-    GenericMap() {}
-
-    const Type*& operator [] (const Generic* generic) const;
-    bool is_empty() const;
-    const char* to_string() const;
-
-private:
-    mutable std::vector<const Type*> types_;
-};
-
-inline std::ostream& operator << (std::ostream& o, const GenericMap& map) { o << map.to_string(); return o; }
-
-//------------------------------------------------------------------------------
-
 class Type : public thorin::Node<Type> {
 protected:
-    Type(TypeTable& typetable, TokenKind kind, size_t size, bool is_generic, const std::string& name)
+    Type(TypeTable& typetable, TokenKind kind, size_t size, const std::string& name)
         : Node((int) kind, size, name)
         , typetable_(typetable)
-        , is_generic_(is_generic)
     {}
 
 public:
@@ -84,58 +42,27 @@ public:
     thorin::ArrayRef<const Type*> elems() const { return ops_ref<const Type*>(); }
     const Type* elem(size_t i) const { return elems()[i]; }
     virtual const Type* refine(const Sema&) const = 0;
-    virtual const Type* specialize(const GenericMap& map) const = 0;
     virtual const thorin::Type* convert(thorin::World&) const = 0;
     bool is_bool() const;
     bool is_int() const;
     bool is_float() const;
     bool is_void() const { return isa<Void>() != nullptr; }
     bool is_noret() const { return isa<NoRet>() != nullptr; }
-    bool is_generic() const { return is_generic_; }
     bool check_with(const Type*) const;
-    bool infer_with(GenericMap& map, const Type* type) const;
     void dump() const;
     void set(size_t i, const Type* t) { assert(!t->is_void() && !t->is_noret()); Node::set(i, t); }
 
 protected:
     TypeTable& typetable_;
-    bool is_generic_;
 };
 
 class TypeError : public Type {
 private:
     TypeError(TypeTable& typetable) 
-        : Type(typetable, Token::TYPE_error, 0, false, "<error>")
+        : Type(typetable, Token::TYPE_error, 0, "<error>")
     {}
 
     virtual const Type* refine(const Sema&) const { return this; }
-    virtual const Type* specialize(const GenericMap& map) const { return this; }
-    virtual const thorin::Type* convert(thorin::World&) const { assert(false); return nullptr; }
-
-    friend class TypeTable;
-};
-
-class Void : public Type {
-private:
-    Void(TypeTable& typetable) 
-        : Type(typetable, Token::TYPE_void, 0, false, "void")
-    {}
-
-    virtual const Type* refine(const Sema&) const { return this; }
-    virtual const Type* specialize(const GenericMap& map) const { return this; }
-    virtual const thorin::Type* convert(thorin::World&) const { assert(false); return nullptr; }
-
-    friend class TypeTable;
-};
-
-class NoRet : public Type {
-private:
-    NoRet(TypeTable& typetable) 
-        : Type(typetable, Token::TYPE_noret, 0, false, "!")
-    {}
-
-    virtual const Type* refine(const Sema&) const { return this; }
-    virtual const Type* specialize(const GenericMap& map) const { return this; }
     virtual const thorin::Type* convert(thorin::World&) const { assert(false); return nullptr; }
 
     friend class TypeTable;
@@ -144,13 +71,36 @@ private:
 class PrimType : public Type {
 private:
     PrimType(TypeTable& typetable, TokenKind kind)
-        : Type(typetable, kind, 0, false, "<primitive type>")
+        : Type(typetable, kind, 0, "<primitive type>")
     {}
 
 public:
     virtual const Type* refine(const Sema&) const { return this; }
-    virtual const Type* specialize(const GenericMap&) const { return this; }
     virtual const thorin::Type* convert(thorin::World&) const;
+
+    friend class TypeTable;
+};
+
+class Void : public Type {
+private:
+    Void(TypeTable& typetable) 
+        : Type(typetable, Token::TYPE_void, 0, "void")
+    {}
+
+    virtual const Type* refine(const Sema&) const { return this; }
+    virtual const thorin::Type* convert(thorin::World&) const { assert(false); return nullptr; }
+
+    friend class TypeTable;
+};
+
+class NoRet : public Type {
+private:
+    NoRet(TypeTable& typetable) 
+        : Type(typetable, Token::TYPE_noret, 0, "!")
+    {}
+
+    virtual const Type* refine(const Sema&) const { return this; }
+    virtual const thorin::Type* convert(thorin::World&) const { assert(false); return nullptr; }
 
     friend class TypeTable;
 };
@@ -158,7 +108,7 @@ public:
 class ArrayType : public Type {
 protected:
     ArrayType(TypeTable& typetable, TokenKind kind, const Type* elem_type)
-        : Type(typetable, kind, 1, elem_type->is_generic(), "<array type>")
+        : Type(typetable, kind, 1, "<array type>")
     {
         set(0, elem_type);
     }
@@ -174,7 +124,6 @@ public:
     {}
 
     virtual const Type* refine(const Sema&) const;
-    virtual const Type* specialize(const GenericMap&) const;
     virtual const thorin::Type* convert(thorin::World&) const;
 
     friend class TypeTable;
@@ -189,7 +138,6 @@ public:
 
     thorin::u64 dim() const { return dim_; }
     virtual const Type* refine(const Sema&) const;
-    virtual const Type* specialize(const GenericMap&) const;
     virtual const thorin::Type* convert(thorin::World&) const;
     virtual size_t hash() const { return thorin::hash_combine(ArrayType::hash(), dim()); }
     virtual bool equals(const Node* other) const {
@@ -202,77 +150,14 @@ private:
     friend class TypeTable;
 };
 
-class Generic : public Type {
-private:
-    Generic(TypeTable& typetable, size_t index)
-        : Type(typetable, Token::TYPE_generic, 0, true, "<generic>")
-        , index_(index)
-    {}
-
-public:
-    size_t index() const { return index_; }
-    static std::string to_string(size_t index);
-    const GenericRef* genericref(const Fun*) const;
-    virtual const Type* refine(const Sema&) const { assert(false); return this; }
-    virtual const Type* specialize(const GenericMap& map) const {
-        auto type = map[this]; assert(type != nullptr); return type;
-    }
-    virtual const thorin::Type* convert(thorin::World&) const;
-    virtual size_t hash() const { return thorin::hash_combine(Type::hash(), index()); }
-    virtual bool equal(const Node* other) const { 
-        return Type::equal(other) ? index() == other->as<Generic>()->index() : false; 
-    }
-
-private:
-    size_t index_;
-
-    friend class TypeTable;
-};
-
-class GenericRef : public Type {
-private:
-    GenericRef(TypeTable& typetable, const Fun* fun, const Generic* generic)
-        : Type(typetable, Token::TYPE_genericref, 1, true, "<generic>")
-        , fun_(fun)
-    {
-        set(0, generic);
-    }
-
-    virtual const Type* refine(const Sema&) const { assert(false); return this; }
-    virtual const Type* specialize(const GenericMap& map) const { return generic()->specialize(map); }
-    virtual const thorin::Type* convert(thorin::World&) const;
-    virtual size_t hash() const { 
-        return thorin::hash_combine(thorin::hash_combine(Type::hash(), fun()), generic()); 
-    }
-    virtual bool equal(const Node* other) const { 
-        if (Type::equal(other)) {
-            auto genref = other->as<GenericRef>();
-            return this->fun() == genref->fun() && this->generic() == genref->generic();
-        }
-        return false;
-    }
-
-public:
-    const Fun* fun() const { return fun_; }
-    const Generic* generic() const { return elem(0)->as<Generic>(); }
-    static std::string to_string(size_t index);
-
-private:
-    const Fun* fun_;
-
-    friend class TypeTable;
-};
-
 class CompoundType : public Type {
 protected:
     CompoundType(TypeTable& typetable, TokenKind kind, thorin::ArrayRef<const Type*> elems, const std::string& name)
-        : Type(typetable, kind, elems.size(), false, name)
+        : Type(typetable, kind, elems.size(), name)
     {
         size_t i = 0;
-        for (auto elem : elems) {
+        for (auto elem : elems)
             set(i++, elem);
-            is_generic_ |= elem->is_generic();
-        }
     }
 };
 
@@ -284,7 +169,6 @@ private:
 
 public:
     virtual const Type* refine(const Sema&) const;
-    virtual const Type* specialize(const GenericMap& map) const;
     virtual const thorin::Type* convert(thorin::World&) const;
     const Type* return_type() const;
 
@@ -298,7 +182,6 @@ private:
     {}
 
     virtual const Type* refine(const Sema& sema) const;
-    virtual const Type* specialize(const GenericMap& map) const;
     virtual const thorin::Type* convert(thorin::World&) const;
 
     friend class TypeTable;
@@ -307,12 +190,11 @@ private:
 class IdType : public Type {
 private:
     IdType(TypeTable& typetable, thorin::Symbol symbol)
-        : Type(typetable, Token::TYPE_id, 0, false, symbol.str())
+        : Type(typetable, Token::TYPE_id, 0, symbol.str())
     {}
     virtual size_t hash() const { return thorin::hash_value(this); }
     virtual bool equal(const Node* other) const { return this == other; }
     virtual const Type* refine(const Sema&) const;
-    virtual const Type* specialize(const GenericMap& map) const { assert(false); return nullptr; }
     virtual const thorin::Type* convert(thorin::World&) const { assert(false); return nullptr; }
 
     friend class TypeTable;
@@ -339,8 +221,6 @@ public:
 #include "impala/tokenlist.h"
     const FnType* fntype(thorin::ArrayRef<const Type*> elems);
     const TupleType* tupletype(thorin::ArrayRef<const Type*> elems);
-    const Generic* generic(size_t index);
-    const GenericRef* genericref(const Fun*, const Generic*);
     const IdType* idtype(thorin::Symbol);
 
 private:

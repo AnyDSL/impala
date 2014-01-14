@@ -26,7 +26,7 @@ namespace thorin {
 
 namespace impala {
 
-class Block;
+class BlockExpr;
 class CodeGen;
 class Expr;
 class Fn;
@@ -264,10 +264,10 @@ protected:
     friend class CodeGen;
 };
 
-class Block : public Expr {
+class BlockExpr : public Expr {
 public:
-    Block() {}
-    Block(thorin::Location loc) { loc_ = loc; }
+    BlockExpr() {}
+    BlockExpr(thorin::Location loc) { loc_ = loc; }
 
     const Stmts& stmts() const { return stmts_; }
     const Expr* expr() const { return expr_; }
@@ -297,7 +297,7 @@ private:
     virtual thorin::RefPtr emit(CodeGen& cg) const;
 };
 
-class Literal : public Expr {
+class LiteralExpr : public Expr {
 public:
     enum Kind {
 #define IMPALA_LIT(itype, atype) LIT_##itype = Token::LIT_##itype,
@@ -305,7 +305,7 @@ public:
         LIT_bool
     };
 
-    Literal(const thorin::Location& loc, Kind kind, thorin::Box box)
+    LiteralExpr(const thorin::Location& loc, Kind kind, thorin::Box box)
         : kind_(kind)
         , box_(box)
     {
@@ -465,7 +465,7 @@ private:
     friend class Parser;
 };
 
-class Tuple : public OpsExpr {
+class TupleExpr : public OpsExpr {
 public:
     virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
@@ -492,11 +492,11 @@ private:
     friend class Parser;
 };
 
-class IfElse: public Expr {
+class IfElseExpr : public Expr {
 public:
     const Expr* cond() const { return cond_; }
-    const Block* then_block() const { return then_block_; }
-    const Block* else_block() const { return else_block_; }
+    const BlockExpr* then_block() const { return then_block_; }
+    const BlockExpr* else_block() const { return else_block_; }
     virtual std::ostream& print(Printer& p) const;
     virtual bool is_lvalue() const { return false; }
 
@@ -505,16 +505,14 @@ private:
     virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     thorin::AutoPtr<const Expr> cond_;
-    thorin::AutoPtr<const Block> then_block_;
-    thorin::AutoPtr<const Block> else_block_;
+    thorin::AutoPtr<const BlockExpr> then_block_;
+    thorin::AutoPtr<const BlockExpr> else_block_;
 
     friend class Parser;
 };
 
-class For : public Expr {
+class ForExpr : public Expr {
 public:
-    For() {}
-
     const Expr* expr() const { return expr_; }
     const Fn& fn() const { return fn_; }
     virtual std::ostream& print(Printer& p) const;

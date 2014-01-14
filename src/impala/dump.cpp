@@ -34,10 +34,6 @@ std::ostream& Printer::print_type(const Type* type) {
         else
             return dump_list([&](const Type* elem) { print_type(elem); }, fn->elems().slice_to_end(fn->size()-1), "fn(", ") -> ") 
                 << ret_type;
-    } else if (auto generic = type->isa<Generic>()) {
-        return stream() << Generic::to_string(generic->index());
-    } else if (auto genref = type->isa<GenericRef>()) {
-        return stream() << '<' << genref->fun()->symbol() << ", " << genref->generic() << '>';
     } else if (auto idtype = type->isa<IdType>()) {
         return stream() << idtype->name;
     } else if (auto primtype = type->isa<PrimType>()) {
@@ -50,10 +46,7 @@ std::ostream& Printer::print_type(const Type* type) {
     THORIN_UNREACHABLE;
 }
 
-std::ostream& Printer::print_block(const Stmt* s) {
-    if (s->isa<ScopeStmt>())
-        s->print(*this);
-    else {
+std::ostream& BlockExpr::print(Printer& p) {
         stream() << "{";
         up();
         s->print(*this);
@@ -68,7 +61,6 @@ std::ostream& Printer::print_block(const Stmt* s) {
 
 void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; }
 void Type::dump() const { Printer p(std::cout, true); p.print_type(this) << std::endl; }
-std::ostream& GenericDecl::print(Printer& p) const { return p.stream() << symbol(); }
 
 std::ostream& VarDecl::print(Printer& p) const { 
     p.stream() << (is_mut() ? "mut " : "");
@@ -90,30 +82,6 @@ std::ostream& Scope::print(Printer& p) const {
         stmts().back()->print(p);
     }
     return p.down() << "}";
-}
-
-std::ostream& Proto::print(Printer& p) const {
-    p.stream() << (is_extern() ? "extern " : "intrinsic ") << symbol_ << " ";
-    return p.dump_list([&](const Type* type) { p.print_type(type); }, orig_type()->elems().slice_to_end(orig_type()->size()-1), "(", ")") 
-            << " -> " << orig_type()->elems().back() << ';';
-}
-
-std::ostream& Fun::print(Printer& p) const {
-    const VarDecl* ret_param = !params().empty() && params().back()->symbol() == Symbol("return") 
-                             ? params().back() 
-                             : nullptr;
-    ArrayRef<const VarDecl*> params_ref = ret_param 
-                                        ? ArrayRef<const VarDecl*>(&params().front(), params().size() - 1) 
-                                        : params();
-
-    p.dump_list([&](const VarDecl* decl) { decl->print(p); }, params_ref, is_lambda() ? "|" : "(", is_lambda() ? "|" : ")");
-
-    if (ret_param)
-        p.stream() << " -> " << orig_fntype()->return_type() << ' ';
-    else
-        p.stream() << ' ';
-
-    return body()->print(p);
 }
 
 /*
@@ -208,46 +176,8 @@ std::ostream& PostfixExpr::print(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& ConditionalExpr::print(Printer& p) const {
-    Prec l = PrecTable::infix_l[Token::QUESTION_MARK];
-    Prec r = PrecTable::infix_r[Token::QUESTION_MARK];
-    Prec old = p.prec;
-    bool paren = !p.is_fancy() || p.prec > l;
-
-    if (paren) p.stream() << "(";
-
-    p.prec = l;
-    cond()->print(p) << " ? " << t_expr() << " : ";
-    p.prec = r;
-    f_expr()->print(p);
-    p.prec = old;
-
-    if (paren) p.stream() << ")";
-
-    return p.stream();
-}
-
-std::ostream& IndexExpr::print(Printer& p) const {
-    Prec l = PrecTable::postfix_l[Token::L_BRACKET];
-    Prec old = p.prec;
-    bool paren = !p.is_fancy() || p.prec > l;
-
-    if (paren) p.stream() << "(";
-
+std::ostream& MapExpr::print(Printer& p) const {
     lhs()->print(p);
-    p.stream() << "[";
-    index()->print(p);
-    p.stream() << "]";
-    p.prec = old;
-
-    if (paren) p.stream() << ")";
-
-    return p.stream();
-}
-
-std::ostream& Call::print(Printer& p) const {
-    assert(ops_.size() >= 1);
-    ops_.front()->print(p);
     return p.dump_list([&](const Expr* expr) { expr->print(p); }, args(), "(", ")");
 }
 
@@ -338,8 +268,8 @@ std::ostream& ProtoItem::print(Printer& p) const { return proto()->print(p); }
 
 std::ostream& FunItem::print(Printer& p) const {
     p.stream() << "fn " << fun()->symbol(); 
-    if (!fun()->generics().empty())
-        p.dump_list([&] (const GenericDecl* generic_decl) { generic_decl->print(p); }, fun()->generics(), "<", ">");
+    //if (!fun()->generics().empty())
+        //p.dump_list([&] (const GenericDecl* generic_decl) { generic_decl->print(p); }, fun()->generics(), "<", ">");
 
     return fun()->print(p);
 }

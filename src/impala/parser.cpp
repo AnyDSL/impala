@@ -162,19 +162,19 @@ public:
 
     // expressions
     bool is_infix();
-    const Expr*    parse_expr(Prec prec);
-    const Expr*    parse_expr() { return parse_expr(BOTTOM, false); }
-    const Expr*    parse_expr(Prec prec, bool no_bars) { THORIN_PUSH(no_bars_, no_bars); return parse_expr(prec); }
-    const Expr*    parse_prefix_expr();
-    const Expr*    parse_infix_expr(const Expr* lhs);
-    const Expr*    parse_postfix_expr(const Expr* lhs);
-    const Expr*    parse_primary_expr();
-    const Literal* parse_literal();
-    const FnExpr*  parse_fn_expr();
-    const IfElse*  parse_if_else();
-    const For*     parse_for();
-    const Block*   parse_block();
-    const Block*   try_block(const std::string& context);
+    const Expr*         parse_expr(Prec prec);
+    const Expr*         parse_expr() { return parse_expr(BOTTOM, false); }
+    const Expr*         parse_expr(Prec prec, bool no_bars) { THORIN_PUSH(no_bars_, no_bars); return parse_expr(prec); }
+    const Expr*         parse_prefix_expr();
+    const Expr*         parse_infix_expr(const Expr* lhs);
+    const Expr*         parse_postfix_expr(const Expr* lhs);
+    const Expr*         parse_primary_expr();
+    const LiteralExpr*  parse_literal_expr();
+    const FnExpr*       parse_fn_expr();
+    const IfElseExpr*   parse_if_else_expr();
+    const ForExpr*      parse_for_expr();
+    const BlockExpr*    parse_block_expr();
+    const BlockExpr*    try_block(const std::string& context);
 
     // statements
     const Stmt*     parse_stmt_not_expr();
@@ -590,7 +590,7 @@ const Expr* Parser::parse_primary_expr() {
             Position pos1 = lex().pos1();
             auto expr = parse_expr();
             if (accept(Token::COMMA)) {
-                auto tuple = new Tuple();
+                auto tuple = new TupleExpr();
                 tuple->set_pos1(pos1);
                 tuple->ops_.push_back(expr);
                 parse_comma_list(Token::R_PAREN, "elements of tuple expression", [&]{ tuple->ops_.push_back(parse_expr()); });
@@ -612,24 +612,24 @@ const Expr* Parser::parse_primary_expr() {
         case Token::LIT_##itype:
 #include "impala/tokenlist.h"
         case Token::TRUE:
-        case Token::FALSE:      return parse_literal();
+        case Token::FALSE:      return parse_literal_expr();
         case Token::ID:         return new Id(lex());
         default:                error("expression", ""); return new EmptyExpr(lex().loc());
     }
 }
 
-const Literal* Parser::parse_literal() {
-    Literal::Kind kind;
+const LiteralExpr* Parser::parse_literal_expr() {
+    LiteralExpr::Kind kind;
     Box box;
 
     switch (la()) {
-        case Token::TRUE:  return new Literal(lex().loc(), Literal::LIT_bool, Box(true));
-        case Token::FALSE: return new Literal(lex().loc(), Literal::LIT_bool, Box(false));
+        case Token::TRUE:  return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, Box(true));
+        case Token::FALSE: return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, Box(false));
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype: { \
-            kind = Literal::LIT_##itype; \
+            kind = LiteralExpr::LIT_##itype; \
             Box box = la().box(); \
-            return new Literal(lex().loc(), kind, box); \
+            return new LiteralExpr(lex().loc(), kind, box); \
         }
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
@@ -660,17 +660,17 @@ const FnExpr* Parser::parse_fn_expr() {
     return fn_expr;
 }
 
-const IfElse* Parser::parse_if_else() {
-    auto ifelse = loc(new IfElse());
+const IfElseExpr* Parser::parse_if_else_expr() {
+    auto ifelse = loc(new IfElseExpr());
     eat(Token::IF);
     ifelse->cond_ = parse_expr();
-    ifelse->then_block_ = parse_block();
-    ifelse->else_block_ = accept(Token::ELSE) ? parse_block() : new Block(prev_loc());
+    ifelse->then_block_ = parse_block_expr();
+    ifelse->else_block_ = accept(Token::ELSE) ? parse_block_expr() : new BlockExpr(prev_loc());
     return ifelse;
 }
 
-const For* Parser::parse_for() {
-    auto for_expr = loc(new For());
+const ForExpr* Parser::parse_for_expr() {
+    auto for_expr = loc(new ForExpr());
     auto& fn = for_expr->fn_;
     eat(Token::FOR);
     parse_param_list(fn.params_, Token::IN);
@@ -679,9 +679,9 @@ const For* Parser::parse_for() {
     return for_expr;
 }
 
-const Block* Parser::parse_block() {
+const BlockExpr* Parser::parse_block_expr() {
     eat(Token::L_BRACE);
-    auto block = loc(new Block());
+    auto block = loc(new BlockExpr());
     auto& stmts = block->stmts_;
     while (true) {
         switch (la()) {
@@ -705,12 +705,12 @@ const Block* Parser::parse_block() {
     }
 }
 
-const Block* Parser::try_block(const std::string& context) {
+const BlockExpr* Parser::try_block(const std::string& context) {
     if (la() == Token::L_BRACE)
-        return parse_block();
+        return parse_block_expr();
 
-    error("block", context);
-    auto block = new Block();
+    error("block expression", context);
+    auto block = new BlockExpr();
     block->set_loc(prev_loc());
     return block;
 }

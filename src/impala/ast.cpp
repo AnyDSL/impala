@@ -10,7 +10,7 @@ FnDecl::FnDecl(TypeTable& typetable)
     //: generic_builder_(typetable)
 {}
 
-TokenKind Literal::literal2type() const {
+TokenKind LiteralExpr::literal2type() const {
     switch (kind()) {
 #define IMPALA_LIT(itype, atype) \
         case LIT_##itype: return Token::TYPE_##itype;
@@ -27,7 +27,7 @@ bool Id::is_lvalue() const {
     return false;
 }
 
-uint64_t Literal::get_u64() const { return bcast<uint64_t, Box>(box()); }
+uint64_t LiteralExpr::get_u64() const { return bcast<uint64_t, Box>(box()); }
 
 bool MapExpr::is_lvalue() const {
     assert(false && "TODO");
