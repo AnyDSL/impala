@@ -52,6 +52,23 @@ void Type::dump() const { Printer p(std::cout, true); p.print_type(this) << std:
 
 //------------------------------------------------------------------------------
 
+std::ostream& Param::print(Printer& p) const {
+    return p.stream() << symbol();
+}
+
+std::ostream& Local::print(Printer& p) const {
+    return p.stream() << symbol();
+}
+
+std::ostream& ModDecl::print(Printer& p) const {
+    return p.stream() << symbol();
+}
+
+std::ostream& ModContents::print(Printer& p) const {
+    //for (auto item : items())
+        //p.prin
+}
+
 /*
  * Items
  */

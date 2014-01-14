@@ -1,9 +1,10 @@
 fn main(mut i : int) -> int {
     let mut a: int = 0;
-    if (i == 0)
+    if (i == 0) {
         a = 23;
-    else
+    } else {
         a = 42;
+    }
 
-    return a + a;
+    a + a
 }

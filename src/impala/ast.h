@@ -40,7 +40,6 @@ class Stmt;
 
 typedef thorin::AutoVector<const Expr*> Exprs;
 typedef thorin::AutoVector<const Item*> Items;
-typedef thorin::AutoVector<const Local*> Locals;
 typedef thorin::AutoVector<const Param*> Params;
 typedef thorin::AutoVector<const Stmt*> Stmts;
 //typedef thorin::AutoVector<const GenericDecl*> GenericDecls;
@@ -149,7 +148,7 @@ public:
     thorin::Lambda* lambda() const { return lambda_; }
     const thorin::Param* ret_param() const { return ret_param_; }
     const thorin::Enter* frame() const { return frame_; }
-    void emit(CodeGen& cg) const;
+    //void emit(CodeGen& cg) const;
 
 private:
     Params params_;
@@ -231,9 +230,9 @@ public:
     const Fn& fn() const { return fn_; }
     bool is_extern() const { return extern_; }
     void check_head(Sema&) const;
-    virtual void check(Sema& sema) const;
+    //virtual void check(Sema& sema) const;
     virtual std::ostream& print(Printer& p) const;
-    virtual void emit(CodeGen& cg) const;
+    //virtual void emit(CodeGen& cg) const;
 
 private:
     Fn fn_;
@@ -254,11 +253,11 @@ public:
     virtual bool is_lvalue() const = 0;
 
 private:
-    virtual thorin::RefPtr emit(CodeGen& cg) const = 0;
-    virtual const Type* check(Sema& sema) const = 0;
+    virtual thorin::RefPtr emit(CodeGen& cg) const { /*= 0*/ return 0; }
+    virtual const Type* check(Sema& sema) const { /*= 0*/ return 0; }
 
 protected:
-    virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
+    virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {}
 
     mutable const Type* type_;
 
@@ -278,8 +277,8 @@ public:
     bool empty() const { return stmts_.empty() && expr_ == nullptr; }
     virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
-    virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual const Type* check(Sema& sema) const;
 
 private:
     Stmts stmts_;
@@ -296,8 +295,8 @@ public:
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
 };
 
 class LiteralExpr : public Expr {
@@ -323,8 +322,8 @@ public:
     TokenKind literal2type() const;
 
 private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     Kind kind_;
     thorin::Box box_;
@@ -341,8 +340,8 @@ public:
     const Fn& fn() const { return fn_; }
 
 private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     Fn fn_;
 
@@ -365,8 +364,8 @@ public:
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     thorin::Symbol symbol_;
     mutable const Decl* decl_; ///< Declaration of the variable in use.
@@ -385,9 +384,9 @@ public:
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
-    virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
+    //virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
     Kind kind_;
     thorin::AutoPtr<const Expr> rhs_;
@@ -410,9 +409,9 @@ public:
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
-    virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
+    //virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
     Kind kind_;
     thorin::AutoPtr<const Expr> lhs_;
@@ -438,8 +437,8 @@ public:
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     Kind kind_;
     thorin::AutoPtr<const Expr> lhs_;
@@ -462,8 +461,8 @@ public:
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     friend class Parser;
 };
@@ -474,8 +473,8 @@ public:
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     friend class Parser;
 };
@@ -487,8 +486,8 @@ public:
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     thorin::AutoPtr<const Expr> lhs_;
 
@@ -504,8 +503,8 @@ public:
     virtual bool is_lvalue() const { return false; }
 
 private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     thorin::AutoPtr<const Expr> cond_;
     thorin::AutoPtr<const BlockExpr> then_block_;
@@ -522,8 +521,8 @@ public:
     virtual bool is_lvalue() const { return false; }
 
 private:
-    virtual const Type* check(Sema& sema) const;
-    virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual const Type* check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     thorin::AutoPtr<const Expr> expr_;
     Fn fn_;
@@ -535,8 +534,8 @@ private:
 
 class Stmt : public ASTNode {
 private:
-    virtual void check(Sema& sema) const = 0;
-    virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const = 0;
+    //virtual void check(Sema& sema) const { [>= 0<]; }
+    //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const { [>= 0<]; }
 
     friend class Sema;
     friend class CodeGen;
@@ -548,8 +547,8 @@ public:
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    virtual void check(Sema& sema) const;
-    virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
+    //virtual void check(Sema& sema) const;
+    //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
     thorin::AutoPtr<const Expr> expr_;
 
@@ -562,8 +561,8 @@ public:
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    virtual void check(Sema& sema) const;
-    virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
+    //virtual void check(Sema& sema) const;
+    //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
     thorin::AutoPtr<const Item> item_;
 
@@ -588,13 +587,13 @@ private:
 class LetStmt : public Stmt {
 public:
     virtual std::ostream& print(Printer& p) const;
-    const Locals& locals() const { return locals_; }
+    const Local* local() const { return local_; }
 
 private:
-    virtual void check(Sema& sema) const;
-    virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
+    //virtual void check(Sema& sema) const;
+    //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
-    Locals locals_;
+    thorin::AutoPtr<const Local> local_;
 
     friend class Parser;
 };

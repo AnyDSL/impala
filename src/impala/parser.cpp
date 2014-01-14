@@ -174,7 +174,7 @@ public:
     const IfElseExpr*   parse_if_else_expr();
     const ForExpr*      parse_for_expr();
     const BlockExpr*    parse_block_expr();
-    const BlockExpr*    try_block(const std::string& context);
+    const BlockExpr*    try_block_expr(const std::string& context);
 
     // statements
     const Stmt*     parse_stmt_not_expr();
@@ -211,8 +211,11 @@ Loc<T>::~Loc() { node_->set_pos2(parser_.prev_loc().pos2()); }
 
 //------------------------------------------------------------------------------
 
-const ModContents* parse(TypeTable& typetable, std::istream& i, const std::string& filename) {
-    return Parser(typetable, i, filename).parse_mod_contents();
+const ModContents* parse(bool& result, TypeTable& typetable, std::istream& i, const std::string& filename) {
+    Parser parser(typetable, i, filename);
+    auto mod = parser.parse_mod_contents();
+    result = parser.result();
+    return mod;
 }
 
 //------------------------------------------------------------------------------
@@ -303,11 +306,9 @@ const ModContents* Parser::parse_mod_contents() {
                 lex(); 
                 continue;
             default:
-                break;
+                return mod_contents;
         }
     }
-
-    return mod_contents;
 }
 
 /*
@@ -392,7 +393,7 @@ FnDecl* Parser::parse_fn_decl() {
     }
 
     THORIN_PUSH(cur_fn_, &fn);
-    fn.body_ = try_block("body of function");
+    fn.body_ = try_block_expr("body of function");
 
     return fn_decl;
 }
@@ -614,6 +615,8 @@ const Expr* Parser::parse_primary_expr() {
         case Token::TRUE:
         case Token::FALSE:      return parse_literal_expr();
         case Token::ID:         return new IdExpr(lex());
+        case Token::IF:         return parse_if_else_expr();
+        case Token::FOR:        return parse_for_expr();
         default:                error("expression", ""); return new EmptyExpr(lex().loc());
     }
 }
@@ -664,8 +667,8 @@ const IfElseExpr* Parser::parse_if_else_expr() {
     auto ifelse = loc(new IfElseExpr());
     eat(Token::IF);
     ifelse->cond_ = parse_expr();
-    ifelse->then_block_ = parse_block_expr();
-    ifelse->else_block_ = accept(Token::ELSE) ? parse_block_expr() : new BlockExpr(prev_loc());
+    ifelse->then_block_ = try_block_expr("then branch of an if expression");
+    ifelse->else_block_ = accept(Token::ELSE) ? try_block_expr("else branch of an if expression") : new BlockExpr(prev_loc());
     return ifelse;
 }
 
@@ -674,8 +677,8 @@ const ForExpr* Parser::parse_for_expr() {
     auto& fn = for_expr->fn_;
     eat(Token::FOR);
     parse_param_list(fn.params_, Token::IN);
-    for_expr->expr_ = parse_expr();
-    fn.body_ = try_block("body of function");
+    for_expr->expr_ = try_block_expr("body of an for expression");
+    fn.body_ = try_block_expr("body of function");
     return for_expr;
 }
 
@@ -706,7 +709,7 @@ const BlockExpr* Parser::parse_block_expr() {
     }
 }
 
-const BlockExpr* Parser::try_block(const std::string& context) {
+const BlockExpr* Parser::try_block_expr(const std::string& context) {
     if (la() == Token::L_BRACE)
         return parse_block_expr();
 
@@ -738,16 +741,22 @@ const ExprStmt* Parser::parse_expr_stmt() {
 const LetStmt* Parser::parse_let_stmt() {
     auto let_stmt = loc(new LetStmt());
     eat(Token::LET);
-    bool is_mut = accept(Token::MUT);
-    parse_comma_list(Token::SEMICOLON, "let bindings", [&] { 
-        auto local = loc(new Local(cur_var_handle++));
-        local->is_mut_ = is_mut;
-        if (accept(Token::ASGN))
-            local->init_ = parse_expr();
-        let_stmt->locals_.push_back(local);
-    });
+    auto local = loc(new Local(cur_var_handle++));
+    local->is_mut_ = accept(Token::MUT);
+    local->symbol_ = try_id("local variable in let binding");
+    if (accept(Token::COLON))
+        local->orig_type_ = parse_type();
+    if (accept(Token::ASGN))
+        local->init_ = parse_expr();
+    expect(Token::SEMICOLON, "the end of an let statement");
 
     return let_stmt;
+}
+
+const ItemStmt* Parser::parse_item_stmt() {
+    auto item_stmt = loc(new ItemStmt());
+    item_stmt->item_ = parse_item();
+    return item_stmt;
 }
 
 } // namespace impala

@@ -117,12 +117,13 @@ int main(int argc, char** argv) {
         //thorin::AutoPtr<impala::Scope> prg = new impala::Scope();
         //prg->set_loc(thorin::Location(infiles[0], 1, 1, 1, 1));
 
-        bool result = true;
+        bool result;
+        thorin::AutoPtr<const impala::ModContents> prg;
         for (auto infile : infiles) {
             std::string filename = infile.c_str();
             ifstream file(filename);
-            //result &= impala::parse(init.typetable, file, filename, prg);
-            //TODO
+            prg = impala::parse(result, init.typetable, file, filename);
+            break;
         }
 
         //if (emit_ast)
