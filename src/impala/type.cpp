@@ -110,15 +110,9 @@ const Type* FnType::return_type() const {
             nelems[i] = elem(i)->refine(sema); \
         return typetable_.constr(nelems); \
     } \
-    const Type* T::specialize(const GenericMap& map) const { \
-        thorin::Array<const Type*> nelems(size()); \
-        for (size_t i = 0, e = size(); i != e; ++i) \
-            nelems[i] = elem(i)->specialize(map); \
-        return typetable_.constr(nelems); \
-    }
 
-//THORIN_REFINE_SPECIALIZE(TupleType, tupletype)
-//THORIN_REFINE_SPECIALIZE(FnType, fntype)
+THORIN_REFINE_SPECIALIZE(TupleType, tupletype)
+THORIN_REFINE_SPECIALIZE(FnType, fntype)
 
 const Type* DefiniteArray::refine(const Sema& sema) const {
     return typetable_.definite_array(elem_type()->refine(sema), dim());
@@ -164,5 +158,8 @@ const thorin::Type* TupleType::convert(World& world) const {
 }
 
 //------------------------------------------------------------------------------
+
+// TODO
+const Type* IdType::refine(const Sema& sema) const { return nullptr; }
 
 } // namespace impala
