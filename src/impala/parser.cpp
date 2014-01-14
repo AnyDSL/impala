@@ -688,8 +688,9 @@ const BlockExpr* Parser::parse_block_expr() {
             case Token::SEMICOLON:  lex(); continue; // ignore semicolon
             case STMT_NOT_EXPR:     stmts.push_back(parse_stmt_not_expr()); continue;
             case EXPR: {
+                bool stmt_like = la() == Token::IF || la() == Token::FOR;
                 auto expr = parse_expr();
-                if (accept(Token::SEMICOLON)) {
+                if (accept(Token::SEMICOLON) || (stmt_like && la() != Token::R_BRACE)) {
                     auto expr_stmt = new ExprStmt();
                     expr_stmt->set_loc(expr->pos1(), prev_loc().pos2());
                     expr_stmt->expr_ = expr;
