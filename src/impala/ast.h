@@ -20,7 +20,7 @@ namespace thorin {
     class Enter;
     class JumpTarget;
     class Lambda;
-    class Param;
+    class ParamDecl;
     class Ref;
 }
 
@@ -31,8 +31,7 @@ class CodeGen;
 class Expr;
 class Fn;
 class Item;
-class Local;
-class Param;
+class ParamDecl;
 class Printer;
 class Sema;
 class Stmt;
@@ -40,7 +39,7 @@ class Stmt;
 
 typedef thorin::AutoVector<const Expr*> Exprs;
 typedef thorin::AutoVector<const Item*> Items;
-typedef thorin::AutoVector<const Param*> Params;
+typedef thorin::AutoVector<const ParamDecl*> Params;
 typedef thorin::AutoVector<const Stmt*> Stmts;
 //typedef thorin::AutoVector<const GenericDecl*> GenericDecls;
 
@@ -116,6 +115,7 @@ public:
     {}
 
     size_t handle() const { return handle_; }
+    virtual std::ostream& print(Printer& p) const;
 
 protected:
     size_t handle_;
@@ -126,13 +126,13 @@ protected:
 
 //------------------------------------------------------------------------------
 
-class Param : public LocalDecl {
-    Param(size_t handle)
+class ParamDecl : public LocalDecl {
+public:
+    ParamDecl(size_t handle)
         : LocalDecl(handle)
     {}
 
-public:
-    virtual std::ostream& print(Printer& p) const;
+    const Fn* fn() const { return fn_; }
 
 private:
     mutable const Fn* fn_;
@@ -142,7 +142,7 @@ private:
 
 class Fn {
 public:
-    const Param* param(size_t i) const { return params_[i]; }
+    const ParamDecl* param(size_t i) const { return params_[i]; }
     const Params& params() const { return params_; }
     const Expr* body() const { return body_; }
     thorin::Lambda* lambda() const { return lambda_; }
@@ -267,27 +267,6 @@ protected:
     friend class CodeGen;
 };
 
-class BlockExpr : public Expr {
-public:
-    BlockExpr() {}
-    BlockExpr(thorin::Location loc) { loc_ = loc; }
-
-    const Stmts& stmts() const { return stmts_; }
-    const Expr* expr() const { return expr_; }
-    const Stmt* stmt(size_t i) const { return stmts_[i]; }
-    bool empty() const { return stmts_.empty() && expr_ == nullptr; }
-    virtual bool is_lvalue() const { return false; }
-    virtual std::ostream& print(Printer& p) const;
-    //virtual thorin::RefPtr emit(CodeGen& cg) const;
-    //virtual const Type* check(Sema& sema) const;
-
-private:
-    Stmts stmts_;
-    thorin::AutoPtr<const Expr> expr_;
-
-    friend class Parser;
-};
-
 class EmptyExpr : public Expr {
 public:
     EmptyExpr(const thorin::Location& loc) { loc_ = loc; }
@@ -298,6 +277,27 @@ public:
 private:
     //virtual const Type* check(Sema& sema) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
+};
+
+class BlockExpr : public Expr {
+public:
+    BlockExpr() {}
+    BlockExpr(thorin::Location loc) { loc_ = loc; }
+
+    const Stmts& stmts() const { return stmts_; }
+    const Expr* expr() const { return expr_; }
+    const Stmt* stmt(size_t i) const { return stmts_[i]; }
+    bool empty() const { return stmts_.empty() && expr_->isa<EmptyExpr>(); }
+    virtual bool is_lvalue() const { return false; }
+    virtual std::ostream& print(Printer& p) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
+    //virtual const Type* check(Sema& sema) const;
+
+private:
+    Stmts stmts_;
+    thorin::AutoPtr<const Expr> expr_;
+
+    friend class Parser;
 };
 
 class LiteralExpr : public Expr {
@@ -570,31 +570,18 @@ private:
     friend class Parser;
 };
 
-class Local : public LocalDecl {
-public:
-    Local(size_t handle)
-        : LocalDecl(handle)
-    {}
-
-    const Expr* init() const { return init_; }
-    virtual std::ostream& print(Printer& p) const;
-
-private:
-    thorin::AutoPtr<const Expr> init_;
-
-    friend class Parser;
-};
-
 class LetStmt : public Stmt {
 public:
     virtual std::ostream& print(Printer& p) const;
-    const Local* local() const { return local_; }
+    const LocalDecl* local() const { return local_; }
+    const Expr* init() const { return init_; }
 
 private:
     //virtual void check(Sema& sema) const;
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
-    thorin::AutoPtr<const Local> local_;
+    thorin::AutoPtr<const LocalDecl> local_;
+    thorin::AutoPtr<const Expr> init_;
 
     friend class Parser;
 };

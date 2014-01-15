@@ -136,7 +136,7 @@ public:
     }
 
     //void parse_generics_list(GenericDecls&);
-    const Param* parse_param();
+    const ParamDecl* parse_param();
     void parse_param_list(Params& params, TokenKind delimiter = Token::R_PAREN);
     const ModContents* parse_mod_contents();
 
@@ -278,8 +278,8 @@ Symbol Parser::try_id(const std::string& what) {
         //});
 //}
 
-const Param* Parser::parse_param() {
-    auto param = loc(new Param(cur_var_handle++));
+const ParamDecl* Parser::parse_param() {
+    auto param = loc(new ParamDecl(cur_var_handle++));
     param->is_mut_ = accept(Token::MUT);
     param->symbol_ = try_id("parameter name");
     if (accept(Token::COLON))
@@ -383,7 +383,7 @@ FnDecl* Parser::parse_fn_decl() {
         Position pos1 = prev_loc().pos1();
         auto type = parse_return_type();
         Position pos2 = prev_loc().pos2();
-        auto param = new Param(cur_var_handle++);
+        auto param = new ParamDecl(cur_var_handle++);
         param->is_mut_ = false;
         param->symbol_ = "return";
         param->orig_type_ = type;
@@ -562,8 +562,9 @@ const Expr* Parser::parse_infix_expr(const Expr* lhs) {
     auto expr = new InfixExpr();
     auto kind = lex().kind();
     expr->kind_ = (InfixExpr::Kind) kind;
-    auto rhs = parse_expr(PrecTable::infix_r[kind]);
-    expr->set_loc(lhs->pos1(), rhs->pos2());
+    expr->lhs_ = lhs;
+    expr->rhs_ = parse_expr(PrecTable::infix_r[kind]);
+    expr->set_loc(lhs->pos1(), expr->rhs()->pos2());
     return expr;
 }
 
@@ -696,6 +697,7 @@ const BlockExpr* Parser::try_block_expr(const std::string& context) {
                         auto expr_stmt = new ExprStmt();
                         expr_stmt->set_loc(expr->pos1(), prev_loc().pos2());
                         expr_stmt->expr_ = expr;
+                        stmts.push_back(expr_stmt);
                         continue;
                     } else
                         block->expr_ = expr;
@@ -738,15 +740,16 @@ const ExprStmt* Parser::parse_expr_stmt() {
 const LetStmt* Parser::parse_let_stmt() {
     auto let_stmt = loc(new LetStmt());
     eat(Token::LET);
-    auto local = loc(new Local(cur_var_handle++));
+    auto local = loc(new LocalDecl(cur_var_handle++));
     local->is_mut_ = accept(Token::MUT);
     local->symbol_ = try_id("local variable in let binding");
     if (accept(Token::COLON))
         local->orig_type_ = parse_type();
     if (accept(Token::ASGN))
-        local->init_ = parse_expr();
+        let_stmt->init_ = parse_expr();
     expect(Token::SEMICOLON, "the end of an let statement");
 
+    let_stmt->local_ = local;
     return let_stmt;
 }
 

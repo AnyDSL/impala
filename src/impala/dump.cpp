@@ -52,18 +52,17 @@ void Type::dump() const { Printer p(std::cout, true); p.print_type(this) << std:
 
 //------------------------------------------------------------------------------
 
-std::ostream& Param::print(Printer& p) const {
+std::ostream& LocalDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" ) << symbol();
-    if (auto type = orig_type())
-        p.stream() << ": " << type;
+    if (auto type = orig_type()) {
+        p.stream() << ": "; 
+        p.print_type(type);
+    }
+    return p.stream();
 }
 
 std::ostream& Fn::print_params(Printer& p) const {
-    p.dump_list([&] (const Param* param) { param->print(p); }, params());
-}
-
-std::ostream& Local::print(Printer& p) const {
-    return p.stream() << symbol();
+    return p.dump_list([&] (const ParamDecl* param) { param->print(p); }, params());
 }
 
 /*
@@ -77,6 +76,7 @@ std::ostream& ModDecl::print(Printer& p) const {
 std::ostream& ModContents::print(Printer& p) const {
     for (auto item : items())
         item->print(p);
+    return p.stream();
 }
 
 std::ostream& FnDecl::print(Printer& p) const {
@@ -86,10 +86,8 @@ std::ostream& FnDecl::print(Printer& p) const {
 
     p.stream() << '(';
     fn().print_params(p);
-    p.stream() << ')' << fn().body();
-
-    //return fun()->print(p);
-    return p.stream();
+    p.stream() << ") ";
+    return fn().body()->print(p);
 }
 
 std::ostream& StructDecl::print(Printer& p) const {
@@ -102,16 +100,20 @@ std::ostream& StructDecl::print(Printer& p) const {
  */
 
 std::ostream& BlockExpr::print(Printer& p) const {
-    p.stream() << "{";
+    p.stream() << '{';
     p.up();
-    if (!empty()) {
-        for (auto i = stmts().cbegin(), e = stmts().cend() - 1; i != e; ++i) {
-            (*i)->print(p);
-            p.newline();
-        }
+    p.dump_list([&] (const Stmt* stmt) { stmt->print(p); }, stmts(), "", "", "\n");
+    if (!expr()->isa<EmptyExpr>())
+        expr()->print(p);
 
-        stmts().back()->print(p);
-    }
+    //if (!empty()) {
+        //for (auto i = stmts().cbegin(), e = stmts().cend() - 1; i != e; ++i) {
+            //(*i)->print(p);
+            //p.newline();
+        //}
+
+        //stmts().back()->print(p);
+    //}
     return p.down() << "}";
 }
 
@@ -208,23 +210,27 @@ std::ostream& MapExpr::print(Printer& p) const {
     return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "(", ")");
 }
 
-std::ostream& FnExpr::print(Printer& p) const { /*...*/ }
+std::ostream& FnExpr::print(Printer& p) const { 
+    p.stream() << '|';
+    fn().print_params(p);
+    p.stream() << "| ";
+    return fn().body()->print(p);
+}
 
 std::ostream& IfExpr::print(Printer& p) const {
-    p.stream() << "if " << cond() << " ";
+    p.stream() << "if ";
+    cond()->print(p) << " ";
     then_block()->print(p);
-
     if (!else_block()->empty()) {
         p.stream() << " else ";
         else_block()->print(p);
     }
-
     return p.stream();
 }
 
 std::ostream& ForExpr::print(Printer& p) const {
     p.stream() << "for ";
-    p.dump_list([&](const Param* param) { param->print(p); }, fn().params());
+    p.dump_list([&](const ParamDecl* param) { param->print(p); }, fn().params());
     expr()->print(p) << ' ';
     return fn().body()->print(p);
 }
@@ -237,18 +243,15 @@ std::ostream& ItemStmt::print(Printer& p) const { return item()->print(p); }
 
 std::ostream& LetStmt::print(Printer& p) const {
     p.stream() << "let ";
-    //var_decl()->print(p);
-    //if (init()) {
-        //p.stream() << " = ";
-        //init()->print(p) << ";";
-    //}
-    return p.stream();
+    local()->print(p);
+    if (init()) {
+        p.stream() << " = ";
+        init()->print(p);
+    }
+    return p.stream() << ';';
 }
 
-std::ostream& ExprStmt::print(Printer& p) const {
-    expr()->print(p);
-    return p.stream() << ";";
-}
+std::ostream& ExprStmt::print(Printer& p) const { return expr()->print(p); }
 
 //------------------------------------------------------------------------------
 
