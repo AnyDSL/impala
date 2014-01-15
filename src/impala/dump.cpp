@@ -53,7 +53,9 @@ void Type::dump() const { Printer p(std::cout, true); p.print_type(this) << std:
 //------------------------------------------------------------------------------
 
 std::ostream& Param::print(Printer& p) const {
-    return p.stream() << symbol();
+    p.stream() << (is_mut() ? "mut " : "" ) << symbol();
+    if (auto type = orig_type())
+        p.stream() << ": " << type;
 }
 
 std::ostream& Fn::print_params(Printer& p) const {
@@ -84,7 +86,7 @@ std::ostream& FnDecl::print(Printer& p) const {
 
     p.stream() << '(';
     fn().print_params(p);
-    p.stream() << ')';
+    p.stream() << ')' << fn().body();
 
     //return fun()->print(p);
     return p.stream();
@@ -208,7 +210,7 @@ std::ostream& MapExpr::print(Printer& p) const {
 
 std::ostream& FnExpr::print(Printer& p) const { /*...*/ }
 
-std::ostream& IfElseExpr::print(Printer& p) const {
+std::ostream& IfExpr::print(Printer& p) const {
     p.stream() << "if " << cond() << " ";
     then_block()->print(p);
 

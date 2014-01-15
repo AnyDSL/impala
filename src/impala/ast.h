@@ -495,7 +495,7 @@ private:
     friend class Parser;
 };
 
-class IfElseExpr : public Expr {
+class IfExpr : public Expr {
 public:
     const Expr* cond() const { return cond_; }
     const BlockExpr* then_block() const { return then_block_; }

@@ -162,19 +162,18 @@ public:
 
     // expressions
     bool is_infix();
-    const Expr*         parse_expr(Prec prec);
-    const Expr*         parse_expr() { return parse_expr(BOTTOM, false); }
-    const Expr*         parse_expr(Prec prec, bool no_bars) { THORIN_PUSH(no_bars_, no_bars); return parse_expr(prec); }
-    const Expr*         parse_prefix_expr();
-    const Expr*         parse_infix_expr(const Expr* lhs);
-    const Expr*         parse_postfix_expr(const Expr* lhs);
-    const Expr*         parse_primary_expr();
-    const LiteralExpr*  parse_literal_expr();
-    const FnExpr*       parse_fn_expr();
-    const IfElseExpr*   parse_if_else_expr();
-    const ForExpr*      parse_for_expr();
-    const BlockExpr*    parse_block_expr();
-    const BlockExpr*    try_block_expr(const std::string& context);
+    const Expr*        parse_expr(Prec prec);
+    const Expr*        parse_expr() { return parse_expr(BOTTOM, false); }
+    const Expr*        parse_expr(Prec prec, bool no_bars) { THORIN_PUSH(no_bars_, no_bars); return parse_expr(prec); }
+    const Expr*        parse_prefix_expr();
+    const Expr*        parse_infix_expr(const Expr* lhs);
+    const Expr*        parse_postfix_expr(const Expr* lhs);
+    const Expr*        parse_primary_expr();
+    const LiteralExpr* parse_literal_expr();
+    const FnExpr*      parse_fn_expr();
+    const IfExpr*      parse_if_else_expr();
+    const ForExpr*     parse_for_expr();
+    const BlockExpr*   try_block_expr(const std::string& context);
 
     // statements
     const Stmt*     parse_stmt_not_expr();
@@ -663,8 +662,8 @@ const FnExpr* Parser::parse_fn_expr() {
     return fn_expr;
 }
 
-const IfElseExpr* Parser::parse_if_else_expr() {
-    auto ifelse = loc(new IfElseExpr());
+const IfExpr* Parser::parse_if_else_expr() {
+    auto ifelse = loc(new IfExpr());
     eat(Token::IF);
     ifelse->cond_ = parse_expr();
     ifelse->then_block_ = try_block_expr("then branch of an if expression");
@@ -682,41 +681,39 @@ const ForExpr* Parser::parse_for_expr() {
     return for_expr;
 }
 
-const BlockExpr* Parser::parse_block_expr() {
-    eat(Token::L_BRACE);
-    auto block = loc(new BlockExpr());
-    auto& stmts = block->stmts_;
-    while (true) {
-        switch (la()) {
-            case Token::SEMICOLON:  lex(); continue; // ignore semicolon
-            case STMT_NOT_EXPR:     stmts.push_back(parse_stmt_not_expr()); continue;
-            case EXPR: {
-                bool stmt_like = la() == Token::IF || la() == Token::FOR;
-                auto expr = parse_expr();
-                if (accept(Token::SEMICOLON) || (stmt_like && la() != Token::R_BRACE)) {
-                    auto expr_stmt = new ExprStmt();
-                    expr_stmt->set_loc(expr->pos1(), prev_loc().pos2());
-                    expr_stmt->expr_ = expr;
-                    continue;
-                } else
-                    block->expr_ = expr;
-                // FALLTHROUGH
-            } 
-            default:
-                expect(Token::R_BRACE, "block");
-                return block;
-        }
-    }
-}
-
 const BlockExpr* Parser::try_block_expr(const std::string& context) {
-    if (la() == Token::L_BRACE)
-        return parse_block_expr();
-
-    error("block expression", context);
-    auto block = new BlockExpr();
-    block->set_loc(prev_loc());
-    return block;
+    if (accept(Token::L_BRACE)) {
+        auto block = loc(new BlockExpr());
+        auto& stmts = block->stmts_;
+        while (true) {
+            switch (la()) {
+                case Token::SEMICOLON:  lex(); continue; // ignore semicolon
+                case STMT_NOT_EXPR:     stmts.push_back(parse_stmt_not_expr()); continue;
+                case EXPR: {
+                    bool stmt_like = la() == Token::IF || la() == Token::FOR;
+                    auto expr = parse_expr();
+                    if (accept(Token::SEMICOLON) || (stmt_like && la() != Token::R_BRACE)) {
+                        auto expr_stmt = new ExprStmt();
+                        expr_stmt->set_loc(expr->pos1(), prev_loc().pos2());
+                        expr_stmt->expr_ = expr;
+                        continue;
+                    } else
+                        block->expr_ = expr;
+                    // FALLTHROUGH
+                } 
+                default:
+                    expect(Token::R_BRACE, "block");
+                    if (block->expr_ == nullptr)
+                        block->expr_ = new EmptyExpr(prev_loc());
+                    return block;
+            }
+        }
+    } else {
+        error("block expression", context);
+        auto block = new BlockExpr();
+        block->set_loc(prev_loc());
+        return block;
+    }
 }
 
 /*
