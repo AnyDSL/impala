@@ -103,18 +103,13 @@ std::ostream& BlockExpr::print(Printer& p) const {
     p.stream() << '{';
     p.up();
     p.dump_list([&] (const Stmt* stmt) { stmt->print(p); }, stmts(), "", "", "\n");
-    if (!expr()->isa<EmptyExpr>())
+    if (!expr()->isa<EmptyExpr>()) {
+        p.newline();
         expr()->print(p);
+    }
 
-    //if (!empty()) {
-        //for (auto i = stmts().cbegin(), e = stmts().cend() - 1; i != e; ++i) {
-            //(*i)->print(p);
-            //p.newline();
-        //}
-
-        //stmts().back()->print(p);
-    //}
-    return p.down() << "}";
+    p.down() << "}";
+    return p.newline();
 }
 
 std::ostream& LiteralExpr::print(Printer& p) const {
@@ -251,7 +246,13 @@ std::ostream& LetStmt::print(Printer& p) const {
     return p.stream() << ';';
 }
 
-std::ostream& ExprStmt::print(Printer& p) const { return expr()->print(p); }
+std::ostream& ExprStmt::print(Printer& p) const { 
+    bool no_semi = expr()->isa<IfExpr>() || expr()->isa<ForExpr>();
+    expr()->print(p); 
+    if (!no_semi)
+        p.stream() << ';';
+    return p.stream();
+}
 
 //------------------------------------------------------------------------------
 
