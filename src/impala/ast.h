@@ -500,18 +500,19 @@ private:
 class IfExpr : public Expr {
 public:
     const Expr* cond() const { return cond_; }
-    const BlockExpr* then_block() const { return then_block_; }
-    const BlockExpr* else_block() const { return else_block_; }
+    const Expr* then_expr() const { return then_expr_; }
+    const Expr* else_expr() const { return else_expr_; }
     virtual std::ostream& print(Printer& p) const;
     virtual bool is_lvalue() const { return false; }
+    bool has_else() const;
 
 private:
     //virtual const Type* check(Sema& sema) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     thorin::AutoPtr<const Expr> cond_;
-    thorin::AutoPtr<const BlockExpr> then_block_;
-    thorin::AutoPtr<const BlockExpr> else_block_;
+    thorin::AutoPtr<const Expr> then_expr_;
+    thorin::AutoPtr<const Expr> else_expr_;
 
     friend class Parser;
 };

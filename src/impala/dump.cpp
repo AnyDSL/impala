@@ -98,7 +98,9 @@ std::ostream& FnDecl::print(Printer& p) const {
         p.print_type(ret) << ' ';
     }
 
-    return fn().body()->print(p);
+    fn().body()->print(p);
+    p.newline();
+    return p.newline();
 }
 
 std::ostream& StructDecl::print(Printer& p) const {
@@ -120,7 +122,7 @@ std::ostream& BlockExpr::print(Printer& p) const {
     }
 
     p.down() << "}";
-    return p.newline();
+    return p.stream();
 }
 
 std::ostream& LiteralExpr::print(Printer& p) const {
@@ -232,10 +234,10 @@ std::ostream& FnExpr::print(Printer& p) const {
 std::ostream& IfExpr::print(Printer& p) const {
     p.stream() << "if ";
     cond()->print(p) << " ";
-    then_block()->print(p);
-    if (!else_block()->empty()) {
+    then_expr()->print(p);
+    if (has_else()) {
         p.stream() << " else ";
-        else_block()->print(p);
+        else_expr()->print(p);
     }
     return p.stream();
 }

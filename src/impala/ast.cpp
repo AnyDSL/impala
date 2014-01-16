@@ -34,4 +34,10 @@ bool MapExpr::is_lvalue() const {
     return true;
 }
 
+bool IfExpr::has_else() const {
+    if (auto block = else_expr_->isa<BlockExpr>())
+        return block->empty();
+    return true;
+}
+
 } // namespace impala

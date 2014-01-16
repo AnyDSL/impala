@@ -172,7 +172,7 @@ public:
     const Expr*        parse_primary_expr();
     const LiteralExpr* parse_literal_expr();
     const FnExpr*      parse_fn_expr();
-    const IfExpr*      parse_if_else_expr();
+    const IfExpr*      parse_if_expr();
     const ForExpr*     parse_for_expr();
     const BlockExpr*   parse_block_expr();
     const BlockExpr*   try_block_expr(const std::string& context);
@@ -590,7 +590,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
 }
 
 const Expr* Parser::parse_primary_expr() {
-    switch (la() ) {
+    switch (la()) {
         case Token::L_PAREN: {
             Position pos1 = lex().pos1();
             auto expr = parse_expr();
@@ -619,7 +619,7 @@ const Expr* Parser::parse_primary_expr() {
         case Token::TRUE:
         case Token::FALSE:      return parse_literal_expr();
         case Token::ID:         return new IdExpr(lex());
-        case Token::IF:         return parse_if_else_expr();
+        case Token::IF:         return parse_if_expr();
         case Token::FOR:        return parse_for_expr();
         case Token::L_BRACE:    return parse_block_expr();
         default:                error("expression", ""); return new EmptyExpr(lex().loc());
@@ -661,13 +661,22 @@ const FnExpr* Parser::parse_fn_expr() {
     return fn_expr;
 }
 
-const IfExpr* Parser::parse_if_else_expr() {
-    auto ifelse = loc(new IfExpr());
+const IfExpr* Parser::parse_if_expr() {
+    auto if_expr = loc(new IfExpr());
     eat(Token::IF);
-    ifelse->cond_ = parse_expr();
-    ifelse->then_block_ = try_block_expr("then branch of an if expression");
-    ifelse->else_block_ = accept(Token::ELSE) ? try_block_expr("else branch of an if expression") : new BlockExpr(prev_loc());
-    return ifelse;
+    if_expr->cond_ = parse_expr();
+    if_expr->then_expr_ = try_block_expr("then branch of an if expression");
+    if (accept(Token::ELSE)) {
+        switch (la()) {
+            case Token::IF:      if_expr->else_expr_ = parse_if_expr(); break;
+            case Token::L_BRACE: if_expr->else_expr_ = parse_block_expr(); break;
+            default:
+                error("block or if expression", "else branch of an if expression");
+                if_expr->else_expr_ = new BlockExpr(prev_loc());
+        }
+    }
+        
+    return if_expr;
 }
 
 const ForExpr* Parser::parse_for_expr() {
