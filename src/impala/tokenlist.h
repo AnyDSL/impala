@@ -145,7 +145,6 @@ IMPALA_KEY_MISC(TYPE,       "type")
 IMPALA_KEY_MISC(TYPE_int,   "int")
 IMPALA_KEY_MISC(TYPE_noret, "noret")
 IMPALA_KEY_MISC(TYPE_uint,  "uint")
-IMPALA_KEY_MISC(TYPE_void,  "void")
 
 #undef IMPALA_KEY_MISC
 

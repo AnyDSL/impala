@@ -20,7 +20,6 @@ class FnType;
 class Fun;
 class IdType;
 class NoRet;
-class Void;
 class PrimType;
 class Sema;
 class TupleType;
@@ -46,11 +45,10 @@ public:
     bool is_bool() const;
     bool is_int() const;
     bool is_float() const;
-    bool is_void() const { return isa<Void>() != nullptr; }
     bool is_noret() const { return isa<NoRet>() != nullptr; }
     bool check_with(const Type*) const;
     void dump() const;
-    void set(size_t i, const Type* t) { assert(!t->is_void() && !t->is_noret()); Node::set(i, t); }
+    void set(size_t i, const Type* t) { assert(!t->is_noret()); Node::set(i, t); }
 
 protected:
     TypeTable& typetable_;
@@ -77,18 +75,6 @@ private:
 public:
     virtual const Type* refine(const Sema&) const { return this; }
     virtual const thorin::Type* convert(thorin::World&) const;
-
-    friend class TypeTable;
-};
-
-class Void : public Type {
-private:
-    Void(TypeTable& typetable) 
-        : Type(typetable, Token::TYPE_void, 0, "void")
-    {}
-
-    virtual const Type* refine(const Sema&) const { return this; }
-    virtual const thorin::Type* convert(thorin::World&) const { assert(false); return nullptr; }
 
     friend class TypeTable;
 };
@@ -213,7 +199,6 @@ public:
 
     const TypeError* type_error() { return type_error_; }
     const NoRet* noret() { return noret_; }
-    const Void* type_void() { return void_; }
     const PrimType* primtype(TokenKind kind);
     const DefiniteArray* definite_array(const Type* elem_type, thorin::u64 dim);
     const IndefiniteArray* indefinite_array(const Type* elem_type);
@@ -234,7 +219,6 @@ private:
 #include "impala/tokenlist.h"
     const TypeError* type_error_;
     const NoRet* noret_;
-    const Void* void_;
 };
 
 //------------------------------------------------------------------------------

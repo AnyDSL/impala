@@ -16,8 +16,6 @@ std::ostream& Printer::print_type(const Type* type) {
         return stream() << "<NULL>";
     } else if (type->isa<NoRet>()) {
         return stream() << "noret";
-    } else if (type->isa<Void>()) {
-        return stream() << "void";
     } else if (type->isa<TypeError>()) {
         return stream() << "<error>";
     } else if (auto array = type->isa<DefiniteArray>()) {

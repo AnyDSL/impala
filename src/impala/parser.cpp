@@ -454,7 +454,6 @@ const Type* Parser::parse_type() {
         case Token::TYPE_##itype:   lex(); return typetable.type_##itype();
 #include "impala/tokenlist.h"
         case Token::TYPE_int:       lex(); return typetable.type_int32();
-        case Token::TYPE_void:      lex(); return typetable.type_void();
         case Token::TYPE_noret:     lex(); return typetable.noret();
         case Token::FN:                    return parse_fn_type();
         case Token::L_PAREN:               return parse_tuple_type();

@@ -19,7 +19,6 @@ TypeTable::TypeTable()
 #include "impala/tokenlist.h"
     , type_error_(unify(new TypeError(*this)))
     , noret_(unify(new NoRet(*this)))
-    , void_(unify(new Void(*this)))
 {}
 
 TypeTable::~TypeTable() {
@@ -93,10 +92,9 @@ bool Type::is_float() const {
 const Type* FnType::return_type() const {
     if (!empty()) {
         if (auto fn = elems().back()->isa<FnType>()) {
-            switch (fn->size()) {
-                case 0: return typetable_.type_void();
-                case 1: return fn->elem(0);
-            }
+            if (fn->size() == 1)
+                return fn->elem(0);
+            return typetable_.tupletype(fn->elems());
         }
     }
 
