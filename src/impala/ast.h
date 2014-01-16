@@ -143,12 +143,12 @@ private:
 class Fn {
 public:
     const ParamDecl* param(size_t i) const { return params_[i]; }
-    const Params& params() const { return params_; }
+    thorin::ArrayRef<const ParamDecl*> params() const { return params_; }
     const Expr* body() const { return body_; }
     thorin::Lambda* lambda() const { return lambda_; }
     const thorin::Param* ret_param() const { return ret_param_; }
     const thorin::Enter* frame() const { return frame_; }
-    std::ostream& print_params(Printer& p) const;
+    std::ostream& print_params(Printer& p, bool returning) const;
     //void emit(CodeGen& cg) const;
 
 private:
@@ -339,12 +339,14 @@ public:
     virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
     const Fn& fn() const { return fn_; }
+    bool has_return_type() const { return has_return_type_; }
 
 private:
     //virtual const Type* check(Sema& sema) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     Fn fn_;
+    bool has_return_type_;
 
     friend class Parser;
 };

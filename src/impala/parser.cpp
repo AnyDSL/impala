@@ -138,7 +138,7 @@ public:
 
     //void parse_generics_list(GenericDecls&);
     const ParamDecl* parse_param();
-    void parse_return_param(Params&);
+    bool parse_return_param(Params&);
     void parse_param_list(Params& params, TokenKind delimiter);
     const ModContents* parse_mod_contents();
 
@@ -294,11 +294,11 @@ void Parser::parse_param_list(Params& params, TokenKind delimiter) {
     parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param()); });
 }
 
-void Parser::parse_return_param(Params& params) {
+bool Parser::parse_return_param(Params& params) {
     if (accept(Token::ARROW)) {
         Position pos1 = prev_loc().pos1();
         if (accept(Token::L_N))
-            return;
+            return true;
         auto type = typetable.fntype({parse_type()});
         Position pos2 = prev_loc().pos2();
         auto param = new ParamDecl(cur_var_handle++);
@@ -307,7 +307,9 @@ void Parser::parse_return_param(Params& params) {
         param->orig_type_ = type;
         param->set_loc(pos1, pos2);
         params.push_back(param);
-    }
+        return true;
+    } else
+        return false;
 }
 
 const ModContents* Parser::parse_mod_contents() {
@@ -654,7 +656,7 @@ const FnExpr* Parser::parse_fn_expr() {
     else
         expect(Token::L_O, "parameter list of function expression");
 
-    parse_return_param(fn.params_);
+    fn_expr->has_return_type_ = parse_return_param(fn.params_);
     fn.body_ = parse_expr();
     return fn_expr;
 }

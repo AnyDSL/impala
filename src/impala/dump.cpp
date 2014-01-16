@@ -28,9 +28,10 @@ std::ostream& Printer::print_type(const Type* type) {
         const Type* ret_type = fn->return_type();
         if (ret_type->isa<NoRet>())
             return dump_list([&](const Type* elem) { print_type(elem); }, fn->elems(), "fn(", ")");
-        else
-            return dump_list([&](const Type* elem) { print_type(elem); }, fn->elems().slice_to_end(fn->size()-1), "fn(", ") -> ") 
-                << ret_type;
+        else {
+            dump_list([&](const Type* elem) { print_type(elem); }, fn->elems().slice_to_end(fn->size()-1), "fn(", ") -> ");
+            return print_type(ret_type);
+        }
     } else if (auto idtype = type->isa<IdType>()) {
         return stream() << idtype->name;
     } else if (auto primtype = type->isa<PrimType>()) {
@@ -59,8 +60,9 @@ std::ostream& LocalDecl::print(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& Fn::print_params(Printer& p) const {
-    return p.dump_list([&] (const ParamDecl* param) { param->print(p); }, params());
+std::ostream& Fn::print_params(Printer& p, bool returning) const {
+    return p.dump_list([&] (const ParamDecl* param) { param->print(p); }, 
+            returning ? params().slice_num_from_end(1) : params());
 }
 
 /*
@@ -82,9 +84,20 @@ std::ostream& FnDecl::print(Printer& p) const {
     //if (!fun()->generics().empty())
         //p.dump_list([&] (const GenericDecl* generic_decl) { generic_decl->print(p); }, fun()->generics(), "<", ">");
 
+    const Type* ret = nullptr;
+    if (!fn().params().empty() && fn().params().back()->symbol() == "return")
+        if (auto fntype = fn().params().back()->orig_type()->isa<FnType>())
+            ret = fntype->unpack_return_type();
+
     p.stream() << '(';
-    fn().print_params(p);
+    fn().print_params(p, ret != nullptr);
     p.stream() << ") ";
+
+    if (ret) {
+        p.stream() << "-> ";
+        p.print_type(ret) << ' ';
+    }
+
     return fn().body()->print(p);
 }
 
@@ -205,8 +218,14 @@ std::ostream& MapExpr::print(Printer& p) const {
 
 std::ostream& FnExpr::print(Printer& p) const { 
     p.stream() << '|';
-    fn().print_params(p);
+    fn().print_params(p, has_return_type_);
     p.stream() << "| ";
+
+    if (has_return_type_) {
+        p.stream() << "-> ";
+        p.print_type(fn().params().back()->orig_type()->as<FnType>()->unpack_return_type()) << ' ';
+    }
+
     return fn().body()->print(p);
 }
 

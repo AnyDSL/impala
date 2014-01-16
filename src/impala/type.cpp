@@ -89,13 +89,12 @@ bool Type::is_float() const {
     return false;
 }
 
+const Type* FnType::unpack_return_type() const { return size() == 1 ? elem(0) : typetable_.tupletype(elems()); }
+
 const Type* FnType::return_type() const {
     if (!empty()) {
-        if (auto fn = elems().back()->isa<FnType>()) {
-            if (fn->size() == 1)
-                return fn->elem(0);
-            return typetable_.tupletype(fn->elems());
-        }
+        if (auto fn = elems().back()->isa<FnType>())
+            return fn->unpack_return_type();
     }
 
     return typetable_.noret();

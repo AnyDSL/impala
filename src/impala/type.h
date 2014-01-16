@@ -156,6 +156,7 @@ private:
 public:
     virtual const Type* refine(const Sema&) const;
     virtual const thorin::Type* convert(thorin::World&) const;
+    const Type* unpack_return_type() const;
     const Type* return_type() const;
 
     friend class TypeTable;
