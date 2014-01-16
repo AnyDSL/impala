@@ -55,6 +55,7 @@
     case Token::IF: \
     case Token::FOR: \
     case Token::L_PAREN: \
+    case Token::L_BRACE: \
     case Token::L_BRACKET
     
 #define STMT_NOT_EXPR \
@@ -137,7 +138,8 @@ public:
 
     //void parse_generics_list(GenericDecls&);
     const ParamDecl* parse_param();
-    void parse_param_list(Params& params, TokenKind delimiter = Token::R_PAREN);
+    void parse_return_param(Params&);
+    void parse_param_list(Params& params, TokenKind delimiter);
     const ModContents* parse_mod_contents();
 
     // types
@@ -145,7 +147,6 @@ public:
     const Type* parse_array_type();
     const Type* parse_fn_type();
     const Type* parse_tuple_type();
-    const Type* parse_return_type();
 
     // items
     Item*       parse_item();
@@ -173,6 +174,7 @@ public:
     const FnExpr*      parse_fn_expr();
     const IfExpr*      parse_if_else_expr();
     const ForExpr*     parse_for_expr();
+    const BlockExpr*   parse_block_expr();
     const BlockExpr*   try_block_expr(const std::string& context);
 
     // statements
@@ -292,6 +294,22 @@ void Parser::parse_param_list(Params& params, TokenKind delimiter) {
     parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param()); });
 }
 
+void Parser::parse_return_param(Params& params) {
+    if (accept(Token::ARROW)) {
+        Position pos1 = prev_loc().pos1();
+        if (accept(Token::L_N))
+            return;
+        auto type = typetable.fntype({parse_type()});
+        Position pos2 = prev_loc().pos2();
+        auto param = new ParamDecl(cur_var_handle++);
+        param->is_mut_ = false;
+        param->symbol_ = "return";
+        param->orig_type_ = type;
+        param->set_loc(pos1, pos2);
+        params.push_back(param);
+    }
+}
+
 const ModContents* Parser::parse_mod_contents() {
     auto mod_contents = loc(new ModContents());
 
@@ -347,8 +365,7 @@ EnumDecl* Parser::parse_enum_decl() {
 }
 
 Item* Parser::parse_foreign_mod_or_fn_decl() {
-    Position pos1 = lex().pos1();
-    eat(Token::EXTERN);
+    Position pos1 = eat(Token::EXTERN).pos1();
     Item* item;
     if (la() == Token::FN) {
         auto fn_decl = parse_fn_decl();
@@ -376,20 +393,8 @@ FnDecl* Parser::parse_fn_decl() {
     //parse_generics_list(fn_decl->generics_);
 
     expect(Token::L_PAREN, "function head");
-    parse_param_list(fn.params_);
-
-    // return-continuation
-    if (accept(Token::ARROW)) {
-        Position pos1 = prev_loc().pos1();
-        auto type = parse_return_type();
-        Position pos2 = prev_loc().pos2();
-        auto param = new ParamDecl(cur_var_handle++);
-        param->is_mut_ = false;
-        param->symbol_ = "return";
-        param->orig_type_ = type;
-        param->set_loc(pos1, pos2);
-        fn.params_.push_back(param);
-    }
+    parse_param_list(fn.params_, Token::R_PAREN);
+    parse_return_param(fn.params_);
 
     THORIN_PUSH(cur_fn_, &fn);
     fn.body_ = try_block_expr("body of function");
@@ -490,8 +495,11 @@ const Type* Parser::parse_fn_type() {
     expect(Token::L_PAREN, "parameter list of function type");
     parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&]{ elems.push_back(parse_type()); });
 
-    if (accept(Token::ARROW))
-        elems.push_back(parse_return_type());
+    if (accept(Token::ARROW)) {
+        if (accept(Token::L_N)) {
+        } else 
+            elems.push_back(typetable.fntype({parse_type()}));
+    }
 
     return typetable.fntype(elems);
 }
@@ -502,11 +510,6 @@ const Type* Parser::parse_tuple_type() {
     parse_comma_list(Token::R_PAREN, "closing parenthesis of sigma type", [&]{ elems.push_back(parse_type()); });
 
     return typetable.tupletype(elems);
-}
-
-const Type* Parser::parse_return_type() {
-    auto ret_type = parse_type();
-    return ret_type->is_void() ? typetable.fntype({}) : typetable.fntype({ret_type});
 }
 
 /*
@@ -617,6 +620,7 @@ const Expr* Parser::parse_primary_expr() {
         case Token::ID:         return new IdExpr(lex());
         case Token::IF:         return parse_if_else_expr();
         case Token::FOR:        return parse_for_expr();
+        case Token::L_BRACE:    return parse_block_expr();
         default:                error("expression", ""); return new EmptyExpr(lex().loc());
     }
 }
@@ -647,19 +651,12 @@ const FnExpr* Parser::parse_fn_expr() {
     THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     if (accept(Token::OR))
-        parse_param_list(fn.params_);
+        parse_param_list(fn.params_, Token::OR);
     else
         expect(Token::L_O, "parameter list of function expression");
 
-    // return-continuation
-    //if (accept(Token::ARROW)) {
-        //Position pos1 = prev_loc().pos1();
-        //Position pos2 = prev_loc().pos2();
-        //fn->params_.push_back(new VarDecl(cur_var_handle++, true, Token(pos1, "return"), arg_types.back(), pos2));
-    //}
-
+    parse_return_param(fn.params_);
     fn.body_ = parse_expr();
-
     return fn_expr;
 }
 
@@ -682,35 +679,41 @@ const ForExpr* Parser::parse_for_expr() {
     return for_expr;
 }
 
-const BlockExpr* Parser::try_block_expr(const std::string& context) {
-    if (accept(Token::L_BRACE)) {
-        auto block = loc(new BlockExpr());
-        auto& stmts = block->stmts_;
-        while (true) {
-            switch (la()) {
-                case Token::SEMICOLON:  lex(); continue; // ignore semicolon
-                case STMT_NOT_EXPR:     stmts.push_back(parse_stmt_not_expr()); continue;
-                case EXPR: {
-                    bool stmt_like = la() == Token::IF || la() == Token::FOR;
-                    auto expr = parse_expr();
-                    if (accept(Token::SEMICOLON) || (stmt_like && la() != Token::R_BRACE)) {
-                        auto expr_stmt = new ExprStmt();
-                        expr_stmt->set_loc(expr->pos1(), prev_loc().pos2());
-                        expr_stmt->expr_ = expr;
-                        stmts.push_back(expr_stmt);
-                        continue;
-                    } else
-                        block->expr_ = expr;
-                    // FALLTHROUGH
-                } 
-                default:
-                    expect(Token::R_BRACE, "block");
-                    if (block->expr_ == nullptr)
-                        block->expr_ = new EmptyExpr(prev_loc());
-                    return block;
-            }
+const BlockExpr* Parser::parse_block_expr() {
+    auto block = loc(new BlockExpr());
+    eat(Token::L_BRACE);
+    auto& stmts = block->stmts_;
+    while (true) {
+        switch (la()) {
+            case Token::SEMICOLON:  lex(); continue; // ignore semicolon
+            case STMT_NOT_EXPR:     stmts.push_back(parse_stmt_not_expr()); continue;
+            case EXPR: {
+                bool stmt_like = la() == Token::IF || la() == Token::FOR;
+                auto expr = parse_expr();
+                if (accept(Token::SEMICOLON) || (stmt_like && la() != Token::R_BRACE)) {
+                    auto expr_stmt = new ExprStmt();
+                    expr_stmt->set_loc(expr->pos1(), prev_loc().pos2());
+                    expr_stmt->expr_ = expr;
+                    stmts.push_back(expr_stmt);
+                    continue;
+                } else
+                    block->expr_ = expr;
+                // FALLTHROUGH
+            } 
+            default:
+                expect(Token::R_BRACE, "block");
+                if (block->expr_ == nullptr)
+                    block->expr_ = new EmptyExpr(prev_loc());
+                return block;
         }
-    } else {
+    }
+    return block;
+}
+
+const BlockExpr* Parser::try_block_expr(const std::string& context) {
+    if (la() == Token::L_BRACE)
+        return parse_block_expr();
+    else {
         error("block expression", context);
         auto block = new BlockExpr();
         block->set_loc(prev_loc());

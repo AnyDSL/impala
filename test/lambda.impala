@@ -3,28 +3,27 @@ extern fn f(a : int) -> int {
     let mut j : int = 22;
     let mut b : bool = i == 23;
 
-    let g : fn(int) -> int = |k : int| -> int { 
-        fn z(x : int) -> int { return x; }
-        return i + j + a + z(k); 
+    let g : fn(int) -> int = |k : int| -> int {
+        fn z(x : int) -> int { x }
+        i + j + a + z(k)
     };
 
-    if (a == 0)
-        return g(23);
-    else
-        return g(g(42));
+    if a == 0 {
+        g(23);
+    } else {
+        g(g(42))
+    }
 }
 
 extern fn g(i : int) -> int {
-    return |j : int| -> int { return j + 42 + i; }(23);
+    |j : int| -> int { j + 42 + i }(23)
 }
 
 fn foo(h : fn(int, fn(int))) -> int {
-    return h(24);
+    h(24)
 }
 
 extern fn bar(a : int) -> int {
-    let k : fn(int) -> int = |b : int| -> int {
-        return a + b;
-    };
-    return foo(k);
+    let k : fn(int) -> int = |b : int| -> int a + b;
+    foo(k);
 }
