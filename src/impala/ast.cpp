@@ -36,7 +36,7 @@ bool MapExpr::is_lvalue() const {
 
 bool IfExpr::has_else() const {
     if (auto block = else_expr_->isa<BlockExpr>())
-        return block->empty();
+        return !block->empty();
     return true;
 }
 

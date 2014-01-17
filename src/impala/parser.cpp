@@ -373,8 +373,9 @@ Item* Parser::parse_foreign_mod_or_fn_decl() {
         auto fn_decl = parse_fn_decl();
         fn_decl->extern_ = true;
         item = fn_decl;
-    } else
-        item = parse_fn_decl();
+    } else {
+        assert(false && "TODO");
+    }
 
     item->set_pos1(pos1);
     return item;
@@ -672,10 +673,11 @@ const IfExpr* Parser::parse_if_expr() {
             case Token::L_BRACE: if_expr->else_expr_ = parse_block_expr(); break;
             default:
                 error("block or if expression", "else branch of an if expression");
-                if_expr->else_expr_ = new BlockExpr(prev_loc());
         }
     }
         
+    if (if_expr->else_expr_ == nullptr)
+        if_expr->else_expr_ = new BlockExpr(prev_loc());
     return if_expr;
 }
 
@@ -684,7 +686,7 @@ const ForExpr* Parser::parse_for_expr() {
     auto& fn = for_expr->fn_;
     eat(Token::FOR);
     parse_param_list(fn.params_, Token::IN);
-    for_expr->expr_ = try_block_expr("body of an for expression");
+    for_expr->expr_ = parse_expr();
     fn.body_ = try_block_expr("body of function");
     return for_expr;
 }
@@ -711,7 +713,7 @@ const BlockExpr* Parser::parse_block_expr() {
                 // FALLTHROUGH
             } 
             default:
-                expect(Token::R_BRACE, "block");
+                expect(Token::R_BRACE, "block expression");
                 if (block->expr_ == nullptr)
                     block->expr_ = new EmptyExpr(prev_loc());
                 return block;

@@ -282,7 +282,7 @@ private:
 class BlockExpr : public Expr {
 public:
     BlockExpr() {}
-    BlockExpr(thorin::Location loc) { loc_ = loc; }
+    BlockExpr(thorin::Location loc) { loc_ = loc; expr_ = new EmptyExpr(loc); }
 
     const Stmts& stmts() const { return stmts_; }
     const Expr* expr() const { return expr_; }

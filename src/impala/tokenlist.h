@@ -36,7 +36,6 @@ IMPALA_PREFIX(        HALT,    "$",   POSTFIX             ) // stop partial eval
 
 IMPALA_POSTFIX(        INC,   "++",                POSTFIX) // postfix ++
 IMPALA_POSTFIX(        DEC,   "--",                POSTFIX) // postfix --
-IMPALA_POSTFIX(  L_BRACKET,    "[",                POSTFIX) // static args
 IMPALA_POSTFIX(    L_PAREN,    "(",                POSTFIX) // function call
 
 #undef IMPALA_POSTFIX

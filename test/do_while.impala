@@ -1,7 +1,0 @@
-extern fn f(i : int) -> int {
-    do {
-        ++i;
-    } while (i < 42);
-
-    return 0;
-}
