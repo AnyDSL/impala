@@ -9,7 +9,7 @@ extern fn f(a : int) -> int {
     };
 
     if a == 0 {
-        g(23);
+        g(23)
     } else {
         g(g(42))
     }
@@ -25,5 +25,5 @@ fn foo(h : fn(int, fn(int))) -> int {
 
 extern fn bar(a : int) -> int {
     let k : fn(int) -> int = |b : int| -> int a + b;
-    foo(k);
+    foo(k)
 }
