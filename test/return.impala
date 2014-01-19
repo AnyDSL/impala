@@ -1,4 +1,4 @@
-extern fn f() -> void {
+extern fn f() -> (int, float) {
 }
 
 extern fn g() -> int {

@@ -56,6 +56,13 @@ const FnType* TypeTable::fntype(thorin::ArrayRef<const Type*> elems) { return un
 const TupleType* TypeTable::tupletype(thorin::ArrayRef<const Type*> elems) { return unify(new TupleType(*this, elems)); }
 const IdType* TypeTable::idtype(Symbol symbol) { return unify(new IdType(*this, symbol)); }
 
+const FnType* TypeTable::pack_return_type(const Type* type) {
+    if (auto tuple = type->isa<TupleType>())
+        if (tuple->size() != 1)
+            return fntype(tuple->elems());
+    return fntype({type});
+}
+
 //------------------------------------------------------------------------------
 
 bool Type::is_bool() const { 

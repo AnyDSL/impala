@@ -299,7 +299,7 @@ bool Parser::parse_return_param(Params& params) {
         Position pos1 = prev_loc().pos1();
         if (accept(Token::L_N))
             return true;
-        auto type = typetable.fntype({parse_type()});
+        auto type = typetable.pack_return_type(parse_type());
         Position pos2 = prev_loc().pos2();
         auto param = new ParamDecl(cur_var_handle++);
         param->is_mut_ = false;

@@ -148,13 +148,13 @@ int main(int argc, char** argv) {
                 thorin::emit_thorin(init.world, fancy, !nocolor);
             if (emit_il)
                 thorin::emit_il(init.world, fancy);
-            if (emit_looptree) {
-                for (auto top : top_level_lambdas(init.world)) {
-                    Scope scope(top);
-                    const LoopTree looptree(scope);
-                    std::cout << looptree.root() << std::endl; // TODO
-                }
-            }
+            //if (emit_looptree) {
+                //for (auto top : top_level_lambdas(init.world)) {
+                    //Scope scope(top);
+                    //const LoopTree looptree(scope);
+                    //std::cout << looptree.root() << std::endl; // TODO
+                //}
+            //}
 
             if (emit_llvm)
                 thorin::emit_llvm(init.world);

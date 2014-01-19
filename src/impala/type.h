@@ -206,6 +206,7 @@ public:
 #define IMPALA_TYPE(itype, atype) const PrimType* type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
     const FnType* fntype(thorin::ArrayRef<const Type*> elems);
+    const FnType* pack_return_type(const Type* type);
     const TupleType* tupletype(thorin::ArrayRef<const Type*> elems);
     const IdType* idtype(thorin::Symbol);
 
