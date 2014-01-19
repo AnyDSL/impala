@@ -161,6 +161,8 @@ public:
     TraitDecl*  parse_trait_decl();
     Typedef*    parse_typedef();
 
+    const Field* parse_field();
+
     // expressions
     bool is_infix();
     const Expr*        parse_expr(Prec prec);
@@ -432,9 +434,27 @@ ConstItem* Parser::parse_const_item() {
     return 0;
 }
 
+const Field* Parser::parse_field() {
+    auto field = loc(new Field);
+    //switch (la()) {
+        //case VISIBILITY: field->visibility = (Visibility) lex().kind();
+        //default:         field->visibility = Visibility::None;
+    //}
+
+    field->symbol_ = try_id("struct field");
+    expect(Token::COLON, "struct field");
+    field->orig_type_ = parse_type();
+
+    return field;
+}
+
 StructDecl* Parser::parse_struct_decl() {
-    assert(false && "TODO");
-    return 0;
+    auto struct_decl = loc(new StructDecl());
+    eat(Token::STRUCT);
+    struct_decl->symbol_ = try_id("struct declaration");
+    eat(Token::L_BRACE);
+    parse_comma_list(Token::R_BRACE, "closing brace of struct declaration", [&]{ struct_decl->fields_.push_back(parse_field()); });
+    return struct_decl;
 }
 
 TraitDecl* Parser::parse_trait_decl() {

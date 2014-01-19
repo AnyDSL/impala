@@ -103,8 +103,15 @@ std::ostream& FnDecl::print(Printer& p) const {
     return p.newline();
 }
 
+std::ostream& Field::print(Printer& p) const {
+    p.stream() << symbol() << ": ";
+    p.print_type(orig_type());
+}
+
 std::ostream& StructDecl::print(Printer& p) const {
-    assert( false && "todo" );
+    p.stream() << "struct " << symbol() << " ";
+    p.up();
+    p.dump_list([&] (const Field* field) { field->print(p); }, fields(), "{", "}");
     return p.stream();
 }
 

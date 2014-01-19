@@ -29,6 +29,7 @@ namespace impala {
 class BlockExpr;
 class CodeGen;
 class Expr;
+class Field;
 class Fn;
 class Item;
 class ParamDecl;
@@ -38,6 +39,7 @@ class Stmt;
 //class GenericDecl;
 
 typedef thorin::AutoVector<const Expr*> Exprs;
+typedef thorin::AutoVector<const Field*> Fields;
 typedef thorin::AutoVector<const Item*> Items;
 typedef thorin::AutoVector<const ParamDecl*> Params;
 typedef thorin::AutoVector<const Stmt*> Stmts;
@@ -204,8 +206,20 @@ class Typedef : public Item, public TypeDecl {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class StructDecl : public Item, public TypeDecl {
+class Field : public ValueDecl {
+public:
     virtual std::ostream& print(Printer& p) const;
+};
+
+class StructDecl : public Item, public TypeDecl {
+public:
+    const Fields& fields() const { return fields_; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    Fields fields_;
+
+    friend class Parser;
 };
 
 class EnumDecl : public Item, public TypeDecl {
