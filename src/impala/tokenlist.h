@@ -140,9 +140,8 @@ IMPALA_KEY_MISC(PUB,        "pub")
 IMPALA_KEY_MISC(STATIC,     "static")
 IMPALA_KEY_MISC(STRUCT,     "struct")
 IMPALA_KEY_MISC(TRAIT,      "trait")
-IMPALA_KEY_MISC(TYPE,       "type")
+IMPALA_KEY_MISC(TYPEDEF,    "type")
 IMPALA_KEY_MISC(TYPE_int,   "int")
-IMPALA_KEY_MISC(TYPE_noret, "noret")
 IMPALA_KEY_MISC(TYPE_uint,  "uint")
 
 #undef IMPALA_KEY_MISC

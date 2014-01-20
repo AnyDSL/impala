@@ -66,6 +66,21 @@
         STMT_NOT_EXPR: \
     case EXPR
 
+#define TYPE \
+         Token::FN: \
+    case Token::L_PAREN: \
+    case Token::ID: \
+    case Token::L_BRACKET: \
+    case Token::TYPE_int8: \
+    case Token::TYPE_int16: \
+    case Token::TYPE_int32: \
+    case Token::TYPE_int64: \
+    case Token::TYPE_float: \
+    case Token::TYPE_double: \
+    case Token::TYPE_bool: \
+    case Token::TYPE_int: \
+    case Token::L_N
+
 using namespace thorin;
 
 namespace impala {
@@ -152,7 +167,7 @@ public:
     Item*       parse_item();
     ConstItem*  parse_const_item();
     EnumDecl*   parse_enum_decl();
-    FnDecl*     parse_fn_decl();
+    FnDecl*     parse_fn_decl(bool maybe_empty);
     ForeignMod* parse_foreign_mod();
     Impl*       parse_impl();
     ModDecl*    parse_mod_decl();
@@ -161,7 +176,7 @@ public:
     TraitDecl*  parse_trait_decl();
     Typedef*    parse_typedef();
 
-    const Field* parse_field();
+    const FieldDecl* parse_field_decl();
 
     // expressions
     bool is_infix();
@@ -269,7 +284,7 @@ Symbol Parser::try_id(const std::string& what) {
         name = lex();
     else {
         error("identifier", what);
-        name = Token(la().loc(), "<error_id>");
+        name = Token(la().loc(), "<error>");
     }
 
     return name.symbol();
@@ -285,14 +300,31 @@ Symbol Parser::try_id(const std::string& what) {
 const ParamDecl* Parser::parse_param(bool lambda) {
     auto param = loc(new ParamDecl(cur_var_handle++));
     param->is_mut_ = accept(Token::MUT);
-    auto symbol = try_id("parameter name");
+    Symbol symbol;
+    const Type* type = nullptr;
+
+    if (la() == Token::ID)
+        symbol = lex().symbol();
+    else {
+        switch (la()) {
+            case Token::TYPE: type = parse_type(); break;
+            default:    
+                symbol = "<error>";
+                error("identifier", "parameter");
+        }
+    }
+
     if (accept(Token::COLON)) {
+        if (type)
+            error("identifier", "parameter");
         param->symbol_ = symbol;
         param->type_ = parse_type();
-    } else if (lambda)
+    } else if (lambda) {
+        if (type)
+            error("identifier", "parameter");
         param->symbol_ = symbol;
-    else
-        param->type_ = typetable.idtype(symbol);
+    } else
+        param->type_ = type != nullptr ? type : typetable.idtype(symbol);
 
     return param;
 }
@@ -351,15 +383,15 @@ Item* Parser::parse_item() {
 
     Item* item = nullptr;
     switch (la()) {
-        case Token::ENUM:      item = parse_enum_decl();              break;
-        case Token::EXTERN:    item = parse_foreign_mod_or_fn_decl(); break;
-        case Token::FN:        item = parse_fn_decl();                break;
-        case Token::IMPL:      item = parse_impl();                   break;
-        case Token::MOD:       item = parse_mod_decl();               break;
-        case Token::STATIC:    item = parse_const_item();             break;
-        case Token::STRUCT:    item = parse_struct_decl();            break;
-        case Token::TRAIT:     item = parse_trait_decl();             break;
-        case Token::TYPE:      item = parse_typedef();                break;
+        case Token::ENUM:    item = parse_enum_decl();              break;
+        case Token::EXTERN:  item = parse_foreign_mod_or_fn_decl(); break;
+        case Token::FN:      item = parse_fn_decl(false);           break;
+        case Token::IMPL:    item = parse_impl();                   break;
+        case Token::MOD:     item = parse_mod_decl();               break;
+        case Token::STATIC:  item = parse_const_item();             break;
+        case Token::STRUCT:  item = parse_struct_decl();            break;
+        case Token::TRAIT:   item = parse_trait_decl();             break;
+        case Token::TYPEDEF: item = parse_typedef();                break;
         default: THORIN_UNREACHABLE;
     }
 
@@ -377,7 +409,7 @@ Item* Parser::parse_foreign_mod_or_fn_decl() {
     Position pos1 = eat(Token::EXTERN).pos1();
     Item* item;
     if (la() == Token::FN) {
-        auto fn_decl = parse_fn_decl();
+        auto fn_decl = parse_fn_decl(false);
         fn_decl->extern_ = true;
         item = fn_decl;
     } else {
@@ -393,7 +425,7 @@ ForeignMod* Parser::parse_foreign_mod() {
     return 0;
 }
 
-FnDecl* Parser::parse_fn_decl() {
+FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
     auto fn_decl = loc(new FnDecl(typetable));
     auto& fn = fn_decl->fn_;
     eat(Token::FN);
@@ -406,8 +438,10 @@ FnDecl* Parser::parse_fn_decl() {
     parse_param_list(fn.params_, Token::R_PAREN, false);
     parse_return_param(fn.params_);
 
-    THORIN_PUSH(cur_fn_, &fn);
-    fn.body_ = try_block_expr("body of function");
+    if (maybe_empty && !accept(Token::SEMICOLON)) {
+        THORIN_PUSH(cur_fn_, &fn);
+        fn.body_ = try_block_expr("body of function");
+    }
 
     return fn_decl;
 }
@@ -439,19 +473,19 @@ ConstItem* Parser::parse_const_item() {
     return 0;
 }
 
-const Field* Parser::parse_field() {
-    auto field = loc(new Field);
+const FieldDecl* Parser::parse_field_decl() {
+    auto field_decl = loc(new FieldDecl);
     switch (la()) {
-        case VISIBILITY: field->visibility_ = (Visibility) lex().kind(); break;
-        default:         field->visibility_ = Visibility::None;
+        case VISIBILITY: field_decl->visibility_ = (Visibility) lex().kind(); break;
+        default:         field_decl->visibility_ = Visibility::None;
     }
-    field->is_mut_ = accept(Token::MUT);
+    field_decl->is_mut_ = accept(Token::MUT);
 
-    field->symbol_ = try_id("struct field");
+    field_decl->symbol_ = try_id("struct field");
     expect(Token::COLON, "struct field");
-    field->type_ = parse_type();
+    field_decl->type_ = parse_type();
 
-    return field;
+    return field_decl;
 }
 
 StructDecl* Parser::parse_struct_decl() {
@@ -459,13 +493,21 @@ StructDecl* Parser::parse_struct_decl() {
     eat(Token::STRUCT);
     struct_decl->symbol_ = try_id("struct declaration");
     eat(Token::L_BRACE);
-    parse_comma_list(Token::R_BRACE, "closing brace of struct declaration", [&]{ struct_decl->fields_.push_back(parse_field()); });
+    parse_comma_list(Token::R_BRACE, "closing brace of struct declaration", [&] { 
+        struct_decl->fields_.push_back(parse_field_decl()); 
+    });
     return struct_decl;
 }
 
 TraitDecl* Parser::parse_trait_decl() {
-    assert(false && "TODO");
-    return 0;
+    auto trait_decl = loc(new TraitDecl);
+    eat(Token::TRAIT);
+    trait_decl->symbol_ = try_id("trait declaration");
+    eat(Token::L_BRACE);
+    while (la() == Token::FN)
+        trait_decl->methods_.push_back(parse_fn_decl(true)); 
+    expect(Token::R_BRACE, "closing brace of trait declaration");
+    return trait_decl;
 }
 
 Typedef* Parser::parse_typedef() {
@@ -483,7 +525,7 @@ const Type* Parser::parse_type() {
         case Token::TYPE_##itype:   lex(); return typetable.type_##itype();
 #include "impala/tokenlist.h"
         case Token::TYPE_int:       lex(); return typetable.type_int32();
-        case Token::TYPE_noret:     lex(); return typetable.noret();
+        case Token::L_N:            lex(); return typetable.noret();
         case Token::FN:                    return parse_fn_type();
         case Token::L_PAREN:               return parse_tuple_type();
         case Token::ID:                    return typetable.idtype(lex().symbol());

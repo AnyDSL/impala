@@ -29,8 +29,9 @@ namespace impala {
 class BlockExpr;
 class CodeGen;
 class Expr;
-class Field;
+class FieldDecl;
 class Fn;
+class FnDecl;
 class Item;
 class ParamDecl;
 class Printer;
@@ -39,10 +40,11 @@ class Stmt;
 //class GenericDecl;
 
 typedef thorin::AutoVector<const Expr*> Exprs;
-typedef thorin::AutoVector<const Field*> Fields;
+typedef thorin::AutoVector<const FieldDecl*> Fields;
 typedef thorin::AutoVector<const Item*> Items;
 typedef thorin::AutoVector<const ParamDecl*> Params;
 typedef thorin::AutoVector<const Stmt*> Stmts;
+typedef thorin::AutoVector<const FnDecl*> Methods;
 //typedef thorin::AutoVector<const GenericDecl*> GenericDecls;
 
 //------------------------------------------------------------------------------
@@ -209,7 +211,7 @@ class Typedef : public Item, public TypeDecl {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class Field : public ValueDecl {
+class FieldDecl : public ValueDecl {
 public:
     virtual std::ostream& print(Printer& p) const;
     Visibility visibility() const { return  visibility_; }
@@ -235,10 +237,6 @@ class EnumDecl : public Item, public TypeDecl {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class TraitDecl : public Item, public TypeDecl {
-    virtual std::ostream& print(Printer& p) const;
-};
-
 class ConstItem : public Item {
     virtual std::ostream& print(Printer& p) const;
 };
@@ -261,6 +259,17 @@ public:
 private:
     Fn fn_;
     bool extern_;
+
+    friend class Parser;
+};
+
+class TraitDecl : public Item, public TypeDecl {
+public:
+    const Methods& methods() const { return methods_; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    Methods methods_;
 
     friend class Parser;
 };

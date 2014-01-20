@@ -82,7 +82,7 @@ public:
 class NoRet : public Type {
 private:
     NoRet(TypeTable& typetable) 
-        : Type(typetable, Token::TYPE_noret, 0, "!")
+        : Type(typetable, Token::L_N, 0, "!")
     {}
 
     virtual const Type* refine(const Sema&) const { return this; }

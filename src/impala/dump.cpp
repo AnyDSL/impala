@@ -103,7 +103,7 @@ std::ostream& FnDecl::print(Printer& p) const {
     return p.newline();
 }
 
-std::ostream& Field::print(Printer& p) const {
+std::ostream& FieldDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" ) << (visibility_ == Visibility::Pub  ? "pub "  : "")
                                             << (visibility_ == Visibility::Priv ? "priv " : "") << symbol() << ": ";
     p.print_type(type());
@@ -112,7 +112,15 @@ std::ostream& Field::print(Printer& p) const {
 std::ostream& StructDecl::print(Printer& p) const {
     p.stream() << "struct " << symbol() << " {";
     p.up();
-    p.dump_list([&] (const Field* field) { field->print(p); }, fields(), "", "", "\n");
+    p.dump_list([&] (const FieldDecl* field) { field->print(p); }, fields(), "", "", "\n");
+    p.down() << "}";
+    return p.stream();
+}
+
+std::ostream& TraitDecl::print(Printer& p) const {
+    p.stream() << "trait " << symbol() << " {";
+    p.up();
+    //p.dump_list([&] (const FieldDecl* field) { field->print(p); }, methods(), "", "", "\n");
     p.down() << "}";
     return p.stream();
 }
