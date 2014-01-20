@@ -345,7 +345,7 @@ Item* Parser::parse_item() {
     Position pos1 = la().pos1();
     Visibility visibility;
     switch (la()) {
-        case VISIBILITY: visibility = (Visibility) lex().kind();
+        case VISIBILITY: visibility = (Visibility) lex().kind(); break;
         default:         visibility = Visibility::None;
     }
 
@@ -441,10 +441,11 @@ ConstItem* Parser::parse_const_item() {
 
 const Field* Parser::parse_field() {
     auto field = loc(new Field);
-    //switch (la()) {
-        //case VISIBILITY: field->visibility = (Visibility) lex().kind();
-        //default:         field->visibility = Visibility::None;
-    //}
+    switch (la()) {
+        case VISIBILITY: field->visibility_ = (Visibility) lex().kind(); break;
+        default:         field->visibility_ = Visibility::None;
+    }
+    field->is_mut_ = accept(Token::MUT);
 
     field->symbol_ = try_id("struct field");
     expect(Token::COLON, "struct field");

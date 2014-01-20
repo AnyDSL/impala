@@ -212,6 +212,12 @@ class Typedef : public Item, public TypeDecl {
 class Field : public ValueDecl {
 public:
     virtual std::ostream& print(Printer& p) const;
+    Visibility visibility() const { return  visibility_; }
+
+private:
+    Visibility visibility_;
+
+    friend class Parser;
 };
 
 class StructDecl : public Item, public TypeDecl {
