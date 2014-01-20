@@ -125,6 +125,19 @@ std::ostream& TraitDecl::print(Printer& p) const {
     return p.stream();
 }
 
+std::ostream& Impl::print(Printer& p) const {
+    p.stream() << "impl " << symbol();
+    if (type_) {
+        p.stream() << " for ";
+        p.print_type(type_);
+    }
+    //<< " {";
+    p.up();
+    //p.dump_list([&] (const FieldDecl* field) { field->print(p); }, methods(), "", "", "\n");
+    p.down() << "}";
+    return p.stream();
+}
+
 /*
  * Expr
  */

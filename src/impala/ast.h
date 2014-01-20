@@ -241,10 +241,6 @@ class ConstItem : public Item {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class Impl : public Item {
-    virtual std::ostream& print(Printer& p) const;
-};
-
 class FnDecl : public Item, public ValueDecl {
 public:
     FnDecl(TypeTable& typetable);
@@ -269,6 +265,21 @@ public:
     virtual std::ostream& print(Printer& p) const;
 
 private:
+    Methods methods_;
+
+    friend class Parser;
+};
+
+class Impl : public Item {
+public:
+    thorin::Symbol symbol() const { return symbol_; }
+    const Type* type() const { return type_; }
+    const Methods& methods() const { return methods_; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    thorin::Symbol symbol_;
+    const Type* type_;
     Methods methods_;
 
     friend class Parser;

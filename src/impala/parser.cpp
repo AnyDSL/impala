@@ -438,7 +438,9 @@ FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
     parse_param_list(fn.params_, Token::R_PAREN, false);
     parse_return_param(fn.params_);
 
-    if (maybe_empty && !accept(Token::SEMICOLON)) {
+    if (maybe_empty && accept(Token::SEMICOLON)) {
+        // do nothing
+    } else {
         THORIN_PUSH(cur_fn_, &fn);
         fn.body_ = try_block_expr("body of function");
     }
@@ -447,8 +449,16 @@ FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
 }
 
 Impl* Parser::parse_impl() {
-    assert(false && "TODO");
-    return 0;
+    auto impl = loc(new Impl());
+    eat(Token::IMPL);
+    impl->symbol_ = try_id("impl");
+    impl->type_ = accept(Token::FOR) ? parse_type() : nullptr;
+    expect(Token::L_BRACE, "impl");
+    while (la() == Token::FN)
+        impl->methods_.push_back(parse_fn_decl(false)); 
+    expect(Token::R_BRACE, "closing brace of impl");
+
+    return impl;
 }
 
 ModDecl* Parser::parse_mod_decl() {
@@ -492,7 +502,7 @@ StructDecl* Parser::parse_struct_decl() {
     auto struct_decl = loc(new StructDecl());
     eat(Token::STRUCT);
     struct_decl->symbol_ = try_id("struct declaration");
-    eat(Token::L_BRACE);
+    expect(Token::L_BRACE, "struct declaration");
     parse_comma_list(Token::R_BRACE, "closing brace of struct declaration", [&] { 
         struct_decl->fields_.push_back(parse_field_decl()); 
     });
@@ -503,7 +513,7 @@ TraitDecl* Parser::parse_trait_decl() {
     auto trait_decl = loc(new TraitDecl);
     eat(Token::TRAIT);
     trait_decl->symbol_ = try_id("trait declaration");
-    eat(Token::L_BRACE);
+    expect(Token::L_BRACE, "trait declaration");
     while (la() == Token::FN)
         trait_decl->methods_.push_back(parse_fn_decl(true)); 
     expect(Token::R_BRACE, "closing brace of trait declaration");

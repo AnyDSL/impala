@@ -126,12 +126,13 @@ int main(int argc, char** argv) {
             break;
         }
 
+        if (emit_ast)
+            impala::dump(prg, fancy);
+
         //result &= check(init.typetable, prg, nossa);
         //result &= result ? emit(init.world, prg) : false;
 
         if (result) {
-            if (emit_ast)
-                impala::dump(prg, fancy);
             if (!nocleanup)
                 init.world.cleanup();
             if (verify)
