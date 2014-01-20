@@ -137,9 +137,9 @@ public:
     }
 
     //void parse_generics_list(GenericDecls&);
-    const ParamDecl* parse_param();
+    const ParamDecl* parse_param(bool lambda);
     bool parse_return_param(Params&);
-    void parse_param_list(Params& params, TokenKind delimiter);
+    void parse_param_list(Params& params, TokenKind delimiter, bool lambda);
     const ModContents* parse_mod_contents();
 
     // types
@@ -282,18 +282,23 @@ Symbol Parser::try_id(const std::string& what) {
         //});
 //}
 
-const ParamDecl* Parser::parse_param() {
+const ParamDecl* Parser::parse_param(bool lambda) {
     auto param = loc(new ParamDecl(cur_var_handle++));
     param->is_mut_ = accept(Token::MUT);
-    param->symbol_ = try_id("parameter name");
-    if (accept(Token::COLON))
-        param->orig_type_ = parse_type();
+    auto symbol = try_id("parameter name");
+    if (accept(Token::COLON)) {
+        param->symbol_ = symbol;
+        param->type_ = parse_type();
+    } else if (lambda)
+        param->symbol_ = symbol;
+    else
+        param->type_ = typetable.idtype(symbol);
 
     return param;
 }
 
-void Parser::parse_param_list(Params& params, TokenKind delimiter) {
-    parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param()); });
+void Parser::parse_param_list(Params& params, TokenKind delimiter, bool lambda) {
+    parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param(lambda)); });
 }
 
 bool Parser::parse_return_param(Params& params) {
@@ -306,7 +311,7 @@ bool Parser::parse_return_param(Params& params) {
         auto param = new ParamDecl(cur_var_handle++);
         param->is_mut_ = false;
         param->symbol_ = "return";
-        param->orig_type_ = type;
+        param->type_ = type;
         param->set_loc(pos1, pos2);
         params.push_back(param);
         return true;
@@ -398,7 +403,7 @@ FnDecl* Parser::parse_fn_decl() {
     //parse_generics_list(fn_decl->generics_);
 
     expect(Token::L_PAREN, "function head");
-    parse_param_list(fn.params_, Token::R_PAREN);
+    parse_param_list(fn.params_, Token::R_PAREN, false);
     parse_return_param(fn.params_);
 
     THORIN_PUSH(cur_fn_, &fn);
@@ -443,7 +448,7 @@ const Field* Parser::parse_field() {
 
     field->symbol_ = try_id("struct field");
     expect(Token::COLON, "struct field");
-    field->orig_type_ = parse_type();
+    field->type_ = parse_type();
 
     return field;
 }
@@ -673,7 +678,7 @@ const FnExpr* Parser::parse_fn_expr() {
     THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     if (accept(Token::OR))
-        parse_param_list(fn.params_, Token::OR);
+        parse_param_list(fn.params_, Token::OR, true);
     else
         expect(Token::L_O, "parameter list of function expression");
 
@@ -705,7 +710,7 @@ const ForExpr* Parser::parse_for_expr() {
     auto for_expr = loc(new ForExpr());
     auto& fn = for_expr->fn_;
     eat(Token::FOR);
-    parse_param_list(fn.params_, Token::IN);
+    parse_param_list(fn.params_, Token::IN, true);
     for_expr->expr_ = parse_expr();
     fn.body_ = try_block_expr("body of function");
     return for_expr;
@@ -779,7 +784,7 @@ const LetStmt* Parser::parse_let_stmt() {
     local->is_mut_ = accept(Token::MUT);
     local->symbol_ = try_id("local variable in let binding");
     if (accept(Token::COLON))
-        local->orig_type_ = parse_type();
+        local->type_ = parse_type();
     if (accept(Token::ASGN))
         let_stmt->init_ = parse_expr();
     expect(Token::SEMICOLON, "the end of an let statement");

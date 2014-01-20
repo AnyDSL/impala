@@ -53,7 +53,7 @@ void Type::dump() const { Printer p(std::cout, true); p.print_type(this) << std:
 
 std::ostream& LocalDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" ) << symbol();
-    if (auto type = orig_type()) {
+    if (auto type = this->type()) {
         p.stream() << ": "; 
         p.print_type(type);
     }
@@ -86,7 +86,7 @@ std::ostream& FnDecl::print(Printer& p) const {
 
     const Type* ret = nullptr;
     if (!fn().params().empty() && fn().params().back()->symbol() == "return")
-        if (auto fntype = fn().params().back()->orig_type()->isa<FnType>())
+        if (auto fntype = fn().params().back()->type()->isa<FnType>())
             ret = fntype->unpack_return_type();
 
     p.stream() << '(';
@@ -105,7 +105,7 @@ std::ostream& FnDecl::print(Printer& p) const {
 
 std::ostream& Field::print(Printer& p) const {
     p.stream() << symbol() << ": ";
-    p.print_type(orig_type());
+    p.print_type(type());
 }
 
 std::ostream& StructDecl::print(Printer& p) const {
@@ -232,7 +232,7 @@ std::ostream& FnExpr::print(Printer& p) const {
 
     if (has_return_type_) {
         p.stream() << "-> ";
-        p.print_type(fn().params().back()->orig_type()->as<FnType>()->unpack_return_type()) << ' ';
+        p.print_type(fn().params().back()->type()->as<FnType>()->unpack_return_type()) << ' ';
     }
 
     return fn().body()->print(p);

@@ -92,18 +92,20 @@ class TypeDecl : public Decl {
 class ValueDecl : public Decl {
 public:
     ValueDecl()
-        : orig_type_(nullptr)
-        , refined_type_(nullptr)
+        : type_(nullptr)
+        , utype_(nullptr)
         , is_mut_(false)
     {}
 
-    const Type* orig_type() const { return orig_type_; }
-    const Type* refined_type() const { return refined_type_; }
+    /// original type.
+    const Type* type() const { return type_; }
+    /// unified type.
+    const Type* utype() const { return utype_; }
     bool is_mut() const { return is_mut_; }
 
 protected:
-    const Type* orig_type_;
-    mutable const Type* refined_type_;
+    const Type* type_;
+    mutable const Type* utype_;
     bool is_mut_;
 
     friend class Parser;
@@ -135,6 +137,7 @@ public:
     {}
 
     const Fn* fn() const { return fn_; }
+    bool is_anonymous() const { return symbol() == thorin::Symbol(); }
 
 private:
     mutable const Fn* fn_;
