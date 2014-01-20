@@ -49,10 +49,27 @@ typedef thorin::AutoVector<const FnDecl*> Methods;
 
 //------------------------------------------------------------------------------
 
-enum class Visibility {
-    None, 
-    Pub = Token::PUB, 
-    Priv = Token::PRIV
+class Visibility {
+public:
+    enum {
+        None, 
+        Pub = Token::PUB, 
+        Priv = Token::PRIV
+    };
+
+    Visibility() {}
+    Visibility(int visibility)
+        : visibility_(visibility)
+    {}
+
+    const char* str();
+    bool is_pub() const { return visibility_ == Pub; }
+    bool is_priv() const { return visibility_ == Priv; }
+
+private:
+    int visibility_;
+
+    friend class Parser;
 };
 
 class ASTNode : public thorin::HasLocation, public thorin::MagicCast<ASTNode> {
@@ -122,6 +139,7 @@ public:
 
     size_t handle() const { return handle_; }
     virtual std::ostream& print(Printer& p) const;
+    bool is_anonymous() const { return symbol() == thorin::Symbol(); }
 
 protected:
     size_t handle_;
@@ -139,7 +157,6 @@ public:
     {}
 
     const Fn* fn() const { return fn_; }
-    bool is_anonymous() const { return symbol() == thorin::Symbol(); }
 
 private:
     mutable const Fn* fn_;

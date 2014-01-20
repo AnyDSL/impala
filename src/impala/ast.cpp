@@ -6,6 +6,12 @@ using namespace thorin;
 
 namespace impala {
 
+const char* Visibility::str() {
+    if (visibility_ == Pub)  return "pub ";
+    if (visibility_ == Priv) return "priv ";
+    return "";
+}
+
 FnDecl::FnDecl(TypeTable& typetable)
     //: generic_builder_(typetable)
 {}

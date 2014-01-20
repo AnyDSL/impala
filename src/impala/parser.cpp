@@ -156,6 +156,7 @@ public:
     bool parse_return_param(Params&);
     void parse_param_list(Params& params, TokenKind delimiter, bool lambda);
     const ModContents* parse_mod_contents();
+    Visibility parse_visibility();
 
     // types
     const Type* parse_type();
@@ -373,13 +374,17 @@ const ModContents* Parser::parse_mod_contents() {
  * items
  */
 
-Item* Parser::parse_item() {
-    Position pos1 = la().pos1();
+Visibility Parser::parse_visibility() {
     Visibility visibility;
     switch (la()) {
-        case VISIBILITY: visibility = (Visibility) lex().kind(); break;
-        default:         visibility = Visibility::None;
+        case VISIBILITY: return Visibility(lex().kind());
+        default:         return Visibility(Visibility::None);
     }
+}
+
+Item* Parser::parse_item() {
+    Position pos1 = la().pos1();
+    auto visibility = parse_visibility();
 
     Item* item = nullptr;
     switch (la()) {
@@ -485,12 +490,8 @@ ConstItem* Parser::parse_const_item() {
 
 const FieldDecl* Parser::parse_field_decl() {
     auto field_decl = loc(new FieldDecl);
-    switch (la()) {
-        case VISIBILITY: field_decl->visibility_ = (Visibility) lex().kind(); break;
-        default:         field_decl->visibility_ = Visibility::None;
-    }
+    field_decl->visibility_ = parse_visibility();
     field_decl->is_mut_ = accept(Token::MUT);
-
     field_decl->symbol_ = try_id("struct field");
     expect(Token::COLON, "struct field");
     field_decl->type_ = parse_type();

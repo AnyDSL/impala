@@ -52,11 +52,14 @@ void Type::dump() const { Printer p(std::cout, true); p.print_type(this) << std:
 //------------------------------------------------------------------------------
 
 std::ostream& LocalDecl::print(Printer& p) const {
-    p.stream() << (is_mut() ? "mut " : "" ) << symbol();
-    if (auto type = this->type()) {
+    p.stream() << (is_mut() ? "mut " : "" );;
+    if (!is_anonymous())
+         p.stream() << symbol();
+    if (!is_anonymous() && type())
         p.stream() << ": "; 
-        p.print_type(type);
-    }
+    if (type())
+        p.print_type(type());
+
     return p.stream();
 }
 
@@ -95,22 +98,27 @@ std::ostream& FnDecl::print(Printer& p) const {
 
     if (ret) {
         p.stream() << "-> ";
-        p.print_type(ret) << ' ';
+        p.print_type(ret);
     }
 
-    fn().body()->print(p);
-    p.newline();
+    if (auto body = fn().body()) {
+        p.stream() << ' ';
+        body->print(p);
+    } else {
+        p.stream() << ';';
+        p.newline();
+    }
+
     return p.newline();
 }
 
 std::ostream& FieldDecl::print(Printer& p) const {
-    p.stream() << (is_mut() ? "mut " : "" ) << (visibility_ == Visibility::Pub  ? "pub "  : "")
-                                            << (visibility_ == Visibility::Priv ? "priv " : "") << symbol() << ": ";
+    p.stream() << (is_mut() ? "mut " : "" ) << visibility().str() << symbol() << ": ";
     p.print_type(type());
 }
 
 std::ostream& StructDecl::print(Printer& p) const {
-    p.stream() << "struct " << symbol() << " {";
+    p.stream() << visibility().str() << "struct " << symbol() << " {";
     p.up();
     p.dump_list([&] (const FieldDecl* field) { field->print(p); }, fields(), "", "", "\n");
     p.down() << "}";
@@ -120,9 +128,8 @@ std::ostream& StructDecl::print(Printer& p) const {
 std::ostream& TraitDecl::print(Printer& p) const {
     p.stream() << "trait " << symbol() << " {";
     p.up();
-    //p.dump_list([&] (const FieldDecl* field) { field->print(p); }, methods(), "", "", "\n");
-    p.down() << "}";
-    return p.stream();
+    p.dump_list([&] (const FnDecl* method) { method->print(p); }, methods(), "", "", "\n");
+    return p.down() << "}";
 }
 
 std::ostream& Impl::print(Printer& p) const {
