@@ -495,7 +495,6 @@ const FieldDecl* Parser::parse_field_decl() {
     field_decl->symbol_ = try_id("struct field");
     expect(Token::COLON, "struct field");
     field_decl->type_ = parse_type();
-
     return field_decl;
 }
 
@@ -588,7 +587,7 @@ const Type* Parser::parse_fn_type() {
 const Type* Parser::parse_tuple_type() {
     eat(Token::L_PAREN);
     std::vector<const Type*> elems;
-    parse_comma_list(Token::R_PAREN, "closing parenthesis of sigma type", [&]{ elems.push_back(parse_type()); });
+    parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple type", [&]{ elems.push_back(parse_type()); });
 
     return typetable.tupletype(elems);
 }
