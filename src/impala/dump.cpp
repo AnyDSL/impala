@@ -64,7 +64,7 @@ std::ostream& LocalDecl::print(Printer& p) const {
 }
 
 std::ostream& Fn::print_params(Printer& p, bool returning) const {
-    return p.dump_list([&] (const ParamDecl* param) { param->print(p); }, 
+    return p.dump_list([&] (const Param* param) { param->print(p); }, 
             returning ? params().slice_num_from_end(1) : params());
 }
 
@@ -281,7 +281,7 @@ std::ostream& IfExpr::print(Printer& p) const {
 
 std::ostream& ForExpr::print(Printer& p) const {
     p.stream() << "for ";
-    p.dump_list([&](const ParamDecl* param) { param->print(p); }, fn().params()) << " in ";
+    p.dump_list([&](const Param* param) { param->print(p); }, fn().params()) << " in ";
     expr()->print(p) << ' ';
     return fn().body()->print(p);
 }

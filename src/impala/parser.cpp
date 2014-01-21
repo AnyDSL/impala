@@ -106,8 +106,6 @@ public:
     Parser(TypeTable& typetable, std::istream& stream, const std::string& filename)
         : typetable(typetable)
         , lexer(stream, filename)
-        //, cur_loop(nullptr)
-        , cur_fn_(nullptr)
         , cur_var_handle(2) // reserve 1 for conditionals, 0 for mem
         , no_bars_(false)
         , result_(true)
@@ -151,8 +149,9 @@ public:
         }
     }
 
-    //void parse_generics_list(GenericDecls&);
-    const ParamDecl* parse_param(bool lambda);
+    const TypeParam* parse_type_param();
+    void parse_type_params(TypeParams&);
+    const Param* parse_param(bool lambda);
     bool parse_return_param(Params&);
     void parse_param_list(Params& params, TokenKind delimiter, bool lambda);
     const ModContents* parse_mod_contents();
@@ -209,7 +208,6 @@ private:
     Lexer lexer;       ///< invoked in order to get next token
     Token lookahead[2];///< LL(2) look ahead
     //const Loop* cur_loop;
-    const Fn* cur_fn_;
     size_t cur_var_handle;
     bool no_bars_;
     thorin::Location prev_loc_;
@@ -291,15 +289,16 @@ Symbol Parser::try_id(const std::string& what) {
     return name.symbol();
 }
 
-//void Parser::parse_generics_list(GenericDecls& generic_decls) {
-    //if (accept(Token::L_BRACE))
-        //parse_comma_list(Token::R_BRACE, "generics list", [&] {
-            //generic_decls.push_back(new GenericDecl(try_id("generic identifier")));
-        //});
-//}
+const TypeParam* Parser::parse_type_param() {
+}
 
-const ParamDecl* Parser::parse_param(bool lambda) {
-    auto param = loc(new ParamDecl(cur_var_handle++));
+void Parser::parse_type_params(TypeParams& type_params) {
+    if (accept(Token::L_BRACKET))
+        parse_comma_list(Token::R_BRACKET, "type parameter list", [&] { type_params.push_back(parse_type_param()); });
+}
+
+const Param* Parser::parse_param(bool lambda) {
+    auto param = loc(new Param(cur_var_handle++));
     param->is_mut_ = accept(Token::MUT);
     Symbol symbol;
     const Type* type = nullptr;
@@ -341,7 +340,7 @@ bool Parser::parse_return_param(Params& params) {
             return true;
         auto type = typetable.pack_return_type(parse_type());
         Position pos2 = prev_loc().pos2();
-        auto param = new ParamDecl(cur_var_handle++);
+        auto param = new Param(cur_var_handle++);
         param->is_mut_ = false;
         param->symbol_ = "return";
         param->type_ = type;
@@ -431,24 +430,21 @@ ForeignMod* Parser::parse_foreign_mod() {
 }
 
 FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
+    THORIN_PUSH(cur_var_handle, cur_var_handle);
+
     auto fn_decl = loc(new FnDecl(typetable));
     auto& fn = fn_decl->fn_;
     eat(Token::FN);
-    fn_decl->symbol_ = try_id("function identifier");
-
-    THORIN_PUSH(cur_var_handle, cur_var_handle);
-    //parse_generics_list(fn_decl->generics_);
-
+    fn_decl->symbol_ = try_id("function name");
+    parse_type_params(fn_decl->type_params_);
     expect(Token::L_PAREN, "function head");
     parse_param_list(fn.params_, Token::R_PAREN, false);
     parse_return_param(fn.params_);
 
     if (maybe_empty && accept(Token::SEMICOLON)) {
         // do nothing
-    } else {
-        THORIN_PUSH(cur_fn_, &fn);
+    } else
         fn.body_ = try_block_expr("body of function");
-    }
 
     return fn_decl;
 }
@@ -513,9 +509,17 @@ TraitDecl* Parser::parse_trait_decl() {
     auto trait_decl = loc(new TraitDecl);
     eat(Token::TRAIT);
     trait_decl->symbol_ = try_id("trait declaration");
-    expect(Token::L_BRACE, "trait declaration");
+
+    if (accept(Token::COLON)) {
+        parse_comma_list(Token::L_BRACE, "trait declaration", [&] { 
+            trait_decl->super_.push_back(try_id("list of super traits"));
+        });
+    } else
+        expect(Token::L_BRACE, "trait declaration");
+
     while (la() == Token::FN)
         trait_decl->methods_.push_back(parse_fn_decl(true)); 
+
     expect(Token::R_BRACE, "closing brace of trait declaration");
     return trait_decl;
 }
@@ -724,11 +728,10 @@ const LiteralExpr* Parser::parse_literal_expr() {
 }
 
 const FnExpr* Parser::parse_fn_expr() {
+    THORIN_PUSH(cur_var_handle, cur_var_handle);
+
     auto fn_expr = loc(new FnExpr(typetable));
     auto& fn = fn_expr->fn_;
-
-    THORIN_PUSH(cur_fn_, &fn);
-    THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     if (accept(Token::OR))
         parse_param_list(fn.params_, Token::OR, true);

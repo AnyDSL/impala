@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "thorin/irbuilder.h"
-
 #include "thorin/util/array.h"
 #include "thorin/util/assert.h"
 #include "thorin/util/autoptr.h"
@@ -16,36 +15,33 @@
 #include "impala/type.h"
 
 namespace thorin {
-    class DefNode;
     class Enter;
     class JumpTarget;
     class Lambda;
-    class ParamDecl;
-    class Ref;
 }
 
 namespace impala {
 
-class BlockExpr;
+class BoundDecl;
 class CodeGen;
 class Expr;
 class FieldDecl;
-class Fn;
 class FnDecl;
 class Item;
-class ParamDecl;
+class Param;
+class TypeParam;
 class Printer;
 class Sema;
 class Stmt;
-//class GenericDecl;
 
+typedef thorin::AutoVector<const BoundDecl*> Bounds;
 typedef thorin::AutoVector<const Expr*> Exprs;
 typedef thorin::AutoVector<const FieldDecl*> Fields;
 typedef thorin::AutoVector<const Item*> Items;
-typedef thorin::AutoVector<const ParamDecl*> Params;
+typedef thorin::AutoVector<const Param*> Params;
+typedef thorin::AutoVector<const TypeParam*> TypeParams;
 typedef thorin::AutoVector<const Stmt*> Stmts;
 typedef thorin::AutoVector<const FnDecl*> Methods;
-//typedef thorin::AutoVector<const GenericDecl*> GenericDecls;
 
 //------------------------------------------------------------------------------
 
@@ -107,6 +103,19 @@ class PathDecl : public Decl {
 class TypeDecl : public Decl {
 };
 
+class ParametricType {
+public:
+    const TypeParam* type_param(size_t i) const { return type_params_[i]; }
+    thorin::ArrayRef<const TypeParam*> type_params() const { return type_params_; }
+
+protected:
+    TypeParams type_params_;
+};
+
+/// Base class for all \p Type declarations having \p TypeParams.
+class ParametricTypeDecl : ParametricType, public Decl {
+};
+
 /// Base class for all declarations which have a type.
 class ValueDecl : public Decl {
 public:
@@ -150,24 +159,32 @@ protected:
 
 //------------------------------------------------------------------------------
 
-class ParamDecl : public LocalDecl {
-public:
-    ParamDecl(size_t handle)
-        : LocalDecl(handle)
-    {}
+class BoundDecl : public ParametricTypeDecl {
+};
 
-    const Fn* fn() const { return fn_; }
+class TypeParam : public TypeDecl {
+public:
+    const Bounds& bounds() const { return bounds_; }
 
 private:
-    mutable const Fn* fn_;
+    Bounds bounds_; 
+
+    friend class Parser;
+};
+
+class Param : public LocalDecl {
+public:
+    Param(size_t handle)
+        : LocalDecl(handle)
+    {}
 
     friend class Parser;
 };
 
 class Fn {
 public:
-    const ParamDecl* param(size_t i) const { return params_[i]; }
-    thorin::ArrayRef<const ParamDecl*> params() const { return params_; }
+    const Param* param(size_t i) const { return params_[i]; }
+    thorin::ArrayRef<const Param*> params() const { return params_; }
     const Expr* body() const { return body_; }
     thorin::Lambda* lambda() const { return lambda_; }
     const thorin::Param* ret_param() const { return ret_param_; }
@@ -258,7 +275,7 @@ class ConstItem : public Item {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class FnDecl : public Item, public ValueDecl {
+class FnDecl : public ParametricType, public Item, public ValueDecl {
 public:
     FnDecl(TypeTable& typetable);
 
@@ -279,10 +296,12 @@ private:
 class TraitDecl : public Item, public TypeDecl {
 public:
     const Methods& methods() const { return methods_; }
+    const std::vector<thorin::Symbol>& super() const { return super_; }
     virtual std::ostream& print(Printer& p) const;
 
 private:
     Methods methods_;
+    std::vector<thorin::Symbol> super_;
 
     friend class Parser;
 };
