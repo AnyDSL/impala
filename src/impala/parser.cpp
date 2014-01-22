@@ -150,13 +150,9 @@ public:
     }
     Visibility parse_visibility();
 
-    // generics
+    // parameters
     void parse_type_params(TypeParams&);
     const TypeParam* parse_type_param();
-    //void parse_bounds(Bounds&);
-    //const BoundDecl* parse_bound_decl();
-
-    // parameters
     const Param* parse_param(bool lambda);
     bool parse_return_param(Params&);
     void parse_param_list(Params& params, TokenKind delimiter, bool lambda);
@@ -306,7 +302,7 @@ Visibility Parser::parse_visibility() {
 }
 
 /*
- * generics
+ * parameters
  */
 
 void Parser::parse_type_params(TypeParams& type_params) {
@@ -318,21 +314,14 @@ const TypeParam* Parser::parse_type_param() {
     auto type_param = loc(new TypeParam());
     type_param->symbol_ = try_id("type parameter");
 
-    //if (accept(Token::COLON))
-        //parse_bounds(type_param->bounds_);
+    if (accept(Token::COLON)) {
+        do 
+            type_param->bounds_.push_back(parse_type());
+        while (accept(Token::ADD));
+    }
 
     return type_param;
 }
-
-//void Parser::parse_bounds(Bounds& bounds) {
-//}
-
-//const BoundDecl* Parser::parse_bound_decl() {
-//}
-
-/*
- * parameters
- */
 
 void Parser::parse_param_list(Params& params, TokenKind delimiter, bool lambda) {
     parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param(lambda)); });
