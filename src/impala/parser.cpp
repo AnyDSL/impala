@@ -148,20 +148,26 @@ public:
             default:   return false;
         }
     }
+    Visibility parse_visibility();
 
-    const TypeParam* parse_type_param();
+    // generics
     void parse_type_params(TypeParams&);
+    const TypeParam* parse_type_param();
+    //void parse_bounds(Bounds&);
+    //const BoundDecl* parse_bound_decl();
+
+    // parameters
     const Param* parse_param(bool lambda);
     bool parse_return_param(Params&);
     void parse_param_list(Params& params, TokenKind delimiter, bool lambda);
-    const ModContents* parse_mod_contents();
-    Visibility parse_visibility();
 
     // types
     const Type* parse_type();
     const Type* parse_array_type();
+    const Type* parse_type_app();
     const Type* parse_fn_type();
     const Type* parse_tuple_type();
+    void parse_types(Types& types);
 
     // items
     Item*       parse_item();
@@ -176,6 +182,8 @@ public:
     TraitDecl*  parse_trait_decl();
     Typedef*    parse_typedef();
 
+    // item helpers
+    const ModContents* parse_mod_contents();
     const FieldDecl* parse_field_decl();
 
     // expressions
@@ -289,12 +297,45 @@ Symbol Parser::try_id(const std::string& what) {
     return name.symbol();
 }
 
-const TypeParam* Parser::parse_type_param() {
+Visibility Parser::parse_visibility() {
+    Visibility visibility;
+    switch (la()) {
+        case VISIBILITY: return Visibility(lex().kind());
+        default:         return Visibility(Visibility::None);
+    }
 }
+
+/*
+ * generics
+ */
 
 void Parser::parse_type_params(TypeParams& type_params) {
     if (accept(Token::L_BRACKET))
         parse_comma_list(Token::R_BRACKET, "type parameter list", [&] { type_params.push_back(parse_type_param()); });
+}
+
+const TypeParam* Parser::parse_type_param() {
+    auto type_param = loc(new TypeParam());
+    type_param->symbol_ = try_id("type parameter");
+
+    //if (accept(Token::COLON))
+        //parse_bounds(type_param->bounds_);
+
+    return type_param;
+}
+
+//void Parser::parse_bounds(Bounds& bounds) {
+//}
+
+//const BoundDecl* Parser::parse_bound_decl() {
+//}
+
+/*
+ * parameters
+ */
+
+void Parser::parse_param_list(Params& params, TokenKind delimiter, bool lambda) {
+    parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param(lambda)); });
 }
 
 const Param* Parser::parse_param(bool lambda) {
@@ -324,13 +365,9 @@ const Param* Parser::parse_param(bool lambda) {
             error("identifier", "parameter");
         param->symbol_ = symbol;
     } else
-        param->type_ = type != nullptr ? type : typetable.idtype(symbol);
+        param->type_ = type != nullptr ? type : typetable.type_app(symbol, {});
 
     return param;
-}
-
-void Parser::parse_param_list(Params& params, TokenKind delimiter, bool lambda) {
-    parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param(lambda)); });
 }
 
 bool Parser::parse_return_param(Params& params) {
@@ -351,35 +388,9 @@ bool Parser::parse_return_param(Params& params) {
         return false;
 }
 
-const ModContents* Parser::parse_mod_contents() {
-    auto mod_contents = loc(new ModContents());
-
-    while (true) {
-        switch (la()) {
-            case VISIBILITY:
-            case ITEM:
-                mod_contents->items_.push_back(parse_item());
-                continue;
-            case Token::SEMICOLON:  
-                lex(); 
-                continue;
-            default:
-                return mod_contents;
-        }
-    }
-}
-
 /*
  * items
  */
-
-Visibility Parser::parse_visibility() {
-    Visibility visibility;
-    switch (la()) {
-        case VISIBILITY: return Visibility(lex().kind());
-        default:         return Visibility(Visibility::None);
-    }
-}
 
 Item* Parser::parse_item() {
     Position pos1 = la().pos1();
@@ -453,7 +464,8 @@ Impl* Parser::parse_impl() {
     auto impl = loc(new Impl());
     eat(Token::IMPL);
     impl->symbol_ = try_id("impl");
-    impl->type_ = accept(Token::FOR) ? parse_type() : nullptr;
+    parse_type_params(impl->type_params_);
+    impl->for_type_ = accept(Token::FOR) ? parse_type() : nullptr;
     expect(Token::L_BRACE, "impl");
     while (la() == Token::FN)
         impl->methods_.push_back(parse_fn_decl(false)); 
@@ -484,20 +496,11 @@ ConstItem* Parser::parse_const_item() {
     return 0;
 }
 
-const FieldDecl* Parser::parse_field_decl() {
-    auto field_decl = loc(new FieldDecl);
-    field_decl->visibility_ = parse_visibility();
-    field_decl->is_mut_ = accept(Token::MUT);
-    field_decl->symbol_ = try_id("struct field");
-    expect(Token::COLON, "struct field");
-    field_decl->type_ = parse_type();
-    return field_decl;
-}
-
 StructDecl* Parser::parse_struct_decl() {
     auto struct_decl = loc(new StructDecl());
     eat(Token::STRUCT);
     struct_decl->symbol_ = try_id("struct declaration");
+    parse_type_params(struct_decl->type_params_);
     expect(Token::L_BRACE, "struct declaration");
     parse_comma_list(Token::R_BRACE, "closing brace of struct declaration", [&] { 
         struct_decl->fields_.push_back(parse_field_decl()); 
@@ -509,6 +512,7 @@ TraitDecl* Parser::parse_trait_decl() {
     auto trait_decl = loc(new TraitDecl);
     eat(Token::TRAIT);
     trait_decl->symbol_ = try_id("trait declaration");
+    parse_type_params(trait_decl->type_params_);
 
     if (accept(Token::COLON)) {
         parse_comma_list(Token::L_BRACE, "trait declaration", [&] { 
@@ -530,6 +534,38 @@ Typedef* Parser::parse_typedef() {
 }
 
 /*
+ * item helpers
+ */
+
+const ModContents* Parser::parse_mod_contents() {
+    auto mod_contents = loc(new ModContents());
+
+    while (true) {
+        switch (la()) {
+            case VISIBILITY:
+            case ITEM:
+                mod_contents->items_.push_back(parse_item());
+                continue;
+            case Token::SEMICOLON:  
+                lex(); 
+                continue;
+            default:
+                return mod_contents;
+        }
+    }
+}
+
+const FieldDecl* Parser::parse_field_decl() {
+    auto field_decl = loc(new FieldDecl);
+    field_decl->visibility_ = parse_visibility();
+    field_decl->is_mut_ = accept(Token::MUT);
+    field_decl->symbol_ = try_id("struct field");
+    expect(Token::COLON, "struct field");
+    field_decl->type_ = parse_type();
+    return field_decl;
+}
+
+/*
  * types
  */
 
@@ -542,7 +578,7 @@ const Type* Parser::parse_type() {
         case Token::L_N:            lex(); return typetable.noret();
         case Token::FN:                    return parse_fn_type();
         case Token::L_PAREN:               return parse_tuple_type();
-        case Token::ID:                    return typetable.idtype(lex().symbol());
+        case Token::ID:                    return parse_type_app();
         case Token::L_BRACKET:      lex(); return parse_array_type();
         default: error("type", ""); lex(); return typetable.type_error();
     }
@@ -577,7 +613,7 @@ const Type* Parser::parse_fn_type() {
     eat(Token::FN);
     std::vector<const Type*> elems;
     expect(Token::L_PAREN, "parameter list of function type");
-    parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&]{ elems.push_back(parse_type()); });
+    parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&] { elems.push_back(parse_type()); });
 
     if (accept(Token::ARROW)) {
         if (accept(Token::L_N)) {
@@ -588,12 +624,23 @@ const Type* Parser::parse_fn_type() {
     return typetable.fntype(elems);
 }
 
+const Type* Parser::parse_type_app() {
+    auto symbol = lex().symbol();
+    std::vector<const Type*> elems;
+    if (accept(Token::L_BRACKET))
+        parse_comma_list(Token::R_BRACKET, "type arguments for type application", [&] { elems.push_back(parse_type()); });
+    return typetable.type_app(symbol, elems);
+}
+
 const Type* Parser::parse_tuple_type() {
     eat(Token::L_PAREN);
     std::vector<const Type*> elems;
-    parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple type", [&]{ elems.push_back(parse_type()); });
+    parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple type", [&] { elems.push_back(parse_type()); });
 
     return typetable.tupletype(elems);
+}
+
+void Parser::parse_types(Types& types) {
 }
 
 /*
@@ -659,7 +706,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
     if (accept(Token::L_PAREN)) {
         auto map = new MapExpr();
         map->lhs_ = lhs;
-        parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&]{ map->ops_.push_back(parse_expr()); });
+        parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->ops_.push_back(parse_expr()); });
         map->set_loc(lhs->pos1(), prev_loc().pos2());
         return map;
     } else {
@@ -681,7 +728,7 @@ const Expr* Parser::parse_primary_expr() {
                 auto tuple = new TupleExpr();
                 tuple->set_pos1(pos1);
                 tuple->ops_.push_back(expr);
-                parse_comma_list(Token::R_PAREN, "elements of tuple expression", [&]{ tuple->ops_.push_back(parse_expr()); });
+                parse_comma_list(Token::R_PAREN, "elements of tuple expression", [&] { tuple->ops_.push_back(parse_expr()); });
                 tuple->set_pos2(prev_loc().pos2());
                 return tuple;
             } else {
@@ -692,7 +739,7 @@ const Expr* Parser::parse_primary_expr() {
         case Token::L_BRACKET: {
             auto array = new ArrayExpr();
             array->set_pos1(lex().pos1());
-            parse_comma_list(Token::R_BRACKET, "elements of array expression", [&]{ array->ops_.push_back(parse_expr()); });
+            parse_comma_list(Token::R_BRACKET, "elements of array expression", [&] { array->ops_.push_back(parse_expr()); });
             array->set_pos2(prev_loc().pos2());
             return array;
         }

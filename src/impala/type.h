@@ -18,7 +18,7 @@ namespace impala {
 
 class FnType;
 class Fun;
-class IdType;
+class TypeApp;
 class NoRet;
 class PrimType;
 class Sema;
@@ -174,11 +174,15 @@ private:
     friend class TypeTable;
 };
 
-class IdType : public Type {
+class TypeApp : public Type {
 private:
-    IdType(TypeTable& typetable, thorin::Symbol symbol)
-        : Type(typetable, Token::TYPE_id, 0, symbol.str())
-    {}
+    TypeApp(TypeTable& typetable, thorin::Symbol symbol, thorin::ArrayRef<const Type*> elems)
+        : Type(typetable, Token::TYPE_app, elems.size(), symbol.str())
+    {
+        size_t i = 0;
+        for (auto elem : elems)
+            set(i++, elem);
+    }
     virtual size_t hash() const { return thorin::hash_value(this); }
     virtual bool equal(const Node* other) const { return this == other; }
     virtual const Type* refine(const Sema&) const;
@@ -208,7 +212,7 @@ public:
     const FnType* fntype(thorin::ArrayRef<const Type*> elems);
     const FnType* pack_return_type(const Type* type);
     const TupleType* tupletype(thorin::ArrayRef<const Type*> elems);
-    const IdType* idtype(thorin::Symbol);
+    const TypeApp* type_app(thorin::Symbol, thorin::ArrayRef<const Type*> elems);
 
 private:
     const Type* unify_base(const Type* type);

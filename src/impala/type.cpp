@@ -54,7 +54,9 @@ const IndefiniteArray* TypeTable::indefinite_array(const Type* elem_type) {
 }
 const FnType* TypeTable::fntype(thorin::ArrayRef<const Type*> elems) { return unify(new FnType(*this, elems)); }
 const TupleType* TypeTable::tupletype(thorin::ArrayRef<const Type*> elems) { return unify(new TupleType(*this, elems)); }
-const IdType* TypeTable::idtype(Symbol symbol) { return unify(new IdType(*this, symbol)); }
+const TypeApp* TypeTable::type_app(Symbol symbol, ArrayRef<const Type*> elems) { 
+    return unify(new TypeApp(*this, symbol, elems)); 
+}
 
 const FnType* TypeTable::pack_return_type(const Type* type) {
     if (auto tuple = type->isa<TupleType>())
@@ -164,6 +166,6 @@ const thorin::Type* TupleType::convert(World& world) const {
 //------------------------------------------------------------------------------
 
 // TODO
-const Type* IdType::refine(const Sema& sema) const { return nullptr; }
+const Type* TypeApp::refine(const Sema& sema) const { return nullptr; }
 
 } // namespace impala

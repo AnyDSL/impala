@@ -22,7 +22,6 @@ namespace thorin {
 
 namespace impala {
 
-class BoundDecl;
 class CodeGen;
 class Expr;
 class FieldDecl;
@@ -34,7 +33,7 @@ class Printer;
 class Sema;
 class Stmt;
 
-typedef thorin::AutoVector<const BoundDecl*> Bounds;
+typedef std::vector<const Type*> Types;
 typedef thorin::AutoVector<const Expr*> Exprs;
 typedef thorin::AutoVector<const FieldDecl*> Fields;
 typedef thorin::AutoVector<const Item*> Items;
@@ -107,6 +106,7 @@ class ParametricType {
 public:
     const TypeParam* type_param(size_t i) const { return type_params_[i]; }
     thorin::ArrayRef<const TypeParam*> type_params() const { return type_params_; }
+    std::ostream& print_type_params(Printer& p, bool returning) const;
 
 protected:
     TypeParams type_params_;
@@ -114,6 +114,7 @@ protected:
 
 /// Base class for all \p Type declarations having \p TypeParams.
 class ParametricTypeDecl : ParametricType, public Decl {
+    friend class Parser;
 };
 
 /// Base class for all declarations which have a type.
@@ -159,15 +160,13 @@ protected:
 
 //------------------------------------------------------------------------------
 
-class BoundDecl : public ParametricTypeDecl {
-};
-
 class TypeParam : public TypeDecl {
 public:
-    const Bounds& bounds() const { return bounds_; }
+    const Types& bounds() const { return bounds_; }
+    virtual std::ostream& print(Printer& p) const;
 
 private:
-    Bounds bounds_; 
+    Types bounds_; 
 
     friend class Parser;
 };
@@ -241,7 +240,7 @@ class ForeignMod : public Item, public PathDecl {
     virtual std::ostream& print(Printer& p) const;
 };
 
-class Typedef : public Item, public TypeDecl {
+class Typedef : public Item, public ParametricTypeDecl {
     virtual std::ostream& print(Printer& p) const;
 };
 
@@ -256,7 +255,7 @@ private:
     friend class Parser;
 };
 
-class StructDecl : public Item, public TypeDecl {
+class StructDecl : public Item, public ParametricTypeDecl {
 public:
     const Fields& fields() const { return fields_; }
     virtual std::ostream& print(Printer& p) const;
@@ -267,7 +266,7 @@ private:
     friend class Parser;
 };
 
-class EnumDecl : public Item, public TypeDecl {
+class EnumDecl : public Item, public ParametricTypeDecl {
     virtual std::ostream& print(Printer& p) const;
 };
 
@@ -293,7 +292,7 @@ private:
     friend class Parser;
 };
 
-class TraitDecl : public Item, public TypeDecl {
+class TraitDecl : public Item, public ParametricTypeDecl {
 public:
     const Methods& methods() const { return methods_; }
     const std::vector<thorin::Symbol>& super() const { return super_; }
@@ -306,16 +305,16 @@ private:
     friend class Parser;
 };
 
-class Impl : public Item {
+class Impl : public Item, public ParametricTypeDecl {
 public:
     thorin::Symbol symbol() const { return symbol_; }
-    const Type* type() const { return type_; }
+    const Type* for_type() const { return for_type_; }
     const Methods& methods() const { return methods_; }
     virtual std::ostream& print(Printer& p) const;
 
 private:
     thorin::Symbol symbol_;
-    const Type* type_;
+    const Type* for_type_;
     Methods methods_;
 
     friend class Parser;

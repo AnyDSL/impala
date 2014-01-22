@@ -32,7 +32,7 @@ std::ostream& Printer::print_type(const Type* type) {
             dump_list([&](const Type* elem) { print_type(elem); }, fn->elems().slice_to_end(fn->size()-1), "fn(", ") -> ");
             return print_type(ret_type);
         }
-    } else if (auto idtype = type->isa<IdType>()) {
+    } else if (auto idtype = type->isa<TypeApp>()) {
         return stream() << idtype->name;
     } else if (auto primtype = type->isa<PrimType>()) {
         switch (primtype->kind()) {
@@ -51,6 +51,31 @@ void Type::dump() const { Printer p(std::cout, true); p.print_type(this) << std:
 
 //------------------------------------------------------------------------------
 
+/*
+ * helpers
+ */
+
+/*
+ * generics
+ */
+
+//std::ostream& ParametricType::print_bounds(Printer& p, bool returning) const {
+    //return p.dump_list([&] (const TypeParam* type_param) { type_param->print(p); }, 
+            //returning ? params().slice_num_from_end(1) : params());
+//}
+
+std::ostream& TypeParam::print(Printer& p) const {
+}
+
+/*
+ * other decls
+ */
+
+std::ostream& Fn::print_params(Printer& p, bool returning) const {
+    return p.dump_list([&] (const Param* param) { param->print(p); }, 
+            returning ? params().slice_num_from_end(1) : params());
+}
+
 std::ostream& LocalDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" );;
     if (!is_anonymous())
@@ -63,23 +88,12 @@ std::ostream& LocalDecl::print(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& Fn::print_params(Printer& p, bool returning) const {
-    return p.dump_list([&] (const Param* param) { param->print(p); }, 
-            returning ? params().slice_num_from_end(1) : params());
-}
-
 /*
- * Items
+ * items
  */
 
 std::ostream& ModDecl::print(Printer& p) const {
     return p.stream() << symbol();
-}
-
-std::ostream& ModContents::print(Printer& p) const {
-    for (auto item : items())
-        item->print(p);
-    return p.stream();
 }
 
 std::ostream& FnDecl::print(Printer& p) const {
@@ -134,9 +148,9 @@ std::ostream& TraitDecl::print(Printer& p) const {
 
 std::ostream& Impl::print(Printer& p) const {
     p.stream() << "impl " << symbol();
-    if (type_) {
+    if (for_type_) {
         p.stream() << " for ";
-        p.print_type(type_);
+        p.print_type(for_type_);
     }
     //<< " {";
     p.up();
@@ -146,7 +160,17 @@ std::ostream& Impl::print(Printer& p) const {
 }
 
 /*
- * Expr
+ * item helpers
+ */
+
+std::ostream& ModContents::print(Printer& p) const {
+    for (auto item : items())
+        item->print(p);
+    return p.stream();
+}
+
+/*
+ * expr
  */
 
 std::ostream& BlockExpr::print(Printer& p) const {
@@ -287,7 +311,7 @@ std::ostream& ForExpr::print(Printer& p) const {
 }
 
 /*
- * Stmt
+ * stmt
  */
 
 std::ostream& ItemStmt::print(Printer& p) const { return item()->print(p); }
