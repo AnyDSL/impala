@@ -1,0 +1,99 @@
+//-------------------------------------------------------------------------
+// This is the DSL interface
+
+trait NumVec {
+    fn add(Self, n: int) -> Self;
+}
+
+struct Pixel[V: NumVec] {
+    red:   V,
+    green: V,
+    blue:  V
+}
+
+trait TImage[V: NumVec] {
+    fn pixels(self: &Self, body: fn(&Pixel[V]) -> ());
+}
+
+//-------------------------------------------------------------------------
+// A DSL using the DSL interface
+
+mod application[Image: TImage] {
+
+fn redshift(img: &Img, val: int) -> () {
+    img.pixels(|pixel| {
+        pixel.red = pixel.red.add(val);
+    });
+}
+
+// nicer with for expression
+fn redshift(img: &Img, val: int) -> () {
+    for pixel in img.pixels() {
+        pixel.red = pixel.red.add(val);
+    }
+}
+
+}
+
+//-------------------------------------------------------------------------
+// platform-specific implementation I
+
+impl NumVec for int {
+    fn add(self: Self, n: int) -> Self {
+        self + n
+    }
+}
+
+struct SimpleImage {
+    data: ~[Pixel[int]] // owned pointer to pixel data on the heap
+}
+    
+impl TImage[V: NumVec] for SimpleImage {
+    fn pixels(self: &Self, body: fn(&Pixel[V])) -> () {
+        for i in range(0, self.data.length) {
+            body(self.data(i));
+        }
+    }
+}
+
+//-------------------------------------------------------------------------
+// platform-specific implementation II - Suitable for vectorization length 2
+
+struct Vec2 {
+    i: int, 
+    j: int
+}
+    
+impl NumVec for Vec2 {
+    fn add(self: Self, n: int) -> Self {
+        Vec2{i: self.i+n, j: self.j+n}
+    }
+}
+
+struct ImageVec2 {
+    data: ~[Pixel[Vec2]] // owned pointer to pixel data on the heap
+}
+
+impl TImage[V: NumVec] for ImageVec2 {
+    fn pixels(self: &Self, body: fn(&Pixel[V]) -> ()) {
+        for i in range(0, self.data.length) {
+            body(self.data(i));
+        }
+    }
+}
+
+//-------------------------------------------------------------------------
+// instantiate DSL module I
+mod application[SimpleImage];
+
+fn foo(img: SimpleImage) -> () {
+    redshift(img, 23);
+}
+
+//-------------------------------------------------------------------------
+// instantiate DSL module II
+mod application[ImageVec2];
+
+fn foo(img: ImageVec2) -> () {
+    redshift(img, 23);
+}
