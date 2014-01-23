@@ -46,6 +46,8 @@ const PrimType* TypeTable::primtype(TokenKind kind) {
     }
 }
 
+const OwnedPtr* TypeTable::owned_ptr(const Type* referenced_type)       { return unify(new    OwnedPtr(*this, referenced_type)); }
+const BorrowedPtr* TypeTable::borrowed_ptr(const Type* referenced_type) { return unify(new BorrowedPtr(*this, referenced_type)); }
 const DefiniteArray* TypeTable::definite_array(const Type* elem_type, u64 dim) { 
     return unify(new DefiniteArray(*this, elem_type, dim)); 
 }
@@ -120,6 +122,9 @@ const Type* FnType::return_type() const {
 THORIN_REFINE_SPECIALIZE(TupleType, tupletype)
 THORIN_REFINE_SPECIALIZE(FnType, fntype)
 
+const Type*    OwnedPtr::refine(const Sema& sema) const { return typetable_.   owned_ptr(referenced_type()->refine(sema)); }
+const Type* BorrowedPtr::refine(const Sema& sema) const { return typetable_.borrowed_ptr(referenced_type()->refine(sema)); }
+
 const Type* DefiniteArray::refine(const Sema& sema) const {
     return typetable_.definite_array(elem_type()->refine(sema), dim());
 }
@@ -137,6 +142,8 @@ const thorin::Type* PrimType::convert(World& world) const {
         default: THORIN_UNREACHABLE;
     }
 }
+
+const thorin::Type* Ptr::convert(World& world) const { return world.ptr(referenced_type()->convert(world)); }
 
 const thorin::Type* DefiniteArray::convert(World& world) const {
     return world.def_array(elem_type()->convert(world), dim());

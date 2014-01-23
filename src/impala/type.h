@@ -91,6 +91,37 @@ private:
     friend class TypeTable;
 };
 
+class Ptr : public Type {
+protected:
+    Ptr(TypeTable& typetable, TokenKind kind, const Type* referenced_type) 
+        : Type(typetable, kind, 1, "")
+    {
+        set(0, referenced_type);
+    }
+
+public:
+    const Type* referenced_type() const { return elem(0); }
+    virtual const thorin::Type* convert(thorin::World&) const;
+};
+
+class OwnedPtr : public Ptr {
+public:
+    OwnedPtr(TypeTable& typetable, const Type* referenced_type) 
+        : Ptr(typetable, Token::NOT, referenced_type)
+    {}
+
+    virtual const Type* refine(const Sema&) const;
+};
+
+class BorrowedPtr : public Ptr {
+public:
+    BorrowedPtr(TypeTable& typetable, const Type* referenced_type) 
+        : Ptr(typetable, Token::AND, referenced_type)
+    {}
+
+    virtual const Type* refine(const Sema&) const;
+};
+
 class ArrayType : public Type {
 protected:
     ArrayType(TypeTable& typetable, TokenKind kind, const Type* elem_type)
@@ -205,6 +236,8 @@ public:
     const TypeError* type_error() { return type_error_; }
     const NoRet* noret() { return noret_; }
     const PrimType* primtype(TokenKind kind);
+    const OwnedPtr* owned_ptr(const Type* referenced_type);
+    const BorrowedPtr* borrowed_ptr(const Type* referenced_type);
     const DefiniteArray* definite_array(const Type* elem_type, thorin::u64 dim);
     const IndefiniteArray* indefinite_array(const Type* elem_type);
 #define IMPALA_TYPE(itype, atype) const PrimType* type_##itype() { return itype##_; }

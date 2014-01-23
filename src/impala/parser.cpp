@@ -79,6 +79,8 @@
     case Token::TYPE_double: \
     case Token::TYPE_bool: \
     case Token::TYPE_int: \
+    case Token::NOT: \
+    case Token::AND: \
     case Token::L_N
 
 using namespace thorin;
@@ -569,6 +571,8 @@ const Type* Parser::parse_type() {
         case Token::L_PAREN:               return parse_tuple_type();
         case Token::ID:                    return parse_type_app();
         case Token::L_BRACKET:      lex(); return parse_array_type();
+        case Token::NOT:            lex(); return typetable.   owned_ptr(parse_type());
+        case Token::AND:            lex(); return typetable.borrowed_ptr(parse_type());
         default: error("type", ""); lex(); return typetable.type_error();
     }
 }
