@@ -469,15 +469,12 @@ ModDecl* Parser::parse_mod_decl() {
     auto mod_decl = loc(new ModDecl());
     eat(Token::MOD);
     mod_decl->symbol_ = try_id("module declaration");
-    switch (la()) {
-        case MOD_CONTENTS: 
-            expect(Token::L_BRACE, "module");
-            mod_decl->mod_contents_ = parse_mod_contents();
-            expect(Token::R_BRACE, "module");
-            break;
-        default:
-            expect(Token::SEMICOLON, "module declaration");
-    }
+    parse_type_params(mod_decl->type_params_);
+    if (accept(Token::L_BRACE)) {
+        mod_decl->mod_contents_ = parse_mod_contents();
+        expect(Token::R_BRACE, "module");
+    } else
+        expect(Token::SEMICOLON, "module declaration");
 
     return mod_decl;
 }
@@ -696,19 +693,30 @@ const Expr* Parser::parse_infix_expr(const Expr* lhs) {
 }
 
 const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
-    if (accept(Token::L_PAREN)) {
-        auto map = new MapExpr();
-        map->lhs_ = lhs;
-        parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->ops_.push_back(parse_expr()); });
-        map->set_loc(lhs->pos1(), prev_loc().pos2());
-        return map;
-    } else {
-        auto expr = new PostfixExpr();
-        expr->lhs_ = lhs;
-        assert(la() == Token::INC || la() == Token::DEC); 
-        expr->kind_ = (PostfixExpr::Kind) lex().kind();
-        expr->set_loc(lhs->pos1(), prev_loc().pos2());
-        return expr;
+    switch (auto kind = lex().kind()) {
+        case Token::L_PAREN: {
+            auto map = new MapExpr();
+            map->lhs_ = lhs;
+            parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->ops_.push_back(parse_expr()); });
+            map->set_loc(lhs->pos1(), prev_loc().pos2());
+            return map;
+        }
+        case Token::DEC:
+        case Token::INC: {
+            auto expr = new PostfixExpr();
+            expr->lhs_ = lhs;
+            expr->kind_ = (PostfixExpr::Kind) kind;
+            expr->set_loc(lhs->pos1(), prev_loc().pos2());
+            return expr;
+        }
+        case Token::DOT: {
+            auto expr = new DotExpr();
+            expr->lhs_ = lhs;
+            expr->symbol_ = try_id("dot expression");
+            expr->set_loc(lhs->pos1(), prev_loc().pos2());
+            return expr;
+        }
+        default: THORIN_UNREACHABLE;
     }
 }
 

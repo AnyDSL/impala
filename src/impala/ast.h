@@ -94,10 +94,6 @@ private:
     friend class Sema;
 };
 
-/// Base class for all module declarations.
-class PathDecl : public Decl {
-};
-
 /// Base class for all \p Type declarations.
 class TypeDecl : public Decl {
 };
@@ -225,7 +221,7 @@ private:
     friend class Parser;
 };
 
-class ModDecl : public Item, public PathDecl {
+class ModDecl : public Item, public ParametricTypeDecl {
 public:
     const ModContents* mod_contents() const { return mod_contents_; }
     virtual std::ostream& print(Printer& p) const;
@@ -236,7 +232,7 @@ private:
     friend class Parser;
 };
 
-class ForeignMod : public Item, public PathDecl {
+class ForeignMod : public Item, public ParametricTypeDecl {
     virtual std::ostream& print(Printer& p) const;
 };
 
@@ -523,6 +519,20 @@ private:
 
     Kind kind_;
     thorin::AutoPtr<const Expr> lhs_;
+
+    friend class Parser;
+};
+
+class DotExpr : public Expr {
+public:
+    const Expr* lhs() const { return lhs_; }
+    thorin::Symbol symbol() const { return symbol_; }
+    virtual bool is_lvalue() const { return true; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    thorin::AutoPtr<const Expr> lhs_;
+    thorin::Symbol symbol_;
 
     friend class Parser;
 };

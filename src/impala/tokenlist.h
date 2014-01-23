@@ -36,7 +36,8 @@ IMPALA_PREFIX(        HALT,    "$",   POSTFIX             ) // stop partial eval
 
 IMPALA_POSTFIX(        INC,   "++",                POSTFIX) // postfix ++
 IMPALA_POSTFIX(        DEC,   "--",                POSTFIX) // postfix --
-IMPALA_POSTFIX(    L_PAREN,    "(",                POSTFIX) // function call
+IMPALA_POSTFIX(    L_PAREN,    "(",                POSTFIX) // map expression (function call, array/tuple index)
+IMPALA_POSTFIX(        DOT,    ".",                POSTFIX) // dot expression (struct access)
 
 #undef IMPALA_POSTFIX
 
@@ -92,9 +93,6 @@ IMPALA_INFIX(          SUB,   "-",        ADD,         MUL)
 IMPALA_INFIX(          MUL,   "*",        MUL,       UNARY)
 IMPALA_INFIX(          DIV,   "/",        MUL,       UNARY)
 IMPALA_INFIX(          REM,   "%",        MUL,       UNARY)
-
-IMPALA_INFIX(          DOT,   ".",    POSTFIX,         TOP)
-IMPALA_INFIX(        ARROW,  "->",    POSTFIX,         TOP)
 
 #undef IMPALA_INFIX
 
@@ -163,6 +161,7 @@ IMPALA_MISC(R_BRACKET,  "]")
 IMPALA_MISC(COMMA,      ",")
 IMPALA_MISC(SEMICOLON,  ";")
 IMPALA_MISC(COLON,      ":")
+IMPALA_MISC(ARROW,      "->")
 IMPALA_MISC(LARROW,     "<-")
 
 #undef IMPALA_MISC
