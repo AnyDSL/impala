@@ -836,7 +836,8 @@ const BlockExpr* Parser::parse_block_expr() {
                 return block;
         }
     }
-    return block;
+    THORIN_UNREACHABLE;
+    return nullptr;
 }
 
 const BlockExpr* Parser::try_block_expr(const std::string& context) {
@@ -844,9 +845,7 @@ const BlockExpr* Parser::try_block_expr(const std::string& context) {
         return parse_block_expr();
     else {
         error("block expression", context);
-        auto block = new BlockExpr();
-        block->set_loc(prev_loc());
-        return block;
+        return new BlockExpr(prev_loc());
     }
 }
 

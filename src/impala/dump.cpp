@@ -65,6 +65,7 @@ void Type::dump() const { Printer p(std::cout, true); p.print_type(this) << std:
 //}
 
 std::ostream& TypeParam::print(Printer& p) const {
+    return p.stream();
 }
 
 /*
@@ -128,7 +129,7 @@ std::ostream& FnDecl::print(Printer& p) const {
 
 std::ostream& FieldDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" ) << visibility().str() << symbol() << ": ";
-    p.print_type(type());
+    return p.print_type(type());
 }
 
 std::ostream& StructDecl::print(Printer& p) const {
