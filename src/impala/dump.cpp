@@ -277,6 +277,13 @@ std::ostream& PostfixExpr::print(Printer& p) const {
 
 std::ostream& DotExpr::print(Printer& p) const { return lhs()->print(p) << '.' << symbol(); }
 
+std::ostream& StructExpr::print(Printer& p) const { 
+    p.stream() << symbol() << '{';
+    // todo
+
+    return p.stream() << '}';
+}
+
 std::ostream& MapExpr::print(Printer& p) const {
     lhs()->print(p);
     return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "(", ")");

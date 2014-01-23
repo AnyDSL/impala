@@ -541,6 +541,7 @@ class OpsExpr : public Expr {
 public:
     const Exprs& ops() const { return ops_; }
     const Expr* op(size_t i) const { return ops_[i]; }
+    virtual bool is_lvalue() const { return false; }
 
 protected:
     Exprs ops_;
@@ -548,7 +549,6 @@ protected:
 
 class ArrayExpr : public OpsExpr {
 public:
-    virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
 
 private:
@@ -560,12 +560,24 @@ private:
 
 class TupleExpr : public OpsExpr {
 public:
-    virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
 
 private:
     //virtual const Type* check(Sema& sema) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
+
+    friend class Parser;
+};
+
+class StructExpr : public OpsExpr {
+public:
+    virtual std::ostream& print(Printer& p) const;
+    thorin::Symbol symbol() const { return symbol_; }
+    const std::vector<thorin::Symbol>& symbols() const { return symbols_; }
+
+private:
+    thorin::Symbol symbol_;
+    std::vector<thorin::Symbol> symbols_;
 
     friend class Parser;
 };

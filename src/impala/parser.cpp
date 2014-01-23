@@ -749,7 +749,21 @@ const Expr* Parser::parse_primary_expr() {
 #include "impala/tokenlist.h"
         case Token::TRUE:
         case Token::FALSE:      return parse_literal_expr();
-        case Token::ID:         return new IdExpr(lex());
+        case Token::ID:  {
+            auto tok = lex();
+            if (accept(Token::L_BRACE)) {
+                auto struct_expr = new StructExpr();
+                struct_expr->symbol_ = tok.symbol();
+                parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
+                    struct_expr->symbols_.push_back(try_id("identifier in struct expression"));
+                    expect(Token::COLON, "struct expression");
+                    struct_expr->ops_.push_back(parse_expr());
+                });
+                struct_expr->set_loc(tok.pos1(), prev_loc().pos2());
+                return struct_expr;
+            }
+            return new IdExpr(tok);
+        }
         case Token::IF:         return parse_if_expr();
         case Token::FOR:        return parse_for_expr();
         case Token::L_BRACE:    return parse_block_expr();
