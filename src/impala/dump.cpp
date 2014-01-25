@@ -32,8 +32,11 @@ std::ostream& Printer::print_type(const Type* type) {
             dump_list([&](const Type* elem) { print_type(elem); }, fn->elems().slice_to_end(fn->size()-1), "fn(", ") -> ");
             return print_type(ret_type);
         }
-    } else if (auto idtype = type->isa<TypeApp>()) {
-        return stream() << idtype->name;
+    } else if (auto type_app = type->isa<TypeApp>()) {
+        stream() << type_app->name;
+        if (!type_app->empty())
+            dump_list([&] (const Type* elem) { print_type(elem); }, type_app->elems(), "[", "]");
+        return stream();
     } else if (auto primtype = type->isa<PrimType>()) {
         switch (primtype->kind()) {
 #define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return stream() << #itype;
@@ -52,19 +55,17 @@ void Type::dump() const { Printer p(std::cout, true); p.print_type(this) << std:
 //------------------------------------------------------------------------------
 
 /*
- * helpers
+ * parameters
  */
-
-/*
- * generics
- */
-
-//std::ostream& ParametricType::print_bounds(Printer& p, bool returning) const {
-    //return p.dump_list([&] (const TypeParam* type_param) { type_param->print(p); }, 
-            //returning ? params().slice_num_from_end(1) : params());
-//}
 
 std::ostream& TypeParam::print(Printer& p) const {
+    p.stream() << symbol() << (bounds_.empty() ? "" : ": ");
+    return p.dump_list([&] (const Type* type) { p.print_type(type); }, bounds(), "", "", " + ");
+}
+
+std::ostream& ParametricType::print_type_params(Printer& p) const {
+    if (!type_params().empty())
+        p.dump_list([&] (const TypeParam* type_param) { type_param->print(p); }, type_params(), "[", "]");
     return p.stream();
 }
 
@@ -119,12 +120,10 @@ std::ostream& FnDecl::print(Printer& p) const {
     if (auto body = fn().body()) {
         p.stream() << ' ';
         body->print(p);
-    } else {
+    } else
         p.stream() << ';';
-        p.newline();
-    }
 
-    return p.newline();
+    return p.stream();
 }
 
 std::ostream& FieldDecl::print(Printer& p) const {
@@ -133,17 +132,19 @@ std::ostream& FieldDecl::print(Printer& p) const {
 }
 
 std::ostream& StructDecl::print(Printer& p) const {
-    p.stream() << visibility().str() << "struct " << symbol() << " {";
+    p.stream() << visibility().str() << "struct " << symbol();
+    print_type_params(p) << " {";
     p.up();
-    p.dump_list([&] (const FieldDecl* field) { field->print(p); }, fields(), "", "", "\n");
+    p.dump_list([&] (const FieldDecl* field) { field->print(p); }, fields(), "", "", ",", true);
     p.down() << "}";
     return p.stream();
 }
 
 std::ostream& TraitDecl::print(Printer& p) const {
-    p.stream() << "trait " << symbol() << " {";
+    p.stream() << "trait " << symbol();
+    print_type_params(p) << " {";
     p.up();
-    p.dump_list([&] (const FnDecl* method) { method->print(p); }, methods(), "", "", "\n");
+    p.dump_list([&] (const FnDecl* method) { method->print(p); }, methods(), "", "", "", true);
     return p.down() << "}";
 }
 
@@ -165,9 +166,7 @@ std::ostream& Impl::print(Printer& p) const {
  */
 
 std::ostream& ModContents::print(Printer& p) const {
-    for (auto item : items())
-        item->print(p);
-    return p.stream();
+    return p.dump_list([&] (const Item* item) { item->print(p); p.newline(); }, items(), "", "", "", true);
 }
 
 /*
@@ -176,15 +175,16 @@ std::ostream& ModContents::print(Printer& p) const {
 
 std::ostream& BlockExpr::print(Printer& p) const {
     p.stream() << '{';
+    if (empty())
+        return p.newline() << '}';
     p.up();
-    p.dump_list([&] (const Stmt* stmt) { stmt->print(p); }, stmts(), "", "", "\n");
-    if (!expr()->isa<EmptyExpr>()) {
+    p.dump_list([&] (const Stmt* stmt) { stmt->print(p); }, stmts(), "", "", "", true);
+    if (!expr()->isa<EmptyExpr>() && !stmts().empty()) {
         p.newline();
         expr()->print(p);
     }
 
-    p.down() << "}";
-    return p.stream();
+    return p.down() << "}";
 }
 
 std::ostream& LiteralExpr::print(Printer& p) const {

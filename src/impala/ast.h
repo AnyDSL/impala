@@ -102,14 +102,14 @@ class ParametricType {
 public:
     const TypeParam* type_param(size_t i) const { return type_params_[i]; }
     thorin::ArrayRef<const TypeParam*> type_params() const { return type_params_; }
-    std::ostream& print_type_params(Printer& p, bool returning) const;
+    std::ostream& print_type_params(Printer& p) const;
 
 protected:
     TypeParams type_params_;
 };
 
 /// Base class for all \p Type declarations having \p TypeParams.
-class ParametricTypeDecl : ParametricType, public Decl {
+class ParametricTypeDecl : public ParametricType, public Decl {
     friend class Parser;
 };
 
