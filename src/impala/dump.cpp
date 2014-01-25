@@ -18,12 +18,20 @@ std::ostream& Printer::print_type(const Type* type) {
         return stream() << "noret";
     } else if (type->isa<TypeError>()) {
         return stream() << "<error>";
+    } else if (auto owned_ptr = type->isa<OwnedPtr>()) {
+        stream() << '~';
+        return print_type(owned_ptr->referenced_type());
+    } else if (auto borrowed_ptr = type->isa<BorrowedPtr>()) {
+        stream() << '&';
+        return print_type(borrowed_ptr->referenced_type());
     } else if (auto array = type->isa<DefiniteArray>()) {
-        return stream() << '[' << array->elem_type() << " * " << array->dim() << ']';
+        stream() << '[';
+        return print_type(array->elem_type()) << " * " << array->dim() << ']';
     } else if (auto array = type->isa<IndefiniteArray>()) {
-        return stream() << '[' << array->elem_type() << ']';
+        stream() << '[';
+        return print_type(array->elem_type()) << ']';
     } else if (auto tuple = type->isa<TupleType>()) {
-        return dump_list([&](const Type* elem) { print_type(elem); }, tuple->elems(), "(", ")");
+        return dump_list([&] (const Type* elem) { print_type(elem); }, tuple->elems(), "(", ")");
     } else if (auto fn = type->isa<FnType>()) {
         const Type* ret_type = fn->return_type();
         if (ret_type->isa<NoRet>())
@@ -95,13 +103,20 @@ std::ostream& LocalDecl::print(Printer& p) const {
  */
 
 std::ostream& ModDecl::print(Printer& p) const {
-    return p.stream() << symbol();
+    p.stream() << "mod " << symbol();
+    print_type_params(p);
+    if (mod_contents()) {
+        p.stream() << " {";
+        p.up();
+        mod_contents()->print(p);
+        return p.down() << " }";
+    } else
+        return p.stream() << ';';
 }
 
 std::ostream& FnDecl::print(Printer& p) const {
     p.stream() << "fn " << symbol();
-    //if (!fun()->generics().empty())
-        //p.dump_list([&] (const GenericDecl* generic_decl) { generic_decl->print(p); }, fun()->generics(), "<", ">");
+    print_type_params(p);
 
     const Type* ret = nullptr;
     if (!fn().params().empty() && fn().params().back()->symbol() == "return")
@@ -157,15 +172,15 @@ std::ostream& TraitDecl::print(Printer& p) const {
 
 std::ostream& Impl::print(Printer& p) const {
     p.stream() << "impl " << symbol();
+    print_type_params(p);
     if (for_type_) {
         p.stream() << " for ";
         p.print_type(for_type_);
     }
-    //<< " {";
+    p.stream() << " {";
     p.up();
-    //p.dump_list([&] (const FieldDecl* field) { field->print(p); }, methods(), "", "", "\n");
-    p.down() << "}";
-    return p.stream();
+    p.dump_list([&] (const FnDecl* method) { method->print(p); }, methods(), "", "", "", true);
+    return p.down() << "}";
 }
 
 /*
