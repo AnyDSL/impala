@@ -142,7 +142,14 @@ std::ostream& StructDecl::print(Printer& p) const {
 
 std::ostream& TraitDecl::print(Printer& p) const {
     p.stream() << "trait " << symbol();
-    print_type_params(p) << " {";
+    print_type_params(p);
+
+    if (!super().empty()) {
+        p.stream() << " : ";
+        p.dump_list([&] (const Symbol symbol) { p.stream() << symbol; }, super());
+    }
+        
+    p.stream() << " {";
     p.up();
     p.dump_list([&] (const FnDecl* method) { method->print(p); }, methods(), "", "", "", true);
     return p.down() << "}";
@@ -179,8 +186,9 @@ std::ostream& BlockExpr::print(Printer& p) const {
         return p.newline() << '}';
     p.up();
     p.dump_list([&] (const Stmt* stmt) { stmt->print(p); }, stmts(), "", "", "", true);
-    if (!expr()->isa<EmptyExpr>() && !stmts().empty()) {
-        p.newline();
+    if (!expr()->isa<EmptyExpr>()) { 
+        if (!stmts().empty())
+            p.newline();
         expr()->print(p);
     }
 

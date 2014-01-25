@@ -290,8 +290,8 @@ private:
 
 class TraitDecl : public Item, public ParametricTypeDecl {
 public:
-    const Methods& methods() const { return methods_; }
     const std::vector<thorin::Symbol>& super() const { return super_; }
+    const Methods& methods() const { return methods_; }
     virtual std::ostream& print(Printer& p) const;
 
 private:
