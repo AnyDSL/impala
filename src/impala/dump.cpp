@@ -46,6 +46,8 @@ std::ostream& Printer::print_type(const Type* type) {
             dump_list([&] (const Type* elem) { print_type(elem); }, type_app->elems(), "[", "]");
         return stream();
     } else if (auto primtype = type->isa<PrimType>()) {
+        if (primtype->kind() == Token::TYPE_int32)
+            return stream() << "int";
         switch (primtype->kind()) {
 #define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return stream() << #itype;
 #include "impala/tokenlist.h"
@@ -125,10 +127,10 @@ std::ostream& FnDecl::print(Printer& p) const {
 
     p.stream() << '(';
     fn().print_params(p, ret != nullptr);
-    p.stream() << ") ";
+    p.stream() << ")";
 
     if (ret) {
-        p.stream() << "-> ";
+        p.stream() << " -> ";
         p.print_type(ret);
     }
 

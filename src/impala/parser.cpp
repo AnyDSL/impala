@@ -114,6 +114,7 @@ public:
     {
         lookahead[0] = lexer.lex();
         lookahead[1] = lexer.lex();
+        prev_loc_ = Location(filename, 1, 1, 1, 1);
     }
 
     const Token& la(size_t i) const { return lookahead[i]; }
@@ -213,7 +214,6 @@ private:
     TypeTable& typetable;
     Lexer lexer;       ///< invoked in order to get next token
     Token lookahead[2];///< LL(2) look ahead
-    //const Loop* cur_loop;
     size_t cur_var_handle;
     bool no_bars_;
     thorin::Location prev_loc_;
