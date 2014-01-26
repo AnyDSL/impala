@@ -1,6 +1,7 @@
 #ifndef IMPALA_AST_H
 #define IMPALA_AST_H
 
+#include <memory>
 #include <vector>
 
 #include "thorin/irbuilder.h"
@@ -569,15 +570,33 @@ private:
     friend class Parser;
 };
 
-class StructExpr : public OpsExpr {
+class StructExpr : public Expr {
 public:
+    class Elem {
+    public:
+        Elem(thorin::Symbol symbol, std::unique_ptr<const Expr> expr)
+            : symbol_(symbol)
+            , expr_(std::move(expr))
+        {}
+
+        thorin::Symbol symbol() const { return symbol_; }
+        const Expr* expr() const { return expr_.get(); }
+
+    private:
+        thorin::Symbol symbol_;
+        std::unique_ptr<const Expr> expr_;
+    };
+
+    typedef std::vector<Elem> Elems;
+
+    virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
     thorin::Symbol symbol() const { return symbol_; }
-    const std::vector<thorin::Symbol>& symbols() const { return symbols_; }
+    const Elems& elems() const { return elems_; }
 
 private:
     thorin::Symbol symbol_;
-    std::vector<thorin::Symbol> symbols_;
+    std::vector<Elem> elems_;
 
     friend class Parser;
 };

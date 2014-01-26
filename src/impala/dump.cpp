@@ -304,7 +304,7 @@ std::ostream& DotExpr::print(Printer& p) const { return lhs()->print(p) << '.' <
 
 std::ostream& StructExpr::print(Printer& p) const { 
     p.stream() << symbol() << '{';
-    // todo
+    p.dump_list([&] (const Elem& elem) { p.stream() << elem.symbol() << ": "; elem.expr()->print(p); }, elems());
 
     return p.stream() << '}';
 }
