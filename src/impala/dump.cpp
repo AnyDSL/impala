@@ -300,7 +300,7 @@ std::ostream& PostfixExpr::print(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& DotExpr::print(Printer& p) const { return lhs()->print(p) << '.' << symbol(); }
+std::ostream& FieldExpr::print(Printer& p) const { return lhs()->print(p) << '.' << symbol(); }
 
 std::ostream& StructExpr::print(Printer& p) const { 
     p.stream() << symbol() << '{';

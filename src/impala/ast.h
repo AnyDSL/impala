@@ -524,7 +524,7 @@ private:
     friend class Parser;
 };
 
-class DotExpr : public Expr {
+class FieldExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
     thorin::Symbol symbol() const { return symbol_; }

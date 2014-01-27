@@ -710,7 +710,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
             return expr;
         }
         case Token::DOT: {
-            auto expr = new DotExpr();
+            auto expr = new FieldExpr();
             expr->lhs_ = lhs;
             expr->symbol_ = try_id("dot expression");
             expr->set_loc(lhs->pos1(), prev_loc().pos2());
