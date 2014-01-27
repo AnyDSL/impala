@@ -107,7 +107,7 @@ public:
 class OwnedPtr : public Ptr {
 public:
     OwnedPtr(TypeTable& typetable, const Type* referenced_type) 
-        : Ptr(typetable, Token::NOT, referenced_type)
+        : Ptr(typetable, Token::TILDE, referenced_type)
     {}
 
     virtual const Type* refine(const Sema&) const;

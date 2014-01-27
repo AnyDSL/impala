@@ -170,7 +170,7 @@ Token Lexer::lex() {
         if (accept(']')) return Token(loc_, Token::R_BRACKET);
         if (accept('{')) return Token(loc_, Token::L_BRACE);
         if (accept('}')) return Token(loc_, Token::R_BRACE);
-        if (accept('~')) return Token(loc_, Token::NOT);
+        if (accept('~')) return Token(loc_, Token::TILDE);
 
         // '.', floats
         if (accept('.')) {
