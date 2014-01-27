@@ -559,6 +559,17 @@ private:
     friend class Parser;
 };
 
+class RepeatArrayExpr : public Expr {
+public:
+    virtual std::ostream& print(Printer& p) const;
+    const Expr* value() const { return value_; }
+    const Expr* count() const { return count_; }
+
+private:
+    thorin::AutoPtr<const Expr> value_;
+    thorin::AutoPtr<const Expr> count_;
+};
+
 class TupleExpr : public OpsExpr {
 public:
     virtual std::ostream& print(Printer& p) const;
