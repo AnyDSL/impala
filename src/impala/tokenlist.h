@@ -16,7 +16,7 @@ IMPALA_PREFIX(         SUB,    "-",   POSTFIX             ) // unary -
 IMPALA_PREFIX(         MUL,    "*",   POSTFIX             ) // deref
 IMPALA_PREFIX(         AND,    "&",   POSTFIX             ) // address of
 IMPALA_PREFIX(       TILDE,    "~",   POSTFIX             ) // unary complement
-IMPALA_PREFIX(         L_N,    "!",   POSTFIX             ) // logical not
+IMPALA_PREFIX(         NOT,    "!",   POSTFIX             ) // logical not
 IMPALA_PREFIX(         INC,   "++",   POSTFIX             ) // prefix ++
 IMPALA_PREFIX(         DEC,   "--",   POSTFIX             ) // prefix --
 IMPALA_PREFIX(          OR,    "|",   POSTFIX             ) // lambda expressions

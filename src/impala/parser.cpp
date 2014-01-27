@@ -44,7 +44,7 @@
     case Token::MUL: \
     case Token::AND: \
     case Token::TILDE: \
-    case Token::L_N: \
+    case Token::NOT: \
     case Token::INC: \
     case Token::DEC: \
     case Token:: OR: \
@@ -81,7 +81,7 @@
     case Token::TYPE_int: \
     case Token::TILDE: \
     case Token::AND: \
-    case Token::L_N
+    case Token::NOT
 
 using namespace thorin;
 
@@ -364,7 +364,7 @@ const Param* Parser::parse_param(bool lambda) {
 bool Parser::parse_return_param(Params& params) {
     if (accept(Token::ARROW)) {
         Position pos1 = prev_loc().pos1();
-        if (accept(Token::L_N))
+        if (accept(Token::NOT))
             return true;
         auto type = typetable.pack_return_type(parse_type());
         Position pos2 = prev_loc().pos2();
@@ -563,7 +563,7 @@ const Type* Parser::parse_type() {
         case Token::TYPE_##itype:   lex(); return typetable.type_##itype();
 #include "impala/tokenlist.h"
         case Token::TYPE_int:       lex(); return typetable.type_int32();
-        case Token::L_N:            lex(); return typetable.noret();
+        case Token::NOT:            lex(); return typetable.noret();
         case Token::FN:                    return parse_fn_type();
         case Token::L_PAREN:               return parse_tuple_type();
         case Token::ID:                    return parse_type_app();
@@ -606,7 +606,7 @@ const Type* Parser::parse_fn_type() {
     parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&] { elems.push_back(parse_type()); });
 
     if (accept(Token::ARROW)) {
-        if (accept(Token::L_N)) {
+        if (accept(Token::NOT)) {
         } else 
             elems.push_back(typetable.fntype({parse_type()}));
     }

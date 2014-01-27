@@ -107,7 +107,7 @@ Token Lexer::lex() {
         IMPALA_LEX_OP('*', MUL, MUL_ASGN)
         IMPALA_LEX_OP('%', REM, REM_ASGN)
         IMPALA_LEX_OP('^', XOR, XOR_ASGN)
-        IMPALA_LEX_OP('!', L_N,  NE)
+        IMPALA_LEX_OP('!', NOT,  NE)
 
         // <, <=, <<, <<=, >, >=, >>, >>=
 #define IMPALA_LEX_REL_SHIFT(op, tok_rel, tok_rel_eq, tok_shift, tok_shift_asgn) \
