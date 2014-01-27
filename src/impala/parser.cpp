@@ -47,8 +47,8 @@
     case Token::NOT: \
     case Token::INC: \
     case Token::DEC: \
-    case Token:: OR: \
-    case Token::L_O: \
+    case Token::OR: \
+    case Token::OROR: \
     case Token::ID: \
     case Token::RUN: \
     case Token::HALT: \
@@ -640,7 +640,7 @@ void Parser::parse_types(Types& types) {
 bool Parser::is_infix() {
     bool infix = la().is_infix();
     if (no_bars_ && infix)
-        return la() != Token::OR && la() != Token::L_O;
+        return la() != Token::OR && la() != Token::OROR;
     return infix;
 }
 
@@ -671,7 +671,7 @@ const Expr* Parser::parse_expr(Prec prec) {
 }
 
 const Expr* Parser::parse_prefix_expr() {
-    if (la() == Token::OR || la() == Token::L_O)
+    if (la() == Token::OR || la() == Token::OROR)
         return parse_fn_expr();
 
     auto expr = loc(new PrefixExpr());
@@ -798,7 +798,7 @@ const FnExpr* Parser::parse_fn_expr() {
     if (accept(Token::OR))
         parse_param_list(fn.params_, Token::OR, true);
     else
-        expect(Token::L_O, "parameter list of function expression");
+        expect(Token::OROR, "parameter list of function expression");
 
     fn_expr->has_return_type_ = parse_return_param(fn.params_);
     fn.body_ = parse_expr();

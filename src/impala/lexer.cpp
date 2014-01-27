@@ -155,8 +155,8 @@ Token Lexer::lex() {
                 return Token(loc_, Token:: tok_logic); \
             return Token(loc_, Token:: tok_bit); \
         }
-        IMPALA_LEX_AND_OR('&', AND, L_A, AND_ASGN)
-        IMPALA_LEX_AND_OR('|',  OR, L_O,  OR_ASGN)
+        IMPALA_LEX_AND_OR('&', AND, ANDAND, AND_ASGN)
+        IMPALA_LEX_AND_OR('|',  OR,   OROR,  OR_ASGN)
 
         // single character tokens
         if (accept('(')) return Token(loc_, Token::L_PAREN);
