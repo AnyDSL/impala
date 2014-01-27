@@ -723,7 +723,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
 const Expr* Parser::parse_primary_expr() {
     switch (la()) {
         case Token::L_PAREN: {
-            Position pos1 = lex().pos1();
+            auto pos1 = lex().pos1();
             auto expr = parse_expr();
             if (accept(Token::COMMA)) {
                 auto tuple = new TupleExpr();
@@ -738,8 +738,20 @@ const Expr* Parser::parse_primary_expr() {
             }
         }
         case Token::L_BRACKET: {
+            auto pos1 = lex().pos1();
+            auto expr = parse_expr();
+            if (accept(Token::COMMA) && accept(Token::DOTDOT)) {
+                auto repeat_array_expr = new RepeatArrayExpr();
+                repeat_array_expr->set_pos1(pos1);
+                repeat_array_expr->value_ = expr;
+                expect(Token::DOTDOT, "repeating array expression");
+                repeat_array_expr->count_ = parse_expr();
+                repeat_array_expr->set_pos2(eat(Token::R_BRACKET).pos2());
+                return repeat_array_expr;
+            }
             auto array = new ArrayExpr();
-            array->set_pos1(lex().pos1());
+            array->set_pos1(pos1);
+            array->ops_.push_back(expr);
             parse_comma_list(Token::R_BRACKET, "elements of array expression", [&] { array->ops_.push_back(parse_expr()); });
             array->set_pos2(prev_loc().pos2());
             return array;

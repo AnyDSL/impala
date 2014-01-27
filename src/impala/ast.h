@@ -561,6 +561,7 @@ private:
 
 class RepeatArrayExpr : public Expr {
 public:
+    virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
     const Expr* value() const { return value_; }
     const Expr* count() const { return count_; }
@@ -568,6 +569,8 @@ public:
 private:
     thorin::AutoPtr<const Expr> value_;
     thorin::AutoPtr<const Expr> count_;
+
+    friend class Parser;
 };
 
 class TupleExpr : public OpsExpr {

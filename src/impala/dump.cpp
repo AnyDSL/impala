@@ -224,8 +224,14 @@ std::ostream& LiteralExpr::print(Printer& p) const {
 
 std::ostream& IdExpr   ::print(Printer& p) const { return p.stream() << symbol(); }
 std::ostream& EmptyExpr::print(Printer& p) const { return p.stream() << "/*empty*/"; }
-std::ostream& ArrayExpr::print(Printer& p) const { return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "[", "]"); }
 std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "(", ")"); }
+std::ostream& ArrayExpr::print(Printer& p) const { return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "[", "]"); }
+
+std::ostream& RepeatArrayExpr::print(Printer& p) const { 
+    p.stream() << '[';
+    value()->print(p) << ", .. ";
+    return count()->print(p) << ']';
+}
 
 std::ostream& PrefixExpr::print(Printer& p) const {
     Prec r = PrecTable::prefix_r[kind()];
