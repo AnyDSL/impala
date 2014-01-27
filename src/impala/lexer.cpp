@@ -78,39 +78,43 @@ Token Lexer::lex() {
 
         // +, ++, +=
         if (accept('+')) {
-            if ( accept('+') ) return Token(loc_, Token::INC);
-            if ( accept('=') ) return Token(loc_, Token::ADD_ASGN);
+            if (accept('+')) return Token(loc_, Token::INC);
+            if (accept('=')) return Token(loc_, Token::ADD_ASGN);
             return Token(loc_, Token::ADD);
         }
 
         // -, --, -=, ->
         if (accept('-')) {
-            if ( accept('-') ) return Token(loc_, Token::DEC);
-            if ( accept('=') ) return Token(loc_, Token::SUB_ASGN);
-            if ( accept('>') ) return Token(loc_, Token::ARROW);
+            if (accept('-')) return Token(loc_, Token::DEC);
+            if (accept('=')) return Token(loc_, Token::SUB_ASGN);
+            if (accept('>')) return Token(loc_, Token::ARROW);
             return Token(loc_, Token::SUB);
         }
 
-        // *, *=, %, %=, ^, ^=, =, ==, !, !=, :, :=
+        // =, ==, =>
+        if (accept('=')) {
+            if (accept('=')) return Token(loc_, Token::EQ);
+            if (accept('>')) return Token(loc_, Token::FAT_ARRROW);
+            return Token(loc_, Token::ASGN);
+        }
+
+        // *, *=, %, %=, ^, ^=, !, !=, :, :=
 #define IMPALA_LEX_OP(op, tok1, tok2) \
         if (accept( op )) { \
-            if ( accept('=') ) return Token(loc_, Token:: tok2); \
+            if (accept('=')) return Token(loc_, Token:: tok2); \
             return Token(loc_, Token:: tok1); \
         }
         IMPALA_LEX_OP('*', MUL, MUL_ASGN)
         IMPALA_LEX_OP('%', REM, REM_ASGN)
         IMPALA_LEX_OP('^', XOR, XOR_ASGN)
-        IMPALA_LEX_OP('=', ASGN, EQ)
         IMPALA_LEX_OP('!', L_N,  NE)
 
         // <, <=, <<, <<=, >, >=, >>, >>=
 #define IMPALA_LEX_REL_SHIFT(op, tok_rel, tok_rel_eq, tok_shift, tok_shift_asgn) \
         if (accept( op )) { \
-            if ( accept('=') ) return Token(loc_, Token:: tok_rel_eq); \
-            if ( op == '<' && accept('-') ) return Token(loc_, Token::LARROW); \
-            if ( accept(op) ) \
-            {  \
-                if ( accept('=') ) return Token(loc_, Token:: tok_shift_asgn); \
+            if (accept('=')) return Token(loc_, Token:: tok_rel_eq); \
+            if (accept(op)) {  \
+                if (accept('=')) return Token(loc_, Token:: tok_shift_asgn); \
                 return Token(loc_, Token:: tok_shift); \
             } \
             return Token(loc_, Token:: tok_rel); \
@@ -128,14 +132,14 @@ Token Lexer::lex() {
             if (delim) break; \
             next(); /* eat up char in comment */\
         }
-        if ( accept('/') ) {
-            if ( accept('=') )
+        if (accept('/')) {
+            if (accept('='))
                 return Token(loc_, Token::DIV_ASGN);
-            if ( accept('*') ) { // arbitrary comment
+            if (accept('*')) { // arbitrary comment
                 IMPALA_WITHIN_COMMENT(accept('*') && accept('/'));
                 continue;
             } 
-            if ( accept('/') ) { // end of line comment
+            if (accept('/')) { // end of line comment
                 IMPALA_WITHIN_COMMENT(accept('\n'));
                 continue;
             }
@@ -145,9 +149,9 @@ Token Lexer::lex() {
         // &, &=, &&, |, |=, ||
 #define IMPALA_LEX_AND_OR(op, tok_bit, tok_logic, tok_asgn) \
         if (accept( op )) { \
-            if ( accept('=') ) \
+            if (accept('=')) \
                 return Token(loc_, Token:: tok_asgn); \
-            if ( accept(op) ) \
+            if (accept(op)) \
                 return Token(loc_, Token:: tok_logic); \
             return Token(loc_, Token:: tok_bit); \
         }
@@ -160,7 +164,6 @@ Token Lexer::lex() {
         if (accept(',')) return Token(loc_, Token::COMMA);
         if (accept(':')) return Token(loc_, Token::COLON);
         if (accept(';')) return Token(loc_, Token::SEMICOLON);
-        if (accept('?')) return Token(loc_, Token::QUESTION_MARK);
         if (accept('@')) return Token(loc_, Token::RUN);
         if (accept('$')) return Token(loc_, Token::HALT);
         if (accept('[')) return Token(loc_, Token::L_BRACKET);
@@ -173,7 +176,10 @@ Token Lexer::lex() {
         if (accept('.')) {
             std::string str(1, '.');
             if (accept(str, dec)) goto l_fractional_dot;
-            return Token(loc_, Token::DOT);
+            if (accept('.'))
+                return Token(loc_, Token::DOTDOT);
+            else
+                return Token(loc_, Token::DOT);
         }
 
         // identifiers/keywords

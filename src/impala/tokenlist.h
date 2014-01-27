@@ -67,8 +67,6 @@ IMPALA_INFIX_ASGN(SHR_ASGN,  ">>=",      COND,        ASGN)
 #define IMPALA_INFIX(tok, str, lprec, rprec)
 #endif
 
-IMPALA_INFIX(QUESTION_MARK,    "?",       L_O,        ASGN)
-
 IMPALA_INFIX(          L_O,   "||",       L_O,         L_A)
 IMPALA_INFIX(          L_A,   "&&",       L_A,          OR)
 
@@ -162,7 +160,8 @@ IMPALA_MISC(COMMA,      ",")
 IMPALA_MISC(SEMICOLON,  ";")
 IMPALA_MISC(COLON,      ":")
 IMPALA_MISC(ARROW,      "->")
-IMPALA_MISC(LARROW,     "<-")
+IMPALA_MISC(FAT_ARRROW, "=>")
+IMPALA_MISC(DOTDOT,     "..")
 
 #undef IMPALA_MISC
 
