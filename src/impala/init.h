@@ -3,8 +3,6 @@
 
 #include "thorin/world.h"
 
-#include "impala/type.h"
-
 namespace thorin {
     class World;
 }
@@ -23,7 +21,6 @@ struct Init {
     ~Init() { destroy(); }
 
     thorin::World world;
-    TypeTable typetable;
 };
 
 } // namespace impala

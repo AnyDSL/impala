@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
         for (auto infile : infiles) {
             std::string filename = infile.c_str();
             ifstream file(filename);
-            prg = impala::parse(result, init.typetable, file, filename);
+            prg = impala::parse(result, file, filename);
             break;
         }
 

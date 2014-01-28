@@ -13,7 +13,6 @@
 #include "thorin/util/types.h"
 
 #include "impala/token.h"
-#include "impala/type.h"
 
 namespace thorin {
     class Enter;
@@ -33,8 +32,9 @@ class TypeParam;
 class Printer;
 class Sema;
 class Stmt;
+class Type;
 
-typedef std::vector<const Type*> Types;
+typedef thorin::AutoVector<const Type*> Types;
 typedef thorin::AutoVector<const Expr*> Exprs;
 typedef thorin::AutoVector<const FieldDecl*> Fields;
 typedef thorin::AutoVector<const Item*> Items;
@@ -75,6 +75,119 @@ public:
 #endif
     virtual std::ostream& print(Printer& p) const = 0;
     void dump() const;
+};
+
+//------------------------------------------------------------------------------
+
+class Type : public ASTNode {};
+
+class InferType : public Type {
+public:
+    virtual std::ostream& print(Printer& p) const;
+};
+
+class ErrorType : public Type {
+public:
+    virtual std::ostream& print(Printer& p) const;
+};
+
+class PrimType : public Type {
+public:
+    enum Kind {
+#define IMPALA_TYPE(itype, atype) TYPE_##itype = Token::TYPE_##itype,
+#include "impala/tokenlist.h"
+    };
+
+    Kind kind() const { return kind_; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    Kind kind_;
+
+    friend class Parser;
+};
+
+class NoRetType : public Type {
+public:
+    virtual std::ostream& print(Printer& p) const;
+};
+
+class PtrType : public Type {
+public:
+    char kind() const { assert(is_owned() || is_borrowed()); return kind_; }
+    const Type* referenced_type() const { return referenced_type_; }
+    bool is_owned() const { return kind_ == '~'; }
+    bool is_borrowed() const { return kind_ == '&'; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    char kind_;
+    thorin::AutoPtr<const Type> referenced_type_;
+
+    friend class Parser;
+};
+
+class ArrayType : public Type {
+public:
+    const Type* elem_type() const { return elem_type_; }
+
+protected:
+    thorin::AutoPtr<const Type> elem_type_;
+
+    friend class Parser;
+};
+
+class IndefiniteArrayType : public ArrayType {
+public:
+    virtual std::ostream& print(Printer& p) const;
+};
+
+class DefiniteArrayType : public ArrayType {
+public:
+    uint64_t dim() const { return dim_; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    thorin::u64 dim_;
+
+    friend class Parser;
+};
+
+class CompoundType : public Type {
+public:
+    const Types& elems() const { return elems_; }
+
+protected:
+    Types elems_;
+
+    friend class Parser;
+};
+
+class TupleType : public CompoundType {
+public:
+    virtual std::ostream& print(Printer& p) const;
+};
+
+class TypeApp : public CompoundType {
+public:
+    thorin::Symbol symbol() const { return symbol_; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    thorin::Symbol symbol_;
+
+    friend class Parser;
+};
+
+class FnType : public CompoundType {
+public:
+    const Type* ret_type() const { return ret_type_; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    thorin::AutoPtr<const Type> ret_type_;
+
+    friend class Parser;
 };
 
 //------------------------------------------------------------------------------
@@ -181,6 +294,7 @@ class Fn {
 public:
     const Param* param(size_t i) const { return params_[i]; }
     thorin::ArrayRef<const Param*> params() const { return params_; }
+    const Type* ret_type() const { return ret_type_; }
     const Expr* body() const { return body_; }
     thorin::Lambda* lambda() const { return lambda_; }
     const thorin::Param* ret_param() const { return ret_param_; }
@@ -190,6 +304,7 @@ public:
 
 private:
     Params params_;
+    thorin::AutoPtr<const Type> ret_type_;
     thorin::AutoPtr<const Expr> body_;
     mutable thorin::Lambda* lambda_;
     mutable const thorin::Param* ret_param_;
@@ -405,21 +520,15 @@ private:
 
 class FnExpr : public Expr {
 public:
-    FnExpr(TypeTable& typetable)
-        //: fn_(new Fn(typetable))
-    {}
-
     virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
     const Fn& fn() const { return fn_; }
-    bool has_return_type() const { return has_return_type_; }
 
 private:
     //virtual const Type* check(Sema& sema) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     Fn fn_;
-    bool has_return_type_;
 
     friend class Parser;
 };

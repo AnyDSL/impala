@@ -6,9 +6,7 @@
 
 namespace impala {
 
-class TypeTable;
-
-const ModContents* parse(bool& result, TypeTable&, std::istream&, const std::string&);
+const ModContents* parse(bool& result, std::istream&, const std::string&);
 
 } // namespace impala
 

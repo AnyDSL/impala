@@ -10,7 +10,6 @@
 #include "impala/ast.h"
 #include "impala/lexer.h"
 #include "impala/prec.h"
-#include "impala/type.h"
 
 #define VISIBILITY \
          Token::PRIV: \
@@ -105,9 +104,8 @@ private:
 
 class Parser {
 public:
-    Parser(TypeTable& typetable, std::istream& stream, const std::string& filename)
-        : typetable(typetable)
-        , lexer(stream, filename)
+    Parser(std::istream& stream, const std::string& filename)
+        : lexer(stream, filename)
         , cur_var_handle(2) // reserve 1 for conditionals, 0 for mem
         , no_bars_(false)
         , result_(true)
@@ -157,16 +155,16 @@ public:
     void parse_type_params(TypeParams&);
     const TypeParam* parse_type_param();
     const Param* parse_param(bool lambda);
-    bool parse_return_param(Params&);
     void parse_param_list(Params& params, TokenKind delimiter, bool lambda);
 
     // types
-    const Type* parse_type();
-    const Type* parse_array_type();
-    const Type* parse_type_app();
-    const Type* parse_fn_type();
-    const Type* parse_tuple_type();
-    void parse_types(Types& types);
+    const Type*      parse_type();
+    const Type*      parse_return_type(bool lambda);
+    const ArrayType* parse_array_type();
+    const FnType*    parse_fn_type();
+    const PtrType*   parse_ptr_type();
+    const TupleType* parse_tuple_type();
+    const TypeApp*   parse_type_app();
 
     // items
     Item*       parse_item();
@@ -211,7 +209,6 @@ private:
     /// Consume next Token in input stream, fill look-ahead buffer, return consumed Token.
     Token lex();
 
-    TypeTable& typetable;
     Lexer lexer;       ///< invoked in order to get next token
     Token lookahead[2];///< LL(2) look ahead
     size_t cur_var_handle;
@@ -234,8 +231,8 @@ Loc<T>::~Loc() { node_->set_pos2(parser_.prev_loc().pos2()); }
 
 //------------------------------------------------------------------------------
 
-const ModContents* parse(bool& result, TypeTable& typetable, std::istream& i, const std::string& filename) {
-    Parser parser(typetable, i, filename);
+const ModContents* parse(bool& result, std::istream& i, const std::string& filename) {
+    Parser parser(i, filename);
     auto mod = parser.parse_mod_contents();
     result = parser.result();
     return mod;
@@ -334,6 +331,7 @@ const Param* Parser::parse_param(bool lambda) {
     param->is_mut_ = accept(Token::MUT);
     Symbol symbol;
     const Type* type = nullptr;
+    auto location = la().loc();
 
     if (la() == Token::ID)
         symbol = lex().symbol();
@@ -355,28 +353,25 @@ const Param* Parser::parse_param(bool lambda) {
         if (type)
             error("identifier", "parameter");
         param->symbol_ = symbol;
-    } else
-        param->type_ = type != nullptr ? type : typetable.type_app(symbol, {});
+    } else {
+        if (type == nullptr) {
+            auto type_app = new TypeApp();
+            type_app->set_loc(location);
+            type = type_app;
+        }
+        param->type_ = type; 
+    }
 
     return param;
 }
 
-bool Parser::parse_return_param(Params& params) {
-    if (accept(Token::ARROW)) {
-        Position pos1 = prev_loc().pos1();
-        if (accept(Token::NOT))
-            return true;
-        auto type = typetable.pack_return_type(parse_type());
-        Position pos2 = prev_loc().pos2();
-        auto param = new Param(cur_var_handle++);
-        param->is_mut_ = false;
-        param->symbol_ = "return";
-        param->type_ = type;
-        param->set_loc(pos1, pos2);
-        params.push_back(param);
-        return true;
-    } else
-        return false;
+const Type* Parser::parse_return_type(bool lambda) {
+    if (accept(Token::ARROW))
+        return parse_type();
+
+    Type* type = lambda ?  (Type*) new InferType() : (Type*) new NoRetType();
+    type->set_loc(prev_loc());
+    return type;
 }
 
 /*
@@ -441,7 +436,7 @@ FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
     parse_type_params(fn_decl->type_params_);
     expect(Token::L_PAREN, "function head");
     parse_param_list(fn.params_, Token::R_PAREN, false);
-    parse_return_param(fn.params_);
+    fn.ret_type_ = parse_return_type(false);
 
     if (maybe_empty && accept(Token::SEMICOLON)) {
         // do nothing
@@ -559,78 +554,105 @@ const FieldDecl* Parser::parse_field_decl() {
 
 const Type* Parser::parse_type() {
     switch (la()) {
-#define IMPALA_TYPE(itype, atype) \
-        case Token::TYPE_##itype:   lex(); return typetable.type_##itype();
+#define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype:
 #include "impala/tokenlist.h"
-        case Token::TYPE_int:       lex(); return typetable.type_int32();
-        case Token::NOT:            lex(); return typetable.noret();
-        case Token::FN:                    return parse_fn_type();
-        case Token::L_PAREN:               return parse_tuple_type();
-        case Token::ID:                    return parse_type_app();
-        case Token::L_BRACKET:      lex(); return parse_array_type();
-        case Token::TILDE:          lex(); return typetable.   owned_ptr(parse_type());
-        case Token::AND:            lex(); return typetable.borrowed_ptr(parse_type());
-        default: error("type", ""); lex(); return typetable.type_error();
+        {                           // primitive type
+            auto prim_type = loc(new PrimType());
+            prim_type->kind_ = (PrimType::Kind) lex().kind();
+            return prim_type;
+        }
+        case Token::NOT: {          // no-return
+            auto no_ret_type = loc(new NoRetType());
+            lex();
+            return no_ret_type;
+        }
+        case Token::FN:         return parse_fn_type();
+        case Token::L_PAREN:    return parse_tuple_type();
+        case Token::ID:         return parse_type_app();
+        case Token::L_BRACKET:  return parse_array_type();
+        case Token::TILDE:
+        case Token::AND:        return parse_ptr_type();
+        default:  {
+            error("type", ""); 
+            auto error_type = new ErrorType();
+            lex(); 
+            return error_type;
+        }
     }
 }
 
-const Type* Parser::parse_array_type() {
-    const Type* result = parse_type();
-
-    while (accept(Token::MUL)) {
-        u64 length;
+const ArrayType* Parser::parse_array_type() {
+    auto pos1 = la().pos1();
+    const Type* elem_type = parse_type();
+    if (accept(Token::MUL)) {
+        u64 dim;
         switch (la()) {
-            case Token::LIT_int8:   length = la().box().get_s8();  break;
-            case Token::LIT_int16:  length = la().box().get_s16(); break;
-            case Token::LIT_int32:  length = la().box().get_s32(); break;
-            case Token::LIT_int64:  length = la().box().get_s64(); break;
+            case Token::LIT_int8:   dim = la().box().get_s8();  break;
+            case Token::LIT_int16:  dim = la().box().get_s16(); break;
+            case Token::LIT_int32:  dim = la().box().get_s32(); break;
+            case Token::LIT_int64:  dim = la().box().get_s64(); break;
             default:
-                length = 0;
+                dim = 0;
                 error("integer literal", "definite array type");
         }
         lex();
-        result = typetable.definite_array(result, length);
+        auto definite_array = new DefiniteArrayType();
+        definite_array->elem_type_ = elem_type;
+        definite_array->dim_ = dim;
+        expect(Token::R_BRACKET, "definite array type");
+        definite_array->set_loc(pos1, prev_loc().pos2());
+        return definite_array;
     }
 
-    if (!result->isa<DefiniteArray>())
-        result = typetable.indefinite_array(result);
-
-    expect(Token::R_BRACKET, "array type");
-    return result;
+    auto indefinite_array = new IndefiniteArrayType();
+    indefinite_array->elem_type_ = elem_type;
+    expect(Token::R_BRACKET, "indefinite array type");
+    indefinite_array->set_loc(pos1, prev_loc().pos2());
+    return indefinite_array;
 }
 
-const Type* Parser::parse_fn_type() {
+const FnType* Parser::parse_fn_type() {
+    auto fn_type = loc(new FnType());
     eat(Token::FN);
-    std::vector<const Type*> elems;
-    expect(Token::L_PAREN, "parameter list of function type");
-    parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&] { elems.push_back(parse_type()); });
+    expect(Token::L_PAREN, "function type");
+    parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&] { 
+        fn_type->elems_.push_back(parse_type()); 
+    });
 
     if (accept(Token::ARROW)) {
-        if (accept(Token::NOT)) {
-        } else 
-            elems.push_back(typetable.fntype({parse_type()}));
+        auto ret_type = new FnType();
+        ret_type->elems_.push_back(parse_type());
+        fn_type->elems_.push_back(ret_type);
     }
 
-    return typetable.fntype(elems);
+    return fn_type;
 }
 
-const Type* Parser::parse_type_app() {
-    auto symbol = lex().symbol();
-    std::vector<const Type*> elems;
-    if (accept(Token::L_BRACKET))
-        parse_comma_list(Token::R_BRACKET, "type arguments for type application", [&] { elems.push_back(parse_type()); });
-    return typetable.type_app(symbol, elems);
+const PtrType* Parser::parse_ptr_type() {
+    auto ptr_type = loc(new PtrType());
+    ptr_type->kind_ = lex().symbol().str()[0];
+    ptr_type->referenced_type_ = parse_type();
+    return ptr_type;
 }
 
-const Type* Parser::parse_tuple_type() {
+const TupleType* Parser::parse_tuple_type() {
+    auto tuple_type = loc(new TupleType());
     eat(Token::L_PAREN);
-    std::vector<const Type*> elems;
-    parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple type", [&] { elems.push_back(parse_type()); });
-
-    return typetable.tupletype(elems);
+    parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple type", [&] { 
+        tuple_type->elems_.push_back(parse_type()); 
+    });
+    return tuple_type;
 }
 
-void Parser::parse_types(Types& types) {
+const TypeApp* Parser::parse_type_app() {
+    auto type_app = loc(new TypeApp());
+    type_app->symbol_ = lex().symbol();
+    if (accept(Token::L_BRACKET)) {
+        parse_comma_list(Token::R_BRACKET, "type arguments for type application", [&] { 
+            type_app->elems_.push_back(parse_type()); 
+        });
+    }
+    return type_app;
 }
 
 /*
@@ -804,7 +826,7 @@ const LiteralExpr* Parser::parse_literal_expr() {
 const FnExpr* Parser::parse_fn_expr() {
     THORIN_PUSH(cur_var_handle, cur_var_handle);
 
-    auto fn_expr = loc(new FnExpr(typetable));
+    auto fn_expr = loc(new FnExpr());
     auto& fn = fn_expr->fn_;
 
     if (accept(Token::OR))
@@ -812,7 +834,7 @@ const FnExpr* Parser::parse_fn_expr() {
     else
         expect(Token::OROR, "parameter list of function expression");
 
-    fn_expr->has_return_type_ = parse_return_param(fn.params_);
+    fn.ret_type_ = parse_return_type(true);
     fn.body_ = parse_expr();
     return fn_expr;
 }

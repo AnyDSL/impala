@@ -3,7 +3,6 @@
 #include "impala/ast.h"
 #include "impala/dump.h"
 #include "impala/prec.h"
-#include "impala/type.h"
 
 using thorin::ArrayRef;
 using thorin::Type;
@@ -11,58 +10,64 @@ using thorin::Symbol;
 
 namespace impala {
 
-std::ostream& Printer::print_type(const Type* type) {
-    if (type == nullptr) {
-        return stream() << "<NULL>";
-    } else if (type->isa<NoRet>()) {
-        return stream() << "noret";
-    } else if (type->isa<TypeError>()) {
-        return stream() << "<error>";
-    } else if (auto owned_ptr = type->isa<OwnedPtr>()) {
-        stream() << '~';
-        return print_type(owned_ptr->referenced_type());
-    } else if (auto borrowed_ptr = type->isa<BorrowedPtr>()) {
-        stream() << '&';
-        return print_type(borrowed_ptr->referenced_type());
-    } else if (auto array = type->isa<DefiniteArray>()) {
-        stream() << '[';
-        return print_type(array->elem_type()) << " * " << array->dim() << ']';
-    } else if (auto array = type->isa<IndefiniteArray>()) {
-        stream() << '[';
-        return print_type(array->elem_type()) << ']';
-    } else if (auto tuple = type->isa<TupleType>()) {
-        return dump_list([&] (const Type* elem) { print_type(elem); }, tuple->elems(), "(", ")");
-    } else if (auto fn = type->isa<FnType>()) {
-        const Type* ret_type = fn->return_type();
-        if (ret_type->isa<NoRet>())
-            return dump_list([&](const Type* elem) { print_type(elem); }, fn->elems(), "fn(", ")");
-        else {
-            dump_list([&](const Type* elem) { print_type(elem); }, fn->elems().slice_to_end(fn->size()-1), "fn(", ") -> ");
-            return print_type(ret_type);
-        }
-    } else if (auto type_app = type->isa<TypeApp>()) {
-        stream() << type_app->name;
-        if (!type_app->empty())
-            dump_list([&] (const Type* elem) { print_type(elem); }, type_app->elems(), "[", "]");
-        return stream();
-    } else if (auto primtype = type->isa<PrimType>()) {
-        if (primtype->kind() == Token::TYPE_int32)
-            return stream() << "int";
-        switch (primtype->kind()) {
-#define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return stream() << #itype;
-#include "impala/tokenlist.h"
-            default: THORIN_UNREACHABLE;
-        }
-    }
-    THORIN_UNREACHABLE;
-}
-
 //------------------------------------------------------------------------------
 
 void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; }
-void Type::dump() const { Printer p(std::cout, true); p.print_type(this) << std::endl; }
 
 //------------------------------------------------------------------------------
+
+/*
+ * types
+ */
+
+std::ostream& NoRetType::print(Printer& p) const { return p.stream() << '!'; }
+std::ostream& InferType::print(Printer& p) const { return p.stream() << "<infer>"; }
+std::ostream& ErrorType::print(Printer& p) const { return p.stream() << "<error>"; }
+
+std::ostream& PtrType::print(Printer& p) const { 
+    p.stream() << kind();
+    return referenced_type()->print(p);
+}
+
+std::ostream& DefiniteArrayType::print(Printer& p) const { 
+    p.stream() << '[';
+    return elem_type()->print(p) << " * " << dim() << ']';
+}
+
+std::ostream& IndefiniteArrayType::print(Printer& p) const { 
+    p.stream() << '[';
+    return elem_type()->print(p) << ']';
+}
+
+std::ostream& TupleType::print(Printer& p) const { 
+    return p.dump_list([&] (const Type* elem) { elem->print(p); }, elems(), "(", ")");
+}
+
+std::ostream& FnType::print(Printer& p) const { 
+    p.stream() << "fn";
+    p.dump_list([&] (const Type* elem) { elem->print(p); }, elems(), "(", ")");
+    if (!p.is_fancy() || !ret_type()->isa<NoRetType>()) {
+        p.stream() << " -> ";
+        ret_type()->print(p);
+    }
+    return p.stream();
+}
+
+std::ostream& TypeApp::print(Printer& p) const { 
+    p.stream() << symbol();
+    if (!elems().empty())
+        p.dump_list([&] (const Type* elem) { elem->print(p); }, elems(), "[", "]");
+    return p.stream();
+}
+
+std::ostream& PrimType::print(Printer& p) const { 
+    switch (kind()) {
+#define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return p.stream() << #itype;
+#include "impala/tokenlist.h"
+        default: THORIN_UNREACHABLE;
+    }
+}
+
 
 /*
  * parameters
@@ -116,6 +121,7 @@ std::ostream& ModDecl::print(Printer& p) const {
         return p.stream() << ';';
 }
 
+#if 0
 std::ostream& FnDecl::print(Printer& p) const {
     p.stream() << "fn " << symbol();
     print_type_params(p);
@@ -142,6 +148,7 @@ std::ostream& FnDecl::print(Printer& p) const {
 
     return p.stream();
 }
+#endif
 
 std::ostream& FieldDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" ) << visibility().str() << symbol() << ": ";
@@ -320,6 +327,7 @@ std::ostream& MapExpr::print(Printer& p) const {
     return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "(", ")");
 }
 
+#if 0
 std::ostream& FnExpr::print(Printer& p) const { 
     p.stream() << '|';
     fn().print_params(p, has_return_type_);
@@ -332,6 +340,7 @@ std::ostream& FnExpr::print(Printer& p) const {
 
     return fn().body()->print(p);
 }
+#endif
 
 std::ostream& IfExpr::print(Printer& p) const {
     p.stream() << "if ";

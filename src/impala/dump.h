@@ -36,7 +36,6 @@ public:
 void dump(const ASTNode*, bool fancy = false, std::ostream& o = std::cout);
 
 //std::ostream& operator << (std::ostream& o, const ASTNode* n);
-//std::ostream& operator << (std::ostream& o, const Type* type);
 
 } // namespace impala
 

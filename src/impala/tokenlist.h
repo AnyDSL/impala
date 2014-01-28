@@ -136,8 +136,6 @@ IMPALA_KEY_MISC(STATIC,     "static")
 IMPALA_KEY_MISC(STRUCT,     "struct")
 IMPALA_KEY_MISC(TRAIT,      "trait")
 IMPALA_KEY_MISC(TYPEDEF,    "type")
-IMPALA_KEY_MISC(TYPE_int,   "int")
-IMPALA_KEY_MISC(TYPE_uint,  "uint")
 
 #undef IMPALA_KEY_MISC
 
@@ -185,6 +183,7 @@ IMPALA_LIT(double, pf64)
 #define IMPALA_TYPE(itype, atype)
 #endif
 
+IMPALA_TYPE(   int, ps32)
 IMPALA_TYPE(  int8,  ps8)
 IMPALA_TYPE( int16, ps16)
 IMPALA_TYPE( int32, ps32)

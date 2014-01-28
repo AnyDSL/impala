@@ -1,7 +1,5 @@
 #include "impala/ast.h"
 
-#include "impala/type.h"
-
 using namespace thorin;
 
 namespace impala {
