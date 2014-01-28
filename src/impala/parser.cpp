@@ -162,6 +162,8 @@ public:
     const Type*      parse_return_type(bool lambda);
     const ArrayType* parse_array_type();
     const FnType*    parse_fn_type();
+    const NoRetType* parse_no_ret_type();
+    const PrimType*  parse_prim_type();
     const PtrType*   parse_ptr_type();
     const TupleType* parse_tuple_type();
     const TypeApp*   parse_type_app();
@@ -554,18 +556,11 @@ const FieldDecl* Parser::parse_field_decl() {
 
 const Type* Parser::parse_type() {
     switch (la()) {
-#define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype:
+#define IMPALA_TYPE(itype, atype) \
+        case Token::TYPE_##itype:
 #include "impala/tokenlist.h"
-        {                           // primitive type
-            auto prim_type = loc(new PrimType());
-            prim_type->kind_ = (PrimType::Kind) lex().kind();
-            return prim_type;
-        }
-        case Token::NOT: {          // no-return
-            auto no_ret_type = loc(new NoRetType());
-            lex();
-            return no_ret_type;
-        }
+                                return parse_prim_type();
+        case Token::NOT:        return parse_no_ret_type();
         case Token::FN:         return parse_fn_type();
         case Token::L_PAREN:    return parse_tuple_type();
         case Token::ID:         return parse_type_app();
@@ -626,6 +621,18 @@ const FnType* Parser::parse_fn_type() {
     }
 
     return fn_type;
+}
+
+const NoRetType* Parser::parse_no_ret_type() {
+    auto no_ret_type = loc(new NoRetType());
+    eat(Token::NOT);
+    return no_ret_type;
+}
+
+const PrimType* Parser::parse_prim_type() {
+    auto prim_type = loc(new PrimType());
+    prim_type->kind_ = (PrimType::Kind) lex().kind();
+    return prim_type;
 }
 
 const PtrType* Parser::parse_ptr_type() {
