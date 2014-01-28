@@ -273,8 +273,6 @@ class ConstItem : public Item {
 
 class FnDecl : public ParametricType, public Item, public ValueDecl {
 public:
-    FnDecl(TypeTable& typetable);
-
     const Fn& fn() const { return fn_; }
     bool is_extern() const { return extern_; }
     void check_head(Sema&) const;

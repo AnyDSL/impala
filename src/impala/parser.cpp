@@ -434,7 +434,7 @@ ForeignMod* Parser::parse_foreign_mod() {
 FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
     THORIN_PUSH(cur_var_handle, cur_var_handle);
 
-    auto fn_decl = loc(new FnDecl(typetable));
+    auto fn_decl = loc(new FnDecl());
     auto& fn = fn_decl->fn_;
     eat(Token::FN);
     fn_decl->symbol_ = try_id("function name");

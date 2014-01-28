@@ -12,10 +12,6 @@ const char* Visibility::str() {
     return "";
 }
 
-FnDecl::FnDecl(TypeTable& typetable)
-    //: generic_builder_(typetable)
-{}
-
 TokenKind LiteralExpr::literal2type() const {
     switch (kind()) {
 #define IMPALA_LIT(itype, atype) \
