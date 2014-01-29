@@ -1,20 +1,20 @@
-#include "thorin/util/symbol.h"
+#include "impala/symbol.h"
+
+#include "thorin/util/hash.h"
 
 #include <iomanip>
 #include <sstream>
 
-#include "thorin/util/hash.h"
-
-namespace thorin {
+namespace impala {
 
 size_t StrHash::operator () (const char* s) const {
     size_t seed = 0;
     const char* i = s;
 
     while (*i != '\0')
-        seed = hash_combine(seed, *i++);
+        seed = thorin::hash_combine(seed, *i++);
 
-    return hash_combine(seed, i-s);
+    return thorin::hash_combine(seed, i-s);
 }
 
 Symbol::Table Symbol::table_(1031);
@@ -37,4 +37,4 @@ void Symbol::destroy() {
         free((void*) const_cast<char*>(s));
 }
 
-} // namespace thorin
+}

@@ -1,5 +1,5 @@
-#ifndef THORIN_SYMBOL_H
-#define THORIN_SYMBOL_H
+#ifndef IMPALA_SYMBOL_H
+#define IMPALA_SYMBOL_H
 
 #include <cstring>
 #include <string>
@@ -7,7 +7,7 @@
 
 #include "thorin/util/hash.h"
 
-namespace thorin {
+namespace impala {
 
 struct StrHash { size_t operator () (const char* s) const; };
 struct StrEqual { bool operator () (const char* s1, const char* s2) const { return std::strcmp(s1, s2) == 0; } };
@@ -34,13 +34,13 @@ private:
 
 inline std::ostream& operator << (std::ostream& o, Symbol s) { return o << s.str(); }
 
-} // namespace thorin
+}
 
 namespace std {
 
 template<>
-struct hash<thorin::Symbol> {
-    size_t operator () (thorin::Symbol symbol) const { return thorin::hash_value(symbol.str()); }
+struct hash<impala::Symbol> {
+    size_t operator () (impala::Symbol symbol) const { return thorin::hash_value(symbol.str()); }
 };
 
 }

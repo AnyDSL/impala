@@ -6,7 +6,6 @@
 
 using thorin::ArrayRef;
 using thorin::Type;
-using thorin::Symbol;
 
 namespace impala {
 

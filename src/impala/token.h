@@ -8,7 +8,8 @@
 #include "thorin/enums.h"
 #include "thorin/util/assert.h"
 #include "thorin/util/location.h"
-#include "thorin/util/symbol.h"
+
+#include "impala/symbol.h"
 
 namespace impala {
 
@@ -57,7 +58,7 @@ public:
     /// Create a literal
     Token(const thorin::Location& loc, Kind type, const std::string& str);
 
-    thorin::Symbol symbol() const { return symbol_; }
+    Symbol symbol() const { return symbol_; }
     thorin::Box box() const { return box_; }
     Kind kind() const { return kind_; }
     operator Kind () const { return kind_; }
@@ -93,18 +94,18 @@ public:
 private:
     static void init();
 
-    thorin::Symbol symbol_;
+    Symbol symbol_;
     Kind kind_;
     thorin::Box box_;
 
     static int tok2op_[NUM_TOKENS];
-    static thorin::Symbol insert(Kind tok, const char* str);
+    static Symbol insert(Kind tok, const char* str);
     static void insert_key(Kind tok, const char* str);
 
-    typedef std::unordered_map<Kind, thorin::Symbol, KindHash> Tok2Sym;
+    typedef std::unordered_map<Kind, Symbol, KindHash> Tok2Sym;
     static Tok2Sym tok2sym_;
 
-    typedef std::unordered_map<thorin::Symbol, Kind> Sym2Tok;
+    typedef std::unordered_map<Symbol, Kind> Sym2Tok;
     static Sym2Tok keywords_;
 
     typedef std::unordered_map<Kind, const char*, KindHash> Tok2Str;

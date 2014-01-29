@@ -12,6 +12,7 @@
 #include "thorin/util/location.h"
 #include "thorin/util/types.h"
 
+#include "impala/symbol.h"
 #include "impala/token.h"
 
 namespace thorin {
@@ -166,11 +167,11 @@ public:
 
 class TypeApp : public CompoundType {
 public:
-    thorin::Symbol symbol() const { return symbol_; }
+    Symbol symbol() const { return symbol_; }
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    thorin::Symbol symbol_;
+    Symbol symbol_;
 
     friend class Parser;
 };
@@ -187,12 +188,12 @@ public:
 
 class Decl : virtual public ASTNode {
 public:
-    thorin::Symbol symbol() const { return symbol_; }
+    Symbol symbol() const { return symbol_; }
     size_t depth() const { return depth_; }
     const Decl* shadows() const { return shadows_; }
 
 protected:
-    thorin::Symbol symbol_;
+    Symbol symbol_;
 
 private:
     mutable const Decl* shadows_;
@@ -248,7 +249,7 @@ public:
 
     size_t handle() const { return handle_; }
     virtual std::ostream& print(Printer& p) const;
-    bool is_anonymous() const { return symbol() == thorin::Symbol(); }
+    bool is_anonymous() const { return symbol() == Symbol(); }
 
 protected:
     size_t handle_;
@@ -391,26 +392,26 @@ private:
 
 class TraitDecl : public Item, public ParametricTypeDecl {
 public:
-    const std::vector<thorin::Symbol>& super() const { return super_; }
+    const std::vector<Symbol>& super() const { return super_; }
     const Methods& methods() const { return methods_; }
     virtual std::ostream& print(Printer& p) const;
 
 private:
     Methods methods_;
-    std::vector<thorin::Symbol> super_;
+    std::vector<Symbol> super_;
 
     friend class Parser;
 };
 
 class Impl : public Item, public ParametricTypeDecl {
 public:
-    thorin::Symbol symbol() const { return symbol_; }
+    Symbol symbol() const { return symbol_; }
     const Type* for_type() const { return for_type_; }
     const Methods& methods() const { return methods_; }
     virtual std::ostream& print(Printer& p) const;
 
 private:
-    thorin::Symbol symbol_;
+    Symbol symbol_;
     thorin::AutoPtr<const Type> for_type_;
     Methods methods_;
 
@@ -523,7 +524,7 @@ public:
         loc_ = tok.loc();
     }
 
-    thorin::Symbol symbol() const { return symbol_; }
+    Symbol symbol() const { return symbol_; }
     const Decl* decl() const { return decl_; }
 
     virtual bool is_lvalue() const;
@@ -533,7 +534,7 @@ private:
     //virtual const Type* check(Sema& sema) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
-    thorin::Symbol symbol_;
+    Symbol symbol_;
     mutable const Decl* decl_; ///< Declaration of the variable in use.
 };
 
@@ -615,13 +616,13 @@ private:
 class FieldExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
-    thorin::Symbol symbol() const { return symbol_; }
+    Symbol symbol() const { return symbol_; }
     virtual bool is_lvalue() const { return true; }
     virtual std::ostream& print(Printer& p) const;
 
 private:
     thorin::AutoPtr<const Expr> lhs_;
-    thorin::Symbol symbol_;
+    Symbol symbol_;
 
     friend class Parser;
 };
@@ -676,16 +677,16 @@ class StructExpr : public Expr {
 public:
     class Elem {
     public:
-        Elem(thorin::Symbol symbol, std::unique_ptr<const Expr> expr)
+        Elem(Symbol symbol, std::unique_ptr<const Expr> expr)
             : symbol_(symbol)
             , expr_(std::move(expr))
         {}
 
-        thorin::Symbol symbol() const { return symbol_; }
+        Symbol symbol() const { return symbol_; }
         const Expr* expr() const { return expr_.get(); }
 
     private:
-        thorin::Symbol symbol_;
+        Symbol symbol_;
         std::unique_ptr<const Expr> expr_;
     };
 
@@ -693,11 +694,11 @@ public:
 
     virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
-    thorin::Symbol symbol() const { return symbol_; }
+    Symbol symbol() const { return symbol_; }
     const Elems& elems() const { return elems_; }
 
 private:
-    thorin::Symbol symbol_;
+    Symbol symbol_;
     std::vector<Elem> elems_;
 
     friend class Parser;
