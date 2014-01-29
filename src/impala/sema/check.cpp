@@ -69,6 +69,10 @@ void Impl::check_head(Sema& sema) const {
  */
 
 void ModDecl::check(Sema& sema) const {
+    sema.push_scope();
+    if (mod_contents())
+        mod_contents()->check(sema);
+    sema.pop_scope();
 }
 
 void ForeignMod::check(Sema& sema) const {
