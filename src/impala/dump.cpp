@@ -44,6 +44,7 @@ std::ostream& TupleType::print(Printer& p) const {
 std::ostream& FnType::print(Printer& p) const { 
     auto ret = ret_fn_type();
     p.stream() << "fn";
+    print_type_params(p);
     p.dump_list([&] (const Type* elem) { elem->print(p); }, ret != nullptr ? elems().slice_num_from_end(1) : elems(), "(", ")");
     if (ret != nullptr) {
         p.stream() << " -> ";

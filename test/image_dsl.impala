@@ -11,8 +11,8 @@ struct Pixel[V: NumVec] {
     blue: V
 }
 
-trait TImage[V: NumVec] {
-    fn pixels(self: &Self, body: fn(&Pixel[V]) -> ());
+trait TImage {
+    fn pixels(self: &Self, body: fn[V: NumVec](&Pixel[V]) -> ());
 }
 
 //-------------------------------------------------------------------------
@@ -48,8 +48,8 @@ struct SimpleImage {
     data: ~[Pixel[int]] // owned pointer to pixel data on the heap
 }
 
-impl TImage[V: NumVec] for SimpleImage {
-    fn pixels(self: &Self, body: fn(&Pixel[V])) -> () {
+impl TImage for SimpleImage {
+    fn pixels(self: &Self, body: fn[V: NumVec](&Pixel[V])) -> () {
         for i in range(0, self.data.length) {
             body(self.data(i));
         }
@@ -74,8 +74,8 @@ struct ImageVec2 {
     data: ~[Pixel[Vec2]] // owned pointer to pixel data on the heap
 }
 
-impl TImage[V: NumVec] for ImageVec2 {
-    fn pixels(self: &Self, body: fn(&Pixel[V]) -> ()) {
+impl TImage for ImageVec2 {
+    fn pixels(self: &Self, body: fn[V: NumVec](&Pixel[V]) -> ()) {
         for i in range(0, self.data.length) {
             body(self.data(i));
         }

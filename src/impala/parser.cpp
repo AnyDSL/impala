@@ -612,6 +612,7 @@ const ArrayType* Parser::parse_array_type() {
 const FnType* Parser::parse_fn_type() {
     auto fn_type = loc(new FnType());
     eat(Token::FN);
+    parse_type_params(fn_type->type_params_);
     expect(Token::L_PAREN, "function type");
     parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&] { 
         fn_type->elems_.push_back(parse_type()); 

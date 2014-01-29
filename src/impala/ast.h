@@ -69,6 +69,16 @@ private:
     friend class Parser;
 };
 
+class ParametricType {
+public:
+    const TypeParam* type_param(size_t i) const { return type_params_[i]; }
+    thorin::ArrayRef<const TypeParam*> type_params() const { return type_params_; }
+    std::ostream& print_type_params(Printer& p) const;
+
+protected:
+    TypeParams type_params_;
+};
+
 class ASTNode : public thorin::HasLocation, public thorin::MagicCast<ASTNode> {
 public:
 #ifndef NDEBUG
@@ -176,7 +186,7 @@ private:
     friend class Parser;
 };
 
-class FnType : public CompoundType {
+class FnType : public ParametricType, public CompoundType {
 public:
     const FnType* ret_fn_type() const;
     virtual std::ostream& print(Printer& p) const;
@@ -204,16 +214,6 @@ private:
 
 /// Base class for all \p Type declarations.
 class TypeDecl : public Decl {
-};
-
-class ParametricType {
-public:
-    const TypeParam* type_param(size_t i) const { return type_params_[i]; }
-    thorin::ArrayRef<const TypeParam*> type_params() const { return type_params_; }
-    std::ostream& print_type_params(Printer& p) const;
-
-protected:
-    TypeParams type_params_;
 };
 
 /// Base class for all \p Type declarations having \p TypeParams.
