@@ -209,7 +209,7 @@ private:
     mutable const Decl* shadows_;
     mutable size_t depth_;
 
-    friend class Sema;
+    friend class ScopeTable;
 };
 
 /// Base class for all \p Type declarations.

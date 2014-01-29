@@ -1,0 +1,58 @@
+#ifndef IMPALA_SEMA_SCOPETABLE_H
+#define IMPALA_SEMA_SCOPETABLE_H
+
+#include <unordered_map>
+#include <vector>
+
+#include "impala/symbol.h"
+
+namespace impala {
+
+class ASTNode;
+class Decl;
+class Location;
+
+class ScopeTable {
+public:
+    ScopeTable()
+        : result_(true)
+    {}
+
+    /** 
+     * @brief Looks up the current definition of \p sym.
+     * @return Returns nullptr on failure.
+     */
+    const Decl* lookup(Symbol symbol) const;
+
+    /** 
+     * @brief Maps \p decl's symbol to \p decl.
+     * 
+     * If \p decl's symbol already has a definition in the current scope, an assertion will be raised.
+     * Use \p clash in order to check this.
+     */
+    void insert(const Decl* decl);
+
+    /** 
+     * @brief Checks whether there already exists a \p Symbol \p symbol in the \em current scope.
+     * @param symbol The \p Symbol to check.
+     * @return The current mapping if the lookup succeeds, nullptr otherwise.
+     */
+    const Decl* clash(Symbol symbol) const;
+
+    void push_scope() { levels_.push_back(decl_stack_.size()); }
+    void pop_scope();
+    size_t depth() const { return levels_.size(); }
+    bool result() const { return result_; }
+    std::ostream& error(const ASTNode*);
+    std::ostream& error(const Location&);
+
+private:
+    std::unordered_map<Symbol, const Decl*> sym2decl_;
+    std::vector<const Decl*> decl_stack_;
+    std::vector<size_t> levels_;
+    bool result_;
+};
+
+}
+
+#endif

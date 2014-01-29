@@ -26,34 +26,7 @@ public:
         , nossa_(nossa)
     {}
 
-    /** 
-     * @brief Looks up the current definition of \p sym.
-     * @return Returns nullptr on failure.
-     */
-    const Decl* lookup(Symbol symbol) const;
-
-    /** 
-     * @brief Maps \p decl's symbol to \p decl.
-     * 
-     * If sym already has a definition in this scope an assertion is raised.
-     * use \p clash in order to check this.
-     */
-    void insert(const Decl* decl);
-
-    /** 
-     * @brief Checks whether there already exists a \p Symbol \p symbol in the \em current scope.
-     * @param symbol The \p Symbol to check.
-     * @return The current mapping if the lookup succeeds, nullptr otherwise.
-     */
-    const Decl* clash(Symbol symbol) const;
-
-    void push_scope() { levels_.push_back(decl_stack_.size()); }
-    void pop_scope();
-    size_t depth() const { return levels_.size(); }
-    bool result() const { return result_; }
     bool nossa() const { return nossa_; }
-    std::ostream& error(const ASTNode* n) { result_ = false; return n->error(); }
-    std::ostream& error(const Location& loc) { result_ = false; return loc.error(); }
     TypeTable& typetable() const { return typetable_; }
     void check(const Scope*);
     void check(const Decl* decl) { decl->check(*this); }
@@ -75,7 +48,6 @@ public:
 private:
     TypeTable& typetable_;
     const Fun* cur_fun_;
-    bool result_;
     bool nossa_;
 
     std::unordered_map<Symbol, const Decl*> sym2decl_;
@@ -87,49 +59,6 @@ private:
 };
 
 //------------------------------------------------------------------------------
-
-const Decl* Sema::lookup(Symbol sym) const {
-    auto i = sym2decl_.find(sym);
-    return i != sym2decl_.end() ? i->second : nullptr;
-}
-
-void Sema::insert(const Decl* decl) {
-    if (const Decl* other = clash(decl->symbol())) {
-        error(decl) << "symbol '" << decl->symbol() << "' already defined\n";
-        error(other) << "previous location here\n";
-        return;
-    } 
-
-    Symbol symbol = decl->symbol();
-    assert(clash(symbol) == nullptr && "must not be found");
-
-    auto i = sym2decl_.find(symbol);
-    decl->shadows_ = i != sym2decl_.end() ? i->second : nullptr;
-    decl->depth_ = depth();
-
-    decl_stack_.push_back(decl);
-    sym2decl_[symbol] = decl;
-}
-
-const Decl* Sema::clash(Symbol symbol) const {
-    auto i = sym2decl_.find(symbol);
-    if (i == sym2decl_.end())
-        return nullptr;
-
-    const Decl* decl = i->second;
-    return (decl && decl->depth() == depth()) ? decl : nullptr;
-}
-
-void Sema::pop_scope() {
-    size_t level = levels_.back();
-    for (size_t i = level, e = decl_stack_.size(); i != e; ++i) {
-        const Decl* decl = decl_stack_[i];
-        sym2decl_[decl->symbol()] = decl->shadows();
-    }
-
-    decl_stack_.resize(level);
-    levels_.pop_back();
-}
 
 //------------------------------------------------------------------------------
 
@@ -585,5 +514,5 @@ bool check(TypeTable& typetable, const Scope* prg, bool nossa) { Sema sema(typet
 
 //------------------------------------------------------------------------------
 
-} // namespace impala
+}
 #endif

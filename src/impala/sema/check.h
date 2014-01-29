@@ -1,5 +1,5 @@
-#ifndef IMPALA_SEMA_H
-#define IMPALA_SEMA_H
+#ifndef IMPALA_SEMA_CHECK_H
+#define IMPALA_SEMA_HCHECK_
 
 namespace impala {
 
@@ -8,6 +8,6 @@ class TypeTable;
 
 bool check(TypeTable&, const Scope*, bool nossa = false);
 
-} // namespace impala
+}
 
-#endif // IMPALA_SEMA_H
+#endif
