@@ -309,6 +309,7 @@ public:
     const Item* item(size_t i) const { return items_[i]; }
     const Items& items() const { return items_; }
     virtual std::ostream& print(Printer& p) const;
+    void check(Sema& sema) const;
 
 private:
     Items items_;
@@ -319,6 +320,9 @@ private:
 class Item : virtual public ASTNode {
 public:
     Visibility visibility() const { return  visibility_; }
+    virtual void check(Sema& sema) const = 0;
+    virtual void check_head(Sema& sema) const = 0;
+    //virtual void emit(CodeGen& cg) const;
 
 private:
     Visibility visibility_;
@@ -330,6 +334,9 @@ class ModDecl : public Item, public ParametricTypeDecl {
 public:
     const ModContents* mod_contents() const { return mod_contents_; }
     virtual std::ostream& print(Printer& p) const;
+    virtual void check(Sema& sema) const;
+    virtual void check_head(Sema& sema) const;
+    //virtual void emit(CodeGen& cg) const;
 
 private:
     thorin::AutoPtr<const ModContents> mod_contents_;
@@ -339,16 +346,24 @@ private:
 
 class ForeignMod : public Item, public ParametricTypeDecl {
     virtual std::ostream& print(Printer& p) const;
+    virtual void check(Sema& sema) const;
+    virtual void check_head(Sema& sema) const;
+    //virtual void emit(CodeGen& cg) const;
 };
 
 class Typedef : public Item, public ParametricTypeDecl {
     virtual std::ostream& print(Printer& p) const;
+    virtual void check(Sema& sema) const;
+    virtual void check_head(Sema& sema) const;
+    //virtual void emit(CodeGen& cg) const;
 };
 
 class FieldDecl : public ValueDecl {
 public:
-    virtual std::ostream& print(Printer& p) const;
     Visibility visibility() const { return  visibility_; }
+    virtual std::ostream& print(Printer& p) const;
+    void check(Sema& sema) const;
+    void check_head(Sema& sema) const;
 
 private:
     Visibility visibility_;
@@ -360,6 +375,9 @@ class StructDecl : public Item, public ParametricTypeDecl {
 public:
     const Fields& fields() const { return fields_; }
     virtual std::ostream& print(Printer& p) const;
+    virtual void check(Sema& sema) const;
+    virtual void check_head(Sema& sema) const;
+    //virtual void emit(CodeGen& cg) const;
 
 private:
     Fields fields_;
@@ -369,19 +387,25 @@ private:
 
 class EnumDecl : public Item, public ParametricTypeDecl {
     virtual std::ostream& print(Printer& p) const;
+    virtual void check(Sema& sema) const;
+    virtual void check_head(Sema& sema) const;
+    //virtual void emit(CodeGen& cg) const;
 };
 
 class ConstItem : public Item {
     virtual std::ostream& print(Printer& p) const;
+    virtual void check(Sema& sema) const;
+    virtual void check_head(Sema& sema) const;
+    //virtual void emit(CodeGen& cg) const;
 };
 
 class FnDecl : public ParametricType, public Item, public ValueDecl {
 public:
     const Fn& fn() const { return fn_; }
     bool is_extern() const { return extern_; }
-    void check_head(Sema&) const;
-    //virtual void check(Sema& sema) const;
     virtual std::ostream& print(Printer& p) const;
+    virtual void check(Sema& sema) const;
+    virtual void check_head(Sema& sema) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -396,6 +420,9 @@ public:
     const std::vector<Symbol>& super() const { return super_; }
     const Methods& methods() const { return methods_; }
     virtual std::ostream& print(Printer& p) const;
+    virtual void check(Sema& sema) const;
+    virtual void check_head(Sema& sema) const;
+    //virtual void emit(CodeGen& cg) const;
 
 private:
     Methods methods_;
@@ -410,6 +437,9 @@ public:
     const Type* for_type() const { return for_type_; }
     const Methods& methods() const { return methods_; }
     virtual std::ostream& print(Printer& p) const;
+    virtual void check(Sema& sema) const;
+    virtual void check_head(Sema& sema) const;
+    //virtual void emit(CodeGen& cg) const;
 
 private:
     Symbol symbol_;
@@ -765,7 +795,7 @@ private:
 //------------------------------------------------------------------------------
 
 class Stmt : public ASTNode {
-private:
+public:
     virtual void check(Sema& sema) const = 0;
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const { [>= 0<]; }
 };

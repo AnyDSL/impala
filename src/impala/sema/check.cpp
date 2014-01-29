@@ -20,6 +20,68 @@ private:
 };
 
 /*
+ * items - check_head
+ */
+
+void ModDecl::check_head(Sema& sema) const {
+}
+
+void ForeignMod::check_head(Sema& sema) const {
+}
+
+void Typedef::check_head(Sema& sema) const {
+}
+
+void EnumDecl::check_head(Sema& sema) const {
+}
+
+void ConstItem::check_head(Sema& sema) const {
+}
+
+void FnDecl::check_head(Sema& sema) const {
+}
+
+void StructDecl::check_head(Sema& sema) const {
+}
+
+void TraitDecl::check_head(Sema& sema) const {
+}
+
+void Impl::check_head(Sema& sema) const {
+}
+
+/*
+ * items - check
+ */
+
+void ModDecl::check(Sema& sema) const {
+}
+
+void ForeignMod::check(Sema& sema) const {
+}
+
+void Typedef::check(Sema& sema) const {
+}
+
+void EnumDecl::check(Sema& sema) const {
+}
+
+void ConstItem::check(Sema& sema) const {
+}
+
+void FnDecl::check(Sema& sema) const {
+}
+
+void StructDecl::check(Sema& sema) const {
+}
+
+void TraitDecl::check(Sema& sema) const {
+}
+
+void Impl::check(Sema& sema) const {
+}
+
+/*
  * expressions
  */
 
@@ -27,6 +89,15 @@ void EmptyExpr::check(Sema& sema) const {
 }
 
 void BlockExpr::check(Sema& sema) const {
+    for (auto stmt : stmts()) {
+        if (auto item_stmt = stmt->isa<ItemStmt>())
+            item_stmt->item()->check_head(sema);
+    }
+
+    for (auto stmt : stmts())
+        stmt->check(sema);
+
+    expr()->check(sema);
 }
 
 void LiteralExpr::check(Sema& sema) const {
