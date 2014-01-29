@@ -74,5 +74,21 @@ void IfExpr::check(Sema& sema) const {
 void ForExpr::check(Sema& sema) const {
 }
 
+/*
+ * statements
+ */
+
+void ExprStmt::check(Sema& sema) const {
+    expr()->check(sema);
+}
+
+void ItemStmt::check(Sema& sema) const {
+    //item()->check(sema);
+}
+
+void LetStmt::check(Sema& sema) const {
+    if (init())
+        init()->check(sema);
+}
 
 }

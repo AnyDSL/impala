@@ -766,7 +766,7 @@ private:
 
 class Stmt : public ASTNode {
 private:
-    //virtual void check(Sema& sema) const { [>= 0<]; }
+    virtual void check(Sema& sema) const = 0;
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const { [>= 0<]; }
 };
 
@@ -774,11 +774,10 @@ class ExprStmt : public Stmt {
 public:
     const Expr* expr() const { return expr_; }
     virtual std::ostream& print(Printer& p) const;
-
-private:
-    //virtual void check(Sema& sema) const;
+    virtual void check(Sema& sema) const;
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
+private:
     thorin::AutoPtr<const Expr> expr_;
 
     friend class Parser;
@@ -788,11 +787,10 @@ class ItemStmt : public Stmt {
 public:
     const Item* item() const { return item_; }
     virtual std::ostream& print(Printer& p) const;
-
-private:
-    //virtual void check(Sema& sema) const;
+    virtual void check(Sema& sema) const;
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
+private:
     thorin::AutoPtr<const Item> item_;
 
     friend class Parser;
@@ -803,11 +801,10 @@ public:
     virtual std::ostream& print(Printer& p) const;
     const LocalDecl* local() const { return local_; }
     const Expr* init() const { return init_; }
-
-private:
-    //virtual void check(Sema& sema) const;
+    virtual void check(Sema& sema) const;
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
+private:
     thorin::AutoPtr<const LocalDecl> local_;
     thorin::AutoPtr<const Expr> init_;
 
