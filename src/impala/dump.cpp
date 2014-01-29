@@ -166,6 +166,12 @@ std::ostream& StructDecl::print(Printer& p) const {
     return p.stream();
 }
 
+std::ostream& Typedef::print(Printer& p) const {
+    p.stream() << visibility().str() << "type " << symbol();
+    print_type_params(p) << " = ";
+    return type()->print(p) << ';';
+}
+
 std::ostream& TraitDecl::print(Printer& p) const {
     p.stream() << "trait " << symbol();
     print_type_params(p);

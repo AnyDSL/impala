@@ -23,6 +23,7 @@
     case Token::MOD: \
     case Token::STATIC: \
     case Token::STRUCT: \
+    case Token::TYPEDEF: \
     case Token::TRAIT
 
 #define MOD_CONTENTS \
@@ -517,8 +518,14 @@ TraitDecl* Parser::parse_trait_decl() {
 }
 
 Typedef* Parser::parse_typedef() {
-    assert(false && "TODO");
-    return 0;
+    auto type_def = loc(new Typedef());
+    eat(Token::TYPEDEF);
+    type_def->symbol_ = try_id("type definition");
+    parse_type_params(type_def->type_params_);
+    eat(Token::ASGN);
+    type_def->type_ = parse_type();
+    expect(Token::SEMICOLON, "type definition");
+    return type_def;
 }
 
 /*

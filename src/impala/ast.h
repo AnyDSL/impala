@@ -352,10 +352,17 @@ class ForeignMod : public Item, public ParametricTypeDecl {
 };
 
 class Typedef : public Item, public ParametricTypeDecl {
+public:
+    const Type* type() const { return type_; }
     virtual std::ostream& print(Printer& p) const;
     virtual void check(Sema& sema) const;
     virtual void check_head(Sema& sema) const;
     //virtual void emit(CodeGen& cg) const;
+
+private:
+    thorin::AutoPtr<const Type> type_;
+
+    friend class Parser;
 };
 
 class FieldDecl : public ValueDecl {

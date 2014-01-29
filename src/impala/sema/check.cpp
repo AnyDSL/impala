@@ -36,10 +36,6 @@ void ForeignMod::check_head(Sema& sema) const {
     sema.insert(this);
 }
 
-void Typedef::check_head(Sema& sema) const {
-    sema.insert(this);
-}
-
 void EnumDecl::check_head(Sema& sema) const {
     sema.insert(this);
 }
@@ -57,6 +53,10 @@ void StructDecl::check_head(Sema& sema) const {
 }
 
 void TraitDecl::check_head(Sema& sema) const {
+    sema.insert(this);
+}
+
+void Typedef::check_head(Sema& sema) const {
     sema.insert(this);
 }
 
