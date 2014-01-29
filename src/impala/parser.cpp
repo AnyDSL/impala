@@ -768,6 +768,13 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
             expr->set_loc(lhs->pos1(), prev_loc().pos2());
             return expr;
         }
+        case Token::AS: {
+            auto expr = new CastExpr();
+            expr->lhs_ = lhs;
+            expr->as_ = parse_type();
+            expr->set_loc(lhs->pos1(), prev_loc().pos2());
+            return expr;
+        }
         default: THORIN_UNREACHABLE;
     }
 }

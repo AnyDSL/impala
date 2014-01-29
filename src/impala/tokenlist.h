@@ -37,6 +37,7 @@ IMPALA_POSTFIX(    INC, "++", POSTFIX) // postfix ++
 IMPALA_POSTFIX(    DEC, "--", POSTFIX) // postfix --
 IMPALA_POSTFIX(L_PAREN,  "(", POSTFIX) // map expression (function call, array/tuple index)
 IMPALA_POSTFIX(    DOT,  ".", POSTFIX) // dot expression (struct access)
+IMPALA_POSTFIX(     AS, "as",     MUL) // cast expression (not as strong as mul)
 
 #undef IMPALA_POSTFIX
 
@@ -123,6 +124,7 @@ IMPALA_KEY_STMT(LET,        "let")
 #define IMPALA_KEY_MISC(tok, str)
 #endif
 
+IMPALA_KEY_MISC(AS,         "as")
 IMPALA_KEY_MISC(ENUM,       "enum")
 IMPALA_KEY_MISC(EXTERN,     "extern")
 IMPALA_KEY_MISC(FN,         "fn")

@@ -627,6 +627,20 @@ private:
     friend class Parser;
 };
 
+class CastExpr : public Expr {
+public:
+    const Expr* lhs() const { return lhs_; }
+    const Type* as() const { return as_; }
+    virtual bool is_lvalue() const { return false; }
+    virtual std::ostream& print(Printer& p) const;
+
+private:
+    thorin::AutoPtr<const Expr> lhs_;
+    thorin::AutoPtr<const Type> as_;
+
+    friend class Parser;
+};
+
 class OpsExpr : public Expr {
 public:
     const Exprs& ops() const { return ops_; }

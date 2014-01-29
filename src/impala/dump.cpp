@@ -245,6 +245,8 @@ std::ostream& RepeatArrayExpr::print(Printer& p) const {
 std::ostream& PrefixExpr::print(Printer& p) const {
     Prec r = PrecTable::prefix_r[kind()];
     Prec old = p.prec;
+    bool paren = !p.is_fancy();
+    if (paren) p.stream() << "(";
 
     const char* op;
     switch (kind()) {
@@ -258,6 +260,7 @@ std::ostream& PrefixExpr::print(Printer& p) const {
     rhs()->print(p);
     p.prec = old;
 
+    if (paren) p.stream() << ")";
     return p.stream();
 }
 
@@ -266,7 +269,6 @@ std::ostream& InfixExpr::print(Printer& p) const {
     Prec r = PrecTable::infix_r[kind()];
     Prec old = p.prec;
     bool paren = !p.is_fancy() || p.prec > l;
-
     if (paren) p.stream() << "(";
 
     p.prec = l;
@@ -286,7 +288,6 @@ std::ostream& InfixExpr::print(Printer& p) const {
     p.prec = old;
 
     if (paren) p.stream() << ")";
-
     return p.stream();
 }
 
@@ -294,7 +295,6 @@ std::ostream& PostfixExpr::print(Printer& p) const {
     Prec l = PrecTable::postfix_l[kind()];
     Prec old = p.prec;
     bool paren = !p.is_fancy() || p.prec > l;
-
     if (paren) p.stream() << "(";
 
     p.prec = l;
@@ -311,11 +311,15 @@ std::ostream& PostfixExpr::print(Printer& p) const {
     p.prec = old;
 
     if (paren) p.stream() << ")";
-
     return p.stream();
 }
 
 std::ostream& FieldExpr::print(Printer& p) const { return lhs()->print(p) << '.' << symbol(); }
+
+std::ostream& CastExpr::print(Printer& p) const { 
+    lhs()->print(p) << " as ";
+    return as()->print(p);
+}
 
 std::ostream& StructExpr::print(Printer& p) const { 
     p.stream() << symbol() << '{';
