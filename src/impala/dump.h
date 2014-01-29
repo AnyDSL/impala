@@ -20,8 +20,6 @@ public:
         , prec(BOTTOM)
     {}
 
-    std::ostream& print_type(const impala::Type*);
-
     Prec prec;
 };
 

@@ -10,6 +10,14 @@ const char* Visibility::str() {
     return "";
 }
 
+const FnType* FnType::ret_fn_type() const { 
+    if (!elems().empty()) {
+        if (auto fn_type = elems().back()->isa<FnType>())
+            return fn_type;
+    }
+    return nullptr;
+}
+
 TokenKind LiteralExpr::literal2type() const {
     switch (kind()) {
 #define IMPALA_LIT(itype, atype) \

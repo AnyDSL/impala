@@ -107,11 +107,6 @@ private:
     friend class Parser;
 };
 
-class NoRetType : public Type {
-public:
-    virtual std::ostream& print(Printer& p) const;
-};
-
 class PtrType : public Type {
 public:
     char kind() const { assert(is_owned() || is_borrowed()); return kind_; }
@@ -155,7 +150,8 @@ private:
 
 class CompoundType : public Type {
 public:
-    const Types& elems() const { return elems_; }
+    thorin::ArrayRef<const Type*> elems() const { return elems_; }
+    const Type* elem(size_t i) const { return elems_[i]; }
 
 protected:
     Types elems_;
@@ -181,11 +177,8 @@ private:
 
 class FnType : public CompoundType {
 public:
-    const Type* ret_type() const { return ret_type_; }
+    const FnType* ret_fn_type() const;
     virtual std::ostream& print(Printer& p) const;
-
-private:
-    thorin::AutoPtr<const Type> ret_type_;
 
     friend class Parser;
 };
@@ -294,7 +287,6 @@ class Fn {
 public:
     const Param* param(size_t i) const { return params_[i]; }
     thorin::ArrayRef<const Param*> params() const { return params_; }
-    const Type* ret_type() const { return ret_type_; }
     const Expr* body() const { return body_; }
     thorin::Lambda* lambda() const { return lambda_; }
     const thorin::Param* ret_param() const { return ret_param_; }
@@ -304,7 +296,6 @@ public:
 
 private:
     Params params_;
-    thorin::AutoPtr<const Type> ret_type_;
     thorin::AutoPtr<const Expr> body_;
     mutable thorin::Lambda* lambda_;
     mutable const thorin::Param* ret_param_;
@@ -529,6 +520,7 @@ private:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     Fn fn_;
+    bool has_return_param_;
 
     friend class Parser;
 };

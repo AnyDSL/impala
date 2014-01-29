@@ -79,8 +79,7 @@
     case Token::TYPE_bool: \
     case Token::TYPE_int: \
     case Token::TILDE: \
-    case Token::AND: \
-    case Token::NOT
+    case Token::AND
 
 using namespace thorin;
 
@@ -156,13 +155,13 @@ public:
     const TypeParam* parse_type_param();
     const Param* parse_param(bool lambda);
     void parse_param_list(Params& params, TokenKind delimiter, bool lambda);
+    bool parse_return_param(Params&);
 
     // types
     const Type*      parse_type();
-    const Type*      parse_return_type(bool lambda);
     const ArrayType* parse_array_type();
+    const Type*      parse_return_type(bool& noret);
     const FnType*    parse_fn_type();
-    const NoRetType* parse_no_ret_type();
     const PrimType*  parse_prim_type();
     const PtrType*   parse_ptr_type();
     const TupleType* parse_tuple_type();
@@ -367,13 +366,17 @@ const Param* Parser::parse_param(bool lambda) {
     return param;
 }
 
-const Type* Parser::parse_return_type(bool lambda) {
-    if (accept(Token::ARROW))
-        return parse_type();
-
-    Type* type = lambda ?  (Type*) new InferType() : (Type*) new NoRetType();
-    type->set_loc(prev_loc());
-    return type;
+bool Parser::parse_return_param(Params& params) {
+    bool noret;
+    if (auto fn_type = parse_return_type(noret)) {
+        auto param = new Param(cur_var_handle++);
+        param->is_mut_ = false;
+        param->symbol_ = "return";
+        param->type_ = fn_type;
+        param->set_loc(fn_type->loc());
+        params.push_back(param);
+    }
+    return noret;
 }
 
 /*
@@ -438,7 +441,7 @@ FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
     parse_type_params(fn_decl->type_params_);
     expect(Token::L_PAREN, "function head");
     parse_param_list(fn.params_, Token::R_PAREN, false);
-    fn.ret_type_ = parse_return_type(false);
+    parse_return_param(fn.params_);
 
     if (maybe_empty && accept(Token::SEMICOLON)) {
         // do nothing
@@ -560,7 +563,6 @@ const Type* Parser::parse_type() {
         case Token::TYPE_##itype:
 #include "impala/tokenlist.h"
                                 return parse_prim_type();
-        case Token::NOT:        return parse_no_ret_type();
         case Token::FN:         return parse_fn_type();
         case Token::L_PAREN:    return parse_tuple_type();
         case Token::ID:         return parse_type_app();
@@ -614,19 +616,38 @@ const FnType* Parser::parse_fn_type() {
         fn_type->elems_.push_back(parse_type()); 
     });
 
-    if (accept(Token::ARROW)) {
-        auto ret_type = new FnType();
-        ret_type->elems_.push_back(parse_type());
-        fn_type->elems_.push_back(ret_type);
+    if (accept(Token::ARROW)) { // TODO remove copy/paste
+        if (!accept(Token::NOT)) { // if not "no-return"
+            auto ret_type = loc(new FnType());
+            ret_type->elems_.push_back(parse_type());
+            fn_type->elems_.push_back(ret_type);
+        }
     }
 
     return fn_type;
 }
 
-const NoRetType* Parser::parse_no_ret_type() {
-    auto no_ret_type = loc(new NoRetType());
-    eat(Token::NOT);
-    return no_ret_type;
+const Type* Parser::parse_return_type(bool& noret) {
+    noret = false;
+
+    if (accept(Token::ARROW)) {
+        if (accept(Token::NOT)) {
+            noret = true; // if "no-return" specified
+            return nullptr;
+        }
+        auto ret_type = loc(new FnType());
+        if (accept(Token::L_PAREN)) {                   // in-place tuple
+            parse_comma_list(Token::R_PAREN, "closing parenthesis of return type list", [&] { 
+                ret_type->elems_.push_back(parse_type()); 
+            });
+        } else {
+            auto type = parse_type();
+            assert(!type->isa<TupleType>());
+            ret_type->elems_.push_back(type);
+        }
+        return ret_type;
+    }
+    return nullptr;
 }
 
 const PrimType* Parser::parse_prim_type() {
@@ -841,7 +862,7 @@ const FnExpr* Parser::parse_fn_expr() {
     else
         expect(Token::OROR, "parameter list of function expression");
 
-    fn.ret_type_ = parse_return_type(true);
+    fn_expr->has_return_param_ = parse_return_param(fn.params_);
     fn.body_ = parse_expr();
     return fn_expr;
 }

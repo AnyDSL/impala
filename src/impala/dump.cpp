@@ -20,7 +20,6 @@ void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; 
  * types
  */
 
-std::ostream& NoRetType::print(Printer& p) const { return p.stream() << '!'; }
 std::ostream& InferType::print(Printer& p) const { return p.stream() << "<infer>"; }
 std::ostream& ErrorType::print(Printer& p) const { return p.stream() << "<error>"; }
 
@@ -44,11 +43,12 @@ std::ostream& TupleType::print(Printer& p) const {
 }
 
 std::ostream& FnType::print(Printer& p) const { 
+    auto ret = ret_fn_type();
     p.stream() << "fn";
-    p.dump_list([&] (const Type* elem) { elem->print(p); }, elems(), "(", ")");
-    if (!p.is_fancy() || !ret_type()->isa<NoRetType>()) {
+    p.dump_list([&] (const Type* elem) { elem->print(p); }, ret != nullptr ? elems().slice_num_from_end(1) : elems(), "(", ")");
+    if (ret != nullptr) {
         p.stream() << " -> ";
-        ret_type()->print(p);
+        ret->print(p);
     }
     return p.stream();
 }
@@ -75,7 +75,7 @@ std::ostream& PrimType::print(Printer& p) const {
 
 std::ostream& TypeParam::print(Printer& p) const {
     p.stream() << symbol() << (bounds_.empty() ? "" : ": ");
-    return p.dump_list([&] (const Type* type) { p.print_type(type); }, bounds(), "", "", " + ");
+    return p.dump_list([&] (const Type* type) { type->print(p); }, bounds(), "", "", " + ");
 }
 
 std::ostream& ParametricType::print_type_params(Printer& p) const {
@@ -100,7 +100,7 @@ std::ostream& LocalDecl::print(Printer& p) const {
     if (!is_anonymous() && type())
         p.stream() << ": "; 
     if (type())
-        p.print_type(type());
+        type()->print(p);
 
     return p.stream();
 }
@@ -152,7 +152,7 @@ std::ostream& FnDecl::print(Printer& p) const {
 
 std::ostream& FieldDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" ) << visibility().str() << symbol() << ": ";
-    return p.print_type(type());
+    return type()->print(p);
 }
 
 std::ostream& StructDecl::print(Printer& p) const {
@@ -182,9 +182,9 @@ std::ostream& TraitDecl::print(Printer& p) const {
 std::ostream& Impl::print(Printer& p) const {
     p.stream() << "impl " << symbol();
     print_type_params(p);
-    if (for_type_) {
+    if (for_type()) {
         p.stream() << " for ";
-        p.print_type(for_type_);
+        for_type()->print(p);
     }
     p.stream() << " {";
     p.up();
@@ -388,7 +388,6 @@ std::ostream& ExprStmt::print(Printer& p) const {
 
 void dump(const ASTNode* n, bool fancy, std::ostream& o) { Printer p(o, fancy); n->print(p); }
 std::ostream& operator << (std::ostream& o, const ASTNode* n) { Printer p(o, true); return n->print(p); }
-std::ostream& operator << (std::ostream& o, const Type* type) { return Printer(o, true).print_type(type); }
 
 //------------------------------------------------------------------------------
 
