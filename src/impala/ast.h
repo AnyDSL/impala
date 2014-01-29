@@ -9,9 +9,9 @@
 #include "thorin/util/assert.h"
 #include "thorin/util/autoptr.h"
 #include "thorin/util/cast.h"
-#include "thorin/util/location.h"
 #include "thorin/util/types.h"
 
+#include "impala/location.h"
 #include "impala/symbol.h"
 #include "impala/token.h"
 
@@ -79,7 +79,7 @@ protected:
     TypeParams type_params_;
 };
 
-class ASTNode : public thorin::HasLocation, public thorin::MagicCast<ASTNode> {
+class ASTNode : public impala::HasLocation, public thorin::MagicCast<ASTNode> {
 public:
 #ifndef NDEBUG
     virtual ~ASTNode() { assert(loc_.is_set()); }
@@ -438,7 +438,7 @@ protected:
 
 class EmptyExpr : public Expr {
 public:
-    EmptyExpr(const thorin::Location& loc) { loc_ = loc; }
+    EmptyExpr(const Location& loc) { loc_ = loc; }
 
     virtual bool is_lvalue() const { return false; }
     virtual std::ostream& print(Printer& p) const;
@@ -451,7 +451,7 @@ private:
 class BlockExpr : public Expr {
 public:
     BlockExpr() {}
-    BlockExpr(thorin::Location loc) { loc_ = loc; expr_ = new EmptyExpr(loc); }
+    BlockExpr(Location loc) { loc_ = loc; expr_ = new EmptyExpr(loc); }
 
     const Stmts& stmts() const { return stmts_; }
     const Expr* expr() const { return expr_; }
@@ -477,7 +477,7 @@ public:
         LIT_bool
     };
 
-    LiteralExpr(const thorin::Location& loc, Kind kind, thorin::Box box)
+    LiteralExpr(const Location& loc, Kind kind, thorin::Box box)
         : kind_(kind)
         , box_(box)
     {

@@ -1,11 +1,9 @@
-#include "thorin/util/location.h"
+#include "impala/location.h"
 
 #include <cctype>
 #include <iostream>
 
-#include "thorin/util/stdlib.h"
-
-namespace thorin {
+namespace impala {
 
 //------------------------------------------------------------------------------
 
@@ -48,4 +46,4 @@ std::ostream& HasLocation::warning() const { return std::cerr << loc_ << ": warn
 
 //------------------------------------------------------------------------------
 
-} // namespace thorin
+}

@@ -117,7 +117,7 @@ public:
     const Token& la(size_t i) const { return lookahead[i]; }
     const Token& la () const { return lookahead[0]; }
     const Token& la2() const { return lookahead[1]; }
-    thorin::Location prev_loc() const { return prev_loc_; }
+    Location prev_loc() const { return prev_loc_; }
 
 #ifdef NDEBUG
     Token eat(TokenKind /*what*/) { return lex(); }
@@ -214,7 +214,7 @@ private:
     Token lookahead[2];///< LL(2) look ahead
     size_t cur_var_handle;
     bool no_bars_;
-    thorin::Location prev_loc_;
+    Location prev_loc_;
     bool result_;
 };
 

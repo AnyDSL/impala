@@ -6,8 +6,6 @@
 
 #include "thorin/util/symbol.h"
 
-using thorin::Symbol;
-
 namespace impala {
 
 static inline bool sym(int c) { return std::isalpha(c) || c == '_'; }
@@ -41,7 +39,7 @@ Lexer::Lexer(std::istream& stream, const std::string& filename)
     stream_.exceptions(std::istream::badbit);
 }
 
-std::ostream& Lexer::error(const thorin::Location& loc) {
+std::ostream& Lexer::error(const Location& loc) {
     result_ = false;
     return loc.error();
 }

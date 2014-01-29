@@ -1,9 +1,9 @@
-#ifndef THORIN_LOCATION_H
-#define THORIN_LOCATION_H
+#ifndef IMPALA_LOCATION_H
+#define IMPALA_LOCATION_H
 
 #include <string>
 
-namespace thorin {
+namespace impala {
 
 //------------------------------------------------------------------------------
 
@@ -115,6 +115,6 @@ std::ostream& operator << (std::ostream& os, const Location& loc);
 
 //------------------------------------------------------------------------------
 
-} // namespace thorin
+}
 
-#endif // DSLU_LOCATION_H
+#endif

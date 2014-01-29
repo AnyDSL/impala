@@ -7,13 +7,13 @@
 
 #include "thorin/enums.h"
 #include "thorin/util/assert.h"
-#include "thorin/util/location.h"
 
+#include "impala/location.h"
 #include "impala/symbol.h"
 
 namespace impala {
 
-class Token : public thorin::HasLocation {
+class Token : public impala::HasLocation {
 public:
     enum Kind {
         /*
@@ -50,13 +50,13 @@ public:
     Token() {}
 
     /// Create a literal operator or special char token
-    Token(const thorin::Location& loc, Kind tok);
+    Token(const Location& loc, Kind tok);
 
     /// Create an identifier or a keyword (depends on \p str)
-    Token(const thorin::Location& loc, const std::string& str);
+    Token(const Location& loc, const std::string& str);
 
     /// Create a literal
-    Token(const thorin::Location& loc, Kind type, const std::string& str);
+    Token(const Location& loc, Kind type, const std::string& str);
 
     Symbol symbol() const { return symbol_; }
     thorin::Box box() const { return box_; }
