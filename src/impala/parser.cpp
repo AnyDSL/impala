@@ -862,7 +862,7 @@ const FnExpr* Parser::parse_fn_expr() {
     else
         expect(Token::OROR, "parameter list of function expression");
 
-    fn_expr->has_return_param_ = parse_return_param(fn.params_);
+    fn_expr->has_return_type_ = parse_return_param(fn.params_);
     fn.body_ = parse_expr();
     return fn_expr;
 }

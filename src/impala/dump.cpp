@@ -121,15 +121,15 @@ std::ostream& ModDecl::print(Printer& p) const {
         return p.stream() << ';';
 }
 
-#if 0
 std::ostream& FnDecl::print(Printer& p) const {
     p.stream() << "fn " << symbol();
     print_type_params(p);
 
-    const Type* ret = nullptr;
-    if (!fn().params().empty() && fn().params().back()->symbol() == "return")
+    const FnType* ret = nullptr;
+    if (!fn().params().empty() && fn().params().back()->symbol() == "return") {
         if (auto fntype = fn().params().back()->type()->isa<FnType>())
-            ret = fntype->unpack_return_type();
+            ret = fntype;
+    }
 
     p.stream() << '(';
     fn().print_params(p, ret != nullptr);
@@ -137,7 +137,10 @@ std::ostream& FnDecl::print(Printer& p) const {
 
     if (ret) {
         p.stream() << " -> ";
-        p.print_type(ret);
+        if (ret->elems().size() == 1)
+            ret->elem(0)->print(p);
+        else
+            p.dump_list([&] (const Type* type) { type->print(p); }, ret->elems(), "(", ")", ",");
     }
 
     if (auto body = fn().body()) {
@@ -148,7 +151,6 @@ std::ostream& FnDecl::print(Printer& p) const {
 
     return p.stream();
 }
-#endif
 
 std::ostream& FieldDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" ) << visibility().str() << symbol() << ": ";
@@ -231,8 +233,8 @@ std::ostream& LiteralExpr::print(Printer& p) const {
 
 std::ostream& IdExpr   ::print(Printer& p) const { return p.stream() << symbol(); }
 std::ostream& EmptyExpr::print(Printer& p) const { return p.stream() << "/*empty*/"; }
-std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "(", ")"); }
-std::ostream& ArrayExpr::print(Printer& p) const { return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "[", "]"); }
+std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { expr->print(p); }, ops(), "(", ")"); }
+std::ostream& ArrayExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { expr->print(p); }, ops(), "[", "]"); }
 
 std::ostream& RepeatArrayExpr::print(Printer& p) const { 
     p.stream() << '[';
@@ -327,7 +329,6 @@ std::ostream& MapExpr::print(Printer& p) const {
     return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "(", ")");
 }
 
-#if 0
 std::ostream& FnExpr::print(Printer& p) const { 
     p.stream() << '|';
     fn().print_params(p, has_return_type_);
@@ -335,12 +336,15 @@ std::ostream& FnExpr::print(Printer& p) const {
 
     if (has_return_type_) {
         p.stream() << "-> ";
-        p.print_type(fn().params().back()->type()->as<FnType>()->unpack_return_type()) << ' ';
+        auto ret = fn().params().back()->as<FnType>();
+        if (ret->elems().size() == 1)
+            ret->elem(0)->print(p);
+        else
+            p.dump_list([&] (const Type* type) { type->print(p); }, ret->elems(), "(", ")", ",");
     }
 
     return fn().body()->print(p);
 }
-#endif
 
 std::ostream& IfExpr::print(Printer& p) const {
     p.stream() << "if ";

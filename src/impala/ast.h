@@ -520,7 +520,7 @@ private:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
     Fn fn_;
-    bool has_return_param_;
+    bool has_return_type_;
 
     friend class Parser;
 };
