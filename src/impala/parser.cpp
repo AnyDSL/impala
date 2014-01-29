@@ -795,7 +795,6 @@ const Expr* Parser::parse_primary_expr() {
                 auto repeat_array_expr = new RepeatArrayExpr();
                 repeat_array_expr->set_pos1(pos1);
                 repeat_array_expr->value_ = expr;
-                expect(Token::DOTDOT, "repeating array expression");
                 repeat_array_expr->count_ = parse_expr();
                 repeat_array_expr->set_pos2(eat(Token::R_BRACKET).pos2());
                 return repeat_array_expr;

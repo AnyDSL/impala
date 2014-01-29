@@ -140,7 +140,7 @@ std::ostream& FnDecl::print(Printer& p) const {
         if (ret->elems().size() == 1)
             ret->elem(0)->print(p);
         else
-            p.dump_list([&] (const Type* type) { type->print(p); }, ret->elems(), "(", ")", ",");
+            p.dump_list([&] (const Type* type) { type->print(p); }, ret->elems(), "(", ")", ", ");
     }
 
     if (auto body = fn().body()) {
@@ -340,7 +340,7 @@ std::ostream& FnExpr::print(Printer& p) const {
         if (ret->elems().size() == 1)
             ret->elem(0)->print(p);
         else
-            p.dump_list([&] (const Type* type) { type->print(p); }, ret->elems(), "(", ")", ",");
+            p.dump_list([&] (const Type* type) { type->print(p); }, ret->elems(), "(", ")", ", ");
     }
 
     return fn().body()->print(p);
