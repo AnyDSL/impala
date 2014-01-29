@@ -39,14 +39,20 @@ public:
      */
     const Decl* clash(Symbol symbol) const;
 
+    /// Opens a new scope.
     void push_scope() { levels_.push_back(decl_stack_.size()); }
+    /// Discards current scope.
     void pop_scope();
-    size_t depth() const { return levels_.size(); }
+    /// Has an error occurred?
     bool result() const { return result_; }
-    std::ostream& error(const ASTNode*);
-    std::ostream& error(const Location&);
+    /// Emit an error while using \p n as \p Location.
+    std::ostream& error(const ASTNode* n);
+    /// Emit an error at \p Location \p loc.
+    std::ostream& error(const Location& loc);
 
 private:
+    size_t depth() const { return levels_.size(); }
+
     std::unordered_map<Symbol, const Decl*> sym2decl_;
     std::vector<const Decl*> decl_stack_;
     std::vector<size_t> levels_;

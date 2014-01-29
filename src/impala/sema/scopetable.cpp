@@ -31,7 +31,6 @@ const Decl* ScopeTable::clash(Symbol symbol) const {
     auto i = sym2decl_.find(symbol);
     if (i == sym2decl_.end())
         return nullptr;
-
     const Decl* decl = i->second;
     return (decl && decl->depth() == depth()) ? decl : nullptr;
 }

@@ -23,6 +23,6 @@ struct Init {
     thorin::World world;
 };
 
-} // namespace impala
+}
 
 #endif

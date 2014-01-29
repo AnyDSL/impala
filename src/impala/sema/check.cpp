@@ -1,66 +1,37 @@
-#if 0
 #include "impala/ast.h"
-
-#include <vector>
-#include <unordered_map>
-
-#include "thorin/type.h"
-#include "thorin/util/array.h"
-#include "thorin/util/push.h"
-
 #include "impala/dump.h"
-#include "impala/type.h"
-
-using namespace thorin;
+#include "impala/sema/scopetable.h"
 
 namespace impala {
 
-//------------------------------------------------------------------------------
-
-class Sema {
+class Sema : public ScopeTable {
 public:
-    Sema(TypeTable& typetable, bool nossa)
-        : typetable_(typetable)
-        , cur_fun_(nullptr)
-        , result_(true)
+    Sema(bool nossa)
+        : cur_fn_(nullptr)
         , nossa_(nossa)
     {}
 
     bool nossa() const { return nossa_; }
-    TypeTable& typetable() const { return typetable_; }
-    void check(const Scope*);
-    void check(const Decl* decl) { decl->check(*this); }
-    const Type* check(const Expr* expr) { assert(!expr->type_); return expr->type_ = expr->check(*this); }
-    void check(const Stmt* stmt) { stmt->check(*this); }
-    void check(const Item* item) { item->check(*this); }
-    bool check_cond(const Expr* cond) {
-        if (check(cond)->is_bool())
-            return true;
-        error(cond) << "condition not a bool\n";
-        return false;
-    }
-    GenericMap copy_generic_map() { return cur_fun_ != nullptr ? cur_fun_->generic_map_ : GenericMap(); }
-    GenericBuilder copy_generic_builder() { return cur_fun_ != nullptr ? cur_fun_->generic_builder_ : GenericBuilder(typetable_); }
-    GenericMap* generic_map() const { return cur_fun_ != nullptr ? &cur_fun_->generic_map_ : nullptr; }
-    GenericBuilder* generic_builder() const { return cur_fun_ != nullptr ? &cur_fun_->generic_builder_ : nullptr; }
-    const Fun* cur_fun() const { return cur_fun_; }
+    //void check(const Scope*);
+    //void check(const Decl* decl) { decl->check(*this); }
+    //const Type* check(const Expr* expr) { assert(!expr->type_); return expr->type_ = expr->check(*this); }
+    //void check(const Stmt* stmt) { stmt->check(*this); }
+    //void check(const Item* item) { item->check(*this); }
+    //bool check_cond(const Expr* cond) {
+        //if (check(cond)->is_bool())
+            //return true;
+        //error(cond) << "condition not a bool\n";
+        //return false;
+    //}
+    const Fn* cur_fn() const { return cur_fn_; }
 
 private:
-    TypeTable& typetable_;
-    const Fun* cur_fun_;
+    const Fn* cur_fn_;
     bool nossa_;
-
-    std::unordered_map<Symbol, const Decl*> sym2decl_;
-    std::vector<const Decl*> decl_stack_;
-    std::vector<size_t> levels_;
-
-    friend class Fun;
-    friend class FunExpr;
 };
 
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
+}
+#if 0
 
 void Fun::check_head(Sema& sema) const {
     generic_builder_ = sema.copy_generic_builder();

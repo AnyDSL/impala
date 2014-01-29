@@ -4,9 +4,8 @@
 namespace impala {
 
 class Scope;
-class TypeTable;
 
-bool check(TypeTable&, const Scope*, bool nossa = false);
+bool check(const ModContents*, bool nossa = false);
 
 }
 
