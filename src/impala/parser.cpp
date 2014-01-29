@@ -580,6 +580,7 @@ const Type* Parser::parse_type() {
 
 const ArrayType* Parser::parse_array_type() {
     auto pos1 = la().pos1();
+    eat(Token::L_BRACKET);
     const Type* elem_type = parse_type();
     if (accept(Token::MUL)) {
         u64 dim;

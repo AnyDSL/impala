@@ -225,19 +225,15 @@ class ValueDecl : public Decl {
 public:
     ValueDecl()
         : type_(nullptr)
-        , utype_(nullptr)
         , is_mut_(false)
     {}
 
     /// original type.
     const Type* type() const { return type_; }
-    /// unified type.
-    const Type* utype() const { return utype_; }
     bool is_mut() const { return is_mut_; }
 
 protected:
-    const Type* type_;
-    mutable const Type* utype_;
+    thorin::AutoPtr<const Type> type_;
     bool is_mut_;
 
     friend class Parser;
@@ -415,7 +411,7 @@ public:
 
 private:
     thorin::Symbol symbol_;
-    const Type* for_type_;
+    thorin::AutoPtr<const Type> for_type_;
     Methods methods_;
 
     friend class Parser;
@@ -425,11 +421,6 @@ private:
 
 class Expr : public ASTNode {
 public:
-    Expr() 
-        : type_(nullptr) 
-    {}
-
-    const Type* type() const { return type_; }
     virtual bool is_lvalue() const = 0;
 
 private:
@@ -438,8 +429,6 @@ private:
 
 protected:
     virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {}
-
-    mutable const Type* type_;
 
     friend class Parser;
     friend class Sema;
