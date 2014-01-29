@@ -392,7 +392,7 @@ class EnumDecl : public Item, public ParametricTypeDecl {
     //virtual void emit(CodeGen& cg) const;
 };
 
-class ConstItem : public Item {
+class StaticItem : public Item, public ValueDecl {
     virtual std::ostream& print(Printer& p) const;
     virtual void check(Sema& sema) const;
     virtual void check_head(Sema& sema) const;
@@ -433,7 +433,6 @@ private:
 
 class Impl : public Item, public ParametricTypeDecl {
 public:
-    Symbol symbol() const { return symbol_; }
     const Type* for_type() const { return for_type_; }
     const Methods& methods() const { return methods_; }
     virtual std::ostream& print(Printer& p) const;
@@ -442,7 +441,6 @@ public:
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    Symbol symbol_;
     thorin::AutoPtr<const Type> for_type_;
     Methods methods_;
 

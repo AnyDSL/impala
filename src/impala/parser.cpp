@@ -169,7 +169,7 @@ public:
 
     // items
     Item*       parse_item();
-    ConstItem*  parse_const_item();
+    StaticItem*  parse_static_item();
     EnumDecl*   parse_enum_decl();
     FnDecl*     parse_fn_decl(bool maybe_empty);
     ForeignMod* parse_foreign_mod();
@@ -394,7 +394,7 @@ Item* Parser::parse_item() {
         case Token::FN:      item = parse_fn_decl(false);           break;
         case Token::IMPL:    item = parse_impl();                   break;
         case Token::MOD:     item = parse_mod_decl();               break;
-        case Token::STATIC:  item = parse_const_item();             break;
+        case Token::STATIC:  item = parse_static_item();            break;
         case Token::STRUCT:  item = parse_struct_decl();            break;
         case Token::TRAIT:   item = parse_trait_decl();             break;
         case Token::TYPEDEF: item = parse_typedef();                break;
@@ -479,7 +479,7 @@ ModDecl* Parser::parse_mod_decl() {
     return mod_decl;
 }
 
-ConstItem* Parser::parse_const_item() {
+StaticItem* Parser::parse_static_item() {
     assert(false && "TODO");
     return 0;
 }

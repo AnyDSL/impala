@@ -27,8 +27,7 @@ public:
     /** 
      * @brief Maps \p decl's symbol to \p decl.
      * 
-     * If \p decl's symbol already has a definition in the current scope, an assertion will be raised.
-     * Use \p clash in order to check this.
+     * If \p decl's symbol already has a definition in the current scope, an error will be emitted.
      */
     void insert(const Decl* decl);
 

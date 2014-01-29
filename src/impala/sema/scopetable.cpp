@@ -14,7 +14,7 @@ void ScopeTable::insert(const Decl* decl) {
         error(decl) << "symbol '" << decl->symbol() << "' already defined\n";
         error(other) << "previous location here\n";
         return;
-    } 
+    }
 
     Symbol symbol = decl->symbol();
     assert(clash(symbol) == nullptr && "must not be found");
@@ -22,7 +22,6 @@ void ScopeTable::insert(const Decl* decl) {
     auto i = sym2decl_.find(symbol);
     decl->shadows_ = i != sym2decl_.end() ? i->second : nullptr;
     decl->depth_ = depth();
-
     decl_stack_.push_back(decl);
     sym2decl_[symbol] = decl;
 }

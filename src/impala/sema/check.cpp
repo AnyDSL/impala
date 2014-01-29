@@ -24,30 +24,44 @@ private:
  */
 
 void ModDecl::check_head(Sema& sema) const {
+    sema.insert(this);
+}
+
+void ModContents::check(Sema& sema) const {
+    for (auto item : items()) item->check_head(sema);
+    for (auto item : items()) item->check(sema);
 }
 
 void ForeignMod::check_head(Sema& sema) const {
+    sema.insert(this);
 }
 
 void Typedef::check_head(Sema& sema) const {
+    sema.insert(this);
 }
 
 void EnumDecl::check_head(Sema& sema) const {
+    sema.insert(this);
 }
 
-void ConstItem::check_head(Sema& sema) const {
+void StaticItem::check_head(Sema& sema) const {
+    sema.insert(this);
 }
 
 void FnDecl::check_head(Sema& sema) const {
+    sema.insert(this);
 }
 
 void StructDecl::check_head(Sema& sema) const {
+    sema.insert(this);
 }
 
 void TraitDecl::check_head(Sema& sema) const {
+    sema.insert(this);
 }
 
 void Impl::check_head(Sema& sema) const {
+    sema.insert(this);
 }
 
 /*
@@ -66,7 +80,7 @@ void Typedef::check(Sema& sema) const {
 void EnumDecl::check(Sema& sema) const {
 }
 
-void ConstItem::check(Sema& sema) const {
+void StaticItem::check(Sema& sema) const {
 }
 
 void FnDecl::check(Sema& sema) const {
@@ -154,12 +168,20 @@ void ExprStmt::check(Sema& sema) const {
 }
 
 void ItemStmt::check(Sema& sema) const {
-    //item()->check(sema);
+    item()->check(sema);
 }
 
 void LetStmt::check(Sema& sema) const {
     if (init())
         init()->check(sema);
+}
+
+//------------------------------------------------------------------------------
+
+bool check(const ModContents* mod, bool nossa) {
+    Sema sema(nossa);
+    mod->check(sema);
+    return sema.result();
 }
 
 }
