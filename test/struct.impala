@@ -1,0 +1,5 @@
+pub struct Vec3 {
+    mut x: float, 
+    priv y: float, 
+    pub mut z: float
+}

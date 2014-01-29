@@ -1,0 +1,22 @@
+struct Vec3[T] {
+    x: T, 
+    y: T,
+    z: T
+}
+
+trait Eq[T: Drop + Clone + Foo[int], U] : Foo, Bar {
+    fn eq(int, foo: int) -> bool;
+    fn neq[U](a: int, b: int) -> bool { !eq(a, b) }
+    fn blub(int, foo: int) -> bool;
+}
+
+fn main() {
+}
+
+impl Eq for Vec3 {
+    fn eq(a: int, b: int) -> bool { a == b }
+}
+
+impl Eq {
+    fn eq(a: int, b: int) -> bool { a == b }
+}
