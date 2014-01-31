@@ -25,7 +25,7 @@ std::ostream& PathItem::print(Printer& p) const {
 }
 
 std::ostream& Path::print(Printer& p) const {
-    p.stream() << is_global() ? "::" : "";
+    p.stream() << (is_global() ? "::" : "");
     return p.dump_list([&] (const PathItem* path_item) { path_item->print(p); }, path_items(), "", "", "::");
 }
 
