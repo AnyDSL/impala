@@ -148,6 +148,9 @@ void ArrayExpr::check(Sema& sema) const {
 void RepeatArrayExpr::check(Sema& sema) const {
 }
 
+void IndefiniteArrayExpr::check(Sema& sema) const {
+}
+
 void TupleExpr::check(Sema& sema) const {
 }
 

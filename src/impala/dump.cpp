@@ -248,6 +248,12 @@ std::ostream& RepeatArrayExpr::print(Printer& p) const {
     return count()->print(p) << ']';
 }
 
+std::ostream& IndefiniteArrayExpr::print(Printer& p) const { 
+    p.stream() << '[';
+    size()->print(p) << ": ";
+    return elem_type()->print(p) << ']';
+}
+
 std::ostream& PrefixExpr::print(Printer& p) const {
     Prec r = PrecTable::prefix_r[kind()];
     Prec old = p.prec;

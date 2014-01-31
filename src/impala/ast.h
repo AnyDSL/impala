@@ -707,6 +707,22 @@ private:
     friend class Parser;
 };
 
+class IndefiniteArrayExpr : public Expr {
+public:
+    const Expr* size() const { return size_; }
+    const Type* elem_type() const { return elem_type_; }
+    virtual std::ostream& print(Printer& p) const;
+    virtual bool is_lvalue() const { return false; }
+    virtual void check(Sema& sema) const;
+    //virtual thorin::RefPtr emit(CodeGen& cg) const;
+
+private:
+    thorin::AutoPtr<const Expr> size_;
+    thorin::AutoPtr<const Type> elem_type_;
+
+    friend class Parser;
+};
+
 class TupleExpr : public OpsExpr {
 public:
     virtual std::ostream& print(Printer& p) const;

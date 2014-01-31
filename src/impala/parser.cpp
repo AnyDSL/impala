@@ -170,7 +170,7 @@ public:
 
     // items
     Item*       parse_item();
-    StaticItem*  parse_static_item();
+    StaticItem* parse_static_item();
     EnumDecl*   parse_enum_decl();
     FnDecl*     parse_fn_decl(bool maybe_empty);
     ForeignMod* parse_foreign_mod();
@@ -806,6 +806,14 @@ const Expr* Parser::parse_primary_expr() {
         case Token::L_BRACKET: {
             auto pos1 = lex().pos1();
             auto expr = parse_expr();
+            if (accept(Token::COLON)) {
+                auto indefinite_array_expr = new IndefiniteArrayExpr();
+                indefinite_array_expr->size_ = expr;
+                indefinite_array_expr->elem_type_ = parse_type();
+                expect(Token::R_BRACKET, "indefinite array expression");
+                indefinite_array_expr->set_loc(pos1, prev_loc().pos2());
+                return indefinite_array_expr;
+            }
             if (accept(Token::COMMA) && accept(Token::DOTDOT)) {
                 auto repeat_array_expr = new RepeatArrayExpr();
                 repeat_array_expr->set_pos1(pos1);
