@@ -174,6 +174,12 @@ std::ostream& FieldDecl::print(Printer& p) const {
     return type()->print(p);
 }
 
+std::ostream& StaticItem::print(Printer& p) const {
+    p.stream() << "static " << (is_mut() ? "mut " : "") << symbol() << ": ";
+    type()->print(p) << " = ";
+    return init()->print(p) << ";";
+}
+
 std::ostream& StructDecl::print(Printer& p) const {
     p.stream() << visibility().str() << "struct " << symbol();
     print_type_params(p) << " {";

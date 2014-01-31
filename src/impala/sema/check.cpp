@@ -40,11 +40,11 @@ void EnumDecl::check_head(Sema& sema) const {
     sema.insert(this);
 }
 
-void StaticItem::check_head(Sema& sema) const {
+void FnDecl::check_head(Sema& sema) const {
     sema.insert(this);
 }
 
-void FnDecl::check_head(Sema& sema) const {
+void StaticItem::check_head(Sema& sema) const {
     sema.insert(this);
 }
 

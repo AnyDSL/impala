@@ -448,10 +448,23 @@ class EnumDecl : public Item, public ParametricTypeDecl {
 };
 
 class StaticItem : public Item, public ValueDecl {
+public:
+    bool is_mut() const { return is_mut_; }
+    Symbol symbol() const { return symbol_; }
+    const Type* type() const { return type_; }
+    const Expr* init() const { return init_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(Sema& sema) const;
     virtual void check_head(Sema& sema) const;
     //virtual void emit(CodeGen& cg) const;
+
+private:
+    bool is_mut_;
+    Symbol symbol_;
+    thorin::AutoPtr<const Type> type_;
+    thorin::AutoPtr<const Expr> init_;;
+
+    friend class Parser;
 };
 
 class FnDecl : public ParametricType, public Item, public ValueDecl {

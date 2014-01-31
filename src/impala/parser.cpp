@@ -508,8 +508,16 @@ ModDecl* Parser::parse_mod_decl() {
 }
 
 StaticItem* Parser::parse_static_item() {
-    assert(false && "TODO");
-    return 0;
+    auto static_item = loc(new StaticItem());
+    eat(Token::STATIC);
+    static_item->is_mut_ = accept(Token::MUT);
+    static_item->symbol_ = try_id("static item");
+    expect(Token::COLON, "static item");
+    static_item->type_ = parse_type();
+    expect(Token::ASGN, "static item");
+    static_item->init_ = parse_expr();
+    expect(Token::SEMICOLON, "static item");
+    return static_item;
 }
 
 StructDecl* Parser::parse_struct_decl() {
