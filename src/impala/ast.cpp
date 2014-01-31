@@ -48,4 +48,4 @@ bool IfExpr::has_else() const {
     return true;
 }
 
-} // namespace impala
+}
