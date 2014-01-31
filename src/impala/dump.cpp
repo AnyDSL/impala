@@ -16,6 +16,20 @@ void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; 
 //------------------------------------------------------------------------------
 
 /*
+ * paths
+ */
+
+std::ostream& PathItem::print(Printer& p) const { 
+    p.stream() << symbol();
+    return print_type_params(p);
+}
+
+std::ostream& Path::print(Printer& p) const {
+    p.stream() << is_global() ? "::" : "";
+    return p.dump_list([&] (const PathItem* path_item) { path_item->print(p); }, path_items(), "", "", "::");
+}
+
+/*
  * types
  */
 

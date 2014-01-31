@@ -151,6 +151,10 @@ public:
     }
     Visibility parse_visibility();
 
+    // paths
+    const Path* parse_path();
+    const PathItem* parse_path_item();
+
     // parameters
     void parse_type_params(TypeParams&);
     const TypeParam* parse_type_param();
@@ -300,6 +304,26 @@ Visibility Parser::parse_visibility() {
         case VISIBILITY: return Visibility(lex().kind());
         default:         return Visibility(Visibility::None);
     }
+}
+
+/*
+ * paths
+ */
+
+const PathItem* Parser::parse_path_item() {
+    auto path_item = loc(new PathItem());
+    path_item->symbol_ = try_id("path");
+    parse_type_params(path_item->type_params_);
+    return path_item;
+}
+
+const Path* Parser::parse_path() {
+    auto path = loc(new Path());
+    path->is_global_ = accept(Token::DOUBLE_COLON);
+    do { 
+        path->path_items_.push_back(parse_path_item());
+    } while (accept(Token::DOUBLE_COLON));
+    return path;
 }
 
 /*
@@ -1001,4 +1025,4 @@ const ItemStmt* Parser::parse_item_stmt() {
     return item_stmt;
 }
 
-} // namespace impala
+}
