@@ -3,7 +3,6 @@
 fn main(i : int) -> int {
     let a = [[0, 1, 2], [0, .. 3], [6, 7, 8]];
     let x = [1];
-    let x = [i: int];
     a(2)(2)++;
     let b = array(i);
     b(3) = 42.f;
