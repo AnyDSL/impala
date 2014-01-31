@@ -142,10 +142,10 @@ void FieldExpr::check(Sema& sema) const {
 void CastExpr::check(Sema& sema) const {
 }
 
-void ArrayExpr::check(Sema& sema) const {
+void DefiniteArrayExpr::check(Sema& sema) const {
 }
 
-void RepeatArrayExpr::check(Sema& sema) const {
+void RepeatedDefiniteArrayExpr::check(Sema& sema) const {
 }
 
 void IndefiniteArrayExpr::check(Sema& sema) const {

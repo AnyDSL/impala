@@ -682,7 +682,7 @@ protected:
     Exprs ops_;
 };
 
-class ArrayExpr : public OpsExpr {
+class DefiniteArrayExpr : public OpsExpr {
 public:
     virtual std::ostream& print(Printer& p) const;
     virtual void check(Sema& sema) const;
@@ -691,7 +691,7 @@ public:
     friend class Parser;
 };
 
-class RepeatArrayExpr : public Expr {
+class RepeatedDefiniteArrayExpr : public Expr {
 public:
     const Expr* value() const { return value_; }
     const Expr* count() const { return count_; }

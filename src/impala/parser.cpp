@@ -815,14 +815,14 @@ const Expr* Parser::parse_primary_expr() {
                 return indefinite_array_expr;
             }
             if (accept(Token::COMMA) && accept(Token::DOTDOT)) {
-                auto repeat_array_expr = new RepeatArrayExpr();
+                auto repeat_array_expr = new RepeatedDefiniteArrayExpr();
                 repeat_array_expr->set_pos1(pos1);
                 repeat_array_expr->value_ = expr;
                 repeat_array_expr->count_ = parse_expr();
                 repeat_array_expr->set_pos2(eat(Token::R_BRACKET).pos2());
                 return repeat_array_expr;
             }
-            auto array = new ArrayExpr();
+            auto array = new DefiniteArrayExpr();
             array->set_pos1(pos1);
             array->ops_.push_back(expr);
             parse_comma_list(Token::R_BRACKET, "elements of array expression", [&] { array->ops_.push_back(parse_expr()); });
