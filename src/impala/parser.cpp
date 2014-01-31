@@ -39,6 +39,7 @@
     case Token::LIT_double: \
     case Token::TRUE: \
     case Token::FALSE: \
+    case Token::DOUBLE_COLON: \
     case Token::ADD: \
     case Token::SUB: \
     case Token::MUL: \
@@ -313,7 +314,9 @@ Visibility Parser::parse_visibility() {
 const PathItem* Parser::parse_path_item() {
     auto path_item = loc(new PathItem());
     path_item->symbol_ = try_id("path");
-    parse_type_params(path_item->type_params_);
+    if (accept(Token::L_BRACKET))
+        parse_comma_list(Token::R_BRACKET, "type list", [&] { path_item->types_.push_back(parse_type()); });
+
     return path_item;
 }
 
@@ -858,20 +861,24 @@ const Expr* Parser::parse_primary_expr() {
 #include "impala/tokenlist.h"
         case Token::TRUE:
         case Token::FALSE:      return parse_literal_expr();
+        case Token::DOUBLE_COLON:
         case Token::ID:  {
-            auto tok = lex();
+            auto path = parse_path();
             if (accept(Token::L_BRACE)) {
                 auto struct_expr = new StructExpr();
-                struct_expr->symbol_ = tok.symbol();
+                struct_expr->path_ = path;
                 parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
                     auto symbol = try_id("identifier in struct expression");
                     expect(Token::COLON, "struct expression");
                     struct_expr->elems_.emplace_back(symbol, std::unique_ptr<const Expr>(parse_expr()));
                 });
-                struct_expr->set_loc(tok.pos1(), prev_loc().pos2());
+                struct_expr->set_loc(path->pos1(), prev_loc().pos2());
                 return struct_expr;
             }
-            return new IdExpr(tok);
+            auto path_expr = new PathExpr();
+            path_expr->path_ = path;
+            path_expr->set_loc(path->loc());
+            return path_expr;
         }
         case Token::IF:         return parse_if_expr();
         case Token::FOR:        return parse_for_expr();

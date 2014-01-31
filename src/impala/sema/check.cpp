@@ -124,7 +124,7 @@ void LiteralExpr::check(Sema& sema) const {
 void FnExpr::check(Sema& sema) const {
 }
 
-void IdExpr::check(Sema& sema) const {
+void PathExpr::check(Sema& sema) const {
 }
 
 void PrefixExpr::check(Sema& sema) const {

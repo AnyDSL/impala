@@ -21,7 +21,10 @@ void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; 
 
 std::ostream& PathItem::print(Printer& p) const { 
     p.stream() << symbol();
-    return print_type_params(p);
+    if (!types().empty())
+        p.dump_list([&] (const Type* type) { type->print(p); }, types(), "[", "]");
+
+    return p.stream();
 }
 
 std::ostream& Path::print(Printer& p) const {
@@ -251,7 +254,7 @@ std::ostream& LiteralExpr::print(Printer& p) const {
     }
 }
 
-std::ostream& IdExpr   ::print(Printer& p) const { return p.stream() << symbol(); }
+std::ostream& PathExpr ::print(Printer& p) const { return path()->print(p); }
 std::ostream& EmptyExpr::print(Printer& p) const { return p.stream() << "/*empty*/"; }
 std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { expr->print(p); }, ops(), "(", ")"); }
 
@@ -351,7 +354,7 @@ std::ostream& CastExpr::print(Printer& p) const {
 }
 
 std::ostream& StructExpr::print(Printer& p) const { 
-    p.stream() << symbol() << '{';
+    path()->print(p) << '{';
     p.dump_list([&] (const Elem& elem) { p.stream() << elem.symbol() << ": "; elem.expr()->print(p); }, elems());
 
     return p.stream() << '}';

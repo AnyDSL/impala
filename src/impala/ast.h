@@ -95,13 +95,15 @@ public:
  * paths
  */
 
-class PathItem : public ParametricType, public ASTNode {
+class PathItem : public ASTNode {
 public:
     Symbol symbol() const { return symbol_; }
+    const Types& types() const { return types_; }
     virtual std::ostream& print(Printer&) const;
 
 private:
     Symbol symbol_;
+    Types types_;
 
     friend class Parser;
 };
@@ -599,26 +601,24 @@ private:
     friend class Parser;
 };
 
-class IdExpr : public Expr {
+class PathExpr : public Expr {
 public:
-    IdExpr(const Token& tok)
-        : symbol_(tok.symbol())
-        , decl_(nullptr)
-    {
-        loc_ = tok.loc();
-    }
+    PathExpr() 
+        : decl_(nullptr)
+    {}
 
-    Symbol symbol() const { return symbol_; }
+    const Path* path() const { return path_; }
     const Decl* decl() const { return decl_; }
-
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const;
     virtual void check(Sema& sema) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    Symbol symbol_;
+    thorin::AutoPtr<const Path> path_;
     mutable const Decl* decl_; ///< Declaration of the variable in use.
+
+    friend class Parser;
 };
 
 class PrefixExpr : public Expr {
@@ -801,14 +801,14 @@ public:
 
     typedef std::vector<Elem> Elems;
 
-    Symbol symbol() const { return symbol_; }
+    const Path* path() const { return path_; }
     const Elems& elems() const { return elems_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(Sema& sema) const;
 
 private:
-    Symbol symbol_;
+    thorin::AutoPtr<const Path> path_;
     std::vector<Elem> elems_;
 
     friend class Parser;

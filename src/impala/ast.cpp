@@ -28,7 +28,7 @@ TokenKind LiteralExpr::literal2type() const {
     }
 }
 
-bool IdExpr::is_lvalue() const { 
+bool PathExpr::is_lvalue() const { 
     assert(decl());
     //if (auto vardecl = decl()->isa<VarDecl>())
         //return vardecl->is_mut();
