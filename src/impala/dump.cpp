@@ -262,10 +262,10 @@ std::ostream& LiteralExpr::print(Printer& p) const {
 
 std::ostream& PathExpr ::print(Printer& p) const { return path()->print(p); }
 std::ostream& EmptyExpr::print(Printer& p) const { return p.stream() << "/*empty*/"; }
-std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { expr->print(p); }, ops(), "(", ")"); }
+std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { expr->print(p); }, elems(), "(", ")"); }
 
 std::ostream& DefiniteArrayExpr::print(Printer& p) const { 
-    return p.dump_list([&] (const Expr* expr) { expr->print(p); }, ops(), "[", "]"); 
+    return p.dump_list([&] (const Expr* expr) { expr->print(p); }, elems(), "[", "]"); 
 }
 
 std::ostream& RepeatedDefiniteArrayExpr::print(Printer& p) const { 
@@ -368,7 +368,7 @@ std::ostream& StructExpr::print(Printer& p) const {
 
 std::ostream& MapExpr::print(Printer& p) const {
     lhs()->print(p);
-    return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "(", ")");
+    return p.dump_list([&](const Expr* expr) { expr->print(p); }, args(), "(", ")");
 }
 
 std::ostream& FnExpr::print(Printer& p) const { 

@@ -354,7 +354,6 @@ private:
 
 class ModContents : public ASTNode {
 public:
-    const Item* item(size_t i) const { return items_[i]; }
     const Items& items() const { return items_; }
     virtual std::ostream& print(Printer&) const;
     void check(Sema& sema) const;
@@ -735,21 +734,16 @@ private:
     friend class Parser;
 };
 
-class OpsExpr : public Expr {
+class DefiniteArrayExpr : public Expr {
 public:
-    const Exprs& ops() const { return ops_; }
-    const Expr* op(size_t i) const { return ops_[i]; }
-    virtual bool is_lvalue() const { return false; }
-
-protected:
-    Exprs ops_;
-};
-
-class DefiniteArrayExpr : public OpsExpr {
-public:
+    const Exprs& elems() const { return elems_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(Sema& sema) const;
+    virtual bool is_lvalue() const { return false; }
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
+
+private:
+    Exprs elems_;
 
     friend class Parser;
 };
@@ -786,11 +780,16 @@ private:
     friend class Parser;
 };
 
-class TupleExpr : public OpsExpr {
+class TupleExpr : public Expr {
 public:
+    const Exprs& elems() const { return elems_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(Sema& sema) const;
+    virtual bool is_lvalue() const { return false; }
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
+
+private:
+    Exprs elems_;
 
     friend class Parser;
 };
@@ -827,8 +826,9 @@ private:
     friend class Parser;
 };
 
-class MapExpr : public OpsExpr {
+class MapExpr : public Expr {
 public:
+    const Exprs& args() const { return args_; }
     const Expr* lhs() const { return lhs_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const;
@@ -837,6 +837,7 @@ public:
 
 private:
     thorin::AutoPtr<const Expr> lhs_;
+    Exprs args_;
 
     friend class Parser;
 };
