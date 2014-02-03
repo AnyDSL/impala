@@ -39,6 +39,7 @@
     case Token::LIT_double: \
     case Token::TRUE: \
     case Token::FALSE: \
+    case Token::DOUBLE_COLON: \
     case Token::ADD: \
     case Token::SUB: \
     case Token::MUL: \
@@ -150,6 +151,10 @@ public:
         }
     }
     Visibility parse_visibility();
+
+    // paths
+    const Path* parse_path();
+    const PathItem* parse_path_item();
 
     // parameters
     void parse_type_params(TypeParams&);
@@ -300,6 +305,28 @@ Visibility Parser::parse_visibility() {
         case VISIBILITY: return Visibility(lex().kind());
         default:         return Visibility(Visibility::None);
     }
+}
+
+/*
+ * paths
+ */
+
+const PathItem* Parser::parse_path_item() {
+    auto path_item = loc(new PathItem());
+    path_item->symbol_ = try_id("path");
+    if (accept(Token::L_BRACKET))
+        parse_comma_list(Token::R_BRACKET, "type list", [&] { path_item->types_.push_back(parse_type()); });
+
+    return path_item;
+}
+
+const Path* Parser::parse_path() {
+    auto path = loc(new Path());
+    path->is_global_ = accept(Token::DOUBLE_COLON);
+    do { 
+        path->path_items_.push_back(parse_path_item());
+    } while (accept(Token::DOUBLE_COLON));
+    return path;
 }
 
 /*
@@ -481,8 +508,16 @@ ModDecl* Parser::parse_mod_decl() {
 }
 
 StaticItem* Parser::parse_static_item() {
-    assert(false && "TODO");
-    return 0;
+    auto static_item = loc(new StaticItem());
+    eat(Token::STATIC);
+    static_item->is_mut_ = accept(Token::MUT);
+    static_item->symbol_ = try_id("static item");
+    expect(Token::COLON, "static item");
+    static_item->type_ = parse_type();
+    expect(Token::ASGN, "static item");
+    static_item->init_ = parse_expr();
+    expect(Token::SEMICOLON, "static item");
+    return static_item;
 }
 
 StructDecl* Parser::parse_struct_decl() {
@@ -756,7 +791,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
         case Token::L_PAREN: {
             auto map = new MapExpr();
             map->lhs_ = lhs;
-            parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->ops_.push_back(parse_expr()); });
+            parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
             map->set_loc(lhs->pos1(), prev_loc().pos2());
             return map;
         }
@@ -794,8 +829,8 @@ const Expr* Parser::parse_primary_expr() {
             if (accept(Token::COMMA)) {
                 auto tuple = new TupleExpr();
                 tuple->set_pos1(pos1);
-                tuple->ops_.push_back(expr);
-                parse_comma_list(Token::R_PAREN, "elements of tuple expression", [&] { tuple->ops_.push_back(parse_expr()); });
+                tuple->elems_.push_back(expr);
+                parse_comma_list(Token::R_PAREN, "elements of tuple expression", [&] { tuple->elems_.push_back(parse_expr()); });
                 tuple->set_pos2(prev_loc().pos2());
                 return tuple;
             } else {
@@ -824,8 +859,8 @@ const Expr* Parser::parse_primary_expr() {
             }
             auto array = new DefiniteArrayExpr();
             array->set_pos1(pos1);
-            array->ops_.push_back(expr);
-            parse_comma_list(Token::R_BRACKET, "elements of array expression", [&] { array->ops_.push_back(parse_expr()); });
+            array->elems_.push_back(expr);
+            parse_comma_list(Token::R_BRACKET, "elements of array expression", [&] { array->elems_.push_back(parse_expr()); });
             array->set_pos2(prev_loc().pos2());
             return array;
         }
@@ -834,20 +869,24 @@ const Expr* Parser::parse_primary_expr() {
 #include "impala/tokenlist.h"
         case Token::TRUE:
         case Token::FALSE:      return parse_literal_expr();
+        case Token::DOUBLE_COLON:
         case Token::ID:  {
-            auto tok = lex();
+            auto path = parse_path();
             if (accept(Token::L_BRACE)) {
                 auto struct_expr = new StructExpr();
-                struct_expr->symbol_ = tok.symbol();
+                struct_expr->path_ = path;
                 parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
                     auto symbol = try_id("identifier in struct expression");
                     expect(Token::COLON, "struct expression");
                     struct_expr->elems_.emplace_back(symbol, std::unique_ptr<const Expr>(parse_expr()));
                 });
-                struct_expr->set_loc(tok.pos1(), prev_loc().pos2());
+                struct_expr->set_loc(path->pos1(), prev_loc().pos2());
                 return struct_expr;
             }
-            return new IdExpr(tok);
+            auto path_expr = new PathExpr();
+            path_expr->path_ = path;
+            path_expr->set_loc(path->loc());
+            return path_expr;
         }
         case Token::IF:         return parse_if_expr();
         case Token::FOR:        return parse_for_expr();
@@ -1001,4 +1040,4 @@ const ItemStmt* Parser::parse_item_stmt() {
     return item_stmt;
 }
 
-} // namespace impala
+}

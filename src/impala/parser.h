@@ -8,6 +8,6 @@ namespace impala {
 
 const ModContents* parse(bool& result, std::istream&, const std::string&);
 
-} // namespace impala
+}
 
 #endif

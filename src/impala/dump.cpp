@@ -16,6 +16,23 @@ void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; 
 //------------------------------------------------------------------------------
 
 /*
+ * paths
+ */
+
+std::ostream& PathItem::print(Printer& p) const { 
+    p.stream() << symbol();
+    if (!types().empty())
+        p.dump_list([&] (const Type* type) { type->print(p); }, types(), "[", "]");
+
+    return p.stream();
+}
+
+std::ostream& Path::print(Printer& p) const {
+    p.stream() << (is_global() ? "::" : "");
+    return p.dump_list([&] (const PathItem* path_item) { path_item->print(p); }, path_items(), "", "", "::");
+}
+
+/*
  * types
  */
 
@@ -157,6 +174,12 @@ std::ostream& FieldDecl::print(Printer& p) const {
     return type()->print(p);
 }
 
+std::ostream& StaticItem::print(Printer& p) const {
+    p.stream() << "static " << (is_mut() ? "mut " : "") << symbol() << ": ";
+    type()->print(p) << " = ";
+    return init()->print(p) << ";";
+}
+
 std::ostream& StructDecl::print(Printer& p) const {
     p.stream() << visibility().str() << "struct " << symbol();
     print_type_params(p) << " {";
@@ -237,12 +260,12 @@ std::ostream& LiteralExpr::print(Printer& p) const {
     }
 }
 
-std::ostream& IdExpr   ::print(Printer& p) const { return p.stream() << symbol(); }
+std::ostream& PathExpr ::print(Printer& p) const { return path()->print(p); }
 std::ostream& EmptyExpr::print(Printer& p) const { return p.stream() << "/*empty*/"; }
-std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { expr->print(p); }, ops(), "(", ")"); }
+std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { expr->print(p); }, elems(), "(", ")"); }
 
 std::ostream& DefiniteArrayExpr::print(Printer& p) const { 
-    return p.dump_list([&] (const Expr* expr) { expr->print(p); }, ops(), "[", "]"); 
+    return p.dump_list([&] (const Expr* expr) { expr->print(p); }, elems(), "[", "]"); 
 }
 
 std::ostream& RepeatedDefiniteArrayExpr::print(Printer& p) const { 
@@ -337,7 +360,7 @@ std::ostream& CastExpr::print(Printer& p) const {
 }
 
 std::ostream& StructExpr::print(Printer& p) const { 
-    p.stream() << symbol() << '{';
+    path()->print(p) << '{';
     p.dump_list([&] (const Elem& elem) { p.stream() << elem.symbol() << ": "; elem.expr()->print(p); }, elems());
 
     return p.stream() << '}';
@@ -345,7 +368,7 @@ std::ostream& StructExpr::print(Printer& p) const {
 
 std::ostream& MapExpr::print(Printer& p) const {
     lhs()->print(p);
-    return p.dump_list([&](const Expr* expr) { expr->print(p); }, ops(), "(", ")");
+    return p.dump_list([&](const Expr* expr) { expr->print(p); }, args(), "(", ")");
 }
 
 std::ostream& FnExpr::print(Printer& p) const { 

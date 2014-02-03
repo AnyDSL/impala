@@ -40,11 +40,11 @@ void EnumDecl::check_head(Sema& sema) const {
     sema.insert(this);
 }
 
-void StaticItem::check_head(Sema& sema) const {
+void FnDecl::check_head(Sema& sema) const {
     sema.insert(this);
 }
 
-void FnDecl::check_head(Sema& sema) const {
+void StaticItem::check_head(Sema& sema) const {
     sema.insert(this);
 }
 
@@ -124,7 +124,7 @@ void LiteralExpr::check(Sema& sema) const {
 void FnExpr::check(Sema& sema) const {
 }
 
-void IdExpr::check(Sema& sema) const {
+void PathExpr::check(Sema& sema) const {
 }
 
 void PrefixExpr::check(Sema& sema) const {
