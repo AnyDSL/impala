@@ -5,7 +5,7 @@
  *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
  */
 
-#include "type_properties.h"
+#include "typeproperties.h"
 
 #include "thorin/util/assert.h"
 #include "type.h"

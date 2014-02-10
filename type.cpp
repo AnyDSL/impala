@@ -1,6 +1,6 @@
 #include "type.h"
 #include "trait.h"
-#include "TypeTable.h"
+#include "typetable.h"
 
 #include <iostream>
 
@@ -39,7 +39,7 @@ bool TypeNode::equal(const TypeNode* other) const {
 
     // set equivalence constraints for type variables
     for (size_t i = 0, e = num_bound_vars(); i != e; ++i) {
-        this->bound_var(i)->set_equiv_variable(other->bound_var(i).get_representative());
+        this->bound_var(i)->set_equiv_variable(other->bound_var(i).representative());
     }
 
     // check equality of the restrictions of the type variables
@@ -48,7 +48,7 @@ bool TypeNode::equal(const TypeNode* other) const {
     }
 
     for (size_t i = 0, e = size(); i != e && result; ++i) {
-        result &= this->elem(i)->equal(other->elem(i).get_representative());
+        result &= this->elem(i)->equal(other->elem(i).representative());
     }
 
     // unset equivalence constraints for type variables
@@ -83,7 +83,7 @@ bool TypeNode::is_subtype(const TypeNode* super_type) const {
         return true;
 
     for (auto t : super_type->elems_) {
-        if (this->is_subtype(t.get_representative())) {
+        if (this->is_subtype(t.representative())) {
             return true;
         }
     }
@@ -135,13 +135,13 @@ bool TypeVarNode::restrictions_equal(const TypeVar other) const {
     // TODO this does work but seems too much effort, at least use a set that uses representatives
     TraitInstanceNodeTableSet ttis;
     for (auto r : *trestr) {
-        auto p = ttis.insert(r.get_representative());
+        auto p = ttis.insert(r.representative());
         assert(p.second && "hash/equal broken");
     }
 
     // this->restricted_by() subset of trestr
     for (auto r : *this->restricted_by()) {
-        if (ttis.find(r.get_representative()) == ttis.end()) {
+        if (ttis.find(r.representative()) == ttis.end()) {
             return false;
         }
     }
@@ -214,7 +214,7 @@ void check_sanity(thorin::ArrayRef<const Type> types) {
     for (auto t1 : types) {
         for (auto t2 : types) {
             if (t1.is_unified() && t2.is_unified()) {
-                if (!((!t1.get_representative()->equal(t2.get_representative())) || (t1.get_representative() == t2.get_representative()))) {
+                if (!((!t1.representative()->equal(t2.representative())) || (t1.representative() == t2.representative()))) {
                     t1->dump();
                     t2->dump();
                     assert(false);

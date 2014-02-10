@@ -5,7 +5,7 @@
  *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
  */
 
-#include "TypeTable.h"
+#include "typetable.h"
 
 TypeTable::TypeTable()
     : types_()
@@ -59,8 +59,8 @@ void TypeTable::insert_new(Type type) {
 
     if (type->kind() != Type_var) {
         // TODO is this a correct instanceof test?
-        assert(!type.get_representative()->isa<TypeVarNode>());
-        auto p = types_.insert(type.get_representative());
+        assert(!type.representative()->isa<TypeVarNode>());
+        auto p = types_.insert(type.representative());
         assert(p.second && "hash/equal broken");
     }
 }
@@ -78,14 +78,14 @@ void TypeTable::insert_new(TypeTraitInstance tti) {
         }
     }
 
-    auto p = trait_instances_.insert(tti.get_representative());
+    auto p = trait_instances_.insert(tti.representative());
     assert(p.second && "hash/equal broken");
 }
 
 void TypeTable::change_repr_rec(TypeTraitInstance tti, TypeTraitInstanceNode* repr) const {
     assert(tti->var_inst_size() == repr->var_inst_size());
     for (size_t i = 0, e = tti->var_inst_size(); i != e; ++i) {
-        change_repr(tti->var_inst_(i), repr->var_inst_(i).get_representative());
+        change_repr(tti->var_inst_(i), repr->var_inst_(i).representative());
     }
 }
 
@@ -96,7 +96,7 @@ template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) 
     assert(t->bound_vars().size() == repr->bound_vars().size());
     for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
         var_restrictions.push_back(new TypeTraitInstSet(*t->bound_var(i)->restricted_by()));
-        change_repr(t->bound_var(i), repr->bound_var(i).get_representative());
+        change_repr(t->bound_var(i), repr->bound_var(i).representative());
     }
 
     // unify restrictions of bounded variables
@@ -112,7 +112,7 @@ template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) 
         // TODO this does work but seems too much effort
         TraitInstanceNodeTableSet ttis;
         for (auto r : *reprv->restricted_by()) {
-            auto p = ttis.insert(r.get_representative());
+            auto p = ttis.insert(r.representative());
             assert(p.second && "hash/equal broken");
         }
 
@@ -131,14 +131,14 @@ template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) 
     // unify sub elements
     assert(t->size() == repr->size());
     for (size_t i = 0, e = t->size(); i != e; ++i) {
-        change_repr(t->elem_(i), repr->elem(i).get_representative());
+        change_repr(t->elem_(i), repr->elem(i).representative());
     }
 }
 
 template<class T>
 void TypeTable::change_repr(UnifiableProxy<T> t, T* repr) const {
     if (t.is_unified()) {
-        assert(t.get_representative() == repr);
+        assert(t.representative() == repr);
         return;
     }
 
@@ -157,12 +157,12 @@ void TypeTable::unify_base(Type type) {
         throw IllegalTypeException("Only closed types can be unified!");
     }
 
-    auto i = types_.find(type.get_representative());
+    auto i = types_.find(type.representative());
 
     if (i != types_.end()) {
-        assert(*i != type.get_representative());
+        assert(*i != type.representative());
         change_repr(type, *i);
-        assert(type.get_representative() == (*i));
+        assert(type.representative() == (*i));
     } else {
         insert_new(type);
         assert(type.is_unified());
@@ -187,11 +187,11 @@ void TypeTable::unify(TypeTraitInstance trait_inst) {
         throw IllegalTypeException("trait instance already unified");
     }
 
-    auto i = trait_instances_.find(trait_inst.get_representative());
+    auto i = trait_instances_.find(trait_inst.representative());
     if (i != trait_instances_.end()) {
-        assert(*i != trait_inst.get_representative());
+        assert(*i != trait_inst.representative());
         change_repr(trait_inst, *i);
-        assert(trait_inst.get_representative() == *i);
+        assert(trait_inst.representative() == *i);
     } else {
         insert_new(trait_inst);
         assert(trait_inst.is_unified());

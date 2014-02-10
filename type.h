@@ -6,10 +6,10 @@
 #include "thorin/util/array.h"
 #include "thorin/util/hash.h"
 
-#include "type_properties.h"
+#include "typeproperties.h"
 
-struct TypeTraitInstanceHash { size_t operator () (const TypeTraitInstance t) const { return thorin::hash_value(t.get_representative()); } };
-struct TypeTraitInstanceEqual { bool operator () (const TypeTraitInstance t1, const TypeTraitInstance t2) const { return t1.get_representative() == t2.get_representative(); } };
+struct TypeTraitInstanceHash { size_t operator () (const TypeTraitInstance t) const { return thorin::hash_value(t.representative()); } };
+struct TypeTraitInstanceEqual { bool operator () (const TypeTraitInstance t1, const TypeTraitInstance t2) const { return t1.representative() == t2.representative(); } };
 typedef std::unordered_set<TypeTraitInstance, TypeTraitInstanceHash, TypeTraitInstanceEqual> TypeTraitInstSet;
 
 //------------------------------------------------------------------------------

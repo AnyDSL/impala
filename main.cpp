@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "TypeTable.h"
+#include "typetable.h"
 
 using namespace std;
 
@@ -69,15 +69,15 @@ void test_unification1() {
     tt.unify(h);
 
     //gh->dump();
-    //gh.get_representative()->dump();
+    //gh.representative()->dump();
     //h->dump();
-    //h.get_representative()->dump();
+    //h.representative()->dump();
 
     assert(f.is_unified());
     assert(g.is_unified());
     assert(h.is_unified());
 
-    assert(f.get_representative() == g.get_representative());
+    assert(f.representative() == g.representative());
 
     tt.check_sanity();
     check_sanity({A, f, g, h});
@@ -100,12 +100,12 @@ void test_unification2() {
     tt.unify(g);
 
     //f->dump();
-    //f.get_representative()->dump();
+    //f.representative()->dump();
     //g->dump();
-    //g.get_representative()->dump();
+    //g.representative()->dump();
 
-    assert(g.get_representative() == f.get_representative());
-    assert(A.get_representative() == B.get_representative());
+    assert(g.representative() == f.representative());
+    assert(A.representative() == B.representative());
 
     tt.check_sanity();
     check_sanity({A, f, B, g});
@@ -140,10 +140,10 @@ void test_unification3() {
     assert(f2.is_unified());
     assert(g2.is_unified());
 
-    assert(f2.get_representative() == g2.get_representative());
+    assert(f2.representative() == g2.representative());
 
     assert(f1->equal(g1));
-    assert(f1.get_representative() == g1.get_representative());
+    assert(f1.representative() == g1.representative());
 
     TypeVar E = tt.typevar();
     TypeVar F = tt.typevar();
@@ -157,12 +157,12 @@ void test_unification3() {
 
     assert(h1.is_unified());
 
-    assert(f2.get_representative() != h2.get_representative());
+    assert(f2.representative() != h2.representative());
     assert(!f2->equal(h2));
 
     assert(f1 != h1);
     assert(!f1->equal(h1));
-    assert(f1.get_representative() != h1.get_representative());
+    assert(f1.representative() != h1.representative());
 
     TypeVar G = tt.typevar();
     TypeVar H = tt.typevar();
@@ -177,11 +177,11 @@ void test_unification3() {
     assert(k1.is_unified());
 
     assert(!f2->equal(k2));
-    assert(f2.get_representative() != k2.get_representative());
+    assert(f2.representative() != k2.representative());
 
     assert(f1 != k1);
     assert(!f1->equal(k1));
-    assert(f1.get_representative() != k1.get_representative());
+    assert(f1.representative() != k1.representative());
 
     tt.check_sanity();
     check_sanity({A, B, f1, f2,
@@ -208,7 +208,7 @@ void test_unification4() {
     assert(inst2.is_unified());
 
     assert(inst->equal(inst2));
-    assert(inst.get_representative() == inst2.get_representative());
+    assert(inst.representative() == inst2.representative());
 
     TypeTrait* A = tt.typetrait(std::string("A"));
     TypeVar X = tt.typevar();
@@ -258,9 +258,9 @@ void test_unification5() {
     assert(clonableInst2.is_unified());
 
     assert(clonableInst->equal(clonableInst2));
-    assert(clonableInst.get_representative() == clonableInst2.get_representative());
+    assert(clonableInst.representative() == clonableInst2.representative());
 
-    assert(f.get_representative() == g.get_representative());
+    assert(f.representative() == g.representative());
 
     const TypeTrait* st = tt.typetrait(std::string("SomeTrait"));
     TypeTraitInstance stInst = tt.instantiate_trait(st, {});
@@ -276,9 +276,9 @@ void test_unification5() {
     assert(!st->equal(clonable));
     assert(!stInst->equal(clonableInst));
     assert(!stInst->equal(clonableInst2));
-    assert(stInst.get_representative() != clonableInst.get_representative());
+    assert(stInst.representative() != clonableInst.representative());
 
-    assert(h.get_representative() != g.get_representative());
+    assert(h.representative() != g.representative());
 
     tt.check_sanity();
     check_sanity({A, f, B, g, C, h});
@@ -321,8 +321,8 @@ void test_unification6() {
     assert(SA.is_unified());
     assert(SB.is_unified());
 
-    assert(A.get_representative() != B.get_representative());
-    assert(SA.get_representative() != SB.get_representative());
+    assert(A.representative() != B.representative());
+    assert(SA.representative() != SB.representative());
 
 
     TypeVar C = tt.typevar();
@@ -347,14 +347,14 @@ void test_unification6() {
     assert(SC.is_unified());
     assert(SD.is_unified());
 
-    assert(C.get_representative() != D.get_representative());
-    assert(SC.get_representative() != SD.get_representative());
+    assert(C.representative() != D.representative());
+    assert(SC.representative() != SD.representative());
 
-    assert(g.get_representative() == f.get_representative());
-    assert(C.get_representative() == A.get_representative());
-    assert(D.get_representative() == B.get_representative());
-    assert(SC.get_representative() == SA.get_representative());
-    assert(SD.get_representative() == SB.get_representative());
+    assert(g.representative() == f.representative());
+    assert(C.representative() == A.representative());
+    assert(D.representative() == B.representative());
+    assert(SC.representative() == SA.representative());
+    assert(SD.representative() == SB.representative());
 
     tt.check_sanity();
     check_sanity({A, B, C, D, f, g});
@@ -400,9 +400,9 @@ void test_unification7() {
     assert(B.is_unified());
     assert(SB.is_unified());
 
-    assert(g.get_representative() == f.get_representative());
-    assert(B.get_representative() == A.get_representative());
-    assert(SB.get_representative() == SA.get_representative());
+    assert(g.representative() == f.representative());
+    assert(B.representative() == A.representative());
+    assert(SB.representative() == SA.representative());
 
     tt.check_sanity();
     check_sanity({A, B, f, g});
@@ -492,7 +492,7 @@ void test_type_sanity3() {
     tt.unify(g);
 
     assert(g.is_unified());
-    assert(g.get_representative() != f.get_representative());
+    assert(g.representative() != f.representative());
     assert(!g->equal(f));
 
     try {

@@ -31,18 +31,18 @@ public:
         , unified_(unified)
     {}
 
-    T* get_representative() const { return representative_; }
+    T* representative() const { return representative_; }
 
     template<class U> bool equal(Unifiable<U> other) const {
         if (this->is_unified() && other.is_unified()) {
-            return this->get_representative() == other.get_representative();
+            return this->representative() == other.representative();
         }
-        return get_representative()->equal(other.get_representative());
+        return representative()->equal(other.representative());
     }
 
     template<class U> operator Unifiable<U>() { return Unifiable<U>((U*) representative_, unified_); }
 
-    /// @see get_representative()
+    /// @see representative()
     bool is_unified() const { return unified_; }
 
 private:
@@ -81,7 +81,7 @@ public:
     {}
 
     bool empty() const { return node_ == nullptr; }
-    T* deref() const { return node_->get_representative(); }
+    T* deref() const { return node_->representative(); }
     T* operator *() const { return deref(); }
     bool operator == (const T* other) const { return deref() == other; } // TODO
     operator T*() const { return deref(); }
@@ -90,7 +90,7 @@ public:
     template<class U> operator UnifiableProxy<U>() { return UnifiableProxy<U>((Unifiable<U>*) node_); }
 
     template<class U> bool equal(const UnifiableProxy<U>* other) const { return node()->equal(other->node()); }
-    T* get_representative() const { return node()->get_representative(); }
+    T* representative() const { return node()->representative(); }
     bool is_unified() const { return node()->is_unified(); }
 
     Unifiable<T>* node() const { return node_; } // TODO make private
