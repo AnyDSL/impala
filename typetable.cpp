@@ -26,7 +26,7 @@ TypeTable::~TypeTable() {
     for (auto trait : trait_instances_) delete trait; 
 }
 
-FnType TypeTable::fntype_simple(TypeArray params, Type return_type) {
+FnType TypeTable::fntype_simple(thorin::ArrayRef<Type> params, Type return_type) {
     FnType retfun = fntype({return_type});
 
     size_t psize = params.size();
@@ -38,7 +38,7 @@ FnType TypeTable::fntype_simple(TypeArray params, Type return_type) {
     }
     p[psize] = retfun;
 
-    return fntype(TypeArray(p, psize + 1));
+    return fntype(thorin::ArrayRef<Type>(p, psize + 1));
 }
 
 void TypeTable::insert_new(Type type) {

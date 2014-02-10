@@ -126,27 +126,15 @@ typedef UnifiableProxy<FnTypeNode> FnType;
 typedef UnifiableProxy<TupleTypeNode> TupleType;
 typedef UnifiableProxy<TypeVarNode> TypeVar;
 typedef UnifiableProxy<TypeTraitInstanceNode> TypeTraitInstance;
-
-typedef thorin::ArrayRef<Type> TypeArray;
-typedef thorin::ArrayRef<TypeNode*> TypeNodeArray;
-typedef thorin::ArrayRef<TypeVar> TypeVarArray;
-typedef thorin::ArrayRef<TypeVarNode*> TypeVarNodeArray;
-//typedef thorin::ArrayRef<const TypeTraitInstance*> TypeTraitInstArray;
-
 typedef std::unordered_set<const TypeTrait*> TypeTraitSet;
 
 //------------------------------------------------------------------------------
 
 class GenericElement : public thorin::MagicCast<GenericElement> {
-protected:
-    std::vector<TypeVar> bound_vars_;
-
-    std::string bound_vars_to_string() const;
-
 public:
     size_t num_bound_vars() const { return bound_vars_.size(); }
 
-    TypeVarArray bound_vars() const { return TypeVarArray(bound_vars_); }
+    thorin::ArrayRef<TypeVar> bound_vars() const { return thorin::ArrayRef<TypeVar>(bound_vars_); }
     TypeVar bound_var(size_t i) const { return bound_vars_[i]; }
 
     /// Returns true if this \p Type does have any bound type variabes (\p bound_vars_).
@@ -156,6 +144,10 @@ public:
 
     virtual bool equal(const GenericElement*) const = 0;
     virtual size_t hash() const = 0;
+
+protected:
+    std::vector<TypeVar> bound_vars_;
+    std::string bound_vars_to_string() const;
 };
 
-#endif /* TYPE_PROPERTIES_H_ */
+#endif

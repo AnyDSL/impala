@@ -44,13 +44,13 @@ public:
     }
     TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}); }
 
-    TypeTraitInstance instantiate_trait(const TypeTrait* trait, TypeArray var_instances) {
+    TypeTraitInstance instantiate_trait(const TypeTrait* trait, thorin::ArrayRef<Type> var_instances) {
         return TypeTraitInstance(new TypeTraitInstanceNode(trait, var_instances));
     }
 
     TypeVarNode* typevar() { return new TypeVarNode(*this); }
 
-    FnType fntype(TypeArray params) { return FnType(new FnTypeNode(*this, params)); }
+    FnType fntype(thorin::ArrayRef<Type> params) { return FnType(new FnTypeNode(*this, params)); }
 
     /**
      * A shortcut to create function types with a return type.
@@ -58,10 +58,10 @@ public:
      * Actually for a Type fn(int)->int a type fn(int, fn(int)) will be created
      * (continuation passing style).
      */
-    FnType fntype_simple(TypeArray params, Type return_type);
+    FnType fntype_simple(thorin::ArrayRef<Type> params, Type return_type);
 
     // TODO review this
-    //const TupleType* tupletype(TypeArray elems) { return unify_new(new TupleType(*this, elems)); }
+    //const TupleType* tupletype(thorin::ArrayRef<Type> elems) { return unify_new(new TupleType(*this, elems)); }
 
     /**
      * Checks if all types in the type tables are sane and correctly unified.

@@ -81,7 +81,7 @@ public:
  */
 class TypeTraitInstanceNode : public thorin::MagicCast<TypeTraitInstanceNode> {
 private:
-    TypeTraitInstanceNode(const TypeTrait* trait, TypeArray var_instances);
+    TypeTraitInstanceNode(const TypeTrait* trait, thorin::ArrayRef<Type> var_instances);
 
     TypeTraitInstanceNode& operator = (const TypeTraitInstanceNode&); ///< Do not copy-assign a \p TypeTraitInstance.
     TypeTraitInstanceNode(const TypeTraitInstanceNode& node);         ///< Do not copy-construct a \p TypeTraitInstance.

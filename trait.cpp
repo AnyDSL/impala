@@ -40,7 +40,7 @@ void TypeTrait::add_method(const std::string name, FnType type) {
 }
 
 
-TypeTraitInstanceNode::TypeTraitInstanceNode(const TypeTrait* trait, TypeArray var_instances)
+TypeTraitInstanceNode::TypeTraitInstanceNode(const TypeTrait* trait, thorin::ArrayRef<Type> var_instances)
     : trait_(trait)
     , var_instances_(var_instances.size())
 {

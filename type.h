@@ -138,7 +138,7 @@ public:
 
 class CompoundType : public TypeNode {
 protected:
-    CompoundType(TypeTable& typetable, Kind kind, TypeArray elems)
+    CompoundType(TypeTable& typetable, Kind kind, thorin::ArrayRef<Type> elems)
         : TypeNode(typetable, kind, elems.size())
     {
         size_t i = 0;
@@ -151,7 +151,7 @@ protected:
 
 class FnTypeNode : public CompoundType {
 private:
-    FnTypeNode(TypeTable& typetable, TypeArray elems)
+    FnTypeNode(TypeTable& typetable, thorin::ArrayRef<Type> elems)
         : CompoundType(typetable, Type_fn, elems)
     {}
 
@@ -163,7 +163,7 @@ public:
 
 class TupleTypeNode : public CompoundType {
 private:
-    TupleTypeNode(TypeTable& typetable, TypeArray elems)
+    TupleTypeNode(TypeTable& typetable, thorin::ArrayRef<Type> elems)
         : CompoundType(typetable, Type_tuple, elems)
     {}
 
