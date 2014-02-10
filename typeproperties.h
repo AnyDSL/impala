@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "thorin/util/array.h"
+#include "thorin/util/autoptr.h"
 #include "thorin/util/cast.h"
 
 class TypeTable;
@@ -25,7 +26,6 @@ public:
         : representative_(node)
         , unified_(false)
     {}
-
     Unifiable(T* node, bool unified)
         : representative_(node)
         , unified_(unified)
@@ -47,9 +47,7 @@ public:
 
 private:
     void set_representative(T* repr) {
-        // TODO does this really hold? (is it set only once?)
-        assert(!unified_);
-        delete representative_;
+        assert(!is_unified());
         representative_ = repr;
         unified_ = true;
     }
@@ -59,7 +57,7 @@ private:
         unified_ = true;
     }
 
-    T* representative_;
+    thorin::AutoPtr<T> representative_;
     bool unified_;
 
     friend class UnifiableProxy<T>;
@@ -71,32 +69,25 @@ public:
     UnifiableProxy()
         : node_(nullptr)
     {}
-
     UnifiableProxy(Unifiable<T>* node)
         : node_(node)
     {}
-
     UnifiableProxy(T* node)
         : node_(new Unifiable<T>(node))
     {}
 
     bool empty() const { return node_ == nullptr; }
-    T* deref() const { return node_->representative(); }
-    T* operator *() const { return deref(); }
-    bool operator == (const T* other) const { return deref() == other; } // TODO
-    operator T*() const { return deref(); }
-    T* operator -> () const { return deref(); }
-
-    template<class U> operator UnifiableProxy<U>() { return UnifiableProxy<U>((Unifiable<U>*) node_); }
-
-    template<class U> bool equal(const UnifiableProxy<U>* other) const { return node()->equal(other->node()); }
     T* representative() const { return node()->representative(); }
     bool is_unified() const { return node()->is_unified(); }
+    T* deref() const { return node_->representative(); }
+    T* operator *() const { return deref(); }
+    bool operator == (const T* other) const { return this->deref()->equal(other.deref());; }
+    operator T*() const { return deref(); }
+    T* operator -> () const { return deref(); }
+    template<class U> operator UnifiableProxy<U>() { return UnifiableProxy<U>((Unifiable<U>*) node_); }
 
-    Unifiable<T>* node() const { return node_; } // TODO make private
 private:
-
-
+    Unifiable<T>* node() const { return node_; }
     void set_representative(T* repr) { node()->set_representative(repr); }
     void set_unified() { node_->set_unified(); }
 
