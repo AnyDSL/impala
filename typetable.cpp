@@ -27,18 +27,9 @@ TypeTable::~TypeTable() {
 }
 
 FnType TypeTable::fntype_simple(thorin::ArrayRef<Type> params, Type return_type) {
-    FnType retfun = fntype({return_type});
-
-    size_t psize = params.size();
-
-    Type* p = new Type[psize + 1]; // TODO delete this array
-
-    for (int i = 0; i < psize; ++i) {
-        p[i] = params[i];
-    }
-    p[psize] = retfun;
-
-    return fntype(thorin::ArrayRef<Type>(p, psize + 1));
+    thorin::Array<Type> p(params.size() + 1);
+    *std::copy(params.begin(), params.end(), p.begin()) = fntype({return_type});
+    return fntype(p);
 }
 
 void TypeTable::insert_new(Type type) {
