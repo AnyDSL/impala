@@ -21,6 +21,11 @@ TypeTable::TypeTable()
     unify(type_error_);
 }
 
+TypeTable::~TypeTable() { 
+    for (auto type : types_) delete type; 
+    for (auto trait : trait_instances_) delete trait; 
+}
+
 FnType TypeTable::fntype_simple(TypeArray params, Type return_type) {
     FnType retfun = fntype({return_type});
 

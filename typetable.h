@@ -26,8 +26,7 @@ typedef std::unordered_set<TypeNode*, TypeNodeHash, TypeNodeEqual> TypeNodeSet;
 class TypeTable {
 public:
     TypeTable();
-    // TODO also delete traits & trait instances
-    ~TypeTable() { for (auto type : types_) delete type; }
+    ~TypeTable();
 
     TypeError type_error() { return type_error_; }
     PrimType primtype(PrimTypeKind kind);
