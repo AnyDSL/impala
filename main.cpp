@@ -214,18 +214,6 @@ void test_unification4() {
     TypeVar X = tt.typevar();
     A->add_bound_var(X);
 
-    try {
-        const TypeTraitInstance inst = tt.instantiate_trait(A, {});
-        assert(false && "Previous statement should have failed!");
-    } catch (IllegalTypeException& e) {
-    }
-
-    try {
-        const TypeTraitInstance inst = tt.instantiate_trait(A, {tt.type_int(), tt.type_int()});
-        assert(false && "Previous statement should have failed!");
-    } catch (IllegalTypeException& e) {
-    }
-
     tt.check_sanity();
 
     cout << "test_unification4 [okay]" << endl;
@@ -416,15 +404,8 @@ void test_trait_instatiation1() {
     TypeVar A = tt.typevar();
     TypeTrait* T = tt.typetrait(std::string("T"));  // trait T
     T->add_bound_var(A);                            // trait T<A>
-    try {
-        // illegal, must instantiate A
-        const TypeTraitInstance Ti = tt.instantiate_trait(T, {});
-        assert(false && "Previous statement should have failed!");
-    } catch (exception& e) {
-    }
 
     tt.check_sanity();
-
     cout << "test_type_sanity1 [okay]" << endl;
 }
 
@@ -434,49 +415,17 @@ void test_type_sanity1() {
     TypeVar A = tt.typevar();
     FnType g = tt.fntype({tt.type_int()}); // fn(int)
 
-    try {
-        // illegal
-        g->add_bound_var(A);    // fn<A>(int)
-
-        assert(false && "Previous statement should have failed!");
-    } catch (IllegalTypeException& e) {
-        assert(g->is_closed());
-        assert(g.is_unified());
-        assert(!A.is_unified());
-        assert(A->bound_at() == nullptr);
-    }
-
     tt.check_sanity();
-
     cout << "test_type_sanity1 [okay]" << endl;
 }
 
 void test_type_sanity2() {
     TypeTable tt;
-
     TypeVar A = tt.typevar();
-
-    try {
-        A->add_bound_var(A);         // forall A, A
-        assert(false && "Previous statement should have failed!");
-    } catch (IllegalTypeException& e) {
-        assert(!A->is_closed());
-        assert(!A.is_unified());
-        assert(A->bound_at() == nullptr);
-    }
-
     TypeVar B = tt.typevar();
     TypeVar C = tt.typevar();
-    try {
-        C->add_bound_var(B); // forall B, C
-        assert(false && "Previous statement should have failed!");
-    } catch (IllegalTypeException& e) {
-        assert(B->bound_at() == nullptr);
-    }
-
 
     tt.check_sanity();
-
     cout << "test_type_sanity2 [okay]" << endl;
 }
 
@@ -495,19 +444,8 @@ void test_type_sanity3() {
     assert(g.representative() != f.representative());
     assert(!g->equal(f));
 
-    try {
-        FnType h = tt.fntype({f, g});     // fn(fn<A>(A), fn(A)) -> INVALID
-        tt.unify(h);
-
-        h->dump();
-
-        assert(false && "Previous statement should have failed!");
-    } catch (IllegalTypeException& e) {
-    }
-
     tt.check_sanity();
     check_sanity({A, f, g});
-
     cout << "test_type_sanity3 [okay]" << endl;
 }
 
@@ -522,16 +460,7 @@ void test_type_sanity4() {
     TypeVar B = tt.typevar();
     FnType g = tt.fntype({A, B});   // fn(A, B)
 
-    try {
-        // must fail because A is already bound!
-        g->add_bound_var(A);
-
-        assert(false && "Previous statement should have failed!");
-    } catch (IllegalTypeException& e) {
-    }
-
     tt.check_sanity();
-
     cout << "test_type_sanity4 [okay]" << endl;
 }
 
@@ -542,16 +471,7 @@ void test_type_sanity5() {
     TypeVar B = tt.typevar();
     FnType g = tt.fntype({B});   // fn(B)
 
-    try {
-        // must fail because A is not a subtype of g
-        g->add_bound_var(A);
-
-        assert(false && "Previous statement should have failed!");
-    } catch (IllegalTypeException& e) {
-    }
-
     tt.check_sanity();
-
     cout << "test_type_sanity5 [okay]" << endl;
 }
 

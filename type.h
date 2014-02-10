@@ -14,21 +14,6 @@ typedef std::unordered_set<TypeTraitInstance, TypeTraitInstanceHash, TypeTraitIn
 
 //------------------------------------------------------------------------------
 
-class IllegalTypeException : public std::exception {
-public:
-    IllegalTypeException(const char* what)
-        : std::exception()
-        , what_(what)
-    {}
-
-    virtual const char* what() const throw () { return what_; }
-
-private:
-    const char* const what_;
-};
-
-//------------------------------------------------------------------------------
-
 enum Kind {
 #define PRIMTYPE(T) Type_##T,
 #include "primtypes.h"

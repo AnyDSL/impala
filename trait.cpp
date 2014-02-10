@@ -29,9 +29,7 @@ std::string TypeTrait::to_string() const {
 }
 
 void TypeTrait::add_method(const std::string name, FnType type) {
-    if (! type.is_unified()) {
-        throw IllegalTypeException("Method types must be closed");
-    }
+    assert(type.is_unified() && "Method types must be closed");
     assert(type->is_closed());
     TypeTraitMethod* m = new TypeTraitMethod();
     m->name = name;
@@ -44,9 +42,7 @@ TypeTraitInstanceNode::TypeTraitInstanceNode(const TypeTrait* trait, thorin::Arr
     : trait_(trait)
     , var_instances_(var_instances.size())
 {
-    if (var_instances.size() != trait->bound_vars().size())
-        throw IllegalTypeException("Wrong number of instances for bound type variables");
-
+    assert(var_instances.size() == trait->bound_vars().size() && "Wrong number of instances for bound type variables");
     size_t i = 0;
     for (auto elem : var_instances)
         var_instances_[i++] = elem;

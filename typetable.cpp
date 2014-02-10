@@ -9,7 +9,6 @@
 
 TypeTable::TypeTable()
     : types_()
-//    , traits_()
 #define PRIMTYPE(T) , T##_(PrimType(new PrimTypeNode(*this, PrimType_##T)))
 #include "primtypes.h"
     , type_error_(TypeError(new TypeErrorNode(*this)))
@@ -144,14 +143,8 @@ void TypeTable::change_repr(UnifiableProxy<T> t, T* repr) const {
 }
 
 void TypeTable::unify_base(Type type) {
-    if (type.is_unified()) {
-        throw IllegalTypeException("Type is already unified!");
-    }
-
-    // unify only closed types (i.e. only types where all type variables have been bound)
-    if (! type->is_closed()) {
-        throw IllegalTypeException("Only closed types can be unified!");
-    }
+    assert(!type.is_unified() && "Type is already unified!");
+    assert(type->is_closed() && "Only closed types can be unified!");
 
     auto i = types_.find(type.representative());
 
@@ -179,9 +172,7 @@ void TypeTable::unify_base(Type type) {
 
 //const TypeTraitInstance* TypeTable::unify_trait_inst(TypeTraitInstance* trait_inst) {
 void TypeTable::unify(TypeTraitInstance trait_inst) {
-    if (trait_inst.is_unified()) {
-        throw IllegalTypeException("trait instance already unified");
-    }
+    assert(!trait_inst.is_unified() && "trait instance already unified");
 
     auto i = trait_instances_.find(trait_inst.representative());
     if (i != trait_instances_.end()) {
@@ -203,8 +194,6 @@ PrimType TypeTable::primtype(const PrimTypeKind kind) {
 }
 
 void TypeTable::check_sanity() const {
-    for (auto t : types_) {
+    for (auto t : types_)
         assert(t->is_sane());
-    }
 }
-
