@@ -77,7 +77,7 @@ void test_unification1() {
     assert(g.is_unified());
     assert(h.is_unified());
 
-    assert(f.representative() == g.representative());
+    assert(f == g);
 
     tt.check_sanity();
     check_sanity({A, f, g, h});

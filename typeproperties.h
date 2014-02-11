@@ -81,7 +81,7 @@ public:
     bool is_unified() const { return node()->is_unified(); }
     T* deref() const { return node_->representative(); }
     T* operator *() const { return deref(); }
-    bool operator == (const T* other) const { return this->deref()->equal(other.deref());; }
+    bool operator == (const UnifiableProxy<T>& other) const { return this->deref()->equal(other.deref());; }
     operator T*() const { return deref(); }
     T* operator -> () const { return deref(); }
     template<class U> operator UnifiableProxy<U>() { return UnifiableProxy<U>((Unifiable<U>*) node_); }
