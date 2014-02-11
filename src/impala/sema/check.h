@@ -1,5 +1,5 @@
 #ifndef IMPALA_SEMA_CHECK_H
-#define IMPALA_SEMA_HCHECK_
+#define IMPALA_SEMA_CHECK_H
 
 namespace impala {
 
