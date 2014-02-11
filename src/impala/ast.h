@@ -129,11 +129,6 @@ private:
 
 class Type : public ASTNode {};
 
-class InferType : public Type {
-public:
-    virtual std::ostream& print(Printer&) const;
-};
-
 class ErrorType : public Type {
 public:
     virtual std::ostream& print(Printer&) const;

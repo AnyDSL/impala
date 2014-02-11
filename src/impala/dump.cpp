@@ -36,7 +36,6 @@ std::ostream& Path::print(Printer& p) const {
  * types
  */
 
-std::ostream& InferType::print(Printer& p) const { return p.stream() << "<infer>"; }
 std::ostream& ErrorType::print(Printer& p) const { return p.stream() << "<error>"; }
 
 std::ostream& PtrType::print(Printer& p) const { 
