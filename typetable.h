@@ -23,6 +23,25 @@ struct TypeNodeHash { size_t operator () (const TypeNode* t) const { return t->h
 struct TypeNodeEqual { bool operator () (const TypeNode* t1, const TypeNode* t2) const { return t1->equal(t2); } };
 typedef std::unordered_set<TypeNode*, TypeNodeHash, TypeNodeEqual> TypeNodeSet;
 
+class UnifiableSet {
+public:
+    UnifiableSet() {}
+    ~UnifiableSet();
+
+    void add(Unifiable<TypeTraitInstanceNode>* t) {
+        auto p = trait_instances_.insert(t);
+        assert(p.second && "hash/equal broken");
+    }
+    void add(Unifiable<TypeNode>* t) {
+        auto p = types_.insert(t);
+        assert(p.second && "hash/equal broken");
+    }
+
+private:
+    std::unordered_set<Unifiable<TypeTraitInstanceNode>*> trait_instances_;
+    std::unordered_set<Unifiable<TypeNode>*> types_;
+};
+
 class TypeTable {
 public:
     TypeTable();
@@ -45,12 +64,16 @@ public:
     TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}); }
 
     TypeTraitInstance instantiate_trait(const TypeTrait* trait, thorin::ArrayRef<Type> var_instances) {
-        return TypeTraitInstance(new TypeTraitInstanceNode(trait, var_instances));
+        auto tti = TypeTraitInstance(new TypeTraitInstanceNode(trait, var_instances));
+        unifiables_.add(tti.node_);
+        return tti;
     }
 
     TypeVarNode* typevar() { return new TypeVarNode(*this); }
 
-    FnType fntype(thorin::ArrayRef<Type> params) { return FnType(new FnTypeNode(*this, params)); }
+    FnType fntype(thorin::ArrayRef<Type> params) {
+        return new_type(new FnTypeNode(*this, params));
+    }
 
     /**
      * A shortcut to create function types with a return type.
@@ -74,6 +97,13 @@ public:
     //const TypeTraitInstance* unify_trait_inst(TypeTraitInstance* type);
 
 private:
+    template<class T> UnifiableProxy<T> new_type(T* tn) {
+        auto t = UnifiableProxy<T>(tn);
+        UnifiableProxy<TypeNode> x = t;  // TODO is this really memory safe?
+        unifiables_.add(x.node_);
+        return t;
+    }
+
     /// insert all not-unified types contained in type
     void insert_new(Type type);
     void insert_new(TypeTraitInstance tti);
@@ -101,6 +131,7 @@ private:
     TypeNodeSet types_;
     //TraitTableSet traits_;
     TraitInstanceNodeTableSet trait_instances_;
+    UnifiableSet unifiables_;
 
 #define PRIMTYPE(T) PrimType T##_;
 #include "primtypes.h"

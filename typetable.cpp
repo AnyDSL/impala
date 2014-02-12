@@ -7,6 +7,14 @@
 
 #include "typetable.h"
 
+// This deletes all unifiables and the non-unified type nodes
+UnifiableSet::~UnifiableSet() {
+    for (auto t : trait_instances_) delete t;
+    for (auto t : types_) delete t;
+}
+
+
+
 TypeTable::TypeTable()
     : types_()
 #define PRIMTYPE(T) , T##_(PrimType(new PrimTypeNode(*this, PrimType_##T)))
@@ -20,9 +28,11 @@ TypeTable::TypeTable()
     unify(type_error_);
 }
 
+// TODO delete all unifiables
 TypeTable::~TypeTable() { 
     for (auto type : types_) delete type; 
-    for (auto trait : trait_instances_) delete trait; 
+    for (auto trait : trait_instances_) delete trait;
+    delete top_trait_;
 }
 
 FnType TypeTable::fntype_simple(thorin::ArrayRef<Type> params, Type return_type) {

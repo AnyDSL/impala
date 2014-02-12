@@ -31,6 +31,9 @@ public:
         , unified_(unified)
     {}
 
+    // Unified TypeNodes are removed by the type table
+    ~Unifiable() { if (!is_unified()) delete representative_; }
+
     T* representative() const { return representative_; }
 
     template<class U> bool equal(Unifiable<U> other) const {
@@ -48,6 +51,7 @@ public:
 private:
     void set_representative(T* repr) {
         assert(!is_unified());
+        delete representative_;
         representative_ = repr;
         unified_ = true;
     }
@@ -57,7 +61,7 @@ private:
         unified_ = true;
     }
 
-    thorin::AutoPtr<T> representative_;
+    T* representative_;
     bool unified_;
 
     friend class UnifiableProxy<T>;
