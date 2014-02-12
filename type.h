@@ -61,6 +61,7 @@ public:
     }
 
     virtual bool equal(const GenericElement*) const;
+    virtual bool equal(Type t) const { return equal(t.representative()); }
     virtual bool equal(const TypeNode*) const;
     virtual size_t hash() const;
 
@@ -78,7 +79,7 @@ public:
     virtual bool is_closed() const;
 
     /// @return true if this is a subtype of super_type.
-    bool is_subtype(const TypeNode* super_type) const;
+    bool is_subtype(const Type super_type) const { return is_subtype(super_type.representative()); }
 
     /**
      * A type is sane if all type variables are bound correctly,
@@ -89,6 +90,8 @@ public:
     virtual bool is_sane() const;
 
 private:
+    bool is_subtype(const TypeNode* super_type) const;
+
     TypeTable& typetable_;
     const Kind kind_;
 

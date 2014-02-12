@@ -106,15 +106,15 @@ public:
     bool empty() const { return node_ == nullptr; }
     bool is_unified() const { return node()->is_unified(); }
     bool operator == (const UnifiableProxy<T>& other) const { return node()->equal(other.node());; }
-    operator T*() const { return deref(); }
-
+    bool operator != (const UnifiableProxy<T>& other) const { return !node()->equal(other.node());; }
     T* operator -> () const { return deref(); }
     template<class U> operator UnifiableProxy<U>() { return UnifiableProxy<U>((Unifiable<U>*) node_); }
 
 private:
     T* representative() const { return node()->representative(); }
     T* deref() const { return representative(); }
-    T* operator *() const { return deref(); }
+    //T* operator *() const { return deref(); }
+    //operator T*() const { return deref(); }
 
     Unifiable<T>* node() const { return node_; }
     void set_representative(T* repr) { node()->set_representative(repr); }

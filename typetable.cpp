@@ -125,7 +125,7 @@ template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) 
 
         // this->restricted_by() subset of trestr
         for (auto restr : *tv_restrs) {
-            auto repr_restr = ttis.find(restr);
+            auto repr_restr = ttis.find(restr.representative());
             assert(repr_restr != ttis.end());
             change_repr(restr, *repr_restr);
         }

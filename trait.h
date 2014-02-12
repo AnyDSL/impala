@@ -92,6 +92,7 @@ private:
     Type var_inst_(size_t i) const { return var_instances_[i]; }
 
 public:
+    bool equal(TypeTraitInstance t) { return equal(t.representative()); }
     bool equal(const TypeTraitInstanceNode* t) const;
     size_t hash() const;
 
