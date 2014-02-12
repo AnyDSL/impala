@@ -11,28 +11,29 @@
 UnifiableSet::~UnifiableSet() {
     for (auto t : trait_instances_) delete t;
     for (auto t : types_) delete t;
+    for (auto t : traits_) delete t;
 }
 
 
 
 TypeTable::TypeTable()
     : types_()
-#define PRIMTYPE(T) , T##_(PrimType(new PrimTypeNode(*this, PrimType_##T)))
+#define PRIMTYPE(T) , T##_(new_type(new PrimTypeNode(*this, PrimType_##T)))
 #include "primtypes.h"
-    , type_error_(TypeError(new TypeErrorNode(*this)))
+    , type_error_(new_type(new TypeErrorNode(*this)))
     , top_trait_(new TypeTrait(*this))
     , top_trait_inst_(instantiate_trait(top_trait_, {}))
 {
 #define PRIMTYPE(T) unify(T##_);
 #include "primtypes.h"
     unify(type_error_);
+    unifiables_.add(top_trait_);
 }
 
 // TODO delete all unifiables
 TypeTable::~TypeTable() { 
     for (auto type : types_) delete type; 
     for (auto trait : trait_instances_) delete trait;
-    delete top_trait_;
 }
 
 FnType TypeTable::fntype_simple(thorin::ArrayRef<Type> params, Type return_type) {
@@ -62,12 +63,13 @@ void TypeTable::insert_new(Type type) {
         }
     }
 
-    if (type->kind() != Type_var) {
+    // TODO does it cause any problems to put TypeVars into the type-set?
+    //if (type->kind() != Type_var) {
         // TODO is this a correct instanceof test?
-        assert(!type.representative()->isa<TypeVarNode>());
+        //assert(!type.representative()->isa<TypeVarNode>());
         auto p = types_.insert(type.representative());
         assert(p.second && "hash/equal broken");
-    }
+    //}
 }
 
 void TypeTable::insert_new(TypeTraitInstance tti) {
@@ -206,4 +208,18 @@ PrimType TypeTable::primtype(const PrimTypeKind kind) {
 void TypeTable::check_sanity() const {
     for (auto t : types_)
         assert(t->is_sane());
+
+    for (auto t : unifiables_.trait_instances_) {
+        if (t->is_unified()) {
+            auto i = trait_instances_.find(t->representative());
+            assert(i != trait_instances_.end());
+        }
+    }
+    for (auto t : unifiables_.types_) {
+        if (t->is_unified()) {
+            auto i = types_.find(t->representative());
+            assert(i != types_.end());
+        }
+    }
+
 }

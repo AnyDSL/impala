@@ -28,18 +28,15 @@ public:
     UnifiableSet() {}
     ~UnifiableSet();
 
-    void add(Unifiable<TypeTraitInstanceNode>* t) {
-        auto p = trait_instances_.insert(t);
-        assert(p.second && "hash/equal broken");
-    }
-    void add(Unifiable<TypeNode>* t) {
-        auto p = types_.insert(t);
-        assert(p.second && "hash/equal broken");
-    }
+    void add(Unifiable<TypeTraitInstanceNode>* t) { trait_instances_.push_back(t); }
+    void add(Unifiable<TypeNode>* t) { types_.push_back(t); }
+    void add(const TypeTrait* t) { traits_.push_back(t); }
 
 private:
-    std::unordered_set<Unifiable<TypeTraitInstanceNode>*> trait_instances_;
-    std::unordered_set<Unifiable<TypeNode>*> types_;
+    std::vector<Unifiable<TypeTraitInstanceNode>*> trait_instances_;
+    std::vector<Unifiable<TypeNode>*> types_;
+    std::vector<const TypeTrait*> traits_;
+    friend class TypeTable;
 };
 
 class TypeTable {
@@ -54,12 +51,13 @@ public:
 #include "primtypes.h"
 
     const TypeTrait* top_trait() const { return top_trait_; }
-    // TODO store the proxy
     TypeTraitInstance top_trait_inst() const { return top_trait_inst_; }
 
     // TODO maybe seperate traits completely from the TypeTable
     TypeTrait* typetrait(std::string name, TypeTraitSet super_traits) {
-        return new TypeTrait(*this, name, super_traits);
+        auto t = new TypeTrait(*this, name, super_traits);
+        unifiables_.add(t);
+        return t;
     }
     TypeTrait* typetrait(std::string name) { return typetrait(name, {top_trait_}); }
 
@@ -69,7 +67,7 @@ public:
         return tti;
     }
 
-    TypeVarNode* typevar() { return new TypeVarNode(*this); }
+    TypeVar typevar() { return new_type(new TypeVarNode(*this)); }
 
     FnType fntype(thorin::ArrayRef<Type> params) {
         return new_type(new FnTypeNode(*this, params));
