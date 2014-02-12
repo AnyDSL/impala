@@ -58,6 +58,8 @@ public:
     T* representative() const { return representative_; }
 
     template<class U> bool equal(Unifiable<U>* other) const {
+        // TODO one could try to unify both in advance
+        //      -> Problem: if one is not closed this leads to undefined behavior
         if (this->is_unified() && other->is_unified()) {
             return this->representative() == other->representative();
         }
