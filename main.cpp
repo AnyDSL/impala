@@ -69,9 +69,9 @@ void test_unification1() {
     tt.unify(h);
 
     //gh->dump();
-    //gh.representative()->dump();
+    //gh->dump();
     //h->dump();
-    //h.representative()->dump();
+    //h->dump();
 
     assert(f.is_unified());
     assert(g.is_unified());
@@ -100,12 +100,12 @@ void test_unification2() {
     tt.unify(g);
 
     //f->dump();
-    //f.representative()->dump();
+    //f->dump();
     //g->dump();
-    //g.representative()->dump();
+    //g->dump();
 
-    assert(g.representative() == f.representative());
-    assert(A.representative() == B.representative());
+    assert(g == f);
+    assert(A == B);
 
     tt.check_sanity();
     check_sanity({A, f, B, g});
@@ -140,10 +140,10 @@ void test_unification3() {
     assert(f2.is_unified());
     assert(g2.is_unified());
 
-    assert(f2.representative() == g2.representative());
+    assert(f2 == g2);
 
     assert(f1->equal(g1));
-    assert(f1.representative() == g1.representative());
+    assert(f1 == g1);
 
     TypeVar E = tt.typevar();
     TypeVar F = tt.typevar();
@@ -157,12 +157,12 @@ void test_unification3() {
 
     assert(h1.is_unified());
 
-    assert(f2.representative() != h2.representative());
+    assert(f2 != h2);
     assert(!f2->equal(h2));
 
     assert(f1 != h1);
     assert(!f1->equal(h1));
-    assert(f1.representative() != h1.representative());
+    assert(f1 != h1);
 
     TypeVar G = tt.typevar();
     TypeVar H = tt.typevar();
@@ -177,11 +177,11 @@ void test_unification3() {
     assert(k1.is_unified());
 
     assert(!f2->equal(k2));
-    assert(f2.representative() != k2.representative());
+    assert(f2 != k2);
 
     assert(f1 != k1);
     assert(!f1->equal(k1));
-    assert(f1.representative() != k1.representative());
+    assert(f1 != k1);
 
     tt.check_sanity();
     check_sanity({A, B, f1, f2,
@@ -208,7 +208,7 @@ void test_unification4() {
     assert(inst2.is_unified());
 
     assert(inst->equal(inst2));
-    assert(inst.representative() == inst2.representative());
+    assert(inst == inst2);
 
     TypeTrait* A = tt.typetrait(std::string("A"));
     TypeVar X = tt.typevar();
@@ -246,9 +246,9 @@ void test_unification5() {
     assert(clonableInst2.is_unified());
 
     assert(clonableInst->equal(clonableInst2));
-    assert(clonableInst.representative() == clonableInst2.representative());
+    assert(clonableInst == clonableInst2);
 
-    assert(f.representative() == g.representative());
+    assert(f == g);
 
     const TypeTrait* st = tt.typetrait(std::string("SomeTrait"));
     TypeTraitInstance stInst = tt.instantiate_trait(st, {});
@@ -264,9 +264,9 @@ void test_unification5() {
     assert(!st->equal(clonable));
     assert(!stInst->equal(clonableInst));
     assert(!stInst->equal(clonableInst2));
-    assert(stInst.representative() != clonableInst.representative());
+    assert(stInst != clonableInst);
 
-    assert(h.representative() != g.representative());
+    assert(h != g);
 
     tt.check_sanity();
     check_sanity({A, f, B, g, C, h});
@@ -309,8 +309,8 @@ void test_unification6() {
     assert(SA.is_unified());
     assert(SB.is_unified());
 
-    assert(A.representative() != B.representative());
-    assert(SA.representative() != SB.representative());
+    assert(A != B);
+    assert(SA != SB);
 
 
     TypeVar C = tt.typevar();
@@ -335,14 +335,14 @@ void test_unification6() {
     assert(SC.is_unified());
     assert(SD.is_unified());
 
-    assert(C.representative() != D.representative());
-    assert(SC.representative() != SD.representative());
+    assert(C != D);
+    assert(SC != SD);
 
-    assert(g.representative() == f.representative());
-    assert(C.representative() == A.representative());
-    assert(D.representative() == B.representative());
-    assert(SC.representative() == SA.representative());
-    assert(SD.representative() == SB.representative());
+    assert(g == f);
+    assert(C == A);
+    assert(D == B);
+    assert(SC == SA);
+    assert(SD == SB);
 
     tt.check_sanity();
     check_sanity({A, B, C, D, f, g});
@@ -388,9 +388,9 @@ void test_unification7() {
     assert(B.is_unified());
     assert(SB.is_unified());
 
-    assert(g.representative() == f.representative());
-    assert(B.representative() == A.representative());
-    assert(SB.representative() == SA.representative());
+    assert(g == f);
+    assert(B == A);
+    assert(SB == SA);
 
     tt.check_sanity();
     check_sanity({A, B, f, g});
@@ -441,7 +441,7 @@ void test_type_sanity3() {
     tt.unify(g);
 
     assert(g.is_unified());
-    assert(g.representative() != f.representative());
+    assert(g != f);
     assert(!g->equal(f));
 
     tt.check_sanity();

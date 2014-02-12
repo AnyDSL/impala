@@ -15,9 +15,30 @@
 #include "thorin/util/autoptr.h"
 #include "thorin/util/cast.h"
 
-class TypeTable;
+class FnTypeNode;
+class PrimTypeNode;
+class TupleTypeNode;
+class TypeVarNode;
 class TypeNode;
+class TypeErrorNode;
+
+class TypeTrait;
+class TypeTraitInstanceNode;
+
+class TypeTable;
+
 template<class T> class UnifiableProxy;
+
+typedef UnifiableProxy<TypeNode> Type;
+typedef UnifiableProxy<TypeErrorNode> TypeError;
+typedef UnifiableProxy<PrimTypeNode> PrimType;
+typedef UnifiableProxy<FnTypeNode> FnType;
+typedef UnifiableProxy<TupleTypeNode> TupleType;
+typedef UnifiableProxy<TypeVarNode> TypeVar;
+typedef UnifiableProxy<TypeTraitInstanceNode> TypeTraitInstance;
+typedef std::unordered_set<const TypeTrait*> TypeTraitSet;
+
+//------------------------------------------------------------------------------
 
 template<class T>
 class Unifiable {
@@ -36,11 +57,11 @@ public:
 
     T* representative() const { return representative_; }
 
-    template<class U> bool equal(Unifiable<U> other) const {
-        if (this->is_unified() && other.is_unified()) {
-            return this->representative() == other.representative();
+    template<class U> bool equal(Unifiable<U>* other) const {
+        if (this->is_unified() && other->is_unified()) {
+            return this->representative() == other->representative();
         }
-        return representative()->equal(other.representative());
+        return representative()->equal(other->representative());
     }
 
     template<class U> operator Unifiable<U>() { return Unifiable<U>((U*) representative_, unified_); }
@@ -81,16 +102,18 @@ public:
     {}
 
     bool empty() const { return node_ == nullptr; }
-    T* representative() const { return node()->representative(); }
     bool is_unified() const { return node()->is_unified(); }
-    T* deref() const { return node_->representative(); }
-    T* operator *() const { return deref(); }
-    bool operator == (const UnifiableProxy<T>& other) const { return this->deref()->equal(other.deref());; }
+    bool operator == (const UnifiableProxy<T>& other) const { return node()->equal(other.node());; }
     operator T*() const { return deref(); }
+
     T* operator -> () const { return deref(); }
     template<class U> operator UnifiableProxy<U>() { return UnifiableProxy<U>((Unifiable<U>*) node_); }
 
 private:
+    T* representative() const { return node()->representative(); }
+    T* deref() const { return representative(); }
+    T* operator *() const { return deref(); }
+
     Unifiable<T>* node() const { return node_; }
     void set_representative(T* repr) { node()->set_representative(repr); }
     void set_unified() { node_->set_unified(); }
@@ -98,30 +121,13 @@ private:
     Unifiable<T>* node_;
 
     friend class TypeTable;
+    friend class TypeNode;
+    friend class TypeVarNode;
+    friend class TypeTraitInstanceNode;
+    friend class TypeTraitInstanceHash;
+    friend class TypeTraitInstanceEqual;
+    friend void check_sanity(thorin::ArrayRef<const Type> types);
 };
-
-//------------------------------------------------------------------------------
-
-class FnTypeNode;
-class PrimTypeNode;
-class TupleTypeNode;
-class TypeVarNode;
-class TypeNode;
-class TypeErrorNode;
-
-class TypeTrait;
-class TypeTraitInstanceNode;
-
-class TypeTable;
-
-typedef UnifiableProxy<TypeNode> Type;
-typedef UnifiableProxy<TypeErrorNode> TypeError;
-typedef UnifiableProxy<PrimTypeNode> PrimType;
-typedef UnifiableProxy<FnTypeNode> FnType;
-typedef UnifiableProxy<TupleTypeNode> TupleType;
-typedef UnifiableProxy<TypeVarNode> TypeVar;
-typedef UnifiableProxy<TypeTraitInstanceNode> TypeTraitInstance;
-typedef std::unordered_set<const TypeTrait*> TypeTraitSet;
 
 //------------------------------------------------------------------------------
 
