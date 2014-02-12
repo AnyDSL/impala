@@ -508,14 +508,5 @@ int main() {
     //test_type_sanity5();
     //test_type_sanity6();
 
-    /*TypeTable tt;
-    PrimType pt = tt.type_int();
-    Unifiable<PrimTypeNode>* pupt = pt.node();
-    Unifiable<PrimTypeNode> upt = *pupt;
-    Unifiable<TypeNode> x = (Unifiable<TypeNode>) upt;
-    Unifiable<TypeNode>* y = (Unifiable<TypeNode>*) pupt;
-    Type t = pt;
-    TypeArray ta = {t};*/
-
     return 0;
 }
