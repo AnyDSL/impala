@@ -58,12 +58,8 @@ public:
     T* representative() const { return representative_; }
 
     template<class U> bool equal(Unifiable<U>* other) const {
-        // TODO one could try to unify both in advance
-        //      -> Problem: if one is not closed this leads to undefined behavior
-        if (this->is_unified() && other->is_unified()) {
-            return this->representative() == other->representative();
-        }
-        return representative()->equal(other->representative());
+        assert(this->is_unified() && other->is_unified());
+        return this->representative() == other->representative();
     }
 
     template<class U> operator Unifiable<U>() { return Unifiable<U>((U*) representative_, unified_); }
@@ -105,8 +101,8 @@ public:
 
     bool empty() const { return node_ == nullptr; }
     bool is_unified() const { return node()->is_unified(); }
-    bool operator == (const UnifiableProxy<T>& other) const { return node()->equal(other.node());; }
-    bool operator != (const UnifiableProxy<T>& other) const { return !node()->equal(other.node());; }
+    bool operator == (const UnifiableProxy<T>& other) { return equal(other); }
+    bool operator != (const UnifiableProxy<T>& other) { return !equal(other); }
     T* operator -> () const { return deref(); }
     template<class U> operator UnifiableProxy<U>() { return UnifiableProxy<U>((Unifiable<U>*) node_); }
 
@@ -115,6 +111,12 @@ private:
     T* deref() const { return representative(); }
     //T* operator *() const { return deref(); }
     //operator T*() const { return deref(); }
+
+    bool equal(const UnifiableProxy<T>& other) {
+        if (!this->is_unified()) representative()->typetable().unify(*this);
+        if (!other.is_unified()) representative()->typetable().unify(other);
+        return node()->equal(other.node());
+    }
 
     Unifiable<T>* node() const { return node_; }
     void set_representative(T* repr) { node()->set_representative(repr); }

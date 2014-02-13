@@ -57,6 +57,8 @@ private:
     static const std::string top_trait_name;
 
 public:
+    TypeTable& typetable() const { return typetable_; }
+
     virtual bool equal(const GenericElement* t) const;
     bool equal(const TypeTrait* t) const;
     size_t hash() const;
@@ -92,6 +94,9 @@ private:
     Type var_inst_(size_t i) const { return var_instances_[i]; }
 
 public:
+    const TypeTrait* trait() const { return trait_; }
+    TypeTable& typetable() const { return trait()->typetable(); }
+
     bool equal(TypeTraitInstance t) const { return equal(t.representative()); }
     bool equal(const TypeTraitInstanceNode* t) const;
     size_t hash() const;
