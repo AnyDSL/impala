@@ -185,6 +185,7 @@ void TypeTable::unify_base(Type type) {
 //const TypeTraitInstance* TypeTable::unify_trait_inst(TypeTraitInstance* trait_inst) {
 void TypeTable::unify(TypeTraitInstance trait_inst) {
     assert(!trait_inst.is_unified() && "trait instance already unified");
+    assert(trait_inst->is_closed() && "Only closed trait instances can be unified!");
 
     auto i = trait_instances_.find(trait_inst.representative());
     if (i != trait_instances_.end()) {
