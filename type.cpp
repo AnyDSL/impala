@@ -6,6 +6,8 @@
 
 using namespace thorin;
 
+namespace impala {
+
 int TypeVarNode::counter = 0;
 
 //------------------------------------------------------------------------------
@@ -219,5 +221,7 @@ void check_sanity(thorin::ArrayRef<const Type> types) {
             }
         }
     }
+}
+
 }
 

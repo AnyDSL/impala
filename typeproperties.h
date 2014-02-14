@@ -15,6 +15,8 @@
 #include "thorin/util/autoptr.h"
 #include "thorin/util/cast.h"
 
+namespace impala {
+
 class FnTypeNode;
 class PrimTypeNode;
 class TupleTypeNode;
@@ -154,5 +156,7 @@ protected:
     std::vector<TypeVar> bound_vars_;
     std::string bound_vars_to_string() const;
 };
+
+}
 
 #endif

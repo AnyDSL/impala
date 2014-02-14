@@ -11,6 +11,8 @@
 #include "type.h"
 #include "trait.h"
 
+namespace impala {
+
 std::string GenericElement::bound_vars_to_string() const {
     std::string result;
 
@@ -51,4 +53,6 @@ void GenericElement::add_bound_var(TypeVar v) {
 
     v->bind(this);
     bound_vars_.push_back(v);
+}
+
 }

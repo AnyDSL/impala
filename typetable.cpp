@@ -7,6 +7,8 @@
 
 #include "typetable.h"
 
+namespace impala {
+
 // This deletes all unifiables and the non-unified type nodes
 UnifiableSet::~UnifiableSet() {
     for (auto t : trait_instances_) delete t;
@@ -222,5 +224,7 @@ void TypeTable::check_sanity() const {
             assert(i != types_.end());
         }
     }
+
+}
 
 }

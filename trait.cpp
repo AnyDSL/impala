@@ -7,6 +7,8 @@
 
 #include "trait.h"
 
+namespace impala {
+
 const std::string TypeTrait::top_trait_name = std::string("");
 
 bool TypeTrait::equal(const GenericElement* other) const {
@@ -84,4 +86,6 @@ std::string TypeTraitInstanceNode::to_string() const {
     }
 
     return result + ">";
+}
+
 }

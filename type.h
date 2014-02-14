@@ -8,6 +8,8 @@
 
 #include "typeproperties.h"
 
+namespace impala {
+
 struct TypeTraitInstanceHash { size_t operator () (const TypeTraitInstance t) const { return thorin::hash_value(t.representative()); } };
 struct TypeTraitInstanceEqual { bool operator () (const TypeTraitInstance t1, const TypeTraitInstance t2) const { return t1.representative() == t2.representative(); } };
 typedef std::unordered_set<TypeTraitInstance, TypeTraitInstanceHash, TypeTraitInstanceEqual> TypeTraitInstSet;
@@ -236,5 +238,7 @@ public:
  * both are unified and t1 equals t2 then they have the same representative.
  */
 void check_sanity(thorin::ArrayRef<const Type> types);
+
+}
 
 #endif

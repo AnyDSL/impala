@@ -10,6 +10,8 @@
 
 #include "type.h"
 
+namespace impala {
+
 struct TypeTraitMethod {
     std::string name;
     FnType type;
@@ -115,5 +117,7 @@ public:
 
     friend class TypeTable;
 };
+
+}
 
 #endif /* TRAIT_H_ */

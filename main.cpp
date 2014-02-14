@@ -3,6 +3,7 @@
 #include "typetable.h"
 
 using namespace std;
+using namespace impala;
 
 void simple_tests() {
     TypeTable tt;

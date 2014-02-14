@@ -11,6 +11,8 @@
 #include "type.h"
 #include "trait.h"
 
+namespace impala {
+
 //struct TypeTraitHash { size_t operator () (const TypeTrait* t) const { return t->hash(); } };
 //struct TypeTraitEqual { bool operator () (const TypeTrait* t1, const TypeTrait* t2) const { return t1->equal(t2); } };
 //typedef std::unordered_set<TypeTrait*, TypeTraitHash, TypeTraitEqual> TraitTableSet;
@@ -138,5 +140,6 @@ private:
     TypeTraitInstance top_trait_inst_;
 };
 
+}
 
 #endif /* TYPETABLE_H_ */
