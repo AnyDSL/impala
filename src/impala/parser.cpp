@@ -164,14 +164,14 @@ public:
     bool parse_return_param(Params&);
 
     // types
-    const Type*      parse_type();
-    const ArrayType* parse_array_type();
-    const Type*      parse_return_type(bool& noret);
-    const FnType*    parse_fn_type();
-    const PrimType*  parse_prim_type();
-    const PtrType*   parse_ptr_type();
-    const TupleType* parse_tuple_type();
-    const TypeApp*   parse_type_app();
+    const ASTType*      parse_type();
+    const ArrayASTType* parse_array_type();
+    const ASTType*      parse_return_type(bool& noret);
+    const FnASTType*    parse_fn_type();
+    const PrimASTType*  parse_prim_type();
+    const PtrASTType*   parse_ptr_type();
+    const TupleASTType* parse_tuple_type();
+    const ASTTypeApp*   parse_type_app();
 
     // items
     Item*       parse_item();
@@ -359,7 +359,7 @@ const Param* Parser::parse_param(bool lambda) {
     auto param = loc(new Param(cur_var_handle++));
     param->is_mut_ = accept(Token::MUT);
     Symbol symbol;
-    const Type* type = nullptr;
+    const ASTType* type = nullptr;
     auto location = la().loc();
 
     if (la() == Token::ID)
@@ -384,7 +384,7 @@ const Param* Parser::parse_param(bool lambda) {
         param->symbol_ = symbol;
     } else {
         if (type == nullptr) {
-            auto type_app = new TypeApp();
+            auto type_app = new ASTTypeApp();
             type_app->set_loc(location);
             type = type_app;
         }
@@ -599,7 +599,7 @@ const FieldDecl* Parser::parse_field_decl() {
  * types
  */
 
-const Type* Parser::parse_type() {
+const ASTType* Parser::parse_type() {
     switch (la()) {
 #define IMPALA_TYPE(itype, atype) \
         case Token::TYPE_##itype:
@@ -613,17 +613,17 @@ const Type* Parser::parse_type() {
         case Token::AND:        return parse_ptr_type();
         default:  {
             error("type", ""); 
-            auto error_type = new ErrorType();
+            auto error_type = new ErrorASTType();
             lex(); 
             return error_type;
         }
     }
 }
 
-const ArrayType* Parser::parse_array_type() {
+const ArrayASTType* Parser::parse_array_type() {
     auto pos1 = la().pos1();
     eat(Token::L_BRACKET);
-    const Type* elem_type = parse_type();
+    const ASTType* elem_type = parse_type();
     if (accept(Token::MUL)) {
         u64 dim;
         switch (la()) {
@@ -636,7 +636,7 @@ const ArrayType* Parser::parse_array_type() {
                 error("integer literal", "definite array type");
         }
         lex();
-        auto definite_array = new DefiniteArrayType();
+        auto definite_array = new DefiniteArrayASTType();
         definite_array->elem_type_ = elem_type;
         definite_array->dim_ = dim;
         expect(Token::R_BRACKET, "definite array type");
@@ -644,15 +644,15 @@ const ArrayType* Parser::parse_array_type() {
         return definite_array;
     }
 
-    auto indefinite_array = new IndefiniteArrayType();
+    auto indefinite_array = new IndefiniteArrayASTType();
     indefinite_array->elem_type_ = elem_type;
     expect(Token::R_BRACKET, "indefinite array type");
     indefinite_array->set_loc(pos1, prev_loc().pos2());
     return indefinite_array;
 }
 
-const FnType* Parser::parse_fn_type() {
-    auto fn_type = loc(new FnType());
+const FnASTType* Parser::parse_fn_type() {
+    auto fn_type = loc(new FnASTType());
     eat(Token::FN);
     parse_type_params(fn_type->type_params_);
     expect(Token::L_PAREN, "function type");
@@ -662,7 +662,7 @@ const FnType* Parser::parse_fn_type() {
 
     if (accept(Token::ARROW)) { // TODO remove copy/paste
         if (!accept(Token::NOT)) { // if not "no-return"
-            auto ret_type = loc(new FnType());
+            auto ret_type = loc(new FnASTType());
             ret_type->elems_.push_back(parse_type());
             fn_type->elems_.push_back(ret_type);
         }
@@ -671,7 +671,7 @@ const FnType* Parser::parse_fn_type() {
     return fn_type;
 }
 
-const Type* Parser::parse_return_type(bool& noret) {
+const ASTType* Parser::parse_return_type(bool& noret) {
     noret = false;
 
     if (accept(Token::ARROW)) {
@@ -679,14 +679,14 @@ const Type* Parser::parse_return_type(bool& noret) {
             noret = true; // if "no-return" specified
             return nullptr;
         }
-        auto ret_type = loc(new FnType());
+        auto ret_type = loc(new FnASTType());
         if (accept(Token::L_PAREN)) {                   // in-place tuple
             parse_comma_list(Token::R_PAREN, "closing parenthesis of return type list", [&] { 
                 ret_type->elems_.push_back(parse_type()); 
             });
         } else {
             auto type = parse_type();
-            assert(!type->isa<TupleType>());
+            assert(!type->isa<TupleASTType>());
             ret_type->elems_.push_back(type);
         }
         return ret_type;
@@ -694,21 +694,21 @@ const Type* Parser::parse_return_type(bool& noret) {
     return nullptr;
 }
 
-const PrimType* Parser::parse_prim_type() {
-    auto prim_type = loc(new PrimType());
-    prim_type->kind_ = (PrimType::Kind) lex().kind();
+const PrimASTType* Parser::parse_prim_type() {
+    auto prim_type = loc(new PrimASTType());
+    prim_type->kind_ = (PrimASTType::Kind) lex().kind();
     return prim_type;
 }
 
-const PtrType* Parser::parse_ptr_type() {
-    auto ptr_type = loc(new PtrType());
+const PtrASTType* Parser::parse_ptr_type() {
+    auto ptr_type = loc(new PtrASTType());
     ptr_type->kind_ = lex().symbol().str()[0];
     ptr_type->referenced_type_ = parse_type();
     return ptr_type;
 }
 
-const TupleType* Parser::parse_tuple_type() {
-    auto tuple_type = loc(new TupleType());
+const TupleASTType* Parser::parse_tuple_type() {
+    auto tuple_type = loc(new TupleASTType());
     eat(Token::L_PAREN);
     parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple type", [&] { 
         tuple_type->elems_.push_back(parse_type()); 
@@ -716,8 +716,8 @@ const TupleType* Parser::parse_tuple_type() {
     return tuple_type;
 }
 
-const TypeApp* Parser::parse_type_app() {
-    auto type_app = loc(new TypeApp());
+const ASTTypeApp* Parser::parse_type_app() {
+    auto type_app = loc(new ASTTypeApp());
     type_app->symbol_ = lex().symbol();
     if (accept(Token::L_BRACKET)) {
         parse_comma_list(Token::R_BRACKET, "type arguments for type application", [&] { 

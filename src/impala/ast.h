@@ -33,10 +33,10 @@ class TypeParam;
 class Printer;
 class Sema;
 class Stmt;
-class Type;
+class ASTType;
 class TypeNode;
 
-typedef thorin::AutoVector<const Type*> Types;
+typedef thorin::AutoVector<const ASTType*> Types;
 typedef thorin::AutoVector<const Expr*> Exprs;
 typedef thorin::AutoVector<const FieldDecl*> Fields;
 typedef thorin::AutoVector<const Item*> Items;
@@ -70,7 +70,7 @@ private:
     friend class Parser;
 };
 
-class ParametricType {
+class ParametricASTType {
 public:
     const TypeParam* type_param(size_t i) const { return type_params_[i]; }
     thorin::ArrayRef<const TypeParam*> type_params() const { return type_params_; }
@@ -127,14 +127,14 @@ private:
  * types
  */
 
-class Type : public ASTNode {};
+class ASTType : public ASTNode {};
 
-class ErrorType : public Type {
+class ErrorASTType : public ASTType {
 public:
     virtual std::ostream& print(Printer&) const;
 };
 
-class PrimType : public Type {
+class PrimASTType : public ASTType {
 public:
     enum Kind {
 #define IMPALA_TYPE(itype, atype) TYPE_##itype = Token::TYPE_##itype,
@@ -150,37 +150,37 @@ private:
     friend class Parser;
 };
 
-class PtrType : public Type {
+class PtrASTType : public ASTType {
 public:
     char kind() const { assert(is_owned() || is_borrowed()); return kind_; }
-    const Type* referenced_type() const { return referenced_type_; }
+    const ASTType* referenced_type() const { return referenced_type_; }
     bool is_owned() const { return kind_ == '~'; }
     bool is_borrowed() const { return kind_ == '&'; }
     virtual std::ostream& print(Printer&) const;
 
 private:
     char kind_;
-    thorin::AutoPtr<const Type> referenced_type_;
+    thorin::AutoPtr<const ASTType> referenced_type_;
 
     friend class Parser;
 };
 
-class ArrayType : public Type {
+class ArrayASTType : public ASTType {
 public:
-    const Type* elem_type() const { return elem_type_; }
+    const ASTType* elem_type() const { return elem_type_; }
 
 protected:
-    thorin::AutoPtr<const Type> elem_type_;
+    thorin::AutoPtr<const ASTType> elem_type_;
 
     friend class Parser;
 };
 
-class IndefiniteArrayType : public ArrayType {
+class IndefiniteArrayASTType : public ArrayASTType {
 public:
     virtual std::ostream& print(Printer&) const;
 };
 
-class DefiniteArrayType : public ArrayType {
+class DefiniteArrayASTType : public ArrayASTType {
 public:
     uint64_t dim() const { return dim_; }
     virtual std::ostream& print(Printer&) const;
@@ -191,10 +191,10 @@ private:
     friend class Parser;
 };
 
-class CompoundType : public Type {
+class CompoundASTType : public ASTType {
 public:
-    thorin::ArrayRef<const Type*> elems() const { return elems_; }
-    const Type* elem(size_t i) const { return elems_[i]; }
+    thorin::ArrayRef<const ASTType*> elems() const { return elems_; }
+    const ASTType* elem(size_t i) const { return elems_[i]; }
 
 protected:
     Types elems_;
@@ -202,12 +202,12 @@ protected:
     friend class Parser;
 };
 
-class TupleType : public CompoundType {
+class TupleASTType : public CompoundASTType {
 public:
     virtual std::ostream& print(Printer&) const;
 };
 
-class TypeApp : public CompoundType {
+class ASTTypeApp : public CompoundASTType {
 public:
     Symbol symbol() const { return symbol_; }
     virtual std::ostream& print(Printer&) const;
@@ -218,9 +218,9 @@ private:
     friend class Parser;
 };
 
-class FnType : public ParametricType, public CompoundType {
+class FnASTType : public ParametricASTType, public CompoundASTType {
 public:
-    const FnType* ret_fn_type() const;
+    const FnASTType* ret_fn_type() const;
     virtual std::ostream& print(Printer&) const;
 
     friend class Parser;
@@ -253,7 +253,7 @@ class TypeDecl : public Decl {
 };
 
 /// Base class for all \p Type declarations having \p TypeParams.
-class ParametricTypeDecl : public ParametricType, public Decl {
+class ParametricTypeDecl : public ParametricASTType, public Decl {
     friend class Parser;
 };
 
@@ -266,11 +266,11 @@ public:
     {}
 
     /// original type.
-    const Type* type() const { return type_; }
+    const ASTType* type() const { return type_; }
     bool is_mut() const { return is_mut_; }
 
 protected:
-    thorin::AutoPtr<const Type> type_;
+    thorin::AutoPtr<const ASTType> type_;
     bool is_mut_;
 
     friend class Parser;
@@ -395,14 +395,14 @@ class ForeignMod : public Item, public ParametricTypeDecl {
 
 class Typedef : public Item, public ParametricTypeDecl {
 public:
-    const Type* type() const { return type_; }
+    const ASTType* type() const { return type_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(Sema& sema) const;
     virtual void check_head(Sema& sema) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    thorin::AutoPtr<const Type> type_;
+    thorin::AutoPtr<const ASTType> type_;
 
     friend class Parser;
 };
@@ -445,7 +445,7 @@ class StaticItem : public Item, public ValueDecl {
 public:
     bool is_mut() const { return is_mut_; }
     Symbol symbol() const { return symbol_; }
-    const Type* type() const { return type_; }
+    const ASTType* type() const { return type_; }
     const Expr* init() const { return init_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(Sema& sema) const;
@@ -455,13 +455,13 @@ public:
 private:
     bool is_mut_;
     Symbol symbol_;
-    thorin::AutoPtr<const Type> type_;
+    thorin::AutoPtr<const ASTType> type_;
     thorin::AutoPtr<const Expr> init_;;
 
     friend class Parser;
 };
 
-class FnDecl : public ParametricType, public Item, public ValueDecl {
+class FnDecl : public ParametricASTType, public Item, public ValueDecl {
 public:
     const Fn& fn() const { return fn_; }
     bool is_extern() const { return extern_; }
@@ -495,7 +495,7 @@ private:
 
 class Impl : public Item, public ParametricTypeDecl {
 public:
-    const Type* for_type() const { return for_type_; }
+    const ASTType* for_type() const { return for_type_; }
     const Methods& methods() const { return methods_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(Sema& sema) const;
@@ -503,7 +503,7 @@ public:
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    thorin::AutoPtr<const Type> for_type_;
+    thorin::AutoPtr<const ASTType> for_type_;
     Methods methods_;
 
     friend class Parser;
@@ -717,14 +717,14 @@ private:
 class CastExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
-    const Type* as() const { return as_; }
+    const ASTType* as() const { return as_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(Sema& sema) const;
 
 private:
     thorin::AutoPtr<const Expr> lhs_;
-    thorin::AutoPtr<const Type> as_;
+    thorin::AutoPtr<const ASTType> as_;
 
     friend class Parser;
 };
@@ -762,7 +762,7 @@ private:
 class IndefiniteArrayExpr : public Expr {
 public:
     const Expr* size() const { return size_; }
-    const Type* elem_type() const { return elem_type_; }
+    const ASTType* elem_type() const { return elem_type_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(Sema& sema) const;
@@ -770,7 +770,7 @@ public:
 
 private:
     thorin::AutoPtr<const Expr> size_;
-    thorin::AutoPtr<const Type> elem_type_;
+    thorin::AutoPtr<const ASTType> elem_type_;
 
     friend class Parser;
 };

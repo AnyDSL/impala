@@ -10,9 +10,9 @@ const char* Visibility::str() {
     return "";
 }
 
-const FnType* FnType::ret_fn_type() const { 
+const FnASTType* FnASTType::ret_fn_type() const {
     if (!elems().empty()) {
-        if (auto fn_type = elems().back()->isa<FnType>())
+        if (auto fn_type = elems().back()->isa<FnASTType>())
             return fn_type;
     }
     return nullptr;

@@ -11,7 +11,7 @@ namespace impala {
 
 class ASTNode;
 class Stmt;
-class Type;
+class ASTType;
 
 class Printer : public thorin::Printer {
 public:

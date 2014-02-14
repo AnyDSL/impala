@@ -22,7 +22,7 @@ void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; 
 std::ostream& PathItem::print(Printer& p) const { 
     p.stream() << symbol();
     if (!types().empty())
-        p.dump_list([&] (const Type* type) { type->print(p); }, types(), "[", "]");
+        p.dump_list([&] (const ASTType* type) { type->print(p); }, types(), "[", "]");
 
     return p.stream();
 }
@@ -36,32 +36,32 @@ std::ostream& Path::print(Printer& p) const {
  * types
  */
 
-std::ostream& ErrorType::print(Printer& p) const { return p.stream() << "<error>"; }
+std::ostream& ErrorASTType::print(Printer& p) const { return p.stream() << "<error>"; }
 
-std::ostream& PtrType::print(Printer& p) const { 
+std::ostream& PtrASTType::print(Printer& p) const {
     p.stream() << kind();
     return referenced_type()->print(p);
 }
 
-std::ostream& DefiniteArrayType::print(Printer& p) const { 
+std::ostream& DefiniteArrayASTType::print(Printer& p) const {
     p.stream() << '[';
     return elem_type()->print(p) << " * " << dim() << ']';
 }
 
-std::ostream& IndefiniteArrayType::print(Printer& p) const { 
+std::ostream& IndefiniteArrayASTType::print(Printer& p) const {
     p.stream() << '[';
     return elem_type()->print(p) << ']';
 }
 
-std::ostream& TupleType::print(Printer& p) const { 
-    return p.dump_list([&] (const Type* elem) { elem->print(p); }, elems(), "(", ")");
+std::ostream& TupleASTType::print(Printer& p) const {
+    return p.dump_list([&] (const ASTType* elem) { elem->print(p); }, elems(), "(", ")");
 }
 
-std::ostream& FnType::print(Printer& p) const { 
+std::ostream& FnASTType::print(Printer& p) const {
     auto ret = ret_fn_type();
     p.stream() << "fn";
     print_type_params(p);
-    p.dump_list([&] (const Type* elem) { elem->print(p); }, ret != nullptr ? elems().slice_num_from_end(1) : elems(), "(", ")");
+    p.dump_list([&] (const ASTType* elem) { elem->print(p); }, ret != nullptr ? elems().slice_num_from_end(1) : elems(), "(", ")");
     if (ret != nullptr) {
         p.stream() << " -> ";
         ret->print(p);
@@ -69,14 +69,14 @@ std::ostream& FnType::print(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& TypeApp::print(Printer& p) const { 
+std::ostream& ASTTypeApp::print(Printer& p) const {
     p.stream() << symbol();
     if (!elems().empty())
-        p.dump_list([&] (const Type* elem) { elem->print(p); }, elems(), "[", "]");
+        p.dump_list([&] (const ASTType* elem) { elem->print(p); }, elems(), "[", "]");
     return p.stream();
 }
 
-std::ostream& PrimType::print(Printer& p) const { 
+std::ostream& PrimASTType::print(Printer& p) const {
     switch (kind()) {
 #define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return p.stream() << #itype;
 #include "impala/tokenlist.h"
@@ -91,10 +91,10 @@ std::ostream& PrimType::print(Printer& p) const {
 
 std::ostream& TypeParam::print(Printer& p) const {
     p.stream() << symbol() << (bounds_.empty() ? "" : ": ");
-    return p.dump_list([&] (const Type* type) { type->print(p); }, bounds(), "", "", " + ");
+    return p.dump_list([&] (const ASTType* type) { type->print(p); }, bounds(), "", "", " + ");
 }
 
-std::ostream& ParametricType::print_type_params(Printer& p) const {
+std::ostream& ParametricASTType::print_type_params(Printer& p) const {
     if (!type_params().empty())
         p.dump_list([&] (const TypeParam* type_param) { type_param->print(p); }, type_params(), "[", "]");
     return p.stream();
@@ -141,9 +141,9 @@ std::ostream& FnDecl::print(Printer& p) const {
     p.stream() << "fn " << symbol();
     print_type_params(p);
 
-    const FnType* ret = nullptr;
+    const FnASTType* ret = nullptr;
     if (!fn().params().empty() && fn().params().back()->symbol() == "return") {
-        if (auto fntype = fn().params().back()->type()->isa<FnType>())
+        if (auto fntype = fn().params().back()->type()->isa<FnASTType>())
             ret = fntype;
     }
 
@@ -156,7 +156,7 @@ std::ostream& FnDecl::print(Printer& p) const {
         if (ret->elems().size() == 1)
             ret->elem(0)->print(p);
         else
-            p.dump_list([&] (const Type* type) { type->print(p); }, ret->elems(), "(", ")", ", ");
+            p.dump_list([&] (const ASTType* type) { type->print(p); }, ret->elems(), "(", ")", ", ");
     }
 
     if (auto body = fn().body()) {
@@ -377,11 +377,11 @@ std::ostream& FnExpr::print(Printer& p) const {
 
     if (has_return_type_) {
         p.stream() << "-> ";
-        auto ret = fn().params().back()->as<FnType>();
+        auto ret = fn().params().back()->as<FnASTType>();
         if (ret->elems().size() == 1)
             ret->elem(0)->print(p);
         else
-            p.dump_list([&] (const Type* type) { type->print(p); }, ret->elems(), "(", ")", ", ");
+            p.dump_list([&] (const ASTType* type) { type->print(p); }, ret->elems(), "(", ")", ", ");
     }
 
     return fn().body()->print(p);
