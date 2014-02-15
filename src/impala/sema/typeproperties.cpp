@@ -5,11 +5,11 @@
  *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
  */
 
-#include "typeproperties.h"
+#include "impala/sema/typeproperties.h"
 
 #include "thorin/util/assert.h"
-#include "type.h"
-#include "trait.h"
+#include "impala/sema/type.h"
+#include "impala/sema/trait.h"
 
 namespace impala {
 

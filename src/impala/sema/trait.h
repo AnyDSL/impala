@@ -8,7 +8,7 @@
 #ifndef TRAIT_H_
 #define TRAIT_H_
 
-#include "type.h"
+#include "impala/sema/type.h"
 
 namespace impala {
 

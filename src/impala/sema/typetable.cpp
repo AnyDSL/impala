@@ -5,7 +5,7 @@
  *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
  */
 
-#include "typetable.h"
+#include "impala/sema/typetable.h"
 
 namespace impala {
 

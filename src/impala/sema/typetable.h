@@ -8,8 +8,8 @@
 #ifndef TYPETABLE_H_
 #define TYPETABLE_H_
 
-#include "type.h"
-#include "trait.h"
+#include "impala/sema/type.h"
+#include "impala/sema/trait.h"
 
 namespace impala {
 

@@ -1,6 +1,6 @@
-#include "type.h"
-#include "trait.h"
-#include "typetable.h"
+#include "impala/sema/type.h"
+#include "impala/sema/trait.h"
+#include "impala/sema/typetable.h"
 
 #include <iostream>
 

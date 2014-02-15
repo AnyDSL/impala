@@ -6,7 +6,7 @@
 #include "thorin/util/array.h"
 #include "thorin/util/hash.h"
 
-#include "typeproperties.h"
+#include "impala/sema/typeproperties.h"
 
 namespace impala {
 

@@ -5,7 +5,7 @@
  *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
  */
 
-#include "trait.h"
+#include "impala/sema/trait.h"
 
 namespace impala {
 
