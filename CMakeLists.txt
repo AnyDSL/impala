@@ -1,6 +1,0 @@
-cmake_minimum_required(VERSION 2.8)
-project(test) 
-add_definitions( "-std=c++11 -fprofile-arcs -ftest-coverage" )
-file(GLOB SRC *.cpp *.h )
-add_executable(test ${SRC} )
-target_link_libraries(test -fprofile-arcs)
