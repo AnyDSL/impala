@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "thorin/util/array.h"
-#include "thorin/util/autoptr.h"
 #include "thorin/util/cast.h"
 
 namespace impala {
