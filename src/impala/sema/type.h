@@ -42,8 +42,6 @@ protected:
         , elems_(size)
     {}
 
-    std::vector<Type> elems_; ///< The operands of this type constructor.
-
     void set(size_t i, Type n) { elems_[i] = n; }
     Type elem_(size_t i) const { return elems_[i]; }
 
@@ -96,6 +94,9 @@ private:
 
     TypeTable& typetable_;
     const Kind kind_;
+
+protected:
+    std::vector<Type> elems_; ///< The operands of this type constructor.
 
     friend class TypeTable;
 };
