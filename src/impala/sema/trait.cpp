@@ -56,7 +56,7 @@ bool TypeTraitInstanceNode::equal(const TypeTraitInstanceNode* other) const {
         return false;
 
     assert(var_instances_.size() == other->var_instances_.size());
-    for (int i = 0; i < var_instances_.size(); ++i) {
+    for (size_t i = 0; i < var_instances_.size(); ++i) {
         if (! var_instances_[i].representative()->equal(other->var_instances_[i].representative())) {
             return false;
         }
