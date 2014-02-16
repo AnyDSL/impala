@@ -14,6 +14,7 @@
 #include "impala/location.h"
 #include "impala/symbol.h"
 #include "impala/token.h"
+#include "impala/sema/typeproperties.h"
 
 namespace thorin {
     class Enter;
@@ -34,7 +35,6 @@ class Printer;
 class Sema;
 class Stmt;
 class ASTType;
-class TypeNode;
 
 typedef thorin::AutoVector<const ASTType*> Types;
 typedef thorin::AutoVector<const Expr*> Exprs;
@@ -517,14 +517,14 @@ private:
 
 class Expr : public ASTNode {
 public:
-    const TypeNode* type() const { return type_; }
+    const Type type() const { return type_; }
     virtual bool is_lvalue() const = 0;
     virtual void check(Sema& sema) const = 0;
     virtual thorin::RefPtr emit(CodeGen& cg) const { /*= 0*/ return 0; }
     virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {}
 
 private:
-    mutable const TypeNode* type_;
+    mutable Type type_;
     friend class Parser;
 };
 
