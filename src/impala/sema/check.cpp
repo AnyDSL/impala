@@ -1,10 +1,11 @@
 #include "impala/ast.h"
 #include "impala/dump.h"
 #include "impala/sema/scopetable.h"
+#include "impala/sema/typetable.h"
 
 namespace impala {
 
-class Sema : public ScopeTable {
+class Sema : public ScopeTable, public TypeTable {
 public:
     Sema(bool nossa)
         : cur_fn_(nullptr)
