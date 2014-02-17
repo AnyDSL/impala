@@ -173,7 +173,7 @@ void TypeVarNode::bind(const GenericElement* const e) {
     bound_at_ = e;
 }
 
-void TypeVarNode::add_restriction(TypeTraitInstance restriction) {
+void TypeVarNode::add_restriction(TraitInstance restriction) {
     assert(!is_closed() && "Closed type variables must not be changed!");
     auto p = restricted_by_.insert(restriction);
     assert(p.second && "hash/equal broken");

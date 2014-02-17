@@ -23,8 +23,8 @@ class TypeVarNode;
 class TypeNode;
 class TypeErrorNode;
 
-class TypeTrait;
-class TypeTraitInstanceNode;
+class Trait;
+class TraitInstanceNode;
 
 class TypeTable;
 
@@ -36,9 +36,9 @@ typedef UnifiableProxy<PrimTypeNode> PrimType;
 typedef UnifiableProxy<FnTypeNode> FnType;
 typedef UnifiableProxy<TupleTypeNode> TupleType;
 typedef UnifiableProxy<TypeVarNode> TypeVar;
-typedef UnifiableProxy<TypeTraitInstanceNode> TypeTraitInstance;
+typedef UnifiableProxy<TraitInstanceNode> TraitInstance;
 // TODO I don't think we need this set - we can grab the super traits via TraitDecl
-typedef std::unordered_set<const TypeTrait*> TypeTraitSet;
+typedef std::unordered_set<const Trait*> TraitSet;
 
 //------------------------------------------------------------------------------
 
@@ -126,9 +126,9 @@ private:
     friend class TypeTable;
     friend class TypeNode;
     friend class TypeVarNode;
-    friend class TypeTraitInstanceNode;
-    friend class TypeTraitInstanceHash;
-    friend class TypeTraitInstanceEqual;
+    friend class TraitInstanceNode;
+    friend class TraitInstanceHash;
+    friend class TraitInstanceEqual;
     friend void verify(thorin::ArrayRef<const Type> types);
 };
 

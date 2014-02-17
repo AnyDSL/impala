@@ -14,7 +14,7 @@ namespace impala {
 
 class TraitDecl;
 
-struct TypeTraitMethod {
+struct TraitMethod {
     std::string name;
     FnType type;
 };
@@ -30,22 +30,22 @@ struct TypeTraitMethod {
  * allowed (I guess):
  * @code trait TT<X:TT<Self>> {}; impl TT<int> for int {} @endcode
  *
- * @see TypeTraitInstance
+ * @see TraitInstance
  */
-class TypeTrait : public GenericElement {
+class Trait : public GenericElement {
 private:
-    TypeTrait(TypeTable& tt, const TraitDecl* trait_decl, const TypeTraitSet super_traits)
+    Trait(TypeTable& tt, const TraitDecl* trait_decl, const TraitSet super_traits)
         : typetable_(tt)
         , trait_decl_(trait_decl)
         , super_traits_(super_traits)
     {}
-    TypeTrait& operator = (const TypeTrait&); ///< Do not copy-assign a \p TypeTrait.
-    TypeTrait(const TypeTrait& node);         ///< Do not copy-construct a \p TypeTrait.
+    Trait& operator = (const Trait&); ///< Do not copy-assign a \p Trait.
+    Trait(const Trait& node);         ///< Do not copy-construct a \p Trait.
 
 public:
     TypeTable& typetable() const { return typetable_; }
     virtual bool equal(const GenericElement* t) const;
-    bool equal(const TypeTrait* other) const { return this->trait_decl() == other->trait_decl(); }
+    bool equal(const Trait* other) const { return this->trait_decl() == other->trait_decl(); }
     size_t hash() const { return thorin::hash_value(trait_decl()); }
     const TraitDecl* trait_decl() const { return trait_decl_; }
     std::string to_string() const;
@@ -55,8 +55,8 @@ public:
 private:
     TypeTable& typetable_;
     const TraitDecl* const trait_decl_;
-    const TypeTraitSet super_traits_;
-    std::vector<const TypeTraitMethod*> methods_;
+    const TraitSet super_traits_;
+    std::vector<const TraitMethod*> methods_;
     static const std::string top_trait_name;
 
     friend class TypeTable;
@@ -66,19 +66,19 @@ private:
  * An instance of a trait is a trait where all generic type variables are
  * instantiated by concrete types.
  */
-class TypeTraitInstanceNode : public thorin::MagicCast<TypeTraitInstanceNode> {
+class TraitInstanceNode : public thorin::MagicCast<TraitInstanceNode> {
 private:
-    TypeTraitInstanceNode(const TypeTrait* trait, thorin::ArrayRef<Type> var_instances);
-    TypeTraitInstanceNode& operator = (const TypeTraitInstanceNode&); ///< Do not copy-assign a \p TypeTraitInstance.
-    TypeTraitInstanceNode(const TypeTraitInstanceNode& node);         ///< Do not copy-construct a \p TypeTraitInstance.
+    TraitInstanceNode(const Trait* trait, thorin::ArrayRef<Type> var_instances);
+    TraitInstanceNode& operator = (const TraitInstanceNode&); ///< Do not copy-assign a \p TraitInstance.
+    TraitInstanceNode(const TraitInstanceNode& node);         ///< Do not copy-construct a \p TraitInstance.
 
     Type var_inst_(size_t i) const { return var_instances_[i]; }
 
 public:
-    const TypeTrait* trait() const { return trait_; }
+    const Trait* trait() const { return trait_; }
     TypeTable& typetable() const { return trait()->typetable(); }
-    bool equal(TypeTraitInstance t) const { return equal(t.representative()); }
-    bool equal(const TypeTraitInstanceNode* t) const;
+    bool equal(TraitInstance t) const { return equal(t.representative()); }
+    bool equal(const TraitInstanceNode* t) const;
     size_t hash() const;
     const Type var_inst(size_t i) const { return var_instances_[i]; }
     /// Returns number of variables instances.
@@ -87,21 +87,21 @@ public:
     std::string to_string() const;
 
 private:
-    const TypeTrait* trait_;
+    const Trait* trait_;
     std::vector<Type> var_instances_;
 
     friend class TypeTable;
 };
 
-struct TypeTraitInstanceNodeHash { 
-    size_t operator () (const TypeTraitInstanceNode* t) const { return t->hash(); } 
+struct TraitInstanceNodeHash { 
+    size_t operator () (const TraitInstanceNode* t) const { return t->hash(); } 
 };
 
-struct TypeTraitInstanceNodeEqual { 
-    bool operator () (const TypeTraitInstanceNode* t1, const TypeTraitInstanceNode* t2) const { return t1->equal(t2); } 
+struct TraitInstanceNodeEqual { 
+    bool operator () (const TraitInstanceNode* t1, const TraitInstanceNode* t2) const { return t1->equal(t2); } 
 };
 
-typedef std::unordered_set<TypeTraitInstanceNode*, TypeTraitInstanceNodeHash, TypeTraitInstanceNodeEqual> TraitInstanceNodeTableSet;
+typedef std::unordered_set<TraitInstanceNode*, TraitInstanceNodeHash, TraitInstanceNodeEqual> TraitInstanceNodeTableSet;
 
 }
 

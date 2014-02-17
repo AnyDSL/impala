@@ -78,7 +78,7 @@ Type FnASTType::to_type(Sema& sema) const {
     return sema.fntype(params);
 }
 
-TypeTraitInstance ASTTypeApp::to_trait_instance(Sema& sema) const {
+TraitInstance ASTTypeApp::to_trait_instance(Sema& sema) const {
     const Decl* d = sema.lookup(symbol());
     if (auto t = d->isa<TraitDecl>()) {
         assert(t->typetrait() != nullptr);
@@ -219,12 +219,12 @@ void StructDecl::check(Sema& sema) const {
 
 void TraitDecl::check(Sema& sema) const {
     // TODO consider super traits and check methods
-    type_trait_ = sema.typetrait(this, TypeTraitSet());
+    trait_ = sema.typetrait(this, TraitSet());
 
     check_type_params(sema);
     for (auto tp : type_params()) {
         assert(!tp->type_var().empty());
-        type_trait_->add_bound_var(tp->type_var());
+        trait_->add_bound_var(tp->type_var());
     }
 }
 

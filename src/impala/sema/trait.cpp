@@ -10,27 +10,27 @@
 
 namespace impala {
 
-const std::string TypeTrait::top_trait_name = std::string("");
+const std::string Trait::top_trait_name = std::string("");
 
-bool TypeTrait::equal(const GenericElement* other) const {
+bool Trait::equal(const GenericElement* other) const {
     // TODO is this correct for a instanceof-equivalent?
-    if (const TypeTrait* t = other->isa<TypeTrait>())
+    if (const Trait* t = other->isa<Trait>())
         return equal(t);
     return false;
 }
 
-std::string TypeTrait::to_string() const { return trait_decl()->symbol().str(); }
+std::string Trait::to_string() const { return trait_decl()->symbol().str(); }
 
-void TypeTrait::add_method(const std::string name, FnType type) {
+void Trait::add_method(const std::string name, FnType type) {
     assert(type.is_unified() && "Method types must be closed");
     assert(type->is_closed());
-    TypeTraitMethod* m = new TypeTraitMethod();
+    TraitMethod* m = new TraitMethod();
     m->name = name;
     m->type = type;
     methods_.push_back(m);
 }
 
-TypeTraitInstanceNode::TypeTraitInstanceNode(const TypeTrait* trait, thorin::ArrayRef<Type> var_instances)
+TraitInstanceNode::TraitInstanceNode(const Trait* trait, thorin::ArrayRef<Type> var_instances)
     : trait_(trait)
     , var_instances_(var_instances.size())
 {
@@ -40,7 +40,7 @@ TypeTraitInstanceNode::TypeTraitInstanceNode(const TypeTrait* trait, thorin::Arr
         var_instances_[i++] = elem;
 }
 
-bool TypeTraitInstanceNode::equal(const TypeTraitInstanceNode* other) const {
+bool TraitInstanceNode::equal(const TraitInstanceNode* other) const {
     // TODO use equal?
     if (trait_ != other->trait_)
         return false;
@@ -55,9 +55,9 @@ bool TypeTraitInstanceNode::equal(const TypeTraitInstanceNode* other) const {
 }
 
 // TODO better hash function
-size_t TypeTraitInstanceNode::hash() const { return trait_->hash(); }
+size_t TraitInstanceNode::hash() const { return trait_->hash(); }
 
-bool TypeTraitInstanceNode::is_closed() const {
+bool TraitInstanceNode::is_closed() const {
     for (auto i : var_instances_) {
         if (!i->is_closed())
             return false;
@@ -66,7 +66,7 @@ bool TypeTraitInstanceNode::is_closed() const {
 }
 
 // TODO
-std::string TypeTraitInstanceNode::to_string() const {
+std::string TraitInstanceNode::to_string() const {
     std::string result = trait_->to_string();
 
     if (var_inst_size() == 0)

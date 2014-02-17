@@ -71,7 +71,7 @@ void TypeTable::insert_new(Type type) {
     //}
 }
 
-void TypeTable::insert_new(TypeTraitInstance tti) {
+void TypeTable::insert_new(TraitInstance tti) {
     assert(!tti.is_unified());
     tti.set_unified();
 
@@ -87,7 +87,7 @@ void TypeTable::insert_new(TypeTraitInstance tti) {
     assert(p.second && "hash/equal broken");
 }
 
-void TypeTable::change_repr_rec(TypeTraitInstance tti, TypeTraitInstanceNode* repr) const {
+void TypeTable::change_repr_rec(TraitInstance tti, TraitInstanceNode* repr) const {
     assert(tti->var_inst_size() == repr->var_inst_size());
     for (size_t i = 0, e = tti->var_inst_size(); i != e; ++i)
         change_repr(tti->var_inst_(i), repr->var_inst_(i).representative());
@@ -96,10 +96,10 @@ void TypeTable::change_repr_rec(TypeTraitInstance tti, TypeTraitInstanceNode* re
 // change_repr_rec for types, but because TypeVar !< Type we need templates here
 template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) const {
     // first unify all bounded variables but remember the old ones
-    std::vector<TypeTraitInstSet*> var_restrictions;
+    std::vector<TraitInstSet*> var_restrictions;
     assert(t->bound_vars().size() == repr->bound_vars().size());
     for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
-        var_restrictions.push_back(new TypeTraitInstSet(*t->bound_var(i)->restricted_by()));
+        var_restrictions.push_back(new TraitInstSet(*t->bound_var(i)->restricted_by()));
         change_repr(t->bound_var(i), repr->bound_var(i).representative());
     }
 
@@ -162,7 +162,7 @@ void TypeTable::unify_base(Type type) {
     }
 }
 
-/*TypeTrait* TypeTable::unify_trait(TypeTrait* trait) {
+/*Trait* TypeTable::unify_trait(Trait* trait) {
     auto i = traits_.find(trait);
     if (i != traits_.end()) {
         delete trait;
@@ -174,8 +174,8 @@ void TypeTable::unify_base(Type type) {
     return trait;
 }*/
 
-//const TypeTraitInstance* TypeTable::unify_trait_inst(TypeTraitInstance* trait_inst) {
-void TypeTable::unify(TypeTraitInstance trait_inst) {
+//const TraitInstance* TypeTable::unify_trait_inst(TraitInstance* trait_inst) {
+void TypeTable::unify(TraitInstance trait_inst) {
     assert(!trait_inst.is_unified() && "trait instance already unified");
     assert(trait_inst->is_closed() && "Only closed trait instances can be unified!");
 

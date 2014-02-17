@@ -10,16 +10,16 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-struct TypeTraitInstanceHash { 
-    size_t operator () (const TypeTraitInstance t) const { return thorin::hash_value(t.representative()); } 
+struct TraitInstanceHash { 
+    size_t operator () (const TraitInstance t) const { return thorin::hash_value(t.representative()); } 
 };
 
-struct TypeTraitInstanceEqual { 
-    bool operator () (const TypeTraitInstance t1, const TypeTraitInstance t2) const { 
+struct TraitInstanceEqual { 
+    bool operator () (const TraitInstance t1, const TraitInstance t2) const { 
         return t1.representative() == t2.representative(); } 
 };
 
-typedef std::unordered_set<TypeTraitInstance, TypeTraitInstanceHash, TypeTraitInstanceEqual> TypeTraitInstSet;
+typedef std::unordered_set<TraitInstance, TraitInstanceHash, TraitInstanceEqual> TraitInstSet;
 
 //------------------------------------------------------------------------------
 
@@ -197,9 +197,9 @@ private:
     bool restrictions_equal(const TypeVar other) const;
 
 public:
-    const TypeTraitInstSet* restricted_by() const { return &restricted_by_; }
+    const TraitInstSet* restricted_by() const { return &restricted_by_; }
     const GenericElement* bound_at() const { return bound_at_; }
-    void add_restriction(TypeTraitInstance restriction);
+    void add_restriction(TraitInstance restriction);
     virtual bool equal(const TypeNode* other) const;
     std::string to_string() const;
 
@@ -214,7 +214,7 @@ public:
 
 private:
     const int id_;                        ///< Used for unambiguous dumping.
-    TypeTraitInstSet restricted_by_;      ///< All traits that restrict the instantiation of this variable.
+    TraitInstSet restricted_by_;      ///< All traits that restrict the instantiation of this variable.
     /**
      * The type where this variable is bound.
      * If such a type is set, then the variable must not be changed anymore!
