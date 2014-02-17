@@ -1,0 +1,3 @@
+fn main() -> () {
+    ::vec[int]::foo[int, float, T[int, bool]](1, 2, 3);
+}

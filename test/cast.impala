@@ -1,0 +1,3 @@
+extern fn f(i: int) -> float { 
+    -i+4 as float 
+}
