@@ -4,14 +4,11 @@
 #include <iostream>
 
 #include "thorin/util/printer.h"
-
 #include "impala/prec.h"
 
 namespace impala {
 
 class ASTNode;
-class Stmt;
-class ASTType;
 
 class Printer : public thorin::Printer {
 public:
@@ -35,6 +32,6 @@ void dump(const ASTNode*, bool fancy = false, std::ostream& o = std::cout);
 
 //std::ostream& operator << (std::ostream& o, const ASTNode* n);
 
-} // namespace impala
+}
 
-#endif // IMPALA_DUMP_H
+#endif

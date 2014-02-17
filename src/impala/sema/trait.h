@@ -49,6 +49,7 @@ public:
     size_t hash() const { return thorin::hash_value(trait_decl()); }
     const TraitDecl* trait_decl() const { return trait_decl_; }
     std::string to_string() const;
+    // TODO retrieve methods via trait_decl()->methods and remove this
     void add_method(const std::string name, FnType type);
 
 private:
