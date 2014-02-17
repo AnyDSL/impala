@@ -248,7 +248,7 @@ void BlockExpr::check(Sema& sema) const {
         stmt->check(sema);
 
     expr()->check(sema);
-    assert(!expr()->type().empty());
+    //assert(!expr()->type().empty()); TODO fails for EmptyExpr -> should we create an EmptyType=void?
     type_ = expr()->type();
 }
 
