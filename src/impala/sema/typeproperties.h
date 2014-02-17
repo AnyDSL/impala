@@ -18,15 +18,13 @@ namespace impala {
 
 class FnTypeNode;
 class PrimTypeNode;
-class TupleTypeNode;
-class TypeVarNode;
-class TypeNode;
-class TypeErrorNode;
-
 class Trait;
 class TraitInstanceNode;
-
+class TupleTypeNode;
+class TypeErrorNode;
+class TypeNode;
 class TypeTable;
+class TypeVarNode;
 
 template<class T> class UnifiableProxy;
 
