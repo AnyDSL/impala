@@ -29,7 +29,7 @@ std::string GenericElement::bound_vars_to_string() const {
         assert((!v.is_unified()) || (restr->size() > 0));
 
         // do not print restrictions if only restricted by top trait
-        if ((restr->size() != 1) || (!(*restr->begin())->is_top_trait())) {
+        if (!restr->empty()) {
             auto inner_sep = ":";
             for (auto t : *restr) {
                 result += inner_sep + t->to_string();

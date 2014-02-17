@@ -24,13 +24,10 @@ TypeTable::TypeTable()
 #define IMPALA_TYPE(itype, atype) , itype##_(new_type(new PrimTypeNode(*this, PrimType_##itype)))
 #include "impala/tokenlist.h"
     , type_error_(new_type(new TypeErrorNode(*this)))
-    , top_trait_(new TypeTrait(*this))
-    , top_trait_inst_(instantiate_trait(top_trait_, {}))
 {
 #define IMPALA_TYPE(itype, atype) unify(itype##_);
 #include "impala/tokenlist.h"
     unify(type_error_);
-    unifiables_.add(top_trait_);
 }
 
 // TODO delete all unifiables

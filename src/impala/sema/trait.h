@@ -12,6 +12,8 @@
 
 namespace impala {
 
+class TraitDecl;
+
 struct TypeTraitMethod {
     std::string name;
     FnType type;
@@ -32,15 +34,9 @@ struct TypeTraitMethod {
  */
 class TypeTrait : public GenericElement {
 private:
-    /// create the global top type trait (like Object in java)
-    TypeTrait(TypeTable& tt)
+    TypeTrait(TypeTable& tt, const TraitDecl* trait_decl, const TypeTraitSet super_traits)
         : typetable_(tt)
-        , name_(top_trait_name)
-        , super_traits_()
-    {}
-    TypeTrait(TypeTable& tt, const std::string name, const TypeTraitSet super_traits)
-        : typetable_(tt)
-        , name_(name)
+        , trait_decl_(trait_decl)
         , super_traits_(super_traits)
     {
         assert(!super_traits.empty() && "Supertraits must at least contain top trait");
@@ -51,20 +47,15 @@ private:
 public:
     TypeTable& typetable() const { return typetable_; }
     virtual bool equal(const GenericElement* t) const;
-    bool equal(const TypeTrait* t) const;
-    size_t hash() const;
-    const std::string name() const { return name_; }
+    bool equal(const TypeTrait* other) const { return this->trait_decl() == other->trait_decl(); }
+    size_t hash() const { return thorin::hash_value(trait_decl()); }
+    const TraitDecl* trait_decl() const { return trait_decl_; }
     std::string to_string() const;
     void add_method(const std::string name, FnType type);
-    /// true if this is the top type trait (like Object in java)
-    bool is_top_trait() const {
-        assert(super_traits_.size() != 0 || name_.compare(top_trait_name) == 0);
-        return super_traits_.size() == 0;
-    }
 
 private:
     TypeTable& typetable_;
-    const std::string name_;
+    const TraitDecl* const trait_decl_;
     const TypeTraitSet super_traits_;
     std::vector<const TypeTraitMethod*> methods_;
     static const std::string top_trait_name;
@@ -95,8 +86,6 @@ public:
     size_t var_inst_size() const { return var_instances_.size(); }
     bool is_closed() const;
     std::string to_string() const;
-    /// true if this is an instance of the top type trait (like Object in Java)
-    bool is_top_trait() const { return trait_->is_top_trait(); }
 
 private:
     const TypeTrait* trait_;

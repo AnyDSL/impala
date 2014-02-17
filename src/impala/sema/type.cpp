@@ -170,11 +170,6 @@ bool TypeVarNode::equal(const TypeNode* other) const {
 
 void TypeVarNode::bind(const GenericElement* const e) {
     assert(bound_at_ == nullptr && "type variables can only be bound once!");
-
-    // restrict type variables by top trait if there are no other restrictions
-    if (restricted_by()->empty())
-        add_restriction(typetable().top_trait_inst());
-
     bound_at_ = e;
 }
 

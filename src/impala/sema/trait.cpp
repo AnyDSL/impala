@@ -5,6 +5,7 @@
  *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
  */
 
+#include "impala/ast.h"
 #include "impala/sema/trait.h"
 
 namespace impala {
@@ -18,16 +19,7 @@ bool TypeTrait::equal(const GenericElement* other) const {
     return false;
 }
 
-bool TypeTrait::equal(const TypeTrait* other) const {
-    return name_.compare(other->name_) == 0;
-}
-
-size_t TypeTrait::hash() const { return thorin::hash_value(name_); }
-
-// TODO
-std::string TypeTrait::to_string() const {
-    return name_;
-}
+std::string TypeTrait::to_string() const { return trait_decl()->symbol().str(); }
 
 void TypeTrait::add_method(const std::string name, FnType type) {
     assert(type.is_unified() && "Method types must be closed");
@@ -75,7 +67,7 @@ bool TypeTraitInstanceNode::is_closed() const {
 
 // TODO
 std::string TypeTraitInstanceNode::to_string() const {
-    std::string result = trait_->name();
+    std::string result = trait_->to_string();
 
     if (var_inst_size() == 0)
         return result;

@@ -37,6 +37,7 @@ typedef UnifiableProxy<FnTypeNode> FnType;
 typedef UnifiableProxy<TupleTypeNode> TupleType;
 typedef UnifiableProxy<TypeVarNode> TypeVar;
 typedef UnifiableProxy<TypeTraitInstanceNode> TypeTraitInstance;
+// TODO I don't think we need this set - we can grab the super traits via TraitDecl
 typedef std::unordered_set<const TypeTrait*> TypeTraitSet;
 
 //------------------------------------------------------------------------------

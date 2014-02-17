@@ -35,19 +35,19 @@ Type PrimASTType::to_type(Sema& sema) const {
 }
 
 Type PtrASTType::to_type(Sema& sema) const {
-    // TODO
+    return Type(); // TODO
 }
 
 Type IndefiniteArrayASTType::to_type(Sema& sema) const {
-    // TODO
+    return Type(); // TODO
 }
 
 Type DefiniteArrayASTType::to_type(Sema& sema) const {
-    // TODO
+    return Type(); // TODO
 }
 
 Type TupleASTType::to_type(Sema& sema) const {
-    // TODO
+    return Type(); // TODO
 }
 
 Type ASTTypeApp::to_type(Sema& sema) const {
@@ -219,7 +219,7 @@ void StructDecl::check(Sema& sema) const {
 
 void TraitDecl::check(Sema& sema) const {
     // TODO consider super traits and check methods
-    type_trait_ = sema.typetrait(symbol().str());
+    type_trait_ = sema.typetrait(this, TypeTraitSet());
 
     check_type_params(sema);
     for (auto tp : type_params()) {
