@@ -77,6 +77,8 @@ public:
     std::ostream& print_type_params(Printer&) const;
 
 protected:
+    void check_type_params(Sema& sema) const;
+
     TypeParams type_params_;
 };
 
@@ -317,12 +319,15 @@ protected:
 class TypeParam : public TypeDecl {
 public:
     const Types& bounds() const { return bounds_; }
+    TypeVar type_var() const { return type_var_; }
     virtual std::ostream& print(Printer&) const;
 
 private:
-    Types bounds_; 
+    Types bounds_;
+    mutable TypeVar type_var_;
 
     friend class Parser;
+    friend class ParametricASTType;
 };
 
 class Param : public LocalDecl {

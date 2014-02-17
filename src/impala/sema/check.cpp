@@ -53,7 +53,10 @@ Type TupleASTType::to_type(Sema& sema) const {
 }
 
 Type ASTTypeApp::to_type(Sema& sema) const {
-    // TODO
+    const Decl* d = sema.lookup(symbol());
+    if (auto tp = d->isa<TypeParam>()) {
+        return tp->type_var();
+    } // TODO else: trait decl!
 }
 
 Type FnASTType::to_type(Sema& sema) const {
@@ -135,9 +138,17 @@ void EnumDecl::check(Sema& sema) const {
 void StaticItem::check(Sema& sema) const {
 }
 
+void ParametricASTType::check_type_params(Sema& sema) const {
+    for (const TypeParam* tp : type_params()) {
+        // TODO check bounds!
+        tp->type_var_ = sema.typevar();
+        sema.insert(tp);
+    }
+}
+
 void FnDecl::check(Sema& sema) const {
-    // TODO set type
-    // TODO check type variables
+    // TODO introduce new scope?
+    check_type_params(sema);
     // check parameters
     std::vector<Type> par_types;
     for (const Param* p : fn().params()) {
@@ -147,13 +158,17 @@ void FnDecl::check(Sema& sema) const {
         par_types.push_back(pt);
     }
     // create FnType
-    // TODO consider type variables
     Type fn_type = sema.fntype(par_types);
+    for (auto tp : type_params()) {
+        fn_type->add_bound_var(tp->type_var());
+    }
+
     type_ = fn_type;
 
     // TODO remove output
     type_->dump();
 
+    // TODO set sema.cur_fn_?
     fn_.body()->check(sema);
 }
 
