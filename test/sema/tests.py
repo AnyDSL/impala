@@ -18,7 +18,9 @@ def allTests():
     tests = []
 
     for f in os.listdir(POS_DIR):
-        tests.append(PositiveTest(POS_DIR, f, ""))
+        of = os.path.splitext(f)[0] + ".output"
+        res = os.path.exists(of) ? of : ""
+        tests.append(PositiveTest(POS_DIR, f, res))
     
     # The parameters are: baseDir, input file name, expected output, compiler options
     # expected output is a file name for positive tests and an error string otherwise
