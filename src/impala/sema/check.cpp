@@ -54,6 +54,12 @@ Type TupleASTType::to_type(Sema& sema) const {
 
 Type ASTTypeApp::to_type(Sema& sema) const {
     const Decl* d = sema.lookup(symbol());
+
+    if (d == nullptr) {
+        // TODO better error handling
+        assert(false);
+    }
+
     if (auto tp = d->isa<TypeParam>()) {
         assert(elems().empty());
         assert(!tp->type_var().empty());
@@ -77,9 +83,14 @@ Type FnASTType::to_type(Sema& sema) const {
 TypeTraitInstance ASTTypeApp::to_trait_instance(Sema& sema) const {
     const Decl* d = sema.lookup(symbol());
     if (auto t = d->isa<TraitDecl>()) {
-        // TODO consider elems
         assert(t->typetrait() != nullptr);
-        return sema.instantiate_trait(t->typetrait(), {});
+
+        std::vector<Type> type_args;
+        for (const ASTType* e : elems()) {
+            type_args.push_back(e->to_type(sema));
+        }
+
+        return sema.instantiate_trait(t->typetrait(), type_args);
     } else {
         // TODO better error handling!
         assert(false && "Cannot convert a type variable into a trait instance");
@@ -123,8 +134,6 @@ void StructDecl::check_head(Sema& sema) const {
 }
 
 void TraitDecl::check_head(Sema& sema) const {
-    // TODO consider super traits
-    type_trait_ = sema.typetrait(symbol().str());
     sema.insert(this);
 }
 
@@ -194,6 +203,7 @@ void FnDecl::check(Sema& sema) const {
     // create FnType
     Type fn_type = sema.fntype(par_types);
     for (auto tp : type_params()) {
+        assert(!tp->type_var().empty());
         fn_type->add_bound_var(tp->type_var());
     }
     sema.unify(fn_type);
@@ -211,6 +221,14 @@ void StructDecl::check(Sema& sema) const {
 }
 
 void TraitDecl::check(Sema& sema) const {
+    // TODO consider super traits and check methods
+    type_trait_ = sema.typetrait(symbol().str());
+
+    check_type_params(sema);
+    for (auto tp : type_params()) {
+        assert(!tp->type_var().empty());
+        type_trait_->add_bound_var(tp->type_var());
+    }
 }
 
 void Impl::check(Sema& sema) const {

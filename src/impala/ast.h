@@ -511,7 +511,7 @@ public:
 private:
     Methods methods_;
     std::vector<Symbol> super_;
-    mutable const TypeTrait* type_trait_;
+    mutable TypeTrait* type_trait_;
 
     friend class Parser;
 };
