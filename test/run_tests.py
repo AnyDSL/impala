@@ -27,16 +27,9 @@ def main():
     executable = "../build/bin/impala"
     pb = True
     
-    if len(sys.argv) < 2:
-        print("You did not specify a test directory.")
-        print(__doc__)
-        sys.exit(2)
-    else:
-        directory = sys.argv[-1]
-    
     # get cmd file
     try:
-        opts, args = getopt.getopt(sys.argv[1:-1], "he:", ["help", "executable", "disable-progressbar"])
+        opts, args = getopt.getopt(sys.argv[1:], "he:", ["help", "executable", "disable-progressbar"])
     except getopt.error as msg:
         print(msg)
         sys.exit(2)
@@ -50,6 +43,17 @@ def main():
             executable = a
         if o in ("--disable-progressbar"):
             pb = False
+
+    if len(args) == 0:
+        print("You did not specify a test directory.")
+        print(__doc__)
+        sys.exit(2)
+    elif len(args) > 1:
+        print("You specified too many arguments.")
+        print(__doc__)
+        sys.exit(2)
+    else:
+        directory = args[0]
 
     invoke(executable, directory, pb)
 
