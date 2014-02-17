@@ -75,7 +75,7 @@ def make_tests(directory, positive=True):
     for testfile in os.listdir(directory):
         if os.path.splitext(testfile)[1] == ".impala":
             of = os.path.splitext(testfile)[0] + ".output"
-            res = of if os.path.exists(of) else ""
+            res = of if os.path.exists(os.path.join(directory, of)) else ""
             tests.append(InvokeTest(positive, directory, testfile, res))
     
     return tests
