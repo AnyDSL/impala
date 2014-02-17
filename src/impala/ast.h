@@ -223,6 +223,7 @@ public:
     Symbol symbol() const { return symbol_; }
     virtual std::ostream& print(Printer&) const;
     virtual Type to_type(Sema& sema) const;
+    TypeTraitInstance to_trait_instance(Sema& sema) const;
 
 private:
     Symbol symbol_;
@@ -501,6 +502,7 @@ class TraitDecl : public Item, public ParametricTypeDecl {
 public:
     const std::vector<Symbol>& super() const { return super_; }
     const Methods& methods() const { return methods_; }
+    const TypeTrait* typetrait() const { return type_trait_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(Sema& sema) const;
     virtual void check_head(Sema& sema) const;
@@ -509,6 +511,7 @@ public:
 private:
     Methods methods_;
     std::vector<Symbol> super_;
+    mutable const TypeTrait* type_trait_;
 
     friend class Parser;
 };

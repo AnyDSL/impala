@@ -55,8 +55,14 @@ Type TupleASTType::to_type(Sema& sema) const {
 Type ASTTypeApp::to_type(Sema& sema) const {
     const Decl* d = sema.lookup(symbol());
     if (auto tp = d->isa<TypeParam>()) {
+        assert(elems().empty());
+        assert(!tp->type_var().empty());
         return tp->type_var();
-    } // TODO else: trait decl!
+    } else {
+        // TODO better error handling!
+        assert(false && "Cannot convert a trait instance into a type");
+        return sema.type_error();
+    }
 }
 
 Type FnASTType::to_type(Sema& sema) const {
@@ -66,6 +72,19 @@ Type FnASTType::to_type(Sema& sema) const {
         params.push_back(p->to_type(sema));
     }
     return sema.fntype(params);
+}
+
+TypeTraitInstance ASTTypeApp::to_trait_instance(Sema& sema) const {
+    const Decl* d = sema.lookup(symbol());
+    if (auto t = d->isa<TraitDecl>()) {
+        // TODO consider elems
+        assert(t->typetrait() != nullptr);
+        return sema.instantiate_trait(t->typetrait(), {});
+    } else {
+        // TODO better error handling!
+        assert(false && "Cannot convert a type variable into a trait instance");
+        //return sema.type_error();
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -104,6 +123,8 @@ void StructDecl::check_head(Sema& sema) const {
 }
 
 void TraitDecl::check_head(Sema& sema) const {
+    // TODO consider super traits
+    type_trait_ = sema.typetrait(symbol().str());
     sema.insert(this);
 }
 
@@ -139,10 +160,23 @@ void StaticItem::check(Sema& sema) const {
 }
 
 void ParametricASTType::check_type_params(Sema& sema) const {
+    // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
+
     for (const TypeParam* tp : type_params()) {
-        // TODO check bounds!
         tp->type_var_ = sema.typevar();
         sema.insert(tp);
+    }
+
+    // check bounds
+    for (const TypeParam* tp : type_params()) {
+        for (const ASTType* b : tp->bounds()) {
+            if (auto trait_inst = b->isa<ASTTypeApp>()) {
+                tp->type_var()->add_restriction(trait_inst->to_trait_instance(sema));
+            } else {
+                // TODO better error handling
+                assert(false && "Bounds must be trait instances, not types");
+            }
+        }
     }
 }
 
@@ -162,6 +196,7 @@ void FnDecl::check(Sema& sema) const {
     for (auto tp : type_params()) {
         fn_type->add_bound_var(tp->type_var());
     }
+    sema.unify(fn_type);
 
     type_ = fn_type;
 
