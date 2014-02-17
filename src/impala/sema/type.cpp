@@ -44,7 +44,7 @@ bool TypeNode::equal(const TypeNode* other) const {
         this->bound_var(i)->set_equiv_variable(other->bound_var(i).representative());
 
     // check equality of the restrictions of the type variables
-    for (size_t i = 0, e = num_bound_vars(); i != e /*&& result TODO missing?*/; ++i)
+    for (size_t i = 0, e = num_bound_vars(); i != e && result; ++i)
         result &= this->bound_var(i)->restrictions_equal(other->bound_var(i));
 
     for (size_t i = 0, e = size(); i != e && result; ++i)
