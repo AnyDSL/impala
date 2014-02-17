@@ -1,0 +1,15 @@
+fn even(x : int) -> bool {
+   if (x == 0) {
+      true
+   } else {
+      odd(x-1)
+   }
+}
+
+fn odd(x : int) -> bool {
+   if (x == 0) {
+      false
+   } else {
+      even(x-1)
+   }
+}
