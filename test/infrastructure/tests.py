@@ -64,7 +64,22 @@ class InvokeTest(Test):
         
     def getName(self):
         return os.path.join(self.basedir, self.srcfile)
+
+def make_tests(directory, positive=True):
+    """Create a list of tests based on the .impala files in directory
     
+    Output files are expected to have the same name but with .output extension.
+    If no output file is found for a test no output is assumed."""
+    tests = []
+
+    for testfile in os.listdir(directory):
+        if os.path.splitext(testfile)[1] == ".impala":
+            of = os.path.splitext(testfile)[0] + ".output"
+            res = of if os.path.exists(of) else ""
+            tests.append(InvokeTest(positive, directory, testfile, res))
+    
+    return tests
+
 def executeTests(tests, gEx, pb = True):
     """Invoke this function with a list of test objects to run the tests. """
     
@@ -109,7 +124,8 @@ def executeTests(tests, gEx, pb = True):
             print("\n* All optional tests were successful.")
         else:
             print("\n!" + str(failOpt) + " of " + str(allOpt) + " OPTIONAL tests failed.")
-
+    
+    
 def concat(outDir, srcFiles):
     def doConcat():
         if not os.path.exists(outDir):
@@ -130,124 +146,3 @@ def concat(outDir, srcFiles):
             print(err.output)
             return []
     return doConcat
-
-class ProgramTest(Test):
-    def __init__(self, name, outDir, srcData, inputs, optimize=False):
-        self.name = name
-        self.outDir = outDir
-        self.srcData = srcData
-        self.inputs = inputs
-        self.optimize = optimize
-    
-    def invoke(self, gEx):
-        if not os.path.exists(os.path.join(self.outDir, "c4")):
-            os.makedirs(os.path.join(self.outDir, "c4"))
-        if not os.path.exists(os.path.join(self.outDir, "clang")):
-            os.makedirs(os.path.join(self.outDir, "clang"))
-
-        if hasattr(self.srcData, '__call__'):
-            self.srcFiles = self.srcData()
-        else:
-            self.srcFiles = self.srcData
-        if not self.compile(gEx):
-            self.clean(self.outDir)
-            return False
-        if not self.link():
-            self.clean(self.outDir)
-            return False
-        result = self.run()
-        self.clean(self.outDir)
-        #print(self.name+": "+str(result))
-        return result
-
-    def compile(self,gEx):
-        result = True
-        # compile all src files
-        for src in self.srcFiles:
-            try:
-                cmd = [os.path.abspath(gEx)]
-                if(self.optimize):
-                    cmd.append("--optimize")
-                cmd.append(os.path.abspath(src))
-                subprocess.check_output(cmd, cwd=os.path.join(self.outDir, "c4"), stderr=subprocess.STDOUT)
-            except subprocess.CalledProcessError as err:
-                print("c4 error: "+src+":")
-                print(err.output)
-                result = False
-            try:
-                cmd = ["clang", "-emit-llvm", "-c", "-S", "-o", self.unitName(src), os.path.abspath(src)]
-                subprocess.check_output(cmd, cwd=os.path.join(self.outDir, "clang"), stderr=subprocess.STDOUT)
-            except subprocess.CalledProcessError as err:
-                print("clang error: "+src+":")
-                print(err.output)
-                result = False
-            except:
-                result = False
-        return result
-    
-    def unitName(self, src):
-        return src[len(os.path.dirname(src))+1:-2]+".ll"
-        
-    def link(self):
-        # link all src files
-        units = []
-        for src in self.srcFiles:
-            unit = self.unitName(src)
-            units.append(unit)
-        try:
-            cmd = ["llvm-link", "-o=output.ll"]+units
-            subprocess.check_output(cmd, cwd=os.path.join(self.outDir, "c4"), stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as err:
-            print("Could not link c4's output: "+src+":")
-            print(err.output)
-            return False
-        
-        try:
-            cmd = ["llvm-link", "-o=output.ll"]+units
-            subprocess.check_output(cmd, cwd=os.path.join(self.outDir, "clang"), stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as err:
-            print("Could not link clang's output: "+str(units)+":")
-            print(err.output)
-            return False
-        return True
-    
-    def run(self):
-        cmdC4 = ["lli", os.path.join("c4", "output.ll")]
-        cmdC4 = cmdC4 + self.inputs
-        cmdClang = ["lli", os.path.join("clang", "output.ll")]
-        cmdClang = cmdClang + self.inputs
-        try:
-            outputC4 = subprocess.check_output(cmdC4, cwd=self.outDir, stderr=subprocess.STDOUT)
-            outputClang = subprocess.check_output(cmdClang, cwd=self.outDir, stderr=subprocess.STDOUT)
-            return self.compare(outputC4, outputClang)
-        except subprocess.CalledProcessError as err:
-            print("Could not execute binary:")
-            print(err.output)
-            return False
-    
-    def compare(self, c4, clang):
-        c4 = c4.splitlines(1)
-        clang = clang.splitlines(1)
-        diff = difflib.Differ()
-        fails = 0
-        for cp in diff.compare(clang, c4):
-            if cp.startswith('-') or cp.startswith('+'):
-                print(cp)
-                fails=fails+1
-        if 0!=fails:
-            return False
-        return True
-    
-    def clean(self, dire):
-        return
-        
-        for f in os.listdir(dire):
-            f = os.path.join(dire, f)
-            if os.path.isdir(f):
-                self.clean(f)
-                os.rmdir(f)
-            else:
-                os.remove(f)
-    
-    def getName(self):
-        return self.name
