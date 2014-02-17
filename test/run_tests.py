@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-This script can be used to execute the tests. 
+This script can be used to execute the tests.
 
 Command line options:
  -e, --executable <Path to executable>
