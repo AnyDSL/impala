@@ -1,0 +1,4 @@
+fn myf[A:T](x : A) -> A {
+   x
+}
+trait T {}
