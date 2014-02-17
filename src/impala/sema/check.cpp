@@ -26,8 +26,31 @@ Type ErrorASTType::to_type(Sema& sema) const {
     return sema.type_error();
 }
 
+#include <iostream>
+
 Type PrimASTType::to_type(Sema& sema) const {
-    // TODO
+    // TODO maybe reuse these kinds, else define intXX types in primtypes.h
+    switch (kind()) {
+    case TYPE_int:
+        return sema.type_int();
+    case TYPE_int8:
+        return sema.type_int();
+    case TYPE_int16:
+        return sema.type_int();
+    case TYPE_int32:
+        return sema.type_int();
+    case TYPE_int64:
+        return sema.type_int();
+    case TYPE_float:
+        return sema.type_float();
+    case TYPE_double:
+        return sema.type_float();
+    case TYPE_bool:
+        return sema.type_bool();
+    default:
+        dump();
+        assert(false);
+    }
 }
 
 Type PtrASTType::to_type(Sema& sema) const {
