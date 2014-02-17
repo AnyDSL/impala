@@ -17,8 +17,8 @@ typedef std::unordered_set<TypeTraitInstance, TypeTraitInstanceHash, TypeTraitIn
 //------------------------------------------------------------------------------
 
 enum Kind {
-#define PRIMTYPE(T) Type_##T,
-#include "primtypes.h"
+#define IMPALA_TYPE(itype, atype) Type_##itype,
+#include "impala/tokenlist.h"
     Type_error,
     Type_fn,
     Type_tuple,
@@ -26,8 +26,8 @@ enum Kind {
 };
 
 enum PrimTypeKind {
-#define PRIMTYPE(T) PrimType_##T = Type_##T,
-#include "primtypes.h"
+#define IMPALA_TYPE(itype, atype) PrimType_##itype = Type_##itype,
+#include "impala/tokenlist.h"
 };
 
 class TypeNode : public GenericElement {

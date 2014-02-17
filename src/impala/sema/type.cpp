@@ -108,8 +108,8 @@ void TypeNode::dump() const { std::cout << to_string() << std::endl; }
 
 std::string PrimTypeNode::to_string() const {
     switch (primtype_kind()) {
-#define PRIMTYPE(T) case PrimType_##T: return #T;
-#include "primtypes.h"
+#define IMPALA_TYPE(itype, atype) case PrimType_##itype: return #itype;
+#include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
 }

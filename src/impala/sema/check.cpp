@@ -29,27 +29,10 @@ Type ErrorASTType::to_type(Sema& sema) const {
 #include <iostream>
 
 Type PrimASTType::to_type(Sema& sema) const {
-    // TODO maybe reuse these kinds, else define intXX types in primtypes.h
     switch (kind()) {
-    case TYPE_int:
-        return sema.type_int();
-    case TYPE_int8:
-        return sema.type_int();
-    case TYPE_int16:
-        return sema.type_int();
-    case TYPE_int32:
-        return sema.type_int();
-    case TYPE_int64:
-        return sema.type_int();
-    case TYPE_float:
-        return sema.type_float();
-    case TYPE_double:
-        return sema.type_float();
-    case TYPE_bool:
-        return sema.type_bool();
-    default:
-        dump();
-        assert(false);
+#define IMPALA_TYPE(itype, atype) case TYPE_##itype: return sema.primtype(PrimType_##itype);
+#include "impala/tokenlist.h"
+    default: THORIN_UNREACHABLE;
     }
 }
 

@@ -49,8 +49,8 @@ public:
     TypeError type_error() { return type_error_; }
     PrimType primtype(PrimTypeKind kind);
 
-#define PRIMTYPE(T) PrimType type_##T() { return T##_; }
-#include "primtypes.h"
+#define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
+#include "impala/tokenlist.h"
 
     const TypeTrait* top_trait() const { return top_trait_; }
     TypeTraitInstance top_trait_inst() const { return top_trait_inst_; }
@@ -133,8 +133,8 @@ private:
     TraitInstanceNodeTableSet trait_instances_;
     UnifiableSet unifiables_;
 
-#define PRIMTYPE(T) PrimType T##_;
-#include "primtypes.h"
+#define IMPALA_TYPE(itype, atype) PrimType itype##_;
+#include "impala/tokenlist.h"
     TypeError type_error_;
     const TypeTrait* top_trait_;
     TypeTraitInstance top_trait_inst_;

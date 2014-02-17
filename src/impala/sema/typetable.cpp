@@ -20,14 +20,14 @@ UnifiableSet::~UnifiableSet() {
 
 TypeTable::TypeTable()
     : types_()
-#define PRIMTYPE(T) , T##_(new_type(new PrimTypeNode(*this, PrimType_##T)))
-#include "primtypes.h"
+#define IMPALA_TYPE(itype, atype) , itype##_(new_type(new PrimTypeNode(*this, PrimType_##itype)))
+#include "impala/tokenlist.h"
     , type_error_(new_type(new TypeErrorNode(*this)))
     , top_trait_(new TypeTrait(*this))
     , top_trait_inst_(instantiate_trait(top_trait_, {}))
 {
-#define PRIMTYPE(T) unify(T##_);
-#include "primtypes.h"
+#define IMPALA_TYPE(itype, atype) unify(itype##_);
+#include "impala/tokenlist.h"
     unify(type_error_);
     unifiables_.add(top_trait_);
 }
@@ -202,8 +202,8 @@ void TypeTable::unify(TypeTraitInstance trait_inst) {
 
 PrimType TypeTable::primtype(const PrimTypeKind kind) {
     switch (kind) {
-#define PRIMTYPE(T) case PrimType_##T: return T##_;
-#include "primtypes.h"
+#define IMPALA_TYPE(itype, atype) case PrimType_##itype: return itype##_;
+#include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
 }
