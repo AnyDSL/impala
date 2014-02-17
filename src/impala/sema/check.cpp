@@ -210,11 +210,10 @@ void FnDecl::check(Sema& sema) const {
 
     type_ = fn_type;
 
-    // TODO remove output
-    type_->dump();
-
     // TODO set sema.cur_fn_?
-    fn_.body()->check(sema);
+    fn().body()->check(sema);
+
+    // TODO check for correct return type
 }
 
 void StructDecl::check(Sema& sema) const {
@@ -251,6 +250,8 @@ void BlockExpr::check(Sema& sema) const {
         stmt->check(sema);
 
     expr()->check(sema);
+    assert(!expr()->type().empty());
+    type_ = expr()->type();
 }
 
 void LiteralExpr::check(Sema& sema) const {
@@ -259,7 +260,14 @@ void LiteralExpr::check(Sema& sema) const {
 void FnExpr::check(Sema& sema) const {
 }
 
+#include <iostream>
+
 void PathExpr::check(Sema& sema) const {
+    // TODO consider longer paths
+    decl_ = sema.lookup(path()->path_items()[0]->symbol());
+    if (auto vdec = decl_->isa<ValueDecl>()) {
+        type_ = vdec->type();
+    } // TODO else
 }
 
 void PrefixExpr::check(Sema& sema) const {
