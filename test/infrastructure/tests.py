@@ -65,18 +65,6 @@ class InvokeTest(Test):
     def getName(self):
         return os.path.join(self.basedir, self.srcfile)
     
-class PositiveTest(InvokeTest):
-    """Represents a test for valid behaviour."""
-    
-    def __init__(self, base, src, res, options=[]):
-        InvokeTest.__init__(self, True, base, src, res, options)
-
-class NegativeTest(InvokeTest):
-    """Represents a test for invalid behaviour."""
-    
-    def __init__(self, base, src, res, options=[]):
-        InvokeTest.__init__(self, False, base, src, res, options)
-    
 def executeTests(tests, gEx, pb = True):
     """Invoke this function with a list of test objects to run the tests. """
     
