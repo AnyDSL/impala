@@ -118,7 +118,7 @@ std::string CompoundType::elems_to_string() const {
     std::string result;
 
     if (is_empty())
-        return result;
+        return "()";
 
     const char* separator = "(";
     for (auto elem : elems_) {
