@@ -1,7 +1,5 @@
-#ifndef TYPE_H
-#define TYPE_H
-
-#include <exception>
+#ifndef IMPALA_SEMA_TYPE_H
+#define IMPALA_SEMA_TYPE_H
 
 #include "thorin/util/array.h"
 #include "thorin/util/hash.h"
@@ -10,8 +8,17 @@
 
 namespace impala {
 
-struct TypeTraitInstanceHash { size_t operator () (const TypeTraitInstance t) const { return thorin::hash_value(t.representative()); } };
-struct TypeTraitInstanceEqual { bool operator () (const TypeTraitInstance t1, const TypeTraitInstance t2) const { return t1.representative() == t2.representative(); } };
+//------------------------------------------------------------------------------
+
+struct TypeTraitInstanceHash { 
+    size_t operator () (const TypeTraitInstance t) const { return thorin::hash_value(t.representative()); } 
+};
+
+struct TypeTraitInstanceEqual { 
+    bool operator () (const TypeTraitInstance t1, const TypeTraitInstance t2) const { 
+        return t1.representative() == t2.representative(); } 
+};
+
 typedef std::unordered_set<TypeTraitInstance, TypeTraitInstanceHash, TypeTraitInstanceEqual> TypeTraitInstSet;
 
 //------------------------------------------------------------------------------
@@ -32,8 +39,8 @@ enum PrimTypeKind {
 
 class TypeNode : public GenericElement {
 private:
-    TypeNode& operator = (const TypeNode&); ///< Do not copy-assign a \p Type.
-    TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p Type.
+    TypeNode& operator = (const TypeNode&); ///< Do not copy-assign a \p TypeNode.
+    TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p TypeNode.
 
 protected:
     TypeNode(TypeTable& typetable, Kind kind, size_t size)
@@ -101,6 +108,16 @@ protected:
     friend class TypeTable;
 };
 
+struct TypeNodeHash { 
+    size_t operator () (const TypeNode* t) const { return t->hash(); } 
+};
+
+struct TypeNodeEqual { 
+    bool operator () (const TypeNode* t1, const TypeNode* t2) const { return t1->equal(t2); } 
+};
+
+typedef std::unordered_set<TypeNode*, TypeNodeHash, TypeNodeEqual> TypeNodeSet;
+
 class TypeErrorNode : public TypeNode {
 private:
     TypeErrorNode(TypeTable& typetable)
@@ -164,8 +181,6 @@ public:
     friend class TypeTable;
 };
 
-
-
 class TypeVarNode : public TypeNode {
 private:
     TypeVarNode(TypeTable& tt)
@@ -176,46 +191,16 @@ private:
         , equiv_var_(nullptr)
     {}
 
-    static int counter;
-
-    /// used for unambiguous dumping
-    const int id_;
-
-    /// All traits that restrict the instantiation of this variable
-    TypeTraitInstSet restricted_by_;
-
-    /**
-     * The type where this variable is bound.
-     * If such a type is set, then the variable must not be changed anymore!
-     */
-    const GenericElement* bound_at_;
-
-    /// Used to define equivalence constraints when checking equality of types
-    mutable const TypeVarNode* equiv_var_;
-
-    void set_equiv_variable(const TypeVarNode* v) const {
-        assert(equiv_var_ == nullptr);
-        assert(v != nullptr);
-        equiv_var_ = v;
-    }
-
-    void unset_equiv_variable() const {
-        assert(equiv_var_ != nullptr);
-        equiv_var_ = nullptr;
-    }
-
+    void set_equiv_variable(const TypeVarNode* v) const { assert(equiv_var_ == nullptr); assert(v != nullptr); equiv_var_ = v; }
+    void unset_equiv_variable() const { assert(equiv_var_ != nullptr); equiv_var_ = nullptr; }
     void bind(const GenericElement* const e);
-
     bool restrictions_equal(const TypeVar other) const;
 
 public:
     const TypeTraitInstSet* restricted_by() const { return &restricted_by_; }
     const GenericElement* bound_at() const { return bound_at_; }
-
     void add_restriction(TypeTraitInstance restriction);
-
     virtual bool equal(const TypeNode* other) const;
-
     std::string to_string() const;
 
     /**
@@ -226,6 +211,17 @@ public:
 
     // TODO this->is_subtype(bound_at()); if bound_at is a Type, else it should occur in the method signatures
     virtual bool is_sane() const { return is_closed(); }
+
+private:
+    const int id_;                        ///< Used for unambiguous dumping.
+    TypeTraitInstSet restricted_by_;      ///< All traits that restrict the instantiation of this variable.
+    /**
+     * The type where this variable is bound.
+     * If such a type is set, then the variable must not be changed anymore!
+     */
+    const GenericElement* bound_at_;
+    mutable const TypeVarNode* equiv_var_;///< Used to define equivalence constraints when checking equality of types.
+    static int counter;
 
     friend class TypeTable;
     friend class TypeNode;
@@ -238,7 +234,7 @@ public:
  * Checks if for all combination of types t1, t2 in 'types' it holds that if
  * both are unified and t1 equals t2 then they have the same representative.
  */
-void check_sanity(thorin::ArrayRef<const Type> types);
+void verify(thorin::ArrayRef<const Type> types);
 
 }
 

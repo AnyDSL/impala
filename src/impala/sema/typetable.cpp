@@ -9,14 +9,15 @@
 
 namespace impala {
 
-// This deletes all unifiables and the non-unified type nodes
+//------------------------------------------------------------------------------
+
 UnifiableSet::~UnifiableSet() {
     for (auto t : trait_instances_) delete t;
     for (auto t : types_) delete t;
     for (auto t : traits_) delete t;
 }
 
-
+//------------------------------------------------------------------------------
 
 TypeTable::TypeTable()
     : types_()
@@ -38,7 +39,7 @@ TypeTable::~TypeTable() {
     for (auto trait : trait_instances_) delete trait;
 }
 
-FnType TypeTable::fntype_simple(thorin::ArrayRef<Type> params, Type return_type) {
+FnType TypeTable::fntype(thorin::ArrayRef<Type> params, Type return_type) {
     thorin::Array<Type> p(params.size() + 1);
     *std::copy(params.begin(), params.end(), p.begin()) = fntype({return_type});
     return fntype(p);
@@ -46,7 +47,6 @@ FnType TypeTable::fntype_simple(thorin::ArrayRef<Type> params, Type return_type)
 
 void TypeTable::insert_new(Type type) {
     assert(!type.is_unified());
-
     type.set_unified();
 
     for (auto elem : type->elems_) {
@@ -76,7 +76,6 @@ void TypeTable::insert_new(Type type) {
 
 void TypeTable::insert_new(TypeTraitInstance tti) {
     assert(!tti.is_unified());
-
     tti.set_unified();
 
     for (size_t i = 0, e = tti->var_inst_size(); i != e; ++i) {
@@ -93,9 +92,8 @@ void TypeTable::insert_new(TypeTraitInstance tti) {
 
 void TypeTable::change_repr_rec(TypeTraitInstance tti, TypeTraitInstanceNode* repr) const {
     assert(tti->var_inst_size() == repr->var_inst_size());
-    for (size_t i = 0, e = tti->var_inst_size(); i != e; ++i) {
+    for (size_t i = 0, e = tti->var_inst_size(); i != e; ++i)
         change_repr(tti->var_inst_(i), repr->var_inst_(i).representative());
-    }
 }
 
 // change_repr_rec for types, but because TypeVar !< Type we need templates here
@@ -133,27 +131,22 @@ template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) 
         }
     }
 
-    for (auto vr : var_restrictions) {
+    for (auto vr : var_restrictions)
         delete vr;
-    }
 
     // unify sub elements
     assert(t->size() == repr->size());
-    for (size_t i = 0, e = t->size(); i != e; ++i) {
+    for (size_t i = 0, e = t->size(); i != e; ++i)
         change_repr(t->elem_(i), repr->elem(i).representative());
-    }
 }
 
 template<class T>
 void TypeTable::change_repr(UnifiableProxy<T> t, T* repr) const {
-    if (t.is_unified()) {
+    if (!t.is_unified()) {
+        change_repr_rec(t, repr);
+        t.set_representative(repr);
+    } else
         assert(t.representative() == repr);
-        return;
-    }
-
-    change_repr_rec(t, repr);
-
-    t.set_representative(repr);
 }
 
 void TypeTable::unify_base(Type type) {
@@ -208,7 +201,7 @@ PrimType TypeTable::primtype(const PrimTypeKind kind) {
     }
 }
 
-void TypeTable::check_sanity() const {
+void TypeTable::verify() const {
     for (auto t : types_)
         assert(t->is_sane());
 
@@ -224,7 +217,6 @@ void TypeTable::check_sanity() const {
             assert(i != types_.end());
         }
     }
-
 }
 
 }

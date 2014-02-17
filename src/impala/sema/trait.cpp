@@ -13,9 +13,8 @@ const std::string TypeTrait::top_trait_name = std::string("");
 
 bool TypeTrait::equal(const GenericElement* other) const {
     // TODO is this correct for a instanceof-equivalent?
-    if (const TypeTrait* t = other->isa<TypeTrait>()) {
+    if (const TypeTrait* t = other->isa<TypeTrait>())
         return equal(t);
-    }
     return false;
 }
 
@@ -38,7 +37,6 @@ void TypeTrait::add_method(const std::string name, FnType type) {
     m->type = type;
     methods_.push_back(m);
 }
-
 
 TypeTraitInstanceNode::TypeTraitInstanceNode(const TypeTrait* trait, thorin::ArrayRef<Type> var_instances)
     : trait_(trait)
