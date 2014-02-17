@@ -88,15 +88,6 @@ private:
     void change_repr_rec(TypeTraitInstance t, TypeTraitInstanceNode* repr) const;
     void unify_base(Type type);
 
-    // TODO still needed?
-    /// like unify but deletes the given type if unification returned a different one
-    /*template<class T>  unify_new(T* type) {
-        T* unified_type = unify(type);
-        if (unified_type != type)
-            delete type;
-        return unified_type;
-    }*/
-
     TypeNodeSet types_;
     TraitInstanceNodeTableSet trait_instances_;
     UnifiableSet unifiables_;
