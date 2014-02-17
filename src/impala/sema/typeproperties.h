@@ -5,8 +5,8 @@
  *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
  */
 
-#ifndef TYPE_PROPERTIES_H_
-#define TYPE_PROPERTIES_H_
+#ifndef IMPALA_SEMA_TYPE_PROPERTIES_H
+#define IMPALA_SEMA_TYPE_PROPERTIES_H
 
 #include <unordered_set>
 #include <vector>
@@ -93,32 +93,29 @@ public:
     UnifiableProxy()
         : node_(nullptr)
     {}
+    // TODO do we need both contructors?
     UnifiableProxy(Unifiable<T>* node)
         : node_(node)
     {}
+    // TODO do we need both contructors?
     UnifiableProxy(T* node)
         : node_(new Unifiable<T>(node))
     {}
 
     bool empty() const { return node_ == nullptr; }
     bool is_unified() const { return node()->is_unified(); }
-    bool operator == (const UnifiableProxy<T>& other) { return equal(other); }
-    bool operator != (const UnifiableProxy<T>& other) { return !equal(other); }
+    bool operator == (const UnifiableProxy<T>& other) {
+        if (!this->is_unified()) representative()->typetable().unify(*this);
+        if (!other.is_unified()) representative()->typetable().unify(other);
+        return node()->equal(other.node());
+    }
+    bool operator != (const UnifiableProxy<T>& other) { return !(*this == other); }
     T* operator -> () const { return deref(); }
     template<class U> operator UnifiableProxy<U>() { return UnifiableProxy<U>((Unifiable<U>*) node_); }
 
 private:
     T* representative() const { return node()->representative(); }
     T* deref() const { return representative(); }
-    //T* operator *() const { return deref(); }
-    //operator T*() const { return deref(); }
-
-    bool equal(const UnifiableProxy<T>& other) {
-        if (!this->is_unified()) representative()->typetable().unify(*this);
-        if (!other.is_unified()) representative()->typetable().unify(other);
-        return node()->equal(other.node());
-    }
-
     Unifiable<T>* node() const { return node_; }
     void set_representative(T* repr) { node()->set_representative(repr); }
     void set_unified() { node_->set_unified(); }
@@ -131,7 +128,7 @@ private:
     friend class TypeTraitInstanceNode;
     friend class TypeTraitInstanceHash;
     friend class TypeTraitInstanceEqual;
-    friend void check_sanity(thorin::ArrayRef<const Type> types);
+    friend void verify(thorin::ArrayRef<const Type> types);
 };
 
 //------------------------------------------------------------------------------
@@ -139,15 +136,11 @@ private:
 class GenericElement : public thorin::MagicCast<GenericElement> {
 public:
     size_t num_bound_vars() const { return bound_vars_.size(); }
-
     thorin::ArrayRef<TypeVar> bound_vars() const { return thorin::ArrayRef<TypeVar>(bound_vars_); }
     TypeVar bound_var(size_t i) const { return bound_vars_[i]; }
-
     /// Returns true if this \p Type does have any bound type variabes (\p bound_vars_).
     bool is_generic() const { return !bound_vars_.empty(); }
-
     void add_bound_var(TypeVar v);
-
     virtual bool equal(const GenericElement*) const = 0;
     virtual size_t hash() const = 0;
 

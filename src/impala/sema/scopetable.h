@@ -19,7 +19,7 @@ public:
     {}
 
     /** 
-     * @brief Looks up the current definition of \p sym.
+     * @brief Looks up the current definition of \p symbol.
      * @return Returns nullptr on failure.
      */
     const Decl* lookup(Symbol symbol) const;

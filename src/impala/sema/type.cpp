@@ -40,23 +40,19 @@ bool TypeNode::equal(const TypeNode* other) const {
         return false;
 
     // set equivalence constraints for type variables
-    for (size_t i = 0, e = num_bound_vars(); i != e; ++i) {
+    for (size_t i = 0, e = num_bound_vars(); i != e; ++i)
         this->bound_var(i)->set_equiv_variable(other->bound_var(i).representative());
-    }
 
     // check equality of the restrictions of the type variables
-    for (size_t i = 0, e = num_bound_vars(); i != e; ++i) {
+    for (size_t i = 0, e = num_bound_vars(); i != e /*&& result TODO missing?*/; ++i)
         result &= this->bound_var(i)->restrictions_equal(other->bound_var(i));
-    }
 
-    for (size_t i = 0, e = size(); i != e && result; ++i) {
+    for (size_t i = 0, e = size(); i != e && result; ++i)
         result &= this->elem(i)->equal(other->elem(i).representative());
-    }
 
     // unset equivalence constraints for type variables
-    for (size_t i = 0, e = num_bound_vars(); i != e; ++i) {
+    for (size_t i = 0, e = num_bound_vars(); i != e; ++i)
         this->bound_var(i)->unset_equiv_variable();
-    }
 
     return result;
 }
@@ -64,16 +60,14 @@ bool TypeNode::equal(const TypeNode* other) const {
 bool TypeNode::is_closed() const {
     for (auto v : bound_vars()) {
         for (auto r : *v->restricted_by()) {
-            if (! r->is_closed()) {
+            if (! r->is_closed())
                 return false;
-            }
         }
     }
 
     for (auto t : elems_) {
-        if (! t->is_closed()) {
+        if (! t->is_closed())
             return false;
-        }
     }
     return true;
 }
@@ -85,9 +79,8 @@ bool TypeNode::is_subtype(const TypeNode* super_type) const {
         return true;
 
     for (auto t : super_type->elems_) {
-        if (this->is_subtype(t.representative())) {
+        if (this->is_subtype(t.representative()))
             return true;
-        }
     }
     return false;
 }
@@ -205,10 +198,9 @@ std::string TypeVarNode::to_string() const {
 
 //------------------------------------------------------------------------------
 
-void check_sanity(thorin::ArrayRef<const Type> types) {
-    for (auto t : types) {
+void verify(thorin::ArrayRef<const Type> types) {
+    for (auto t : types)
         assert(t->is_sane());
-    }
 
     for (auto t1 : types) {
         for (auto t2 : types) {
@@ -224,4 +216,3 @@ void check_sanity(thorin::ArrayRef<const Type> types) {
 }
 
 }
-

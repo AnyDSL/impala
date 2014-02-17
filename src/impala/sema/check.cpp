@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "impala/ast.h"
 #include "impala/dump.h"
 #include "impala/sema/scopetable.h"
@@ -25,8 +27,6 @@ private:
 Type ErrorASTType::to_type(Sema& sema) const {
     return sema.type_error();
 }
-
-#include <iostream>
 
 Type PrimASTType::to_type(Sema& sema) const {
     switch (kind()) {
