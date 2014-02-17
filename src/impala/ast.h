@@ -612,7 +612,6 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-
     Kind kind_;
     thorin::Box box_;
 };
@@ -626,7 +625,6 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-
     Fn fn_;
     bool has_return_type_;
 

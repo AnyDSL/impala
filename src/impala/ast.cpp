@@ -1,7 +1,5 @@
 #include "impala/ast.h"
 
-using namespace thorin;
-
 namespace impala {
 
 const char* Visibility::str() {
@@ -35,7 +33,7 @@ bool PathExpr::is_lvalue() const {
     return false;
 }
 
-uint64_t LiteralExpr::get_u64() const { return bcast<uint64_t, Box>(box()); }
+uint64_t LiteralExpr::get_u64() const { return thorin::bcast<uint64_t, thorin::Box>(box()); }
 
 bool MapExpr::is_lvalue() const {
     assert(false && "TODO");
