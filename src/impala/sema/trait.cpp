@@ -10,8 +10,6 @@
 
 namespace impala {
 
-const std::string Trait::top_trait_name = std::string("");
-
 bool Trait::equal(const GenericElement* other) const {
     // TODO is this correct for a instanceof-equivalent?
     if (const Trait* t = other->isa<Trait>())

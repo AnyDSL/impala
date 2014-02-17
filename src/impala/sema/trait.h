@@ -57,7 +57,6 @@ private:
     const TraitDecl* const trait_decl_;
     const TraitSet super_traits_;
     std::vector<const TraitMethod*> methods_;
-    static const std::string top_trait_name;
 
     friend class TypeTable;
 };
