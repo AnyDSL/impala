@@ -79,13 +79,16 @@ bool TypeTraitInstanceNode::is_closed() const {
 std::string TypeTraitInstanceNode::to_string() const {
     std::string result = trait_->name();
 
-    const char* separator = "<";
+    if (var_inst_size() == 0)
+        return result;
+
+    const char* separator = "[";
     for (auto v : var_instances_) {
         result += separator + v->to_string();
         separator = ",";
     }
 
-    return result + ">";
+    return result + "]";
 }
 
 }

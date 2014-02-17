@@ -19,7 +19,7 @@ std::string GenericElement::bound_vars_to_string() const {
     if (!is_generic())
         return result;
 
-    const char* separator = "<";
+    const char* separator = "[";
     for (auto v : bound_vars()) {
         result += separator + v->to_string();
 
@@ -40,7 +40,7 @@ std::string GenericElement::bound_vars_to_string() const {
 
         separator = ",";
     }
-    return result + '>';
+    return result + ']';
 }
 
 void GenericElement::add_bound_var(TypeVar v) {
