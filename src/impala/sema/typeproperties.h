@@ -56,15 +56,11 @@ public:
     ~Unifiable() { if (!is_unified()) delete representative_; }
 
     T* representative() const { return representative_; }
-
     template<class U> bool equal(Unifiable<U>* other) const {
         assert(this->is_unified() && other->is_unified());
         return this->representative() == other->representative();
     }
-
     template<class U> operator Unifiable<U>() { return Unifiable<U>((U*) representative_, unified_); }
-
-    /// @see representative()
     bool is_unified() const { return unified_; }
 
 private:
@@ -92,11 +88,9 @@ public:
     UnifiableProxy()
         : node_(nullptr)
     {}
-    // TODO do we need both contructors?
     UnifiableProxy(Unifiable<T>* node)
         : node_(node)
     {}
-    // TODO do we need both contructors?
     UnifiableProxy(T* node)
         : node_(new Unifiable<T>(node))
     {}
