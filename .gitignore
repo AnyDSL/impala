@@ -4,4 +4,4 @@ CMakeCache.txt
 CMakeFiles/
 build*
 html
-impala
+test/impala
