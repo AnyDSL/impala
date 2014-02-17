@@ -65,20 +65,4 @@ bool TraitInstanceNode::is_closed() const {
     return true;
 }
 
-// TODO
-std::string TraitInstanceNode::to_string() const {
-    std::string result = trait_->to_string();
-
-    if (var_inst_size() == 0)
-        return result;
-
-    const char* separator = "[";
-    for (auto v : var_instances_) {
-        result += separator + v->to_string();
-        separator = ",";
-    }
-
-    return result + "]";
-}
-
 }

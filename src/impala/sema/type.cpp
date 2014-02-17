@@ -99,28 +99,6 @@ void TypeNode::dump() const { std::cout << to_string() << std::endl; }
 
 //------------------------------------------------------------------------------
 
-std::string PrimTypeNode::to_string() const {
-    switch (primtype_kind()) {
-#define IMPALA_TYPE(itype, atype) case PrimType_##itype: return #itype;
-#include "impala/tokenlist.h"
-        default: THORIN_UNREACHABLE;
-    }
-}
-
-std::string CompoundType::elems_to_string() const {
-    std::string result;
-
-    if (is_empty())
-        return "()";
-
-    const char* separator = "(";
-    for (auto elem : elems_) {
-        result += separator + elem->to_string();
-        separator = ", ";
-    }
-    return result + ')';
-}
-
 bool TypeVarNode::restrictions_equal(const TypeVar other) const {
     auto trestr = other->restricted_by();
 
@@ -181,14 +159,6 @@ void TypeVarNode::add_restriction(TraitInstance restriction) {
 
 bool TypeVarNode::is_closed() const {
     return bound_at_ != nullptr;
-}
-
-std::string TypeVarNode::to_string() const {
-    if (id_ < 26) {
-        return std::string(1, 'A' + id_);
-    } else {
-        return std::string("Z") + std::to_string(id_);
-    }
 }
 
 //------------------------------------------------------------------------------
