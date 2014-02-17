@@ -113,10 +113,10 @@ std::ostream& LocalDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" );;
     if (!is_anonymous())
          p.stream() << symbol();
-    if (!is_anonymous() && type())
+    if (!is_anonymous() && asttype())
         p.stream() << ": "; 
-    if (type())
-        type()->print(p);
+    if (asttype())
+        asttype()->print(p);
 
     return p.stream();
 }
@@ -143,7 +143,7 @@ std::ostream& FnDecl::print(Printer& p) const {
 
     const FnASTType* ret = nullptr;
     if (!fn().params().empty() && fn().params().back()->symbol() == "return") {
-        if (auto fntype = fn().params().back()->type()->isa<FnASTType>())
+        if (auto fntype = fn().params().back()->asttype()->isa<FnASTType>())
             ret = fntype;
     }
 
@@ -170,7 +170,7 @@ std::ostream& FnDecl::print(Printer& p) const {
 
 std::ostream& FieldDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" ) << visibility().str() << symbol() << ": ";
-    return type()->print(p);
+    return asttype()->print(p);
 }
 
 std::ostream& StaticItem::print(Printer& p) const {

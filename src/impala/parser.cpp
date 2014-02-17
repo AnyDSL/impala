@@ -377,7 +377,7 @@ const Param* Parser::parse_param(bool lambda) {
         if (type)
             error("identifier", "parameter");
         param->symbol_ = symbol;
-        param->type_ = parse_type();
+        param->asttype_ = parse_type();
     } else if (lambda) {
         if (type)
             error("identifier", "parameter");
@@ -388,7 +388,7 @@ const Param* Parser::parse_param(bool lambda) {
             type_app->set_loc(location);
             type = type_app;
         }
-        param->type_ = type; 
+        param->asttype_ = type;
     }
 
     return param;
@@ -400,7 +400,7 @@ bool Parser::parse_return_param(Params& params) {
         auto param = new Param(cur_var_handle++);
         param->is_mut_ = false;
         param->symbol_ = "return";
-        param->type_ = fn_type;
+        param->asttype_ = fn_type;
         param->set_loc(fn_type->loc());
         params.push_back(param);
     }
@@ -513,7 +513,7 @@ StaticItem* Parser::parse_static_item() {
     static_item->is_mut_ = accept(Token::MUT);
     static_item->symbol_ = try_id("static item");
     expect(Token::COLON, "static item");
-    static_item->type_ = parse_type();
+    static_item->asttype_ = parse_type();
     expect(Token::ASGN, "static item");
     static_item->init_ = parse_expr();
     expect(Token::SEMICOLON, "static item");
@@ -591,7 +591,7 @@ const FieldDecl* Parser::parse_field_decl() {
     field_decl->is_mut_ = accept(Token::MUT);
     field_decl->symbol_ = try_id("struct field");
     expect(Token::COLON, "struct field");
-    field_decl->type_ = parse_type();
+    field_decl->asttype_ = parse_type();
     return field_decl;
 }
 
@@ -1025,7 +1025,7 @@ const LetStmt* Parser::parse_let_stmt() {
     local->is_mut_ = accept(Token::MUT);
     local->symbol_ = try_id("local variable in let binding");
     if (accept(Token::COLON))
-        local->type_ = parse_type();
+        local->asttype_ = parse_type();
     if (accept(Token::ASGN))
         let_stmt->init_ = parse_expr();
     expect(Token::SEMICOLON, "the end of an let statement");

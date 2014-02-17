@@ -127,11 +127,15 @@ private:
  * types
  */
 
-class ASTType : public ASTNode {};
+class ASTType : public ASTNode {
+public:
+    virtual Type to_type(Sema& sema) const = 0;
+};
 
 class ErrorASTType : public ASTType {
 public:
     virtual std::ostream& print(Printer&) const;
+    virtual Type to_type(Sema& sema) const;
 };
 
 class PrimASTType : public ASTType {
@@ -143,6 +147,7 @@ public:
 
     Kind kind() const { return kind_; }
     virtual std::ostream& print(Printer&) const;
+    virtual Type to_type(Sema& sema) const;
 
 private:
     Kind kind_;
@@ -157,6 +162,7 @@ public:
     bool is_owned() const { return kind_ == '~'; }
     bool is_borrowed() const { return kind_ == '&'; }
     virtual std::ostream& print(Printer&) const;
+    virtual Type to_type(Sema& sema) const;
 
 private:
     char kind_;
@@ -178,12 +184,14 @@ protected:
 class IndefiniteArrayASTType : public ArrayASTType {
 public:
     virtual std::ostream& print(Printer&) const;
+    virtual Type to_type(Sema& sema) const;
 };
 
 class DefiniteArrayASTType : public ArrayASTType {
 public:
     uint64_t dim() const { return dim_; }
     virtual std::ostream& print(Printer&) const;
+    virtual Type to_type(Sema& sema) const;
 
 private:
     thorin::u64 dim_;
@@ -205,12 +213,14 @@ protected:
 class TupleASTType : public CompoundASTType {
 public:
     virtual std::ostream& print(Printer&) const;
+    virtual Type to_type(Sema& sema) const;
 };
 
 class ASTTypeApp : public CompoundASTType {
 public:
     Symbol symbol() const { return symbol_; }
     virtual std::ostream& print(Printer&) const;
+    virtual Type to_type(Sema& sema) const;
 
 private:
     Symbol symbol_;
@@ -222,6 +232,7 @@ class FnASTType : public ParametricASTType, public CompoundASTType {
 public:
     const FnASTType* ret_fn_type() const;
     virtual std::ostream& print(Printer&) const;
+    virtual Type to_type(Sema& sema) const;
 
     friend class Parser;
 };
@@ -261,16 +272,19 @@ class ParametricTypeDecl : public ParametricASTType, public Decl {
 class ValueDecl : public Decl {
 public:
     ValueDecl()
-        : type_(nullptr)
+        : asttype_(nullptr)
+        , type_()
         , is_mut_(false)
     {}
 
     /// original type.
-    const ASTType* type() const { return type_; }
+    const ASTType* asttype() const { return asttype_; }
+    Type type() const { return type_; }
     bool is_mut() const { return is_mut_; }
 
 protected:
-    thorin::AutoPtr<const ASTType> type_;
+    thorin::AutoPtr<const ASTType> asttype_;
+    mutable Type type_;
     bool is_mut_;
 
     friend class Parser;
@@ -317,6 +331,7 @@ public:
         : LocalDecl(handle)
     {}
 
+    friend class FnDecl;
     friend class Parser;
 };
 
@@ -523,8 +538,10 @@ public:
     virtual thorin::RefPtr emit(CodeGen& cg) const { /*= 0*/ return 0; }
     virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {}
 
-private:
+protected:
     mutable Type type_;
+
+private:
     friend class Parser;
 };
 

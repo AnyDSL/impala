@@ -20,6 +20,47 @@ private:
     bool nossa_;
 };
 
+//------------------------------------------------------------------------------
+
+Type ErrorASTType::to_type(Sema& sema) const {
+    return sema.type_error();
+}
+
+Type PrimASTType::to_type(Sema& sema) const {
+    // TODO
+}
+
+Type PtrASTType::to_type(Sema& sema) const {
+    // TODO
+}
+
+Type IndefiniteArrayASTType::to_type(Sema& sema) const {
+    // TODO
+}
+
+Type DefiniteArrayASTType::to_type(Sema& sema) const {
+    // TODO
+}
+
+Type TupleASTType::to_type(Sema& sema) const {
+    // TODO
+}
+
+Type ASTTypeApp::to_type(Sema& sema) const {
+    // TODO
+}
+
+Type FnASTType::to_type(Sema& sema) const {
+    // TODO type vars
+    std::vector<Type> params;
+    for (auto p : elems()) {
+        params.push_back(p->to_type(sema));
+    }
+    return sema.fntype(params);
+}
+
+//------------------------------------------------------------------------------
+
 /*
  * items - check_head
  */
@@ -89,6 +130,25 @@ void StaticItem::check(Sema& sema) const {
 }
 
 void FnDecl::check(Sema& sema) const {
+    // TODO set type
+    // TODO check type variables
+    // check parameters
+    std::vector<Type> par_types;
+    for (const Param* p : fn().params()) {
+        sema.insert(p);
+        Type pt = p->asttype()->to_type(sema);
+        p->type_ = pt;
+        par_types.push_back(pt);
+    }
+    // create FnType
+    // TODO consider type variables
+    Type fn_type = sema.fntype(par_types);
+    type_ = fn_type;
+
+    // TODO remove output
+    type_->dump();
+
+    fn_.body()->check(sema);
 }
 
 void StructDecl::check(Sema& sema) const {
