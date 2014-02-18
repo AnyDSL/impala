@@ -94,7 +94,7 @@ private:
 #include "impala/tokenlist.h"
     TypeError type_error_;
 
-    friend class TypeVar;
+    friend class TypeVarNode;
 };
 
 }

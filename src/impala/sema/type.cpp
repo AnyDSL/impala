@@ -163,6 +163,36 @@ bool TypeVarNode::is_closed() const {
 
 //------------------------------------------------------------------------------
 
+Type TypeNode::instantiate(thorin::ArrayRef<Type> var_instances) const {
+    check_instantiation(var_instances);
+
+    assert(clone_.empty());
+    assert(num_bound_vars() == var_instances.size());
+    size_t i = 0;
+    for (TypeVar v : bound_vars())
+        v->clone_ = var_instances[i++];
+
+    set_clone();
+    assert(!clone_.empty());
+    Type instance = clone_;
+
+    clean_clone();
+    assert(clone_.empty());
+
+    assert(instance->is_sane());
+    return instance;
+}
+
+void TypeNode::clean_clone() const {
+    clone_ = Type();
+    // CHECK does this loop cost anything w.o. assertions?
+    for (TypeVar v : bound_vars())
+        assert(v->is_subtype(this));
+
+    for (size_t i = 0; i < size(); ++i)
+        elem(i)->clean_clone();
+}
+
 Type TypeNode::clone() const {
     if (clone_.empty()) {
         for (TypeVar v : bound_vars())

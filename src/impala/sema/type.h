@@ -77,8 +77,7 @@ public:
     void dump() const;
     virtual std::string to_string() const = 0;
 
-    /// return a deep copy of this Type
-    Type clone() const;
+    Type instantiate(thorin::ArrayRef<Type> var_instances) const;
 
     bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());
@@ -104,6 +103,11 @@ public:
 private:
     bool is_subtype(const TypeNode* super_type) const;
 
+    /// return a deep copy of this Type
+    Type clone() const;
+    /// empty all clone_ Types
+    void clean_clone() const;
+
     /// set the internal clone_ variable with a clone that has not yet any bound variables
     virtual void set_clone() const = 0;
 
@@ -113,6 +117,7 @@ protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
     mutable Type clone_; ///< Used internally during cloning
 
+    friend class CompoundType;
     friend class TypeTable;
 };
 
@@ -242,7 +247,7 @@ private:
 
     virtual void set_clone() const;
     /// Set up clone_ to be a fully fledged clone of this TypeVar (except of the binding)
-    void TypeVarNode::set_bound_clone() const;
+    void set_bound_clone() const;
 
     friend class TypeTable;
     friend class TypeNode;
