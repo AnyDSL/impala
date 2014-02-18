@@ -1,0 +1,3 @@
+// these traits are not implementable
+trait S[A: T[int]] {}
+trait T[B: S[int]] {}
