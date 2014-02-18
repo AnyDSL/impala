@@ -45,9 +45,9 @@ std::string GenericElement::bound_vars_to_string() const {
 void GenericElement::add_bound_var(TypeVar v) {
     assert(!v->is_closed() && "Type variables already bound");
 
-    // TODO should variables only be bound in this case? does this also hold for traits?
+    // CHECK should variables only be bound in this case? does this also hold for traits?
     //assert(v->is_subtype(this) && "Type variables can only be bound at t if they are a subtype of t!");
-    // TODO should this be forbidden?
+    // CHECK should this be forbidden?
     //assert(type->kind() != Type_var && "Types like 'forall a, a' are forbidden!");
 
     v->bind(this);
@@ -56,7 +56,7 @@ void GenericElement::add_bound_var(TypeVar v) {
 
 void GenericElement::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
     assert(var_instances.size() == bound_vars().size() && "Wrong number of instances for bound type variables");
-    // TODO raise error if a type does not implement the require traits
+    // FEATURE raise error if a type does not implement the require traits
 }
 
 }

@@ -30,7 +30,6 @@ TypeTable::TypeTable()
     unify(type_error_);
 }
 
-// TODO delete all unifiables
 TypeTable::~TypeTable() { 
     for (auto type : types_) delete type; 
     for (auto trait : trait_instances_) delete trait;
@@ -62,9 +61,8 @@ void TypeTable::insert_new(Type type) {
         }
     }
 
-    // TODO does it cause any problems to put TypeVars into the type-set?
+    // CHECK does it cause any problems to put TypeVars into the type-set?
     //if (type->kind() != Type_var) {
-        // TODO is this a correct instanceof test?
         //assert(!type.representative()->isa<TypeVarNode>());
         auto p = types_.insert(type.representative());
         assert(p.second && "hash/equal broken");
@@ -113,7 +111,7 @@ template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) 
 
         assert(tv_restrs->size() == reprv->restricted_by()->size());
 
-        // TODO this does work but seems too much effort
+        // FEATURE this does work but seems too much effort
         TraitInstanceNodeTableSet ttis;
         for (auto r : *reprv->restricted_by()) {
             auto p = ttis.insert(r.representative());

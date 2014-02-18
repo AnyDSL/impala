@@ -231,7 +231,7 @@ public:
      */
     virtual bool is_closed() const;
 
-    // TODO this->is_subtype(bound_at()); if bound_at is a Type, else it should occur in the method signatures
+    // CHECK this->is_subtype(bound_at()); if bound_at is a Type, else it should occur in the method signatures
     virtual bool is_sane() const { return is_closed(); }
 
 private:

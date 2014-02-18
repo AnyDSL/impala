@@ -13,8 +13,8 @@ int TypeVarNode::counter = 0;
 //------------------------------------------------------------------------------
 
 size_t TypeNode::hash() const {
-    // TODO take type variables of generic types better into the equation
-    // TODO perhaps store this hash so it does not need to be recomputed all the time
+    // FEATURE take type variables of generic types better into the equation
+    // FEATURE perhaps store this hash so it does not need to be recomputed all the time
     size_t seed = hash_combine(hash_value((int) kind()), size());
     seed = hash_combine(seed, num_bound_vars());
     for (auto elem : elems_)
@@ -24,7 +24,6 @@ size_t TypeNode::hash() const {
 }
 
 bool TypeNode::equal(const GenericElement* other) const {
-    // TODO is this correct for a instanceof-equivalent?
     if (const TypeNode* t = other->isa<TypeNode>()) {
         return equal(t);
     }
@@ -105,7 +104,7 @@ bool TypeVarNode::restrictions_equal(const TypeVar other) const {
     if (this->restricted_by()->size() != trestr->size())
         return false;
 
-    // TODO this does work but seems too much effort, at least use a set that uses representatives
+    // FEATURE this does work but seems too much effort, at least use a set that uses representatives
     TraitInstanceNodeTableSet ttis;
     for (auto r : *trestr) {
         auto p = ttis.insert(r.representative());
@@ -126,7 +125,6 @@ bool TypeVarNode::equal(const TypeNode* other) const {
     if (this == other)
         return true;
 
-    // TODO is this correct for a instanceof-equivalent?
     if (const TypeVarNode* t = other->isa<TypeVarNode>()) {
         if ((this->equiv_var_ == nullptr) && (t->equiv_var_ == nullptr)) {
             if (this->bound_at_ == nullptr) {
@@ -185,7 +183,7 @@ Type TypeNode::instantiate(thorin::ArrayRef<Type> var_instances) const {
 
 void TypeNode::clean_clone() const {
     clone_ = Type();
-    // CHECK does this loop cost anything w.o. assertions?
+    // CHECK does this loop cost anything with disabled assertions?
     for (TypeVar v : bound_vars())
         assert(v->is_subtype(this));
 
@@ -218,7 +216,7 @@ thorin::AutoPtr<std::vector<Type>> CompoundType::clone_elems() const {
 void TypeErrorNode::set_clone() const { clone_ = typetable().type_error(); }
 void PrimTypeNode::set_clone() const { clone_ = typetable().primtype(primtype_kind()); }
 void FnTypeNode::set_clone() const { clone_ = typetable().fntype(*clone_elems()); }
-void TupleTypeNode::set_clone() const { /*clone_ = typetable().tupletype(*clone_elems()); TODO*/ }
+void TupleTypeNode::set_clone() const { /*clone_ = typetable().tupletype(*clone_elems()); FEATURE*/ }
 
 void TypeVarNode::set_clone() const {
     // was not bound in the cloned type -> return orginal type var
@@ -229,7 +227,7 @@ void TypeVarNode::set_clone() const {
 void TypeVarNode::set_bound_clone() const {
     assert(clone_.empty());
     clone_ = typetable().typevar();
-    // TODO consider bounds!
+    // FEATURE consider bounds!
 }
 
 //------------------------------------------------------------------------------

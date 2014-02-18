@@ -11,7 +11,6 @@
 namespace impala {
 
 bool Trait::equal(const GenericElement* other) const {
-    // TODO is this correct for a instanceof-equivalent?
     if (const Trait* t = other->isa<Trait>())
         return equal(t);
     return false;
@@ -39,7 +38,7 @@ TraitInstanceNode::TraitInstanceNode(const Trait* trait, thorin::ArrayRef<Type> 
 }
 
 bool TraitInstanceNode::equal(const TraitInstanceNode* other) const {
-    // TODO use equal?
+    // CHECK use equal?
     if (trait_ != other->trait_)
         return false;
 
@@ -52,7 +51,7 @@ bool TraitInstanceNode::equal(const TraitInstanceNode* other) const {
     return true;
 }
 
-// TODO better hash function
+// FEATURE better hash function
 size_t TraitInstanceNode::hash() const { return trait_->hash(); }
 
 bool TraitInstanceNode::is_closed() const {

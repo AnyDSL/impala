@@ -1,4 +1,4 @@
-// TODO only for debugging
+// REMINDER only for debugging
 #include "iostream"
 
 #include "impala/ast.h"
@@ -59,19 +59,19 @@ Type PrimASTType::to_type(Sema& sema) const {
 }
 
 Type PtrASTType::to_type(Sema& sema) const {
-    return Type(); // TODO
+    return Type(); // FEATURE
 }
 
 Type IndefiniteArrayASTType::to_type(Sema& sema) const {
-    return Type(); // TODO
+    return Type(); // FEATURE
 }
 
 Type DefiniteArrayASTType::to_type(Sema& sema) const {
-    return Type(); // TODO
+    return Type(); // FEATURE
 }
 
 Type TupleASTType::to_type(Sema& sema) const {
-    return Type(); // TODO
+    return Type(); // FEATURE
 }
 
 Type ASTTypeApp::to_type(Sema& sema) const {
@@ -220,10 +220,10 @@ void FnDecl::check(Sema& sema) const {
 
     type_ = fn_type;
 
-    // TODO set sema.cur_fn_?
+    // CHECK set sema.cur_fn_?
     fn().body()->check(sema);
 
-    // TODO check for correct return type
+    // FEATURE check for correct return type
     sema.pop_scope();
 }
 
@@ -231,7 +231,7 @@ void StructDecl::check(Sema& sema) const {
 }
 
 void TraitDecl::check(Sema& sema) const {
-    // TODO consider super traits and check methods
+    // FEATURE consider super traits and check methods
     trait_ = sema.typetrait(this, TraitSet());
 
     check_type_params(sema);
@@ -274,7 +274,7 @@ void FnExpr::check(Sema& sema) const {
 void PathExpr::check(Sema& sema) const {
     const PathItem* last_item = path()->path_items().back();
 
-    // TODO consider longer paths
+    // FEATURE consider longer paths
     decl_ = sema.lookup(last_item->symbol());
     if (decl_ == nullptr) {
         // TODO better error handling
@@ -292,7 +292,7 @@ void PathExpr::check(Sema& sema) const {
         } else {
             type_ = vdec->type();
         }
-    } // TODO else
+    } // FEATURE else
 }
 
 void PrefixExpr::check(Sema& sema) const {
@@ -326,7 +326,7 @@ void StructExpr::check(Sema& sema) const {
 }
 
 void MapExpr::check(Sema& sema) const {
-    // TODO this currently only considers function calls
+    // FEATURE this currently only considers function calls
     lhs()->check(sema);
     Type lhs_type = lhs()->type();
     assert(!lhs_type.empty());
@@ -350,13 +350,13 @@ void MapExpr::check(Sema& sema) const {
         assert(ret_func->kind() == Type_fn); // TODO better error handling
         switch (ret_func->size()) {
         case 0:
-            // TODO set void type of something
+            // FEATURE set void/unit type or something
             break;
         case 1:
             type_ = ret_func->elem(0);
             break;
         default:
-            // TODO return tuple type
+            // FEATURE return tuple type
             break;
         }
     }
