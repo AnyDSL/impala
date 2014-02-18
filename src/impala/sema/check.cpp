@@ -1,3 +1,6 @@
+// TODO only for debugging
+#include "iostream"
+
 #include "impala/ast.h"
 #include "impala/dump.h"
 #include "impala/sema/scopetable.h"
@@ -21,6 +24,27 @@ private:
 };
 
 //------------------------------------------------------------------------------
+
+void ParametricASTType::check_type_params(Sema& sema) const {
+    // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
+
+    for (const TypeParam* tp : type_params()) {
+        tp->type_var_ = sema.typevar();
+        sema.insert(tp);
+    }
+
+    // check bounds
+    for (const TypeParam* tp : type_params()) {
+        for (const ASTType* b : tp->bounds()) {
+            if (auto trait_inst = b->isa<ASTTypeApp>()) {
+                tp->type_var()->add_restriction(trait_inst->to_trait_instance(sema));
+            } else {
+                // TODO better error handling
+                assert(false && "Bounds must be trait instances, not types");
+            }
+        }
+    }
+}
 
 Type ErrorASTType::to_type(Sema& sema) const {
     return sema.type_error();
@@ -70,12 +94,21 @@ Type ASTTypeApp::to_type(Sema& sema) const {
 }
 
 Type FnASTType::to_type(Sema& sema) const {
-    // TODO type vars
+    sema.push_scope();
+
+    check_type_params(sema);
+
     std::vector<Type> params;
-    for (auto p : elems()) {
+    for (auto p : elems())
         params.push_back(p->to_type(sema));
-    }
-    return sema.fntype(params);
+
+    FnType t = sema.fntype(params);
+    for (auto tp : type_params())
+        t->add_bound_var(tp->type_var());
+
+    sema.pop_scope();
+
+    return t;
 }
 
 TraitInstance ASTTypeApp::to_trait_instance(Sema& sema) const {
@@ -166,27 +199,6 @@ void EnumDecl::check(Sema& sema) const {
 void StaticItem::check(Sema& sema) const {
 }
 
-void ParametricASTType::check_type_params(Sema& sema) const {
-    // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
-
-    for (const TypeParam* tp : type_params()) {
-        tp->type_var_ = sema.typevar();
-        sema.insert(tp);
-    }
-
-    // check bounds
-    for (const TypeParam* tp : type_params()) {
-        for (const ASTType* b : tp->bounds()) {
-            if (auto trait_inst = b->isa<ASTTypeApp>()) {
-                tp->type_var()->add_restriction(trait_inst->to_trait_instance(sema));
-            } else {
-                // TODO better error handling
-                assert(false && "Bounds must be trait instances, not types");
-            }
-        }
-    }
-}
-
 void FnDecl::check(Sema& sema) const {
     // TODO introduce new scope?
     check_type_params(sema);
@@ -248,7 +260,7 @@ void BlockExpr::check(Sema& sema) const {
         stmt->check(sema);
 
     expr()->check(sema);
-    //assert(!expr()->type().empty()); TODO fails for EmptyExpr -> should we create an EmptyType=void?
+    //assert(!expr()->type().empty()); TODO fails for EmptyExpr -> should we create an EmptyType=void/unit?
     type_ = expr()->type();
 }
 
@@ -258,12 +270,19 @@ void LiteralExpr::check(Sema& sema) const {
 void FnExpr::check(Sema& sema) const {
 }
 
-#include <iostream>
-
 void PathExpr::check(Sema& sema) const {
+    const PathItem* last_item = path()->path_items().back();
+
     // TODO consider longer paths
-    decl_ = sema.lookup(path()->path_items()[0]->symbol());
+    decl_ = sema.lookup(last_item->symbol());
+    if (decl_ == nullptr) {
+        // TODO better error handling
+        assert(false && "Declaration not found");
+    }
+
     if (auto vdec = decl_->isa<ValueDecl>()) {
+        // TODO consider type expressions
+
         type_ = vdec->type();
     } // TODO else
 }
