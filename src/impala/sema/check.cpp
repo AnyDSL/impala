@@ -200,7 +200,7 @@ void StaticItem::check(Sema& sema) const {
 }
 
 void FnDecl::check(Sema& sema) const {
-    // TODO introduce new scope?
+    sema.push_scope();
     check_type_params(sema);
     // check parameters
     std::vector<Type> par_types;
@@ -224,6 +224,7 @@ void FnDecl::check(Sema& sema) const {
     fn().body()->check(sema);
 
     // TODO check for correct return type
+    sema.pop_scope();
 }
 
 void StructDecl::check(Sema& sema) const {
