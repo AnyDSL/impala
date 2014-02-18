@@ -32,7 +32,7 @@ TraitInstanceNode::TraitInstanceNode(const Trait* trait, thorin::ArrayRef<Type> 
     : trait_(trait)
     , var_instances_(var_instances.size())
 {
-    assert(var_instances.size() == trait->bound_vars().size() && "Wrong number of instances for bound type variables");
+    trait->check_instantiation(var_instances);
     size_t i = 0;
     for (auto elem : var_instances)
         var_instances_[i++] = elem;

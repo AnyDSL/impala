@@ -163,6 +163,38 @@ bool TypeVarNode::is_closed() const {
 
 //------------------------------------------------------------------------------
 
+Type TypeNode::clone() const {
+    if (clone_.empty()) {
+        set_clone();
+        assert(!clone_.empty());
+
+        for (TypeVar v : bound_vars())
+            clone_->add_bound_var(v->clone());
+    }
+
+    return clone_;
+}
+
+thorin::AutoPtr<std::vector<Type>> CompoundType::clone_elems() const {
+    thorin::AutoPtr<std::vector<Type>> clones(new std::vector<Type>());
+    for (size_t i = 0; i < size(); ++i)
+        clones->push_back(elem(i)->clone());
+    return clones;
+}
+
+void TypeErrorNode::set_clone() const { clone_ = typetable().type_error(); }
+void PrimTypeNode::set_clone() const { clone_ = typetable().primtype(primtype_kind()); }
+void FnTypeNode::set_clone() const { clone_ = typetable().fntype(*clone_elems()); }
+void TupleTypeNode::set_clone() const { /*clone_ = typetable().tupletype(*clone_elems()); TODO*/ }
+
+void TypeVarNode::set_clone() const {
+    // FIXME if this TypeVar is bound extern to cloning do not create a new one!
+    clone_ = typetable().typevar();
+    // TODO consider bounds!
+}
+
+//------------------------------------------------------------------------------
+
 void verify(thorin::ArrayRef<const Type> types) {
     for (auto t : types)
         assert(t->is_sane());

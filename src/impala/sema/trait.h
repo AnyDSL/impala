@@ -35,7 +35,7 @@ struct TraitMethod {
 class Trait : public GenericElement {
 private:
     Trait(TypeTable& tt, const TraitDecl* trait_decl, const TraitSet super_traits)
-        : typetable_(tt)
+        : GenericElement(tt)
         , trait_decl_(trait_decl)
         , super_traits_(super_traits)
     {}
@@ -43,7 +43,6 @@ private:
     Trait(const Trait& node);         ///< Do not copy-construct a \p Trait.
 
 public:
-    TypeTable& typetable() const { return typetable_; }
     virtual bool equal(const GenericElement* t) const;
     bool equal(const Trait* other) const { return this->trait_decl() == other->trait_decl(); }
     size_t hash() const { return thorin::hash_value(trait_decl()); }
@@ -53,7 +52,6 @@ public:
     void add_method(const std::string name, FnType type);
 
 private:
-    TypeTable& typetable_;
     const TraitDecl* const trait_decl_;
     const TraitSet super_traits_;
     std::vector<const TraitMethod*> methods_;

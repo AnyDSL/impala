@@ -128,6 +128,7 @@ private:
 
 class GenericElement : public thorin::MagicCast<GenericElement> {
 public:
+    TypeTable& typetable() const { return typetable_; }
     size_t num_bound_vars() const { return bound_vars_.size(); }
     thorin::ArrayRef<TypeVar> bound_vars() const { return thorin::ArrayRef<TypeVar>(bound_vars_); }
     TypeVar bound_var(size_t i) const { return bound_vars_[i]; }
@@ -137,9 +138,18 @@ public:
     virtual bool equal(const GenericElement*) const = 0;
     virtual size_t hash() const = 0;
 
+    /// raise error if a type does not implement the required traits;
+    void check_instantiation(thorin::ArrayRef<Type>) const;
+
 protected:
-    std::vector<TypeVar> bound_vars_;
+    GenericElement(TypeTable& tt) : typetable_(tt) {}
+
     std::string bound_vars_to_string() const;
+
+    std::vector<TypeVar> bound_vars_;
+
+private:
+    TypeTable& typetable_;
 };
 
 }

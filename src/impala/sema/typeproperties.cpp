@@ -54,4 +54,9 @@ void GenericElement::add_bound_var(TypeVar v) {
     bound_vars_.push_back(v);
 }
 
+void GenericElement::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
+    assert(var_instances.size() == bound_vars().size() && "Wrong number of instances for bound type variables");
+    // TODO raise error if a type does not implement the require traits
+}
+
 }

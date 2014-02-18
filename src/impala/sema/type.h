@@ -1,6 +1,9 @@
 #ifndef IMPALA_SEMA_TYPE_H
 #define IMPALA_SEMA_TYPE_H
 
+#include <map>
+
+#include "thorin/util/autoptr.h"
 #include "thorin/util/array.h"
 #include "thorin/util/hash.h"
 
@@ -44,7 +47,7 @@ private:
 
 protected:
     TypeNode(TypeTable& typetable, Kind kind, size_t size)
-        : typetable_(typetable)
+        : GenericElement(typetable)
         , kind_(kind)
         , elems_(size)
     {}
@@ -53,7 +56,6 @@ protected:
     Type elem_(size_t i) const { return elems_[i]; }
 
 public:
-    TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
     //TypeNodeArray elems() const { return TypeNodeArray(elems_); }
     const Type elem(size_t i) const { return elems_[i]; }
@@ -74,6 +76,9 @@ public:
 
     void dump() const;
     virtual std::string to_string() const = 0;
+
+    /// return a deep copy of this Type
+    Type clone() const;
 
     bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());
@@ -99,11 +104,14 @@ public:
 private:
     bool is_subtype(const TypeNode* super_type) const;
 
-    TypeTable& typetable_;
+    /// set the internal clone_ variable with a clone that has not yet any bound variables
+    virtual void set_clone() const = 0;
+
     const Kind kind_;
 
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
+    mutable Type clone_; ///< Used internally during cloning
 
     friend class TypeTable;
 };
@@ -124,6 +132,8 @@ private:
         : TypeNode(typetable, Type_error, 0)
     {}
 
+    virtual void set_clone() const;
+
 public:
     virtual std::string to_string() const { return "<type error>"; }
 
@@ -137,6 +147,7 @@ private:
     {}
 
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
+    virtual void set_clone() const;
 
 public:
     virtual std::string to_string() const;
@@ -155,6 +166,8 @@ protected:
     }
 
     std::string elems_to_string() const;
+
+    thorin::AutoPtr<std::vector<Type>> clone_elems() const;
 };
 
 class FnTypeNode : public CompoundType {
@@ -162,6 +175,8 @@ private:
     FnTypeNode(TypeTable& typetable, thorin::ArrayRef<Type> elems)
         : CompoundType(typetable, Type_fn, elems)
     {}
+
+    virtual void set_clone() const;
 
 public:
     virtual std::string to_string() const { return std::string("fn") + bound_vars_to_string() + elems_to_string(); }
@@ -174,6 +189,8 @@ private:
     TupleTypeNode(TypeTable& typetable, thorin::ArrayRef<Type> elems)
         : CompoundType(typetable, Type_tuple, elems)
     {}
+
+    virtual void set_clone() const;
 
 public:
     virtual std::string to_string() const { return std::string("tuple") + bound_vars_to_string() + elems_to_string(); }
@@ -202,6 +219,8 @@ public:
     void add_restriction(TraitInstance restriction);
     virtual bool equal(const TypeNode* other) const;
     std::string to_string() const;
+
+    virtual void set_clone() const;
 
     /**
      * A type variable is closed if it is bound and all restrictions are closed.
