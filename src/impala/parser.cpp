@@ -113,12 +113,11 @@ public:
     {
         lookahead[0] = lexer.lex();
         lookahead[1] = lexer.lex();
+        lookahead[2] = lexer.lex();
         prev_loc_ = Location(filename, 1, 1, 1, 1);
     }
 
-    const Token& la(size_t i) const { return lookahead[i]; }
-    const Token& la () const { return lookahead[0]; }
-    const Token& la2() const { return lookahead[1]; }
+    const Token& la(size_t i = 0) const { assert(i < 3); return lookahead[i]; }
     Location prev_loc() const { return prev_loc_; }
 
 #ifdef NDEBUG
@@ -217,7 +216,7 @@ private:
     Token lex();
 
     Lexer lexer;       ///< invoked in order to get next token
-    Token lookahead[2];///< LL(2) look ahead
+    Token lookahead[3];///< SLL(3) look ahead
     size_t cur_var_handle;
     bool no_bars_;
     Location prev_loc_;
@@ -252,9 +251,10 @@ const ModContents* parse(bool& result, std::istream& i, const std::string& filen
  */
 
 Token Parser::lex() {
-    Token result  = lookahead[0]; // remember result
+    Token result = lookahead[0]; // remember result
     lookahead[0] = lookahead[1];  // copy over LA2 to LA1
-    lookahead[1] = lexer.lex();   // fill new LA2
+    lookahead[1] = lookahead[2];  // copy over LA3 to LA2
+    lookahead[2] = lexer.lex();   // fill new LA3
     prev_loc_ = result.loc();     // remember previous location
 
     return result;
@@ -872,7 +872,8 @@ const Expr* Parser::parse_primary_expr() {
         case Token::DOUBLE_COLON:
         case Token::ID:  {
             auto path = parse_path();
-            if (accept(Token::L_BRACE)) {
+            if (la(0) == Token::L_BRACE && (la(1) == Token::ID && la(2) == Token::COLON)) {
+                eat(Token::L_BRACE);
                 auto struct_expr = new StructExpr();
                 struct_expr->path_ = path;
                 parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
