@@ -282,9 +282,16 @@ void PathExpr::check(Sema& sema) const {
     }
 
     if (auto vdec = decl_->isa<ValueDecl>()) {
-        // TODO consider type expressions
+        // consider type expressions
+        if (!last_item->types().empty()) {
+            std::vector<Type> type_args;
+            for (const ASTType* t : last_item->types())
+                type_args.push_back(t->to_type(sema));
 
-        type_ = vdec->type();
+            type_ = vdec->type()->instantiate(type_args);
+        } else {
+            type_ = vdec->type();
+        }
     } // TODO else
 }
 

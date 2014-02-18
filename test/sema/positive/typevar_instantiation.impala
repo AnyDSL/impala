@@ -1,0 +1,3 @@
+fn myf(x: int, f: fn[A](A)->bool) -> bool {
+    f[int](x)
+}
