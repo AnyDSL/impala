@@ -1,0 +1,3 @@
+fn myf(x: bool, f: fn(int)->bool) -> bool {
+   f(x)
+}

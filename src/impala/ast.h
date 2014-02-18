@@ -540,7 +540,7 @@ private:
 
 class Expr : public ASTNode {
 public:
-    const Type type() const { return type_; }
+    Type type() const { return type_; }
     virtual bool is_lvalue() const = 0;
     virtual void check(Sema& sema) const = 0;
     virtual thorin::RefPtr emit(CodeGen& cg) const { /*= 0*/ return 0; }

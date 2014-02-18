@@ -299,6 +299,40 @@ void StructExpr::check(Sema& sema) const {
 }
 
 void MapExpr::check(Sema& sema) const {
+    // TODO this currently only considers function calls
+    lhs()->check(sema);
+    Type lhs_type = lhs()->type();
+    assert(!lhs_type.empty());
+
+    if (lhs_type->kind() == Type_fn) {
+        // TODO better error handling
+        assert(((lhs_type->size() == (args().size()+1))
+                || (lhs_type->size() == args().size())) && "Wrong number of arguments");
+
+        for (size_t i = 0; i < args().size(); ++i) {
+            auto arg = args()[i];
+            arg->check(sema);
+            assert(!arg->type().empty());
+
+            // TODO better error handling
+            assert(arg->type() == lhs_type->elem(i));
+        }
+
+        // set return type
+        Type ret_func = lhs_type->elem(lhs_type->size() - 1);
+        assert(ret_func->kind() == Type_fn); // TODO better error handling
+        switch (ret_func->size()) {
+        case 0:
+            // TODO set void type of something
+            break;
+        case 1:
+            type_ = ret_func->elem(0);
+            break;
+        default:
+            // TODO return tuple type
+            break;
+        }
+    }
 }
 
 void IfExpr::check(Sema& sema) const {
