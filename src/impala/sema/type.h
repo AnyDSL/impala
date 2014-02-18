@@ -220,8 +220,6 @@ public:
     virtual bool equal(const TypeNode* other) const;
     std::string to_string() const;
 
-    virtual void set_clone() const;
-
     /**
      * A type variable is closed if it is bound and all restrictions are closed.
      * If a type variable is closed it must not be changed anymore!
@@ -241,6 +239,10 @@ private:
     const GenericElement* bound_at_;
     mutable const TypeVarNode* equiv_var_;///< Used to define equivalence constraints when checking equality of types.
     static int counter;
+
+    virtual void set_clone() const;
+    /// Set up clone_ to be a fully fledged clone of this TypeVar (except of the binding)
+    void TypeVarNode::set_bound_clone() const;
 
     friend class TypeTable;
     friend class TypeNode;

@@ -165,6 +165,9 @@ bool TypeVarNode::is_closed() const {
 
 Type TypeNode::clone() const {
     if (clone_.empty()) {
+        for (TypeVar v : bound_vars())
+            v->set_bound_clone();
+
         set_clone();
         assert(!clone_.empty());
 
@@ -188,7 +191,13 @@ void FnTypeNode::set_clone() const { clone_ = typetable().fntype(*clone_elems())
 void TupleTypeNode::set_clone() const { /*clone_ = typetable().tupletype(*clone_elems()); TODO*/ }
 
 void TypeVarNode::set_clone() const {
-    // FIXME if this TypeVar is bound extern to cloning do not create a new one!
+    // was not bound in the cloned type -> return orginal type var
+    assert(clone_.empty());
+    clone_ = typetable().new_type(this);
+}
+
+void TypeVarNode::set_bound_clone() const {
+    assert(clone_.empty());
     clone_ = typetable().typevar();
     // TODO consider bounds!
 }
