@@ -67,7 +67,7 @@ public:
 private:
     template<class T> UnifiableProxy<T> new_type(T* tn) {
         auto t = UnifiableProxy<T>(tn);
-        UnifiableProxy<TypeNode> x = t;  // CHECK is this really memory safe?
+        UnifiableProxy<TypeNode> x = t;
         unifiables_.add(x.node_);
         return t;
     }

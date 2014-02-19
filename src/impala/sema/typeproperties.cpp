@@ -47,7 +47,7 @@ void GenericElement::add_bound_var(TypeVar v) {
 
     // CHECK should variables only be bound in this case? does this also hold for traits?
     //assert(v->is_subtype(this) && "Type variables can only be bound at t if they are a subtype of t!");
-    // CHECK should this be forbidden?
+    // CHECK should 'forall a, a' be forbidden?
     //assert(type->kind() != Type_var && "Types like 'forall a, a' are forbidden!");
 
     v->bind(this);
