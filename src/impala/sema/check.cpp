@@ -315,17 +315,17 @@ void MapExpr::check(Sema& sema) const {
     assert(!lhs_type.empty());
 
     if (lhs_type->kind() == Type_fn) {
-        // TODO better error handling
-        assert(((lhs_type->size() == (args().size()+1))
-                || (lhs_type->size() == args().size())) && "Wrong number of arguments");
+        if ((lhs_type->size() != (args().size()+1)) && (lhs_type->size() != args().size()))
+            // CHECK how would the result type look like if the continuation is explicitly passed?
+            sema.error(this) << "Wrong number of arguments";
 
         for (size_t i = 0; i < args().size(); ++i) {
             auto arg = args()[i];
             arg->check(sema);
             assert(!arg->type().empty());
 
-            // TODO better error handling
-            assert(arg->type() == lhs_type->elem(i));
+            if (arg->type() != lhs_type->elem(i))
+                sema.error(arg) << "Wrong argument type; expected " << lhs_type->elem(i)->to_string() << " but found " << arg->type()->to_string();
         }
 
         // set return type
