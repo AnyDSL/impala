@@ -159,7 +159,8 @@ int main(int argc, char** argv) {
 
             if (emit_llvm)
                 thorin::emit_llvm(init.world);
-        }
+        } else
+            return EXIT_FAILURE;
 
         return EXIT_SUCCESS;
     } catch (exception const& e) {
