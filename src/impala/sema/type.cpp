@@ -126,11 +126,22 @@ bool TypeVarNode::equal(const TypeNode* other) const {
 
     if (const TypeVarNode* t = other->isa<TypeVarNode>()) {
         if ((this->equiv_var_ == nullptr) && (t->equiv_var_ == nullptr)) {
-            if (this->bound_at_ == nullptr) {
+            if (this->bound_at() == nullptr) { // unbound type vars are by definition unequal
                 return false;
             } else {
-                //return this->bound_at_->equal(t->bound_at_); TODO AND: they must be bound at the same position!
-                return false;
+                // two type vars are equal if the types where they are bound are
+                // equal and they are bound at the same position
+                bool result = bound_at()->num_bound_vars() == t->bound_at()->num_bound_vars();
+                size_t i;
+                for (i = 0; (i < bound_at()->num_bound_vars()) && result; ++i) {
+                    if (bound_at()->bound_var(i).representative() == this) {
+                        result &= t->bound_at()->bound_var(i).representative() == t;
+                        break;
+                    }
+                }
+                assert(i < bound_at()->num_bound_vars()); // it should have been found!
+
+                return result && bound_at()->equal(t->bound_at());
             }
 
         } else {
