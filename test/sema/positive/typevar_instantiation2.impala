@@ -1,0 +1,3 @@
+fn myf[A](x: A, f: fn[B](B)->B) -> A {
+    f[A](x)
+}

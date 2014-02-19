@@ -1,0 +1,3 @@
+fn f(x:int, g:fn(int)->int) -> int {
+   g(x, x)
+}
