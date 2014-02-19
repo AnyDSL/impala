@@ -325,7 +325,7 @@ void MapExpr::check(Sema& sema) const {
             assert(!arg->type().empty());
 
             if (arg->type() != lhs_type->elem(i))
-                sema.error(arg) << "Wrong argument type; expected " << lhs_type->elem(i)->to_string() << " but found " << arg->type()->to_string();
+                sema.error(arg) << "Wrong argument type; expected " << lhs_type->elem(i) << " but found " << arg->type();
         }
 
         // set return type

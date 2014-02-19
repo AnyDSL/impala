@@ -124,6 +124,9 @@ private:
     friend void verify(thorin::ArrayRef<const Type> types);
 };
 
+template<class T>
+std::ostream& operator << (std::ostream& o, UnifiableProxy<T> u) { return o << u->to_string(); }
+
 //------------------------------------------------------------------------------
 
 class GenericElement : public thorin::MagicCast<GenericElement> {
