@@ -45,7 +45,7 @@ public:
     PrimType primtype(PrimTypeKind kind);
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
-    Trait* typetrait(const TraitDecl* trait_decl, TraitSet super_traits) {
+    Trait* trait(const TraitDecl* trait_decl, TraitSet super_traits) {
         auto t = new Trait(*this, trait_decl, super_traits);
         unifiables_.add(t);
         return t;

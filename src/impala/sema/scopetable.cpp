@@ -4,9 +4,17 @@
 
 namespace impala {
 
-const Decl* ScopeTable::lookup(Symbol sym) const {
-    auto i = sym2decl_.find(sym);
-    return i != sym2decl_.end() ? i->second : nullptr;
+const Decl* ScopeTable::lookup(Symbol symbol) const {
+    auto i = symbol2decl_.find(symbol);
+    return i != symbol2decl_.end() ? i->second : nullptr;
+}
+
+
+const Decl* ScopeTable::lookup(const ASTNode* n, Symbol symbol) {
+    auto decl = lookup(symbol);
+    if (decl == nullptr)
+        error(n) << '\'' << symbol << "' not found in current scope\n";
+    return decl;
 }
 
 void ScopeTable::insert(const Decl* decl) {
@@ -19,16 +27,16 @@ void ScopeTable::insert(const Decl* decl) {
     Symbol symbol = decl->symbol();
     assert(clash(symbol) == nullptr && "must not be found");
 
-    auto i = sym2decl_.find(symbol);
-    decl->shadows_ = i != sym2decl_.end() ? i->second : nullptr;
+    auto i = symbol2decl_.find(symbol);
+    decl->shadows_ = i != symbol2decl_.end() ? i->second : nullptr;
     decl->depth_ = depth();
     decl_stack_.push_back(decl);
-    sym2decl_[symbol] = decl;
+    symbol2decl_[symbol] = decl;
 }
 
 const Decl* ScopeTable::clash(Symbol symbol) const {
-    auto i = sym2decl_.find(symbol);
-    if (i == sym2decl_.end())
+    auto i = symbol2decl_.find(symbol);
+    if (i == symbol2decl_.end())
         return nullptr;
     const Decl* decl = i->second;
     return (decl && decl->depth() == depth()) ? decl : nullptr;
@@ -38,7 +46,7 @@ void ScopeTable::pop_scope() {
     size_t level = levels_.back();
     for (size_t i = level, e = decl_stack_.size(); i != e; ++i) {
         const Decl* decl = decl_stack_[i];
-        sym2decl_[decl->symbol()] = decl->shadows();
+        symbol2decl_[decl->symbol()] = decl->shadows();
     }
 
     decl_stack_.resize(level);

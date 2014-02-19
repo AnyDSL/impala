@@ -24,6 +24,9 @@ public:
      */
     const Decl* lookup(Symbol symbol) const;
 
+    /// Lookups \p symbol and reports an error at location of \p n if was not found
+    const Decl* lookup(const ASTNode* n, Symbol);
+
     /** 
      * @brief Maps \p decl's symbol to \p decl.
      * 
@@ -52,7 +55,7 @@ public:
 private:
     size_t depth() const { return levels_.size(); }
 
-    std::unordered_map<Symbol, const Decl*> sym2decl_;
+    std::unordered_map<Symbol, const Decl*> symbol2decl_;
     std::vector<const Decl*> decl_stack_;
     std::vector<size_t> levels_;
     bool result_;

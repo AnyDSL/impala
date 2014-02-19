@@ -502,7 +502,7 @@ class TraitDecl : public Item, public ParametricTypeDecl {
 public:
     const std::vector<Symbol>& super() const { return super_; }
     const Methods& methods() const { return methods_; }
-    const Trait* typetrait() const { return trait_; }
+    const Trait* trait() const { return trait_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(Sema& sema) const;
     virtual void check_head(Sema& sema) const;

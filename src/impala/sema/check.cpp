@@ -1,5 +1,4 @@
-// REMINDER only for debugging
-#include "iostream"
+#include <iostream>
 
 #include "impala/ast.h"
 #include "impala/dump.h"
@@ -39,22 +38,19 @@ void ParametricASTType::check_type_params(Sema& sema) const {
             if (auto trait_inst = b->isa<ASTTypeApp>()) {
                 tp->type_var()->add_restriction(trait_inst->to_trait_instance(sema));
             } else {
-                // TODO better error handling
-                assert(false && "Bounds must be trait instances, not types");
+                sema.error(tp) << "Bounds must be trait instances, not types\n";
             }
         }
     }
 }
 
-Type ErrorASTType::to_type(Sema& sema) const {
-    return sema.type_error();
-}
+Type ErrorASTType::to_type(Sema& sema) const { return sema.type_error(); }
 
 Type PrimASTType::to_type(Sema& sema) const {
     switch (kind()) {
 #define IMPALA_TYPE(itype, atype) case TYPE_##itype: return sema.primtype(PrimType_##itype);
 #include "impala/tokenlist.h"
-    default: THORIN_UNREACHABLE;
+        default: THORIN_UNREACHABLE;
     }
 }
 
@@ -75,22 +71,16 @@ Type TupleASTType::to_type(Sema& sema) const {
 }
 
 Type ASTTypeApp::to_type(Sema& sema) const {
-    const Decl* d = sema.lookup(symbol());
-
-    if (d == nullptr) {
-        // TODO better error handling
-        assert(false);
+    if (auto decl = sema.lookup(this, symbol())) {
+        if (auto tp = decl->isa<TypeParam>()) {
+            assert(elems().empty());
+            assert(!tp->type_var().empty());
+            return tp->type_var();
+        } else
+            sema.error(this) << "cannot convert a trait instance into a type\n";
     }
 
-    if (auto tp = d->isa<TypeParam>()) {
-        assert(elems().empty());
-        assert(!tp->type_var().empty());
-        return tp->type_var();
-    } else {
-        // TODO better error handling!
-        assert(false && "Cannot convert a trait instance into a type");
-        return sema.type_error();
-    }
+    return sema.type_error();
 }
 
 Type FnASTType::to_type(Sema& sema) const {
@@ -112,21 +102,17 @@ Type FnASTType::to_type(Sema& sema) const {
 }
 
 TraitInstance ASTTypeApp::to_trait_instance(Sema& sema) const {
-    const Decl* d = sema.lookup(symbol());
-    if (auto t = d->isa<TraitDecl>()) {
-        assert(t->typetrait() != nullptr);
+    if (auto decl = sema.lookup(this, symbol())) {
+        if (auto trait_decl = decl->isa<TraitDecl>()) {
+            std::vector<Type> type_args;
+            for (auto e : elems())
+                type_args.push_back(e->to_type(sema));
 
-        std::vector<Type> type_args;
-        for (const ASTType* e : elems()) {
-            type_args.push_back(e->to_type(sema));
-        }
-
-        return sema.instantiate_trait(t->typetrait(), type_args);
-    } else {
-        // TODO better error handling!
-        assert(false && "Cannot convert a type variable into a trait instance");
-        //return sema.type_error();
+            return sema.instantiate_trait(trait_decl->trait(), type_args);
+        } else
+            sema.error(this) << "cannot convert a type variable into a trait instance";
     }
+    // return error_trait_instance <- we need sth like that
 }
 
 //------------------------------------------------------------------------------
@@ -232,7 +218,7 @@ void StructDecl::check(Sema& sema) const {
 
 void TraitDecl::check(Sema& sema) const {
     // FEATURE consider super traits and check methods
-    trait_ = sema.typetrait(this, TraitSet());
+    trait_ = sema.trait(this, TraitSet());
 
     check_type_params(sema);
     for (auto tp : type_params()) {
@@ -249,6 +235,7 @@ void Impl::check(Sema& sema) const {
  */
 
 void EmptyExpr::check(Sema& sema) const {
+    // type_ = sema.unit(); yes: empty expression returns unit - the empty tuple type '()'
 }
 
 void BlockExpr::check(Sema& sema) const {
@@ -261,7 +248,6 @@ void BlockExpr::check(Sema& sema) const {
         stmt->check(sema);
 
     expr()->check(sema);
-    //assert(!expr()->type().empty()); TODO fails for EmptyExpr -> should we create an EmptyType=void/unit?
     type_ = expr()->type();
 }
 
@@ -272,27 +258,24 @@ void FnExpr::check(Sema& sema) const {
 }
 
 void PathExpr::check(Sema& sema) const {
-    const PathItem* last_item = path()->path_items().back();
-
     // FEATURE consider longer paths
-    decl_ = sema.lookup(last_item->symbol());
-    if (decl_ == nullptr) {
-        // TODO better error handling
-        assert(false && "Declaration not found");
+    auto last_item = path()->path_items().back();
+
+    if ((decl_ = sema.lookup(this, last_item->symbol()))) {
+        if (auto vdec = decl_->isa<ValueDecl>()) {
+            // consider type expressions
+            if (!last_item->types().empty()) {
+                std::vector<Type> type_args;
+                for (const ASTType* t : last_item->types())
+                    type_args.push_back(t->to_type(sema));
+
+                type_ = vdec->type()->instantiate(type_args);
+            } else
+                type_ = vdec->type();
+        }
     }
 
-    if (auto vdec = decl_->isa<ValueDecl>()) {
-        // consider type expressions
-        if (!last_item->types().empty()) {
-            std::vector<Type> type_args;
-            for (const ASTType* t : last_item->types())
-                type_args.push_back(t->to_type(sema));
-
-            type_ = vdec->type()->instantiate(type_args);
-        } else {
-            type_ = vdec->type();
-        }
-    } // FEATURE else
+    type_ = sema.type_error();
 }
 
 void PrefixExpr::check(Sema& sema) const {
