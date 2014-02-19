@@ -14,7 +14,6 @@ int TypeVarNode::counter = 0;
 
 size_t TypeNode::hash() const {
     // FEATURE take type variables of generic types better into the equation
-    // FEATURE perhaps store this hash so it does not need to be recomputed all the time
     size_t seed = hash_combine(hash_value((int) kind()), size());
     seed = hash_combine(seed, num_bound_vars());
     for (auto elem : elems_)
