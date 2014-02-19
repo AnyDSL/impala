@@ -186,6 +186,7 @@ Type TypeNode::instantiate(thorin::ArrayRef<Type> var_instances) const {
 }
 
 Type TypeNode::specialize(SpecializeMapping& mapping) const {
+    // FEATURE this could be faster if we copy only types were something changed inside
     auto it = mapping.find(this);
     if (it != mapping.end())
         return it->second;
