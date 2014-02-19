@@ -171,7 +171,7 @@ protected:
 
     std::string elems_to_string() const;
 
-    thorin::AutoPtr<std::vector<Type>> specialize_elems(SpecializeMapping& mapping) const;
+    thorin::Array<Type> specialize_elems(SpecializeMapping& mapping) const;
 };
 
 class FnTypeNode : public CompoundType {

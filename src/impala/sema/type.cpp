@@ -194,16 +194,16 @@ Type TypeNode::specialize(SpecializeMapping& mapping) const {
     return t;
 }
 
-thorin::AutoPtr<std::vector<Type>> CompoundType::specialize_elems(SpecializeMapping& mapping) const {
-    thorin::AutoPtr<std::vector<Type>> nelems(new std::vector<Type>());
-    for (size_t i = 0; i < size(); ++i)
-        nelems->push_back(elem(i)->specialize(mapping));
+thorin::Array<Type> CompoundType::specialize_elems(SpecializeMapping& mapping) const {
+    thorin::Array<Type> nelems(size());
+    for (size_t i = 0, e = size(); i != e; ++i)
+        nelems[i] = elem(i)->specialize(mapping);
     return nelems;
 }
 
 Type TypeErrorNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().type_error(); }
 Type PrimTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().primtype(primtype_kind()); }
-Type FnTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().fntype(*specialize_elems(mapping)); }
+Type FnTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().fntype(specialize_elems(mapping)); }
 Type TupleTypeNode::vspecialize(SpecializeMapping& mapping) const { return Type(); /*return mapping[this] = typetable().tupletype(*specialize_elems(mapping)); FEATURE*/ }
 
 Type TypeVarNode::vspecialize(SpecializeMapping& mapping) const {
