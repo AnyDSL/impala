@@ -53,7 +53,7 @@ void TypeTable::insert_new(Type type) {
     }
 
     for (auto v : type->bound_vars()) {
-        for (auto r : v->restricted_by_) {
+        for (auto r : v->bounds_) {
             if (!r.is_unified()) {
                 unify(r);
                 assert(r.is_unified());
@@ -97,7 +97,7 @@ template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) 
     std::vector<TraitInstSet*> var_restrictions;
     assert(t->bound_vars().size() == repr->bound_vars().size());
     for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
-        var_restrictions.push_back(new TraitInstSet(*t->bound_var(i)->restricted_by()));
+        var_restrictions.push_back(new TraitInstSet(*t->bound_var(i)->bounds()));
         change_repr(t->bound_var(i), repr->bound_var(i).representative());
     }
 
@@ -109,16 +109,16 @@ template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) 
         auto tv_restrs = var_restrictions[i];
         auto reprv = repr->bound_var(i);
 
-        assert(tv_restrs->size() == reprv->restricted_by()->size());
+        assert(tv_restrs->size() == reprv->bounds()->size());
 
         // FEATURE this does work but seems too much effort
         TraitInstanceNodeTableSet ttis;
-        for (auto r : *reprv->restricted_by()) {
+        for (auto r : *reprv->bounds()) {
             auto p = ttis.insert(r.representative());
             assert(p.second && "hash/equal broken");
         }
 
-        // this->restricted_by() subset of trestr
+        // this->bounds() subset of trestr
         for (auto restr : *tv_restrs) {
             auto repr_restr = ttis.find(restr.representative());
             assert(repr_restr != ttis.end());

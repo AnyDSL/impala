@@ -58,7 +58,7 @@ bool TypeNode::equal(const TypeNode* other) const {
 
 bool TypeNode::is_closed() const {
     for (auto v : bound_vars()) {
-        for (auto r : *v->restricted_by()) {
+        for (auto r : *v->bounds()) {
             if (! r->is_closed())
                 return false;
         }
@@ -99,9 +99,9 @@ void TypeNode::dump() const { std::cout << to_string() << std::endl; }
 //------------------------------------------------------------------------------
 
 bool TypeVarNode::restrictions_equal(const TypeVar other) const {
-    auto trestr = other->restricted_by();
+    auto trestr = other->bounds();
 
-    if (this->restricted_by()->size() != trestr->size())
+    if (this->bounds()->size() != trestr->size())
         return false;
 
     // FEATURE this does work but seems too much effort, at least use a set that uses representatives
@@ -111,8 +111,8 @@ bool TypeVarNode::restrictions_equal(const TypeVar other) const {
         assert(p.second && "hash/equal broken");
     }
 
-    // this->restricted_by() subset of trestr
-    for (auto r : *this->restricted_by()) {
+    // this->bounds() subset of trestr
+    for (auto r : *this->bounds()) {
         if (ttis.find(r.representative()) == ttis.end()) {
             return false;
         }
@@ -149,9 +149,9 @@ void TypeVarNode::bind(const GenericElement* const e) {
     bound_at_ = e;
 }
 
-void TypeVarNode::add_restriction(TraitInstance restriction) {
+void TypeVarNode::add_bound(TraitInstance restriction) {
     assert(!is_closed() && "Closed type variables must not be changed!");
-    auto p = restricted_by_.insert(restriction);
+    auto p = bounds_.insert(restriction);
     assert(p.second && "hash/equal broken");
 }
 

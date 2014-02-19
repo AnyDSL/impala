@@ -23,7 +23,7 @@ std::string GenericElement::bound_vars_to_string() const {
     for (auto v : bound_vars()) {
         result += separator + v->to_string();
 
-        const TraitInstSet* restr = v->restricted_by();
+        const TraitInstSet* restr = v->bounds();
 
         // if v is unified it should at least be restricted by the top trait
         assert((!v.is_unified()) || (restr->size() > 0)); // TODO review this assert: there is no top trait anymore

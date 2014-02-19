@@ -208,7 +208,6 @@ private:
     TypeVarNode(TypeTable& tt)
         : TypeNode(tt, Type_var, 0)
         , id_(counter++)
-        , restricted_by_()
         , bound_at_(nullptr)
         , equiv_var_(nullptr)
     {}
@@ -219,9 +218,9 @@ private:
     bool restrictions_equal(const TypeVar other) const;
 
 public:
-    const TraitInstSet* restricted_by() const { return &restricted_by_; }
+    const TraitInstSet* bounds() const { return &bounds_; }
     const GenericElement* bound_at() const { return bound_at_; }
-    void add_restriction(TraitInstance restriction);
+    void add_bound(TraitInstance restriction);
     virtual bool equal(const TypeNode* other) const;
     std::string to_string() const;
 
@@ -235,8 +234,8 @@ public:
     virtual bool is_sane() const { return is_closed(); }
 
 private:
-    const int id_;                        ///< Used for unambiguous dumping.
-    TraitInstSet restricted_by_;      ///< All traits that restrict the instantiation of this variable.
+    const int id_;       ///< Used for unambiguous dumping.
+    TraitInstSet bounds_;///< All traits that restrict the instantiation of this variable.
     /**
      * The type where this variable is bound.
      * If such a type is set, then the variable must not be changed anymore!
