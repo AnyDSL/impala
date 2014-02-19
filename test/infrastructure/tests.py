@@ -59,8 +59,8 @@ class InvokeTest(Test):
                 if cp.startswith('-') or cp.startswith('+'):
                     print(cp)
                     fails=fails+1
-            if 0!=fails:
-                return False
+            
+            return True if fails == 0 else False
         
     def getName(self):
         return os.path.join(self.basedir, self.srcfile)
