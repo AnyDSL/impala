@@ -105,10 +105,10 @@ public:
 private:
     bool is_subtype(const TypeNode* super_type) const;
 
-    /// return a deep copy of this Type
+    /// copy this type but replace the subtypes given in the mapping
     Type specialize(SpecializeMapping&) const;
 
-    /// set the internal clone_ variable with a clone that has not yet any bound variables
+    /// like specialize but does not care about generics (this method is called by specialize)
     virtual Type vspecialize(SpecializeMapping&) const = 0;
 
     const Kind kind_;
@@ -244,7 +244,7 @@ private:
     static int counter;
 
     virtual Type vspecialize(SpecializeMapping&) const;
-    /// Set up clone_ to be a fully fledged clone of this TypeVar (except of the binding)
+    /// Create a fully fledged clone of this TypeVar (except of the binding)
     TypeVar clone() const;
 
     friend class TypeTable;
