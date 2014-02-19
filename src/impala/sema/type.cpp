@@ -163,69 +163,56 @@ bool TypeVarNode::is_closed() const {
 Type TypeNode::instantiate(thorin::ArrayRef<Type> var_instances) const {
     check_instantiation(var_instances);
 
-    assert(clone_.empty());
+    SpecializeMapping mapping;
     assert(num_bound_vars() == var_instances.size());
     size_t i = 0;
     for (TypeVar v : bound_vars())
-        v->clone_ = var_instances[i++];
+        mapping[v.representative()] = var_instances[i];
 
-    set_clone();
-    assert(!clone_.empty());
-    Type instance = clone_;
-
-    clean_clone();
-    assert(clone_.empty());
-
+    Type instance = vspecialize(mapping);
     assert(instance->is_sane());
     return instance;
 }
 
-void TypeNode::clean_clone() const {
-    clone_ = Type();
-    // CHECK does this loop cost anything with disabled assertions?
-    for (TypeVar v : bound_vars())
-        assert(v->is_subtype(this));
+Type TypeNode::specialize(SpecializeMapping& mapping) const {
+    auto it = mapping.find(this);
+    if (it != mapping.end())
+        return it->second;
 
-    for (size_t i = 0; i < size(); ++i)
-        elem(i)->clean_clone();
-}
-
-Type TypeNode::clone() const {
-    if (clone_.empty()) {
-        for (TypeVar v : bound_vars())
-            v->set_bound_clone();
-
-        set_clone();
-        assert(!clone_.empty());
-
-        for (TypeVar v : bound_vars())
-            clone_->add_bound_var(v->clone());
+    for (TypeVar v : bound_vars()) {
+        assert(mapping.find(v.representative()) == mapping.end());
+        mapping[v.representative()] = v->clone();
     }
 
-    return clone_;
+    Type t = vspecialize(mapping);
+
+    for (TypeVar v : bound_vars()) {
+        assert(mapping.find(v.representative()) != mapping.end());
+        t->add_bound_var(mapping[v.representative()]);
+    }
+
+    return t;
 }
 
-thorin::AutoPtr<std::vector<Type>> CompoundType::clone_elems() const {
-    thorin::AutoPtr<std::vector<Type>> clones(new std::vector<Type>());
+thorin::AutoPtr<std::vector<Type>> CompoundType::specialize_elems(SpecializeMapping& mapping) const {
+    thorin::AutoPtr<std::vector<Type>> nelems(new std::vector<Type>());
     for (size_t i = 0; i < size(); ++i)
-        clones->push_back(elem(i)->clone());
-    return clones;
+        nelems->push_back(elem(i)->specialize(mapping));
+    return nelems;
 }
 
-void TypeErrorNode::set_clone() const { clone_ = typetable().type_error(); }
-void PrimTypeNode::set_clone() const { clone_ = typetable().primtype(primtype_kind()); }
-void FnTypeNode::set_clone() const { clone_ = typetable().fntype(*clone_elems()); }
-void TupleTypeNode::set_clone() const { /*clone_ = typetable().tupletype(*clone_elems()); FEATURE*/ }
+Type TypeErrorNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().type_error(); }
+Type PrimTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().primtype(primtype_kind()); }
+Type FnTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().fntype(*specialize_elems(mapping)); }
+Type TupleTypeNode::vspecialize(SpecializeMapping& mapping) const { return Type(); /*return mapping[this] = typetable().tupletype(*specialize_elems(mapping)); FEATURE*/ }
 
-void TypeVarNode::set_clone() const {
-    // was not bound in the cloned type -> return orginal type var
-    assert(clone_.empty());
-    clone_ = typetable().new_type(this);
+Type TypeVarNode::vspecialize(SpecializeMapping& mapping) const {
+    // was not bound in the specialized type -> return orginal type var
+    return mapping[this] = typetable().new_type(this);
 }
 
-void TypeVarNode::set_bound_clone() const {
-    assert(clone_.empty());
-    clone_ = typetable().typevar();
+TypeVar TypeVarNode::clone() const {
+    return typetable().typevar();
     // FEATURE consider bounds!
 }
 

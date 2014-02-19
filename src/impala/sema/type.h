@@ -1,7 +1,7 @@
 #ifndef IMPALA_SEMA_TYPE_H
 #define IMPALA_SEMA_TYPE_H
 
-#include <map>
+#include <unordered_map>
 
 #include "thorin/util/autoptr.h"
 #include "thorin/util/array.h"
@@ -25,6 +25,8 @@ struct TraitInstanceEqual {
 typedef std::unordered_set<TraitInstance, TraitInstanceHash, TraitInstanceEqual> TraitInstSet;
 
 //------------------------------------------------------------------------------
+
+typedef std::unordered_map<const TypeNode*, Type> SpecializeMapping;
 
 enum Kind {
 #define IMPALA_TYPE(itype, atype) Type_##itype,
@@ -104,18 +106,15 @@ private:
     bool is_subtype(const TypeNode* super_type) const;
 
     /// return a deep copy of this Type
-    Type clone() const;
-    /// empty all clone_ Types
-    void clean_clone() const;
+    Type specialize(SpecializeMapping&) const;
 
     /// set the internal clone_ variable with a clone that has not yet any bound variables
-    virtual void set_clone() const = 0;
+    virtual Type vspecialize(SpecializeMapping&) const = 0;
 
     const Kind kind_;
 
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
-    mutable Type clone_; ///< Used internally during cloning
 
     friend class CompoundType;
     friend class TypeTable;
@@ -137,7 +136,7 @@ private:
         : TypeNode(typetable, Type_error, 0)
     {}
 
-    virtual void set_clone() const;
+    virtual Type vspecialize(SpecializeMapping&) const;
 
 public:
     virtual std::string to_string() const { return "<type error>"; }
@@ -152,7 +151,7 @@ private:
     {}
 
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
-    virtual void set_clone() const;
+    virtual Type vspecialize(SpecializeMapping&) const;
 
 public:
     virtual std::string to_string() const;
@@ -172,7 +171,7 @@ protected:
 
     std::string elems_to_string() const;
 
-    thorin::AutoPtr<std::vector<Type>> clone_elems() const;
+    thorin::AutoPtr<std::vector<Type>> specialize_elems(SpecializeMapping& mapping) const;
 };
 
 class FnTypeNode : public CompoundType {
@@ -181,7 +180,7 @@ private:
         : CompoundType(typetable, Type_fn, elems)
     {}
 
-    virtual void set_clone() const;
+    virtual Type vspecialize(SpecializeMapping&) const;
 
 public:
     virtual std::string to_string() const { return std::string("fn") + bound_vars_to_string() + elems_to_string(); }
@@ -195,7 +194,7 @@ private:
         : CompoundType(typetable, Type_tuple, elems)
     {}
 
-    virtual void set_clone() const;
+    virtual Type vspecialize(SpecializeMapping&) const;
 
 public:
     virtual std::string to_string() const { return std::string("tuple") + bound_vars_to_string() + elems_to_string(); }
@@ -244,9 +243,9 @@ private:
     mutable const TypeVarNode* equiv_var_;///< Used to define equivalence constraints when checking equality of types.
     static int counter;
 
-    virtual void set_clone() const;
+    virtual Type vspecialize(SpecializeMapping&) const;
     /// Set up clone_ to be a fully fledged clone of this TypeVar (except of the binding)
-    void set_bound_clone() const;
+    TypeVar clone() const;
 
     friend class TypeTable;
     friend class TypeNode;
