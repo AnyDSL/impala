@@ -240,6 +240,17 @@ public:
     friend class Parser;
 };
 
+/// Base class of all items that have a type assigned. Use as a mixin
+class Typable {
+public:
+    Type type() const { return type_; }
+protected:
+    Typable() : type_() {}
+    void set_type(Type t) const;
+private:
+    mutable Type type_;
+};
+
 //------------------------------------------------------------------------------
 
 /*
@@ -272,22 +283,19 @@ class ParametricTypeDecl : public ParametricASTType, public Decl {
 };
 
 /// Base class for all declarations which have a type.
-class ValueDecl : public Decl {
+class ValueDecl : public Decl, public Typable {
 public:
     ValueDecl()
         : asttype_(nullptr)
-        , type_()
         , is_mut_(false)
     {}
 
     /// original type.
     const ASTType* asttype() const { return asttype_; }
-    Type type() const { return type_; }
     bool is_mut() const { return is_mut_; }
 
 protected:
     thorin::AutoPtr<const ASTType> asttype_;
-    mutable Type type_;
     bool is_mut_;
 
     friend class Parser;
@@ -538,16 +546,12 @@ private:
  * expressions
  */
 
-class Expr : public ASTNode {
+class Expr : public ASTNode, public Typable {
 public:
-    Type type() const { return type_; }
     virtual bool is_lvalue() const = 0;
     virtual void check(Sema& sema) const = 0;
     virtual thorin::RefPtr emit(CodeGen& cg) const { /*= 0*/ return 0; }
     virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {}
-
-protected:
-    mutable Type type_;
 
 private:
     friend class Parser;

@@ -22,6 +22,16 @@ private:
     bool nossa_;
 };
 
+inline bool match_types(Sema& sema, Type expected, const Expr* found) {
+    assert(!expected.empty());
+    assert(!found->type().empty());
+    if (found->type() != expected) {
+        sema.error(found) << "Wrong argument type; expected " << expected << " but found " << found->type() << "\n";
+        return false;
+    } else
+        return true;
+}
+
 //------------------------------------------------------------------------------
 
 void ParametricASTType::check_type_params(Sema& sema) const {
@@ -110,7 +120,7 @@ TraitInstance ASTTypeApp::to_trait_instance(Sema& sema) const {
 
             return sema.instantiate_trait(trait_decl->trait(), type_args);
         } else
-            sema.error(this) << "cannot convert a type variable into a trait instance";
+            sema.error(this) << "cannot convert a type variable into a trait instance\n";
     }
     // return error_trait_instance <- we need sth like that
 }
@@ -193,7 +203,7 @@ void FnDecl::check(Sema& sema) const {
     for (const Param* p : fn().params()) {
         sema.insert(p);
         Type pt = p->asttype()->to_type(sema);
-        p->type_ = pt;
+        p->set_type(pt);
         par_types.push_back(pt);
     }
     // create FnType
@@ -203,8 +213,7 @@ void FnDecl::check(Sema& sema) const {
         fn_type->add_bound_var(tp->type_var());
     }
     sema.unify(fn_type);
-
-    type_ = fn_type;
+    set_type(fn_type);
 
     // CHECK set sema.cur_fn_?
     fn().body()->check(sema);
@@ -235,7 +244,7 @@ void Impl::check(Sema& sema) const {
  */
 
 void EmptyExpr::check(Sema& sema) const {
-    // type_ = sema.unit(); yes: empty expression returns unit - the empty tuple type '()'
+    // set_type(sema.unit(); yes: empty expression returns unit - the empty tuple type '()'
 }
 
 void BlockExpr::check(Sema& sema) const {
@@ -248,7 +257,8 @@ void BlockExpr::check(Sema& sema) const {
         stmt->check(sema);
 
     expr()->check(sema);
-    type_ = expr()->type();
+    assert(!expr()->type().empty());
+    set_type(expr()->type());
 }
 
 void LiteralExpr::check(Sema& sema) const {
@@ -269,13 +279,14 @@ void PathExpr::check(Sema& sema) const {
                 for (const ASTType* t : last_item->types())
                     type_args.push_back(t->to_type(sema));
 
-                type_ = vdec->type()->instantiate(type_args);
+                set_type(vdec->type()->instantiate(type_args));
             } else
-                type_ = vdec->type();
+                set_type(vdec->type());
         }
-    }
+    } else
+        set_type(sema.type_error());
 
-    type_ = sema.type_error();
+    assert(!type().empty());
 }
 
 void PrefixExpr::check(Sema& sema) const {
@@ -314,35 +325,43 @@ void MapExpr::check(Sema& sema) const {
     Type lhs_type = lhs()->type();
     assert(!lhs_type.empty());
 
-    if (lhs_type->kind() == Type_fn) {
-        if ((lhs_type->size() != (args().size()+1)) && (lhs_type->size() != args().size()))
-            // CHECK how would the result type look like if the continuation is explicitly passed?
-            sema.error(this) << "Wrong number of arguments";
+    switch (lhs_type->kind()) {
+        case Type_error:
+            set_type(sema.type_error());
+            return;
+        case Type_fn:
+            if ((lhs_type->size() != (args().size()+1)) && (lhs_type->size() != args().size())) {
+                // CHECK how would the result type look like if the continuation is explicitly passed?
+                sema.error(this) << "Wrong number of arguments\n";
+                set_type(sema.type_error());
+            } else {
+                for (size_t i = 0; i < args().size(); ++i) {
+                    auto arg = args()[i];
+                    arg->check(sema);
+                    if (!match_types(sema, lhs_type->elem(i), arg)) set_type(sema.type_error());
+                }
 
-        for (size_t i = 0; i < args().size(); ++i) {
-            auto arg = args()[i];
-            arg->check(sema);
-            assert(!arg->type().empty());
+                // set return type
+                Type ret_func = lhs_type->elem(lhs_type->size() - 1);
+                assert(ret_func->kind() == Type_fn); // CHECK can there be function types w/o return function?
 
-            if (arg->type() != lhs_type->elem(i))
-                sema.error(arg) << "Wrong argument type; expected " << lhs_type->elem(i) << " but found " << arg->type();
-        }
-
-        // set return type
-        Type ret_func = lhs_type->elem(lhs_type->size() - 1);
-        assert(ret_func->kind() == Type_fn); // TODO better error handling
-        switch (ret_func->size()) {
-        case 0:
-            // FEATURE set void/unit type or something
-            break;
-        case 1:
-            type_ = ret_func->elem(0);
+                switch (ret_func->size()) {
+                case 0:
+                    // FEATURE set void/unit type or something
+                    break;
+                case 1:
+                    set_type(ret_func->elem(0));
+                    break;
+                default:
+                    // FEATURE return tuple type
+                    break;
+                }
+            }
             break;
         default:
-            // FEATURE return tuple type
-            break;
-        }
+            set_type(sema.type_error());
     }
+    assert(!type().empty());
 }
 
 void IfExpr::check(Sema& sema) const {

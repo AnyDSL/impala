@@ -1,4 +1,5 @@
 #include "impala/ast.h"
+#include "impala/sema/type.h"
 
 namespace impala {
 
@@ -44,6 +45,14 @@ bool IfExpr::has_else() const {
     if (auto block = else_expr_->isa<BlockExpr>())
         return !block->empty();
     return true;
+}
+
+void Typable::set_type(Type t) const {
+    assert(!t.empty());
+    if (type_.empty()) {
+        type_ = t;
+    } else
+        assert(type_->kind() == Type_error);
 }
 
 }
