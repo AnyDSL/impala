@@ -7,7 +7,7 @@ Usage: run_tests.py [options] <subdirectory that contains test cases>
 
 Command line options:
  -e, --executable <Path to executable>
- --disable-progressbar Disable the fancy progress bar
+ -d, --disable-progressbar Disable the fancy progress bar
 """
 
 import infrastructure.tests
@@ -29,7 +29,7 @@ def main():
     
     # get cmd file
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "he:", ["help", "executable", "disable-progressbar"])
+        opts, args = getopt.getopt(sys.argv[1:], "he:d", ["help", "executable", "disable-progressbar"])
     except getopt.error as msg:
         print(msg)
         sys.exit(2)
@@ -41,7 +41,7 @@ def main():
             sys.exit(0)
         if o in ("-e", "--executable"):
             executable = a
-        if o in ("--disable-progressbar"):
+        if o in ("-d", "--disable-progressbar"):
             pb = False
 
     if len(args) == 0:
