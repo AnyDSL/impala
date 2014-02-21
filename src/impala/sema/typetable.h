@@ -58,6 +58,8 @@ public:
     TypeVar typevar() { return new_type(new TypeVarNode(*this)); }
     FnType fntype(thorin::ArrayRef<Type> params) { return new_type(new FnTypeNode(*this, params)); }
     FnType fntype(thorin::ArrayRef<Type> params, Type return_type);
+    TupleType tupletype(thorin::ArrayRef<Type> elems) { return new_type(new TupleTypeNode(*this, elems)); }
+    TupleType unit() { return tupletype({}); }
     void unify(TraitInstance tti);
     template<class T> void unify(UnifiableProxy<T> type) { unify_base(type); }
     //const TraitInstance* unify_trait_inst(TraitInstance* type);

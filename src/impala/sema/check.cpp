@@ -245,7 +245,8 @@ void Impl::check(Sema& sema) const {
  */
 
 void EmptyExpr::check(Sema& sema) const {
-    // set_type(sema.unit(); yes: empty expression returns unit - the empty tuple type '()'
+    // empty expression returns unit - the empty tuple type '()'
+    set_type(sema.unit());
 }
 
 void BlockExpr::check(Sema& sema) const {
@@ -286,8 +287,6 @@ void PathExpr::check(Sema& sema) const {
         }
     } else
         set_type(sema.type_error());
-
-    assert(!type().empty());
 }
 
 void PrefixExpr::check(Sema& sema) const {
@@ -348,7 +347,7 @@ void MapExpr::check(Sema& sema) const {
 
                 switch (ret_func->size()) {
                 case 0:
-                    // FEATURE set void/unit type or something
+                    set_type(sema.unit());
                     break;
                 case 1:
                     set_type(ret_func->elem(0));
