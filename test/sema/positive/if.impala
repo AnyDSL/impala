@@ -1,3 +1,3 @@
-fun f(x : int, y : int, b : bool) -> int {
-    if (b) x else y
+fn f(x : int, y : int, b : bool) -> int {
+    if b { x }  else { y }
 }

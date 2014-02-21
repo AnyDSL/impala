@@ -240,6 +240,8 @@ Loc<T>::~Loc() { node_->set_pos2(parser_.prev_loc().pos2()); }
 const ModContents* parse(bool& result, std::istream& i, const std::string& filename) {
     Parser parser(i, filename);
     auto mod = parser.parse_mod_contents();
+    if (parser.la() != Token::END_OF_FILE)
+        parser.error("module item", "module contents");
     result = parser.result();
     return mod;
 }
