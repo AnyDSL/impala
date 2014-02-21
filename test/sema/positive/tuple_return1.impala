@@ -1,0 +1,3 @@
+fn f(g : fn() -> (int, int)) -> (int, int) {
+   g()
+}

@@ -59,7 +59,7 @@ protected:
 
 public:
     Kind kind() const { return kind_; }
-    //TypeNodeArray elems() const { return TypeNodeArray(elems_); }
+    thorin::ArrayRef<Type> elems() const { return thorin::ArrayRef<Type>(elems_); }
     const Type elem(size_t i) const { return elems_[i]; }
 
     /// Returns number of \p TypeNode operands (\p elems_).

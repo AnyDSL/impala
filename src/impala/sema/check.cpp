@@ -77,7 +77,11 @@ Type DefiniteArrayASTType::to_type(Sema& sema) const {
 }
 
 Type TupleASTType::to_type(Sema& sema) const {
-    return Type(); // FEATURE
+    std::vector<Type> elems;
+    for (auto e : this->elems())
+        elems.push_back(e->to_type(sema));
+
+    return sema.tupletype(elems);
 }
 
 Type ASTTypeApp::to_type(Sema& sema) const {
@@ -245,7 +249,8 @@ void Impl::check(Sema& sema) const {
  */
 
 void EmptyExpr::check(Sema& sema) const {
-    // set_type(sema.unit(); yes: empty expression returns unit - the empty tuple type '()'
+    // empty expression returns unit - the empty tuple type '()'
+    set_type(sema.unit());
 }
 
 void BlockExpr::check(Sema& sema) const {
@@ -286,8 +291,6 @@ void PathExpr::check(Sema& sema) const {
         }
     } else
         set_type(sema.type_error());
-
-    assert(!type().empty());
 }
 
 void PrefixExpr::check(Sema& sema) const {
@@ -348,13 +351,16 @@ void MapExpr::check(Sema& sema) const {
 
                 switch (ret_func->size()) {
                 case 0:
-                    // FEATURE set void/unit type or something
+                    set_type(sema.unit());
                     break;
                 case 1:
                     set_type(ret_func->elem(0));
                     break;
                 default:
-                    // FEATURE return tuple type
+                    std::vector<Type> ret_types;
+                    for (auto t : ret_func->elems())
+                        ret_types.push_back(t);
+                    set_type(sema.tupletype(ret_types));
                     break;
                 }
             }
