@@ -379,6 +379,25 @@ void MapExpr::check(Sema& sema) const {
 }
 
 void IfExpr::check(Sema& sema) const {
+    // assert condition is of type bool
+    cond()->check(sema);
+    match_types(sema, sema.type_bool(), cond());
+
+    then_expr()->check(sema);
+
+    if (has_else()) {
+        else_expr()->check(sema);
+
+        // assert that both branches have the same type and set the type
+        if (match_types(sema, then_expr()->type(), else_expr()))
+            set_type(then_expr()->type());
+        else
+            set_type(sema.type_error());
+    } else {
+        // CHECK what is the type of this IfExpr now?
+    }
+
+    assert(!type().empty());
 }
 
 void ForExpr::check(Sema& sema) const {
