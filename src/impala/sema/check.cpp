@@ -318,6 +318,13 @@ void IndefiniteArrayExpr::check(Sema& sema) const {
 }
 
 void TupleExpr::check(Sema& sema) const {
+    std::vector<Type> elems;
+    for (auto e : this->elems()) {
+        e->check(sema);
+        assert(!e->type().empty());
+        elems.push_back(e->type());
+    }
+    set_type(sema.tupletype(elems));
 }
 
 void StructExpr::check(Sema& sema) const {
@@ -342,7 +349,7 @@ void MapExpr::check(Sema& sema) const {
                 for (size_t i = 0; i < args().size(); ++i) {
                     auto arg = args()[i];
                     arg->check(sema);
-                    if (!match_types(sema, lhs_type->elem(i), arg)) set_type(sema.type_error());
+                    match_types(sema, lhs_type->elem(i), arg);
                 }
 
                 // set return type
