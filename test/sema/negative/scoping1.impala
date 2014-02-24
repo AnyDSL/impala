@@ -1,0 +1,1 @@
+fn fun(f: fn[A](A)->A, g: fn[A](A)->A, x:A) -> () {}

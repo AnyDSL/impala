@@ -1,0 +1,1 @@
+sema/negative/scoping2.impala:1 col 27: error: 'A' not found in current scope
