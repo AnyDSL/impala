@@ -2,8 +2,6 @@
 #include "impala/sema/trait.h"
 #include "impala/sema/typetable.h"
 
-#include <iostream>
-
 using namespace thorin;
 
 namespace impala {
@@ -92,9 +90,6 @@ bool TypeNode::is_sane() const {
     assert(is_closed());
     return true;
 }
-
-// TODO move to to_string.cpp
-void TypeNode::dump() const { std::cout << to_string() << std::endl; }
 
 //------------------------------------------------------------------------------
 

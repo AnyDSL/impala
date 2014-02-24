@@ -5,7 +5,6 @@
  *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
  */
 
-#include "impala/ast.h"
 #include "impala/sema/trait.h"
 #include "impala/sema/typetable.h"
 
@@ -16,8 +15,6 @@ bool Trait::equal(const GenericElement* other) const {
         return equal(t);
     return false;
 }
-
-std::string Trait::to_string() const { return trait_decl()->symbol().str(); }
 
 void Trait::add_method(const std::string name, FnType type) {
     assert(type.is_unified() && "Method types must be closed");
