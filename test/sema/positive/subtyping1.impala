@@ -1,0 +1,11 @@
+trait T {}
+impl T for int {}
+fn fun1[A](a: A) -> A {
+   a
+}
+fn fun2(f: fn[A:T](A)->A) -> int {
+   f[int](0)
+}
+fn main() {
+   fun2(fun1);
+}
