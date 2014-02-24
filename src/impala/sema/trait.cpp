@@ -10,12 +10,6 @@
 
 namespace impala {
 
-bool Trait::equal(const GenericElement* other) const {
-    if (const Trait* t = other->isa<Trait>())
-        return equal(t);
-    return false;
-}
-
 void Trait::add_method(const std::string name, FnType type) {
     assert(type.is_unified() && "Method types must be closed");
     assert(type->is_closed());
@@ -34,23 +28,6 @@ TraitInstanceNode::TraitInstanceNode(const Trait* trait, thorin::ArrayRef<Type> 
     for (auto elem : var_instances)
         var_instances_[i++] = elem;
 }
-
-bool TraitInstanceNode::equal(const TraitInstanceNode* other) const {
-    // CHECK use equal?
-    if (trait_ != other->trait_)
-        return false;
-
-    assert(var_instances_.size() == other->var_instances_.size());
-    for (size_t i = 0; i < var_instances_.size(); ++i) {
-        if (! var_instances_[i].representative()->equal(other->var_instances_[i].representative())) {
-            return false;
-        }
-    }
-    return true;
-}
-
-// FEATURE better hash function
-size_t TraitInstanceNode::hash() const { return trait_->hash(); }
 
 bool TraitInstanceNode::is_closed() const {
     for (auto i : var_instances_) {

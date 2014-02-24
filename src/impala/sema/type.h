@@ -217,7 +217,7 @@ private:
     void set_equiv_variable(const TypeVarNode* v) const { assert(equiv_var_ == nullptr); assert(v != nullptr); equiv_var_ = v; }
     void unset_equiv_variable() const { assert(equiv_var_ != nullptr); equiv_var_ = nullptr; }
     void bind(const GenericElement* const e);
-    bool restrictions_equal(const TypeVar other) const;
+    bool bounds_equal(const TypeVar other) const;
 
 public:
     const TraitInstSet* bounds() const { return &bounds_; }
