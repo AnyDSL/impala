@@ -1,0 +1,4 @@
+trait T[X] {}
+fn myf[A, B:T[A]](x: B, f: fn[C:T[A]](C)->C) -> B {
+    f[B](x)
+}
