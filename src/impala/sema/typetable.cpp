@@ -45,20 +45,24 @@ void TypeTable::insert_new(Type type) {
     assert(!type.is_unified());
     type.set_unified();
 
-    for (auto elem : type->elems_) {
+    for (Type elem : type->elems_) {
         if (!elem.is_unified()) {
             unify(elem);
             assert(elem.is_unified());
         }
     }
 
-    for (auto v : type->bound_vars()) {
-        for (auto r : v->bounds_) {
+    for (TypeVar v : type->bound_vars()) {
+        bool changed = false;
+        for (auto r : v->bounds()) {
             if (!r.is_unified()) {
-                unify(r);
+                changed = unify(r) || changed;
                 assert(r.is_unified());
             }
         }
+        // we have to renew the bounds set because the hashes may have changed during unification
+        if (changed)
+            v->refresh_bounds();
     }
 
     // CHECK does it cause any problems to put TypeVars into the type-set?
@@ -93,43 +97,42 @@ void TypeTable::change_repr_rec(TraitInstance tti, TraitInstanceNode* repr) cons
 
 // change_repr_rec for types, but because TypeVar !< Type we need templates here
 template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) const {
-    // first unify all bounded variables but remember the old ones
+    // first change the representative of all bound variables but remember the old ones
     std::vector<TraitInstSet*> var_restrictions;
     assert(t->bound_vars().size() == repr->bound_vars().size());
     for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
-        var_restrictions.push_back(new TraitInstSet(*t->bound_var(i)->bounds()));
+        var_restrictions.push_back(new TraitInstSet(t->bound_var(i)->bounds()));
         change_repr(t->bound_var(i), repr->bound_var(i).representative());
     }
 
-    // unify restrictions of bounded variables
+    // change representatives of the bounds (i.e. \p TraitInstances) of type variables
     size_t num_bound_vars = var_restrictions.size();
     assert(num_bound_vars == repr->bound_vars().size());
 
     for (size_t i = 0; i != num_bound_vars; ++i) {
-        auto tv_restrs = var_restrictions[i];
-        auto reprv = repr->bound_var(i);
+        auto old_bounds = var_restrictions[i];
+        auto repr_bounds = repr->bound_var(i)->bounds();
 
-        assert(tv_restrs->size() == reprv->bounds()->size());
+        assert(old_bounds->size() == repr_bounds.size());
 
-        // FEATURE this does work but seems too much effort
+        // FEATURE this works but seems too much effort
         TraitInstanceNodeTableSet ttis;
-        for (auto r : *reprv->bounds()) {
+        for (auto r : repr_bounds) {
             auto p = ttis.insert(r.representative());
             assert(p.second && "hash/equal broken");
         }
 
-        // this->bounds() subset of trestr
-        for (auto restr : *tv_restrs) {
-            auto repr_restr = ttis.find(restr.representative());
-            assert(repr_restr != ttis.end());
-            change_repr(restr, *repr_restr);
+        for (TraitInstance bound : *old_bounds) {
+            auto repr_bound = ttis.find(bound.representative());
+            assert(repr_bound != ttis.end());
+            change_repr(bound, *repr_bound);
         }
     }
 
     for (auto vr : var_restrictions)
         delete vr;
 
-    // unify sub elements
+    // change representative of all sub elements
     assert(t->size() == repr->size());
     for (size_t i = 0, e = t->size(); i != e; ++i)
         change_repr(t->elem_(i), repr->elem(i).representative());
@@ -160,20 +163,7 @@ void TypeTable::unify_base(Type type) {
     }
 }
 
-/*Trait* TypeTable::unify_trait(Trait* trait) {
-    auto i = traits_.find(trait);
-    if (i != traits_.end()) {
-        delete trait;
-        return *i;
-    }
-
-    auto p = traits_.insert(trait);
-    assert(p.second && "hash/equal broken");
-    return trait;
-}*/
-
-//const TraitInstance* TypeTable::unify_trait_inst(TraitInstance* trait_inst) {
-void TypeTable::unify(TraitInstance trait_inst) {
+bool TypeTable::unify(TraitInstance trait_inst) {
     assert(!trait_inst.is_unified() && "trait instance already unified");
     assert(trait_inst->is_closed() && "Only closed trait instances can be unified!");
 
@@ -182,9 +172,11 @@ void TypeTable::unify(TraitInstance trait_inst) {
         assert(*i != trait_inst.representative());
         change_repr(trait_inst, *i);
         assert(trait_inst.representative() == *i);
+        return true;
     } else {
         insert_new(trait_inst);
         assert(trait_inst.is_unified());
+        return false;
     }
 }
 

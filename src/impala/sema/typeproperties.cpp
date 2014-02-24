@@ -23,11 +23,11 @@ std::string GenericElement::bound_vars_to_string() const {
     for (auto v : bound_vars()) {
         result += separator + v->to_string();
 
-        const TraitInstSet* restr = v->bounds();
+        const TraitInstSet restr = v->bounds();
 
-        if (!restr->empty()) {
+        if (!restr.empty()) {
             auto inner_sep = ":";
-            for (auto t : *restr) {
+            for (auto t : restr) {
                 result += inner_sep + t->to_string();
                 inner_sep = "+";
             }
@@ -58,7 +58,7 @@ void GenericElement::check_instantiation(thorin::ArrayRef<Type> var_instances) c
     for (size_t i = 0; i < var_instances.size(); ++i) {
         Type instance = var_instances[i];
 
-        for (TraitInstance bound : *bound_var(i)->bounds())
+        for (TraitInstance bound : bound_var(i)->bounds())
             // TODO better error handling
             assert(instance->implements(bound));
     }

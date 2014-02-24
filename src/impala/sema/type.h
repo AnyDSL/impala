@@ -220,7 +220,7 @@ private:
     bool bounds_equal(const TypeVar other) const;
 
 public:
-    const TraitInstSet* bounds() const { return &bounds_; }
+    const TraitInstSet& bounds() const { return bounds_; }
     const GenericElement* bound_at() const { return bound_at_; }
     void add_bound(TraitInstance restriction);
     virtual bool equal(const TypeNode* other) const;
@@ -239,8 +239,6 @@ public:
 
 private:
     const int id_;       ///< Used for unambiguous dumping.
-
-    // FIXME after unification the hash values may have been changed!
     TraitInstSet bounds_;///< All traits that restrict the instantiation of this variable.
     /**
      * The type where this variable is bound.
@@ -253,6 +251,9 @@ private:
     virtual Type vspecialize(SpecializeMapping&) const;
     /// Create a copy of this \p TypeVar that considers the specialization (the binding is not copied)
     TypeVar clone(SpecializeMapping&) const;
+
+    /// re-add all elements to the bounds set -- needed if during unification the representatives of bounds change
+    void refresh_bounds();
 
     friend class TypeTable;
     friend class TypeNode;

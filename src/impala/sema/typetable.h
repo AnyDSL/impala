@@ -60,7 +60,9 @@ public:
     FnType fntype(thorin::ArrayRef<Type> params, Type return_type);
     TupleType tupletype(thorin::ArrayRef<Type> elems) { return new_type(new TupleTypeNode(*this, elems)); }
     TupleType unit() { return tupletype({}); }
-    void unify(TraitInstance tti);
+
+    /// unify a trait instance and return \p true if the representative changed
+    bool unify(TraitInstance tti);
     template<class T> void unify(UnifiableProxy<T> type) { unify_base(type); }
     //const TraitInstance* unify_trait_inst(TraitInstance* type);
     /// Checks if all types in the type tables are sane and correctly unified.

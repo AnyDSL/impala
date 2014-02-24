@@ -10,13 +10,13 @@ int TypeVarNode::counter = 0;
 
 bool TypeNode::is_closed() const {
     for (auto v : bound_vars()) {
-        for (auto r : *v->bounds()) {
+        for (auto r : v->bounds()) {
             if (! r->is_closed())
                 return false;
         }
     }
 
-    for (auto t : elems_) {
+    for (auto t : elems()) {
         if (! t->is_closed())
             return false;
     }
@@ -71,8 +71,8 @@ bool TypeNode::implements(TraitInstance trait) const {
 }
 
 bool TypeVarNode::implements(TraitInstance trait) const {
-    // TODO is this enough?
-    return bounds()->find(trait) != bounds()->end();
+    // CHECK is this enough?
+    return bounds().find(trait) != bounds().end();
 }
 
 //------------------------------------------------------------------------------
@@ -134,10 +134,21 @@ TypeVar TypeVarNode::clone(SpecializeMapping& mapping) const {
     TypeVar v = typetable().typevar();
 
     // copy bounds!
-    for (TraitInstance b : *bounds())
+    for (TraitInstance b : bounds())
         v->add_bound(b->specialize(mapping));
 
     return v;
+}
+
+void TypeVarNode::refresh_bounds() {
+    std::vector<TraitInstance> tmp;
+    for (TraitInstance i : bounds())
+        tmp.push_back(i);
+    bounds_.clear();
+    for (TraitInstance i : tmp) {
+        auto p = bounds_.insert(i);
+        assert(p.second && "hash/equal broken");
+    }
 }
 
 //------------------------------------------------------------------------------

@@ -55,20 +55,20 @@ bool TypeNode::equal(const TypeNode* other) const {
 }
 
 bool TypeVarNode::bounds_equal(const TypeVar other) const {
-    auto trestr = other->bounds();
+    TraitInstSet trestr = other->bounds();
 
-    if (this->bounds()->size() != trestr->size())
+    if (this->bounds().size() != trestr.size())
         return false;
 
-    // FEATURE this does work but seems too much effort, at least use a set that uses representatives
+    // FEATURE this works but seems too much effort, at least use a set that uses representatives
     TraitInstanceNodeTableSet ttis;
-    for (auto r : *trestr) {
+    for (auto r : trestr) {
         auto p = ttis.insert(r.representative());
         assert(p.second && "hash/equal broken");
     }
 
     // this->bounds() subset of trestr
-    for (auto r : *this->bounds()) {
+    for (auto r : this->bounds()) {
         if (ttis.find(r.representative()) == ttis.end()) {
             return false;
         }
