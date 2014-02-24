@@ -93,6 +93,7 @@ bool TypeNode::is_sane() const {
     return true;
 }
 
+// TODO move to to_string.cpp
 void TypeNode::dump() const { std::cout << to_string() << std::endl; }
 
 //------------------------------------------------------------------------------
@@ -167,6 +168,18 @@ void TypeVarNode::add_bound(TraitInstance restriction) {
 
 bool TypeVarNode::is_closed() const {
     return bound_at_ != nullptr;
+}
+
+//------------------------------------------------------------------------------
+
+bool TypeNode::implements(TraitInstance trait) const {
+    // FEATURE raise error if a type does not implement the required traits
+    return true;
+}
+
+bool TypeVarNode::implements(TraitInstance trait) const {
+    // TODO is this enough?
+    return bounds()->find(trait) != bounds()->end();
 }
 
 //------------------------------------------------------------------------------

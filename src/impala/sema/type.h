@@ -81,6 +81,8 @@ public:
 
     Type instantiate(thorin::ArrayRef<Type> var_instances) const;
 
+    virtual bool implements(TraitInstance) const;
+
     bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());
         return GenericElement::is_generic();
@@ -224,6 +226,8 @@ public:
     virtual bool equal(const TypeNode* other) const;
     std::string to_string() const;
 
+    virtual bool implements(TraitInstance) const;
+
     /**
      * A type variable is closed if it is bound and all restrictions are closed.
      * If a type variable is closed it must not be changed anymore!
@@ -235,6 +239,8 @@ public:
 
 private:
     const int id_;       ///< Used for unambiguous dumping.
+
+    // FIXME after unification the hash values may have been changed!
     TraitInstSet bounds_;///< All traits that restrict the instantiation of this variable.
     /**
      * The type where this variable is bound.
