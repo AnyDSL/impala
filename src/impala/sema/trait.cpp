@@ -7,6 +7,7 @@
 
 #include "impala/ast.h"
 #include "impala/sema/trait.h"
+#include "impala/sema/typetable.h"
 
 namespace impala {
 
@@ -60,6 +61,14 @@ bool TraitInstanceNode::is_closed() const {
             return false;
     }
     return true;
+}
+
+TraitInstance TraitInstanceNode::specialize(SpecializeMapping& mapping) const {
+    std::vector<Type> instances;
+    for (auto i : var_instances())
+        instances.push_back(i->specialize(mapping));
+
+    return typetable().instantiate_trait(trait(), instances);
 }
 
 }

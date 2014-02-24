@@ -116,6 +116,7 @@ private:
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
 
+    friend class TraitInstanceNode;
     friend class CompoundType;
     friend class TypeTable;
 };
@@ -244,8 +245,8 @@ private:
     static int counter;
 
     virtual Type vspecialize(SpecializeMapping&) const;
-    /// Create a fully fledged clone of this TypeVar (except of the binding)
-    TypeVar clone() const;
+    /// Create a copy of this \p TypeVar that considers the specialization (the binding is not copied)
+    TypeVar clone(SpecializeMapping&) const;
 
     friend class TypeTable;
     friend class TypeNode;

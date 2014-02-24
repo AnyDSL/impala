@@ -77,9 +77,12 @@ public:
     bool equal(TraitInstance t) const { return equal(t.representative()); }
     bool equal(const TraitInstanceNode* t) const;
     size_t hash() const;
+
+    thorin::ArrayRef<Type> var_instances() const { return thorin::ArrayRef<Type>(var_instances_); }
     const Type var_inst(size_t i) const { return var_instances_[i]; }
     /// Returns number of variables instances.
     size_t var_inst_size() const { return var_instances_.size(); }
+
     bool is_closed() const;
     std::string to_string() const;
 
@@ -87,6 +90,9 @@ private:
     const Trait* trait_;
     std::vector<Type> var_instances_;
 
+    TraitInstance specialize(SpecializeMapping&) const;
+
+    friend class TypeVarNode;
     friend class TypeTable;
 };
 

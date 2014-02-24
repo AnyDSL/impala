@@ -1,0 +1,3 @@
+fn myf(x: int, f:fn[A](A)->A, g: fn[A](A, fn[B](B)->B)->A) -> int {
+    g[int](x, f)
+}

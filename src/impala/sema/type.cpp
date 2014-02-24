@@ -181,7 +181,8 @@ Type TypeNode::instantiate(thorin::ArrayRef<Type> var_instances) const {
         mapping[v.representative()] = var_instances[i];
 
     Type instance = vspecialize(mapping);
-    assert(instance->is_sane());
+    typetable().unify(instance);
+
     return instance;
 }
 
@@ -193,7 +194,7 @@ Type TypeNode::specialize(SpecializeMapping& mapping) const {
 
     for (TypeVar v : bound_vars()) {
         assert(mapping.find(v.representative()) == mapping.end());
-        mapping[v.representative()] = v->clone();
+        mapping[v.representative()] = v->clone(mapping);
     }
 
     Type t = vspecialize(mapping);
@@ -223,9 +224,14 @@ Type TypeVarNode::vspecialize(SpecializeMapping& mapping) const {
     return mapping[this] = typetable().new_type(this);
 }
 
-TypeVar TypeVarNode::clone() const {
-    return typetable().typevar();
-    // FEATURE consider bounds!
+TypeVar TypeVarNode::clone(SpecializeMapping& mapping) const {
+    TypeVar v = typetable().typevar();
+
+    // copy bounds!
+    for (TraitInstance b : *bounds())
+        v->add_bound(b->specialize(mapping));
+
+    return v;
 }
 
 //------------------------------------------------------------------------------
