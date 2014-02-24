@@ -55,4 +55,16 @@ void Typable::set_type(Type t) const {
         assert(type_->kind() == Type_error);
 }
 
+const Trait* TraitDecl::calc_trait(Sema& sema) const {
+    check(sema);
+    assert(trait() != nullptr);
+    return trait();
+}
+
+Type ValueDecl::calc_type(Sema& sema) const {
+    check(sema);
+    assert(!type().empty());
+    return type();
+}
+
 }

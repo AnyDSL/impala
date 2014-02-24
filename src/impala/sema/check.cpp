@@ -122,7 +122,7 @@ TraitInstance ASTTypeApp::to_trait_instance(Sema& sema) const {
             for (auto e : elems())
                 type_args.push_back(e->to_type(sema));
 
-            return sema.instantiate_trait(trait_decl->trait(), type_args);
+            return sema.instantiate_trait(trait_decl->calc_trait(sema), type_args);
         } else
             sema.error(this) << "cannot convert a type variable into a trait instance\n";
     }
@@ -201,6 +201,10 @@ void StaticItem::check(Sema& sema) const {
 }
 
 void FnDecl::check(Sema& sema) const {
+    // this FnDecl has already been checked
+    if (!type().empty())
+        return;
+
     sema.push_scope();
     check_type_params(sema);
     // check parameters
@@ -231,6 +235,10 @@ void StructDecl::check(Sema& sema) const {
 }
 
 void TraitDecl::check(Sema& sema) const {
+    // did we already check this trait?
+    if (trait_ != nullptr)
+        return;
+
     // FEATURE consider super traits and check methods
     trait_ = sema.trait(this, TraitSet());
 
@@ -285,9 +293,9 @@ void PathExpr::check(Sema& sema) const {
                 for (const ASTType* t : last_item->types())
                     type_args.push_back(t->to_type(sema));
 
-                set_type(vdec->type()->instantiate(type_args));
+                set_type(vdec->calc_type(sema)->instantiate(type_args));
             } else
-                set_type(vdec->type());
+                set_type(vdec->calc_type(sema));
         }
     } else
         set_type(sema.type_error());

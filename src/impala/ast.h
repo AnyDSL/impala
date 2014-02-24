@@ -293,6 +293,8 @@ public:
     /// original type.
     const ASTType* asttype() const { return asttype_; }
     bool is_mut() const { return is_mut_; }
+    virtual void check(Sema& sema) const = 0;
+    Type calc_type(Sema&) const;
 
 protected:
     thorin::AutoPtr<const ASTType> asttype_;
@@ -311,6 +313,7 @@ public:
     size_t handle() const { return handle_; }
     virtual std::ostream& print(Printer&) const;
     bool is_anonymous() const { return symbol() == Symbol(); }
+    virtual void check(Sema& sema) const {}
 
 protected:
     size_t handle_;
@@ -440,7 +443,7 @@ class FieldDecl : public ValueDecl {
 public:
     Visibility visibility() const { return  visibility_; }
     virtual std::ostream& print(Printer&) const;
-    void check(Sema& sema) const;
+    void check(Sema& sema) const {} // TODO
     void check_head(Sema& sema) const;
 
 private:
@@ -511,6 +514,7 @@ public:
     const std::vector<Symbol>& super() const { return super_; }
     const Methods& methods() const { return methods_; }
     const Trait* trait() const { return trait_; }
+    const Trait* calc_trait(Sema& sema) const;
     virtual std::ostream& print(Printer&) const;
     virtual void check(Sema& sema) const;
     virtual void check_head(Sema& sema) const;
@@ -519,7 +523,7 @@ public:
 private:
     Methods methods_;
     std::vector<Symbol> super_;
-    mutable Trait* trait_;
+    mutable Trait* trait_ = nullptr;
 
     friend class Parser;
 };
