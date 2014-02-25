@@ -1,0 +1,3 @@
+fn f1(r: fn(bool)->()) -> () {
+   r(true)
+}

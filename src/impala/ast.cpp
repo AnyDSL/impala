@@ -1,5 +1,4 @@
 #include "impala/ast.h"
-#include "impala/sema/type.h"
 
 namespace impala {
 
@@ -17,12 +16,12 @@ const FnASTType* FnASTType::ret_fn_type() const {
     return nullptr;
 }
 
-TokenKind LiteralExpr::literal2type() const {
+PrimTypeKind LiteralExpr::literal2type() const {
     switch (kind()) {
 #define IMPALA_LIT(itype, atype) \
-        case LIT_##itype: return Token::TYPE_##itype;
+        case LIT_##itype: return PrimType_##itype;
 #include "impala/tokenlist.h"
-        case LIT_bool:    return Token::TYPE_bool;
+        case LIT_bool:    return PrimType_bool;
         default: THORIN_UNREACHABLE;
     }
 }

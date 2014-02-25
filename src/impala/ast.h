@@ -14,7 +14,7 @@
 #include "impala/location.h"
 #include "impala/symbol.h"
 #include "impala/token.h"
-#include "impala/sema/typeproperties.h"
+#include "impala/sema/type.h"
 
 namespace thorin {
     class Enter;
@@ -613,7 +613,7 @@ public:
     Kind kind() const { return kind_; }
     thorin::Box box() const { return box_; }
     uint64_t get_u64() const;
-    TokenKind literal2type() const;
+    PrimTypeKind literal2type() const;
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(Sema& sema) const;

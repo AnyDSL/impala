@@ -276,6 +276,7 @@ void BlockExpr::check(Sema& sema) const {
 }
 
 void LiteralExpr::check(Sema& sema) const {
+    set_type(sema.primtype(literal2type()));
 }
 
 void FnExpr::check(Sema& sema) const {

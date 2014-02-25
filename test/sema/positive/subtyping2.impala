@@ -1,0 +1,6 @@
+fn f(r: fn(float)->()) -> () {
+   r(4)
+}
+fn f(r: fn(double)->()) -> () {
+   r(5)
+}
