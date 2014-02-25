@@ -15,6 +15,7 @@ UnifiableSet::~UnifiableSet() {
     for (auto t : trait_instances_) delete t;
     for (auto t : types_) delete t;
     for (auto t : traits_) delete t;
+    for (auto t : trait_impls_) delete t;
 }
 
 //------------------------------------------------------------------------------

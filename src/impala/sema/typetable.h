@@ -25,11 +25,13 @@ public:
     void add(Unifiable<TraitInstanceNode>* t) { trait_instances_.push_back(t); }
     void add(Unifiable<TypeNode>* t) { types_.push_back(t); }
     void add(const Trait* t) { traits_.push_back(t); }
+    void add(const TraitImpl* impl) { trait_impls_.push_back(impl); }
 
 private:
     std::vector<Unifiable<TraitInstanceNode>*> trait_instances_;
     std::vector<Unifiable<TypeNode>*> types_;
     std::vector<const Trait*> traits_;
+    std::vector<const TraitImpl*> trait_impls_;
 
     friend class TypeTable;
 };
@@ -54,6 +56,11 @@ public:
         auto tti = TraitInstance(new TraitInstanceNode(trait, var_instances));
         unifiables_.add(tti.node_);
         return tti;
+    }
+    TraitImpl* implement_trait(const Impl* impl_decl, TraitInstance trait) {
+        auto impl = new TraitImpl(*this, impl_decl, trait);
+        unifiables_.add(impl);
+        return impl;
     }
     TypeVar typevar() { return new_type(new TypeVarNode(*this)); }
     FnType fntype(thorin::ArrayRef<Type> params) { return new_type(new FnTypeNode(*this, params)); }

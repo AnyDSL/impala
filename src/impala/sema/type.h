@@ -16,13 +16,15 @@ namespace impala {
 struct TraitInstanceHash { 
     size_t operator () (const TraitInstance t) const { return thorin::hash_value(t.representative()); } 
 };
-
 struct TraitInstanceEqual { 
     bool operator () (const TraitInstance t1, const TraitInstance t2) const { 
         return t1.representative() == t2.representative(); } 
 };
-
 typedef std::unordered_set<TraitInstance, TraitInstanceHash, TraitInstanceEqual> TraitInstSet;
+
+struct TraitImplHash { size_t operator () (const TraitInstance t) const; };
+struct TraitImplEqual { bool operator () (const TraitInstance t1, const TraitInstance t2) const; };
+typedef std::unordered_set<TraitInstance, TraitImplHash, TraitImplEqual> TraitImplSet;
 
 //------------------------------------------------------------------------------
 
@@ -61,10 +63,8 @@ public:
     Kind kind() const { return kind_; }
     thorin::ArrayRef<Type> elems() const { return thorin::ArrayRef<Type>(elems_); }
     const Type elem(size_t i) const { return elems_[i]; }
-
     /// Returns number of \p TypeNode operands (\p elems_).
     size_t size() const { return elems_.size(); }
-
     /// Returns true if this \p TypeNode does not have any \p TypeNode operands (\p elems_).
     bool is_empty() const {
         assert (!elems_.empty() || bound_vars_.empty());
@@ -79,8 +79,8 @@ public:
     void dump() const;
     virtual std::string to_string() const = 0;
 
+    void add_implementation(const TraitImpl* impl);
     Type instantiate(thorin::ArrayRef<Type> var_instances) const;
-
     virtual bool implements(TraitInstance) const;
 
     bool is_generic() const {
@@ -114,6 +114,7 @@ private:
     virtual Type vspecialize(SpecializeMapping&) const = 0;
 
     const Kind kind_;
+    TraitImplSet trait_impls_;
 
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.

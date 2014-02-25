@@ -20,6 +20,7 @@ class FnTypeNode;
 class PrimTypeNode;
 class Trait;
 class TraitInstanceNode;
+class TraitImpl;
 class TupleTypeNode;
 class TypeErrorNode;
 class TypeNode;
@@ -97,7 +98,7 @@ public:
 
     bool empty() const { return node_ == nullptr; }
     bool is_unified() const { return node()->is_unified(); }
-    bool operator == (const UnifiableProxy<T>& other) {
+    bool operator == (const UnifiableProxy<T>& other) const {
         if (!this->is_unified()) representative()->typetable().unify(*this);
         if (!other.is_unified()) representative()->typetable().unify(other);
         return node()->equal(other.node());

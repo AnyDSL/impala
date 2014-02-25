@@ -13,6 +13,7 @@
 namespace impala {
 
 class TraitDecl;
+class Impl;
 
 struct TraitMethod {
     std::string name;
@@ -93,6 +94,29 @@ private:
     TraitInstance specialize(SpecializeMapping&) const;
 
     friend class TypeVarNode;
+    friend class TypeTable;
+};
+
+class TraitImpl : public GenericElement {
+    TraitImpl(TypeTable& tt, const Impl* impl_decl, TraitInstance trait)
+        : GenericElement(tt)
+        , impl_decl_(impl_decl)
+        , trait_(trait)
+    {}
+    TraitImpl& operator = (const TraitImpl&); ///< Do not copy-assign a \p TraitImpl.
+    TraitImpl(const TraitImpl&);              ///< Do not copy-construct a \p TraitImpl.
+
+public:
+    virtual bool equal(const GenericElement* t) const;
+    bool equal(const TraitImpl* other) const { return this->impl_decl() == other->impl_decl(); }
+    size_t hash() const { return thorin::hash_value(impl_decl()); }
+    const Impl* impl_decl() const { return impl_decl_; }
+    TraitInstance trait_inst() const { return trait_; }
+
+private:
+    const Impl* const impl_decl_;
+    TraitInstance trait_;
+
     friend class TypeTable;
 };
 

@@ -134,4 +134,10 @@ bool Trait::equal(const GenericElement* other) const {
     return false;
 }
 
+bool TraitImpl::equal(const GenericElement* other) const {
+    if (const TraitImpl* t = other->isa<TraitImpl>())
+        return equal(t);
+    return false;
+}
+
 }

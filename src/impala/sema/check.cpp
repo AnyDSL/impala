@@ -204,9 +204,7 @@ void Typedef::check_head(Sema& sema) const {
     sema.insert(this);
 }
 
-void Impl::check_head(Sema& sema) const {
-    sema.insert(this);
-}
+void Impl::check_head(Sema& sema) const {}
 
 /*
  * items - check
@@ -281,6 +279,29 @@ void TraitDecl::check(Sema& sema) const {
 }
 
 void Impl::check(Sema& sema) const {
+    sema.push_scope();
+    check_type_params(sema);
+
+    // TODO currently symbol() gives the trait name, this does not handle stuff like 'impl T[int] for S {}'
+    if (auto decl = sema.lookup(this, symbol())) {
+        if (auto trait = decl->isa<TraitDecl>()) {
+            // create TraitImpl
+            TraitInstance tinst = sema.instantiate_trait(trait->calc_trait(sema), {});
+            const TraitImpl* impl = sema.implement_trait(this, tinst);
+
+            // add impl to type
+            Type t = for_type()->to_type(sema);
+            if (t != sema.type_error())
+                t->add_implementation(impl);
+
+            // FEATURE check that all methods are implemented
+            for (auto fn : methods())
+                fn->check(sema);
+        } else
+            sema.error(decl) << decl << " is not the name of a trait.\n";
+    }
+
+    sema.pop_scope();
 }
 
 /*

@@ -6,6 +6,12 @@ namespace impala {
 
 int TypeVarNode::counter = 0;
 
+size_t TraitImplHash::operator () (const TraitInstance t) const{ return t->hash(); }
+bool TraitImplEqual::operator () (const TraitInstance t1, const TraitInstance t2) const {
+    // FEATURE consider generic implementations, ...
+    return t1 == t2;
+}
+
 //------------------------------------------------------------------------------
 
 bool TypeNode::is_closed() const {
@@ -65,9 +71,14 @@ bool TypeVarNode::is_closed() const {
 
 //------------------------------------------------------------------------------
 
+void TypeNode::add_implementation(const TraitImpl* impl) {
+    auto p = trait_impls_.insert(impl->trait_inst());
+    assert(p.second && "hash/equal broken");
+}
+
 bool TypeNode::implements(TraitInstance trait) const {
-    // FEATURE raise error if a type does not implement the required traits
-    return true;
+    // CHECK is this enough?
+    return trait_impls_.find(trait) != trait_impls_.end();
 }
 
 bool TypeVarNode::implements(TraitInstance trait) const {
