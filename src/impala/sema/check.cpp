@@ -22,14 +22,45 @@ private:
     bool nossa_;
 };
 
-inline bool match_types(Sema& sema, Type expected, const Expr* found) {
+void expect_num(Sema& sema, const Expr* exp) {
+    Type t = exp->type();
+    assert(!t.empty());
+
+    if (t == sema.type_error())
+        return;
+
+    // TODO realize this with subtyping
+    if ((t != sema.type_int()) && (t != sema.type_int8()) && (t != sema.type_int16()) && (t != sema.type_int32()) &&
+            (t != sema.type_int64()) && (t != sema.type_float()) && (t != sema.type_double()))
+        sema.error(exp) << "Expected number type but found " << t << "\n";
+}
+
+Type match_types(Sema& sema, const Expr* pos, Type t1, Type t2) {
+    assert(!t1.empty());
+    assert(!t2.empty());
+
+    Type error = sema.type_error();
+    if (t1 == error || t2 == error)
+        return error;
+
+    // TODO consider subtyping of primitive types and return the "smallest common type"
+    if (t1 == t2) {
+        return t1;
+    } else {
+        sema.error(pos) << "Types do not match: " << t1 << " != " << t2 << "\n";
+        return error;
+    }
+}
+
+inline void expect_type(Sema& sema, const Expr* found, Type expected) {
     assert(!expected.empty());
     assert(!found->type().empty());
-    if (found->type() != expected) {
-        sema.error(found) << "Wrong argument type; expected " << expected << " but found " << found->type() << "\n";
-        return false;
-    } else
-        return true;
+    assert(expected != sema.type_error());
+
+    if (found->type() == sema.type_error())
+        return;
+    if (found->type() != expected)
+        sema.error(found) << "Wrong type; expected " << expected << " but found " << found->type() << "\n";
 }
 
 //------------------------------------------------------------------------------
@@ -306,6 +337,29 @@ void PrefixExpr::check(Sema& sema) const {
 }
 
 void InfixExpr::check(Sema& sema) const {
+    lhs()->check(sema);
+    rhs()->check(sema);
+
+    Type lhstype = lhs()->type();
+    Type rhstype = rhs()->type();
+
+    // FEATURE other cases
+    switch (kind()) {
+        case EQ:
+        case NE:
+            match_types(sema, this, lhstype, rhstype);
+            set_type(sema.type_bool());
+            break;
+        case ADD:
+        case SUB:
+        case MUL:
+        case DIV:
+        case REM:
+            expect_num(sema, lhs());
+            set_type(match_types(sema, this, lhstype, rhstype));
+            break;
+        default: THORIN_UNREACHABLE;
+    }
 }
 
 void PostfixExpr::check(Sema& sema) const {
@@ -358,7 +412,7 @@ void MapExpr::check(Sema& sema) const {
                 for (size_t i = 0; i < args().size(); ++i) {
                     auto arg = args()[i];
                     arg->check(sema);
-                    match_types(sema, lhs_type->elem(i), arg);
+                    expect_type(sema, arg, lhs_type->elem(i));
                 }
 
                 // set return type
@@ -390,7 +444,7 @@ void MapExpr::check(Sema& sema) const {
 void IfExpr::check(Sema& sema) const {
     // assert condition is of type bool
     cond()->check(sema);
-    match_types(sema, sema.type_bool(), cond());
+    expect_type(sema, cond(), sema.type_bool());
 
     then_expr()->check(sema);
 
@@ -398,10 +452,7 @@ void IfExpr::check(Sema& sema) const {
         else_expr()->check(sema);
 
         // assert that both branches have the same type and set the type
-        if (match_types(sema, then_expr()->type(), else_expr()))
-            set_type(then_expr()->type());
-        else
-            set_type(sema.type_error());
+        set_type(match_types(sema, this, then_expr()->type(), else_expr()->type()));
     } else {
         // CHECK what is the type of this IfExpr now?
     }
