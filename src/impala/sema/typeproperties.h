@@ -48,10 +48,6 @@ public:
         : representative_(node)
         , unified_(false)
     {}
-    Unifiable(T* node, bool unified)
-        : representative_(node)
-        , unified_(unified)
-    {}
 
     // Unified TypeNodes are removed by the type table
     ~Unifiable() { if (!is_unified()) delete representative_; }
