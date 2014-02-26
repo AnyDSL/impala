@@ -61,8 +61,14 @@ public:
         assert(this->is_unified() && other->is_unified());
         return this->representative() == other->representative();
     }
-    template<class U> operator Unifiable<U>() { return Unifiable<U>((U*) representative_, unified_); }
+    template<class U> operator Unifiable<U>() { 
+        // TODO static assert that U is a super type of T
+        return Unifiable<U>((U*) representative_, unified_); 
+    }
     bool is_unified() const { return unified_; }
+    template<class U> Unifiable<U>* isa() { 
+        return representative_->template isa<U>() ? reinterpret_cast<Unifiable<U>*>(this) : nullptr; 
+    }
 
 private:
     void set_representative(T* repr) {
@@ -86,6 +92,8 @@ private:
 template<class T>
 class UnifiableProxy {
 public:
+    typedef T BaseType;
+
     UnifiableProxy()
         : node_(nullptr)
     {}
@@ -105,7 +113,15 @@ public:
     }
     bool operator != (const UnifiableProxy<T>& other) { return !(*this == other); }
     T* operator -> () const { return deref(); }
-    template<class U> operator UnifiableProxy<U>() { return UnifiableProxy<U>((Unifiable<U>*) node_); }
+    template<class U> operator UnifiableProxy<U>() { 
+        // TODO static assert that U is a super type of T
+        return UnifiableProxy<U>(reinterpret_cast<Unifiable<U>*>(node_)); 
+    }
+    template<class U> 
+    UnifiableProxy<typename U::BaseType> isa() { 
+        return UnifiableProxy<typename U::BaseType>(node_->template isa<typename U::BaseType>()); 
+    }
+    operator bool() { return node_ != nullptr; }
 
 private:
     T* representative() const { return node()->representative(); }
