@@ -468,16 +468,10 @@ void IfExpr::check(Sema& sema) const {
     expect_type(sema, cond(), sema.type_bool());
 
     then_expr()->check(sema);
+    else_expr()->check(sema);
 
-    if (has_else()) {
-        else_expr()->check(sema);
-
-        // assert that both branches have the same type and set the type
-        set_type(match_types(sema, this, then_expr()->type(), else_expr()->type()));
-    } else {
-        // CHECK what is the type of this IfExpr now?
-    }
-
+    // assert that both branches have the same type and set the type
+    set_type(match_types(sema, this, then_expr()->type(), else_expr()->type()));
     assert(!type().empty());
 }
 
