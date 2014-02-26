@@ -484,9 +484,13 @@ FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
 Impl* Parser::parse_impl() {
     auto impl = loc(new Impl());
     eat(Token::IMPL);
-    impl->symbol_ = try_id("impl");
     parse_type_params(impl->type_params_);
-    impl->for_type_ = accept(Token::FOR) ? parse_type() : nullptr;
+    auto type = parse_type();
+    if (accept(Token::FOR)) {
+        impl->trait_ = type;
+        impl->for_type_ = parse_type();
+    } else
+        impl->for_type_ = type;
     expect(Token::L_BRACE, "impl");
     while (la() == Token::FN)
         impl->methods_.push_back(parse_fn_decl(false)); 

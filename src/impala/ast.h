@@ -528,8 +528,9 @@ private:
     friend class Parser;
 };
 
-class Impl : public Item, public ParametricTypeDecl {
+class Impl : public Item, public ParametricASTType {
 public:
+    const ASTType* trait() const { return trait_; }
     const ASTType* for_type() const { return for_type_; }
     const Methods& methods() const { return methods_; }
     virtual std::ostream& print(Printer&) const;
@@ -538,6 +539,7 @@ public:
     //virtual void emit(CodeGen& cg) const;
 
 private:
+    thorin::AutoPtr<const ASTType> trait_;
     thorin::AutoPtr<const ASTType> for_type_;
     Methods methods_;
 
