@@ -29,6 +29,7 @@ bool TypeNode::equal(const GenericElement* other) const {
 }
 
 bool TypeNode::equal(const TypeNode* other) const {
+    //assert(this != other && "double insert"); // TODO what happens in this case?
     bool result = this->kind() == other->kind();
     result &= this->size() == other->size();
     result &= this->num_bound_vars() == other->num_bound_vars();
