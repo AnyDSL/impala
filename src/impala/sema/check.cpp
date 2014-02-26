@@ -39,7 +39,7 @@ Type match_types(Sema& sema, const Expr* pos, Type t1, Type t2) {
     assert(!t1.empty());
     assert(!t2.empty());
 
-    Type error = sema.type_error();
+    auto error = sema.type_error();
     if (t1 == error || t2 == error)
         return error;
 

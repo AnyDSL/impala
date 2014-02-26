@@ -22,14 +22,14 @@ public:
     UnifiableSet() {}
     ~UnifiableSet();
 
-    void add(Unifiable<TraitInstanceNode>* t) { trait_instances_.push_back(t); }
-    void add(Unifiable<TypeNode>* t) { types_.push_back(t); }
+    void add(TraitInstanceNode* t) { trait_instances_.push_back(t); }
+    void add(TypeNode* t) { types_.push_back(t); }
     void add(const Trait* t) { traits_.push_back(t); }
     void add(const TraitImpl* impl) { trait_impls_.push_back(impl); }
 
 private:
-    std::vector<Unifiable<TraitInstanceNode>*> trait_instances_;
-    std::vector<Unifiable<TypeNode>*> types_;
+    std::vector<TraitInstanceNode*> trait_instances_;
+    std::vector<TypeNode*> types_;
     std::vector<const Trait*> traits_;
     std::vector<const TraitImpl*> trait_impls_;
 
@@ -53,8 +53,8 @@ public:
         return t;
     }
     TraitInstance instantiate_trait(const Trait* trait, thorin::ArrayRef<Type> var_instances) {
-        auto tti = TraitInstance(new TraitInstanceNode(trait, var_instances));
-        unifiables_.add(tti.node_);
+        auto tti = new TraitInstanceNode(*this, trait, var_instances);
+        unifiables_.add(tti);
         return tti;
     }
     TraitImpl* implement_trait(const Impl* impl_decl, TraitInstance trait) {
@@ -70,18 +70,17 @@ public:
 
     /// unify a trait instance and return \p true if the representative changed
     bool unify(TraitInstance tti);
-    template<class T> void unify(const TypeNode* type);// TODO { unify_base(type); }
+    template<class T> void unify(Proxy<T> type);// TODO { unify_base(type); }
     //const TraitInstance* unify_trait_inst(TraitInstance* type);
     /// Checks if all types in the type tables are sane and correctly unified.
     void verify() const;
 
 private:
-    //template<class T> UnifiableProxy<T> new_type(T* tn) {
-        //auto t = UnifiableProxy<T>(tn);
-        //UnifiableProxy<TypeNode> x = t;
-        //unifiables_.add(x.node_);
-        //return t;
-    //}
+    template<class T> 
+    Proxy<T> new_type(T* tn) {
+        unifiables_.add(tn);
+        return Proxy<T>(tn);
+    }
 
     /// insert all not-unified types contained in type
     void insert_new(Type type);

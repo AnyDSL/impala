@@ -36,7 +36,7 @@ bool TypeNode::is_subtype(const TypeNode* super_type) const {
         return true;
 
     for (auto t : super_type->elems_) {
-        if (this->is_subtype(t.representative()))
+        if (this->is_subtype(t))
             return true;
     }
     return false;
@@ -95,7 +95,7 @@ Type TypeNode::instantiate(thorin::ArrayRef<Type> var_instances) const {
     assert(num_bound_vars() == var_instances.size());
     size_t i = 0;
     for (TypeVar v : bound_vars())
-        mapping[v.representative()] = var_instances[i];
+        mapping[v] = var_instances[i];
 
     Type instance = vspecialize(mapping);
     typetable().unify(instance);
@@ -110,15 +110,15 @@ Type TypeNode::specialize(SpecializeMapping& mapping) const {
         return it->second;
 
     for (TypeVar v : bound_vars()) {
-        assert(mapping.find(v.representative()) == mapping.end());
-        mapping[v.representative()] = v->clone(mapping);
+        assert(mapping.find(v) == mapping.end());
+        mapping[v] = v->clone(mapping);
     }
 
     Type t = vspecialize(mapping);
 
-    for (TypeVar v : bound_vars()) {
-        assert(mapping.find(v.representative()) != mapping.end());
-        t->add_bound_var(mapping[v.representative()]);
+    for (auto v : bound_vars()) {
+        assert(mapping.find(v) != mapping.end());
+        t->add_bound_var(mapping[v]->as<TypeVarNode>());
     }
 
     return t;
@@ -138,7 +138,7 @@ Type TupleTypeNode::vspecialize(SpecializeMapping& mapping) const { return mappi
 
 Type TypeVarNode::vspecialize(SpecializeMapping& mapping) const {
     // was not bound in the specialized type -> return orginal type var
-    return mapping[this] = typetable().new_type(this);
+    return mapping[const_cast<TypeVarNode*>(this)] = typetable().new_type(this); // HACK
 }
 
 TypeVar TypeVarNode::clone(SpecializeMapping& mapping) const {
@@ -171,7 +171,7 @@ void verify(thorin::ArrayRef<const Type> types) {
     for (auto t1 : types) {
         for (auto t2 : types) {
             if (t1.is_unified() && t2.is_unified()) {
-                if (!((!t1.representative()->equal(t2.representative())) || (t1.representative() == t2.representative()))) {
+                if (!((!t1->equal(t2)) || (t1 == t2))) {
                     t1->dump();
                     t2->dump();
                     assert(false);

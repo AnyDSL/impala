@@ -76,7 +76,7 @@ private:
  */
 class TraitInstanceNode : public Unifiable<TraitInstanceNode> {
 private:
-    TraitInstanceNode(const Trait* trait, thorin::ArrayRef<Type> var_instances);
+    TraitInstanceNode(TypeTable&, const Trait* trait, thorin::ArrayRef<Type> var_instances);
     TraitInstanceNode& operator = (const TraitInstanceNode&); ///< Do not copy-assign a \p TraitInstance.
     TraitInstanceNode(const TraitInstanceNode& node);         ///< Do not copy-construct a \p TraitInstance.
 
@@ -108,7 +108,7 @@ private:
 };
 
 class TraitImpl : public Generic<TraitImpl> {
-    TraitImpl(TypeTable& tt, const Impl* impl_decl, TraitInstance trait)
+    TraitImpl(TypeTable& tt, const Impl* impl_decl, TraitInstanceNode* trait)
         : Generic(tt)
         , impl_decl_(impl_decl)
         , trait_(trait)
@@ -125,7 +125,7 @@ public:
 
 private:
     const Impl* const impl_decl_;
-    TraitInstance trait_;
+    TraitInstanceNode* trait_;
 
     friend class TypeTable;
 };

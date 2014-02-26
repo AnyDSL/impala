@@ -23,7 +23,7 @@ public:
 
     bool empty() const { return node_ == nullptr; }
     bool is_unified() const { return deref()->is_unified(); }
-    bool operator == (const Proxy<T>& other) const 
+    bool operator == (const Proxy<T>& other) const;
     //{
         //if (!this->is_unified()) deref()->typetable().unify(*this);
         //if (!other.is_unified()) deref()->typetable().unify(other);
@@ -31,7 +31,9 @@ public:
     //}
     bool operator != (const Proxy<T>& other) { return !(*this == other); }
     T* operator -> () const { return deref(); }
-    T* deref() const { return node_->representative(); }
+    operator T* () const { return deref(); }
+    T* deref() const { return node_->representative()->template as<T>(); }
+    Proxy<T>& operator = (T* other) { node_ = other; return *this; }
 
 private:
     T* node_;
@@ -49,13 +51,18 @@ protected:
         : typetable_(tt) 
         , representative_((T*) this)
         , unified_(false)
-    {}
+    {
+        static_assert(std::is_base_of<Unifiable<T>, T>::value, "Unifiable<T> is not a base type of T");
+    }
 
 public:
     TypeTable& typetable() const { return typetable_; }
     T* representative() const { return representative_; }
     bool is_unified() const { return unified_; }
-    virtual bool equal(const Unifiable*) const = 0;
+    virtual bool equal(const Unifiable<T>* u) const { 
+        // todo;
+        return true;
+    }
     virtual size_t hash() const = 0;
 
 private:

@@ -19,8 +19,9 @@ void Trait::add_method(const std::string name, FnType type) {
     methods_.push_back(m);
 }
 
-TraitInstanceNode::TraitInstanceNode(const Trait* trait, thorin::ArrayRef<Type> var_instances)
-    : trait_(trait)
+TraitInstanceNode::TraitInstanceNode(TypeTable& typetable, const Trait* trait, thorin::ArrayRef<Type> var_instances)
+    : Unifiable<TraitInstanceNode>(typetable)
+    , trait_(trait)
     , var_instances_(var_instances.size())
 {
     trait->check_instantiation(var_instances);

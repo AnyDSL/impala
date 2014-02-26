@@ -5,6 +5,7 @@
  *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
  */
 
+#include "impala/sema/type.h"
 #include "impala/sema/trait.h"
 
 using namespace thorin;
@@ -39,14 +40,14 @@ bool TypeNode::equal(const TypeNode* other) const {
 
     // set equivalence constraints for type variables
     for (size_t i = 0, e = num_bound_vars(); i != e; ++i)
-        this->bound_var(i)->set_equiv_variable(other->bound_var(i).representative());
+        this->bound_var(i)->set_equiv_variable(other->bound_var(i));
 
     // check equality of the restrictions of the type variables
     for (size_t i = 0, e = num_bound_vars(); i != e && result; ++i)
         result &= this->bound_var(i)->bounds_equal(other->bound_var(i));
 
     for (size_t i = 0, e = size(); i != e && result; ++i)
-        result &= this->elem(i)->equal(other->elem(i).representative());
+        result &= this->elem(i)->equal(other->elem(i));
 
     // unset equivalence constraints for type variables
     for (size_t i = 0, e = num_bound_vars(); i != e; ++i)
@@ -64,13 +65,13 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
     // FEATURE this works but seems too much effort, at least use a set that uses representatives
     TraitInstanceNodeTableSet ttis;
     for (auto r : trestr) {
-        auto p = ttis.insert(r.representative());
+        auto p = ttis.insert(r);
         assert(p.second && "hash/equal broken");
     }
 
     // this->bounds() subset of trestr
     for (auto r : this->bounds()) {
-        if (ttis.find(r.representative()) == ttis.end()) {
+        if (ttis.find(r) == ttis.end()) {
             return false;
         }
     }
@@ -92,8 +93,8 @@ bool TypeVarNode::equal(const TypeNode* other) const {
                 bool result = bound_at()->num_bound_vars() == t->bound_at()->num_bound_vars();
                 size_t i;
                 for (i = 0; (i < bound_at()->num_bound_vars()) && result; ++i) {
-                    if (bound_at()->bound_var(i).representative() == this) {
-                        result &= t->bound_at()->bound_var(i).representative() == t;
+                    if (bound_at()->bound_var(i) == this) {
+                        result &= t->bound_at()->bound_var(i) == t;
                         break;
                     }
                 }
@@ -119,7 +120,7 @@ bool TraitInstanceNode::equal(const TraitInstanceNode* other) const {
 
     assert(var_instances_.size() == other->var_instances_.size());
     for (size_t i = 0; i < var_instances_.size(); ++i) {
-        if (! var_instances_[i].representative()->equal(other->var_instances_[i].representative())) {
+        if (! var_instances_[i]->equal(other->var_instances_[i])) {
             return false;
         }
     }
