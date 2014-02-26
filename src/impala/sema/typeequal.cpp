@@ -21,7 +21,7 @@ size_t TypeNode::hash() const {
     return seed;
 }
 
-bool TypeNode::equal(const GenericElement* other) const {
+bool TypeNode::equal(const Generic* other) const {
     if (const TypeNode* t = other->isa<TypeNode>()) {
         return equal(t);
     }
@@ -29,6 +29,7 @@ bool TypeNode::equal(const GenericElement* other) const {
 }
 
 bool TypeNode::equal(const TypeNode* other) const {
+    //assert(this != other && "double insert"); // TODO what happens in this case?
     bool result = this->kind() == other->kind();
     result &= this->size() == other->size();
     result &= this->num_bound_vars() == other->num_bound_vars();
@@ -128,13 +129,13 @@ bool TraitInstanceNode::equal(const TraitInstanceNode* other) const {
 // FEATURE better hash function
 size_t TraitInstanceNode::hash() const { return trait_->hash(); }
 
-bool Trait::equal(const GenericElement* other) const {
+bool Trait::equal(const Generic* other) const {
     if (const Trait* t = other->isa<Trait>())
         return equal(t);
     return false;
 }
 
-bool TraitImpl::equal(const GenericElement* other) const {
+bool TraitImpl::equal(const Generic* other) const {
     if (const TraitImpl* t = other->isa<TraitImpl>())
         return equal(t);
     return false;

@@ -48,10 +48,6 @@ public:
         : representative_(node)
         , unified_(false)
     {}
-    Unifiable(T* node, bool unified)
-        : representative_(node)
-        , unified_(unified)
-    {}
 
     // Unified TypeNodes are removed by the type table
     ~Unifiable() { if (!is_unified()) delete representative_; }
@@ -61,8 +57,14 @@ public:
         assert(this->is_unified() && other->is_unified());
         return this->representative() == other->representative();
     }
-    template<class U> operator Unifiable<U>() { return Unifiable<U>((U*) representative_, unified_); }
+    template<class U> operator Unifiable<U>() { 
+        // TODO static assert that U is a super type of T
+        return Unifiable<U>((U*) representative_, unified_); 
+    }
     bool is_unified() const { return unified_; }
+    template<class U> Unifiable<U>* isa() { 
+        return representative_->template isa<U>() ? reinterpret_cast<Unifiable<U>*>(this) : nullptr; 
+    }
 
 private:
     void set_representative(T* repr) {
@@ -86,6 +88,8 @@ private:
 template<class T>
 class UnifiableProxy {
 public:
+    typedef T BaseType;
+
     UnifiableProxy()
         : node_(nullptr)
     {}
@@ -105,7 +109,15 @@ public:
     }
     bool operator != (const UnifiableProxy<T>& other) { return !(*this == other); }
     T* operator -> () const { return deref(); }
-    template<class U> operator UnifiableProxy<U>() { return UnifiableProxy<U>((Unifiable<U>*) node_); }
+    template<class U> operator UnifiableProxy<U>() { 
+        // TODO static assert that U is a super type of T
+        return UnifiableProxy<U>(reinterpret_cast<Unifiable<U>*>(node_)); 
+    }
+    template<class U> 
+    UnifiableProxy<typename U::BaseType> isa() { 
+        return UnifiableProxy<typename U::BaseType>(node_->template isa<typename U::BaseType>()); 
+    }
+    operator bool() { return node_ != nullptr; }
 
 private:
     T* representative() const { return node()->representative(); }
@@ -130,7 +142,7 @@ std::ostream& operator << (std::ostream& o, UnifiableProxy<T> u) { return o << u
 
 //------------------------------------------------------------------------------
 
-class GenericElement : public thorin::MagicCast<GenericElement> {
+class Generic : public thorin::MagicCast<Generic> {
 public:
     TypeTable& typetable() const { return typetable_; }
     size_t num_bound_vars() const { return bound_vars_.size(); }
@@ -139,14 +151,14 @@ public:
     /// Returns true if this \p Type does have any bound type variabes (\p bound_vars_).
     bool is_generic() const { return !bound_vars_.empty(); }
     void add_bound_var(TypeVar v);
-    virtual bool equal(const GenericElement*) const = 0;
+    virtual bool equal(const Generic*) const = 0;
     virtual size_t hash() const = 0;
 
     /// raise error if a type does not implement the required traits;
     void check_instantiation(thorin::ArrayRef<Type>) const;
 
 protected:
-    GenericElement(TypeTable& tt) : typetable_(tt) {}
+    Generic(TypeTable& tt) : typetable_(tt) {}
 
     std::string bound_vars_to_string() const;
 

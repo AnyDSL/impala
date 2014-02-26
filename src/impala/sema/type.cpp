@@ -54,7 +54,7 @@ bool TypeNode::is_sane() const {
 
 //------------------------------------------------------------------------------
 
-void TypeVarNode::bind(const GenericElement* const e) {
+void TypeVarNode::bind(const Generic* const e) {
     assert(bound_at_ == nullptr && "type variables can only be bound once!");
     bound_at_ = e;
 }

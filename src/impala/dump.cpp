@@ -210,12 +210,11 @@ std::ostream& TraitDecl::print(Printer& p) const {
 }
 
 std::ostream& Impl::print(Printer& p) const {
-    p.stream() << "impl " << symbol();
-    print_type_params(p);
-    if (for_type()) {
-        p.stream() << " for ";
-        for_type()->print(p);
-    }
+    p.stream() << "impl";
+    print_type_params(p) << ' ';
+    if (trait())
+        trait()->print(p) << " for ";
+    for_type()->print(p);
     p.stream() << " {";
     p.up();
     p.dump_list([&] (const FnDecl* method) { method->print(p); }, methods(), "", "", "", true);
@@ -432,7 +431,7 @@ std::ostream& ExprStmt::print(Printer& p) const {
 //------------------------------------------------------------------------------
 
 void dump(const ASTNode* n, bool fancy, std::ostream& o) { Printer p(o, fancy); n->print(p); }
-std::ostream& operator << (std::ostream& o, const ASTNode* n) { Printer p(o, true); return n->print(p); }
+//std::ostream& operator << (std::ostream& o, const ASTNode* n) { Printer p(o, true); return n->print(p); }
 
 //------------------------------------------------------------------------------
 

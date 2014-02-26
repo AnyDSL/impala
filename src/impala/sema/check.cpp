@@ -283,7 +283,7 @@ void Impl::check(Sema& sema) const {
     check_type_params(sema);
 
     // TODO currently symbol() gives the trait name, this does not handle stuff like 'impl T[int] for S {}'
-    if (auto decl = sema.lookup(this, symbol())) {
+    if (auto decl = sema.lookup(this, Symbol() /*TODO*/)) {
         if (auto trait = decl->isa<TraitDecl>()) {
             // create TraitImpl
             TraitInstance tinst = sema.instantiate_trait(trait->calc_trait(sema), {});

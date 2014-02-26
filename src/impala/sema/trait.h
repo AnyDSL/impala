@@ -33,10 +33,10 @@ struct TraitMethod {
  *
  * @see TraitInstance
  */
-class Trait : public GenericElement {
+class Trait : public Generic {
 private:
     Trait(TypeTable& tt, const TraitDecl* trait_decl, const TraitSet super_traits)
-        : GenericElement(tt)
+        : Generic(tt)
         , trait_decl_(trait_decl)
         , super_traits_(super_traits)
     {}
@@ -44,7 +44,7 @@ private:
     Trait(const Trait& node);         ///< Do not copy-construct a \p Trait.
 
 public:
-    virtual bool equal(const GenericElement* t) const;
+    virtual bool equal(const Generic* t) const;
     bool equal(const Trait* other) const { return this->trait_decl() == other->trait_decl(); }
     size_t hash() const { return thorin::hash_value(trait_decl()); }
     const TraitDecl* trait_decl() const { return trait_decl_; }
@@ -97,9 +97,9 @@ private:
     friend class TypeTable;
 };
 
-class TraitImpl : public GenericElement {
+class TraitImpl : public Generic {
     TraitImpl(TypeTable& tt, const Impl* impl_decl, TraitInstance trait)
-        : GenericElement(tt)
+        : Generic(tt)
         , impl_decl_(impl_decl)
         , trait_(trait)
     {}
@@ -107,7 +107,7 @@ class TraitImpl : public GenericElement {
     TraitImpl(const TraitImpl&);              ///< Do not copy-construct a \p TraitImpl.
 
 public:
-    virtual bool equal(const GenericElement* t) const;
+    virtual bool equal(const Generic* t) const;
     bool equal(const TraitImpl* other) const { return this->impl_decl() == other->impl_decl(); }
     size_t hash() const { return thorin::hash_value(impl_decl()); }
     const Impl* impl_decl() const { return impl_decl_; }
