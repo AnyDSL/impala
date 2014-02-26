@@ -1,3 +1,4 @@
+#if 0
 /*
  * type_properties.h
  *
@@ -170,4 +171,5 @@ private:
 
 }
 
+#endif
 #endif

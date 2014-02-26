@@ -70,18 +70,18 @@ public:
 
     /// unify a trait instance and return \p true if the representative changed
     bool unify(TraitInstance tti);
-    template<class T> void unify(UnifiableProxy<T> type) { unify_base(type); }
+    template<class T> void unify(const TypeNode* type);// TODO { unify_base(type); }
     //const TraitInstance* unify_trait_inst(TraitInstance* type);
     /// Checks if all types in the type tables are sane and correctly unified.
     void verify() const;
 
 private:
-    template<class T> UnifiableProxy<T> new_type(T* tn) {
-        auto t = UnifiableProxy<T>(tn);
-        UnifiableProxy<TypeNode> x = t;
-        unifiables_.add(x.node_);
-        return t;
-    }
+    //template<class T> UnifiableProxy<T> new_type(T* tn) {
+        //auto t = UnifiableProxy<T>(tn);
+        //UnifiableProxy<TypeNode> x = t;
+        //unifiables_.add(x.node_);
+        //return t;
+    //}
 
     /// insert all not-unified types contained in type
     void insert_new(Type type);
@@ -93,8 +93,8 @@ private:
      *
      * This assumes that t is equal to repr.
      */
-    template<class T> void change_repr(UnifiableProxy<T> t, T* repr) const;
-    template<class T> void change_repr_rec(UnifiableProxy<T> t, T* repr) const;
+    template<class T> void change_repr(Proxy<T> t, T* repr) const;
+    template<class T> void change_repr_rec(Proxy<T> t, T* repr) const;
     void change_repr_rec(TraitInstance t, TraitInstanceNode* repr) const;
     void unify_base(Type type);
 

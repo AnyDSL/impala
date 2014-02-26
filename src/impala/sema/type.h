@@ -7,6 +7,8 @@
 #include "thorin/util/array.h"
 #include "thorin/util/hash.h"
 
+#include "impala/sema/generic.h"
+#include "impala/sema/trait.h"
 #include "impala/sema/typeproperties.h"
 
 namespace impala {
@@ -14,11 +16,10 @@ namespace impala {
 //------------------------------------------------------------------------------
 
 struct TraitInstanceHash { 
-    size_t operator () (const TraitInstance t) const { return thorin::hash_value(t.representative()); } 
+    size_t operator () (const TraitInstance t) const { return thorin::hash_value(t.deref()); } 
 };
 struct TraitInstanceEqual { 
-    bool operator () (const TraitInstance t1, const TraitInstance t2) const { 
-        return t1.representative() == t2.representative(); } 
+    bool operator () (const TraitInstance t1, const TraitInstance t2) const { return t1 == t2; }
 };
 typedef std::unordered_set<TraitInstance, TraitInstanceHash, TraitInstanceEqual> TraitInstSet;
 
@@ -27,8 +28,6 @@ struct TraitImplEqual { bool operator () (const TraitInstance t1, const TraitIns
 typedef std::unordered_set<TraitInstance, TraitImplHash, TraitImplEqual> TraitImplSet;
 
 //------------------------------------------------------------------------------
-
-typedef std::unordered_map<const TypeNode*, Type> SpecializeMapping;
 
 enum Kind {
 #define IMPALA_TYPE(itype, atype) Type_##itype,
@@ -44,7 +43,7 @@ enum PrimTypeKind {
 #include "impala/tokenlist.h"
 };
 
-class TypeNode : public Generic {
+class TypeNode : public Generic<TypeNode> {
 private:
     TypeNode& operator = (const TypeNode&); ///< Do not copy-assign a \p TypeNode.
     TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p TypeNode.
@@ -72,7 +71,7 @@ public:
     }
 
     virtual bool equal(const Generic*) const;
-    virtual bool equal(Type t) const { return equal(t.representative()); }
+    virtual bool equal(Type t) const { return equal(t); }
     virtual bool equal(const TypeNode*) const;
     virtual size_t hash() const;
 
@@ -94,7 +93,7 @@ public:
     virtual bool is_closed() const;
 
     /// @return true if this is a subtype of super_type.
-    bool is_subtype(const Type super_type) const { return is_subtype(super_type.representative()); }
+    bool is_subtype(const Type super_type) const { return is_subtype(super_type); }
 
     /**
      * A type is sane if all type variables are bound correctly,
@@ -260,6 +259,11 @@ private:
     friend class TypeNode;
     friend class Generic;
 };
+
+typedef Proxy<TypeErrorNode> TypeError;
+typedef Proxy<PrimTypeNode> PrimType;
+typedef Proxy<FnTypeNode> FnType;
+typedef Proxy<TupleTypeNode> TupleType;
 
 //------------------------------------------------------------------------------
 

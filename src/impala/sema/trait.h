@@ -8,12 +8,22 @@
 #ifndef IMPALA_SEMA_TRAIT_H
 #define IMPALA_SEMA_TRAIT_H
 
-#include "impala/sema/type.h"
+#include <unordered_map>
+#include <unordered_set>
+
+#include "impala/sema/generic.h"
 
 namespace impala {
 
-class TraitDecl;
+class FnTypeNode;
 class Impl;
+class Trait;
+class TraitInstanceNode;
+class TraitDecl;
+typedef std::unordered_set<const Trait*> TraitSet;
+typedef Proxy<FnTypeNode> FnType;
+typedef Proxy<TraitInstanceNode> TraitInstance;
+typedef std::unordered_map<const TypeNode*, Type> SpecializeMapping;
 
 struct TraitMethod {
     std::string name;
@@ -33,7 +43,7 @@ struct TraitMethod {
  *
  * @see TraitInstance
  */
-class Trait : public Generic {
+class Trait : public Generic<Trait> {
 private:
     Trait(TypeTable& tt, const TraitDecl* trait_decl, const TraitSet super_traits)
         : Generic(tt)
@@ -64,7 +74,7 @@ private:
  * An instance of a trait is a trait where all generic type variables are
  * instantiated by concrete types.
  */
-class TraitInstanceNode : public thorin::MagicCast<TraitInstanceNode> {
+class TraitInstanceNode : public Unifiable<TraitInstanceNode> {
 private:
     TraitInstanceNode(const Trait* trait, thorin::ArrayRef<Type> var_instances);
     TraitInstanceNode& operator = (const TraitInstanceNode&); ///< Do not copy-assign a \p TraitInstance.
@@ -75,7 +85,7 @@ private:
 public:
     const Trait* trait() const { return trait_; }
     TypeTable& typetable() const { return trait()->typetable(); }
-    bool equal(TraitInstance t) const { return equal(t.representative()); }
+    bool equal(TraitInstance t) const { return equal(t); }
     bool equal(const TraitInstanceNode* t) const;
     size_t hash() const;
 
@@ -97,7 +107,7 @@ private:
     friend class TypeTable;
 };
 
-class TraitImpl : public Generic {
+class TraitImpl : public Generic<TraitImpl> {
     TraitImpl(TypeTable& tt, const Impl* impl_decl, TraitInstance trait)
         : Generic(tt)
         , impl_decl_(impl_decl)

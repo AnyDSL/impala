@@ -97,7 +97,7 @@ void TypeTable::change_repr_rec(TraitInstance tti, TraitInstanceNode* repr) cons
 }
 
 // change_repr_rec for types, but because TypeVar !< Type we need templates here
-template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) const {
+template<class T> void TypeTable::change_repr_rec(Proxy<T> t, T* repr) const {
     // first change the representative of all bound variables but remember the old ones
     std::vector<TraitInstSet*> var_restrictions;
     assert(t->bound_vars().size() == repr->bound_vars().size());
@@ -140,7 +140,7 @@ template<class T> void TypeTable::change_repr_rec(UnifiableProxy<T> t, T* repr) 
 }
 
 template<class T>
-void TypeTable::change_repr(UnifiableProxy<T> t, T* repr) const {
+void TypeTable::change_repr(Proxy<T> t, T* repr) const {
     if (!t.is_unified()) {
         change_repr_rec(t, repr);
         t.set_representative(repr);
