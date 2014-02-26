@@ -13,7 +13,7 @@
 
 namespace impala {
 
-std::string GenericElement::bound_vars_to_string() const {
+std::string Generic::bound_vars_to_string() const {
     std::string result;
 
     if (!is_generic())
@@ -39,7 +39,7 @@ std::string GenericElement::bound_vars_to_string() const {
     return result + ']';
 }
 
-void GenericElement::add_bound_var(TypeVar v) {
+void Generic::add_bound_var(TypeVar v) {
     assert(!v->is_closed() && "Type variables already bound");
 
     // CHECK should variables only be bound in this case? does this also hold for traits?
@@ -51,7 +51,7 @@ void GenericElement::add_bound_var(TypeVar v) {
     bound_vars_.push_back(v);
 }
 
-void GenericElement::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
+void Generic::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
     // TODO better error handling
     assert(var_instances.size() == bound_vars().size() && "Wrong number of instances for bound type variables");
 

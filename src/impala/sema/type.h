@@ -44,14 +44,14 @@ enum PrimTypeKind {
 #include "impala/tokenlist.h"
 };
 
-class TypeNode : public GenericElement {
+class TypeNode : public Generic {
 private:
     TypeNode& operator = (const TypeNode&); ///< Do not copy-assign a \p TypeNode.
     TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p TypeNode.
 
 protected:
     TypeNode(TypeTable& typetable, Kind kind, size_t size)
-        : GenericElement(typetable)
+        : Generic(typetable)
         , kind_(kind)
         , elems_(size)
     {}
@@ -71,7 +71,7 @@ public:
         return elems_.empty();
     }
 
-    virtual bool equal(const GenericElement*) const;
+    virtual bool equal(const Generic*) const;
     virtual bool equal(Type t) const { return equal(t.representative()); }
     virtual bool equal(const TypeNode*) const;
     virtual size_t hash() const;
@@ -85,7 +85,7 @@ public:
 
     bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());
-        return GenericElement::is_generic();
+        return Generic::is_generic();
     }
 
     /**
@@ -217,12 +217,12 @@ private:
 
     void set_equiv_variable(const TypeVarNode* v) const { assert(equiv_var_ == nullptr); assert(v != nullptr); equiv_var_ = v; }
     void unset_equiv_variable() const { assert(equiv_var_ != nullptr); equiv_var_ = nullptr; }
-    void bind(const GenericElement* const e);
+    void bind(const Generic* const e);
     bool bounds_equal(const TypeVar other) const;
 
 public:
     const TraitInstSet& bounds() const { return bounds_; }
-    const GenericElement* bound_at() const { return bound_at_; }
+    const Generic* bound_at() const { return bound_at_; }
     void add_bound(TraitInstance restriction);
     virtual bool equal(const TypeNode* other) const;
     std::string to_string() const;
@@ -245,7 +245,7 @@ private:
      * The type where this variable is bound.
      * If such a type is set, then the variable must not be changed anymore!
      */
-    const GenericElement* bound_at_;
+    const Generic* bound_at_;
     mutable const TypeVarNode* equiv_var_;///< Used to define equivalence constraints when checking equality of types.
     static int counter;
 
@@ -258,7 +258,7 @@ private:
 
     friend class TypeTable;
     friend class TypeNode;
-    friend class GenericElement;
+    friend class Generic;
 };
 
 //------------------------------------------------------------------------------

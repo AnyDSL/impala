@@ -142,7 +142,7 @@ std::ostream& operator << (std::ostream& o, UnifiableProxy<T> u) { return o << u
 
 //------------------------------------------------------------------------------
 
-class GenericElement : public thorin::MagicCast<GenericElement> {
+class Generic : public thorin::MagicCast<Generic> {
 public:
     TypeTable& typetable() const { return typetable_; }
     size_t num_bound_vars() const { return bound_vars_.size(); }
@@ -151,14 +151,14 @@ public:
     /// Returns true if this \p Type does have any bound type variabes (\p bound_vars_).
     bool is_generic() const { return !bound_vars_.empty(); }
     void add_bound_var(TypeVar v);
-    virtual bool equal(const GenericElement*) const = 0;
+    virtual bool equal(const Generic*) const = 0;
     virtual size_t hash() const = 0;
 
     /// raise error if a type does not implement the required traits;
     void check_instantiation(thorin::ArrayRef<Type>) const;
 
 protected:
-    GenericElement(TypeTable& tt) : typetable_(tt) {}
+    Generic(TypeTable& tt) : typetable_(tt) {}
 
     std::string bound_vars_to_string() const;
 
