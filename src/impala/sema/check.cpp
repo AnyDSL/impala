@@ -269,7 +269,7 @@ void FnDecl::check(Sema& sema) const {
     sema.unify(fn_type);
     set_type(fn_type);
 
-    // CHECK set sema.cur_fn_?
+    // CHECK set sema.cur_fn_? --> if needed, else remove it
     fn().body()->check(sema);
     if (fn().body()->type() != sema.type_noreturn()) {
         Type ret_func = fn_type->elem(fn_type->size() - 1);
