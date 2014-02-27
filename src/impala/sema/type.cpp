@@ -95,7 +95,7 @@ Type TypeNode::instantiate(thorin::ArrayRef<Type> var_instances) const {
     assert(num_bound_vars() == var_instances.size());
     size_t i = 0;
     for (TypeVar v : bound_vars())
-        mapping[v] = var_instances[i];
+        mapping[v.node_] = var_instances[i];
 
     Type instance = vspecialize(mapping);
     typetable().unify(instance);
@@ -110,15 +110,15 @@ Type TypeNode::specialize(SpecializeMapping& mapping) const {
         return it->second;
 
     for (TypeVar v : bound_vars()) {
-        assert(mapping.find(v) == mapping.end());
-        mapping[v] = v->clone(mapping);
+        assert(mapping.find(v.node_) == mapping.end());
+        mapping[v.node_] = v->clone(mapping);
     }
 
     Type t = vspecialize(mapping);
 
     for (auto v : bound_vars()) {
-        assert(mapping.find(v) != mapping.end());
-        t->add_bound_var(mapping[v]->as<TypeVarNode>());
+        assert(mapping.find(v.node_) != mapping.end());
+        t->add_bound_var(mapping[v.node_]->as<TypeVarNode>());
     }
 
     return t;

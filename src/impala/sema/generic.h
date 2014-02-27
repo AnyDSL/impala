@@ -32,11 +32,19 @@ public:
     bool operator != (const Proxy<T>& other) { return !(*this == other); }
     T* operator -> () const { return deref(); }
     operator T* () const { return deref(); }
-    T* deref() const { return node_->representative()->template as<T>(); }
+    template<class U> operator Proxy<U>() {
+        // TODO static assert that U is a super type of T
+        return Proxy<U>((U*) node_);
+    }
+    T* deref() const { return node_->is_unified() ? representative() : node_->template as<T>(); }
     Proxy<T>& operator = (T* other) { node_ = other; return *this; }
+    T* representative() const { return node_->representative()->template as<T>(); }
 
 private:
     T* node_;
+
+    friend class TypeNode;
+    friend class TypeTable;
 };
 
 class TypeNode;
@@ -47,10 +55,9 @@ typedef Proxy<TypeVarNode> TypeVar;
 template<class T>
 class Unifiable : public thorin::MagicCast<T> {
 protected:
-    Unifiable(TypeTable& tt) 
-        : typetable_(tt) 
-        , representative_((T*) this)
-        , unified_(false)
+    Unifiable(TypeTable& tt)
+        : typetable_(tt)
+        , representative_(nullptr)
     {
         static_assert(std::is_base_of<Unifiable<T>, T>::value, "Unifiable<T> is not a base type of T");
     }
@@ -58,8 +65,9 @@ protected:
 public:
     TypeTable& typetable() const { return typetable_; }
     T* representative() const { return representative_; }
-    bool is_unified() const { return unified_; }
-    virtual bool equal(const Unifiable<T>* u) const { 
+    bool is_final_representative() const { return representative() == this; }
+    bool is_unified() const { return representative_ != nullptr; }
+    virtual bool equal(const Unifiable<T>* u) const {
         // todo;
         return true;
     }
@@ -70,15 +78,19 @@ private:
     T* representative_;
     bool unified_;
 
+    void set_representative(T* representative) { representative_ = representative; }
+
 protected:
     std::vector<TypeVar> bound_vars_;
+
+    friend class TypeTable;
 };
 
 template<class T>
 class Generic : public Unifiable<T> {
 protected:
-    Generic(TypeTable& tt) 
-        : Unifiable<T>(tt) 
+    Generic(TypeTable& tt)
+        : Unifiable<T>(tt)
     {}
 
 public:

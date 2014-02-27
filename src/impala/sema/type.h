@@ -9,7 +9,6 @@
 
 #include "impala/sema/generic.h"
 #include "impala/sema/trait.h"
-#include "impala/sema/typeproperties.h"
 
 namespace impala {
 
@@ -84,7 +83,7 @@ public:
 
     bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());
-        return Generic::is_generic();
+        return Generic<TypeNode>::is_generic();
     }
 
     /**

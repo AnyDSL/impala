@@ -22,14 +22,14 @@ public:
     UnifiableSet() {}
     ~UnifiableSet();
 
-    void add(TraitInstanceNode* t) { trait_instances_.push_back(t); }
-    void add(TypeNode* t) { types_.push_back(t); }
+    void add(const TraitInstanceNode* t) { trait_instances_.push_back(t); }
+    void add(const TypeNode* t) { types_.push_back(t); }
     void add(const Trait* t) { traits_.push_back(t); }
     void add(const TraitImpl* impl) { trait_impls_.push_back(impl); }
 
 private:
-    std::vector<TraitInstanceNode*> trait_instances_;
-    std::vector<TypeNode*> types_;
+    std::vector<const TraitInstanceNode*> trait_instances_;
+    std::vector<const TypeNode*> types_;
     std::vector<const Trait*> traits_;
     std::vector<const TraitImpl*> trait_impls_;
 
@@ -64,13 +64,11 @@ public:
     }
     TypeVar typevar() { return new_type(new TypeVarNode(*this)); }
     FnType fntype(thorin::ArrayRef<Type> params) { return new_type(new FnTypeNode(*this, params)); }
-    FnType fntype(thorin::ArrayRef<Type> params, Type return_type);
     TupleType tupletype(thorin::ArrayRef<Type> elems) { return new_type(new TupleTypeNode(*this, elems)); }
     TupleType unit() { return tupletype({}); }
 
     /// unify a trait instance and return \p true if the representative changed
-    bool unify(TraitInstance tti);
-    template<class T> void unify(Proxy<T> type);// TODO { unify_base(type); }
+    template<class T> bool unify(Proxy<T> type) { return unify_base(type.node_); }
     //const TraitInstance* unify_trait_inst(TraitInstance* type);
     /// Checks if all types in the type tables are sane and correctly unified.
     void verify() const;
@@ -92,10 +90,11 @@ private:
      *
      * This assumes that t is equal to repr.
      */
-    template<class T> void change_repr(Proxy<T> t, T* repr) const;
-    template<class T> void change_repr_rec(Proxy<T> t, T* repr) const;
-    void change_repr_rec(TraitInstance t, TraitInstanceNode* repr) const;
-    void unify_base(Type type);
+    template<class T> void change_repr(T* t, T* repr) const;
+    template<class T> void change_repr_rec(T* t, T* repr) const;
+    void change_repr_rec(TraitInstanceNode* t, TraitInstanceNode* repr) const;
+    bool unify_base(TraitInstanceNode* trait);
+    bool unify_base(TypeNode* type);
 
     TypeNodeSet types_;
     TraitInstanceNodeTableSet trait_instances_;

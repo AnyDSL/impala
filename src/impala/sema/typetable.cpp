@@ -36,15 +36,9 @@ TypeTable::~TypeTable() {
     for (auto trait : trait_instances_) delete trait;
 }
 
-FnType TypeTable::fntype(thorin::ArrayRef<Type> params, Type return_type) {
-    thorin::Array<Type> p(params.size() + 1);
-    *std::copy(params.begin(), params.end(), p.begin()) = fntype({return_type});
-    return fntype(p);
-}
-
 void TypeTable::insert_new(Type type) {
     assert(!type.is_unified());
-    type.set_unified();
+    type->set_representative(type);
 
     for (Type elem : type->elems_) {
         if (!elem.is_unified()) {
@@ -69,14 +63,14 @@ void TypeTable::insert_new(Type type) {
     // CHECK does it cause any problems to put TypeVars into the type-set?
     //if (type->kind() != Type_var) {
         //assert(!type.representative()->isa<TypeVarNode>());
-        auto p = types_.insert(type.representative());
+        auto p = types_.insert(type->representative());
         assert(p.second && "hash/equal broken");
     //}
 }
 
 void TypeTable::insert_new(TraitInstance tti) {
     assert(!tti.is_unified());
-    tti.set_unified();
+    tti->set_representative(tti);
 
     for (size_t i = 0, e = tti->var_inst_size(); i != e; ++i) {
         auto vi = tti->var_inst_(i);
@@ -86,24 +80,24 @@ void TypeTable::insert_new(TraitInstance tti) {
         }
     }
 
-    auto p = trait_instances_.insert(tti.representative());
+    auto p = trait_instances_.insert(tti->representative());
     assert(p.second && "hash/equal broken");
 }
 
-void TypeTable::change_repr_rec(TraitInstance tti, TraitInstanceNode* repr) const {
+void TypeTable::change_repr_rec(TraitInstanceNode* tti, TraitInstanceNode* repr) const {
     assert(tti->var_inst_size() == repr->var_inst_size());
     for (size_t i = 0, e = tti->var_inst_size(); i != e; ++i)
-        change_repr(tti->var_inst_(i), repr->var_inst_(i).representative());
+        change_repr(tti->var_inst_(i).node_, repr->var_inst_(i).representative());
 }
 
 // change_repr_rec for types, but because TypeVar !< Type we need templates here
-template<class T> void TypeTable::change_repr_rec(Proxy<T> t, T* repr) const {
+template<class T> void TypeTable::change_repr_rec(T* t, T* repr) const {
     // first change the representative of all bound variables but remember the old ones
     std::vector<TraitInstSet*> var_restrictions;
     assert(t->bound_vars().size() == repr->bound_vars().size());
     for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
         var_restrictions.push_back(new TraitInstSet(t->bound_var(i)->bounds()));
-        change_repr(t->bound_var(i), repr->bound_var(i).representative());
+        change_repr(t->bound_var(i).node_, repr->bound_var(i).representative());
     }
 
     // change representatives of the bounds (i.e. \p TraitInstances) of type variables
@@ -119,14 +113,14 @@ template<class T> void TypeTable::change_repr_rec(Proxy<T> t, T* repr) const {
         // FEATURE this works but seems too much effort
         TraitInstanceNodeTableSet ttis;
         for (auto r : repr_bounds) {
-            auto p = ttis.insert(r.representative());
+            auto p = ttis.insert(r);
             assert(p.second && "hash/equal broken");
         }
 
         for (TraitInstance bound : *old_bounds) {
-            auto repr_bound = ttis.find(bound.representative());
+            auto repr_bound = ttis.find(bound);
             assert(repr_bound != ttis.end());
-            change_repr(bound, *repr_bound);
+            change_repr(bound.node_, (*repr_bound)->representative());
         }
     }
 
@@ -136,47 +130,49 @@ template<class T> void TypeTable::change_repr_rec(Proxy<T> t, T* repr) const {
     // change representative of all sub elements
     assert(t->size() == repr->size());
     for (size_t i = 0, e = t->size(); i != e; ++i)
-        change_repr(t->elem_(i), repr->elem(i).representative());
+        change_repr(t->elem_(i).node_, repr->elem(i).representative());
 }
 
 template<class T>
-void TypeTable::change_repr(Proxy<T> t, T* repr) const {
-    if (!t.is_unified()) {
+void TypeTable::change_repr(T* t, T* repr) const {
+    if (!t->is_unified()) {
         change_repr_rec(t, repr);
-        t.set_representative(repr);
+        t->set_representative(repr);
     } else
-        assert(t.representative() == repr);
+        assert(t->representative() == repr);
 }
 
-void TypeTable::unify_base(Type type) {
-    assert(!type.is_unified() && "Type is already unified!");
+bool TypeTable::unify_base(TypeNode* type) {
+    assert(!type->is_unified() && "Type is already unified!");
     assert(type->is_closed() && "Only closed types can be unified!");
 
-    auto i = types_.find(type.representative());
+    auto i = types_.find(type);
 
     if (i != types_.end()) {
-        assert(*i != type.representative());
+        assert(*i != type && "Type already unified");
         change_repr(type, *i);
-        assert(type.representative() == (*i));
+        assert(type->representative() == (*i));
+        return true;
     } else {
         insert_new(type);
-        assert(type.is_unified());
+        assert(type->representative() == type);
+        return false;
     }
 }
 
-bool TypeTable::unify(TraitInstance trait_inst) {
-    assert(!trait_inst.is_unified() && "trait instance already unified");
+bool TypeTable::unify_base(TraitInstanceNode* trait_inst) {
+    assert(!trait_inst->is_unified() && "trait instance already unified");
     assert(trait_inst->is_closed() && "Only closed trait instances can be unified!");
 
-    auto i = trait_instances_.find(trait_inst.representative());
+    auto i = trait_instances_.find(trait_inst);
     if (i != trait_instances_.end()) {
-        assert(*i != trait_inst.representative());
+        assert(*i != trait_inst && "Trait already unified");
         change_repr(trait_inst, *i);
-        assert(trait_inst.representative() == *i);
+        assert(trait_inst->representative() == *i);
         return true;
     } else {
         insert_new(trait_inst);
-        assert(trait_inst.is_unified());
+        assert(trait_inst->representative() == trait_inst);
         return false;
     }
 }
@@ -190,8 +186,10 @@ PrimType TypeTable::primtype(const PrimTypeKind kind) {
 }
 
 void TypeTable::verify() const {
-    for (auto t : types_)
+    for (auto t : types_) {
         assert(t->is_sane());
+        assert(t->is_final_representative());
+    }
 
     for (auto t : unifiables_.trait_instances_) {
         if (t->is_unified()) {
