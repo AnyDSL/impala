@@ -25,10 +25,12 @@ TypeTable::TypeTable()
 #define IMPALA_TYPE(itype, atype) , itype##_(new_type(new PrimTypeNode(*this, PrimType_##itype)))
 #include "impala/tokenlist.h"
     , type_error_(new_type(new TypeErrorNode(*this)))
+    , type_noreturn_(new_type(new NoReturnTypeNode(*this)))
 {
 #define IMPALA_TYPE(itype, atype) unify(itype##_);
 #include "impala/tokenlist.h"
     unify(type_error_);
+    unify(type_noreturn_);
 }
 
 TypeTable::~TypeTable() { 

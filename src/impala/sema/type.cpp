@@ -132,6 +132,7 @@ thorin::Array<Type> CompoundType::specialize_elems(SpecializeMapping& mapping) c
 }
 
 Type TypeErrorNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().type_error(); }
+Type NoReturnTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().type_noreturn(); }
 Type PrimTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().primtype(primtype_kind()); }
 Type FnTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().fntype(specialize_elems(mapping)); }
 Type TupleTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().tupletype(specialize_elems(mapping)); }

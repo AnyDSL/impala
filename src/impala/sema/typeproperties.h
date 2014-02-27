@@ -23,6 +23,7 @@ class TraitInstanceNode;
 class TraitImpl;
 class TupleTypeNode;
 class TypeErrorNode;
+class NoReturnTypeNode;
 class TypeNode;
 class TypeTable;
 class TypeVarNode;
@@ -31,6 +32,7 @@ template<class T> class UnifiableProxy;
 
 typedef UnifiableProxy<TypeNode> Type;
 typedef UnifiableProxy<TypeErrorNode> TypeError;
+typedef UnifiableProxy<NoReturnTypeNode> NoReturnType;
 typedef UnifiableProxy<PrimTypeNode> PrimType;
 typedef UnifiableProxy<FnTypeNode> FnType;
 typedef UnifiableProxy<TupleTypeNode> TupleType;

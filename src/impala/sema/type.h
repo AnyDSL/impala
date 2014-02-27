@@ -34,6 +34,7 @@ enum Kind {
 #define IMPALA_TYPE(itype, atype) Type_##itype,
 #include "impala/tokenlist.h"
     Type_error,
+    Type_noReturn,
     Type_fn,
     Type_tuple,
     Type_var,
@@ -144,6 +145,20 @@ private:
 
 public:
     virtual std::string to_string() const { return "<type error>"; }
+
+    friend class TypeTable;
+};
+
+class NoReturnTypeNode : public TypeNode {
+private:
+    NoReturnTypeNode(TypeTable& typetable)
+        : TypeNode(typetable, Type_noReturn, 0)
+    {}
+
+    virtual Type vspecialize(SpecializeMapping&) const;
+
+public:
+    virtual std::string to_string() const { return "<type no-return>"; }
 
     friend class TypeTable;
 };
