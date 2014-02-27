@@ -52,7 +52,7 @@ Type match_types(Sema& sema, const Expr* pos, Type t1, Type t2) {
     }
 }
 
-inline void expect_type(Sema& sema, const Expr* found, Type expected) {
+inline void expect_type(Sema& sema, const Expr* found, Type expected, std::string typetype) {
     assert(!expected.empty());
     assert(!found->type().empty());
     assert(expected != sema.type_error());
@@ -60,7 +60,23 @@ inline void expect_type(Sema& sema, const Expr* found, Type expected) {
     if (found->type() == sema.type_error())
         return;
     if (found->type() != expected)
-        sema.error(found) << "Wrong type; expected " << expected << " but found " << found->type() << "\n";
+        sema.error(found) << "Wrong " << typetype << " type; expected " << expected << " but found " << found->type() << "\n";
+}
+
+inline Type create_return_type(Sema& sema, const ASTNode* node, Type ret_func) {
+    if (ret_func.isa<FnType>()) {
+        if (ret_func->size() == 1) {
+            return ret_func->elem(0);
+        } else {
+            std::vector<Type> ret_types;
+            for (auto t : ret_func->elems())
+                ret_types.push_back(t);
+            return sema.tupletype(ret_types);
+        }
+    } else {
+        sema.error(node) << "last argument is not a continuation function\n";
+        return sema.type_error();
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -255,8 +271,11 @@ void FnDecl::check(Sema& sema) const {
 
     // CHECK set sema.cur_fn_?
     fn().body()->check(sema);
+    if (fn().body()->type() != sema.type_noreturn()) {
+        Type ret_func = fn_type->elem(fn_type->size() - 1);
+        expect_type(sema, fn().body(), create_return_type(sema, this, ret_func), "return");
+    }
 
-    // FEATURE check for correct return type
     sema.pop_scope();
 }
 
@@ -323,7 +342,6 @@ void BlockExpr::check(Sema& sema) const {
         stmt->check(sema);
 
     expr()->check(sema);
-    assert(!expr()->type().empty());
     set_type(expr()->type());
 }
 
@@ -420,52 +438,39 @@ void MapExpr::check(Sema& sema) const {
     Type lhs_type = lhs()->type();
     assert(!lhs_type.empty());
 
-    switch (lhs_type->kind()) {
-        case Type_error:
-            set_type(sema.type_error());
-            return;
-        case Type_fn:
-            if ((lhs_type->size() != (args().size()+1)) && (lhs_type->size() != args().size())) {
-                // CHECK how would the result type look like if the continuation is explicitly passed?
-                sema.error(this) << "Wrong number of arguments\n";
-                set_type(sema.type_error());
-            } else {
-                for (size_t i = 0; i < args().size(); ++i) {
-                    auto arg = args()[i];
-                    arg->check(sema);
-                    expect_type(sema, arg, lhs_type->elem(i));
-                }
-
-                // set return type
-                Type ret_func = lhs_type->elem(lhs_type->size() - 1);
-                assert(ret_func->kind() == Type_fn); // CHECK can there be function types w/o return function?
-
-                switch (ret_func->size()) {
-                case 0:
-                    set_type(sema.unit());
-                    break;
-                case 1:
-                    set_type(ret_func->elem(0));
-                    break;
-                default:
-                    std::vector<Type> ret_types;
-                    for (auto t : ret_func->elems())
-                        ret_types.push_back(t);
-                    set_type(sema.tupletype(ret_types));
-                    break;
-                }
+    if (auto fn = lhs_type.isa<FnType>()) {
+        bool no_cont = fn->size() == (args().size()+1); // true if this is a normal function call (no continuation)
+        if (no_cont || (fn->size() == args().size())) {
+            for (size_t i = 0; i < args().size(); ++i) {
+                auto arg = args()[i];
+                arg->check(sema);
+                expect_type(sema, arg, fn->elem(i), "argument");
             }
-            break;
-        default:
-            set_type(sema.type_error());
+
+            // set return type
+            if (no_cont) {
+                Type ret_func = fn->elem(fn->size() - 1);
+                set_type(create_return_type(sema, this, ret_func));
+            } else {
+                // same number of args as params -> continuation call
+                set_type(sema.type_noreturn());
+            }
+            return;
+        } else {
+            sema.error(this) << "Wrong number of arguments\n";
+        }
+    } else if (!lhs_type.isa<TypeError>()) {
+        // REMINDER new error message if not only fn-types are allowed
+        sema.error(lhs()) << "Expected function type but found " << lhs_type << "\n";
     }
-    assert(!type().empty());
+    assert(type().empty() && "This should only be reached if an error occurred");
+    set_type(sema.type_error());
 }
 
 void IfExpr::check(Sema& sema) const {
     // assert condition is of type bool
     cond()->check(sema);
-    expect_type(sema, cond(), sema.type_bool());
+    expect_type(sema, cond(), sema.type_bool(), "");
 
     then_expr()->check(sema);
     else_expr()->check(sema);
