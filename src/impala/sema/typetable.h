@@ -41,7 +41,7 @@ private:
 class TypeTable {
 public:
     TypeTable();
-    ~TypeTable();
+    ~TypeTable() {}
 
     TypeError type_error() { return type_error_; }
     PrimType primtype(PrimTypeKind kind);
