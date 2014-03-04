@@ -1,7 +1,7 @@
 '''
 Created on 8 Dec 2013
 
-@author: Alexander Kampmann
+@author: Alexander Kampmann, David Poetzsch-Heffter
 '''
 
 import sys, os, subprocess, difflib, shutil
@@ -83,7 +83,7 @@ def make_tests(directory, positive=True):
 def executeTests(tests, gEx, pb = True):
     """Invoke this function with a list of test objects to run the tests. """
     
-    res = []
+    res = {}
     bar = Progressbar(50)
     s   = True
     for i in range(len(tests)):
@@ -91,39 +91,39 @@ def executeTests(tests, gEx, pb = True):
             bar.update(float(i)/float(len(tests)),tests[i].getName(),success=s)
         else:
             print ("["+str(i+1)+"/"+str(len(tests))+"] " + tests[i].getName())
-        opt = tests[i]
-        s   = opt.invoke(gEx)
-        res.append(s)
+        res[tests[i]] = tests[i].invoke(gEx)
     bar.done()
 
-    print ("\n* Test summary")    
+    print("\n* Test summary")
     failOpt = 0
-    allOpt = 0
     failReq = 0
-    allReq = 0
-    for i in range(0, len(tests)):
-        if not res[i]:
-            if tests[i].isOptional():
-                print("\n - optional test failed: "+tests[i].getName())
-                failOpt = failOpt + 1
-            else:
-                print("\n - required test failed: "+tests[i].getName())
-                failReq = failReq + 1
-        if tests[i].isOptional():
-            allOpt = allOpt + 1
-        else:
-            allReq = allReq + 1
+    
+    opt_tests = []
+    req_tests = []
+    for t in tests:
+        opt_tests.append(t) if t.isOptional() else req_tests.append(t)
+    
+    for t in req_tests:
+        if not res[t]:
+            print("\n - REQUIRED test failed: "+t.getName())
+            failReq += 1
+            
+    for t in opt_tests:
+        if not res[t]:
+            print("\n - OPTIONAL test failed: "+t.getName())
+            failOpt += 1
+    
     if failOpt == 0 and failReq == 0:
         print("\n* All " + str(len(tests)) +  " tests were successful.")
     else:
         if failReq == 0:
             print("\n* All required tests were successful.")
         else:
-            print("\n!" + str(failReq) + " of " + str(allReq) + " REQUIRED tests failed.")
+            print("\n!" + str(failReq) + " of " + str(len(req_tests)) + " REQUIRED tests failed.")
         if failOpt == 0:
             print("\n* All optional tests were successful.")
         else:
-            print("\n!" + str(failOpt) + " of " + str(allOpt) + " OPTIONAL tests failed.")
+            print("\n!" + str(failOpt) + " of " + str(len(opt_tests)) + " OPTIONAL tests failed.")
     
     
 def concat(outDir, srcFiles):
