@@ -1,4 +1,4 @@
-fn even(x : int) -> bool {
+fn even(x : int32) -> bool {
    if (x == 0) {
       true
    } else {
@@ -6,7 +6,7 @@ fn even(x : int) -> bool {
    }
 }
 
-fn odd(x : int) -> bool {
+fn odd(x : int32) -> bool {
    if (x == 0) {
       false
    } else {
