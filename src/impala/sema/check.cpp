@@ -53,9 +53,8 @@ Type match_types(Sema& sema, const Expr* pos, Type t1, Type t2) {
 inline void expect_type(Sema& sema, const Expr* found, Type expected, std::string typetype) {
     assert(!expected.empty());
     assert(!found->type().empty());
-    assert(expected != sema.type_error());
 
-    if (found->type() == sema.type_error())
+    if (found->type() == sema.type_error() || expected == sema.type_error())
         return;
     if (found->type() != expected)
         sema.error(found) << "Wrong " << typetype << " type; expected " << expected << " but found " << found->type() << "\n";
