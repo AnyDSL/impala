@@ -29,7 +29,6 @@ void expect_num(Sema& sema, const Expr* exp) {
     if (t == sema.type_error())
         return;
 
-    // TODO realize this with subtyping
     if ((t != sema.type_int()) && (t != sema.type_int8()) && (t != sema.type_int16()) && (t != sema.type_int32()) &&
             (t != sema.type_int64()) && (t != sema.type_float()) && (t != sema.type_double()))
         sema.error(exp) << "Expected number type but found " << t << "\n";
@@ -43,7 +42,6 @@ Type match_types(Sema& sema, const Expr* pos, Type t1, Type t2) {
     if (t1 == error || t2 == error)
         return error;
 
-    // TODO consider subtyping of primitive types and return the "smallest common type"
     if (t1 == t2) {
         return t1;
     } else {
