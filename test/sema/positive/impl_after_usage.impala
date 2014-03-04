@@ -1,0 +1,5 @@
+fn myf(f: fn[A:T](A) -> A) -> int32 {
+   f[int32](4)
+}
+impl T for int32 {}
+trait T {}

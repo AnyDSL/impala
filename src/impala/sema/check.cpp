@@ -17,9 +17,19 @@ public:
     bool nossa() const { return nossa_; }
     const Fn* cur_fn() const { return cur_fn_; }
 
+    void push_impl(const Impl* i) { impls_.push_back(i); }
+    void check_impls() {
+        while (!impls_.empty()) {
+            const Impl* i = impls_.back();
+            impls_.pop_back();
+            i->check(*this);
+        }
+    }
+
 private:
     const Fn* cur_fn_;
     bool nossa_;
+    std::vector<const Impl*> impls_;
 };
 
 void expect_num(Sema& sema, const Expr* exp) {
@@ -217,7 +227,9 @@ void Typedef::check_head(Sema& sema) const {
     sema.insert(this);
 }
 
-void Impl::check_head(Sema& sema) const {}
+void Impl::check_head(Sema& sema) const {
+    sema.push_impl(this);
+}
 
 /*
  * items - check
@@ -295,6 +307,11 @@ void TraitDecl::check(Sema& sema) const {
 }
 
 void Impl::check(Sema& sema) const {
+    if (checked_)
+        return;
+    else
+        checked_ = true;
+
     sema.push_scope();
     check_type_params(sema);
 

@@ -542,6 +542,7 @@ private:
     thorin::AutoPtr<const ASTType> trait_;
     thorin::AutoPtr<const ASTType> for_type_;
     Methods methods_;
+    mutable bool checked_ = false;
 
     friend class Parser;
 };

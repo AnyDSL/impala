@@ -1,0 +1,6 @@
+fn f[A: T](x:A) -> A {
+   x
+}
+trait T {
+      fn tf(A) -> A;
+}

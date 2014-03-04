@@ -1,0 +1,6 @@
+fn f(x: int) -> int {
+   g()
+}
+fn g() -> int {
+   x
+}
