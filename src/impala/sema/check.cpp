@@ -171,7 +171,7 @@ TraitInstance ASTTypeApp::to_trait_instance(Sema& sema) const {
             sema.error(this) << "cannot convert a type variable into a trait instance\n";
     }
     // TODO return error_trait_instance <- we need sth like that
-    return TraitInstance();
+    return sema.trait_inst_error();
 }
 
 //------------------------------------------------------------------------------
@@ -298,24 +298,27 @@ void Impl::check(Sema& sema) const {
     sema.push_scope();
     check_type_params(sema);
 
-    // TODO currently symbol() gives the trait name, this does not handle stuff like 'impl T[int] for S {}'
-    if (auto decl = sema.lookup(this, Symbol() /*TODO*/)) {
-        if (auto trait = decl->isa<TraitDecl>()) {
-            // create TraitImpl
-            TraitInstance tinst = sema.instantiate_trait(trait->calc_trait(sema), {});
-            const TraitImpl* impl = sema.implement_trait(this, tinst);
+    Type ftype = for_type()->to_type(sema);
 
-            // add impl to type
-            Type t = for_type()->to_type(sema);
-            if (t != sema.type_error())
-                t->add_implementation(impl);
+    if (trait() != nullptr) {
+        if (auto t = trait()->isa<ASTTypeApp>()) {
+            TraitInstance tinst = t->to_trait_instance(sema);
 
-            // FEATURE check that all methods are implemented
-            for (auto fn : methods())
-                fn->check(sema);
+            if (tinst != sema.trait_inst_error()) {
+                // create TraitImpl
+                const TraitImpl* impl = sema.implement_trait(this, tinst);
+
+                // add impl to type
+                if (ftype != sema.type_error())
+                    ftype->add_implementation(impl);
+            }
         } else
-            sema.error(decl) << decl << " is not the name of a trait.\n";
+            sema.error(trait()) << "expected trait instance.\n";
     }
+
+    // FEATURE check that all methods are implemented
+    for (auto fn : methods())
+        fn->check(sema);
 
     sema.pop_scope();
 }
