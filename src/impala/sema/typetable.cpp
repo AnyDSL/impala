@@ -24,6 +24,7 @@ TypeTable::TypeTable()
     : types_()
 #define IMPALA_TYPE(itype, atype) , itype##_(new_type(new PrimTypeNode(*this, PrimType_##itype)))
 #include "impala/tokenlist.h"
+    , trait_inst_error_(instantiate_trait(trait(nullptr, {}), {}))
     , type_error_(new_type(new TypeErrorNode(*this)))
     , type_noreturn_(new_type(new NoReturnTypeNode(*this)))
 {

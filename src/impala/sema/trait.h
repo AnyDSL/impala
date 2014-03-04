@@ -48,6 +48,7 @@ public:
     bool equal(const Trait* other) const { return this->trait_decl() == other->trait_decl(); }
     size_t hash() const { return thorin::hash_value(trait_decl()); }
     const TraitDecl* trait_decl() const { return trait_decl_; }
+    bool is_error_trait() const { return trait_decl_ == nullptr; }
     std::string to_string() const;
     // TODO retrieve methods via trait_decl()->methods and remove this
     void add_method(const std::string name, FnType type);

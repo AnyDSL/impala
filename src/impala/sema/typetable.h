@@ -44,7 +44,8 @@ public:
     ~TypeTable();
 
     TypeError type_error() { return type_error_; }
-    TypeError type_noreturn() { return type_noreturn_; }
+    TraitInstance trait_inst_error() { return trait_inst_error_; }
+    NoReturnType type_noreturn() { return type_noreturn_; }
     PrimType primtype(PrimTypeKind kind);
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
@@ -105,8 +106,9 @@ private:
     UnifiableSet unifiables_;
 #define IMPALA_TYPE(itype, atype) PrimType itype##_;
 #include "impala/tokenlist.h"
+    TraitInstance trait_inst_error_;
     TypeError type_error_;
-    TypeError type_noreturn_;
+    NoReturnType type_noreturn_;
 
     friend class TypeVarNode;
 };
