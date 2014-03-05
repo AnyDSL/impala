@@ -8,6 +8,7 @@
 #ifndef IMPALA_SEMA_TYPE_PROPERTIES_H
 #define IMPALA_SEMA_TYPE_PROPERTIES_H
 
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -40,6 +41,8 @@ typedef UnifiableProxy<TypeVarNode> TypeVar;
 typedef UnifiableProxy<TraitInstanceNode> TraitInstance;
 // TODO I don't think we need this set - we can grab the super traits via TraitDecl
 typedef std::unordered_set<const Trait*> TraitSet;
+
+typedef std::unordered_map<const TypeNode*, Type> SpecializeMapping;
 
 //------------------------------------------------------------------------------
 
@@ -133,6 +136,7 @@ private:
     friend class TypeTable;
     friend class TypeNode;
     friend class TypeVarNode;
+    friend class Generic;
     friend class TraitInstanceNode;
     friend class TraitInstanceHash;
     friend class TraitInstanceEqual;
@@ -157,7 +161,7 @@ public:
     virtual size_t hash() const = 0;
 
     /// raise error if a type does not implement the required traits;
-    void check_instantiation(thorin::ArrayRef<Type>) const;
+    SpecializeMapping check_instantiation(thorin::ArrayRef<Type>) const;
 
 protected:
     Generic(TypeTable& tt) : typetable_(tt) {}

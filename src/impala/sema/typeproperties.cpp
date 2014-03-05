@@ -51,17 +51,29 @@ void Generic::add_bound_var(TypeVar v) {
     bound_vars_.push_back(v);
 }
 
-void Generic::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
+SpecializeMapping Generic::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
     // TODO better error handling
-    assert(var_instances.size() == bound_vars().size() && "Wrong number of instances for bound type variables");
+    assert(var_instances.size() == num_bound_vars() && "Wrong number of instances for bound type variables");
 
-    for (size_t i = 0; i < var_instances.size(); ++i) {
-        Type instance = var_instances[i];
+    // create a mapping TypeVar -> Type
+    SpecializeMapping mapping;
+    size_t i = 0;
+    for (TypeVar v : bound_vars())
+        mapping[v.representative()] = var_instances[i++];
+    assert(mapping.size() == var_instances.size());
 
-        for (TraitInstance bound : bound_var(i)->bounds())
+    // check the bounds
+    for (TypeVar v : bound_vars()) {
+        auto it = mapping.find(v.representative());
+        assert(it != mapping.end());
+        Type instance = it->second;
+
+        for (TraitInstance bound : v->bounds())
             // TODO better error handling
-            assert(instance->implements(bound));
+            assert(instance->implements(bound->specialize(mapping)));
     }
+
+    return mapping;
 }
 
 }

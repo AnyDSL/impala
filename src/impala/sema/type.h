@@ -1,8 +1,6 @@
 #ifndef IMPALA_SEMA_TYPE_H
 #define IMPALA_SEMA_TYPE_H
 
-#include <unordered_map>
-
 #include "thorin/util/autoptr.h"
 #include "thorin/util/array.h"
 #include "thorin/util/hash.h"
@@ -27,8 +25,6 @@ struct TraitImplEqual { bool operator () (const TraitInstance t1, const TraitIns
 typedef std::unordered_set<TraitInstance, TraitImplHash, TraitImplEqual> TraitImplSet;
 
 //------------------------------------------------------------------------------
-
-typedef std::unordered_map<const TypeNode*, Type> SpecializeMapping;
 
 enum Kind {
 #define IMPALA_TYPE(itype, atype) Type_##itype,

@@ -89,13 +89,7 @@ bool TypeVarNode::implements(TraitInstance trait) const {
 //------------------------------------------------------------------------------
 
 Type TypeNode::instantiate(thorin::ArrayRef<Type> var_instances) const {
-    check_instantiation(var_instances);
-
-    SpecializeMapping mapping;
-    assert(num_bound_vars() == var_instances.size());
-    size_t i = 0;
-    for (TypeVar v : bound_vars())
-        mapping[v.representative()] = var_instances[i];
+    SpecializeMapping mapping = check_instantiation(var_instances);
 
     Type instance = vspecialize(mapping);
     typetable().unify(instance);
