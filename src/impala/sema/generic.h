@@ -1,6 +1,7 @@
 #ifndef IMPALA_SEMA_GENERIC_H
 #define IMPALA_SEMA_GENERIC_H
 
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -54,7 +55,13 @@ private:
     T* node() const { return node_; }
     T* node_;
 
+    friend class Generic;
     friend class TypeNode;
+    friend class PrimTypeNode;
+    friend class TypeErrorNode;
+    friend class FnTypeNode;
+    friend class TupleTypeNode;
+    friend class TypeVarNode;
     friend struct NodeHash<Proxy<T>>;
     friend struct NodeEqual<Proxy<T>>;
     friend class TypeTable;
@@ -68,6 +75,9 @@ typedef Proxy<TypeNode> Type;
 typedef Proxy<TypeVarNode> TypeVar;
 typedef Proxy<TraitNode> Trait;
 typedef Proxy<TraitImplNode> TraitImpl;
+
+class Generic;
+typedef std::unordered_map<const Generic*, Generic*> SpecializeMapping; // FIXME specialization
 
 //------------------------------------------------------------------------------
 
@@ -88,13 +98,25 @@ public:
     void add_bound_var(TypeVar v);
     virtual bool equal(const Generic*) const = 0;
     virtual size_t hash() const = 0;
-    /// raise error if a type does not implement the required traits;
-    void check_instantiation(thorin::ArrayRef<Type>) const;
     std::string bound_vars_to_string() const;
+
+    Generic* instantiate(thorin::ArrayRef<Type> var_instances) const;
+    /**
+     * if this element is in the mapping return the mapped one;
+     * otherwise copy this element with specialized sub-elements
+     */
+    Generic* specialize(SpecializeMapping&) const;
 
 protected:
     std::vector<TypeVar> bound_vars_;
     TypeTable& typetable_;
+
+    /// like specialize but does not care about generics (this method is called by specialize)
+    virtual Generic* vspecialize(SpecializeMapping&) const = 0;
+
+private:
+    /// raise error if a type does not implement the required traits;
+    void check_instantiation(thorin::ArrayRef<Type>) const;
 };
 
 template<class T>

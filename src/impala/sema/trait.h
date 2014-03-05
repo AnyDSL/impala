@@ -19,7 +19,6 @@ class FnTypeNode;
 class Impl;
 class TraitDecl;
 typedef Proxy<FnTypeNode> FnType;
-typedef std::unordered_map<const TypeNode*, Type> SpecializeMapping; // FIXME specialization
 
 /**
  * Represents a declared trait.
@@ -53,7 +52,7 @@ public:
     virtual bool is_closed() const { return true; } // TODO
 
     /// copy this trait but replace the sub-elements given in the mapping
-    Trait specialize(SpecializeMapping&) const { return Trait(); } // FIXME specialization
+    TraitNode* vspecialize(SpecializeMapping&) const { return new TraitNode(typetable(), trait_decl()); } // FIXME specialization
 
 private:
     const TraitDecl* const trait_decl_;
@@ -117,6 +116,9 @@ public:
     Trait trait() const { return trait_; }
 
     virtual bool is_closed() const { return true; } // TODO
+
+    /// copy this \p TraitImplNode but replace the sub-elements given in the mapping
+    TraitImplNode* vspecialize(SpecializeMapping&) const { return new TraitImplNode(typetable(), impl_decl(), trait()); } // FIXME specialization
 
 private:
     const Impl* const impl_decl_;

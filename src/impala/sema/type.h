@@ -1,8 +1,6 @@
 #ifndef IMPALA_SEMA_TYPE_H
 #define IMPALA_SEMA_TYPE_H
 
-#include <unordered_map>
-
 #include "thorin/util/autoptr.h"
 #include "thorin/util/array.h"
 #include "thorin/util/hash.h"
@@ -70,7 +68,6 @@ public:
     virtual std::string to_string() const = 0;
 
     void add_implementation(TraitImpl impl);
-    Type instantiate(thorin::ArrayRef<Type> var_instances) const;
     virtual bool implements(TraitImpl) const;
 
     bool is_generic() const {
@@ -97,12 +94,6 @@ public:
 private:
     bool is_subtype(const TypeNode* super_type) const;
 
-    /// copy this type but replace the subtypes given in the mapping
-    Type specialize(SpecializeMapping&) const;
-
-    /// like specialize but does not care about generics (this method is called by specialize)
-    virtual Type vspecialize(SpecializeMapping&) const = 0;
-
     const Kind kind_;
     TraitImplSet trait_impls_; // TODO do we want to have the impls or only the traits?
 
@@ -120,7 +111,8 @@ private:
         : TypeNode(typetable, Type_error, 0)
     {}
 
-    virtual Type vspecialize(SpecializeMapping&) const;
+protected:
+    virtual Generic* vspecialize(SpecializeMapping&) const;
 
 public:
     virtual std::string to_string() const { return "<type error>"; }
@@ -135,7 +127,9 @@ private:
     {}
 
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
-    virtual Type vspecialize(SpecializeMapping&) const;
+
+protected:
+    virtual Generic* vspecialize(SpecializeMapping&) const;
 
 public:
     virtual std::string to_string() const;
@@ -164,7 +158,8 @@ private:
         : CompoundType(typetable, Type_fn, elems)
     {}
 
-    virtual Type vspecialize(SpecializeMapping&) const;
+protected:
+    virtual Generic* vspecialize(SpecializeMapping&) const;
 
 public:
     virtual std::string to_string() const { return std::string("fn") + bound_vars_to_string() + elems_to_string(); }
@@ -178,7 +173,8 @@ private:
         : CompoundType(typetable, Type_tuple, elems)
     {}
 
-    virtual Type vspecialize(SpecializeMapping&) const;
+protected:
+    virtual Generic* vspecialize(SpecializeMapping&) const;
 
 public:
     virtual std::string to_string() const { return std::string("tuple") + bound_vars_to_string() + elems_to_string(); }
@@ -218,6 +214,9 @@ public:
     // CHECK this->is_subtype(bound_at()); if bound_at is a Type, else it should occur in the method signatures
     virtual bool is_sane() const { return is_closed(); }
 
+    /// Create a copy of this \p TypeVar that considers the specialization (the binding is not copied)
+    TypeVar clone(SpecializeMapping&) const;
+
 private:
     const int id_;       ///< Used for unambiguous dumping.
     NodeSet<Trait> bounds_;///< All traits that restrict the instantiation of this variable.
@@ -229,9 +228,8 @@ private:
     mutable const TypeVarNode* equiv_var_;///< Used to define equivalence constraints when checking equality of types.
     static int counter;
 
-    virtual Type vspecialize(SpecializeMapping&) const;
-    /// Create a copy of this \p TypeVar that considers the specialization (the binding is not copied)
-    TypeVar clone(SpecializeMapping&) const;
+protected:
+    virtual Generic* vspecialize(SpecializeMapping&) const;
 
     /// re-add all elements to the bounds set -- needed if during unification the representatives of bounds change
     void refresh_bounds();

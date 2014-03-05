@@ -10,6 +10,7 @@
 #include "thorin/util/assert.h"
 #include "impala/sema/type.h"
 #include "impala/sema/trait.h"
+#include "impala/sema/typetable.h"
 
 namespace impala {
 
@@ -61,6 +62,42 @@ void Generic::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
             // TODO better error handling
             assert(instance->implements(bound));
     }
+}
+
+Generic* Generic::instantiate(thorin::ArrayRef<Type> var_instances) const {
+    check_instantiation(var_instances);
+
+    SpecializeMapping mapping;
+    assert(num_bound_vars() == var_instances.size());
+    size_t i = 0;
+    for (TypeVar v : bound_vars())
+        mapping[v.node()] = var_instances[i];
+
+    Generic* instance = vspecialize(mapping);
+    //typetable().unify(instance); FIXME specialization -- unification
+
+    return instance;
+}
+
+Generic* Generic::specialize(SpecializeMapping& mapping) const {
+    // FEATURE this could be faster if we copy only types were something changed inside
+    auto it = mapping.find(this);
+    if (it != mapping.end())
+        return it->second;
+
+    for (TypeVar v : bound_vars()) {
+        assert(mapping.find(v.node()) == mapping.end());
+        mapping[v.node()] = v->clone(mapping);
+    }
+
+    Generic* t = vspecialize(mapping);
+
+    for (auto v : bound_vars()) {
+        assert(mapping.find(v.node()) != mapping.end());
+        //t->add_bound_var(mapping[v.node()]->as<TypeVarNode>()); FIXME how can we cast this?
+    }
+
+    return t;
 }
 
 }
