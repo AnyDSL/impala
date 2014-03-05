@@ -12,6 +12,14 @@ namespace impala {
 class TypeTable;
 template<class T> class Unifiable;
 
+template<class T> struct NodeHash {
+    size_t operator () (const T t) const { return thorin::hash_value(t.node()); }
+};
+template<class T> struct NodeEqual {
+    bool operator () (const T t1, const T t2) const { return t1.node() == t2.node(); }
+};
+template<class T> using NodeSet = std::unordered_set<T, NodeHash<T>, NodeEqual<T>>;
+
 template<class T>
 class Proxy {
 public:
@@ -23,7 +31,7 @@ public:
     {}
 
     bool empty() const { return node_ == nullptr; }
-    bool is_unified() const { return deref()->is_unified(); }
+    bool is_unified() const { return deref()->is_unified(); } // TODO remove this
     bool operator == (const Proxy<T>& other) const {
         assert(&node()->typetable() == &other.node()->typetable());
         if (!this->is_unified()) node()->typetable().unify(*this);
@@ -31,22 +39,24 @@ public:
         return deref() == other.deref();
     }
     bool operator != (const Proxy<T>& other) { return !(*this == other); }
+    operator T* () const { return deref(); } // CHECK shouldn't we remove this?
     T* operator -> () const { return deref(); }
-    operator T* () const { return deref(); }
     template<class U> operator Proxy<U>() {
         // TODO static assert that U is a super type of T
         return Proxy<U>((U*) node_);
     }
-    T* deref() const { return node_->is_unified() ? representative() : node_->template as<T>(); }
     //Proxy<T>& operator = (T* other) { node_ = other; return *this; } CHECK isn't this just adding confusion?
-    T* representative() const { return node_->representative()->template as<T>(); }
-    T* node() const { return node_; }
     // FEATURE make most of this stuff private!
 
 private:
+    T* deref() const { return node_->is_unified() ? representative() : node_->template as<T>(); }
+    T* representative() const { return node_->representative()->template as<T>(); }
+    T* node() const { return node_; }
     T* node_;
 
     friend class TypeNode;
+    friend struct NodeHash<Proxy<T>>;
+    friend struct NodeEqual<Proxy<T>>;
     friend class TypeTable;
 };
 
@@ -58,14 +68,6 @@ typedef Proxy<TypeNode> Type;
 typedef Proxy<TypeVarNode> TypeVar;
 typedef Proxy<TraitNode> Trait;
 typedef Proxy<TraitImplNode> TraitImpl;
-
-template<class T> struct NodeHash {
-    size_t operator () (const T t) const { return thorin::hash_value(t.node()); }
-};
-template<class T> struct NodeEqual {
-    bool operator () (const T t1, const T t2) const { return t1.node() == t2.node(); }
-};
-template<class T> using NodeSet = std::unordered_set<T, NodeHash<T>, NodeEqual<T>>;
 
 //------------------------------------------------------------------------------
 
