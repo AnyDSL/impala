@@ -153,7 +153,7 @@ Trait ASTTypeApp::to_trait(Sema& sema) const {
             for (auto e : elems())
                 type_args.push_back(e->to_type(sema));
 
-            //return sema.instantiate_trait(trait_decl->calc_trait(sema), type_args); FIXME
+            //return sema.instantiate_trait(trait_decl->calc_trait(sema), type_args); FIXME specialization
             return trait_decl->calc_trait(sema);
         } else
             sema.error(this) << "cannot convert a type variable into a trait instance\n";
@@ -287,7 +287,7 @@ void Impl::check(Sema& sema) const {
     if (auto decl = sema.lookup(this, Symbol() /*TODO*/)) {
         if (auto trait = decl->isa<TraitDecl>()) {
             // create TraitImpl
-            /*Trait tinst = sema.instantiate_trait(trait->calc_trait(sema), {}); FIXME
+            /*Trait tinst = sema.instantiate_trait(trait->calc_trait(sema), {}); FIXME specialization
             const TraitImpl* impl = sema.implement_trait(this, tinst);
 
             // add impl to type

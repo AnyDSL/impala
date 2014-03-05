@@ -136,6 +136,11 @@ bool TypeTable::unify_base(TypetableSet<T>& set, T* unifiable) {
     }
 }
 
+// force instantiation
+template bool TypeTable::unify_base(TypetableSet<TypeNode>& set, TypeNode* unifiable);
+template bool TypeTable::unify_base(TypetableSet<TraitNode>& set, TraitNode* unifiable);
+template bool TypeTable::unify_base(TypetableSet<TraitImplNode>& set, TraitImplNode* unifiable);
+
 PrimType TypeTable::primtype(const PrimTypeKind kind) {
     switch (kind) {
 #define IMPALA_TYPE(itype, atype) case PrimType_##itype: return itype##_;

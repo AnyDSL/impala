@@ -25,9 +25,9 @@ public:
     bool empty() const { return node_ == nullptr; }
     bool is_unified() const { return deref()->is_unified(); }
     bool operator == (const Proxy<T>& other) const {
-        // FIXME first unify, then compare!
-        //if (!this->is_unified()) deref()->typetable().unify(*this);
-        //if (!other.is_unified()) deref()->typetable().unify(other);
+        assert(&node()->typetable() == &other.node()->typetable());
+        if (!this->is_unified()) node()->typetable().unify(*this);
+        if (!other.is_unified()) node()->typetable().unify(other);
         return deref() == other.deref();
     }
     bool operator != (const Proxy<T>& other) { return !(*this == other); }
@@ -38,7 +38,7 @@ public:
         return Proxy<U>((U*) node_);
     }
     T* deref() const { return node_->is_unified() ? representative() : node_->template as<T>(); }
-    //Proxy<T>& operator = (T* other) { node_ = other; return *this; } FIXME
+    //Proxy<T>& operator = (T* other) { node_ = other; return *this; } CHECK isn't this just adding confusion?
     T* representative() const { return node_->representative()->template as<T>(); }
     T* node() const { return node_; }
     // FEATURE make most of this stuff private!
@@ -102,7 +102,7 @@ protected:
         : Generic(tt)
         , representative_(nullptr)
     {
-        //static_assert(std::is_base_of<Unifiable<T>, T>::value, "Unifiable<T> is not a base type of T"); FIXME
+        static_assert(std::is_base_of<Unifiable<T>, T>::value, "Unifiable<T> is not a base type of T");
     }
 
 public:
