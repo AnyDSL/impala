@@ -7,6 +7,7 @@
 
 #include "impala/sema/type.h"
 #include "impala/sema/trait.h"
+#include "impala/sema/typetable.h"
 
 using namespace thorin;
 
@@ -23,9 +24,9 @@ size_t TypeNode::hash() const {
 }
 
 bool TypeNode::equal(const Generic* other) const {
-    if (const TypeNode* t = other->isa<TypeNode>()) {
+    /*if (const TypeNode* t = other->isa<TypeNode>()) { FIXME how can we cast this?
         return equal(t);
-    }
+    }*/
     return false;
 }
 
@@ -57,23 +58,20 @@ bool TypeNode::equal(const TypeNode* other) const {
 }
 
 bool TypeVarNode::bounds_equal(const TypeVar other) const {
-    TraitInstSet trestr = other->bounds();
-
-    if (this->bounds().size() != trestr.size())
+    if (this->bounds().size() != other->bounds().size())
         return false;
 
     // FEATURE this works but seems too much effort, at least use a set that uses representatives
-    TraitInstanceNodeTableSet ttis;
-    for (auto r : trestr) {
-        auto p = ttis.insert(r);
+    TypetableSet<TraitNode> obounds;
+    for (auto r : other->bounds()) {
+        auto p = obounds.insert(r);
         assert(p.second && "hash/equal broken");
     }
 
     // this->bounds() subset of trestr
     for (auto r : this->bounds()) {
-        if (ttis.find(r) == ttis.end()) {
+        if (obounds.find(r) == obounds.end())
             return false;
-        }
     }
 
     return true;
@@ -113,6 +111,8 @@ bool TypeVarNode::equal(const TypeNode* other) const {
     return false;
 }
 
+// TODO review this: what should be included in the new Trait?
+#if 0
 bool TraitInstanceNode::equal(const TraitInstanceNode* other) const {
     // CHECK use equal?
     if (trait_ != other->trait_)
@@ -129,16 +129,17 @@ bool TraitInstanceNode::equal(const TraitInstanceNode* other) const {
 
 // FEATURE better hash function
 size_t TraitInstanceNode::hash() const { return trait_->hash(); }
+#endif
 
-bool Trait::equal(const Generic* other) const {
-    if (const Trait* t = other->isa<Trait>())
-        return equal(t);
+bool TraitNode::equal(const Generic* other) const {
+    /*if (const TraitNode* t = other->isa<TraitNode>()) FIXME how can we cast this?
+        return equal(t);*/
     return false;
 }
 
-bool TraitImpl::equal(const Generic* other) const {
-    if (const TraitImpl* t = other->isa<TraitImpl>())
-        return equal(t);
+bool TraitImplNode::equal(const Generic* other) const {
+    /*if (const TraitImplNode* t = other->isa<TraitImplNode>()) FIXME how can we cast this?
+        return equal(t);*/
     return false;
 }
 

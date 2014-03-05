@@ -17,18 +17,9 @@ namespace impala {
 
 class FnTypeNode;
 class Impl;
-class Trait;
-class TraitInstanceNode;
 class TraitDecl;
-typedef std::unordered_set<const Trait*> TraitSet;
 typedef Proxy<FnTypeNode> FnType;
-typedef Proxy<TraitInstanceNode> TraitInstance;
-typedef std::unordered_map<const TypeNode*, Type> SpecializeMapping;
-
-struct TraitMethod {
-    std::string name;
-    FnType type;
-};
+typedef std::unordered_map<const TypeNode*, Type> SpecializeMapping; // FIXME
 
 /**
  * Represents a declared trait.
@@ -43,33 +34,34 @@ struct TraitMethod {
  *
  * @see TraitInstance
  */
-class Trait : public Generic<Trait> {
+class TraitNode : public Unifiable<TraitNode> {
 private:
-    Trait(TypeTable& tt, const TraitDecl* trait_decl, const TraitSet super_traits)
-        : Generic(tt)
+    TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
+        : Unifiable(tt)
         , trait_decl_(trait_decl)
-        , super_traits_(super_traits)
     {}
-    Trait& operator = (const Trait&); ///< Do not copy-assign a \p Trait.
-    Trait(const Trait& node);         ///< Do not copy-construct a \p Trait.
+    TraitNode& operator = (const TraitNode&); ///< Do not copy-assign a \p Trait.
+    TraitNode(const TraitNode& node);         ///< Do not copy-construct a \p Trait.
 
 public:
     virtual bool equal(const Generic* t) const;
-    bool equal(const Trait* other) const { return this->trait_decl() == other->trait_decl(); }
+    bool equal(const TraitNode* other) const { return this->trait_decl() == other->trait_decl(); }
     size_t hash() const { return thorin::hash_value(trait_decl()); }
     const TraitDecl* trait_decl() const { return trait_decl_; }
     std::string to_string() const;
-    // TODO retrieve methods via trait_decl()->methods and remove this
-    void add_method(const std::string name, FnType type);
+
+    virtual bool is_closed() const { return true; } // TODO
+
+    /// copy this trait but replace the sub-elements given in the mapping
+    Trait specialize(SpecializeMapping&) const { return Trait(); } // FIXME
 
 private:
     const TraitDecl* const trait_decl_;
-    const TraitSet super_traits_;
-    std::vector<const TraitMethod*> methods_;
 
     friend class TypeTable;
 };
 
+#if 0
 /**
  * An instance of a trait is a trait where all generic type variables are
  * instantiated by concrete types.
@@ -106,39 +98,32 @@ private:
     friend class TypeVarNode;
     friend class TypeTable;
 };
+#endif
 
-class TraitImpl : public Generic<TraitImpl> {
-    TraitImpl(TypeTable& tt, const Impl* impl_decl, TraitInstanceNode* trait)
-        : Generic(tt)
+class TraitImplNode : public Unifiable<TraitImplNode> {
+    TraitImplNode(TypeTable& tt, const Impl* impl_decl, Trait trait)
+        : Unifiable(tt)
         , impl_decl_(impl_decl)
         , trait_(trait)
     {}
-    TraitImpl& operator = (const TraitImpl&); ///< Do not copy-assign a \p TraitImpl.
-    TraitImpl(const TraitImpl&);              ///< Do not copy-construct a \p TraitImpl.
+    TraitImplNode& operator = (const TraitImplNode&); ///< Do not copy-assign a \p TraitImpl.
+    TraitImplNode(const TraitImplNode&);              ///< Do not copy-construct a \p TraitImpl.
 
 public:
     virtual bool equal(const Generic* t) const;
-    bool equal(const TraitImpl* other) const { return this->impl_decl() == other->impl_decl(); }
+    bool equal(const TraitImplNode* other) const { return this->impl_decl() == other->impl_decl(); }
     size_t hash() const { return thorin::hash_value(impl_decl()); }
     const Impl* impl_decl() const { return impl_decl_; }
-    TraitInstance trait_inst() const { return trait_; }
+    Trait trait() const { return trait_; }
+
+    virtual bool is_closed() const { return true; } // TODO
 
 private:
     const Impl* const impl_decl_;
-    TraitInstanceNode* trait_;
+    Trait trait_;
 
     friend class TypeTable;
 };
-
-struct TraitInstanceNodeHash { 
-    size_t operator () (const TraitInstanceNode* t) const { return t->hash(); } 
-};
-
-struct TraitInstanceNodeEqual { 
-    bool operator () (const TraitInstanceNode* t1, const TraitInstanceNode* t2) const { return t1->equal(t2); } 
-};
-
-typedef std::unordered_set<TraitInstanceNode*, TraitInstanceNodeHash, TraitInstanceNodeEqual> TraitInstanceNodeTableSet;
 
 }
 

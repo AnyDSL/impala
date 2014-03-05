@@ -15,23 +15,30 @@ namespace impala {
 
 class TraitDecl;
 
+template<class T> struct TypetableHash {
+    size_t operator () (const T* t) const { return t->hash(); }
+};
+template<class T> struct TypetableEqual {
+    bool operator () (const T* t1, const T* t2) const { return t1->equal(t2); }
+};
+template<class T> using TypetableSet = std::unordered_set<T*, TypetableHash<T>, TypetableEqual<T>>;
+
 //------------------------------------------------------------------------------
 
+// FEATURE maybe this can be simplified using the common inheritance
 class UnifiableSet {
 public:
     UnifiableSet() {}
     ~UnifiableSet();
 
-    void add(const TraitInstanceNode* t) { trait_instances_.push_back(t); }
     void add(const TypeNode* t) { types_.push_back(t); }
-    void add(const Trait* t) { traits_.push_back(t); }
-    void add(const TraitImpl* impl) { trait_impls_.push_back(impl); }
+    void add(const TraitNode* t) { traits_.push_back(t); }
+    void add(const TraitImplNode* impl) { trait_impls_.push_back(impl); }
 
 private:
-    std::vector<const TraitInstanceNode*> trait_instances_;
     std::vector<const TypeNode*> types_;
-    std::vector<const Trait*> traits_;
-    std::vector<const TraitImpl*> trait_impls_;
+    std::vector<const TraitNode*> traits_;
+    std::vector<const TraitImplNode*> trait_impls_;
 
     friend class TypeTable;
 };
@@ -47,57 +54,55 @@ public:
     PrimType primtype(PrimTypeKind kind);
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
-    Trait* trait(const TraitDecl* trait_decl, TraitSet super_traits) {
-        auto t = new Trait(*this, trait_decl, super_traits);
-        unifiables_.add(t);
-        return t;
-    }
-    TraitInstance instantiate_trait(const Trait* trait, thorin::ArrayRef<Type> var_instances) {
-        auto tti = new TraitInstanceNode(*this, trait, var_instances);
-        unifiables_.add(tti);
-        return tti;
-    }
-    TraitImpl* implement_trait(const Impl* impl_decl, TraitInstance trait) {
-        auto impl = new TraitImpl(*this, impl_decl, trait);
-        unifiables_.add(impl);
-        return impl;
-    }
-    TypeVar typevar() { return new_type(new TypeVarNode(*this)); }
-    FnType fntype(thorin::ArrayRef<Type> params) { return new_type(new FnTypeNode(*this, params)); }
-    TupleType tupletype(thorin::ArrayRef<Type> elems) { return new_type(new TupleTypeNode(*this, elems)); }
+    Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
+    TraitImpl implement_trait(const Impl* impl_decl, Trait trait) { return new_unifiable(new TraitImplNode(*this, impl_decl, trait)); }
+
+    TypeVar typevar() { return new_unifiable(new TypeVarNode(*this)); }
+    FnType fntype(thorin::ArrayRef<Type> params) { return new_unifiable(new FnTypeNode(*this, params)); }
+    TupleType tupletype(thorin::ArrayRef<Type> elems) { return new_unifiable(new TupleTypeNode(*this, elems)); }
     TupleType unit() { return tupletype({}); }
 
-    /// unify a trait instance and return \p true if the representative changed
-    template<class T> bool unify(Proxy<T> type) { return unify_base(type.node_); }
-    //const TraitInstance* unify_trait_inst(TraitInstance* type);
+    /// unify a type and return \p true if the representative changed
+    bool unify(Type t) { return unify_base(types_, t.node()); }
+    bool unify(Trait t) { return unify_base(traits_, t.node()); }
+    bool unify(TraitImpl t) { return unify_base(trait_impls_, t.node()); }
+
     /// Checks if all types in the type tables are sane and correctly unified.
     void verify() const;
 
 private:
     template<class T> 
-    Proxy<T> new_type(T* tn) {
+    Proxy<T> new_unifiable(T* tn) {
         unifiables_.add(tn);
         return Proxy<T>(tn);
     }
 
-    /// insert all not-unified types contained in type
-    void insert_new(Type type);
-    void insert_new(TraitInstance tti);
+    /// insert all contained unifiables that are not yet unified
+    template<class T> void insert_new(TypetableSet<T>&, T*);
+    /// insert all contained types
+    void insert_new_rec(TypeNode*);
+    void insert_new_rec(TraitNode*);
+    void insert_new_rec(TraitImplNode*) {}
 
     /**
-     * Recursivly change the representatives of the not-unified types in t to the
+     * Recursively change the representatives of the not-unified elements in t to the
      * corresponding types in repr.
      *
      * This assumes that t is equal to repr.
      */
     template<class T> void change_repr(T* t, T* repr) const;
-    template<class T> void change_repr_rec(T* t, T* repr) const;
-    void change_repr_rec(TraitInstanceNode* t, TraitInstanceNode* repr) const;
-    bool unify_base(TraitInstanceNode* trait);
-    bool unify_base(TypeNode* type);
+    /// change the representative of the bound type variables
+    template<class T> void change_repr_generic(T* t, T* repr) const;
+    /// change the representative of the contained types
+    void change_repr_rec(TypeNode* t, TypeNode* repr) const;
+    void change_repr_rec(TraitNode* t, TraitNode* repr) const {}
+    void change_repr_rec(TraitImplNode* t, TraitImplNode* repr) const {}
 
-    TypeNodeSet types_;
-    TraitInstanceNodeTableSet trait_instances_;
+    template<class T> bool unify_base(TypetableSet<T>&, T*);
+
+    TypetableSet<TypeNode> types_;
+    TypetableSet<TraitNode> traits_;
+    TypetableSet<TraitImplNode> trait_impls_;
     UnifiableSet unifiables_;
 #define IMPALA_TYPE(itype, atype) PrimType itype##_;
 #include "impala/tokenlist.h"

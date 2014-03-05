@@ -77,7 +77,7 @@ void ParametricASTType::check_type_params(Sema& sema) const {
     for (const TypeParam* tp : type_params()) {
         for (const ASTType* b : tp->bounds()) {
             if (auto trait_inst = b->isa<ASTTypeApp>()) {
-                tp->type_var()->add_bound(trait_inst->to_trait_instance(sema));
+                tp->type_var()->add_bound(trait_inst->to_trait(sema));
             } else {
                 sema.error(tp) << "Bounds must be trait instances, not types\n";
             }
@@ -146,19 +146,20 @@ Type FnASTType::to_type(Sema& sema) const {
     return t;
 }
 
-TraitInstance ASTTypeApp::to_trait_instance(Sema& sema) const {
+Trait ASTTypeApp::to_trait(Sema& sema) const {
     if (auto decl = sema.lookup(this, symbol())) {
         if (auto trait_decl = decl->isa<TraitDecl>()) {
             std::vector<Type> type_args;
             for (auto e : elems())
                 type_args.push_back(e->to_type(sema));
 
-            return sema.instantiate_trait(trait_decl->calc_trait(sema), type_args);
+            //return sema.instantiate_trait(trait_decl->calc_trait(sema), type_args); FIXME
+            return trait_decl->calc_trait(sema);
         } else
             sema.error(this) << "cannot convert a type variable into a trait instance\n";
     }
     // TODO return error_trait_instance <- we need sth like that
-    return TraitInstance();
+    return Trait();
 }
 
 //------------------------------------------------------------------------------
@@ -265,11 +266,11 @@ void StructDecl::check(Sema& sema) const {
 
 void TraitDecl::check(Sema& sema) const {
     // did we already check this trait?
-    if (trait_ != nullptr)
+    if ((!trait().empty()))
         return;
 
     // FEATURE consider super traits and check methods
-    trait_ = sema.trait(this, TraitSet());
+    trait_ = sema.trait(this);
 
     check_type_params(sema);
     for (auto tp : type_params()) {
@@ -286,7 +287,7 @@ void Impl::check(Sema& sema) const {
     if (auto decl = sema.lookup(this, Symbol() /*TODO*/)) {
         if (auto trait = decl->isa<TraitDecl>()) {
             // create TraitImpl
-            TraitInstance tinst = sema.instantiate_trait(trait->calc_trait(sema), {});
+            /*Trait tinst = sema.instantiate_trait(trait->calc_trait(sema), {}); FIXME
             const TraitImpl* impl = sema.implement_trait(this, tinst);
 
             // add impl to type
@@ -296,7 +297,7 @@ void Impl::check(Sema& sema) const {
 
             // FEATURE check that all methods are implemented
             for (auto fn : methods())
-                fn->check(sema);
+                fn->check(sema);*/
         } else
             sema.error(decl) << decl << " is not the name of a trait.\n";
     }

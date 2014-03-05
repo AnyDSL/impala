@@ -1,11 +1,11 @@
 /*
- * type_properties.cpp
+ * generic.cpp
  *
- *  Created on: Jan 2, 2014
+ *  Created on: Mar 5, 2014
  *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
  */
-#if 0
-#include "impala/sema/typeproperties.h"
+
+#include "impala/sema/generic.h"
 
 #include "thorin/util/assert.h"
 #include "impala/sema/type.h"
@@ -13,8 +13,7 @@
 
 namespace impala {
 
-template<class T>
-std::string Generic<T>::bound_vars_to_string() const {
+std::string Generic::bound_vars_to_string() const {
     std::string result;
 
     if (!is_generic())
@@ -24,7 +23,7 @@ std::string Generic<T>::bound_vars_to_string() const {
     for (auto v : bound_vars()) {
         result += separator + v->to_string();
 
-        const TraitInstSet restr = v->bounds();
+        const NodeSet<Trait> restr = v->bounds();
 
         if (!restr.empty()) {
             auto inner_sep = ":";
@@ -32,7 +31,6 @@ std::string Generic<T>::bound_vars_to_string() const {
                 result += inner_sep + t->to_string();
                 inner_sep = "+";
             }
-
         }
 
         separator = ",";
@@ -40,8 +38,7 @@ std::string Generic<T>::bound_vars_to_string() const {
     return result + ']';
 }
 
-template<class T>
-void Generic<T>::add_bound_var(TypeVar v) {
+void Generic::add_bound_var(TypeVar v) {
     assert(!v->is_closed() && "Type variables already bound");
 
     // CHECK should variables only be bound in this case? does this also hold for traits?
@@ -53,20 +50,17 @@ void Generic<T>::add_bound_var(TypeVar v) {
     bound_vars_.push_back(v);
 }
 
-template<class T>
-void Generic<T>::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
+void Generic::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
     // TODO better error handling
     assert(var_instances.size() == bound_vars().size() && "Wrong number of instances for bound type variables");
 
     for (size_t i = 0; i < var_instances.size(); ++i) {
         Type instance = var_instances[i];
 
-        for (TraitInstance bound : bound_var(i)->bounds())
+        for (Trait bound : bound_var(i)->bounds())
             // TODO better error handling
             assert(instance->implements(bound));
     }
 }
 
 }
-#endif
-

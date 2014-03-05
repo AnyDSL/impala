@@ -14,17 +14,9 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-struct TraitInstanceHash { 
-    size_t operator () (const TraitInstance t) const { return thorin::hash_value(t.deref()); } 
-};
-struct TraitInstanceEqual { 
-    bool operator () (const TraitInstance t1, const TraitInstance t2) const { return t1 == t2; }
-};
-typedef std::unordered_set<TraitInstance, TraitInstanceHash, TraitInstanceEqual> TraitInstSet;
-
-struct TraitImplHash { size_t operator () (const TraitInstance t) const; };
-struct TraitImplEqual { bool operator () (const TraitInstance t1, const TraitInstance t2) const; };
-typedef std::unordered_set<TraitInstance, TraitImplHash, TraitImplEqual> TraitImplSet;
+struct TraitImplHash { size_t operator () (const TraitImpl t) const; };
+struct TraitImplEqual { bool operator () (const TraitImpl t1, const TraitImpl t2) const; };
+typedef std::unordered_set<TraitImpl, TraitImplHash, TraitImplEqual> TraitImplSet;
 
 //------------------------------------------------------------------------------
 
@@ -42,14 +34,14 @@ enum PrimTypeKind {
 #include "impala/tokenlist.h"
 };
 
-class TypeNode : public Generic<TypeNode> {
+class TypeNode : public Unifiable<TypeNode> {
 private:
     TypeNode& operator = (const TypeNode&); ///< Do not copy-assign a \p TypeNode.
     TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p TypeNode.
 
 protected:
     TypeNode(TypeTable& typetable, Kind kind, size_t size)
-        : Generic(typetable)
+        : Unifiable(typetable)
         , kind_(kind)
         , elems_(size)
     {}
@@ -77,13 +69,13 @@ public:
     void dump() const;
     virtual std::string to_string() const = 0;
 
-    void add_implementation(const TraitImpl* impl);
+    void add_implementation(TraitImpl impl);
     Type instantiate(thorin::ArrayRef<Type> var_instances) const;
-    virtual bool implements(TraitInstance) const;
+    virtual bool implements(TraitImpl) const;
 
     bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());
-        return Generic<TypeNode>::is_generic();
+        return Generic::is_generic();
     }
 
     /**
@@ -112,7 +104,7 @@ private:
     virtual Type vspecialize(SpecializeMapping&) const = 0;
 
     const Kind kind_;
-    TraitImplSet trait_impls_;
+    TraitImplSet trait_impls_; // TODO do we want to have the impls or only the traits?
 
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
@@ -121,16 +113,6 @@ protected:
     friend class CompoundType;
     friend class TypeTable;
 };
-
-struct TypeNodeHash { 
-    size_t operator () (const TypeNode* t) const { return t->hash(); } 
-};
-
-struct TypeNodeEqual { 
-    bool operator () (const TypeNode* t1, const TypeNode* t2) const { return t1->equal(t2); } 
-};
-
-typedef std::unordered_set<TypeNode*, TypeNodeHash, TypeNodeEqual> TypeNodeSet;
 
 class TypeErrorNode : public TypeNode {
 private:
@@ -219,13 +201,13 @@ private:
     bool bounds_equal(const TypeVar other) const;
 
 public:
-    const TraitInstSet& bounds() const { return bounds_; }
+    const NodeSet<Trait>& bounds() const { return bounds_; }
     const Generic* bound_at() const { return bound_at_; }
-    void add_bound(TraitInstance restriction);
+    void add_bound(Trait);
     virtual bool equal(const TypeNode* other) const;
     std::string to_string() const;
 
-    virtual bool implements(TraitInstance) const;
+    virtual bool implements(TraitImpl) const;
 
     /**
      * A type variable is closed if it is bound and all restrictions are closed.
@@ -238,7 +220,7 @@ public:
 
 private:
     const int id_;       ///< Used for unambiguous dumping.
-    TraitInstSet bounds_;///< All traits that restrict the instantiation of this variable.
+    NodeSet<Trait> bounds_;///< All traits that restrict the instantiation of this variable.
     /**
      * The type where this variable is bound.
      * If such a type is set, then the variable must not be changed anymore!

@@ -6,8 +6,9 @@ namespace impala {
 
 int TypeVarNode::counter = 0;
 
-size_t TraitImplHash::operator () (const TraitInstance t) const{ return t->hash(); }
-bool TraitImplEqual::operator () (const TraitInstance t1, const TraitInstance t2) const {
+// TODO review this
+size_t TraitImplHash::operator () (const TraitImpl t) const{ return t->hash(); }
+bool TraitImplEqual::operator () (const TraitImpl t1, const TraitImpl t2) const {
     // FEATURE consider generic implementations, ...
     return t1 == t2;
 }
@@ -59,9 +60,9 @@ void TypeVarNode::bind(const Generic* const e) {
     bound_at_ = e;
 }
 
-void TypeVarNode::add_bound(TraitInstance restriction) {
+void TypeVarNode::add_bound(Trait bound) {
     assert(!is_closed() && "Closed type variables must not be changed!");
-    auto p = bounds_.insert(restriction);
+    auto p = bounds_.insert(bound);
     assert(p.second && "hash/equal broken");
 }
 
@@ -71,19 +72,19 @@ bool TypeVarNode::is_closed() const {
 
 //------------------------------------------------------------------------------
 
-void TypeNode::add_implementation(const TraitImpl* impl) {
-    auto p = trait_impls_.insert(impl->trait_inst());
+void TypeNode::add_implementation(TraitImpl impl) {
+    auto p = trait_impls_.insert(impl);
     assert(p.second && "hash/equal broken");
 }
 
-bool TypeNode::implements(TraitInstance trait) const {
+bool TypeNode::implements(TraitImpl trait) const {
     // CHECK is this enough?
     return trait_impls_.find(trait) != trait_impls_.end();
 }
 
-bool TypeVarNode::implements(TraitInstance trait) const {
+bool TypeVarNode::implements(TraitImpl impl) const {
     // CHECK is this enough?
-    return bounds().find(trait) != bounds().end();
+    return bounds().find(impl->trait()) != bounds().end();
 }
 
 //------------------------------------------------------------------------------
@@ -138,25 +139,25 @@ Type TupleTypeNode::vspecialize(SpecializeMapping& mapping) const { return mappi
 
 Type TypeVarNode::vspecialize(SpecializeMapping& mapping) const {
     // was not bound in the specialized type -> return orginal type var
-    return mapping[const_cast<TypeVarNode*>(this)] = typetable().new_type(this); // HACK
+    return mapping[const_cast<TypeVarNode*>(this)] = typetable().new_unifiable(this); // HACK
 }
 
 TypeVar TypeVarNode::clone(SpecializeMapping& mapping) const {
     TypeVar v = typetable().typevar();
 
     // copy bounds!
-    for (TraitInstance b : bounds())
+    for (Trait b : bounds())
         v->add_bound(b->specialize(mapping));
 
     return v;
 }
 
 void TypeVarNode::refresh_bounds() {
-    std::vector<TraitInstance> tmp;
-    for (TraitInstance i : bounds())
+    std::vector<Trait> tmp;
+    for (Trait i : bounds())
         tmp.push_back(i);
     bounds_.clear();
-    for (TraitInstance i : tmp) {
+    for (Trait i : tmp) {
         auto p = bounds_.insert(i);
         assert(p.second && "hash/equal broken");
     }
