@@ -321,14 +321,16 @@ void Impl::check(Sema& sema) const {
         if (auto t = trait()->isa<ASTTypeApp>()) {
             TraitInstance tinst = t->to_trait_instance(sema);
 
-            if (tinst != sema.trait_inst_error()) {
-                // create TraitImpl
-                const TraitImpl* impl = sema.implement_trait(this, tinst);
-
-                // add impl to type
-                if (ftype != sema.type_error())
-                    ftype->add_implementation(impl);
+            // create TraitImpl
+            TraitImpl* impl = sema.implement_trait(this, tinst);
+            for (auto tp : type_params()) {
+                assert(!tp->type_var().empty());
+                impl->add_bound_var(tp->type_var());
             }
+
+            // add impl to type
+            if ((ftype != sema.type_error()) && (tinst != sema.trait_inst_error()))
+                ftype->add_implementation(impl);
         } else
             sema.error(trait()) << "expected trait instance.\n";
     }

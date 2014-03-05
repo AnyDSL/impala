@@ -8,7 +8,7 @@ int TypeVarNode::counter = 0;
 
 size_t TraitImplHash::operator () (const TraitInstance t) const{ return t->hash(); }
 bool TraitImplEqual::operator () (const TraitInstance t1, const TraitInstance t2) const {
-    // FEATURE consider generic implementations, ...
+    // FEATURE consider generic implementations -- this will need some type inference magic!
     return t1 == t2;
 }
 
@@ -133,6 +133,7 @@ Type TupleTypeNode::vspecialize(SpecializeMapping& mapping) const { return mappi
 
 Type TypeVarNode::vspecialize(SpecializeMapping& mapping) const {
     // was not bound in the specialized type -> return orginal type var
+    // FIXME we need to create a new copy here - else unification will lead to segmentation faults!!
     return mapping[this] = typetable().new_type(this);
 }
 

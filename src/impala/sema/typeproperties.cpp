@@ -10,6 +10,7 @@
 #include "thorin/util/assert.h"
 #include "impala/sema/type.h"
 #include "impala/sema/trait.h"
+#include "impala/sema/typetable.h"
 
 namespace impala {
 
@@ -68,9 +69,12 @@ SpecializeMapping Generic::check_instantiation(thorin::ArrayRef<Type> var_instan
         assert(it != mapping.end());
         Type instance = it->second;
 
-        for (TraitInstance bound : v->bounds())
+        for (TraitInstance bound : v->bounds()) {
+            TraitInstance spec_bound = bound->specialize(mapping);
+            spec_bound->typetable().unify(spec_bound);
             // TODO better error handling
-            assert(instance->implements(bound->specialize(mapping)));
+            assert(instance->implements(spec_bound));
+        }
     }
 
     return mapping;

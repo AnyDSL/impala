@@ -1,0 +1,8 @@
+trait T[X] {}
+impl[A] T[A] for int32 {}
+fn g[B:T[A], A](x:B) -> B {
+   x
+}
+fn main() -> int32 {
+   g[int32, bool](4)
+}
