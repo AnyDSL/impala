@@ -91,7 +91,7 @@ def executeTests(tests, gEx, pb = True):
             bar.update(float(i)/float(len(tests)),tests[i].getName(),success=s)
         else:
             print ("["+str(i+1)+"/"+str(len(tests))+"] " + tests[i].getName())
-        res[tests[i]] = tests[i].invoke(gEx)
+        res[tests[i]] = s = tests[i].invoke(gEx)
     bar.done()
 
     print("\n* Test summary")

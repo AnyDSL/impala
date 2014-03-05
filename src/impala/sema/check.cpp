@@ -180,7 +180,7 @@ TraitInstance ASTTypeApp::to_trait_instance(Sema& sema) const {
         } else
             sema.error(this) << "cannot convert a type variable into a trait instance\n";
     }
-    // TODO return error_trait_instance <- we need sth like that
+
     return sema.trait_inst_error();
 }
 
