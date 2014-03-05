@@ -7,6 +7,7 @@
 namespace impala {
 
 void TypeNode::dump() const { std::cout << to_string() << std::endl; }
+void TraitInstanceNode::dump() const { std::cout << to_string() << std::endl; }
 
 std::string Trait::to_string() const { return is_error_trait() ? "<error trait>" : trait_decl()->symbol().str(); }
 

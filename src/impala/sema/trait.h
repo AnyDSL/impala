@@ -87,6 +87,7 @@ public:
 
     bool is_closed() const;
     std::string to_string() const;
+    void dump() const;
 
 private:
     const Trait* trait_;
@@ -95,6 +96,7 @@ private:
     TraitInstance specialize(SpecializeMapping&) const;
 
     friend class TypeVarNode;
+    friend class Generic;
     friend class TypeTable;
 };
 
