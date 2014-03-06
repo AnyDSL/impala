@@ -19,11 +19,11 @@ bool TraitInstanceNode::is_closed() const {
     return true;
 }
 
-TraitNode* TraitNode::vspecialize(SpecializeMapping& mapping) const {
+TraitNode* TraitNode::vspecialize(SpecializeMapping& mapping) {
     return typetable().instantiate_trait(this, mapping);
 }
 
-TraitNode* TraitInstanceNode::vspecialize(SpecializeMapping& mapping) const {
+TraitNode* TraitInstanceNode::vspecialize(SpecializeMapping& mapping) {
     /*std::vector<Type> instances; FIXME specialization
     for (auto i : var_instances())
         instances.push_back(i->specialize(mapping));

@@ -107,19 +107,19 @@ public:
     std::string bound_vars_to_string() const;
     virtual std::string to_string() const = 0;
 
-    Generic* instantiate(thorin::ArrayRef<Type> var_instances) const;
-    /**
-     * if this element is in the mapping return the mapped one;
-     * otherwise copy this element with specialized sub-elements
-     */
-    Generic* specialize(SpecializeMapping&) const;
-
 protected:
     std::vector<TypeVar> bound_vars_;
     TypeTable& typetable_;
 
+    Generic* ginstantiate(thorin::ArrayRef<Type> var_instances);
+    /**
+     * if this element is in the mapping return the mapped one;
+     * otherwise copy this element with specialized sub-elements
+     */
+    Generic* specialize(SpecializeMapping&);
+
     /// like specialize but does not care about generics (this method is called by specialize)
-    virtual Generic* vspecialize(SpecializeMapping&) const = 0;
+    virtual Generic* vspecialize(SpecializeMapping&) = 0;
 
 private:
     /// raise error if a type does not implement the required traits;
@@ -147,6 +147,11 @@ public:
         return false;
     }
     virtual size_t hash() const = 0;
+
+    Proxy<T> instantiate(thorin::ArrayRef<Type> var_instances) {
+        // TODO maybe unify?
+        return Proxy<T>(ginstantiate(var_instances)->as<T>);
+    }
 
 private:
     T* representative_;

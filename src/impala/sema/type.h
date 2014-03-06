@@ -12,9 +12,9 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-struct TraitImplHash { size_t operator () (const TraitImpl t) const; };
-struct TraitImplEqual { bool operator () (const TraitImpl t1, const TraitImpl t2) const; };
-typedef std::unordered_set<TraitImpl, TraitImplHash, TraitImplEqual> TraitImplSet;
+struct TraitImplHash { size_t operator () (const Trait t) const; };
+struct TraitImplEqual { bool operator () (const Trait t1, const Trait t2) const; };
+typedef std::unordered_set<Trait, TraitImplHash, TraitImplEqual> TraitImplSet;
 
 //------------------------------------------------------------------------------
 
@@ -66,8 +66,8 @@ public:
     void dump() const;
     virtual std::string to_string() const = 0;
 
-    void add_implementation(TraitImpl impl);
-    virtual bool implements(TraitImpl) const;
+    void add_implementation(Trait);
+    virtual bool implements(Trait) const;
 
     bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());
@@ -111,7 +111,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMapping&) const;
+    virtual Generic* vspecialize(SpecializeMapping&);
 
 public:
     virtual std::string to_string() const { return "<type error>"; }
@@ -128,7 +128,7 @@ private:
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
 
 protected:
-    virtual Generic* vspecialize(SpecializeMapping&) const;
+    virtual Generic* vspecialize(SpecializeMapping&);
 
 public:
     virtual std::string to_string() const;
@@ -158,7 +158,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMapping&) const;
+    virtual Generic* vspecialize(SpecializeMapping&);
 
 public:
     virtual std::string to_string() const { return std::string("fn") + bound_vars_to_string() + elems_to_string(); }
@@ -173,7 +173,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMapping&) const;
+    virtual Generic* vspecialize(SpecializeMapping&);
 
 public:
     virtual std::string to_string() const { return std::string("tuple") + bound_vars_to_string() + elems_to_string(); }
@@ -202,7 +202,7 @@ public:
     virtual bool equal(const TypeNode* other) const;
     std::string to_string() const;
 
-    virtual bool implements(TraitImpl) const;
+    virtual bool implements(Trait) const;
 
     /**
      * A type variable is closed if it is bound and all restrictions are closed.
@@ -228,7 +228,7 @@ private:
     static int counter;
 
 protected:
-    virtual Generic* vspecialize(SpecializeMapping&) const;
+    virtual Generic* vspecialize(SpecializeMapping&);
 
     /// re-add all elements to the bounds set -- needed if during unification the representatives of bounds change
     void refresh_bounds();

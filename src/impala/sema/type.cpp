@@ -7,8 +7,8 @@ namespace impala {
 int TypeVarNode::counter = 0;
 
 // TODO review this
-size_t TraitImplHash::operator () (const TraitImpl t) const{ return t->hash(); }
-bool TraitImplEqual::operator () (const TraitImpl t1, const TraitImpl t2) const {
+size_t TraitImplHash::operator () (const Trait t) const{ return t->hash(); }
+bool TraitImplEqual::operator () (const Trait t1, const Trait t2) const {
     // FEATURE consider generic implementations, ...
     return t1 == t2;
 }
@@ -72,19 +72,19 @@ bool TypeVarNode::is_closed() const {
 
 //------------------------------------------------------------------------------
 
-void TypeNode::add_implementation(TraitImpl impl) {
+void TypeNode::add_implementation(Trait impl) {
     auto p = trait_impls_.insert(impl);
     assert(p.second && "hash/equal broken");
 }
 
-bool TypeNode::implements(TraitImpl trait) const {
+bool TypeNode::implements(Trait trait) const {
     // CHECK is this enough?
     return trait_impls_.find(trait) != trait_impls_.end();
 }
 
-bool TypeVarNode::implements(TraitImpl impl) const {
+bool TypeVarNode::implements(Trait trait) const {
     // CHECK is this enough?
-    return bounds().find(impl->trait()) != bounds().end();
+    return bounds().find(trait) != bounds().end();
 }
 
 //------------------------------------------------------------------------------
@@ -97,12 +97,12 @@ thorin::Array<Type> CompoundType::specialize_elems(SpecializeMapping& mapping) c
 }
 
 // FIXME this is only a hack
-Generic* TypeErrorNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = (Generic*) typetable().type_error().node(); }
-Generic* PrimTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = (Generic*) typetable().primtype(primtype_kind()).node(); }
-Generic* FnTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = (Generic*) typetable().fntype(specialize_elems(mapping)).node(); }
-Generic* TupleTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = (Generic*) typetable().tupletype(specialize_elems(mapping)).node(); }
+Generic* TypeErrorNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = (Generic*) typetable().type_error().node(); }
+Generic* PrimTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = (Generic*) typetable().primtype(primtype_kind()).node(); }
+Generic* FnTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = (Generic*) typetable().fntype(specialize_elems(mapping)).node(); }
+Generic* TupleTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = (Generic*) typetable().tupletype(specialize_elems(mapping)).node(); }
 
-Generic* TypeVarNode::vspecialize(SpecializeMapping& mapping) const {
+Generic* TypeVarNode::vspecialize(SpecializeMapping& mapping) {
     // was not bound in the specialized type -> return orginal type var
     return mapping[const_cast<TypeVarNode*>(this)] = (Generic*) typetable().new_unifiable(this).node(); // HACK
 }

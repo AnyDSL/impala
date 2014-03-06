@@ -59,14 +59,13 @@ void Generic::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
     for (size_t i = 0; i < var_instances.size(); ++i) {
         Type instance = var_instances[i];
 
-        // FIXME 
-        //for (Trait bound : bound_var(i)->bounds())
+        for (Trait bound : bound_var(i)->bounds())
             // TODO better error handling
-            //assert(instance->implements(bound));
+            assert(instance->implements(bound));
     }
 }
 
-Generic* Generic::instantiate(thorin::ArrayRef<Type> var_instances) const {
+Generic* Generic::ginstantiate(thorin::ArrayRef<Type> var_instances) {
     check_instantiation(var_instances);
 
     SpecializeMapping mapping;
@@ -81,7 +80,7 @@ Generic* Generic::instantiate(thorin::ArrayRef<Type> var_instances) const {
     return instance;
 }
 
-Generic* Generic::specialize(SpecializeMapping& mapping) const {
+Generic* Generic::specialize(SpecializeMapping& mapping) {
     // FEATURE this could be faster if we copy only types were something changed inside
     auto it = mapping.find(this);
     if (it != mapping.end())

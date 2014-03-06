@@ -52,8 +52,9 @@ public:
 
     virtual bool is_closed() const { return true; } // TODO
 
+protected:
     /// copy this trait but replace the sub-elements given in the mapping
-    TraitNode* vspecialize(SpecializeMapping&) const;
+    TraitNode* vspecialize(SpecializeMapping&);
 
 private:
     const TraitDecl* const trait_decl_;
@@ -82,8 +83,9 @@ public:
 
     virtual bool is_closed() const;
 
+protected:
     /// copy this trait but replace the sub-elements given in the mapping
-    TraitNode* vspecialize(SpecializeMapping&) const;
+    TraitNode* vspecialize(SpecializeMapping&);
 
 private:
     const Trait trait() const { return trait_; }
@@ -113,8 +115,9 @@ public:
 
     virtual bool is_closed() const { return true; } // TODO
 
+protected:
     /// copy this \p TraitImplNode but replace the sub-elements given in the mapping
-    TraitImplNode* vspecialize(SpecializeMapping&) const { return new TraitImplNode(typetable(), impl_decl(), trait()); } // FIXME specialization
+    TraitImplNode* vspecialize(SpecializeMapping&) { return new TraitImplNode(typetable(), impl_decl(), trait()); } // FIXME specialization
 
     virtual std::string to_string() const { return ""; } // TODO
 
