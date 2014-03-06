@@ -37,10 +37,10 @@ template<class T> void TypeTable::insert_new(TypetableSet<T>& set, T* unifiable)
 
     for (TypeVar v : unifiable->bound_vars()) {
         bool changed = false;
-        for (auto r : v->bounds()) {
-            if (!r.is_unified()) {
+        for (Trait r : v->bounds()) {
+            if (!r->is_unified()) {
                 changed = unify(r) || changed;
-                assert(r.is_unified());
+                assert(r->is_unified());
             }
         }
         // we have to renew the bounds set because the hashes may have changed during unification
@@ -56,9 +56,9 @@ template<class T> void TypeTable::insert_new(TypetableSet<T>& set, T* unifiable)
 
 void TypeTable::insert_new_rec(TypeNode* type) {
     for (Type elem : type->elems_) {
-        if (!elem.is_unified()) {
+        if (!elem->is_unified()) {
             unify(elem);
-            assert(elem.is_unified());
+            assert(elem->is_unified());
         }
     }
 }

@@ -34,11 +34,10 @@ public:
     {}
 
     bool empty() const { return node_ == nullptr; }
-    bool is_unified() const { return deref()->is_unified(); } // TODO remove this
     bool operator == (const Proxy<T>& other) const {
         assert(&node()->typetable() == &other.node()->typetable());
-        if (!this->is_unified()) node()->typetable().unify(*this);
-        if (!other.is_unified()) node()->typetable().unify(other);
+        if (!node()->is_unified()) node()->typetable().unify(*this);
+        if (!other->is_unified()) node()->typetable().unify(other);
         return representative() == other.representative();
     }
     bool operator != (const Proxy<T>& other) { return !(*this == other); }
