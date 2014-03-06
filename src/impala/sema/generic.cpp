@@ -59,9 +59,10 @@ void Generic::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
     for (size_t i = 0; i < var_instances.size(); ++i) {
         Type instance = var_instances[i];
 
-        for (Trait bound : bound_var(i)->bounds())
+        // FIXME 
+        //for (Trait bound : bound_var(i)->bounds())
             // TODO better error handling
-            assert(instance->implements(bound));
+            //assert(instance->implements(bound));
     }
 }
 

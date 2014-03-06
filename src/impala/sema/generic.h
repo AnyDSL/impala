@@ -24,10 +24,12 @@ template<class T> using NodeSet = std::unordered_set<T, NodeHash<T>, NodeEqual<T
 template<class T>
 class Proxy {
 public:
+    typedef T BaseType;
+
     Proxy()
         : node_(nullptr)
     {}
-    Proxy(T* node)
+    explicit Proxy(T* node)
         : node_(node)
     {}
 
@@ -42,11 +44,17 @@ public:
     bool operator != (const Proxy<T>& other) { return !(*this == other); }
     operator T* () const { return deref(); } // CHECK shouldn't we remove this?
     T* operator -> () const { return deref(); }
+    /// Automatic up-cast in the class hierarchy.
     template<class U> operator Proxy<U>() {
-        // TODO static assert that U is a super type of T
+        static_assert(std::is_base_of<U, T>::value, "R is not a base type of L");
         return Proxy<U>((U*) node_);
     }
-    //Proxy<T>& operator = (T* other) { node_ = other; return *this; } CHECK isn't this just adding confusion?
+    template<class U> Proxy<typename U::BaseType> isa() { 
+        return Proxy<typename U::BaseType>(node_->isa<typename U::BaseType>());
+    }
+    template<class U> Proxy<typename U::BaseType> as() { 
+        return Proxy<typename U::BaseType>(node_->as<typename U::BaseType>());
+    }
     // FEATURE make most of this stuff private!
 
 private:
