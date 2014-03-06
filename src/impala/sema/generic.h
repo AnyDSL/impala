@@ -133,6 +133,13 @@ public:
     T* representative() const { return representative_; }
     bool is_final_representative() const { return representative() == this->template as<T>(); }
     bool is_unified() const { return representative_ != nullptr; }
+    virtual bool equal(T*) const = 0;
+    virtual bool equal(Generic* g) const {
+        /*if (const T* t = other->isa<T>()) { FIXME how can we cast this?
+            return equal(t);
+        }*/
+        return false;
+    }
     virtual bool equal(const Unifiable<T>* u) const {
         // TODO
         return true;
