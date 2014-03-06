@@ -126,6 +126,7 @@ private:
     void check_instantiation(thorin::ArrayRef<Type>) const;
 
     friend class TypeVarNode;
+    friend class TraitInstanceNode;
 };
 
 template<class T>

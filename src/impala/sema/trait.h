@@ -117,7 +117,7 @@ public:
 
 protected:
     /// copy this \p TraitImplNode but replace the sub-elements given in the mapping
-    TraitImplNode* vspecialize(SpecializeMapping&) { return new TraitImplNode(typetable(), impl_decl(), trait()); } // FIXME specialization
+    TraitImplNode* vspecialize(SpecializeMapping&) { return new TraitImplNode(typetable(), impl_decl(), trait()); } // TODO specialization
 
     virtual std::string to_string() const { return ""; } // TODO
 

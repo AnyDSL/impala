@@ -100,8 +100,9 @@ private:
 
     template<class T> bool unify_base(TypetableSet<T>&, T*);
 
-    TraitInstanceNode* instantiate_trait(TraitNode* trait, SpecializeMapping& mapping) {
-        return new_unifiable(new TraitInstanceNode(Trait(trait), mapping)).node();
+    TraitInstanceNode* instantiate_trait(TraitNode* trait, SpecializeMapping& mapping) { return instantiate_trait(Trait(trait), mapping); }
+    TraitInstanceNode* instantiate_trait(Trait trait, SpecializeMapping& mapping) {
+        return new_unifiable(new TraitInstanceNode(trait, mapping)).node();
     }
 
     TypetableSet<TypeNode> types_;
@@ -114,6 +115,7 @@ private:
 
     friend class TypeVarNode;
     friend class TraitNode;
+    friend class TraitInstanceNode;
 };
 
 }

@@ -24,12 +24,11 @@ TraitNode* TraitNode::vspecialize(SpecializeMapping& mapping) {
 }
 
 TraitNode* TraitInstanceNode::vspecialize(SpecializeMapping& mapping) {
-    /*std::vector<Type> instances; FIXME specialization
+    SpecializeMapping m;
     for (auto i : var_instances())
-        instances.push_back(i->specialize(mapping));
+        m[i.first] = i.second->specialize(mapping);
 
-    return typetable().instantiate_trait(trait(), instances);*/
-    return nullptr;
+    return typetable().instantiate_trait(trait(), m);
 }
 
 }
