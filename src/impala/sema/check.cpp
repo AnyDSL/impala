@@ -347,7 +347,7 @@ void PathExpr::check(Sema& sema) const {
                 for (const ASTType* t : last_item->types())
                     type_args.push_back(t->to_type(sema));
 
-                //set_type(vdec->calc_type(sema)->instantiate(type_args)); FIXME how can we cast this?
+                set_type(vdec->calc_type(sema)->instantiate(type_args));
             } else
                 set_type(vdec->calc_type(sema));
         }

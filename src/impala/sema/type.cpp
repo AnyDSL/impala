@@ -91,28 +91,27 @@ bool TypeVarNode::implements(Trait trait) const {
 
 thorin::Array<Type> CompoundType::specialize_elems(SpecializeMapping& mapping) const {
     thorin::Array<Type> nelems(size());
-    /*for (size_t i = 0, e = size(); i != e; ++i)
-        nelems[i] = elem(i)->specialize(mapping); FIXME how can we cast this? */
+    for (size_t i = 0, e = size(); i != e; ++i)
+        nelems[i] = Type(elem(i)->specialize(mapping)->as<TypeNode>());
     return nelems;
 }
 
-// FIXME this is only a hack
-Generic* TypeErrorNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = (Generic*) typetable().type_error().node(); }
-Generic* PrimTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = (Generic*) typetable().primtype(primtype_kind()).node(); }
-Generic* FnTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = (Generic*) typetable().fntype(specialize_elems(mapping)).node(); }
-Generic* TupleTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = (Generic*) typetable().tupletype(specialize_elems(mapping)).node(); }
+Generic* TypeErrorNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().type_error().node(); }
+Generic* PrimTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().primtype(primtype_kind()).node(); }
+Generic* FnTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().fntype(specialize_elems(mapping)).node(); }
+Generic* TupleTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().tupletype(specialize_elems(mapping)).node(); }
 
 Generic* TypeVarNode::vspecialize(SpecializeMapping& mapping) {
     // was not bound in the specialized type -> return orginal type var
-    return mapping[const_cast<TypeVarNode*>(this)] = (Generic*) typetable().new_unifiable(this).node(); // HACK
+    return mapping[const_cast<TypeVarNode*>(this)] = typetable().new_unifiable(this).node(); // HACK
 }
 
 TypeVar TypeVarNode::clone(SpecializeMapping& mapping) const {
     TypeVar v = typetable().typevar();
 
     // copy bounds!
-    /*for (Trait b : bounds())
-        v->add_bound(b->specialize(mapping)); FIXME how can we cast this?*/
+    for (Trait b : bounds())
+        v->add_bound(Trait(b->specialize(mapping)->as<TraitNode>()));
 
     return v;
 }

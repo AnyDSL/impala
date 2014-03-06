@@ -95,7 +95,7 @@ Generic* Generic::specialize(SpecializeMapping& mapping) {
 
     for (auto v : bound_vars()) {
         assert(mapping.find(v.node()) != mapping.end());
-        //t->add_bound_var(mapping[v.node()]->as<TypeVarNode>()); FIXME how can we cast this?
+        t->add_bound_var(TypeVar(mapping[v.node()]->as<TypeVarNode>()));
     }
 
     return t;

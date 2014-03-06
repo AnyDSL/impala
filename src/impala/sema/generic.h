@@ -124,6 +124,8 @@ protected:
 private:
     /// raise error if a type does not implement the required traits;
     void check_instantiation(thorin::ArrayRef<Type>) const;
+
+    friend class TypeVarNode;
 };
 
 template<class T>
@@ -150,7 +152,7 @@ public:
 
     Proxy<T> instantiate(thorin::ArrayRef<Type> var_instances) {
         // TODO maybe unify?
-        return Proxy<T>(ginstantiate(var_instances)->as<T>);
+        return Proxy<T>(ginstantiate(var_instances)->as<T>());
     }
 
 private:
