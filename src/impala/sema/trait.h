@@ -46,7 +46,7 @@ private:
 
 public:
     virtual bool equal(const TraitNode* other) const { return this->trait_decl() == other->trait_decl(); }
-    virtual size_t hash() const { return thorin::hash_value(trait_decl()); }
+    virtual size_t hash() const;
     const TraitDecl* trait_decl() const { return trait_decl_; }
     virtual std::string to_string() const;
 
@@ -108,8 +108,8 @@ class TraitImplNode : public Unifiable<TraitImplNode> {
     TraitImplNode(const TraitImplNode&);              ///< Do not copy-construct a \p TraitImpl.
 
 public:
-    bool equal(const TraitImplNode* other) const { return this->impl_decl() == other->impl_decl(); }
-    size_t hash() const { return thorin::hash_value(impl_decl()); }
+    virtual bool equal(const TraitImplNode* other) const { return this->impl_decl() == other->impl_decl(); }
+    virtual size_t hash() const;
     const Impl* impl_decl() const { return impl_decl_; }
     Trait trait() const { return trait_; }
 

@@ -148,7 +148,6 @@ public:
             return equal(t);
         return false;
     }
-    virtual size_t hash() const = 0;
 
     Proxy<T> instantiate(thorin::ArrayRef<Type> var_instances) {
         Proxy<T> u = Proxy<T>(ginstantiate(var_instances)->as<T>());

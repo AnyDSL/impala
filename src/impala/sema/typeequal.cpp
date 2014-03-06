@@ -20,8 +20,20 @@ size_t TypeNode::hash() const {
     for (auto elem : elems_)
         seed = hash_combine(seed, elem->hash());
 
-    return seed;
+    return hash_combine(seed, 0); // 0 because this is a TypeNode
 }
+
+size_t TraitNode::hash() const {
+    return hash_combine(hash_value(trait_decl()), 1); // 1 because this is a TraitNode
+}
+
+// FEATURE better hash function
+size_t TraitInstanceNode::hash() const { return trait()->hash(); }
+
+size_t TraitImplNode::hash() const {
+    return hash_combine(hash_value(impl_decl()), 2); // 2 because this is a TraitImplNode
+}
+
 
 bool TypeNode::equal(const TypeNode* other) const {
     //assert(this != other && "double insert"); // TODO what happens in this case?
@@ -120,8 +132,5 @@ bool TraitInstanceNode::equal(const TraitNode* other) const {
     }
     return false;
 }
-
-// FEATURE better hash function
-size_t TraitInstanceNode::hash() const { return trait()->hash(); }
 
 }

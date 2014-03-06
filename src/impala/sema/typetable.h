@@ -25,30 +25,10 @@ template<class T> using TypetableSet = std::unordered_set<T*, TypetableHash<T>, 
 
 //------------------------------------------------------------------------------
 
-// FEATURE maybe this can be simplified using the common inheritance
-class UnifiableSet {
-public:
-    UnifiableSet() {}
-    ~UnifiableSet();
-
-    void add(const TypeNode* t) { types_.push_back(t); }
-    void add(const TraitNode* t) { traits_.push_back(t); }
-    void add(const TraitImplNode* impl) { trait_impls_.push_back(impl); }
-
-private:
-    std::vector<const TypeNode*> types_;
-    std::vector<const TraitNode*> traits_;
-    std::vector<const TraitImplNode*> trait_impls_;
-
-    friend class TypeTable;
-};
-
-//------------------------------------------------------------------------------
-
 class TypeTable {
 public:
     TypeTable();
-    ~TypeTable() {}
+    ~TypeTable();
 
     TypeError type_error() { return type_error_; }
     PrimType primtype(PrimTypeKind kind);
@@ -63,9 +43,7 @@ public:
     TupleType unit() { return tupletype({}); }
 
     /// unify a type and return \p true if the representative changed
-    bool unify(Type t) { return unify_base(types_, t.node()); }
-    bool unify(Trait t) { return unify_base(traits_, t.node()); }
-    bool unify(TraitImpl t) { return unify_base(trait_impls_, t.node()); }
+    template<class T> bool unify(Proxy<T> t);
 
     /// Checks if all types in the type tables are sane and correctly unified.
     void verify() const;
@@ -73,12 +51,12 @@ public:
 private:
     template<class T> 
     Proxy<T> new_unifiable(T* tn) {
-        unifiables_.add(tn);
+        garbage_.push_back(tn);
         return Proxy<T>(tn);
     }
 
     /// insert all contained unifiables that are not yet unified
-    template<class T> void insert_new(TypetableSet<T>&, T*);
+    template<class T> void insert_new(T*);
     /// insert all contained types
     void insert_new_rec(TypeNode*);
     void insert_new_rec(TraitNode*);
@@ -98,17 +76,13 @@ private:
     void change_repr_rec(TraitNode* t, TraitNode* repr) const {}
     void change_repr_rec(TraitImplNode* t, TraitImplNode* repr) const {}
 
-    template<class T> bool unify_base(TypetableSet<T>&, T*);
-
     TraitInstanceNode* instantiate_trait(TraitNode* trait, SpecializeMapping& mapping) { return instantiate_trait(Trait(trait), mapping); }
     TraitInstanceNode* instantiate_trait(Trait trait, SpecializeMapping& mapping) {
         return new_unifiable(new TraitInstanceNode(trait, mapping)).node();
     }
 
-    TypetableSet<TypeNode> types_;
-    TypetableSet<TraitNode> traits_;
-    TypetableSet<TraitImplNode> trait_impls_;
-    UnifiableSet unifiables_;
+    TypetableSet<Generic> unifiables_;
+    std::vector<Generic*> garbage_;
 #define IMPALA_TYPE(itype, atype) PrimType itype##_;
 #include "impala/tokenlist.h"
     TypeError type_error_;

@@ -11,16 +11,8 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-UnifiableSet::~UnifiableSet() {
-    for (auto t : types_) delete t;
-    for (auto t : traits_) delete t;
-    for (auto t : trait_impls_) delete t;
-}
-
-//------------------------------------------------------------------------------
-
 TypeTable::TypeTable()
-    : types_()
+    : unifiables_()
 #define IMPALA_TYPE(itype, atype) , itype##_(new_unifiable(new PrimTypeNode(*this, PrimType_##itype)))
 #include "impala/tokenlist.h"
     , type_error_(new_unifiable(new TypeErrorNode(*this)))
@@ -31,7 +23,9 @@ TypeTable::TypeTable()
     unify(t = type_error_); // TODO remove this hacked cast
 }
 
-template<class T> void TypeTable::insert_new(TypetableSet<T>& set, T* unifiable) {
+TypeTable::~TypeTable() { for (Generic* g : garbage_) delete g; }
+
+template<class T> void TypeTable::insert_new(T* unifiable) {
     assert(!unifiable->is_unified());
     unifiable->set_representative(unifiable);
 
@@ -50,7 +44,7 @@ template<class T> void TypeTable::insert_new(TypetableSet<T>& set, T* unifiable)
     insert_new_rec(unifiable);
 
     // CHECK does it cause any problems to put TypeVars into the type-set?
-    auto p = set.insert(unifiable->representative());
+    auto p = unifiables_.insert(unifiable->representative());
     assert(p.second && "hash/equal broken");
 }
 
@@ -118,28 +112,31 @@ void TypeTable::change_repr(T* t, T* repr) const {
 }
 
 template<class T>
-bool TypeTable::unify_base(TypetableSet<T>& set, T* unifiable) {
+bool TypeTable::unify(Proxy<T> elem) {
+    T* unifiable = elem.node();
+
     assert(!unifiable->is_unified() && "Unifiable is already unified!");
     assert(unifiable->is_closed() && "Only closed unifiables can be unified!");
 
-    auto i = set.find(unifiable);
+    auto i = unifiables_.find(unifiable);
 
-    if (i != set.end()) {
-        assert(*i != unifiable && "Already unified");
-        change_repr(unifiable, *i);
-        assert(unifiable->representative() == (*i));
+    if (i != unifiables_.end()) {
+        T* repr = (*i)->template as<T>();
+        assert(repr != unifiable && "Already unified");
+        change_repr(unifiable, repr);
+        assert(unifiable->representative() == repr);
         return true;
     } else {
-        insert_new(set, unifiable);
+        insert_new(unifiable);
         assert(unifiable->representative() == unifiable);
         return false;
     }
 }
 
-// force instantiation
-template bool TypeTable::unify_base(TypetableSet<TypeNode>& set, TypeNode* unifiable);
+// force instantiation REMINDER remove this
+/*template bool TypeTable::unify_base(TypetableSet<TypeNode>& set, TypeNode* unifiable);
 template bool TypeTable::unify_base(TypetableSet<TraitNode>& set, TraitNode* unifiable);
-template bool TypeTable::unify_base(TypetableSet<TraitImplNode>& set, TraitImplNode* unifiable);
+template bool TypeTable::unify_base(TypetableSet<TraitImplNode>& set, TraitImplNode* unifiable);*/
 
 PrimType TypeTable::primtype(const PrimTypeKind kind) {
     switch (kind) {
@@ -150,35 +147,29 @@ PrimType TypeTable::primtype(const PrimTypeKind kind) {
 }
 
 void TypeTable::verify() const {
-    for (auto t : types_) {
-        assert(t->is_sane());
-        assert(t->is_final_representative());
-    }
-    for (auto t : traits_) {
-        assert(t->is_closed());
-        assert(t->is_final_representative());
-    }
-    for (auto t : trait_impls_) {
-        assert(t->is_closed());
-        assert(t->is_final_representative());
+    for (auto g : unifiables_) {
+        if (auto type = g->isa<TypeNode>()) {
+            assert(type->is_sane());
+            assert(type->is_final_representative());
+        } else if (auto trait = g->isa<TraitNode>()) {
+            assert(trait->is_closed());
+            assert(trait->is_final_representative());
+        } else if (auto impl = g->isa<TraitImplNode>()) {
+            assert(impl->is_closed());
+            assert(impl->is_final_representative());
+        }
     }
 
-    for (auto t : unifiables_.types_) {
-        if (t->is_unified()) {
-            auto i = types_.find(t->representative());
-            assert(i != types_.end());
-        }
-    }
-    for (auto t : unifiables_.traits_) {
-        if (t->is_unified()) {
-            auto i = traits_.find(t->representative());
-            assert(i != traits_.end());
-        }
-    }
-    for (auto t : unifiables_.trait_impls_) {
-        if (t->is_unified()) {
-            auto i = trait_impls_.find(t->representative());
-            assert(i != trait_impls_.end());
+    for (auto g : garbage_) {
+        if (auto type = g->isa<TypeNode>()) {
+            if (type->is_unified())
+                assert(unifiables_.find(type->representative()) != unifiables_.end());
+        } else if (auto trait = g->isa<TraitNode>()) {
+            if (trait->is_unified())
+                assert(unifiables_.find(trait->representative()) != unifiables_.end());
+        } else if (auto impl = g->isa<TraitImplNode>()) {
+            if (impl->is_unified())
+                assert(unifiables_.find(impl->representative()) != unifiables_.end());
         }
     }
 }
