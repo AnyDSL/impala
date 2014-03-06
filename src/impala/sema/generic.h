@@ -99,6 +99,7 @@ public:
     virtual bool equal(const Generic*) const = 0;
     virtual size_t hash() const = 0;
     std::string bound_vars_to_string() const;
+    virtual std::string to_string() const = 0;
 
     Generic* instantiate(thorin::ArrayRef<Type> var_instances) const;
     /**
@@ -133,8 +134,8 @@ public:
     T* representative() const { return representative_; }
     bool is_final_representative() const { return representative() == this->template as<T>(); }
     bool is_unified() const { return representative_ != nullptr; }
-    virtual bool equal(T*) const = 0;
-    virtual bool equal(Generic* g) const {
+    virtual bool equal(const T*) const = 0;
+    virtual bool equal(const Generic* g) const {
         /*if (const T* t = other->isa<T>()) { FIXME how can we cast this?
             return equal(t);
         }*/
