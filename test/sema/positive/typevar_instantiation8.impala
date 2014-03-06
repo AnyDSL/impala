@@ -4,5 +4,5 @@ fn f[A : T[bool]](x:A) -> A {
    x
 }
 fn main() -> int32 {
-   f[int32](4);
+   f[int32](4)
 }
