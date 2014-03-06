@@ -66,7 +66,7 @@ public:
     void dump() const;
     virtual std::string to_string() const = 0;
 
-    void add_implementation(Trait);
+    void add_implementation(TraitImpl);
     virtual bool implements(Trait) const;
 
     bool is_generic() const {

@@ -72,8 +72,8 @@ bool TypeVarNode::is_closed() const {
 
 //------------------------------------------------------------------------------
 
-void TypeNode::add_implementation(Trait impl) {
-    auto p = trait_impls_.insert(impl);
+void TypeNode::add_implementation(TraitImpl impl) {
+    auto p = trait_impls_.insert(impl->trait());
     assert(p.second && "hash/equal broken");
 }
 

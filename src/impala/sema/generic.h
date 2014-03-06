@@ -83,7 +83,7 @@ typedef Proxy<TraitNode> Trait;
 typedef Proxy<TraitImplNode> TraitImpl;
 
 class Generic;
-typedef std::unordered_map<const Generic*, Generic*> SpecializeMapping; // FIXME specialization
+typedef std::unordered_map<const Generic*, Generic*> SpecializeMapping;
 
 //------------------------------------------------------------------------------
 
@@ -152,8 +152,9 @@ public:
     virtual size_t hash() const = 0;
 
     Proxy<T> instantiate(thorin::ArrayRef<Type> var_instances) {
-        // TODO maybe unify?
-        return Proxy<T>(ginstantiate(var_instances)->as<T>());
+        Proxy<T> u = Proxy<T>(ginstantiate(var_instances)->as<T>());
+        typetable().unify(u);
+        return u;
     }
 
 private:

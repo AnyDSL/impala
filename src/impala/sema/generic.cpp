@@ -75,8 +75,6 @@ Generic* Generic::ginstantiate(thorin::ArrayRef<Type> var_instances) {
         mapping[v.node()] = var_instances[i];
 
     Generic* instance = vspecialize(mapping);
-    //typetable().unify(instance); FIXME specialization -- unification
-
     return instance;
 }
 

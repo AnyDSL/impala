@@ -153,8 +153,7 @@ Trait ASTTypeApp::to_trait(Sema& sema) const {
             for (auto e : elems())
                 type_args.push_back(e->to_type(sema));
 
-            //return sema.instantiate_trait(trait_decl->calc_trait(sema), type_args); FIXME specialization
-            return trait_decl->calc_trait(sema);
+            return trait_decl->calc_trait(sema)->instantiate(type_args);
         } else
             sema.error(this) << "cannot convert a type variable into a trait instance\n";
     }
@@ -286,9 +285,7 @@ void Impl::check(Sema& sema) const {
     // TODO currently symbol() gives the trait name, this does not handle stuff like 'impl T[int] for S {}'
     if (auto decl = sema.lookup(this, Symbol() /*TODO*/)) {
         if (auto trait = decl->isa<TraitDecl>()) {
-            // create TraitImpl
-            /*Trait tinst = sema.instantiate_trait(trait->calc_trait(sema), {}); FIXME specialization
-            const TraitImpl* impl = sema.implement_trait(this, tinst);
+            TraitImpl impl = sema.implement_trait(this, trait->calc_trait(sema));
 
             // add impl to type
             Type t = for_type()->to_type(sema);
@@ -297,7 +294,7 @@ void Impl::check(Sema& sema) const {
 
             // FEATURE check that all methods are implemented
             for (auto fn : methods())
-                fn->check(sema);*/
+                fn->check(sema);
         } else
             sema.error(decl) << decl << " is not the name of a trait.\n";
     }
