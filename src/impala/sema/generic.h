@@ -49,12 +49,10 @@ public:
         static_assert(std::is_base_of<U, T>::value, "R is not a base type of L");
         return Proxy<U>((U*) node_);
     }
-    template<class U> Proxy<typename U::BaseType> isa() { 
-        return Proxy<typename U::BaseType>(node_->isa<typename U::BaseType>());
-    }
-    template<class U> Proxy<typename U::BaseType> as() { 
-        return Proxy<typename U::BaseType>(node_->as<typename U::BaseType>());
-    }
+    template<class U> 
+    Proxy<typename U::BaseType> isa() { return Proxy<typename U::BaseType>(node_->isa<typename U::BaseType>()); }
+    template<class U> 
+    Proxy<typename U::BaseType> as() { return Proxy<typename U::BaseType>(node_->as<typename U::BaseType>()); }
     // FEATURE make most of this stuff private!
 
 private:
@@ -143,15 +141,10 @@ public:
     bool is_final_representative() const { return representative() == this->template as<T>(); }
     bool is_unified() const { return representative_ != nullptr; }
     virtual bool equal(const T*) const = 0;
-    virtual bool equal(const Generic* g) const {
-        /*if (const T* t = other->isa<T>()) { FIXME how can we cast this?
+    virtual bool equal(const Generic* other) const {
+        if (const T* t = other->isa<T>())
             return equal(t);
-        }*/
         return false;
-    }
-    virtual bool equal(const Unifiable<T>* u) const {
-        // TODO
-        return true;
     }
     virtual size_t hash() const = 0;
 
