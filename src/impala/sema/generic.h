@@ -167,6 +167,9 @@ protected:
     friend class TypeTable;
 };
 
+template<class T>
+std::ostream& operator << (std::ostream& o, Proxy<T> u) { return o << u->to_string(); }
+
 }
 
 #endif
