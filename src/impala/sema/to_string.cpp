@@ -9,17 +9,18 @@ namespace impala {
 void TypeNode::dump() const { std::cout << to_string() << std::endl; }
 void TraitInstanceNode::dump() const { std::cout << to_string() << std::endl; }
 
-std::string Trait::to_string() const { return is_error_trait() ? "<error trait>" : trait_decl()->symbol().str(); }
+std::string TraitNode::to_string() const { return is_error_trait() ? "<error trait>" : trait_decl()->symbol().str(); }
 
 std::string TraitInstanceNode::to_string() const {
-    std::string result = trait_->to_string();
+    std::string result = trait()->to_string();
 
-    if (var_inst_size() == 0)
+    if (var_instances_.empty())
         return result;
 
     const char* separator = "[";
-    for (auto v : var_instances_) {
-        result += separator + v->to_string();
+    for (TypeVar tv : trait()->bound_vars()) {
+        assert(var_instances_.find(tv) != var_instances_.end());
+        result += separator + var_instances_.find(tv)->second->to_string();
         separator = ",";
     }
 

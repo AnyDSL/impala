@@ -5,7 +5,9 @@
  *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
  */
 
+#include "impala/sema/type.h"
 #include "impala/sema/trait.h"
+#include "impala/sema/typetable.h"
 
 using namespace thorin;
 
@@ -18,15 +20,20 @@ size_t TypeNode::hash() const {
     for (auto elem : elems_)
         seed = hash_combine(seed, elem->hash());
 
-    return seed;
+    return hash_combine(seed, 0); // 0 because this is a TypeNode
 }
 
-bool TypeNode::equal(const Generic* other) const {
-    if (const TypeNode* t = other->isa<TypeNode>()) {
-        return equal(t);
-    }
-    return false;
+size_t TraitNode::hash() const {
+    return hash_combine(hash_value(trait_decl()), 1); // 1 because this is a TraitNode
 }
+
+// FEATURE better hash function
+size_t TraitInstanceNode::hash() const { return trait()->hash(); }
+
+size_t TraitImplNode::hash() const {
+    return hash_combine(hash_value(impl_decl()), 2); // 2 because this is a TraitImplNode
+}
+
 
 bool TypeNode::equal(const TypeNode* other) const {
     //assert(this != other && "double insert"); // TODO what happens in this case?
@@ -37,16 +44,17 @@ bool TypeNode::equal(const TypeNode* other) const {
     if (!result)
         return false;
 
+    // CHECK is deref below correct? -- two times below!
     // set equivalence constraints for type variables
     for (size_t i = 0, e = num_bound_vars(); i != e; ++i)
-        this->bound_var(i)->set_equiv_variable(other->bound_var(i).representative());
+        this->bound_var(i)->set_equiv_variable(other->bound_var(i).deref());
 
     // check equality of the restrictions of the type variables
     for (size_t i = 0, e = num_bound_vars(); i != e && result; ++i)
         result &= this->bound_var(i)->bounds_equal(other->bound_var(i));
 
     for (size_t i = 0, e = size(); i != e && result; ++i)
-        result &= this->elem(i)->equal(other->elem(i).representative());
+        result &= this->elem(i)->equal(other->elem(i).deref());
 
     // unset equivalence constraints for type variables
     for (size_t i = 0, e = num_bound_vars(); i != e; ++i)
@@ -56,23 +64,20 @@ bool TypeNode::equal(const TypeNode* other) const {
 }
 
 bool TypeVarNode::bounds_equal(const TypeVar other) const {
-    TraitInstSet trestr = other->bounds();
-
-    if (this->bounds().size() != trestr.size())
+    if (this->bounds().size() != other->bounds().size())
         return false;
 
     // FEATURE this works but seems too much effort, at least use a set that uses representatives
-    TraitInstanceNodeTableSet ttis;
-    for (auto r : trestr) {
-        auto p = ttis.insert(r.representative());
+    TypetableSet<TraitNode> obounds;
+    for (Trait r : other->bounds()) {
+        auto p = obounds.insert(r.deref()); // TODO is deref here and below correct?
         assert(p.second && "hash/equal broken");
     }
 
     // this->bounds() subset of trestr
-    for (auto r : this->bounds()) {
-        if (ttis.find(r.representative()) == ttis.end()) {
+    for (Trait r : this->bounds()) {
+        if (obounds.find(r.deref()) == obounds.end())
             return false;
-        }
     }
 
     return true;
@@ -92,8 +97,8 @@ bool TypeVarNode::equal(const TypeNode* other) const {
                 bool result = bound_at()->num_bound_vars() == t->bound_at()->num_bound_vars();
                 size_t i;
                 for (i = 0; (i < bound_at()->num_bound_vars()) && result; ++i) {
-                    if (bound_at()->bound_var(i).representative() == this) {
-                        result &= t->bound_at()->bound_var(i).representative() == t;
+                    if (bound_at()->bound_var(i).node() == this) { // CHECK is node() here and below correct?
+                        result &= t->bound_at()->bound_var(i).node() == t;
                         break;
                     }
                 }
@@ -112,32 +117,20 @@ bool TypeVarNode::equal(const TypeNode* other) const {
     return false;
 }
 
-bool TraitInstanceNode::equal(const TraitInstanceNode* other) const {
-    // CHECK use equal?
-    if (trait_ != other->trait_)
-        return false;
-
-    assert(var_instances_.size() == other->var_instances_.size());
-    for (size_t i = 0; i < var_instances_.size(); ++i) {
-        if (! var_instances_[i].representative()->equal(other->var_instances_[i].representative())) {
+bool TraitInstanceNode::equal(const TraitNode* other) const {
+    if (auto instance = other->isa<TraitInstanceNode>()) {
+        if (trait() != instance->trait())
             return false;
+
+        assert(var_instances_.size() == instance->var_instances_.size());
+        for (auto p : var_instances_) {
+            assert(instance->var_instances_.find(p.first) != instance->var_instances_.end());
+            if (! p.second->equal(instance->var_instances_.find(p.first)->second)) {
+                return false;
+            }
         }
+        return true;
     }
-    return true;
-}
-
-// FEATURE better hash function
-size_t TraitInstanceNode::hash() const { return trait_->hash(); }
-
-bool Trait::equal(const Generic* other) const {
-    if (const Trait* t = other->isa<Trait>())
-        return equal(t);
-    return false;
-}
-
-bool TraitImpl::equal(const Generic* other) const {
-    if (const TraitImpl* t = other->isa<TraitImpl>())
-        return equal(t);
     return false;
 }
 

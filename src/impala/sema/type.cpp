@@ -6,9 +6,10 @@ namespace impala {
 
 int TypeVarNode::counter = 0;
 
-size_t TraitImplHash::operator () (const TraitInstance t) const{ return t->hash(); }
-bool TraitImplEqual::operator () (const TraitInstance t1, const TraitInstance t2) const {
-    // FEATURE consider generic implementations -- this will need some type inference magic!
+// TODO review this
+size_t TraitImplHash::operator () (const Trait t) const{ return t->hash(); }
+bool TraitImplEqual::operator () (const Trait t1, const Trait t2) const {
+    // FEATURE consider generic implementations, ...
     return t1 == t2;
 }
 
@@ -29,14 +30,15 @@ bool TypeNode::is_closed() const {
     return true;
 }
 
-bool TypeNode::is_subtype(const TypeNode* super_type) const {
-    assert(super_type != nullptr);
+// TODO test this
+bool TypeNode::is_subtype(const Type super_type) const {
+    assert(!super_type.empty());
 
-    if (this == super_type)
+    if (this == super_type.deref())
         return true;
 
-    for (auto t : super_type->elems_) {
-        if (this->is_subtype(t.representative()))
+    for (Type t : super_type->elems()) {
+        if (this->is_subtype(t))
             return true;
     }
     return false;
@@ -59,9 +61,9 @@ void TypeVarNode::bind(const Generic* const e) {
     bound_at_ = e;
 }
 
-void TypeVarNode::add_bound(TraitInstance restriction) {
+void TypeVarNode::add_bound(Trait bound) {
     assert(!is_closed() && "Closed type variables must not be changed!");
-    auto p = bounds_.insert(restriction);
+    auto p = bounds_.insert(bound);
     assert(p.second && "hash/equal broken");
 }
 
@@ -71,88 +73,58 @@ bool TypeVarNode::is_closed() const {
 
 //------------------------------------------------------------------------------
 
-void TypeNode::add_implementation(const TraitImpl* impl) {
-    auto p = trait_impls_.insert(impl->trait_inst());
+void TypeNode::add_implementation(TraitImpl impl) {
+    auto p = trait_impls_.insert(impl->trait());
     assert(p.second && "hash/equal broken");
 }
 
-bool TypeNode::implements(TraitInstance trait) const {
+bool TypeNode::implements(Trait trait) const {
     // CHECK is this enough?
     return trait_impls_.find(trait) != trait_impls_.end();
 }
 
-bool TypeVarNode::implements(TraitInstance trait) const {
+bool TypeVarNode::implements(Trait trait) const {
     // CHECK is this enough?
     return bounds().find(trait) != bounds().end();
 }
 
 //------------------------------------------------------------------------------
 
-Type TypeNode::instantiate(thorin::ArrayRef<Type> var_instances) const {
-    SpecializeMapping mapping = check_instantiation(var_instances);
-
-    Type instance = vspecialize(mapping);
-    typetable().unify(instance);
-
-    return instance;
-}
-
-Type TypeNode::specialize(SpecializeMapping& mapping) const {
-    // FEATURE this could be faster if we copy only types were something changed inside
-    auto it = mapping.find(this);
-    if (it != mapping.end())
-        return it->second;
-
-    for (TypeVar v : bound_vars()) {
-        assert(mapping.find(v.representative()) == mapping.end());
-        mapping[v.representative()] = v->clone(mapping);
-    }
-
-    Type t = vspecialize(mapping);
-
-    for (TypeVar v : bound_vars()) {
-        assert(mapping.find(v.representative()) != mapping.end());
-        t->add_bound_var(mapping[v.representative()]);
-    }
-
-    return t;
-}
-
 thorin::Array<Type> CompoundType::specialize_elems(SpecializeMapping& mapping) const {
     thorin::Array<Type> nelems(size());
     for (size_t i = 0, e = size(); i != e; ++i)
-        nelems[i] = elem(i)->specialize(mapping);
+        nelems[i] = Type(elem(i)->specialize(mapping)->as<TypeNode>());
     return nelems;
 }
 
-Type TypeErrorNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().type_error(); }
-Type NoReturnTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().type_noreturn(); }
-Type PrimTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().primtype(primtype_kind()); }
-Type FnTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().fntype(specialize_elems(mapping)); }
-Type TupleTypeNode::vspecialize(SpecializeMapping& mapping) const { return mapping[this] = typetable().tupletype(specialize_elems(mapping)); }
+Generic* TypeErrorNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().type_error().node(); }
+Generic* NoReturnTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().type_noreturn().node(); }
+Generic* PrimTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().primtype(primtype_kind()).node(); }
+Generic* FnTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().fntype(specialize_elems(mapping)).node(); }
+Generic* TupleTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().tupletype(specialize_elems(mapping)).node(); }
 
-Type TypeVarNode::vspecialize(SpecializeMapping& mapping) const {
+Generic* TypeVarNode::vspecialize(SpecializeMapping& mapping) {
     // was not bound in the specialized type -> return orginal type var
-    // FIXME we need to create a new copy here - else unification will lead to segmentation faults!!
-    return mapping[this] = typetable().new_type(this);
+    // FIXME we need to create a new copy here - else unification will lead to segmentation faults!! -- right?
+    return mapping[this] = typetable().new_unifiable(this).node();
 }
 
 TypeVar TypeVarNode::clone(SpecializeMapping& mapping) const {
     TypeVar v = typetable().typevar();
 
     // copy bounds!
-    for (TraitInstance b : bounds())
-        v->add_bound(b->specialize(mapping));
+    for (Trait b : bounds())
+        v->add_bound(Trait(b->specialize(mapping)->as<TraitNode>()));
 
     return v;
 }
 
 void TypeVarNode::refresh_bounds() {
-    std::vector<TraitInstance> tmp;
-    for (TraitInstance i : bounds())
+    std::vector<Trait> tmp;
+    for (Trait i : bounds())
         tmp.push_back(i);
     bounds_.clear();
-    for (TraitInstance i : tmp) {
+    for (Trait i : tmp) {
         auto p = bounds_.insert(i);
         assert(p.second && "hash/equal broken");
     }
@@ -166,8 +138,8 @@ void verify(thorin::ArrayRef<const Type> types) {
 
     for (auto t1 : types) {
         for (auto t2 : types) {
-            if (t1.is_unified() && t2.is_unified()) {
-                if (!((!t1.representative()->equal(t2.representative())) || (t1.representative() == t2.representative()))) {
+            if (t1->is_unified() && t2->is_unified()) {
+                if (!((!t1->equal(t2)) || (t1 == t2))) {
                     t1->dump();
                     t2->dump();
                     assert(false);

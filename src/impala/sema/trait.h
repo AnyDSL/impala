@@ -8,17 +8,17 @@
 #ifndef IMPALA_SEMA_TRAIT_H
 #define IMPALA_SEMA_TRAIT_H
 
-#include "impala/sema/type.h"
+#include <unordered_map>
+#include <unordered_set>
+
+#include "impala/sema/generic.h"
 
 namespace impala {
 
-class TraitDecl;
+class FnTypeNode;
 class Impl;
-
-struct TraitMethod {
-    std::string name;
-    FnType type;
-};
+class TraitDecl;
+typedef Proxy<FnTypeNode> FnType;
 
 /**
  * Represents a declared trait.
@@ -33,30 +33,32 @@ struct TraitMethod {
  *
  * @see TraitInstance
  */
-class Trait : public Generic {
-private:
-    Trait(TypeTable& tt, const TraitDecl* trait_decl, const TraitSet super_traits)
-        : Generic(tt)
+class TraitNode : public Unifiable<TraitNode> {
+protected:
+    TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
+        : Unifiable(tt)
         , trait_decl_(trait_decl)
-        , super_traits_(super_traits)
     {}
-    Trait& operator = (const Trait&); ///< Do not copy-assign a \p Trait.
-    Trait(const Trait& node);         ///< Do not copy-construct a \p Trait.
+
+private:
+    TraitNode& operator = (const TraitNode&); ///< Do not copy-assign a \p Trait.
+    TraitNode(const TraitNode& node);         ///< Do not copy-construct a \p Trait.
 
 public:
-    virtual bool equal(const Generic* t) const;
-    bool equal(const Trait* other) const { return this->trait_decl() == other->trait_decl(); }
-    size_t hash() const { return thorin::hash_value(trait_decl()); }
+    virtual bool equal(const TraitNode* other) const { return this->trait_decl() == other->trait_decl(); }
+    virtual size_t hash() const;
     const TraitDecl* trait_decl() const { return trait_decl_; }
     bool is_error_trait() const { return trait_decl_ == nullptr; }
-    std::string to_string() const;
-    // TODO retrieve methods via trait_decl()->methods and remove this
-    void add_method(const std::string name, FnType type);
+    virtual std::string to_string() const;
+
+    virtual bool is_closed() const { return true; } // TODO
+
+protected:
+    /// copy this trait but replace the sub-elements given in the mapping
+    TraitNode* vspecialize(SpecializeMapping&);
 
 private:
     const TraitDecl* const trait_decl_;
-    const TraitSet super_traits_;
-    std::vector<const TraitMethod*> methods_;
 
     friend class TypeTable;
 };
@@ -65,73 +67,71 @@ private:
  * An instance of a trait is a trait where all generic type variables are
  * instantiated by concrete types.
  */
-class TraitInstanceNode : public thorin::MagicCast<TraitInstanceNode> {
+class TraitInstanceNode : public TraitNode {
 private:
-    TraitInstanceNode(const Trait* trait, thorin::ArrayRef<Type> var_instances);
+    TraitInstanceNode(const Trait trait, SpecializeMapping var_instances)
+        : TraitNode(trait->typetable(), trait->trait_decl())
+        , trait_(trait)
+        , var_instances_(var_instances)
+    {}
     TraitInstanceNode& operator = (const TraitInstanceNode&); ///< Do not copy-assign a \p TraitInstance.
     TraitInstanceNode(const TraitInstanceNode& node);         ///< Do not copy-construct a \p TraitInstance.
 
-    Type var_inst_(size_t i) const { return var_instances_[i]; }
-
 public:
-    const Trait* trait() const { return trait_; }
-    TypeTable& typetable() const { return trait()->typetable(); }
-    bool equal(TraitInstance t) const { return equal(t.representative()); }
-    bool equal(const TraitInstanceNode* t) const;
-    size_t hash() const;
+    virtual bool equal(const TraitNode* other) const;
+    virtual size_t hash() const;
+    virtual std::string to_string() const;
 
-    thorin::ArrayRef<Type> var_instances() const { return thorin::ArrayRef<Type>(var_instances_); }
-    const Type var_inst(size_t i) const { return var_instances_[i]; }
-    /// Returns number of variables instances.
-    size_t var_inst_size() const { return var_instances_.size(); }
+    virtual bool is_closed() const;
 
-    bool is_closed() const;
-    std::string to_string() const;
-    void dump() const;
+    void dump() const; // TODO move this upwards?
+
+protected:
+    /// copy this trait but replace the sub-elements given in the mapping
+    TraitNode* vspecialize(SpecializeMapping&);
 
 private:
-    const Trait* trait_;
-    std::vector<Type> var_instances_;
+    const Trait trait() const { return trait_; }
+    SpecializeMapping var_instances() const { return var_instances_; }
 
-    TraitInstance specialize(SpecializeMapping&) const;
+    const Trait trait_;
+    SpecializeMapping var_instances_;
 
     friend class TypeVarNode;
     friend class Generic;
     friend class TypeTable;
 };
 
-class TraitImpl : public Generic {
-    TraitImpl(TypeTable& tt, const Impl* impl_decl, TraitInstance trait)
-        : Generic(tt)
+class TraitImplNode : public Unifiable<TraitImplNode> {
+private:
+    TraitImplNode(TypeTable& tt, const Impl* impl_decl, Trait trait)
+        : Unifiable(tt)
         , impl_decl_(impl_decl)
         , trait_(trait)
     {}
-    TraitImpl& operator = (const TraitImpl&); ///< Do not copy-assign a \p TraitImpl.
-    TraitImpl(const TraitImpl&);              ///< Do not copy-construct a \p TraitImpl.
+    TraitImplNode& operator = (const TraitImplNode&); ///< Do not copy-assign a \p TraitImpl.
+    TraitImplNode(const TraitImplNode&);              ///< Do not copy-construct a \p TraitImpl.
 
 public:
-    virtual bool equal(const Generic* t) const;
-    bool equal(const TraitImpl* other) const { return this->impl_decl() == other->impl_decl(); }
-    size_t hash() const { return thorin::hash_value(impl_decl()); }
+    virtual bool equal(const TraitImplNode* other) const { return this->impl_decl() == other->impl_decl(); }
+    virtual size_t hash() const;
     const Impl* impl_decl() const { return impl_decl_; }
-    TraitInstance trait_inst() const { return trait_; }
+    Trait trait() const { return trait_; }
+
+    virtual bool is_closed() const { return true; } // TODO
+
+protected:
+    /// copy this \p TraitImplNode but replace the sub-elements given in the mapping
+    TraitImplNode* vspecialize(SpecializeMapping&) { return new TraitImplNode(typetable(), impl_decl(), trait()); } // TODO specialization
+
+    virtual std::string to_string() const { return ""; } // TODO
 
 private:
     const Impl* const impl_decl_;
-    TraitInstance trait_;
+    Trait trait_;
 
     friend class TypeTable;
 };
-
-struct TraitInstanceNodeHash { 
-    size_t operator () (const TraitInstanceNode* t) const { return t->hash(); } 
-};
-
-struct TraitInstanceNodeEqual { 
-    bool operator () (const TraitInstanceNode* t1, const TraitInstanceNode* t2) const { return t1->equal(t2); } 
-};
-
-typedef std::unordered_set<TraitInstanceNode*, TraitInstanceNodeHash, TraitInstanceNodeEqual> TraitInstanceNodeTableSet;
 
 }
 

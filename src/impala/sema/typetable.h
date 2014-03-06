@@ -15,26 +15,13 @@ namespace impala {
 
 class TraitDecl;
 
-//------------------------------------------------------------------------------
-
-class UnifiableSet {
-public:
-    UnifiableSet() {}
-    ~UnifiableSet();
-
-    void add(Unifiable<TraitInstanceNode>* t) { trait_instances_.push_back(t); }
-    void add(Unifiable<TypeNode>* t) { types_.push_back(t); }
-    void add(const Trait* t) { traits_.push_back(t); }
-    void add(const TraitImpl* impl) { trait_impls_.push_back(impl); }
-
-private:
-    std::vector<Unifiable<TraitInstanceNode>*> trait_instances_;
-    std::vector<Unifiable<TypeNode>*> types_;
-    std::vector<const Trait*> traits_;
-    std::vector<const TraitImpl*> trait_impls_;
-
-    friend class TypeTable;
+template<class T> struct TypetableHash {
+    size_t operator () (const T* t) const { return t->hash(); }
 };
+template<class T> struct TypetableEqual {
+    bool operator () (const T* t1, const T* t2) const { return t1->equal(t2); }
+};
+template<class T> using TypetableSet = std::unordered_set<T*, TypetableHash<T>, TypetableEqual<T>>;
 
 //------------------------------------------------------------------------------
 
@@ -44,73 +31,69 @@ public:
     ~TypeTable();
 
     TypeError type_error() { return type_error_; }
-    TraitInstance trait_inst_error() { return trait_inst_error_; }
+    Trait trait_error() { return trait_error_; }
     NoReturnType type_noreturn() { return type_noreturn_; }
     PrimType primtype(PrimTypeKind kind);
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
+    Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
+    TraitImpl implement_trait(const Impl* impl_decl, Trait trait) { return new_unifiable(new TraitImplNode(*this, impl_decl, trait)); }
 
-    Trait* trait(const TraitDecl* trait_decl, TraitSet super_traits) {
-        auto t = new Trait(*this, trait_decl, super_traits);
-        unifiables_.add(t);
-        return t;
-    }
-    TraitInstance instantiate_trait(const Trait* trait, thorin::ArrayRef<Type> var_instances) {
-        auto tti = TraitInstance(new TraitInstanceNode(trait, var_instances));
-        unifiables_.add(tti.node_);
-        return tti;
-    }
-    TraitImpl* implement_trait(const Impl* impl_decl, TraitInstance trait) {
-        auto impl = new TraitImpl(*this, impl_decl, trait);
-        unifiables_.add(impl);
-        return impl;
-    }
-    TypeVar typevar() { return new_type(new TypeVarNode(*this)); }
-    FnType fntype(thorin::ArrayRef<Type> params) { return new_type(new FnTypeNode(*this, params)); }
-    FnType fntype(thorin::ArrayRef<Type> params, Type return_type);
-    TupleType tupletype(thorin::ArrayRef<Type> elems) { return new_type(new TupleTypeNode(*this, elems)); }
+    TypeVar typevar() { return new_unifiable(new TypeVarNode(*this)); }
+    FnType fntype(thorin::ArrayRef<Type> params) { return new_unifiable(new FnTypeNode(*this, params)); }
+    TupleType tupletype(thorin::ArrayRef<Type> elems) { return new_unifiable(new TupleTypeNode(*this, elems)); }
     TupleType unit() { return tupletype({}); }
 
-    /// unify a trait instance and return \p true if the representative changed
-    bool unify(TraitInstance tti);
-    template<class T> void unify(UnifiableProxy<T> type) { unify_base(type); }
-    //const TraitInstance* unify_trait_inst(TraitInstance* type);
+    /// unify a type and return \p true if the representative changed
+    template<class T> bool unify(Proxy<T> t);
+
     /// Checks if all types in the type tables are sane and correctly unified.
     void verify() const;
 
 private:
-    template<class T> UnifiableProxy<T> new_type(T* tn) {
-        auto t = UnifiableProxy<T>(tn);
-        UnifiableProxy<TypeNode> x = t;
-        unifiables_.add(x.node_);
-        return t;
+    template<class T> 
+    Proxy<T> new_unifiable(T* tn) {
+        garbage_.push_back(tn);
+        return Proxy<T>(tn);
     }
 
-    /// insert all not-unified types contained in type
-    void insert_new(Type type);
-    void insert_new(TraitInstance tti);
+    /// insert all contained unifiables that are not yet unified
+    template<class T> void insert_new(T*);
+    /// insert all contained types
+    void insert_new_rec(TypeNode*);
+    void insert_new_rec(TraitNode*);
+    void insert_new_rec(TraitImplNode*) {}
 
     /**
-     * Recursivly change the representatives of the not-unified types in t to the
+     * Recursively change the representatives of the not-unified elements in t to the
      * corresponding types in repr.
      *
      * This assumes that t is equal to repr.
      */
-    template<class T> void change_repr(UnifiableProxy<T> t, T* repr) const;
-    template<class T> void change_repr_rec(UnifiableProxy<T> t, T* repr) const;
-    void change_repr_rec(TraitInstance t, TraitInstanceNode* repr) const;
-    void unify_base(Type type);
+    template<class T> void change_repr(T* t, T* repr) const;
+    /// change the representative of the bound type variables
+    template<class T> void change_repr_generic(T* t, T* repr) const;
+    /// change the representative of the contained types
+    void change_repr_rec(TypeNode* t, TypeNode* repr) const;
+    void change_repr_rec(TraitNode* t, TraitNode* repr) const {}
+    void change_repr_rec(TraitImplNode* t, TraitImplNode* repr) const {}
 
-    TypeNodeSet types_;
-    TraitInstanceNodeTableSet trait_instances_;
-    UnifiableSet unifiables_;
+    TraitInstanceNode* instantiate_trait(TraitNode* trait, SpecializeMapping& mapping) { return instantiate_trait(Trait(trait), mapping); }
+    TraitInstanceNode* instantiate_trait(Trait trait, SpecializeMapping& mapping) {
+        return new_unifiable(new TraitInstanceNode(trait, mapping)).node();
+    }
+
+    TypetableSet<Generic> unifiables_;
+    std::vector<Generic*> garbage_;
 #define IMPALA_TYPE(itype, atype) PrimType itype##_;
 #include "impala/tokenlist.h"
-    TraitInstance trait_inst_error_;
+    Trait trait_error_;
     TypeError type_error_;
     NoReturnType type_noreturn_;
 
     friend class TypeVarNode;
+    friend class TraitNode;
+    friend class TraitInstanceNode;
 };
 
 }

@@ -100,7 +100,7 @@ void ParametricASTType::check_type_params(Sema& sema) const {
     for (const TypeParam* tp : type_params()) {
         for (const ASTType* b : tp->bounds()) {
             if (auto trait_inst = b->isa<ASTTypeApp>()) {
-                tp->type_var()->add_bound(trait_inst->to_trait_instance(sema));
+                tp->type_var()->add_bound(trait_inst->to_trait(sema));
             } else {
                 sema.error(tp) << "Bounds must be trait instances, not types\n";
             }
@@ -169,19 +169,18 @@ Type FnASTType::to_type(Sema& sema) const {
     return t;
 }
 
-TraitInstance ASTTypeApp::to_trait_instance(Sema& sema) const {
+Trait ASTTypeApp::to_trait(Sema& sema) const {
     if (auto decl = sema.lookup(this, symbol())) {
         if (auto trait_decl = decl->isa<TraitDecl>()) {
             std::vector<Type> type_args;
             for (auto e : elems())
                 type_args.push_back(e->to_type(sema));
 
-            return sema.instantiate_trait(trait_decl->calc_trait(sema), type_args);
+            return trait_decl->calc_trait(sema)->instantiate(type_args);
         } else
             sema.error(this) << "cannot convert a type variable into a trait instance\n";
     }
-
-    return sema.trait_inst_error();
+    return sema.trait_error();
 }
 
 //------------------------------------------------------------------------------
@@ -293,11 +292,11 @@ void StructDecl::check(Sema& sema) const {
 
 void TraitDecl::check(Sema& sema) const {
     // did we already check this trait?
-    if (trait_ != nullptr)
+    if ((!trait().empty()))
         return;
 
     // FEATURE consider super traits and check methods
-    trait_ = sema.trait(this, TraitSet());
+    trait_ = sema.trait(this);
 
     check_type_params(sema);
     for (auto tp : type_params()) {
@@ -319,17 +318,16 @@ void Impl::check(Sema& sema) const {
 
     if (trait() != nullptr) {
         if (auto t = trait()->isa<ASTTypeApp>()) {
-            TraitInstance tinst = t->to_trait_instance(sema);
-
-            // create TraitImpl
-            TraitImpl* impl = sema.implement_trait(this, tinst);
+            // create impl
+            Trait tinst = t->to_trait(sema);
+            TraitImpl impl = sema.implement_trait(this, tinst);
             for (auto tp : type_params()) {
                 assert(!tp->type_var().empty());
                 impl->add_bound_var(tp->type_var());
             }
 
             // add impl to type
-            if ((ftype != sema.type_error()) && (tinst != sema.trait_inst_error()))
+            if ((ftype != sema.type_error()) && (tinst != sema.trait_error()))
                 ftype->add_implementation(impl);
         } else
             sema.error(trait()) << "expected trait instance.\n";

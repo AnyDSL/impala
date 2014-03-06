@@ -5,24 +5,16 @@
 #include "thorin/util/array.h"
 #include "thorin/util/hash.h"
 
-#include "impala/sema/typeproperties.h"
+#include "impala/sema/generic.h"
+#include "impala/sema/trait.h"
 
 namespace impala {
 
 //------------------------------------------------------------------------------
 
-struct TraitInstanceHash { 
-    size_t operator () (const TraitInstance t) const { return thorin::hash_value(t.representative()); } 
-};
-struct TraitInstanceEqual { 
-    bool operator () (const TraitInstance t1, const TraitInstance t2) const { 
-        return t1.representative() == t2.representative(); } 
-};
-typedef std::unordered_set<TraitInstance, TraitInstanceHash, TraitInstanceEqual> TraitInstSet;
-
-struct TraitImplHash { size_t operator () (const TraitInstance t) const; };
-struct TraitImplEqual { bool operator () (const TraitInstance t1, const TraitInstance t2) const; };
-typedef std::unordered_set<TraitInstance, TraitImplHash, TraitImplEqual> TraitImplSet;
+struct TraitImplHash { size_t operator () (const Trait t) const; };
+struct TraitImplEqual { bool operator () (const Trait t1, const Trait t2) const; };
+typedef std::unordered_set<Trait, TraitImplHash, TraitImplEqual> TraitImplSet;
 
 //------------------------------------------------------------------------------
 
@@ -41,14 +33,14 @@ enum PrimTypeKind {
 #include "impala/tokenlist.h"
 };
 
-class TypeNode : public Generic {
+class TypeNode : public Unifiable<TypeNode> {
 private:
     TypeNode& operator = (const TypeNode&); ///< Do not copy-assign a \p TypeNode.
     TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p TypeNode.
 
 protected:
     TypeNode(TypeTable& typetable, Kind kind, size_t size)
-        : Generic(typetable)
+        : Unifiable(typetable)
         , kind_(kind)
         , elems_(size)
     {}
@@ -68,17 +60,14 @@ public:
         return elems_.empty();
     }
 
-    virtual bool equal(const Generic*) const;
-    virtual bool equal(Type t) const { return equal(t.representative()); }
     virtual bool equal(const TypeNode*) const;
     virtual size_t hash() const;
 
     void dump() const;
     virtual std::string to_string() const = 0;
 
-    void add_implementation(const TraitImpl* impl);
-    Type instantiate(thorin::ArrayRef<Type> var_instances) const;
-    virtual bool implements(TraitInstance) const;
+    void add_implementation(TraitImpl);
+    virtual bool implements(Trait) const;
 
     bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());
@@ -91,7 +80,7 @@ public:
     virtual bool is_closed() const;
 
     /// @return true if this is a subtype of super_type.
-    bool is_subtype(const Type super_type) const { return is_subtype(super_type.representative()); }
+    bool is_subtype(const Type super_type) const;
 
     /**
      * A type is sane if all type variables are bound correctly,
@@ -102,16 +91,8 @@ public:
     virtual bool is_sane() const;
 
 private:
-    bool is_subtype(const TypeNode* super_type) const;
-
-    /// copy this type but replace the subtypes given in the mapping
-    Type specialize(SpecializeMapping&) const;
-
-    /// like specialize but does not care about generics (this method is called by specialize)
-    virtual Type vspecialize(SpecializeMapping&) const = 0;
-
     const Kind kind_;
-    TraitImplSet trait_impls_;
+    TraitImplSet trait_impls_; // TODO do we want to have the impls or only the traits?
 
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
@@ -121,23 +102,14 @@ protected:
     friend class TypeTable;
 };
 
-struct TypeNodeHash { 
-    size_t operator () (const TypeNode* t) const { return t->hash(); } 
-};
-
-struct TypeNodeEqual { 
-    bool operator () (const TypeNode* t1, const TypeNode* t2) const { return t1->equal(t2); } 
-};
-
-typedef std::unordered_set<TypeNode*, TypeNodeHash, TypeNodeEqual> TypeNodeSet;
-
 class TypeErrorNode : public TypeNode {
 private:
     TypeErrorNode(TypeTable& typetable)
         : TypeNode(typetable, Type_error, 0)
     {}
 
-    virtual Type vspecialize(SpecializeMapping&) const;
+protected:
+    virtual Generic* vspecialize(SpecializeMapping&);
 
 public:
     virtual std::string to_string() const { return "<type error>"; }
@@ -151,7 +123,8 @@ private:
         : TypeNode(typetable, Type_noReturn, 0)
     {}
 
-    virtual Type vspecialize(SpecializeMapping&) const;
+protected:
+    virtual Generic* vspecialize(SpecializeMapping&);
 
 public:
     virtual std::string to_string() const { return "<type no-return>"; }
@@ -166,7 +139,9 @@ private:
     {}
 
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
-    virtual Type vspecialize(SpecializeMapping&) const;
+
+protected:
+    virtual Generic* vspecialize(SpecializeMapping&);
 
 public:
     virtual std::string to_string() const;
@@ -195,7 +170,8 @@ private:
         : CompoundType(typetable, Type_fn, elems)
     {}
 
-    virtual Type vspecialize(SpecializeMapping&) const;
+protected:
+    virtual Generic* vspecialize(SpecializeMapping&);
 
 public:
     virtual std::string to_string() const { return std::string("fn") + bound_vars_to_string() + elems_to_string(); }
@@ -209,7 +185,8 @@ private:
         : CompoundType(typetable, Type_tuple, elems)
     {}
 
-    virtual Type vspecialize(SpecializeMapping&) const;
+protected:
+    virtual Generic* vspecialize(SpecializeMapping&);
 
 public:
     virtual std::string to_string() const { return std::string("tuple") + bound_vars_to_string() + elems_to_string(); }
@@ -232,13 +209,13 @@ private:
     bool bounds_equal(const TypeVar other) const;
 
 public:
-    const TraitInstSet& bounds() const { return bounds_; }
+    const NodeSet<Trait>& bounds() const { return bounds_; }
     const Generic* bound_at() const { return bound_at_; }
-    void add_bound(TraitInstance restriction);
+    void add_bound(Trait);
     virtual bool equal(const TypeNode* other) const;
     std::string to_string() const;
 
-    virtual bool implements(TraitInstance) const;
+    virtual bool implements(Trait) const;
 
     /**
      * A type variable is closed if it is bound and all restrictions are closed.
@@ -249,9 +226,12 @@ public:
     // CHECK this->is_subtype(bound_at()); if bound_at is a Type, else it should occur in the method signatures
     virtual bool is_sane() const { return is_closed(); }
 
+    /// Create a copy of this \p TypeVar that considers the specialization (the binding is not copied)
+    TypeVar clone(SpecializeMapping&) const;
+
 private:
     const int id_;       ///< Used for unambiguous dumping.
-    TraitInstSet bounds_;///< All traits that restrict the instantiation of this variable.
+    NodeSet<Trait> bounds_;///< All traits that restrict the instantiation of this variable.
     /**
      * The type where this variable is bound.
      * If such a type is set, then the variable must not be changed anymore!
@@ -260,9 +240,8 @@ private:
     mutable const TypeVarNode* equiv_var_;///< Used to define equivalence constraints when checking equality of types.
     static int counter;
 
-    virtual Type vspecialize(SpecializeMapping&) const;
-    /// Create a copy of this \p TypeVar that considers the specialization (the binding is not copied)
-    TypeVar clone(SpecializeMapping&) const;
+protected:
+    virtual Generic* vspecialize(SpecializeMapping&);
 
     /// re-add all elements to the bounds set -- needed if during unification the representatives of bounds change
     void refresh_bounds();
@@ -271,6 +250,12 @@ private:
     friend class TypeNode;
     friend class Generic;
 };
+
+typedef Proxy<TypeErrorNode> TypeError;
+typedef Proxy<PrimTypeNode> PrimType;
+typedef Proxy<NoReturnTypeNode> NoReturnType;
+typedef Proxy<FnTypeNode> FnType;
+typedef Proxy<TupleTypeNode> TupleType;
 
 //------------------------------------------------------------------------------
 
