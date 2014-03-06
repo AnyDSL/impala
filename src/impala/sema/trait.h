@@ -84,8 +84,6 @@ public:
 
     virtual bool is_closed() const;
 
-    void dump() const; // TODO move this upwards?
-
 protected:
     /// copy this trait but replace the sub-elements given in the mapping
     TraitNode* vspecialize(SpecializeMapping&);

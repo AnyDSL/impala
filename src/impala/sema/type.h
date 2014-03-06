@@ -63,9 +63,6 @@ public:
     virtual bool equal(const TypeNode*) const;
     virtual size_t hash() const;
 
-    void dump() const;
-    virtual std::string to_string() const = 0;
-
     void add_implementation(TraitImpl);
     virtual bool implements(Trait) const;
 

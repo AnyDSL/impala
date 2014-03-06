@@ -108,6 +108,8 @@ public:
     std::string bound_vars_to_string() const;
     virtual std::string to_string() const = 0;
 
+    void dump() const;
+
 protected:
     std::vector<TypeVar> bound_vars_;
     TypeTable& typetable_;
