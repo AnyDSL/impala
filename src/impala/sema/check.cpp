@@ -172,11 +172,16 @@ Type FnASTType::to_type(Sema& sema) const {
 Trait ASTTypeApp::to_trait(Sema& sema) const {
     if (auto decl = sema.lookup(this, symbol())) {
         if (auto trait_decl = decl->isa<TraitDecl>()) {
-            std::vector<Type> type_args;
-            for (auto e : elems())
-                type_args.push_back(e->to_type(sema));
+            Trait trait = trait_decl->calc_trait(sema);
+            if (elems().empty()) {
+                return trait;
+            } else {
+                std::vector<Type> type_args;
+                for (auto e : elems())
+                    type_args.push_back(e->to_type(sema));
 
-            return trait_decl->calc_trait(sema)->instantiate(type_args);
+                return trait->instantiate(type_args);
+            }
         } else
             sema.error(this) << "cannot convert a type variable into a trait instance\n";
     }
