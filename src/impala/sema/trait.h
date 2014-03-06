@@ -34,25 +34,26 @@ typedef Proxy<FnTypeNode> FnType;
  * @see TraitInstance
  */
 class TraitNode : public Unifiable<TraitNode> {
-private:
+protected:
     TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
         : Unifiable(tt)
         , trait_decl_(trait_decl)
     {}
+
+private:
     TraitNode& operator = (const TraitNode&); ///< Do not copy-assign a \p Trait.
     TraitNode(const TraitNode& node);         ///< Do not copy-construct a \p Trait.
 
 public:
-    virtual bool equal(const Generic* t) const;
-    bool equal(const TraitNode* other) const { return this->trait_decl() == other->trait_decl(); }
-    size_t hash() const { return thorin::hash_value(trait_decl()); }
+    virtual bool equal(const TraitNode* other) const { return this->trait_decl() == other->trait_decl(); }
+    virtual size_t hash() const { return thorin::hash_value(trait_decl()); }
     const TraitDecl* trait_decl() const { return trait_decl_; }
-    std::string to_string() const;
+    virtual std::string to_string() const;
 
     virtual bool is_closed() const { return true; } // TODO
 
     /// copy this trait but replace the sub-elements given in the mapping
-    TraitNode* vspecialize(SpecializeMapping&) const { return new TraitNode(typetable(), trait_decl()); } // FIXME specialization
+    TraitNode* vspecialize(SpecializeMapping&) const;
 
 private:
     const TraitDecl* const trait_decl_;
@@ -60,44 +61,40 @@ private:
     friend class TypeTable;
 };
 
-#if 0
 /**
  * An instance of a trait is a trait where all generic type variables are
  * instantiated by concrete types.
  */
-class TraitInstanceNode : public Unifiable<TraitInstanceNode> {
+class TraitInstanceNode : public TraitNode {
 private:
-    TraitInstanceNode(TypeTable&, const Trait* trait, thorin::ArrayRef<Type> var_instances);
+    TraitInstanceNode(const Trait trait, SpecializeMapping var_instances)
+        : TraitNode(trait->typetable(), trait->trait_decl())
+        , trait_(trait)
+        , var_instances_(var_instances)
+    {}
     TraitInstanceNode& operator = (const TraitInstanceNode&); ///< Do not copy-assign a \p TraitInstance.
     TraitInstanceNode(const TraitInstanceNode& node);         ///< Do not copy-construct a \p TraitInstance.
 
-    Type var_inst_(size_t i) const { return var_instances_[i]; }
-
 public:
-    const Trait* trait() const { return trait_; }
-    TypeTable& typetable() const { return trait()->typetable(); }
-    bool equal(TraitInstance t) const { return equal(t); }
-    bool equal(const TraitInstanceNode* t) const;
-    size_t hash() const;
+    virtual bool equal(const TraitNode* other) const;
+    virtual size_t hash() const;
+    virtual std::string to_string() const;
 
-    thorin::ArrayRef<Type> var_instances() const { return thorin::ArrayRef<Type>(var_instances_); }
-    const Type var_inst(size_t i) const { return var_instances_[i]; }
-    /// Returns number of variables instances.
-    size_t var_inst_size() const { return var_instances_.size(); }
+    virtual bool is_closed() const;
 
-    bool is_closed() const;
-    std::string to_string() const;
+    /// copy this trait but replace the sub-elements given in the mapping
+    TraitNode* vspecialize(SpecializeMapping&) const;
 
 private:
-    const Trait* trait_;
-    std::vector<Type> var_instances_;
+    const Trait trait() const { return trait_; }
+    SpecializeMapping var_instances() const { return var_instances_; }
 
-    TraitInstance specialize(SpecializeMapping&) const;
+    const Trait trait_;
+    SpecializeMapping var_instances_;
 
     friend class TypeVarNode;
     friend class TypeTable;
 };
-#endif
 
 class TraitImplNode : public Unifiable<TraitImplNode> {
     TraitImplNode(TypeTable& tt, const Impl* impl_decl, Trait trait)
@@ -109,7 +106,6 @@ class TraitImplNode : public Unifiable<TraitImplNode> {
     TraitImplNode(const TraitImplNode&);              ///< Do not copy-construct a \p TraitImpl.
 
 public:
-    virtual bool equal(const Generic* t) const;
     bool equal(const TraitImplNode* other) const { return this->impl_decl() == other->impl_decl(); }
     size_t hash() const { return thorin::hash_value(impl_decl()); }
     const Impl* impl_decl() const { return impl_decl_; }
@@ -119,6 +115,8 @@ public:
 
     /// copy this \p TraitImplNode but replace the sub-elements given in the mapping
     TraitImplNode* vspecialize(SpecializeMapping&) const { return new TraitImplNode(typetable(), impl_decl(), trait()); } // FIXME specialization
+
+    virtual std::string to_string() const { return ""; } // TODO
 
 private:
     const Impl* const impl_decl_;

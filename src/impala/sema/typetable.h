@@ -100,6 +100,11 @@ private:
 
     template<class T> bool unify_base(TypetableSet<T>&, T*);
 
+    TraitInstanceNode* instantiate_trait(const TraitNode* trait, SpecializeMapping& mapping) {
+        //return new_unifiable(new TraitInstanceNode(Trait(trait), mapping)).node(); FIXME const-correctness?
+        return nullptr;
+    }
+
     TypetableSet<TypeNode> types_;
     TypetableSet<TraitNode> traits_;
     TypetableSet<TraitImplNode> trait_impls_;
@@ -109,6 +114,7 @@ private:
     TypeError type_error_;
 
     friend class TypeVarNode;
+    friend class TraitNode;
 };
 
 }

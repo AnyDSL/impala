@@ -104,24 +104,24 @@ bool TypeVarNode::equal(const TypeNode* other) const {
     return false;
 }
 
-// TODO review this: what should be included in the new Trait?
-#if 0
-bool TraitInstanceNode::equal(const TraitInstanceNode* other) const {
-    // CHECK use equal?
-    if (trait_ != other->trait_)
-        return false;
-
-    assert(var_instances_.size() == other->var_instances_.size());
-    for (size_t i = 0; i < var_instances_.size(); ++i) {
-        if (! var_instances_[i]->equal(other->var_instances_[i])) {
+bool TraitInstanceNode::equal(const TraitNode* other) const {
+    if (auto instance = other->isa<TraitInstanceNode>()) {
+        if (trait() != instance->trait())
             return false;
+
+        assert(var_instances_.size() == instance->var_instances_.size());
+        for (auto p : var_instances_) {
+            assert(instance->var_instances_.find(p.first) != instance->var_instances_.end());
+            if (! p.second->equal(instance->var_instances_.find(p.first)->second)) {
+                return false;
+            }
         }
+        return true;
     }
-    return true;
+    return false;
 }
 
 // FEATURE better hash function
-size_t TraitInstanceNode::hash() const { return trait_->hash(); }
-#endif
+size_t TraitInstanceNode::hash() const { return trait()->hash(); }
 
 }
