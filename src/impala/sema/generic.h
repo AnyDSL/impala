@@ -39,7 +39,7 @@ public:
         assert(&node()->typetable() == &other.node()->typetable());
         if (!this->is_unified()) node()->typetable().unify(*this);
         if (!other.is_unified()) node()->typetable().unify(other);
-        return deref() == other.deref();
+        return representative() == other.representative();
     }
     bool operator != (const Proxy<T>& other) { return !(*this == other); }
     operator T* () const { return deref(); } // CHECK shouldn't we remove this?

@@ -59,7 +59,6 @@ public:
         return elems_.empty();
     }
 
-    virtual bool equal(Type t) const { return equal(t); }
     virtual bool equal(const TypeNode*) const;
     virtual size_t hash() const;
 
