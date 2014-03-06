@@ -81,7 +81,7 @@ typedef std::unordered_map<const Generic*, Generic*> SpecializeMapping; // FIXME
 
 //------------------------------------------------------------------------------
 
-class Generic { // : public thorin::MagicCast<Generic> { CHECK how do we add casts here?
+class Generic : public thorin::MagicCast<Generic> {
 protected:
     Generic(TypeTable& tt)
         : typetable_(tt)
@@ -121,7 +121,7 @@ private:
 };
 
 template<class T>
-class Unifiable : public Generic, public thorin::MagicCast<T> {
+class Unifiable : public Generic {
 protected:
     Unifiable(TypeTable& tt)
         : Generic(tt)
