@@ -116,7 +116,7 @@ protected:
      * if this element is in the mapping return the mapped one;
      * otherwise copy this element with specialized sub-elements
      */
-    Generic* specialize(SpecializeMapping&);
+    Generic* specialize(SpecializeMapping&); // TODO one could always assert that this is only called on final representatives!
 
     /// like specialize but does not care about generics (this method is called by specialize)
     virtual Generic* vspecialize(SpecializeMapping&) = 0;
