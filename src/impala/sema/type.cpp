@@ -136,14 +136,14 @@ void verify(thorin::ArrayRef<const Type> types) {
     for (auto t : types)
         assert(t->is_sane());
 
-    for (auto t1 : types) {
-        for (auto t2 : types) {
+    for (Type t1 : types) {
+        for (Type t2 : types) {
             if (t1->is_unified() && t2->is_unified()) {
-                if (!((!t1->equal(t2)) || (t1 == t2))) {
+                /*if (!((!t1->equal(t2)) || (t1 == t2))) { FIXME
                     t1->dump();
                     t2->dump();
                     assert(false);
-                }
+                }*/
             }
         }
     }

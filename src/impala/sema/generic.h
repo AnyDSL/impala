@@ -40,8 +40,8 @@ public:
         if (!other->is_unified()) node()->typetable().unify(other);
         return representative() == other.representative();
     }
-    bool operator != (const Proxy<T>& other) { return !(*this == other); }
-    operator T* () const { return deref(); } // CHECK shouldn't we remove this?
+    bool operator != (const Proxy<T>& other) const { return !(*this == other); }
+    //operator T* () const { return deref(); } // CHECK shouldn't we remove this?
     T* operator -> () const { return deref(); }
     /// Automatic up-cast in the class hierarchy.
     template<class U> operator Proxy<U>() {
@@ -52,7 +52,7 @@ public:
     Proxy<typename U::BaseType> isa() { return Proxy<typename U::BaseType>(node_->isa<typename U::BaseType>()); }
     template<class U> 
     Proxy<typename U::BaseType> as() { return Proxy<typename U::BaseType>(node_->as<typename U::BaseType>()); }
-    // FEATURE make most of this stuff private!
+    operator bool() { return !empty(); }
 
 private:
     T* deref() const { return node_->is_unified() ? representative() : node_->template as<T>(); }
@@ -68,6 +68,7 @@ private:
     friend class FnTypeNode;
     friend class TupleTypeNode;
     friend class TypeVarNode;
+    friend class TraitInstanceNode;
     friend struct NodeHash<Proxy<T>>;
     friend struct NodeEqual<Proxy<T>>;
     friend class TypeTable;

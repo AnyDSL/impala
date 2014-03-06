@@ -85,12 +85,12 @@ void TypeTable::change_repr_generic(T* t, T* repr) const {
         // FEATURE if this is changed in the bounds of a TypeVar this is not needed any more
         TypetableSet<TraitNode> bounds;
         for (Trait r : repr_bounds) {
-            auto p = bounds.insert(r.representative());
+            auto p = bounds.insert(r.representative()); // CHECK ist representative here and node() below correct?
             assert(p.second && "hash/equal broken");
         }
 
         for (Trait bound : old_bounds) {
-            auto repr_bound = bounds.find(bound);
+            auto repr_bound = bounds.find(bound.node());
             assert(repr_bound != bounds.end());
             change_repr(bound.node(), (*repr_bound)->representative());
         }

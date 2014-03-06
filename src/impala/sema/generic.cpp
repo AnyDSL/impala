@@ -60,7 +60,7 @@ SpecializeMapping Generic::check_instantiation(thorin::ArrayRef<Type> var_instan
     SpecializeMapping mapping;
     size_t i = 0;
     for (TypeVar v : bound_vars())
-        mapping[v.representative()] = var_instances[i++];
+        mapping[v.representative()] = var_instances[i++].deref(); // CHECK ist representative/deref correct here?
     assert(mapping.size() == var_instances.size());
 
     // check the bounds
@@ -94,7 +94,7 @@ Generic* Generic::specialize(SpecializeMapping& mapping) {
     for (TypeVar v : bound_vars()) {
         // CHECK is representative really correct or do we need node()? -- see also below!
         assert(mapping.find(v.representative()) == mapping.end());
-        mapping[v.representative()] = v->clone(mapping);
+        mapping[v.representative()] = v->clone(mapping).node(); // CHECK is node() correct here?
     }
 
     Generic* t = vspecialize(mapping);

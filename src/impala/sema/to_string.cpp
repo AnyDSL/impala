@@ -19,8 +19,9 @@ std::string TraitInstanceNode::to_string() const {
 
     const char* separator = "[";
     for (TypeVar tv : trait()->bound_vars()) {
-        assert(var_instances_.find(tv) != var_instances_.end());
-        result += separator + var_instances_.find(tv)->second->to_string();
+        // CHECK is node() correct here?
+        assert(var_instances_.find(tv.node()) != var_instances_.end());
+        result += separator + var_instances_.find(tv.node())->second->to_string();
         separator = ",";
     }
 
