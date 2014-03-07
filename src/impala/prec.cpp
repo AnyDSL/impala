@@ -15,4 +15,4 @@ void PrecTable::init() {
 #include "impala/tokenlist.h"
 }
 
-} // namespace impala
+}

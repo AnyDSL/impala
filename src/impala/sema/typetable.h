@@ -30,7 +30,7 @@ template<class T> using TypetableSet = thorin::HashSet<T*, TypetableHash<T>, Typ
 
 class TypeTable : public ErrorHandler {
 public:
-    TypeTable(const bool result);
+    TypeTable();
     ~TypeTable();
 
     TypeError type_error() { return type_error_; }

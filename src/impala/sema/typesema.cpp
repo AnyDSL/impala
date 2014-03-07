@@ -10,9 +10,8 @@ namespace impala {
 
 class TypeSema : public TypeTable {
 public:
-    TypeSema(const bool result, const bool nossa)
-        : TypeTable(result)
-        , nossa_(nossa)
+    TypeSema(const bool nossa)
+        : nossa_(nossa)
     {}
 
     bool nossa() const { return nossa_; }
@@ -185,6 +184,18 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
             sema.error(this) << "cannot convert a type variable into a trait instance\n";
     }
     return sema.trait_error();
+}
+
+Trait TraitDecl::calc_trait(TypeSema& sema) const {
+    check(tt);
+    assert(!trait().empty());
+    return trait();
+}
+
+Type ValueDecl::calc_type(TypeSema& sema) const {
+    check(tt);
+    assert(!type().empty());
+    return type();
 }
 
 //------------------------------------------------------------------------------
@@ -470,7 +481,7 @@ void LetStmt::check(TypeSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-bool check(const ModContents* mod, bool nossa) {
+bool type_analysis(const ModContents* mod, bool nossa) {
     TypeSema sema(nossa);
     mod->check(sema);
     return sema.result();

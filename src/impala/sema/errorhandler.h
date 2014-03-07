@@ -10,8 +10,8 @@ class Location;
 
 class ErrorHandler {
 public:
-    ErrorHandler(const bool result)
-        : result_(result)
+    ErrorHandler()
+        : result_(true)
     {}
 
     bool result() const { return result_; }   ///< Has an error occurred?

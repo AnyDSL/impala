@@ -49,6 +49,6 @@ private:
     friend void init();
 };
 
-} // namespace impala
+}
 
 #endif

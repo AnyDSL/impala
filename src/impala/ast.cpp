@@ -54,16 +54,4 @@ void Typable::set_type(Type t) const {
         assert(type_->kind() == Type_error);
 }
 
-Trait TraitDecl::calc_trait(TypeTable& tt) const {
-    check(tt);
-    assert(!trait().empty());
-    return trait();
-}
-
-Type ValueDecl::calc_type(TypeTable& tt) const {
-    check(tt);
-    assert(!type().empty());
-    return type();
-}
-
 }

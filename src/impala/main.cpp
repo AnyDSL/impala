@@ -15,11 +15,8 @@
 #include "thorin/util/args.h"
 
 #include "impala/ast.h"
-#include "impala/parser.h"
-#include "impala/sema/check.h"
 #include "impala/dump.h"
-#include "impala/emit.h"
-#include "impala/init.h"
+#include "impala/impala.h"
 
 //------------------------------------------------------------------------------
 

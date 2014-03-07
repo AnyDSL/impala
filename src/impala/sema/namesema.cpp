@@ -7,10 +7,6 @@ namespace impala {
 
 class NameSema : public ErrorHandler {
 public:
-    NameSema(const bool result)
-        : ErrorHandler(result)
-    {}
-
     /** 
      * @brief Looks up the current definition of \p symbol.
      * @return Returns nullptr on failure.
@@ -370,8 +366,8 @@ void LetStmt::check(NameSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-bool check(const ModContents* mod, bool nossa) {
-    NameSema sema(true /*TODO*/);
+bool name_analysis(const ModContents* mod) {
+    NameSema sema;
     mod->check(sema);
     return sema.result();
 }
