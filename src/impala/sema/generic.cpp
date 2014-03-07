@@ -24,7 +24,7 @@ std::string Generic::bound_vars_to_string() const {
     for (auto v : bound_vars()) {
         result += separator + v->to_string();
 
-        const NodeSet<Trait> restr = v->bounds();
+        const UniSet<Trait> restr = v->bounds();
 
         if (!restr.empty()) {
             auto inner_sep = ":";
@@ -67,14 +67,14 @@ SpecializeMapping Generic::check_instantiation(thorin::ArrayRef<Type> var_instan
     for (TypeVar v : bound_vars()) {
         auto it = mapping.find(v.deref());
         assert(it != mapping.end());
-        Generic* instance = it->second;
+        Type instance = Type(it->second->as<TypeNode>());
 
         for (Trait bound : v->bounds()) {
-            SpecializeMapping m(mapping);
-            Generic* spec_bound = bound->specialize(m);
-            //spec_bound->typetable().unify(spec_bound); FIXME
+            SpecializeMapping m(mapping); // copy the mapping
+            Trait spec_bound = Trait(bound->specialize(m)->as<TraitNode>());
+            spec_bound->typetable().unify(spec_bound);
             // TODO better error handling
-            // assert(instance->implements(spec_bound)); FIXME
+            assert(instance->implements(spec_bound));
         }
     }
 

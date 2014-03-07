@@ -73,7 +73,9 @@ private:
         : TraitNode(trait->typetable(), trait->trait_decl())
         , trait_(trait)
         , var_instances_(var_instances)
-    {}
+    {
+        assert(trait_->num_bound_vars() == var_instances_.size());
+    }
     TraitInstanceNode& operator = (const TraitInstanceNode&); ///< Do not copy-assign a \p TraitInstance.
     TraitInstanceNode(const TraitInstanceNode& node);         ///< Do not copy-construct a \p TraitInstance.
 

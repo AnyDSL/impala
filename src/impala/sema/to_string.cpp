@@ -13,9 +13,8 @@ std::string TraitNode::to_string() const { return is_error_trait() ? "<error tra
 std::string TraitInstanceNode::to_string() const {
     std::string result = trait()->to_string();
 
-    if (var_instances_.empty())
-        return result;
-
+    assert(!var_instances_.empty());
+    assert(var_instances_.size() == trait()->num_bound_vars());
     const char* separator = "[";
     for (TypeVar tv : trait()->bound_vars()) {
         // CHECK is node() correct here?

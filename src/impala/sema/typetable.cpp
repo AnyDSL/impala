@@ -74,8 +74,8 @@ void TypeTable::change_repr_generic(T* t, T* repr) const {
     // change representatives of the bounds (i.e. Traits) of type variables
     assert(t->num_bound_vars() == repr->num_bound_vars());
     for (size_t i = 0; i != t->num_bound_vars(); ++i) {
-        NodeSet<Trait> old_bounds = t->bound_var(i)->bounds();
-        NodeSet<Trait> repr_bounds = repr->bound_var(i)->bounds();
+        UniSet<Trait> old_bounds = t->bound_var(i)->bounds();
+        UniSet<Trait> repr_bounds = repr->bound_var(i)->bounds();
 
         assert(old_bounds.size() == repr_bounds.size());
 
@@ -117,7 +117,9 @@ template<class T>
 bool TypeTable::unify(Proxy<T> elem) {
     T* unifiable = elem.node();
 
-    assert(!unifiable->is_unified() && "Unifiable is already unified!");
+    if (unifiable->is_unified())
+        return false;
+
     assert(unifiable->is_closed() && "Only closed unifiables can be unified!");
 
     auto i = unifiables_.find(unifiable);

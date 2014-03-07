@@ -20,7 +20,7 @@ bool TraitInstanceNode::is_closed() const {
 }
 
 TraitNode* TraitNode::vspecialize(SpecializeMapping& mapping) {
-    return typetable().instantiate_trait(this, mapping);
+    return is_generic() ? typetable().instantiate_trait(this, mapping) : this;
 }
 
 TraitNode* TraitInstanceNode::vspecialize(SpecializeMapping& mapping) {

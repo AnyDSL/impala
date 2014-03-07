@@ -206,7 +206,7 @@ private:
     bool bounds_equal(const TypeVar other) const;
 
 public:
-    const NodeSet<Trait>& bounds() const { return bounds_; }
+    const UniSet<Trait>& bounds() const { return bounds_; }
     const Generic* bound_at() const { return bound_at_; }
     void add_bound(Trait);
     virtual bool equal(const TypeNode* other) const;
@@ -228,7 +228,7 @@ public:
 
 private:
     const int id_;       ///< Used for unambiguous dumping.
-    NodeSet<Trait> bounds_;///< All traits that restrict the instantiation of this variable.
+    UniSet<Trait> bounds_;///< All traits that restrict the instantiation of this variable.
     /**
      * The type where this variable is bound.
      * If such a type is set, then the variable must not be changed anymore!

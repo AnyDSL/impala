@@ -21,6 +21,14 @@ template<class T> struct NodeEqual {
 };
 template<class T> using NodeSet = std::unordered_set<T, NodeHash<T>, NodeEqual<T>>;
 
+template<class T> struct UniHash {
+    size_t operator () (const T t) const { return thorin::hash_value(t.deref()); }
+};
+template<class T> struct UniEqual {
+    bool operator () (const T t1, const T t2) const { return t1 == t2; }
+};
+template<class T> using UniSet = std::unordered_set<T, UniHash<T>, UniEqual<T>>;
+
 class TypeNode;
 
 template<class T>
@@ -38,8 +46,8 @@ public:
     bool empty() const { return node_ == nullptr; }
     bool operator == (const Proxy<T>& other) const {
         assert(&node()->typetable() == &other.node()->typetable());
-        if (!node()->is_unified()) node()->typetable().unify(*this);
-        if (!other->is_unified()) node()->typetable().unify(other);
+        node()->typetable().unify(*this);
+        node()->typetable().unify(other);
         return representative() == other.representative();
     }
     bool operator != (const Proxy<T>& other) const { return !(*this == other); }
@@ -73,6 +81,7 @@ private:
     friend class TraitInstanceNode;
     friend struct NodeHash<Proxy<T>>;
     friend struct NodeEqual<Proxy<T>>;
+    friend struct UniHash<Proxy<T>>;
     friend class TypeTable;
     friend void verify(thorin::ArrayRef<const Proxy<TypeNode>> types);
 };
