@@ -60,12 +60,12 @@ SpecializeMapping Generic::check_instantiation(thorin::ArrayRef<Type> var_instan
     SpecializeMapping mapping;
     size_t i = 0;
     for (TypeVar v : bound_vars())
-        mapping[v.deref()] = var_instances[i++].deref(); // CHECK ist deref correct here and below?
+        mapping[*v] = *var_instances[i++]; // CHECK ist deref correct here and below?
     assert(mapping.size() == var_instances.size());
 
     // check the bounds
     for (TypeVar v : bound_vars()) {
-        auto it = mapping.find(v.deref());
+        auto it = mapping.find(*v);
         assert(it != mapping.end());
         Generic* instance = it->second;
 

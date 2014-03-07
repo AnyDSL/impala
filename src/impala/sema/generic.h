@@ -40,8 +40,7 @@ public:
         return representative() == other.representative();
     }
     bool operator != (const Proxy<T>& other) const { return !(*this == other); }
-    //operator T* () const { return deref(); } // CHECK shouldn't we remove this?
-    T* operator -> () const { return deref(); }
+    T* operator -> () const { return *(*this); }
     /// Automatic up-cast in the class hierarchy.
     template<class U> operator Proxy<U>() {
         static_assert(std::is_base_of<U, T>::value, "R is not a base type of L");
@@ -54,7 +53,7 @@ public:
     operator bool() { return !empty(); }
 
 private:
-    T* deref() const { return node_->is_unified() ? representative() : node_->template as<T>(); }
+    T* operator * () const { return node_->is_unified() ? representative() : node_->template as<T>(); }
     T* representative() const { return node_->representative()->template as<T>(); }
     T* node() const { return node_; }
     T* node_;

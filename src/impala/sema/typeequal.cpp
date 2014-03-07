@@ -48,14 +48,14 @@ bool TypeNode::equal(const TypeNode* other) const {
     // CHECK is deref below correct? -- two times below!
     // set equivalence constraints for type variables
     for (size_t i = 0, e = num_bound_vars(); i != e; ++i)
-        this->bound_var(i)->set_equiv_variable(other->bound_var(i).deref());
+        this->bound_var(i)->set_equiv_variable(*other->bound_var(i));
 
     // check equality of the restrictions of the type variables
     for (size_t i = 0, e = num_bound_vars(); i != e && result; ++i)
         result &= this->bound_var(i)->bounds_equal(other->bound_var(i));
 
     for (size_t i = 0, e = size(); i != e && result; ++i)
-        result &= this->elem(i)->equal(other->elem(i).deref());
+        result &= this->elem(i)->equal(*other->elem(i));
 
     // unset equivalence constraints for type variables
     for (size_t i = 0, e = num_bound_vars(); i != e; ++i)
@@ -71,13 +71,13 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
     // FEATURE this works but seems too much effort, at least use a set that uses representatives
     TypetableSet<TraitNode> obounds;
     for (Trait r : other->bounds()) {
-        auto p = obounds.insert(r.deref()); // TODO is deref here and below correct?
+        auto p = obounds.insert(*r); // TODO is deref here and below correct?
         assert(p.second && "hash/equal broken");
     }
 
     // this->bounds() subset of trestr
     for (Trait r : this->bounds()) {
-        if (obounds.find(r.deref()) == obounds.end())
+        if (obounds.find(*r) == obounds.end())
             return false;
     }
 
