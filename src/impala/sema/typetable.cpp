@@ -11,8 +11,9 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-TypeTable::TypeTable()
-    : unifiables_()
+TypeTable::TypeTable(const bool result)
+    : ErrorHandler(result)
+    , unifiables_()
 #define IMPALA_TYPE(itype, atype) , itype##_(new_unifiable(new PrimTypeNode(*this, PrimType_##itype)))
 #include "impala/tokenlist.h"
     , trait_error_(trait(nullptr))

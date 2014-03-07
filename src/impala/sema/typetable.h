@@ -10,6 +10,7 @@
 
 #include "thorin/util/hash.h"
 
+#include "impala/sema/errorhandler.h"
 #include "impala/sema/type.h"
 #include "impala/sema/trait.h"
 
@@ -27,9 +28,9 @@ template<class T> using TypetableSet = thorin::HashSet<T*, TypetableHash<T>, Typ
 
 //------------------------------------------------------------------------------
 
-class TypeTable {
+class TypeTable : public ErrorHandler {
 public:
-    TypeTable();
+    TypeTable(const bool result);
     ~TypeTable();
 
     TypeError type_error() { return type_error_; }
