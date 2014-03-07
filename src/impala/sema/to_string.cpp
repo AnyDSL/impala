@@ -8,7 +8,7 @@ namespace impala {
 
 void Generic::dump() const { std::cout << to_string() << std::endl; }
 
-std::string TraitNode::to_string() const { return is_error_trait() ? "<error trait>" : trait_decl()->symbol().str(); }
+std::string TraitNode::to_string() const { return is_error_trait() ? "<trait error>" : trait_decl()->symbol().str(); }
 
 std::string TraitInstanceNode::to_string() const {
     std::string result = trait()->to_string();
