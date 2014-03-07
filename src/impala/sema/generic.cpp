@@ -83,6 +83,7 @@ SpecializeMapping Generic::check_instantiation(thorin::ArrayRef<Type> var_instan
 
 Generic* Generic::ginstantiate(thorin::ArrayRef<Type> var_instances) {
     SpecializeMapping m = check_instantiation(var_instances);
+    assert(m.size() == var_instances.size());
     return vspecialize(m);
 }
 

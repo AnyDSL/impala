@@ -66,7 +66,7 @@ private:
  */
 class TraitInstanceNode : public TraitNode {
 private:
-    TraitInstanceNode(const Trait trait, SpecializeMapping var_instances)
+    TraitInstanceNode(const Trait trait, const SpecializeMapping& var_instances)
         : TraitNode(trait->typetable(), trait->trait_decl())
         , trait_(trait)
         , var_instances_(var_instances)
