@@ -1,2 +1,2 @@
-trait T[X] {}
-fn f[A:T[B], B:T[A]](x:A, y:B) -> () {}
+trait T[A] {}
+fn f[B:T[C], C:T[B]](x:B, y:C) -> () {}

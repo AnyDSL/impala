@@ -42,7 +42,7 @@ private:
     TraitNode(const TraitNode& node);         ///< Do not copy-construct a \p Trait.
 
 public:
-    virtual bool equal(const TraitNode* other) const { return this->trait_decl() == other->trait_decl(); }
+    virtual bool equal(const TraitNode* other) const;
     virtual size_t hash() const;
     const TraitDecl* trait_decl() const { return trait_decl_; }
     bool is_error_trait() const { return trait_decl_ == nullptr; }

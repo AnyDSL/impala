@@ -60,17 +60,18 @@ SpecializeMapping Generic::check_instantiation(thorin::ArrayRef<Type> var_instan
     SpecializeMapping mapping;
     size_t i = 0;
     for (TypeVar v : bound_vars())
-        mapping[v.representative()] = var_instances[i++].deref(); // CHECK ist representative/deref correct here?
+        mapping[v.deref()] = var_instances[i++].deref(); // CHECK ist deref correct here and below?
     assert(mapping.size() == var_instances.size());
 
     // check the bounds
     for (TypeVar v : bound_vars()) {
-        auto it = mapping.find(v.representative());
+        auto it = mapping.find(v.deref());
         assert(it != mapping.end());
         Generic* instance = it->second;
 
         for (Trait bound : v->bounds()) {
-            Generic* spec_bound = bound->specialize(mapping);
+            SpecializeMapping m(mapping);
+            Generic* spec_bound = bound->specialize(m);
             //spec_bound->typetable().unify(spec_bound); FIXME
             // TODO better error handling
             // assert(instance->implements(spec_bound)); FIXME
