@@ -78,6 +78,7 @@ public:
     std::ostream& print_type_params(Printer&) const;
 
 protected:
+    void check_type_params(NameSema&) const;
     void check_type_params(TypeSema&) const;
 
     TypeParams type_params_;
@@ -132,12 +133,14 @@ private:
 
 class ASTType : public ASTNode {
 public:
+    virtual void to_type(NameSema&) const = 0;
     virtual Type to_type(TypeSema&) const = 0;
 };
 
 class ErrorASTType : public ASTType {
 public:
     virtual std::ostream& print(Printer&) const;
+    virtual void to_type(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 };
 
@@ -150,6 +153,7 @@ public:
 
     Kind kind() const { return kind_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void to_type(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 
 private:
@@ -165,6 +169,7 @@ public:
     bool is_owned() const { return kind_ == '~'; }
     bool is_borrowed() const { return kind_ == '&'; }
     virtual std::ostream& print(Printer&) const;
+    virtual void to_type(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 
 private:
@@ -187,6 +192,7 @@ protected:
 class IndefiniteArrayASTType : public ArrayASTType {
 public:
     virtual std::ostream& print(Printer&) const;
+    virtual void to_type(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 };
 
@@ -194,6 +200,7 @@ class DefiniteArrayASTType : public ArrayASTType {
 public:
     uint64_t dim() const { return dim_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void to_type(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 
 private:
@@ -216,6 +223,7 @@ protected:
 class TupleASTType : public CompoundASTType {
 public:
     virtual std::ostream& print(Printer&) const;
+    virtual void to_type(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 };
 
@@ -223,7 +231,9 @@ class ASTTypeApp : public CompoundASTType {
 public:
     Symbol symbol() const { return symbol_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void to_type(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
+    void  to_trait(NameSema&) const;
     Trait to_trait(TypeSema&) const;
 
 private:
@@ -236,6 +246,7 @@ class FnASTType : public ParametricASTType, public CompoundASTType {
 public:
     const FnASTType* ret_fn_type() const;
     virtual std::ostream& print(Printer&) const;
+    virtual void to_type(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 
     friend class Parser;
@@ -294,6 +305,7 @@ public:
     /// original type.
     const ASTType* asttype() const { return asttype_; }
     bool is_mut() const { return is_mut_; }
+    virtual void check(NameSema&) const = 0;
     virtual void check(TypeSema&) const = 0;
     Type calc_type(TypeSema&) const;
 
@@ -314,6 +326,7 @@ public:
     size_t handle() const { return handle_; }
     virtual std::ostream& print(Printer&) const;
     bool is_anonymous() const { return symbol() == Symbol(); }
+    virtual void check(NameSema&) const {}
     virtual void check(TypeSema&) const {}
 
 protected:
@@ -384,6 +397,7 @@ class ModContents : public ASTNode {
 public:
     const Items& items() const { return items_; }
     virtual std::ostream& print(Printer&) const;
+    void check(NameSema&) const;
     void check(TypeSema&) const;
 
 private:
@@ -395,8 +409,9 @@ private:
 class Item : virtual public ASTNode {
 public:
     Visibility visibility() const { return  visibility_; }
+    virtual void check_head(NameSema&) const = 0;
+    virtual void check(NameSema&) const = 0;
     virtual void check(TypeSema&) const = 0;
-    virtual void check_head(TypeSema&) const = 0;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -409,8 +424,9 @@ class ModDecl : public Item, public ParametricTypeDecl {
 public:
     const ModContents* mod_contents() const { return mod_contents_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void check_head(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual void check_head(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -421,8 +437,9 @@ private:
 
 class ForeignMod : public Item, public ParametricTypeDecl {
     virtual std::ostream& print(Printer&) const;
+    virtual void check_head(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual void check_head(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 };
 
@@ -430,8 +447,9 @@ class Typedef : public Item, public ParametricTypeDecl {
 public:
     const ASTType* type() const { return type_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void check_head(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual void check_head(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -444,8 +462,9 @@ class FieldDecl : public ValueDecl {
 public:
     Visibility visibility() const { return  visibility_; }
     virtual std::ostream& print(Printer&) const;
+    void check_head(NameSema&) const;
+    void check(NameSema&) const {} // TODO
     void check(TypeSema&) const {} // TODO
-    void check_head(TypeSema&) const;
 
 private:
     Visibility visibility_;
@@ -457,8 +476,9 @@ class StructDecl : public Item, public ParametricTypeDecl {
 public:
     const Fields& fields() const { return fields_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void check_head(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual void check_head(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -469,8 +489,9 @@ private:
 
 class EnumDecl : public Item, public ParametricTypeDecl {
     virtual std::ostream& print(Printer&) const;
+    virtual void check_head(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual void check_head(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 };
 
@@ -481,8 +502,9 @@ public:
     const ASTType* type() const { return type_; }
     const Expr* init() const { return init_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void check_head(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual void check_head(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -499,8 +521,9 @@ public:
     const Fn& fn() const { return fn_; }
     bool is_extern() const { return extern_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void check_head(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual void check_head(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -517,8 +540,9 @@ public:
     Trait trait() const { return trait_; }
     Trait calc_trait(TypeSema&) const;
     virtual std::ostream& print(Printer&) const;
+    virtual void check_head(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual void check_head(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -535,8 +559,9 @@ public:
     const ASTType* for_type() const { return for_type_; }
     const Methods& methods() const { return methods_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void check_head(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual void check_head(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -557,6 +582,7 @@ private:
 class Expr : public ASTNode, public Typable {
 public:
     virtual bool is_lvalue() const = 0;
+    virtual void check(NameSema&) const = 0;
     virtual void check(TypeSema&) const = 0;
     virtual thorin::RefPtr emit(CodeGen& cg) const { /*= 0*/ return 0; }
     virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {}
@@ -571,10 +597,10 @@ public:
 
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
 
 private:
-    //virtual const Type* check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 };
 
@@ -589,6 +615,7 @@ public:
     bool empty() const { return stmts_.empty() && expr_->isa<EmptyExpr>(); }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
@@ -620,6 +647,7 @@ public:
     PrimTypeKind literal2type() const;
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
@@ -633,6 +661,7 @@ public:
     const Fn& fn() const { return fn_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
@@ -653,6 +682,7 @@ public:
     const Decl* decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
@@ -674,6 +704,7 @@ public:
     Kind kind() const { return kind_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
     //virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
@@ -698,6 +729,7 @@ public:
     const Expr* rhs() const { return rhs_; }
     virtual bool is_lvalue() const { return Token::is_assign((TokenKind) kind()); }
     virtual std::ostream& print(Printer&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
@@ -724,6 +756,7 @@ public:
     const Expr* lhs() const { return lhs_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
@@ -740,6 +773,7 @@ public:
     Symbol symbol() const { return symbol_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return true; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
 
 private:
@@ -755,6 +789,7 @@ public:
     const ASTType* as() const { return as_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
 
 private:
@@ -768,6 +803,7 @@ class DefiniteArrayExpr : public Expr {
 public:
     const Exprs& elems() const { return elems_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     virtual bool is_lvalue() const { return false; }
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -784,6 +820,7 @@ public:
     const Expr* count() const { return count_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
@@ -800,6 +837,7 @@ public:
     const ASTType* elem_type() const { return elem_type_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
@@ -814,6 +852,7 @@ class TupleExpr : public Expr {
 public:
     const Exprs& elems() const { return elems_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     virtual bool is_lvalue() const { return false; }
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -847,6 +886,7 @@ public:
     const Elems& elems() const { return elems_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
 
 private:
@@ -862,6 +902,7 @@ public:
     const Expr* lhs() const { return lhs_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
@@ -880,6 +921,7 @@ public:
     bool has_else() const;
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
@@ -897,6 +939,7 @@ public:
     const Fn& fn() const { return fn_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
@@ -915,6 +958,7 @@ private:
 
 class Stmt : public ASTNode {
 public:
+    virtual void check(NameSema&) const = 0;
     virtual void check(TypeSema&) const = 0;
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const { [>= 0<]; }
 };
@@ -923,6 +967,7 @@ class ExprStmt : public Stmt {
 public:
     const Expr* expr() const { return expr_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
@@ -936,6 +981,7 @@ class ItemStmt : public Stmt {
 public:
     const Item* item() const { return item_; }
     virtual std::ostream& print(Printer&) const;
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
@@ -950,6 +996,7 @@ public:
     virtual std::ostream& print(Printer&) const;
     const LocalDecl* local() const { return local_; }
     const Expr* init() const { return init_; }
+    virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 

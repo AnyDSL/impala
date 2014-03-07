@@ -6,6 +6,8 @@
 
 namespace impala {
 
+//------------------------------------------------------------------------------
+
 class TypeSema : public TypeTable {
 public:
     TypeSema(const bool result, const bool nossa)
@@ -22,51 +24,56 @@ public:
             i->check(*this);
         }
     }
+    void expect_num(const Expr* exp);
+    Type match_types(const Expr* pos, Type t1, Type t2);
+    void expect_type(const Expr* found, Type expected, std::string typetype);
+    Type create_return_type(const ASTNode* node, Type ret_func);
 
 private:
     bool nossa_;
     std::vector<const Impl*> impls_;
 };
 
-void expect_num(TypeSema& sema, const Expr* exp) {
+//------------------------------------------------------------------------------
+
+void TypeSema::expect_num(const Expr* exp) {
     Type t = exp->type();
     assert(!t.empty());
 
-    if (t == sema.type_error())
+    if (t == type_error())
         return;
 
-    if ((t != sema.type_int()) && (t != sema.type_int8()) && (t != sema.type_int16()) && (t != sema.type_int32()) &&
-            (t != sema.type_int64()) && (t != sema.type_float()) && (t != sema.type_double()))
-        sema.error(exp) << "Expected number type but found " << t << "\n";
+    if ((t != type_int()) && (t != type_int8()) && (t != type_int16()) && (t != type_int32()) &&
+            (t != type_int64()) && (t != type_float()) && (t != type_double()))
+        error(exp) << "Expected number type but found " << t << "\n";
 }
 
-Type match_types(TypeSema& sema, const Expr* pos, Type t1, Type t2) {
+Type TypeSema::match_types(const Expr* pos, Type t1, Type t2) {
     assert(!t1.empty());
     assert(!t2.empty());
 
-    Type error = sema.type_error();
-    if (t1 == error || t2 == error)
-        return error;
+    if (t1 == type_error() || t2 == type_error())
+        return type_error();
 
     if (t1 == t2) {
         return t1;
     } else {
-        sema.error(pos) << "Types do not match: " << t1 << " != " << t2 << "\n";
-        return error;
+        error(pos) << "Types do not match: " << t1 << " != " << t2 << "\n";
+        return type_error();
     }
 }
 
-inline void expect_type(TypeSema& sema, const Expr* found, Type expected, std::string typetype) {
+void TypeSema::expect_type(const Expr* found, Type expected, std::string typetype) {
     assert(!expected.empty());
     assert(!found->type().empty());
 
-    if (found->type() == sema.type_error() || expected == sema.type_error())
+    if (found->type() == type_error() || expected == type_error())
         return;
     if (found->type() != expected)
-        sema.error(found) << "Wrong " << typetype << " type; expected " << expected << " but found " << found->type() << "\n";
+        error(found) << "Wrong " << typetype << " type; expected " << expected << " but found " << found->type() << "\n";
 }
 
-inline Type create_return_type(TypeSema& sema, const ASTNode* node, Type ret_func) {
+Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
     if (ret_func.isa<FnType>()) {
         if (ret_func->size() == 1) {
             return ret_func->elem(0);
@@ -74,11 +81,11 @@ inline Type create_return_type(TypeSema& sema, const ASTNode* node, Type ret_fun
             std::vector<Type> ret_types;
             for (auto t : ret_func->elems())
                 ret_types.push_back(t);
-            return sema.tupletype(ret_types);
+            return tupletype(ret_types);
         }
     } else {
-        sema.error(node) << "last argument is not a continuation function\n";
-        return sema.type_error();
+        error(node) << "last argument is not a continuation function\n";
+        return type_error();
     }
 }
 
@@ -187,52 +194,7 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
 //------------------------------------------------------------------------------
 
 /*
- * items - check_head
- */
-
-void ModDecl::check_head(TypeSema& sema) const {
-    sema.insert(this);
-}
-
-void ModContents::check(TypeSema& sema) const {
-    for (auto item : items()) item->check_head(sema);
-    for (auto item : items()) item->check(sema);
-}
-
-void ForeignMod::check_head(TypeSema& sema) const {
-    sema.insert(this);
-}
-
-void EnumDecl::check_head(TypeSema& sema) const {
-    sema.insert(this);
-}
-
-void FnDecl::check_head(TypeSema& sema) const {
-    sema.insert(this);
-}
-
-void StaticItem::check_head(TypeSema& sema) const {
-    sema.insert(this);
-}
-
-void StructDecl::check_head(TypeSema& sema) const {
-    sema.insert(this);
-}
-
-void TraitDecl::check_head(TypeSema& sema) const {
-    sema.insert(this);
-}
-
-void Typedef::check_head(TypeSema& sema) const {
-    sema.insert(this);
-}
-
-void Impl::check_head(TypeSema& sema) const {
-    sema.push_impl(this);
-}
-
-/*
- * items - check
+ * items
  */
 
 void ModDecl::check(TypeSema& sema) const {
@@ -350,11 +312,6 @@ void EmptyExpr::check(TypeSema& sema) const {
 }
 
 void BlockExpr::check(TypeSema& sema) const {
-    for (auto stmt : stmts()) {
-        if (auto item_stmt = stmt->isa<ItemStmt>())
-            item_stmt->item()->check_head(sema);
-    }
-
     for (auto stmt : stmts())
         stmt->check(sema);
 
