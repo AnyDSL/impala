@@ -484,6 +484,9 @@ void LetStmt::check(TypeSema& sema) const {
 bool type_analysis(const ModContents* mod, bool nossa) {
     TypeSema sema(nossa);
     mod->check(sema);
+#ifndef NDEBUG
+    sema.verify();
+#endif
     return sema.result();
 }
 
