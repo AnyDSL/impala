@@ -21,12 +21,12 @@ template<class T> struct NodeEqual {
 template<class T> using NodeSet = thorin::HashSet<T, NodeHash<T>, NodeEqual<T>>;
 
 template<class T> struct UniHash {
-    size_t operator () (const T t) const { return thorin::hash_value(t.deref()); }
+    size_t operator () (const T t) const { return thorin::hash_value(*t); }
 };
 template<class T> struct UniEqual {
     bool operator () (const T t1, const T t2) const { return t1 == t2; }
 };
-template<class T> using UniSet = std::unordered_set<T, UniHash<T>, UniEqual<T>>;
+template<class T> using UniSet = thorin::HashSet<T, UniHash<T>, UniEqual<T>>;
 
 class TypeNode;
 
