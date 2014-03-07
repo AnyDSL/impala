@@ -19,11 +19,10 @@ TypeTable::TypeTable()
     , type_error_(new_unifiable(new TypeErrorNode(*this)))
     , type_noreturn_(new_unifiable(new NoReturnTypeNode(*this)))
 {
-    Type t;
-#define IMPALA_TYPE(itype, atype) unify(t = itype##_);   // TODO remove this hacked cast
+#define IMPALA_TYPE(itype, atype) unify(Type(itype##_));
 #include "impala/tokenlist.h"
-    unify(t = type_error_); // TODO remove this hacked cast
-    unify(t = type_noreturn_); // TODO remove this hacked cast
+    unify(Type(type_error_));
+    unify(Type(type_noreturn_));
 }
 
 TypeTable::~TypeTable() { for (Generic* g : garbage_) delete g; }
