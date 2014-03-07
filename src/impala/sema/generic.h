@@ -154,9 +154,8 @@ public:
     }
 
     Proxy<T> instantiate(thorin::ArrayRef<Type> var_instances) {
-        Proxy<T> u = Proxy<T>(ginstantiate(var_instances)->as<T>());
-        typetable().unify(u);
-        return u;
+        // we can not unify yet because it could be that this type is not closed yet
+        return Proxy<T>(ginstantiate(var_instances)->as<T>());
     }
 
 private:
