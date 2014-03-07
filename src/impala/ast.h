@@ -345,7 +345,7 @@ protected:
 class TypeParam : public TypeDecl {
 public:
     const Types& bounds() const { return bounds_; }
-    TypeVar type_var() const { return type_var_; }
+    TypeVar type_var() const { assert(!type_var_.empty()); return type_var_; }
     virtual std::ostream& print(Printer&) const;
 
 private:
@@ -555,6 +555,7 @@ private:
 
 class Impl : public Item, public ParametricASTType {
 public:
+    /// Maybe nullptr as this trait is optional.
     const ASTType* trait() const { return trait_; }
     const ASTType* for_type() const { return for_type_; }
     const Methods& methods() const { return methods_; }

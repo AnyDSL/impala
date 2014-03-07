@@ -145,7 +145,6 @@ Type ASTTypeApp::to_type(TypeSema& sema) const {
     if (auto decl = sema.lookup(this, symbol())) {
         if (auto tp = decl->isa<TypeParam>()) {
             assert(elems().empty());
-            assert(!tp->type_var().empty());
             return tp->type_var();
         } else
             sema.error(this) << "cannot convert a trait instance into a type\n";
@@ -234,7 +233,6 @@ void FnDecl::check(TypeSema& sema) const {
     // create FnType
     Type fn_type = sema.fntype(par_types);
     for (auto tp : type_params()) {
-        assert(!tp->type_var().empty());
         fn_type->add_bound_var(tp->type_var());
     }
     sema.unify(fn_type);
@@ -262,7 +260,6 @@ void TraitDecl::check(TypeSema& sema) const {
 
     check_type_params(sema);
     for (auto tp : type_params()) {
-        assert(!tp->type_var().empty());
         trait_->add_bound_var(tp->type_var());
     }
 }
@@ -284,7 +281,6 @@ void Impl::check(TypeSema& sema) const {
             Trait tinst = t->to_trait(sema);
             TraitImpl impl = sema.implement_trait(this, tinst);
             for (auto tp : type_params()) {
-                assert(!tp->type_var().empty());
                 impl->add_bound_var(tp->type_var());
             }
 
@@ -306,10 +302,7 @@ void Impl::check(TypeSema& sema) const {
  * expressions
  */
 
-void EmptyExpr::check(TypeSema& sema) const {
-    // empty expression returns unit - the empty tuple type '()'
-    set_type(sema.unit());
-}
+void EmptyExpr::check(TypeSema& sema) const { set_type(sema.unit()); }
 
 void BlockExpr::check(TypeSema& sema) const {
     for (auto stmt : stmts())
