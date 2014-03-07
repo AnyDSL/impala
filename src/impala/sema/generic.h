@@ -44,28 +44,31 @@ public:
 
     bool empty() const { return node_ == nullptr; }
     bool operator == (const Proxy<T>& other) const {
+        assert(node_ != nullptr);         
         assert(&node()->typetable() == &other.node()->typetable());
         node()->typetable().unify(*this);
         node()->typetable().unify(other);
         return representative() == other.representative();
     }
-    bool operator != (const Proxy<T>& other) const { return !(*this == other); }
-    T* operator -> () const { return *(*this); }
+    bool operator != (const Proxy<T>& other) const { assert(node_ != nullptr); return !(*this == other); }
+    T* operator -> () const { assert(node_ != nullptr); return *(*this); }
     /// Automatic up-cast in the class hierarchy.
     template<class U> operator Proxy<U>() {
         static_assert(std::is_base_of<U, T>::value, "R is not a base type of L");
-        return Proxy<U>((U*) node_);
+        assert(node_ != nullptr); return Proxy<U>((U*) node_);
     }
-    template<class U> 
-    Proxy<typename U::BaseType> isa() { return Proxy<typename U::BaseType>(node_->isa<typename U::BaseType>()); }
-    template<class U> 
-    Proxy<typename U::BaseType> as() { return Proxy<typename U::BaseType>(node_->as<typename U::BaseType>()); }
+    template<class U> Proxy<typename U::BaseType> isa() { 
+        assert(node_ != nullptr); return Proxy<typename U::BaseType>(node_->isa<typename U::BaseType>()); 
+    }
+    template<class U> Proxy<typename U::BaseType> as() { 
+        assert(node_ != nullptr); return Proxy<typename U::BaseType>(node_->as<typename U::BaseType>()); 
+    }
     operator bool() { return !empty(); }
 
 private:
-    T* operator * () const { return node_->is_unified() ? representative() : node_->template as<T>(); }
-    T* representative() const { return node_->representative()->template as<T>(); }
-    T* node() const { return node_; }
+    T* operator * () const { assert(node_ != nullptr); return node_->is_unified() ? representative() : node_->template as<T>(); }
+    T* representative() const { assert(node_ != nullptr); return node_->representative()->template as<T>(); }
+    T* node() const { assert(node_ != nullptr); return node_; }
     T* node_;
 
     friend class Generic;
