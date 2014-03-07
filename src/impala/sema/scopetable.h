@@ -1,7 +1,6 @@
 #ifndef IMPALA_SEMA_SCOPETABLE_H
 #define IMPALA_SEMA_SCOPETABLE_H
 
-#include <unordered_map>
 #include <vector>
 
 #include "impala/symbol.h"
@@ -55,7 +54,7 @@ public:
 private:
     size_t depth() const { return levels_.size(); }
 
-    std::unordered_map<Symbol, const Decl*> symbol2decl_;
+    thorin::HashMap<Symbol, const Decl*> symbol2decl_;
     std::vector<const Decl*> decl_stack_;
     std::vector<size_t> levels_;
     bool result_;

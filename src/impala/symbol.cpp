@@ -1,23 +1,20 @@
 #include "impala/symbol.h"
 
-#include "thorin/util/hash.h"
-
 #include <iomanip>
 #include <sstream>
 
 namespace impala {
 
 size_t StrHash::operator () (const char* s) const {
-    size_t seed = 0;
+    size_t seed = thorin::FNV1<size_t>::offset;
     const char* i = s;
 
     while (*i != '\0')
         seed = thorin::hash_combine(seed, *i++);
-
     return thorin::hash_combine(seed, i-s);
 }
 
-Symbol::Table Symbol::table_(1031);
+Symbol::Table Symbol::table_;
 
 #ifdef _MSC_VER
 static const char* duplicate(const char* s) { return _strdup(s); }

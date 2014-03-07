@@ -35,11 +35,9 @@ void ScopeTable::insert(const Decl* decl) {
 }
 
 const Decl* ScopeTable::clash(Symbol symbol) const {
-    auto i = symbol2decl_.find(symbol);
-    if (i == symbol2decl_.end())
-        return nullptr;
-    const Decl* decl = i->second;
-    return (decl && decl->depth() == depth()) ? decl : nullptr;
+    if (auto decl = thorin::find(symbol2decl_, symbol))
+        return (decl && decl->depth() == depth()) ? decl : nullptr;
+    return nullptr;
 }
 
 void ScopeTable::pop_scope() {

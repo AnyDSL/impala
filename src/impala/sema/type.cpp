@@ -34,7 +34,7 @@ bool TypeNode::is_closed() const {
 bool TypeNode::is_subtype(const Type super_type) const {
     assert(!super_type.empty());
 
-    if (this == super_type.deref())
+    if (this == *super_type)
         return true;
 
     for (Type t : super_type->elems()) {

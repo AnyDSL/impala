@@ -1,12 +1,11 @@
 #ifndef IMPALA_SEMA_GENERIC_H
 #define IMPALA_SEMA_GENERIC_H
 
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "thorin/util/array.h"
 #include "thorin/util/cast.h"
+#include "thorin/util/hash.h"
 
 namespace impala {
 
@@ -19,7 +18,7 @@ template<class T> struct NodeHash {
 template<class T> struct NodeEqual {
     bool operator () (const T t1, const T t2) const { return t1.node() == t2.node(); }
 };
-template<class T> using NodeSet = std::unordered_set<T, NodeHash<T>, NodeEqual<T>>;
+template<class T> using NodeSet = thorin::HashSet<T, NodeHash<T>, NodeEqual<T>>;
 
 template<class T> struct UniHash {
     size_t operator () (const T t) const { return thorin::hash_value(t.deref()); }
@@ -51,8 +50,7 @@ public:
         return representative() == other.representative();
     }
     bool operator != (const Proxy<T>& other) const { return !(*this == other); }
-    //operator T* () const { return deref(); } // CHECK shouldn't we remove this?
-    T* operator -> () const { return deref(); }
+    T* operator -> () const { return *(*this); }
     /// Automatic up-cast in the class hierarchy.
     template<class U> operator Proxy<U>() {
         static_assert(std::is_base_of<U, T>::value, "R is not a base type of L");
@@ -65,7 +63,7 @@ public:
     operator bool() { return !empty(); }
 
 private:
-    T* deref() const { return node_->is_unified() ? representative() : node_->template as<T>(); }
+    T* operator * () const { return node_->is_unified() ? representative() : node_->template as<T>(); }
     T* representative() const { return node_->representative()->template as<T>(); }
     T* node() const { return node_; }
     T* node_;
@@ -95,7 +93,7 @@ typedef Proxy<TraitNode> Trait;
 typedef Proxy<TraitImplNode> TraitImpl;
 
 class Generic;
-typedef std::unordered_map<const Generic*, Generic*> SpecializeMapping;
+typedef thorin::HashMap<const Generic*, Generic*> SpecializeMapping;
 
 //------------------------------------------------------------------------------
 

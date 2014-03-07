@@ -14,7 +14,7 @@ namespace impala {
 
 struct TraitImplHash { size_t operator () (const Trait t) const; };
 struct TraitImplEqual { bool operator () (const Trait t1, const Trait t2) const; };
-typedef std::unordered_set<Trait, TraitImplHash, TraitImplEqual> TraitImplSet;
+typedef thorin::HashSet<Trait, TraitImplHash, TraitImplEqual> TraitImplSet;
 
 //------------------------------------------------------------------------------
 

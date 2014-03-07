@@ -8,9 +8,6 @@
 #ifndef IMPALA_SEMA_TRAIT_H
 #define IMPALA_SEMA_TRAIT_H
 
-#include <unordered_map>
-#include <unordered_set>
-
 #include "impala/sema/generic.h"
 
 namespace impala {
