@@ -95,8 +95,9 @@ public:
     inline Loc(Parser& parser, T* node);
     inline ~Loc();
 
-    operator T*() { return node_; }
-    T* operator -> () { return node_; }
+    operator T*() const { return node_; }
+    T* operator -> () const { return node_; }
+    T* get() const { return node_; }
 
 private:
     Parser& parser_;
@@ -1037,7 +1038,7 @@ const LetStmt* Parser::parse_let_stmt() {
         let_stmt->init_ = parse_expr();
     expect(Token::SEMICOLON, "the end of an let statement");
 
-    let_stmt->local_ = local;
+    let_stmt->local_ = local.get();
     return let_stmt;
 }
 
