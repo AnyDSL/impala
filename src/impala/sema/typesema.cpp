@@ -131,36 +131,28 @@ Type TupleASTType::to_type(TypeSema& sema) const {
 }
 
 Type ASTTypeApp::to_type(TypeSema& sema) const {
-    if (auto decl = sema.lookup(this, symbol())) {
-        if (auto tp = decl->isa<TypeParam>()) {
-            assert(elems().empty());
-            return tp->type_var();
-        } else
-            sema.error(this) << "cannot convert a trait instance into a type\n";
-    }
-
-    return sema.type_error();
+    if (type_param())
+        return type_param()->type_var();
+    else 
+        return sema.type_error();
 }
 
 Type FnASTType::to_type(TypeSema& sema) const {
-    sema.push_scope();
-
     check_type_params(sema);
 
     std::vector<Type> params;
-    for (auto p : elems())
-        params.push_back(p->to_type(sema));
+    for (auto elem : elems())
+        params.push_back(elem->to_type(sema));
 
-    FnType t = sema.fntype(params);
-    for (auto tp : type_params())
-        t->add_bound_var(tp->type_var());
+    FnType fntype = sema.fntype(params);
+    for (auto type_param : type_params())
+        fntype->add_bound_var(type_param->type_var());
 
-    sema.pop_scope();
-
-    return t;
+    return fntype;
 }
 
 Trait ASTTypeApp::to_trait(TypeSema& sema) const {
+#if 0
     if (auto decl = sema.lookup(this, symbol())) {
         if (auto trait_decl = decl->isa<TraitDecl>()) {
             Trait trait = trait_decl->calc_trait(sema);
@@ -177,29 +169,32 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
             sema.error(this) << "cannot convert a type variable into a trait instance\n";
     }
     return sema.trait_error();
+#endif
 }
 
 Trait TraitDecl::calc_trait(TypeSema& sema) const {
-    check(tt);
+    check(sema);
     return trait();
 }
 
 Type ValueDecl::calc_type(TypeSema& sema) const {
-    check(tt);
+    check(sema);
     return type();
 }
 
 //------------------------------------------------------------------------------
+
+void ModContents::check(TypeSema& sema) const {
+    for (auto item : items()) item->check(sema);
+}
 
 /*
  * Item::check
  */
 
 void ModDecl::check(TypeSema& sema) const {
-    sema.push_scope();
     if (mod_contents())
         mod_contents()->check(sema);
-    sema.pop_scope();
 }
 
 void ForeignMod::check(TypeSema& sema) const {
@@ -215,6 +210,7 @@ void StaticItem::check(TypeSema& sema) const {
 }
 
 void FnDecl::check(TypeSema& sema) const {
+#if 0
     // this FnDecl has already been checked
     if (!type().empty())
         return;
@@ -240,10 +236,11 @@ void FnDecl::check(TypeSema& sema) const {
     fn().body()->check(sema);
     if (fn().body()->type() != sema.type_noreturn()) {
         Type ret_func = fn_type->elem(fn_type->size() - 1);
-        expect_type(sema, fn().body(), create_return_type(sema, this, ret_func), "return");
+        sema.expect_type(fn().body(), create_return_type(sema, this, ret_func), "return");
     }
 
     sema.pop_scope();
+#endif
 }
 
 void StructDecl::check(TypeSema& sema) const {
@@ -264,6 +261,7 @@ void TraitDecl::check(TypeSema& sema) const {
 }
 
 void Impl::check(TypeSema& sema) const {
+#if 0
     if (checked_)
         return;
     else
@@ -295,6 +293,7 @@ void Impl::check(TypeSema& sema) const {
         fn->check(sema);
 
     sema.pop_scope();
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -321,6 +320,7 @@ void FnExpr::check(TypeSema& sema) const {
 }
 
 void PathExpr::check(TypeSema& sema) const {
+#if 0
     // FEATURE consider longer paths
     auto last_item = path()->path_items().back();
 
@@ -338,6 +338,7 @@ void PathExpr::check(TypeSema& sema) const {
         }
     } else
         set_type(sema.type_error());
+#endif
 }
 
 void PrefixExpr::check(TypeSema& sema) const {
@@ -354,7 +355,7 @@ void InfixExpr::check(TypeSema& sema) const {
     switch (kind()) {
         case EQ:
         case NE:
-            match_types(sema, this, lhstype, rhstype);
+            sema.match_types(this, lhstype, rhstype);
             set_type(sema.type_bool());
             break;
         case ADD:
@@ -362,8 +363,8 @@ void InfixExpr::check(TypeSema& sema) const {
         case MUL:
         case DIV:
         case REM:
-            expect_num(sema, lhs());
-            set_type(match_types(sema, this, lhstype, rhstype));
+            sema.expect_num(lhs());
+            set_type(sema.match_types(this, lhstype, rhstype));
             break;
         default: THORIN_UNREACHABLE;
     }
@@ -400,6 +401,7 @@ void StructExpr::check(TypeSema& sema) const {
 }
 
 void MapExpr::check(TypeSema& sema) const {
+#if 0
     // FEATURE this currently only considers function calls
     lhs()->check(sema);
     Type lhs_type = lhs()->type();
@@ -410,7 +412,7 @@ void MapExpr::check(TypeSema& sema) const {
             for (size_t i = 0; i < args().size(); ++i) {
                 auto arg = args()[i];
                 arg->check(sema);
-                expect_type(sema, arg, fn->elem(i), "argument");
+                sema.expect_type(arg, fn->elem(i), "argument");
             }
 
             // set return type
@@ -431,18 +433,19 @@ void MapExpr::check(TypeSema& sema) const {
     }
     assert(type().empty() && "This should only be reached if an error occurred");
     set_type(sema.type_error());
+#endif
 }
 
 void IfExpr::check(TypeSema& sema) const {
     // assert condition is of type bool
     cond()->check(sema);
-    expect_type(sema, cond(), sema.type_bool(), "");
+    sema.expect_type(cond(), sema.type_bool(), "");
 
     then_expr()->check(sema);
     else_expr()->check(sema);
 
     // assert that both branches have the same type and set the type
-    set_type(match_types(sema, this, then_expr()->type(), else_expr()->type()));
+    set_type(sema.match_types(this, then_expr()->type(), else_expr()->type()));
 }
 
 void ForExpr::check(TypeSema& sema) const {

@@ -144,17 +144,17 @@ void ASTTypeApp::to_trait(NameSema& sema) const {
 
 //------------------------------------------------------------------------------
 
+void ModContents::check(NameSema& sema) const {
+    for (auto item : items()) item->check_head(sema);
+    for (auto item : items()) item->check(sema);
+}
+
 /*
  * Item::check_head
  */
 
 void ModDecl::check_head(NameSema& sema) const {
     sema.insert(this);
-}
-
-void ModContents::check(NameSema& sema) const {
-    for (auto item : items()) item->check_head(sema);
-    for (auto item : items()) item->check(sema);
 }
 
 void ForeignMod::check_head(NameSema& sema) const {
