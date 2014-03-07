@@ -105,8 +105,8 @@ Generic* TupleTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping
 
 Generic* TypeVarNode::vspecialize(SpecializeMapping& mapping) {
     // was not bound in the specialized type -> return orginal type var
-    // FIXME we need to create a new copy here - else unification will lead to segmentation faults!! -- right?
-    return mapping[this] = typetable().new_unifiable(this).node();
+    // CHECK do we need to create a new copy here? unification lead to segmentation faults in the past...
+    return mapping[this] = this;
 }
 
 TypeVar TypeVarNode::clone(SpecializeMapping& mapping) const {
