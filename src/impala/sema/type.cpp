@@ -32,8 +32,6 @@ bool TypeNode::is_closed() const {
 
 // TODO test this
 bool TypeNode::is_subtype(const Type super_type) const {
-    assert(!super_type.empty());
-
     if (this == *super_type)
         return true;
 

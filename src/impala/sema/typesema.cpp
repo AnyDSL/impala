@@ -37,7 +37,6 @@ private:
 
 void TypeSema::expect_num(const Expr* exp) {
     Type t = exp->type();
-    assert(!t.empty());
 
     if (t == type_error())
         return;
@@ -48,9 +47,6 @@ void TypeSema::expect_num(const Expr* exp) {
 }
 
 Type TypeSema::match_types(const Expr* pos, Type t1, Type t2) {
-    assert(!t1.empty());
-    assert(!t2.empty());
-
     if (t1 == type_error() || t2 == type_error())
         return type_error();
 
@@ -63,9 +59,6 @@ Type TypeSema::match_types(const Expr* pos, Type t1, Type t2) {
 }
 
 void TypeSema::expect_type(const Expr* found, Type expected, std::string typetype) {
-    assert(!expected.empty());
-    assert(!found->type().empty());
-
     if (found->type() == type_error() || expected == type_error())
         return;
     if (found->type() != expected)
@@ -188,13 +181,11 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
 
 Trait TraitDecl::calc_trait(TypeSema& sema) const {
     check(tt);
-    assert(!trait().empty());
     return trait();
 }
 
 Type ValueDecl::calc_type(TypeSema& sema) const {
     check(tt);
-    assert(!type().empty());
     return type();
 }
 
@@ -400,7 +391,6 @@ void TupleExpr::check(TypeSema& sema) const {
     std::vector<Type> elems;
     for (auto e : this->elems()) {
         e->check(sema);
-        assert(!e->type().empty());
         elems.push_back(e->type());
     }
     set_type(sema.tupletype(elems));
@@ -413,7 +403,6 @@ void MapExpr::check(TypeSema& sema) const {
     // FEATURE this currently only considers function calls
     lhs()->check(sema);
     Type lhs_type = lhs()->type();
-    assert(!lhs_type.empty());
 
     if (auto fn = lhs_type.isa<FnType>()) {
         bool no_cont = fn->size() == (args().size()+1); // true if this is a normal function call (no continuation)
@@ -454,7 +443,6 @@ void IfExpr::check(TypeSema& sema) const {
 
     // assert that both branches have the same type and set the type
     set_type(match_types(sema, this, then_expr()->type(), else_expr()->type()));
-    assert(!type().empty());
 }
 
 void ForExpr::check(TypeSema& sema) const {
