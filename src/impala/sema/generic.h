@@ -21,6 +21,8 @@ template<class T> struct NodeEqual {
 };
 template<class T> using NodeSet = std::unordered_set<T, NodeHash<T>, NodeEqual<T>>;
 
+class TypeNode;
+
 template<class T>
 class Proxy {
 public:
@@ -72,9 +74,9 @@ private:
     friend struct NodeHash<Proxy<T>>;
     friend struct NodeEqual<Proxy<T>>;
     friend class TypeTable;
+    friend void verify(thorin::ArrayRef<const Proxy<TypeNode>> types);
 };
 
-class TypeNode;
 class TypeVarNode;
 class TraitNode;
 class TraitImplNode;
