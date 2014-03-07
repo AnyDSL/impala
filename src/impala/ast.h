@@ -307,7 +307,7 @@ public:
     bool is_mut() const { return is_mut_; }
     virtual void check(NameSema&) const = 0;
     virtual void check(TypeSema&) const = 0;
-    Type calc_type(TypeSema&) const;
+    Type calc_type(TypeTable&) const;
 
 protected:
     thorin::AutoPtr<const ASTType> asttype_;
@@ -538,7 +538,7 @@ public:
     const std::vector<Symbol>& super() const { return super_; }
     const Methods& methods() const { return methods_; }
     Trait trait() const { return trait_; }
-    Trait calc_trait(TypeSema&) const;
+    Trait calc_trait(TypeTable&) const;
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;

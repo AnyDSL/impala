@@ -91,14 +91,11 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
 
 //------------------------------------------------------------------------------
 
+/*
+ * ASTType::to_type
+ */
+
 void ParametricASTType::check_type_params(TypeSema& sema) const {
-    // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
-
-    for (const TypeParam* tp : type_params()) {
-        tp->type_var_ = sema.typevar();
-        sema.insert(tp);
-    }
-
     // check bounds
     for (const TypeParam* tp : type_params()) {
         for (const ASTType* b : tp->bounds()) {
@@ -193,7 +190,7 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
 //------------------------------------------------------------------------------
 
 /*
- * items
+ * Item::check
  */
 
 void ModDecl::check(TypeSema& sema) const {
@@ -298,8 +295,10 @@ void Impl::check(TypeSema& sema) const {
     sema.pop_scope();
 }
 
+//------------------------------------------------------------------------------
+
 /*
- * expressions
+ * Expr::check
  */
 
 void EmptyExpr::check(TypeSema& sema) const { set_type(sema.unit()); }
@@ -450,8 +449,10 @@ void IfExpr::check(TypeSema& sema) const {
 void ForExpr::check(TypeSema& sema) const {
 }
 
+//------------------------------------------------------------------------------
+
 /*
- * statements
+ * Stmt::check
  */
 
 void ExprStmt::check(TypeSema& sema) const {
