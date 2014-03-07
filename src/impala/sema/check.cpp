@@ -527,6 +527,9 @@ void LetStmt::check(Sema& sema) const {
 bool check(const ModContents* mod, bool nossa) {
     Sema sema(nossa);
     mod->check(sema);
+#ifndef NDEBUG
+    sema.verify();
+#endif
     return sema.result();
 }
 

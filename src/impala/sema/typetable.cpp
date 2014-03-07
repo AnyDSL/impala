@@ -151,7 +151,8 @@ PrimType TypeTable::primtype(const PrimTypeKind kind) {
 }
 
 void TypeTable::verify() const {
-    for (auto g : unifiables_) {
+    for (Generic* g : unifiables_) {
+        assert(g != nullptr);
         if (auto type = g->isa<TypeNode>()) {
             assert(type->is_sane());
             assert(type->is_final_representative());
@@ -164,16 +165,23 @@ void TypeTable::verify() const {
         }
     }
 
-    for (auto g : garbage_) {
+    for (size_t i = 0; i < garbage_.size(); ++i) {
+        Generic* g = garbage_[i];
+        assert(g != nullptr);
+
+        // no element should be twice in the garbage vector - else deletion will fail!
+        for (size_t j = i+1; j < garbage_.size(); ++j)
+            assert(g != garbage_[j]);
+
         if (auto type = g->isa<TypeNode>()) {
             if (type->is_unified())
-                assert(unifiables_.find(type->representative()) != unifiables_.end());
+                assert(unifiables_.contains(type->representative()));
         } else if (auto trait = g->isa<TraitNode>()) {
             if (trait->is_unified())
-                assert(unifiables_.find(trait->representative()) != unifiables_.end());
+                assert(unifiables_.contains(trait->representative()));
         } else if (auto impl = g->isa<TraitImplNode>()) {
             if (impl->is_unified())
-                assert(unifiables_.find(impl->representative()) != unifiables_.end());
+                assert(unifiables_.contains(impl->representative()));
         }
     }
 }
