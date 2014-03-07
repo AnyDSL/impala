@@ -8,6 +8,8 @@
 #ifndef IMPALA_SEMA_TYPETABLE_H
 #define IMPALA_SEMA_TYPETABLE_H
 
+#include "thorin/util/hash.h"
+
 #include "impala/sema/type.h"
 #include "impala/sema/trait.h"
 
@@ -21,7 +23,7 @@ template<class T> struct TypetableHash {
 template<class T> struct TypetableEqual {
     bool operator () (const T* t1, const T* t2) const { return t1->equal(t2); }
 };
-template<class T> using TypetableSet = std::unordered_set<T*, TypetableHash<T>, TypetableEqual<T>>;
+template<class T> using TypetableSet = thorin::HashSet<T*, TypetableHash<T>, TypetableEqual<T>>;
 
 //------------------------------------------------------------------------------
 

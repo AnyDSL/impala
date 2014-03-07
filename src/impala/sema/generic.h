@@ -1,12 +1,11 @@
 #ifndef IMPALA_SEMA_GENERIC_H
 #define IMPALA_SEMA_GENERIC_H
 
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "thorin/util/array.h"
 #include "thorin/util/cast.h"
+#include "thorin/util/hash.h"
 
 namespace impala {
 
@@ -19,7 +18,7 @@ template<class T> struct NodeHash {
 template<class T> struct NodeEqual {
     bool operator () (const T t1, const T t2) const { return t1.node() == t2.node(); }
 };
-template<class T> using NodeSet = std::unordered_set<T, NodeHash<T>, NodeEqual<T>>;
+template<class T> using NodeSet = thorin::HashSet<T, NodeHash<T>, NodeEqual<T>>;
 
 template<class T>
 class Proxy {
@@ -84,7 +83,7 @@ typedef Proxy<TraitNode> Trait;
 typedef Proxy<TraitImplNode> TraitImpl;
 
 class Generic;
-typedef std::unordered_map<const Generic*, Generic*> SpecializeMapping;
+typedef thorin::HashMap<const Generic*, Generic*> SpecializeMapping;
 
 //------------------------------------------------------------------------------
 

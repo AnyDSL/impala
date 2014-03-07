@@ -3,7 +3,6 @@
 
 #include <ostream>
 #include <string>
-#include <unordered_map>
 
 #include "thorin/enums.h"
 #include "thorin/util/assert.h"
@@ -43,18 +42,11 @@ public:
         size_t operator () (Kind kind) const { return thorin::hash_value((int) kind); }
     };
 
-    /*
-     * constructors
-     */
-
     Token() {}
-
     /// Create a literal operator or special char token
     Token(const Location& loc, Kind tok);
-
     /// Create an identifier or a keyword (depends on \p str)
     Token(const Location& loc, const std::string& str);
-
     /// Create a literal
     Token(const Location& loc, Kind type, const std::string& str);
 
@@ -102,13 +94,13 @@ private:
     static Symbol insert(Kind tok, const char* str);
     static void insert_key(Kind tok, const char* str);
 
-    typedef std::unordered_map<Kind, Symbol, KindHash> Tok2Sym;
+    typedef thorin::HashMap<Kind, Symbol, KindHash> Tok2Sym;
     static Tok2Sym tok2sym_;
 
-    typedef std::unordered_map<Symbol, Kind> Sym2Tok;
+    typedef thorin::HashMap<Symbol, Kind> Sym2Tok;
     static Sym2Tok keywords_;
 
-    typedef std::unordered_map<Kind, const char*, KindHash> Tok2Str;
+    typedef thorin::HashMap<Kind, const char*, KindHash> Tok2Str;
     static Tok2Str tok2str_;
 
     friend void init();
@@ -125,6 +117,6 @@ std::ostream& operator << (std::ostream& os, const TokenKind& tok);
 
 //------------------------------------------------------------------------------
 
-} // namespace impala
+}
 
 #endif

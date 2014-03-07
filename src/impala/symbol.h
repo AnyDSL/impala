@@ -3,7 +3,6 @@
 
 #include <cstring>
 #include <string>
-#include <unordered_set>
 
 #include "thorin/util/hash.h"
 
@@ -28,7 +27,7 @@ private:
     void insert(const char* str);
 
     const char* str_;
-    typedef std::unordered_set<const char*, StrHash, StrEqual> Table;
+    typedef thorin::HashSet<const char*, StrHash, StrEqual> Table;
     static Table table_;
 };
 
@@ -36,10 +35,10 @@ inline std::ostream& operator << (std::ostream& o, Symbol s) { return o << s.str
 
 }
 
-namespace std {
+namespace thorin {
 
 template<>
-struct hash<impala::Symbol> {
+struct Hash<impala::Symbol> {
     size_t operator () (impala::Symbol symbol) const { return thorin::hash_value(symbol.str()); }
 };
 
