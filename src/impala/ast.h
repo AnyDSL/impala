@@ -543,7 +543,7 @@ private:
 
 class TraitDecl : public Item, public ParametricTypeDecl {
 public:
-    const std::vector<Symbol>& super() const { return super_; }
+    const AutoVector<const ASTTypeApp*>& super() const { return super_; }
     const Methods& methods() const { return methods_; }
     Trait trait() const { return trait_; }
     Trait calc_trait(TypeSema&) const;
@@ -555,7 +555,7 @@ public:
 
 private:
     Methods methods_;
-    std::vector<Symbol> super_;
+    AutoVector<const ASTTypeApp*> super_;
     mutable Trait trait_;
 
     friend class Parser;

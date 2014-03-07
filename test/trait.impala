@@ -4,7 +4,7 @@ struct Vec3[T] {
     z: T
 }
 
-trait Eq[T: Drop + Clone + Foo[int], U] : Foo, Bar {
+trait Eq[T: Drop + Clone + Foo[int], U] : Foo[int], Bar, FooBar[A, B, float, D] {
     fn eq(int, foo: int) -> bool;
     fn neq[U](a: int, b: int) -> bool { !eq(a, b) }
     fn blub(int, foo: int) -> bool;

@@ -547,7 +547,7 @@ TraitDecl* Parser::parse_trait_decl() {
 
     if (accept(Token::COLON)) {
         parse_comma_list(Token::L_BRACE, "trait declaration", [&] { 
-            trait_decl->super_.push_back(try_id("list of super traits"));
+            trait_decl->super_.push_back(parse_type_app());
         });
     } else
         expect(Token::L_BRACE, "trait declaration");

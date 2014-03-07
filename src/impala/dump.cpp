@@ -200,7 +200,7 @@ std::ostream& TraitDecl::print(Printer& p) const {
 
     if (!super().empty()) {
         p.stream() << " : ";
-        p.dump_list([&] (const Symbol symbol) { p.stream() << symbol; }, super());
+        p.dump_list([&] (const ASTTypeApp* type_app) { type_app->print(p); }, super());
     }
         
     p.stream() << " {";
