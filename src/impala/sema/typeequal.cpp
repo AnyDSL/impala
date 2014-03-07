@@ -77,7 +77,7 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
 
     // this->bounds() subset of trestr
     for (Trait r : this->bounds()) {
-        if (obounds.find(*r) == obounds.end())
+        if (!obounds.contains(*r))
             return false;
     }
 
