@@ -1,4 +1,4 @@
-#include "impala/init.h"
+#include "impala/impala.h"
 
 #include "impala/prec.h"
 #include "impala/symbol.h"

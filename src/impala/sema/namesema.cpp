@@ -121,11 +121,8 @@ void TupleASTType::to_type(NameSema& sema) const {
 
 void ASTTypeApp::to_type(NameSema& sema) const {
     if (auto decl = sema.lookup(this, symbol())) {
-        if (auto tp = decl->isa<TypeParam>()) {
-            // TODO
-            //assert(elems().empty());
-            //return tp->type_var();
-        } else
+        type_param_ = decl->isa<TypeParam>();
+        if (!type_param_)
             sema.error(this) << "cannot convert a trait instance into a type\n";
     }
 }

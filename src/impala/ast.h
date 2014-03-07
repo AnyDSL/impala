@@ -37,14 +37,19 @@ class Stmt;
 class TypeParam;
 class TypeSema;
 
-typedef thorin::AutoVector<const ASTType*> Types;
-typedef thorin::AutoVector<const Expr*> Exprs;
-typedef thorin::AutoVector<const FieldDecl*> Fields;
-typedef thorin::AutoVector<const Item*> Items;
-typedef thorin::AutoVector<const Param*> Params;
-typedef thorin::AutoVector<const TypeParam*> TypeParams;
-typedef thorin::AutoVector<const Stmt*> Stmts;
-typedef thorin::AutoVector<const FnDecl*> Methods;
+template<class T> using SafePtr    = thorin::SafePtr<T>;
+template<class T> using AutoPtr    = thorin::AutoPtr<T>;
+template<class T> using AutoVector = thorin::AutoVector<T>;
+template<class T> using ArrayRef   = thorin::ArrayRef<T>;
+
+typedef AutoVector<const ASTType*> Types;
+typedef AutoVector<const Expr*> Exprs;
+typedef AutoVector<const FieldDecl*> Fields;
+typedef AutoVector<const Item*> Items;
+typedef AutoVector<const Param*> Params;
+typedef AutoVector<const TypeParam*> TypeParams;
+typedef AutoVector<const Stmt*> Stmts;
+typedef AutoVector<const FnDecl*> Methods;
 
 //------------------------------------------------------------------------------
 
@@ -74,7 +79,7 @@ private:
 class ParametricASTType {
 public:
     const TypeParam* type_param(size_t i) const { return type_params_[i]; }
-    thorin::ArrayRef<const TypeParam*> type_params() const { return type_params_; }
+    ArrayRef<const TypeParam*> type_params() const { return type_params_; }
     std::ostream& print_type_params(Printer&) const;
 
 protected:
@@ -112,7 +117,7 @@ private:
     friend class Parser;
 };
 
-typedef thorin::AutoVector<const PathItem*> PathItems;
+typedef AutoVector<const PathItem*> PathItems;
 
 class Path : public ASTNode {
 public:
@@ -174,7 +179,7 @@ public:
 
 private:
     char kind_;
-    thorin::AutoPtr<const ASTType> referenced_type_;
+    AutoPtr<const ASTType> referenced_type_;
 
     friend class Parser;
 };
@@ -184,7 +189,7 @@ public:
     const ASTType* elem_type() const { return elem_type_; }
 
 protected:
-    thorin::AutoPtr<const ASTType> elem_type_;
+    AutoPtr<const ASTType> elem_type_;
 
     friend class Parser;
 };
@@ -211,7 +216,7 @@ private:
 
 class CompoundASTType : public ASTType {
 public:
-    thorin::ArrayRef<const ASTType*> elems() const { return elems_; }
+    ArrayRef<const ASTType*> elems() const { return elems_; }
     const ASTType* elem(size_t i) const { return elems_[i]; }
 
 protected:
@@ -230,6 +235,7 @@ public:
 class ASTTypeApp : public CompoundASTType {
 public:
     Symbol symbol() const { return symbol_; }
+    const TypeParam* type_param() const { return type_param_; }
     virtual std::ostream& print(Printer&) const;
     virtual void to_type(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
@@ -238,8 +244,10 @@ public:
 
 private:
     Symbol symbol_;
+    mutable SafePtr<const TypeParam> type_param_;
 
     friend class Parser;
+    friend class NameScope;
 };
 
 class FnASTType : public ParametricASTType, public CompoundASTType {
@@ -310,7 +318,7 @@ public:
     Type calc_type(TypeSema&) const;
 
 protected:
-    thorin::AutoPtr<const ASTType> asttype_;
+    AutoPtr<const ASTType> asttype_;
     bool is_mut_;
 
     friend class Parser;
@@ -369,7 +377,7 @@ public:
 class Fn {
 public:
     const Param* param(size_t i) const { return params_[i]; }
-    thorin::ArrayRef<const Param*> params() const { return params_; }
+    ArrayRef<const Param*> params() const { return params_; }
     const Expr* body() const { return body_; }
     thorin::Lambda* lambda() const { return lambda_; }
     const thorin::Param* ret_param() const { return ret_param_; }
@@ -379,7 +387,7 @@ public:
 
 private:
     Params params_;
-    thorin::AutoPtr<const Expr> body_;
+    AutoPtr<const Expr> body_;
     mutable thorin::Lambda* lambda_;
     mutable const thorin::Param* ret_param_;
     mutable const thorin::Enter* frame_;
@@ -430,7 +438,7 @@ public:
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    thorin::AutoPtr<const ModContents> mod_contents_;
+    AutoPtr<const ModContents> mod_contents_;
 
     friend class Parser;
 };
@@ -453,7 +461,7 @@ public:
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    thorin::AutoPtr<const ASTType> type_;
+    AutoPtr<const ASTType> type_;
 
     friend class Parser;
 };
@@ -510,8 +518,8 @@ public:
 private:
     bool is_mut_;
     Symbol symbol_;
-    thorin::AutoPtr<const ASTType> type_;
-    thorin::AutoPtr<const Expr> init_;;
+    AutoPtr<const ASTType> type_;
+    AutoPtr<const Expr> init_;;
 
     friend class Parser;
 };
@@ -566,8 +574,8 @@ public:
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    thorin::AutoPtr<const ASTType> trait_;
-    thorin::AutoPtr<const ASTType> for_type_;
+    AutoPtr<const ASTType> trait_;
+    AutoPtr<const ASTType> for_type_;
     Methods methods_;
     mutable bool checked_ = false;
 
@@ -622,7 +630,7 @@ public:
 
 private:
     Stmts stmts_;
-    thorin::AutoPtr<const Expr> expr_;
+    AutoPtr<const Expr> expr_;
 
     friend class Parser;
 };
@@ -688,7 +696,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    thorin::AutoPtr<const Path> path_;
+    AutoPtr<const Path> path_;
     mutable const Decl* decl_; ///< Declaration of the variable in use.
 
     friend class Parser;
@@ -712,7 +720,7 @@ public:
 
 private:
     Kind kind_;
-    thorin::AutoPtr<const Expr> rhs_;
+    AutoPtr<const Expr> rhs_;
 
     friend class Parser;
 };
@@ -736,8 +744,8 @@ public:
 
 private:
     Kind kind_;
-    thorin::AutoPtr<const Expr> lhs_;
-    thorin::AutoPtr<const Expr> rhs_;
+    AutoPtr<const Expr> lhs_;
+    AutoPtr<const Expr> rhs_;
 
     friend class Parser;
 };
@@ -763,7 +771,7 @@ public:
 
 private:
     Kind kind_;
-    thorin::AutoPtr<const Expr> lhs_;
+    AutoPtr<const Expr> lhs_;
 
     friend class Parser;
 };
@@ -778,7 +786,7 @@ public:
     virtual void check(TypeSema&) const;
 
 private:
-    thorin::AutoPtr<const Expr> lhs_;
+    AutoPtr<const Expr> lhs_;
     Symbol symbol_;
 
     friend class Parser;
@@ -794,8 +802,8 @@ public:
     virtual void check(TypeSema&) const;
 
 private:
-    thorin::AutoPtr<const Expr> lhs_;
-    thorin::AutoPtr<const ASTType> as_;
+    AutoPtr<const Expr> lhs_;
+    AutoPtr<const ASTType> as_;
 
     friend class Parser;
 };
@@ -826,8 +834,8 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    thorin::AutoPtr<const Expr> value_;
-    thorin::AutoPtr<const Expr> count_;
+    AutoPtr<const Expr> value_;
+    AutoPtr<const Expr> count_;
 
     friend class Parser;
 };
@@ -843,8 +851,8 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    thorin::AutoPtr<const Expr> size_;
-    thorin::AutoPtr<const ASTType> elem_type_;
+    AutoPtr<const Expr> size_;
+    AutoPtr<const ASTType> elem_type_;
 
     friend class Parser;
 };
@@ -891,7 +899,7 @@ public:
     virtual void check(TypeSema&) const;
 
 private:
-    thorin::AutoPtr<const Path> path_;
+    AutoPtr<const Path> path_;
     std::vector<Elem> elems_;
 
     friend class Parser;
@@ -908,7 +916,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    thorin::AutoPtr<const Expr> lhs_;
+    AutoPtr<const Expr> lhs_;
     Exprs args_;
 
     friend class Parser;
@@ -927,9 +935,9 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    thorin::AutoPtr<const Expr> cond_;
-    thorin::AutoPtr<const Expr> then_expr_;
-    thorin::AutoPtr<const Expr> else_expr_;
+    AutoPtr<const Expr> cond_;
+    AutoPtr<const Expr> then_expr_;
+    AutoPtr<const Expr> else_expr_;
 
     friend class Parser;
 };
@@ -945,7 +953,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    thorin::AutoPtr<const Expr> expr_;
+    AutoPtr<const Expr> expr_;
     Fn fn_;
 
     friend class Parser;
@@ -973,7 +981,7 @@ public:
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
 private:
-    thorin::AutoPtr<const Expr> expr_;
+    AutoPtr<const Expr> expr_;
 
     friend class Parser;
 };
@@ -987,7 +995,7 @@ public:
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
 private:
-    thorin::AutoPtr<const Item> item_;
+    AutoPtr<const Item> item_;
 
     friend class Parser;
 };
@@ -1002,8 +1010,8 @@ public:
     //virtual void emit(CodeGen& cg, thorin::JumpTarget& exit) const;
 
 private:
-    thorin::AutoPtr<const LocalDecl> local_;
-    thorin::AutoPtr<const Expr> init_;
+    AutoPtr<const LocalDecl> local_;
+    AutoPtr<const Expr> init_;
 
     friend class Parser;
 };
