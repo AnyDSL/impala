@@ -43,7 +43,7 @@ void TypeSema::expect_num(const Expr* exp) {
 
     if ((t != type_int()) && (t != type_int8()) && (t != type_int16()) && (t != type_int32()) &&
             (t != type_int64()) && (t != type_float()) && (t != type_double()))
-        error(exp) << "Expected number type but found " << t << "\n";
+        error(exp) << "expected number type but found " << t << "\n";
 }
 
 Type TypeSema::match_types(const Expr* pos, Type t1, Type t2) {
@@ -53,7 +53,7 @@ Type TypeSema::match_types(const Expr* pos, Type t1, Type t2) {
     if (t1 == t2) {
         return t1;
     } else {
-        error(pos) << "Types do not match: " << t1 << " != " << t2 << "\n";
+        error(pos) << "types do not match: " << t1 << " != " << t2 << "\n";
         return type_error();
     }
 }
@@ -62,7 +62,7 @@ void TypeSema::expect_type(const Expr* found, Type expected, std::string typetyp
     if (found->type() == type_error() || expected == type_error())
         return;
     if (found->type() != expected)
-        error(found) << "Wrong " << typetype << " type; expected " << expected << " but found " << found->type() << "\n";
+        error(found) << "wrong " << typetype << " type; expected " << expected << " but found " << found->type() << "\n";
 }
 
 Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
@@ -94,7 +94,7 @@ void ParametricASTType::check_type_params(TypeSema& sema) const {
             if (auto trait_inst = b->isa<ASTTypeApp>()) {
                 tp->type_var()->add_bound(trait_inst->to_trait(sema));
             } else {
-                sema.error(tp) << "Bounds must be trait instances, not types\n";
+                sema.error(tp) << "bounds must be trait instances, not types\n";
             }
         }
     }
@@ -425,13 +425,13 @@ void MapExpr::check(TypeSema& sema) const {
             }
             return;
         } else {
-            sema.error(this) << "Wrong number of arguments\n";
+            sema.error(this) << "wrong number of arguments\n";
         }
     } else if (!lhs_type.isa<TypeError>()) {
         // REMINDER new error message if not only fn-types are allowed
-        sema.error(lhs()) << "Expected function type but found " << lhs_type << "\n";
+        sema.error(lhs()) << "expected function type but found " << lhs_type << "\n";
     }
-    assert(type().empty() && "This should only be reached if an error occurred");
+    assert(type().empty() && "this should only be reached if an error occurred");
     set_type(sema.type_error());
 #endif
 }

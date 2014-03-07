@@ -121,7 +121,6 @@ bool TypeTable::unify(Proxy<T> elem) {
         return false;
 
     assert(unifiable->is_closed() && "Only closed unifiables can be unified!");
-
     auto i = unifiables_.find(unifiable);
 
     if (i != unifiables_.end()) {

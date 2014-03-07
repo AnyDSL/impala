@@ -103,7 +103,7 @@ void ParametricASTType::check_type_params(NameSema& sema) const {
             if (auto trait_inst = b->isa<ASTTypeApp>())
                 trait_inst->to_trait(sema);
             else
-                sema.error(tp) << "Bounds must be trait instances, not types\n";
+                sema.error(tp) << "bounds must be trait instances, not types\n";
         }
     }
 }
