@@ -21,8 +21,8 @@ void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; 
 
 std::ostream& PathItem::print(Printer& p) const { 
     p.stream() << symbol();
-    if (!types().empty())
-        p.dump_list([&] (const ASTType* type) { type->print(p); }, types(), "[", "]");
+    if (!args().empty())
+        p.dump_list([&] (const ASTType* type) { type->print(p); }, args(), "[", "]");
 
     return p.stream();
 }
@@ -113,10 +113,10 @@ std::ostream& LocalDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" );;
     if (!is_anonymous())
          p.stream() << symbol();
-    if (!is_anonymous() && asttype())
+    if (!is_anonymous() && ast_type())
         p.stream() << ": "; 
-    if (asttype())
-        asttype()->print(p);
+    if (ast_type())
+        ast_type()->print(p);
 
     return p.stream();
 }
@@ -143,7 +143,7 @@ std::ostream& FnDecl::print(Printer& p) const {
 
     const FnASTType* ret = nullptr;
     if (!fn().params().empty() && fn().params().back()->symbol() == "return") {
-        if (auto fntype = fn().params().back()->asttype()->isa<FnASTType>())
+        if (auto fntype = fn().params().back()->ast_type()->isa<FnASTType>())
             ret = fntype;
     }
 
@@ -170,7 +170,7 @@ std::ostream& FnDecl::print(Printer& p) const {
 
 std::ostream& FieldDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" ) << visibility().str() << symbol() << ": ";
-    return asttype()->print(p);
+    return ast_type()->print(p);
 }
 
 std::ostream& StaticItem::print(Printer& p) const {

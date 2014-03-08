@@ -157,11 +157,11 @@ public:
     const PathItem* parse_path_item();
 
     // parameters
-    void parse_type_params(TypeParams&);
+    void parse_type_params(AutoVector<const TypeParam*>&);
     const TypeParam* parse_type_param();
     const Param* parse_param(bool lambda);
-    void parse_param_list(Params& params, TokenKind delimiter, bool lambda);
-    bool parse_return_param(Params&);
+    void parse_param_list(AutoVector<const Param*>& params, TokenKind delimiter, bool lambda);
+    bool parse_return_param(AutoVector<const Param*>&);
 
     // types
     const ASTType*      parse_type();
@@ -318,7 +318,7 @@ const PathItem* Parser::parse_path_item() {
     auto path_item = loc(new PathItem());
     path_item->symbol_ = try_id("path");
     if (accept(Token::L_BRACKET))
-        parse_comma_list(Token::R_BRACKET, "type list", [&] { path_item->types_.push_back(parse_type()); });
+        parse_comma_list(Token::R_BRACKET, "type list", [&] { path_item->args_.push_back(parse_type()); });
 
     return path_item;
 }
@@ -336,7 +336,7 @@ const Path* Parser::parse_path() {
  * parameters
  */
 
-void Parser::parse_type_params(TypeParams& type_params) {
+void Parser::parse_type_params(AutoVector<const TypeParam*>& type_params) {
     if (accept(Token::L_BRACKET))
         parse_comma_list(Token::R_BRACKET, "type parameter list", [&] { type_params.push_back(parse_type_param()); });
 }
@@ -354,7 +354,7 @@ const TypeParam* Parser::parse_type_param() {
     return type_param;
 }
 
-void Parser::parse_param_list(Params& params, TokenKind delimiter, bool lambda) {
+void Parser::parse_param_list(AutoVector<const Param*>& params, TokenKind delimiter, bool lambda) {
     parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param(lambda)); });
 }
 
@@ -380,7 +380,7 @@ const Param* Parser::parse_param(bool lambda) {
         if (type)
             error("identifier", "parameter");
         param->symbol_ = symbol;
-        param->asttype_ = parse_type();
+        param->ast_type_ = parse_type();
     } else if (lambda) {
         if (type)
             error("identifier", "parameter");
@@ -391,19 +391,19 @@ const Param* Parser::parse_param(bool lambda) {
             type_app->set_loc(location);
             type = type_app;
         }
-        param->asttype_ = type;
+        param->ast_type_ = type;
     }
 
     return param;
 }
 
-bool Parser::parse_return_param(Params& params) {
+bool Parser::parse_return_param(AutoVector<const Param*>& params) {
     bool noret;
     if (auto fn_type = parse_return_type(noret)) {
         auto param = new Param(cur_var_handle++);
         param->is_mut_ = false;
         param->symbol_ = "return";
-        param->asttype_ = fn_type;
+        param->ast_type_ = fn_type;
         param->set_loc(fn_type->loc());
         params.push_back(param);
     }
@@ -520,7 +520,7 @@ StaticItem* Parser::parse_static_item() {
     static_item->is_mut_ = accept(Token::MUT);
     static_item->symbol_ = try_id("static item");
     expect(Token::COLON, "static item");
-    static_item->asttype_ = parse_type();
+    static_item->ast_type_ = parse_type();
     expect(Token::ASGN, "static item");
     static_item->init_ = parse_expr();
     expect(Token::SEMICOLON, "static item");
@@ -598,7 +598,7 @@ const FieldDecl* Parser::parse_field_decl() {
     field_decl->is_mut_ = accept(Token::MUT);
     field_decl->symbol_ = try_id("struct field");
     expect(Token::COLON, "struct field");
-    field_decl->asttype_ = parse_type();
+    field_decl->ast_type_ = parse_type();
     return field_decl;
 }
 
@@ -1033,7 +1033,7 @@ const LetStmt* Parser::parse_let_stmt() {
     local->is_mut_ = accept(Token::MUT);
     local->symbol_ = try_id("local variable in let binding");
     if (accept(Token::COLON))
-        local->asttype_ = parse_type();
+        local->ast_type_ = parse_type();
     if (accept(Token::ASGN))
         let_stmt->init_ = parse_expr();
     expect(Token::SEMICOLON, "the end of an let statement");

@@ -218,7 +218,7 @@ void FnDecl::check(NameSema& sema) const {
     check_type_params(sema);
     for (const Param* param : fn().params()) {
         sema.insert(param);
-        param->asttype()->to_type(sema);
+        param->ast_type()->to_type(sema);
     }
     fn().body()->check(sema);
     sema.pop_scope();

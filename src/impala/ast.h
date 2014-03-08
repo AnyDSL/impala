@@ -42,14 +42,8 @@ template<class T> using AutoPtr    = thorin::AutoPtr<T>;
 template<class T> using AutoVector = thorin::AutoVector<T>;
 template<class T> using ArrayRef   = thorin::ArrayRef<T>;
 
-typedef AutoVector<const ASTType*> Types;
+typedef AutoVector<const ASTType*> ASTTypes;
 typedef AutoVector<const Expr*> Exprs;
-typedef AutoVector<const FieldDecl*> Fields;
-typedef AutoVector<const Item*> Items;
-typedef AutoVector<const Param*> Params;
-typedef AutoVector<const TypeParam*> TypeParams;
-typedef AutoVector<const Stmt*> Stmts;
-typedef AutoVector<const FnDecl*> Methods;
 
 //------------------------------------------------------------------------------
 
@@ -86,7 +80,7 @@ protected:
     void check_type_params(NameSema&) const;
     void check_type_params(TypeSema&) const;
 
-    TypeParams type_params_;
+    AutoVector<const TypeParam*> type_params_;
 };
 
 class ASTNode : public impala::HasLocation, public thorin::MagicCast<ASTNode> {
@@ -107,12 +101,12 @@ public:
 class PathItem : public ASTNode {
 public:
     Symbol symbol() const { return symbol_; }
-    const Types& types() const { return types_; }
+    const ASTTypes& args() const { return args_; }
     virtual std::ostream& print(Printer&) const;
 
 private:
     Symbol symbol_;
-    Types types_;
+    ASTTypes args_;
 
     friend class Parser;
 };
@@ -220,7 +214,7 @@ public:
     const ASTType* elem(size_t i) const { return elems_[i]; }
 
 protected:
-    Types elems_;
+    ASTTypes elems_;
 
     friend class Parser;
 };
@@ -297,7 +291,7 @@ private:
 class TypeDecl : public Decl {
 };
 
-/// Base class for all \p Type declarations having \p TypeParams.
+/// Base class for all \p Type declarations having \p TypeParam%s.
 class ParametricTypeDecl : public ParametricASTType, public Decl {
     friend class Parser;
 };
@@ -306,19 +300,17 @@ class ParametricTypeDecl : public ParametricASTType, public Decl {
 class ValueDecl : public Decl, public Typable {
 public:
     ValueDecl()
-        : asttype_(nullptr)
-        , is_mut_(false)
+        : is_mut_(false)
     {}
 
-    /// original type.
-    const ASTType* asttype() const { return asttype_; }
+    const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     bool is_mut() const { return is_mut_; }
     virtual void check(NameSema&) const = 0;
     virtual void check(TypeSema&) const = 0;
     Type calc_type(TypeSema&) const;
 
 protected:
-    AutoPtr<const ASTType> asttype_;
+    AutoPtr<const ASTType> ast_type_;
     bool is_mut_;
 
     friend class Parser;
@@ -352,12 +344,12 @@ protected:
 
 class TypeParam : public TypeDecl {
 public:
-    const Types& bounds() const { return bounds_; }
+    const ASTTypes& bounds() const { return bounds_; }
     TypeVar type_var() const { return type_var_; }
     virtual std::ostream& print(Printer&) const;
 
 private:
-    Types bounds_;
+    ASTTypes bounds_;
     mutable TypeVar type_var_;
 
     friend class Parser;
@@ -386,7 +378,7 @@ public:
     //void emit(CodeGen& cg) const;
 
 private:
-    Params params_;
+    AutoVector<const Param*> params_;
     AutoPtr<const Expr> body_;
     mutable thorin::Lambda* lambda_;
     mutable const thorin::Param* ret_param_;
@@ -403,13 +395,13 @@ private:
 
 class ModContents : public ASTNode {
 public:
-    const Items& items() const { return items_; }
+    const AutoVector<const Item*>& items() const { return items_; }
     virtual std::ostream& print(Printer&) const;
     void check(NameSema&) const;
     void check(TypeSema&) const;
 
 private:
-    Items items_;
+    AutoVector<const Item*> items_;
 
     friend class Parser;
 };
@@ -482,7 +474,7 @@ private:
 
 class StructDecl : public Item, public ParametricTypeDecl {
 public:
-    const Fields& fields() const { return fields_; }
+    const AutoVector<const FieldDecl*>& fields() const { return fields_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
@@ -490,7 +482,7 @@ public:
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    Fields fields_;
+    AutoVector<const FieldDecl*> fields_;
 
     friend class Parser;
 };
@@ -544,7 +536,7 @@ private:
 class TraitDecl : public Item, public ParametricTypeDecl {
 public:
     const AutoVector<const ASTTypeApp*>& super() const { return super_; }
-    const Methods& methods() const { return methods_; }
+    const AutoVector<const FnDecl*>& methods() const { return methods_; }
     Trait trait() const { return trait_; }
     Trait calc_trait(TypeSema&) const;
     virtual std::ostream& print(Printer&) const;
@@ -554,7 +546,7 @@ public:
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    Methods methods_;
+    AutoVector<const FnDecl*> methods_;
     AutoVector<const ASTTypeApp*> super_;
     mutable Trait trait_;
 
@@ -566,7 +558,7 @@ public:
     /// Maybe nullptr as this trait is optional.
     const ASTType* trait() const { return trait_; }
     const ASTType* for_type() const { return for_type_; }
-    const Methods& methods() const { return methods_; }
+    const AutoVector<const FnDecl*>& methods() const { return methods_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
@@ -576,7 +568,7 @@ public:
 private:
     AutoPtr<const ASTType> trait_;
     AutoPtr<const ASTType> for_type_;
-    Methods methods_;
+    AutoVector<const FnDecl*> methods_;
     mutable bool checked_ = false;
 
     friend class Parser;
@@ -618,7 +610,7 @@ public:
     BlockExpr() {}
     BlockExpr(Location loc) { loc_ = loc; expr_ = new EmptyExpr(loc); }
 
-    const Stmts& stmts() const { return stmts_; }
+    const AutoVector<const Stmt*>& stmts() const { return stmts_; }
     const Expr* expr() const { return expr_; }
     const Stmt* stmt(size_t i) const { return stmts_[i]; }
     bool empty() const { return stmts_.empty() && expr_->isa<EmptyExpr>(); }
@@ -629,7 +621,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    Stmts stmts_;
+    AutoVector<const Stmt*> stmts_;
     AutoPtr<const Expr> expr_;
 
     friend class Parser;
