@@ -72,7 +72,7 @@ private:
     friend class Parser;
 };
 
-class ParametricASTType {
+class TypeParamList {
 public:
     const TypeParam* type_param(size_t i) const { return type_params_[i]; }
     ArrayRef<const TypeParam*> type_params() const { return type_params_; }
@@ -248,7 +248,7 @@ private:
     friend class NameScope;
 };
 
-class FnASTType : public ParametricASTType, public CompoundASTType {
+class FnASTType : public TypeParamList, public CompoundASTType {
 public:
     const FnASTType* ret_fn_type() const;
     virtual std::ostream& print(Printer&) const;
@@ -298,7 +298,7 @@ public:
 };
 
 /// Base class for all \p Type declarations having \p TypeParam%s.
-class ParametricTypeDecl : public TypeDecl, public ParametricASTType {
+class ParametricTypeDecl : public TypeDecl, public TypeParamList {
     friend class Parser;
 };
 
@@ -360,7 +360,7 @@ private:
     mutable TypeVar type_var_;
 
     friend class Parser;
-    friend class ParametricASTType;
+    friend class TypeParamList;
 };
 
 class Param : public LocalDecl {
@@ -522,7 +522,7 @@ private:
     friend class Parser;
 };
 
-class FnDecl : public ParametricASTType, public Item, public ValueDecl {
+class FnDecl : public TypeParamList, public Item, public ValueDecl {
 public:
     const Fn& fn() const { return fn_; }
     bool is_extern() const { return extern_; }
@@ -559,7 +559,7 @@ private:
     friend class Parser;
 };
 
-class Impl : public Item, public ParametricASTType {
+class Impl : public Item, public TypeParamList {
 public:
     /// May be nullptr as trait is optional.
     const ASTType* trait() const { return trait_; }

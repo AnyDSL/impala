@@ -87,7 +87,7 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
  * ASTType::to_type
  */
 
-void ParametricASTType::check_type_params(TypeSema& sema) const {
+void TypeParamList::check_type_params(TypeSema& sema) const {
     // check bounds
     for (const TypeParam* tp : type_params()) {
         for (const ASTType* b : tp->bounds()) {

@@ -94,7 +94,7 @@ void NameSema::pop_scope() {
  * ASTType::check
  */
 
-void ParametricASTType::check_type_params(NameSema& sema) const {
+void TypeParamList::check_type_params(NameSema& sema) const {
     for (const TypeParam* tp : type_params()) {
         sema.insert(tp);
         for (const ASTType* b : tp->bounds())

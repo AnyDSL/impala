@@ -94,7 +94,7 @@ std::ostream& TypeParam::print(Printer& p) const {
     return p.dump_list([&] (const ASTType* type) { type->print(p); }, bounds(), "", "", " + ");
 }
 
-std::ostream& ParametricASTType::print_type_params(Printer& p) const {
+std::ostream& TypeParamList::print_type_params(Printer& p) const {
     if (!type_params().empty())
         p.dump_list([&] (const TypeParam* type_param) { type_param->print(p); }, type_params(), "[", "]");
     return p.stream();
