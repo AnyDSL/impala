@@ -115,8 +115,8 @@ void TupleASTType::check(NameSema& sema) const {
 
 void ASTTypeApp::check(NameSema& sema) const {
     if (auto decl = sema.lookup(this, symbol())) {
-        type_decl_ = decl->isa<TypeDecl>();
-        if (!type_decl_)
+        type_or_trait_decl_ = decl->isa<TypeOrTraitDecl>();
+        if (!type_or_trait_decl_)
             sema.error(this) << '\'' << symbol() << "' must be a type or trait declaration\n";
     }
 }

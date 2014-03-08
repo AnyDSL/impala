@@ -130,13 +130,6 @@ Type TupleASTType::to_type(TypeSema& sema) const {
     return sema.tupletype(elems);
 }
 
-Type ASTTypeApp::to_type(TypeSema& sema) const {
-    if (type_decl())
-        return type_decl()->to_type();
-    else 
-        return sema.type_error();
-}
-
 Type FnASTType::to_type(TypeSema& sema) const {
     check_type_params(sema);
 
@@ -151,10 +144,21 @@ Type FnASTType::to_type(TypeSema& sema) const {
     return fntype;
 }
 
+Type ASTTypeApp::to_type(TypeSema& sema) const {
+    if (type_or_trait_decl()) {
+        if (auto type_decl = type_or_trait_decl()->isa<TypeDecl>())
+            return type_decl->to_type();
+        else
+            sema.error(this) << '\'' << symbol() << "' does not name a type\n";
+    }
+
+    return sema.type_error();
+}
+
 Trait ASTTypeApp::to_trait(TypeSema& sema) const {
-    if (type_decl()) {
-        if (auto trait_decl = type_decl()->isa<TraitDecl>()) {
-            Trait trait = trait_decl->calc_trait(sema);
+    if (type_or_trait_decl()) {
+        if (auto trait_decl = type_or_trait_decl()->isa<TraitDecl>()) {
+            Trait trait = trait_decl->to_trait(sema);
             if (elems().empty()) {
                 return trait; // TODO design the API such that this check is not necessary
             } else {
@@ -164,19 +168,49 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
                 return trait->instantiate(type_args);
             }
         } else
-            sema.error(this) << '\'' << symbol() << "' is not a trait\n";
+            sema.error(this) << '\'' << symbol() << "' does not name a trait\n";
     }
     return sema.trait_error();
 }
 
-Trait TraitDecl::calc_trait(TypeSema& sema) const {
-    check(sema);
-    return trait();
+//------------------------------------------------------------------------------
+
+/*
+ * TypeDecl::to_type + to_trait + calc_trait
+ */
+
+Type ModDecl::to_type() const {
+    return Type();
 }
+
+Type ForeignMod::to_type() const {
+    return Type();
+}
+
+Type EnumDecl::to_type() const {
+    return Type();
+}
+
+Type StructDecl::to_type() const {
+    return Type();
+}
+
+Type Typedef::to_type() const {
+    return Type();
+}
+
+Type TypeParam::to_type() const { return type_var(); }
 
 Type ValueDecl::calc_type(TypeSema& sema) const {
     check(sema);
     return type();
+}
+
+// TraitDecl::to_trait
+
+Trait TraitDecl::to_trait(TypeSema& sema) const {
+    check(sema);
+    return trait();
 }
 
 //------------------------------------------------------------------------------

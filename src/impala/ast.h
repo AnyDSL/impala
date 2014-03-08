@@ -36,6 +36,7 @@ class Param;
 class Printer;
 class Stmt;
 class TypeDecl;
+class TypeOrTraitDecl;
 class TypeParam;
 class TypeSema;
 
@@ -234,7 +235,7 @@ public:
 class ASTTypeApp : public CompoundASTType {
 public:
     Symbol symbol() const { return symbol_; }
-    const TypeDecl* type_decl() const { return type_decl_; }
+    const TypeOrTraitDecl* type_or_trait_decl() const { return type_or_trait_decl_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
@@ -242,7 +243,7 @@ public:
 
 private:
     Symbol symbol_;
-    mutable SafePtr<const TypeDecl> type_decl_;
+    mutable SafePtr<const TypeOrTraitDecl> type_or_trait_decl_;
 
     friend class Parser;
     friend class NameScope;
@@ -291,8 +292,11 @@ private:
     friend class NameSema;
 };
 
+class TypeOrTraitDecl : public Decl {
+};
+
 /// Base class for all \p Type declarations.
-class TypeDecl : public Decl {
+class TypeDecl : public TypeOrTraitDecl {
 public:
     virtual Type to_type() const = 0;
 };
@@ -544,17 +548,16 @@ private:
     friend class Parser;
 };
 
-class TraitDecl : public Item, public ParametricTypeDecl {
+class TraitDecl : public Item, public TypeOrTraitDecl, public TypeParamList {
 public:
     const AutoVector<const ASTTypeApp*>& super() const { return super_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
     Trait trait() const { return trait_; }
-    Trait calc_trait(TypeSema&) const;
+    Trait to_trait(TypeSema&) const;
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual Type to_type() const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
