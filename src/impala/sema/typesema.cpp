@@ -92,12 +92,18 @@ void TypeParamList::check_type_params(TypeSema& sema) const {
     for (const TypeParam* tp : type_params()) {
         for (const ASTType* b : tp->bounds()) {
             if (auto trait_inst = b->isa<ASTTypeApp>()) {
-                tp->type_var()->add_bound(trait_inst->to_trait(sema));
+                tp->type_var(sema)->add_bound(trait_inst->to_trait(sema));
             } else {
                 sema.error(tp) << "bounds must be trait instances, not types\n";
             }
         }
     }
+}
+
+TypeVar TypeParam::type_var(TypeSema& sema) const {
+    if (!type_var_)
+        type_var_ = sema.typevar();
+    return type_var_;
 }
 
 Type ErrorASTType::to_type(TypeSema& sema) const { return sema.type_error(); }
@@ -139,7 +145,7 @@ Type FnASTType::to_type(TypeSema& sema) const {
 
     FnType fntype = sema.fntype(params);
     for (auto type_param : type_params())
-        fntype->add_bound_var(type_param->type_var());
+        fntype->add_bound_var(type_param->type_var(sema));
 
     return fntype;
 }
@@ -147,7 +153,7 @@ Type FnASTType::to_type(TypeSema& sema) const {
 Type ASTTypeApp::to_type(TypeSema& sema) const {
     if (type_or_trait_decl()) {
         if (auto type_decl = type_or_trait_decl()->isa<TypeDecl>())
-            return type_decl->to_type();
+            return type_decl->to_type(sema);
         else
             sema.error(this) << '\'' << symbol() << "' does not name a type\n";
     }
@@ -179,27 +185,27 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
  * TypeDecl::to_type + to_trait + calc_trait
  */
 
-Type ModDecl::to_type() const {
+Type ModDecl::to_type(TypeSema& sema) const {
     return Type();
 }
 
-Type ForeignMod::to_type() const {
+Type ForeignMod::to_type(TypeSema& sema) const {
     return Type();
 }
 
-Type EnumDecl::to_type() const {
+Type EnumDecl::to_type(TypeSema& sema) const {
     return Type();
 }
 
-Type StructDecl::to_type() const {
+Type StructDecl::to_type(TypeSema& sema) const {
     return Type();
 }
 
-Type Typedef::to_type() const {
+Type Typedef::to_type(TypeSema& sema) const {
     return Type();
 }
 
-Type TypeParam::to_type() const { return type_var(); }
+Type TypeParam::to_type(TypeSema& sema) const { return type_var(sema); }
 
 Type ValueDecl::calc_type(TypeSema& sema) const {
     if (!type())
@@ -257,7 +263,7 @@ void FnDecl::check(TypeSema& sema) const {
     // create FnType
     Type fn_type = sema.fntype(types);
     for (auto tp : type_params())
-        fn_type->add_bound_var(tp->type_var());
+        fn_type->add_bound_var(tp->type_var(sema));
 
     sema.unify(fn_type); // TODO is this call necessary?
     set_type(fn_type);
@@ -285,7 +291,7 @@ void TraitDecl::check(TypeSema& sema) const {
 
     check_type_params(sema);
     for (auto tp : type_params()) {
-        trait_->add_bound_var(tp->type_var());
+        trait_->add_bound_var(tp->type_var(sema));
     }
 }
 

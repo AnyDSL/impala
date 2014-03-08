@@ -124,6 +124,8 @@ void ASTTypeApp::check(NameSema& sema) const {
 void FnASTType::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
+    for (auto elem : elems())
+        elem->check(sema);
     sema.pop_scope();
 }
 

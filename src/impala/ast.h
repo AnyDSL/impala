@@ -298,7 +298,7 @@ class TypeOrTraitDecl : public Decl {
 /// Base class for all \p Type declarations.
 class TypeDecl : public TypeOrTraitDecl {
 public:
-    virtual Type to_type() const = 0;
+    virtual Type to_type(TypeSema&) const = 0;
 };
 
 /// Base class for all \p Type declarations having \p TypeParam%s.
@@ -353,9 +353,9 @@ protected:
 class TypeParam : public TypeDecl {
 public:
     const ASTTypes& bounds() const { return bounds_; }
-    TypeVar type_var() const { return type_var_; }
+    TypeVar type_var(TypeSema&) const;
     virtual std::ostream& print(Printer&) const;
-    virtual Type to_type() const;
+    virtual Type to_type(TypeSema&) const;
 
 private:
     ASTTypes bounds_;
@@ -436,7 +436,7 @@ public:
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual Type to_type() const;
+    virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -450,7 +450,7 @@ class ForeignMod : public Item, public ParametricTypeDecl {
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual Type to_type() const;
+    virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 };
 
@@ -461,7 +461,7 @@ public:
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual Type to_type() const;
+    virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -490,7 +490,7 @@ public:
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual Type to_type() const;
+    virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -504,7 +504,7 @@ class EnumDecl : public Item, public ParametricTypeDecl {
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
-    virtual Type to_type() const;
+    virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 };
 
