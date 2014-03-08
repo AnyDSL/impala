@@ -427,12 +427,8 @@ void StructExpr::check(TypeSema& sema) const {
 }
 
 void MapExpr::check(TypeSema& sema) const {
-#if 0
-    // FEATURE this currently only considers function calls
     lhs()->check(sema);
-    Type lhs_type = lhs()->type();
-
-    if (auto fn = lhs_type.isa<FnType>()) {
+    if (auto fn = lhs()->type().isa<FnType>()) {
         bool no_cont = fn->size() == (args().size()+1); // true if this is a normal function call (no continuation)
         if (no_cont || (fn->size() == args().size())) {
             for (size_t i = 0; i < args().size(); ++i) {
@@ -444,7 +440,7 @@ void MapExpr::check(TypeSema& sema) const {
             // set return type
             if (no_cont) {
                 Type ret_func = fn->elem(fn->size() - 1);
-                set_type(create_return_type(sema, this, ret_func));
+                set_type(sema.create_return_type(this, ret_func));
             } else {
                 // same number of args as params -> continuation call
                 set_type(sema.type_noreturn());
@@ -453,13 +449,13 @@ void MapExpr::check(TypeSema& sema) const {
         } else {
             sema.error(this) << "wrong number of arguments\n";
         }
-    } else if (!lhs_type.isa<TypeError>()) {
+    } else if (!lhs()->type().isa<TypeError>()) {
         // REMINDER new error message if not only fn-types are allowed
-        sema.error(lhs()) << "expected function type but found " << lhs_type << "\n";
+        sema.error(lhs()) << "expected function type but found " << lhs()->type() << "\n";
     }
+
     assert(type().empty() && "this should only be reached if an error occurred");
     set_type(sema.type_error());
-#endif
 }
 
 void IfExpr::check(TypeSema& sema) const {
