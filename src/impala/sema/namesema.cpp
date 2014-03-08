@@ -91,55 +91,40 @@ void NameSema::pop_scope() {
 //------------------------------------------------------------------------------
 
 /*
- * ASTType::to_type
+ * ASTType::check
  */
 
 void ParametricASTType::check_type_params(NameSema& sema) const {
-    for (const TypeParam* tp : type_params())
-        sema.insert(tp);
-
     for (const TypeParam* tp : type_params()) {
-        for (const ASTType* b : tp->bounds()) {
-            if (auto trait_inst = b->isa<ASTTypeApp>())
-                trait_inst->to_trait(sema);
-            else
-                sema.error(tp) << "bounds must be trait instances, not types\n";
-        }
+        sema.insert(tp);
+        for (const ASTType* b : tp->bounds())
+            b->check(sema);
     }
 }
 
-void ErrorASTType::to_type(NameSema& sema) const {}
-void PrimASTType::to_type(NameSema& sema) const {}
-void PtrASTType::to_type(NameSema& sema) const { referenced_type()->to_type(sema); }
-void IndefiniteArrayASTType::to_type(NameSema& sema) const { elem_type()->to_type(sema); }
-void DefiniteArrayASTType::to_type(NameSema& sema) const { elem_type()->to_type(sema); }
+void ErrorASTType::check(NameSema& sema) const {}
+void PrimASTType::check(NameSema& sema) const {}
+void PtrASTType::check(NameSema& sema) const { referenced_type()->check(sema); }
+void IndefiniteArrayASTType::check(NameSema& sema) const { elem_type()->check(sema); }
+void DefiniteArrayASTType::check(NameSema& sema) const { elem_type()->check(sema); }
 
-void TupleASTType::to_type(NameSema& sema) const {
+void TupleASTType::check(NameSema& sema) const {
     for (auto elem : this->elems())
-        elem->to_type(sema);
+        elem->check(sema);
 }
 
-void ASTTypeApp::to_type(NameSema& sema) const {
+void ASTTypeApp::check(NameSema& sema) const {
     if (auto decl = sema.lookup(this, symbol())) {
-        type_param_ = decl->isa<TypeParam>();
-        if (!type_param_)
-            sema.error(this) << "cannot convert a trait instance into a type\n";
+        type_decl_ = decl->isa<TypeDecl>();
+        if (!type_decl_)
+            sema.error(this) << '\'' << symbol() << "' must be a type or trait declaration\n";
     }
 }
 
-void FnASTType::to_type(NameSema& sema) const {
+void FnASTType::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
     sema.pop_scope();
-}
-
-void ASTTypeApp::to_trait(NameSema& sema) const {
-    if (auto decl = sema.lookup(this, symbol())) {
-        if (auto trait_decl = decl->isa<TraitDecl>()) {
-            // sth TODO here?
-        } else
-            sema.error(this) << "cannot convert a type variable into a trait instance\n";
-    }
 }
 
 //------------------------------------------------------------------------------
@@ -153,40 +138,17 @@ void ModContents::check(NameSema& sema) const {
  * Item::check_head
  */
 
-void ModDecl::check_head(NameSema& sema) const {
-    sema.insert(this);
-}
+// TODO factor this to default implementation
 
-void ForeignMod::check_head(NameSema& sema) const {
-    sema.insert(this);
-}
-
-void EnumDecl::check_head(NameSema& sema) const {
-    sema.insert(this);
-}
-
-void FnDecl::check_head(NameSema& sema) const {
-    sema.insert(this);
-}
-
-void StaticItem::check_head(NameSema& sema) const {
-    sema.insert(this);
-}
-
-void StructDecl::check_head(NameSema& sema) const {
-    sema.insert(this);
-}
-
-void TraitDecl::check_head(NameSema& sema) const {
-    sema.insert(this);
-}
-
-void Typedef::check_head(NameSema& sema) const {
-    sema.insert(this);
-}
-
-void Impl::check_head(NameSema& sema) const {
-}
+void ModDecl::check_head(NameSema& sema) const { sema.insert(this); }
+void ForeignMod::check_head(NameSema& sema) const { sema.insert(this); }
+void EnumDecl::check_head(NameSema& sema) const { sema.insert(this); }
+void FnDecl::check_head(NameSema& sema) const { sema.insert(this); }
+void StaticItem::check_head(NameSema& sema) const { sema.insert(this); }
+void StructDecl::check_head(NameSema& sema) const { sema.insert(this); }
+void TraitDecl::check_head(NameSema& sema) const { sema.insert(this); }
+void Typedef::check_head(NameSema& sema) const { sema.insert(this); }
+void Impl::check_head(NameSema& sema) const {}
 
 //------------------------------------------------------------------------------
 
@@ -218,7 +180,7 @@ void FnDecl::check(NameSema& sema) const {
     check_type_params(sema);
     for (const Param* param : fn().params()) {
         sema.insert(param);
-        param->ast_type()->to_type(sema);
+        param->ast_type()->check(sema);
     }
     fn().body()->check(sema);
     sema.pop_scope();
@@ -231,29 +193,19 @@ void FieldDecl::check(NameSema&) const {
 }
 
 void TraitDecl::check(NameSema& sema) const {
-    // FEATURE consider super traits and check methods
+    sema.push_scope();
     check_type_params(sema);
-    for (auto tp : type_params()) {
-        // TODO
-    }
     for (auto method : methods())
         method->check(sema);
+    sema.pop_scope();
 }
 
 void Impl::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
-    if (trait() != nullptr) {
-        if (auto t = trait()->isa<ASTTypeApp>()) {
-            t->to_trait(sema);
-            for (auto tp : type_params()) {
-                // TODO
-            }
-        } else
-            sema.error(trait()) << "expected trait instance.\n";
-    }
-    for_type()->to_type(sema);
-
+    if (trait())
+        trait()->check(sema);
+    for_type()->check(sema);
     for (auto fn : methods())
         fn->check(sema);
     sema.pop_scope();
@@ -285,27 +237,17 @@ void LiteralExpr::check(NameSema& sema) const {}
 void FnExpr::check(NameSema& sema) const {
 }
 
+void Path::check(NameSema& sema) const {
+    // TODO longer pathers
+    auto last_item = path_items().back();
+    decl_ = sema.lookup(last_item->symbol());
+}
+
 void PathExpr::check(NameSema& sema) const {
-#if 0
-    // FEATURE consider longer paths
-    auto last_item = path()->path_items().back();
-
-    if ((decl_ = sema.lookup(this, last_item->symbol()))) {
-        if (auto vdec = decl_->isa<ValueDecl>()) {
-            // consider type expressions
-            if (!last_item->types().empty()) {
-                std::vector<Type> type_args;
-                for (const ASTType* t : last_item->types())
-                    type_args.push_back(t->to_type(sema));
-
-                set_type(vdec->calc_type(sema)->instantiate(type_args));
-            } else
-                set_type(vdec->calc_type(sema));
-        }
-    } else
-        set_type(sema.type_error());
-#endif
-    // TODO
+    path()->check(sema);
+    value_decl_ = path()->decl()->isa<ValueDecl>();
+    if (!value_decl_)
+        sema.error(this) << '\'' << path() << "' is not a value\n";
 }
 
 void PrefixExpr::check(NameSema& sema) const  {                     rhs()->check(sema); }

@@ -27,7 +27,6 @@ PrimTypeKind LiteralExpr::literal2type() const {
 }
 
 bool PathExpr::is_lvalue() const { 
-    assert(decl());
     //if (auto vardecl = decl()->isa<VarDecl>())
         //return vardecl->is_mut();
     return false;

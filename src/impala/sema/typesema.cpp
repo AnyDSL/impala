@@ -131,8 +131,8 @@ Type TupleASTType::to_type(TypeSema& sema) const {
 }
 
 Type ASTTypeApp::to_type(TypeSema& sema) const {
-    if (type_param())
-        return type_param()->type_var();
+    if (type_decl())
+        return type_decl()->type_var();
     else 
         return sema.type_error();
 }

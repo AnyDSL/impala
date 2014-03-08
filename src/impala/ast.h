@@ -26,6 +26,7 @@ namespace impala {
 
 class ASTType;
 class CodeGen;
+class Decl;
 class Expr;
 class FieldDecl;
 class FnDecl;
@@ -34,6 +35,7 @@ class NameSema;
 class Param;
 class Printer;
 class Stmt;
+class TypeDecl;
 class TypeParam;
 class TypeSema;
 
@@ -117,11 +119,14 @@ class Path : public ASTNode {
 public:
     bool is_global() const { return is_global_; }
     const PathItems& path_items() const { return path_items_; }
+    const Decl* decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const;
+    void check(NameSema&) const;
 
 private:
     bool is_global_;
     PathItems path_items_;
+    mutable SafePtr<const Decl> decl_;
 
     friend class Parser;
 };
@@ -132,14 +137,14 @@ private:
 
 class ASTType : public ASTNode {
 public:
-    virtual void to_type(NameSema&) const = 0;
+    virtual void check(NameSema&) const = 0;
     virtual Type to_type(TypeSema&) const = 0;
 };
 
 class ErrorASTType : public ASTType {
 public:
     virtual std::ostream& print(Printer&) const;
-    virtual void to_type(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 };
 
@@ -152,7 +157,7 @@ public:
 
     Kind kind() const { return kind_; }
     virtual std::ostream& print(Printer&) const;
-    virtual void to_type(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 
 private:
@@ -168,7 +173,7 @@ public:
     bool is_owned() const { return kind_ == '~'; }
     bool is_borrowed() const { return kind_ == '&'; }
     virtual std::ostream& print(Printer&) const;
-    virtual void to_type(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 
 private:
@@ -191,7 +196,7 @@ protected:
 class IndefiniteArrayASTType : public ArrayASTType {
 public:
     virtual std::ostream& print(Printer&) const;
-    virtual void to_type(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 };
 
@@ -199,7 +204,7 @@ class DefiniteArrayASTType : public ArrayASTType {
 public:
     uint64_t dim() const { return dim_; }
     virtual std::ostream& print(Printer&) const;
-    virtual void to_type(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 
 private:
@@ -222,23 +227,22 @@ protected:
 class TupleASTType : public CompoundASTType {
 public:
     virtual std::ostream& print(Printer&) const;
-    virtual void to_type(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 };
 
 class ASTTypeApp : public CompoundASTType {
 public:
     Symbol symbol() const { return symbol_; }
-    const TypeParam* type_param() const { return type_param_; }
+    const TypeDecl* type_decl() const { return type_decl_; }
     virtual std::ostream& print(Printer&) const;
-    virtual void to_type(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
-    void  to_trait(NameSema&) const;
     Trait to_trait(TypeSema&) const;
 
 private:
     Symbol symbol_;
-    mutable SafePtr<const TypeParam> type_param_;
+    mutable SafePtr<const TypeDecl> type_decl_;
 
     friend class Parser;
     friend class NameScope;
@@ -248,7 +252,7 @@ class FnASTType : public ParametricASTType, public CompoundASTType {
 public:
     const FnASTType* ret_fn_type() const;
     virtual std::ostream& print(Printer&) const;
-    virtual void to_type(NameSema&) const;
+    virtual void check(NameSema&) const;
     virtual Type to_type(TypeSema&) const;
 
     friend class Parser;
@@ -289,10 +293,12 @@ private:
 
 /// Base class for all \p Type declarations.
 class TypeDecl : public Decl {
+public:
+    //virtual Type to_type() const = 0;
 };
 
 /// Base class for all \p Type declarations having \p TypeParam%s.
-class ParametricTypeDecl : public ParametricASTType, public Decl {
+class ParametricTypeDecl : public TypeDecl, public ParametricASTType {
     friend class Parser;
 };
 
@@ -324,8 +330,8 @@ public:
     {}
 
     size_t handle() const { return handle_; }
-    virtual std::ostream& print(Printer&) const;
     bool is_anonymous() const { return symbol() == Symbol(); }
+    virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const {}
     virtual void check(TypeSema&) const {}
 
@@ -347,6 +353,7 @@ public:
     const ASTTypes& bounds() const { return bounds_; }
     TypeVar type_var() const { return type_var_; }
     virtual std::ostream& print(Printer&) const;
+    virtual Type to_type() const;
 
 private:
     ASTTypes bounds_;
@@ -554,7 +561,7 @@ private:
 
 class Impl : public Item, public ParametricASTType {
 public:
-    /// Maybe nullptr as this trait is optional.
+    /// May be nullptr as trait is optional.
     const ASTType* trait() const { return trait_; }
     const ASTType* for_type() const { return for_type_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
@@ -674,12 +681,8 @@ private:
 
 class PathExpr : public Expr {
 public:
-    PathExpr() 
-        : decl_(nullptr)
-    {}
-
     const Path* path() const { return path_; }
-    const Decl* decl() const { return decl_; }
+    const ValueDecl* value_decl() const { return value_decl_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const;
     virtual void check(NameSema&) const;
@@ -688,7 +691,7 @@ public:
 
 private:
     AutoPtr<const Path> path_;
-    mutable const Decl* decl_; ///< Declaration of the variable in use.
+    mutable SafePtr<const ValueDecl> value_decl_; ///< Declaration of the variable in use.
 
     friend class Parser;
 };
