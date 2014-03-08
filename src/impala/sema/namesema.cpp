@@ -236,10 +236,15 @@ void LiteralExpr::check(NameSema& sema) const {}
 void FnExpr::check(NameSema& sema) const {
 }
 
+void PathItem::check(NameSema& sema) const {
+    decl_ = sema.lookup(symbol());
+    for (auto arg : args())
+        arg->check(sema);
+}
+
 void Path::check(NameSema& sema) const {
-    // TODO longer pathers
-    auto last_item = path_items().back();
-    decl_ = sema.lookup(last_item->symbol());
+    for (auto path_item : path_items())
+        path_item->check(sema);
 }
 
 void PathExpr::check(NameSema& sema) const {

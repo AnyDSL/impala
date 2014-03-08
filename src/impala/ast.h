@@ -105,11 +105,14 @@ class PathItem : public ASTNode {
 public:
     Symbol symbol() const { return symbol_; }
     const ASTTypes& args() const { return args_; }
+    const Decl* decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const;
+    void check(NameSema&) const;
 
 private:
     Symbol symbol_;
     ASTTypes args_;
+    mutable SafePtr<const Decl> decl_;
 
     friend class Parser;
 };
@@ -120,14 +123,13 @@ class Path : public ASTNode {
 public:
     bool is_global() const { return is_global_; }
     const PathItems& path_items() const { return path_items_; }
-    const Decl* decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const;
     void check(NameSema&) const;
+    const Decl* decl() const { return path_items_.back()->decl(); }
 
 private:
     bool is_global_;
     PathItems path_items_;
-    mutable SafePtr<const Decl> decl_;
 
     friend class Parser;
 };
