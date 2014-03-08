@@ -315,8 +315,8 @@ public:
 
     const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     bool is_mut() const { return is_mut_; }
-    virtual void check(NameSema&) const = 0;
-    virtual void check(TypeSema&) const = 0;
+    void check(NameSema&) const;
+    void check(TypeSema&) const;
     Type calc_type(TypeSema&) const;
 
 protected:
@@ -336,8 +336,6 @@ public:
     size_t handle() const { return handle_; }
     bool is_anonymous() const { return symbol() == Symbol(); }
     virtual std::ostream& print(Printer&) const;
-    virtual void check(NameSema&) const {}
-    virtual void check(TypeSema&) const {}
 
 protected:
     size_t handle_;

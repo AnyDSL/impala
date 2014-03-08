@@ -224,12 +224,9 @@ void BlockExpr::check(NameSema& sema) const {
         if (auto item_stmt = stmt->isa<ItemStmt>())
             item_stmt->item()->check_head(sema);
     }
-
     for (auto stmt : stmts())
         stmt->check(sema);
-
     expr()->check(sema);
-    set_type(expr()->type());
 }
 
 void LiteralExpr::check(NameSema& sema) const {} 
@@ -245,9 +242,11 @@ void Path::check(NameSema& sema) const {
 
 void PathExpr::check(NameSema& sema) const {
     path()->check(sema);
-    value_decl_ = path()->decl()->isa<ValueDecl>();
-    if (!value_decl_)
-        sema.error(this) << '\'' << path() << "' is not a value\n";
+    if (path()->decl()) {
+        value_decl_ = path()->decl()->isa<ValueDecl>();
+        if (!value_decl_)
+            sema.error(this) << '\'' << path() << "' is not a value\n";
+    }
 }
 
 void PrefixExpr::check(NameSema& sema) const  {                     rhs()->check(sema); }
@@ -303,8 +302,12 @@ void ItemStmt::check(NameSema& sema) const { item()->check(sema); }
 void LetStmt::check(NameSema& sema) const {
     if (init())
         init()->check(sema);
-    // TODO handle local
+    local()->check(sema);
 }
+
+//------------------------------------------------------------------------------
+
+void ValueDecl::check(NameSema& sema) const { sema.insert(this); }
 
 //------------------------------------------------------------------------------
 

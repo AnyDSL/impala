@@ -202,7 +202,8 @@ Type Typedef::to_type() const {
 Type TypeParam::to_type() const { return type_var(); }
 
 Type ValueDecl::calc_type(TypeSema& sema) const {
-    check(sema);
+    if (!type())
+        check(sema);
     return type();
 }
 
@@ -216,7 +217,8 @@ Trait TraitDecl::to_trait(TypeSema& sema) const {
 //------------------------------------------------------------------------------
 
 void ModContents::check(TypeSema& sema) const {
-    for (auto item : items()) item->check(sema);
+    for (auto item : items()) 
+        item->check(sema);
 }
 
 /*
@@ -336,7 +338,7 @@ void BlockExpr::check(TypeSema& sema) const {
         stmt->check(sema);
 
     expr()->check(sema);
-    set_type(expr()->type());
+    set_type(expr() ? expr()->type() : Type(sema.unit()));
 }
 
 void LiteralExpr::check(TypeSema& sema) const {
@@ -347,25 +349,19 @@ void FnExpr::check(TypeSema& sema) const {
 }
 
 void PathExpr::check(TypeSema& sema) const {
-#if 0
     // FEATURE consider longer paths
     auto last_item = path()->path_items().back();
+    if (value_decl()) {
+        if (!last_item->args().empty()) {
+            std::vector<Type> type_args;
+            for (const ASTType* t : last_item->args())
+                type_args.push_back(t->to_type(sema));
 
-    if ((decl_ = sema.lookup(this, last_item->symbol()))) {
-        if (auto vdec = decl_->isa<ValueDecl>()) {
-            // consider type expressions
-            if (!last_item->types().empty()) {
-                std::vector<Type> type_args;
-                for (const ASTType* t : last_item->types())
-                    type_args.push_back(t->to_type(sema));
-
-                set_type(vdec->calc_type(sema)->instantiate(type_args));
-            } else
-                set_type(vdec->calc_type(sema));
-        }
+            set_type(value_decl()->calc_type(sema)->instantiate(type_args));
+        } else
+            set_type(value_decl()->calc_type(sema));
     } else
         set_type(sema.type_error());
-#endif
 }
 
 void PrefixExpr::check(TypeSema& sema) const {
@@ -392,6 +388,9 @@ void InfixExpr::check(TypeSema& sema) const {
         case REM:
             sema.expect_num(lhs());
             set_type(sema.match_types(this, lhstype, rhstype));
+            break;
+        case ASGN:
+            set_type(sema.unit());
             break;
         default: THORIN_UNREACHABLE;
     }
@@ -496,6 +495,10 @@ void LetStmt::check(TypeSema& sema) const {
     if (init())
         init()->check(sema);
 }
+
+//------------------------------------------------------------------------------
+
+void ValueDecl::check(TypeSema& sema) const { set_type(ast_type()->to_type(sema)); }
 
 //------------------------------------------------------------------------------
 
