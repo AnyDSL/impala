@@ -294,7 +294,7 @@ private:
 /// Base class for all \p Type declarations.
 class TypeDecl : public Decl {
 public:
-    //virtual Type to_type() const = 0;
+    virtual Type to_type() const = 0;
 };
 
 /// Base class for all \p Type declarations having \p TypeParam%s.
@@ -434,6 +434,7 @@ public:
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
+    virtual Type to_type() const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -447,6 +448,7 @@ class ForeignMod : public Item, public ParametricTypeDecl {
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
+    virtual Type to_type() const;
     //virtual void emit(CodeGen& cg) const;
 };
 
@@ -457,6 +459,7 @@ public:
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
+    virtual Type to_type() const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -485,6 +488,7 @@ public:
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
+    virtual Type to_type() const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
@@ -498,6 +502,7 @@ class EnumDecl : public Item, public ParametricTypeDecl {
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
+    virtual Type to_type() const;
     //virtual void emit(CodeGen& cg) const;
 };
 
@@ -549,6 +554,7 @@ public:
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void check(TypeSema&) const;
+    virtual Type to_type() const;
     //virtual void emit(CodeGen& cg) const;
 
 private:

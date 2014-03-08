@@ -132,7 +132,7 @@ Type TupleASTType::to_type(TypeSema& sema) const {
 
 Type ASTTypeApp::to_type(TypeSema& sema) const {
     if (type_decl())
-        return type_decl()->type_var();
+        return type_decl()->to_type();
     else 
         return sema.type_error();
 }
@@ -152,24 +152,21 @@ Type FnASTType::to_type(TypeSema& sema) const {
 }
 
 Trait ASTTypeApp::to_trait(TypeSema& sema) const {
-#if 0
-    if (auto decl = sema.lookup(this, symbol())) {
-        if (auto trait_decl = decl->isa<TraitDecl>()) {
+    if (type_decl()) {
+        if (auto trait_decl = type_decl()->isa<TraitDecl>()) {
             Trait trait = trait_decl->calc_trait(sema);
             if (elems().empty()) {
-                return trait;
+                return trait; // TODO design the API such that this check is not necessary
             } else {
                 std::vector<Type> type_args;
                 for (auto e : elems())
                     type_args.push_back(e->to_type(sema));
-
                 return trait->instantiate(type_args);
             }
         } else
-            sema.error(this) << "cannot convert a type variable into a trait instance\n";
+            sema.error(this) << '\'' << symbol() << "' is not a trait\n";
     }
     return sema.trait_error();
-#endif
 }
 
 Trait TraitDecl::calc_trait(TypeSema& sema) const {
@@ -210,37 +207,30 @@ void StaticItem::check(TypeSema& sema) const {
 }
 
 void FnDecl::check(TypeSema& sema) const {
-#if 0
     // this FnDecl has already been checked
     if (!type().empty())
         return;
 
-    sema.push_scope();
     check_type_params(sema);
-    // check parameters
-    std::vector<Type> par_types;
+    std::vector<Type> types;
     for (const Param* p : fn().params()) {
-        sema.insert(p);
-        Type pt = p->asttype()->to_type(sema);
+        Type pt = p->ast_type()->to_type(sema);
         p->set_type(pt);
-        par_types.push_back(pt);
+        types.push_back(pt);
     }
     // create FnType
-    Type fn_type = sema.fntype(par_types);
-    for (auto tp : type_params()) {
+    Type fn_type = sema.fntype(types);
+    for (auto tp : type_params())
         fn_type->add_bound_var(tp->type_var());
-    }
-    sema.unify(fn_type);
+
+    sema.unify(fn_type); // TODO is this call necessary?
     set_type(fn_type);
 
     fn().body()->check(sema);
     if (fn().body()->type() != sema.type_noreturn()) {
         Type ret_func = fn_type->elem(fn_type->size() - 1);
-        sema.expect_type(fn().body(), create_return_type(sema, this, ret_func), "return");
+        sema.expect_type(fn().body(), sema.create_return_type(this, ret_func), "return");
     }
-
-    sema.pop_scope();
-#endif
 }
 
 void StructDecl::check(TypeSema& sema) const {
