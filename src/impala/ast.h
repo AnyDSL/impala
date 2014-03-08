@@ -462,9 +462,8 @@ class FieldDecl : public ValueDecl {
 public:
     Visibility visibility() const { return  visibility_; }
     virtual std::ostream& print(Printer&) const;
-    void check_head(NameSema&) const;
-    void check(NameSema&) const {} // TODO
-    void check(TypeSema&) const {} // TODO
+    virtual void check(NameSema&) const;
+    virtual void check(TypeSema&) const;
 
 private:
     Visibility visibility_;

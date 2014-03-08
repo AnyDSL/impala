@@ -246,6 +246,9 @@ void FnDecl::check(TypeSema& sema) const {
 void StructDecl::check(TypeSema& sema) const {
 }
 
+void FieldDecl::check(TypeSema&) const {
+}
+
 void TraitDecl::check(TypeSema& sema) const {
     // did we already check this trait?
     if ((!trait().empty()))

@@ -227,6 +227,9 @@ void FnDecl::check(NameSema& sema) const {
 void StructDecl::check(NameSema& sema) const {
 }
 
+void FieldDecl::check(NameSema&) const {
+}
+
 void TraitDecl::check(NameSema& sema) const {
     // FEATURE consider super traits and check methods
     check_type_params(sema);
