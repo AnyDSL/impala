@@ -12,12 +12,6 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-struct TraitImplHash { size_t operator () (const Trait t) const; };
-struct TraitImplEqual { bool operator () (const Trait t1, const Trait t2) const; };
-typedef thorin::HashSet<Trait, TraitImplHash, TraitImplEqual> TraitImplSet;
-
-//------------------------------------------------------------------------------
-
 enum Kind {
 #define IMPALA_TYPE(itype, atype) Type_##itype,
 #include "impala/tokenlist.h"
@@ -65,7 +59,7 @@ public:
 
     void add_implementation(TraitImpl);
     virtual bool implements(Trait) const;
-    const TraitImplSet& trait_impls() const { return trait_impls_; }
+    virtual const UniSet<Trait>& trait_impls() const { return trait_impls_; }
 
     bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());
@@ -90,7 +84,7 @@ public:
 
 private:
     const Kind kind_;
-    TraitImplSet trait_impls_; // TODO do we want to have the impls or only the traits?
+    UniSet<Trait> trait_impls_; // TODO do we want to have the impls or only the traits?
 
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
@@ -214,6 +208,7 @@ public:
     std::string to_string() const;
 
     virtual bool implements(Trait) const;
+    virtual const UniSet<Trait>& trait_impls() const { return bounds(); }
 
     /**
      * A type variable is closed if it is bound and all restrictions are closed.

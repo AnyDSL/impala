@@ -6,13 +6,6 @@ namespace impala {
 
 int TypeVarNode::counter = 0;
 
-// TODO review this
-size_t TraitImplHash::operator () (const Trait t) const{ return t->hash(); }
-bool TraitImplEqual::operator () (const Trait t1, const Trait t2) const {
-    // FEATURE consider generic implementations, ...
-    return t1 == t2;
-}
-
 //------------------------------------------------------------------------------
 
 bool TypeNode::is_closed() const {
