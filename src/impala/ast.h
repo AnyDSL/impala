@@ -263,7 +263,7 @@ public:
 
 /// Base class of all entities that have a type assigned. 
 /// Use as a mixin.
-class Typable {
+class Typeable {
 public:
     Type type() const { return type_; }
     void set_type(Type t) const;
@@ -309,7 +309,7 @@ class ParametricTypeDecl : public TypeDecl, public TypeParamList {
 };
 
 /// Base class for all declarations which have a type.
-class ValueDecl : public Decl, public Typable {
+class ValueDecl : public Decl, public Typeable {
 public:
     ValueDecl()
         : is_mut_(false)
@@ -595,7 +595,7 @@ private:
  * expressions
  */
 
-class Expr : public ASTNode, public Typable {
+class Expr : public ASTNode, public Typeable {
 public:
     virtual bool is_lvalue() const = 0;
     virtual void check(NameSema&) const = 0;

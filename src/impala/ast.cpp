@@ -45,7 +45,7 @@ bool IfExpr::has_else() const {
     return true;
 }
 
-void Typable::set_type(Type t) const {
+void Typeable::set_type(Type t) const {
     assert(!t.empty());
     if (type_.empty() || (t->kind() == Type_error)) {
         type_ = t;
