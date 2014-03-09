@@ -383,10 +383,7 @@ private:
 
 class SelfParam : public TypeParam {
 public:
-    SelfParam(const Location& loc) { 
-        loc_ = loc;
-        symbol_ = Symbol("Self");
-    }
+    SelfParam(const Location& loc) { symbol_ = Symbol("Self"); }
 };
 
 class Param : public LocalDecl {
