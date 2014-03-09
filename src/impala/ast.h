@@ -88,7 +88,7 @@ protected:
 class ASTNode : public impala::HasLocation, public thorin::MagicCast<ASTNode> {
 public:
 #ifndef NDEBUG
-    //virtual ~ASTNode() { assert(loc_.is_set()); } FIXME this is not the case for SelfParam
+    virtual ~ASTNode() { assert(loc_.is_set()); }
 #endif
     virtual std::ostream& print(Printer&) const = 0;
     void dump() const;
@@ -383,7 +383,10 @@ private:
 
 class SelfParam : public TypeParam {
 public:
-    SelfParam() { symbol_ = Symbol("Self"); }
+    SelfParam(const Location& loc) { 
+        loc_ = loc;
+        symbol_ = Symbol("Self");
+    }
 };
 
 class Param : public LocalDecl {
@@ -591,9 +594,13 @@ private:
 
 class TraitDecl : public MiscItem, public Decl, public TypeParamList {
 public:
+    TraitDecl()
+        : self_param_(Location(loc().pos1(), loc().pos1()))
+    {}
+
     const AutoVector<const ASTTypeApp*>& super() const { return super_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
-    const SelfParam* self_decl() const { return &self_decl_; }
+    const SelfParam* self_param() const { return &self_param_; }
     Trait trait() const { return trait_; }
     Trait to_trait(TypeSema&) const;
     virtual std::ostream& print(Printer&) const;
@@ -603,7 +610,7 @@ public:
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    const SelfParam self_decl_;
+    const SelfParam self_param_;
     AutoVector<const FnDecl*> methods_;
     AutoVector<const ASTTypeApp*> super_;
     mutable Trait trait_;
