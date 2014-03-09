@@ -32,6 +32,17 @@ public:
     void push_scope() { levels_.push_back(decl_stack_.size()); } ///< Opens a new scope.
     void pop_scope();                                            ///< Discards current scope.
 
+
+    void check(const TypeDecl* type_decl) { type_decl->check(*this); }
+    void check(const Item* item) { 
+        if (auto type_decl_item = item->isa<TypeDeclItem>())
+            check(type_decl_item);
+        else
+            check(item->isa<MiscItem>());
+    }
+    void check(const TypeDeclItem* type_decl_item) { type_decl_item->check(*this); }
+    void check(const MiscItem* misc_item) { misc_item->check(*this); }
+
 private:
     size_t depth() const { return levels_.size(); }
 
@@ -90,16 +101,19 @@ void NameSema::pop_scope() {
 
 //------------------------------------------------------------------------------
 
+void TypeParam::check(NameSema& sema) const {
+    sema.insert(this);
+    for (const ASTType* bound : bounds())
+        bound->check(sema);
+}
+
 /*
  * ASTType::check
  */
 
 void TypeParamList::check_type_params(NameSema& sema) const {
-    for (const TypeParam* tp : type_params()) {
-        sema.insert(tp);
-        for (const ASTType* b : tp->bounds())
-            b->check(sema);
-    }
+    for (const TypeParam* tp : type_params())
+        tp->check(sema);
 }
 
 void ErrorASTType::check(NameSema& sema) const {}
@@ -133,7 +147,7 @@ void FnASTType::check(NameSema& sema) const {
 
 void ModContents::check(NameSema& sema) const {
     for (auto item : items()) item->check_head(sema);
-    for (auto item : items()) item->check(sema);
+    for (auto item : items()) sema.check(item);
 }
 
 /*
@@ -305,7 +319,7 @@ void ForExpr::check(NameSema& sema) const {
  */
 
 void ExprStmt::check(NameSema& sema) const { expr()->check(sema); }
-void ItemStmt::check(NameSema& sema) const { item()->check(sema); }
+void ItemStmt::check(NameSema& sema) const { sema.check(item()); }
 void LetStmt::check(NameSema& sema) const {
     if (init())
         init()->check(sema);

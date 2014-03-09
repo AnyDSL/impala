@@ -27,7 +27,21 @@ public:
     Type match_types(const Expr* pos, Type t1, Type t2);
     void expect_type(const Expr* found, Type expected, std::string typetype);
     Type create_return_type(const ASTNode* node, Type ret_func);
-    void check(const Item* item) { if (!item->checked_) { item->checked_ = true; item->check(*this); } }
+    Type check(const TypeDecl* type_decl) { 
+        if (!type_decl->checked_) { 
+            type_decl->checked_ = true; 
+            type_decl->type_ = type_decl->check(*this); 
+        }
+        return type_decl->type();
+    }
+    void check(const Item* item) { 
+        if (auto type_decl_item = item->isa<TypeDeclItem>())
+            check(type_decl_item);
+        else
+            check(item->isa<MiscItem>());
+    }
+    Type check(const TypeDeclItem* type_decl_item) { return type_decl_item->type_ = type_decl_item->check(*this); }
+    void check(const MiscItem* misc_item) { misc_item->check(*this); }
     Type check(const Expr* expr) { return expr->type_ = expr->check(*this); }
     Type check(const ASTType* ast_type) { return ast_type->type_ = ast_type->check(*this); }
 
@@ -103,12 +117,7 @@ void TypeParamList::check_type_params(TypeSema& sema) const {
     }
 }
 
-TypeVar TypeParam::type_var(TypeSema& sema) const {
-    if (!type_)
-        type_ = sema.typevar();
-    return type().as<TypeVar>();
-}
-
+TypeVar TypeParam::type_var(TypeSema& sema) const { return sema.check(this).as<TypeVar>(); }
 Type ErrorASTType::check(TypeSema& sema) const { return sema.type_error(); }
 
 Type PrimASTType::check(TypeSema& sema) const {
@@ -156,8 +165,7 @@ Type FnASTType::check(TypeSema& sema) const {
 Type ASTTypeApp::check(TypeSema& sema) const {
     if (type_or_trait_decl()) {
         if (auto type_decl = type_or_trait_decl()->isa<TypeDecl>())
-            //return sema.check(type_decl);
-            return type_decl->to_type(sema);
+            return sema.check(type_decl);
         else
             sema.error(this) << '\'' << symbol() << "' does not name a type\n";
     }
@@ -185,32 +193,6 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-/*
- * TypeDecl::to_type + to_trait + calc_trait
- */
-
-Type ModDecl::to_type(TypeSema& sema) const {
-    return Type();
-}
-
-Type ForeignMod::to_type(TypeSema& sema) const {
-    return Type();
-}
-
-Type EnumDecl::to_type(TypeSema& sema) const {
-    return Type();
-}
-
-Type StructDecl::to_type(TypeSema& sema) const {
-    return Type();
-}
-
-Type Typedef::to_type(TypeSema& sema) const {
-    return Type();
-}
-
-Type TypeParam::to_type(TypeSema& sema) const { return type_var(sema); }
-
 Type ValueDecl::calc_type(TypeSema& sema) const {
     if (!type())
         check(sema);
@@ -226,31 +208,45 @@ Trait TraitDecl::to_trait(TypeSema& sema) const {
 
 //------------------------------------------------------------------------------
 
+/*
+ * TypeDecl
+ */
+
+Type TypeParam::check(TypeSema& sema) const { return sema.typevar(); }
+
+Type ModDecl::check(TypeSema& sema) const {
+    if (mod_contents())
+        mod_contents()->check(sema);
+    return Type();
+}
+
 void ModContents::check(TypeSema& sema) const {
     for (auto item : items()) 
         sema.check(item);
 }
 
+Type ForeignMod::check(TypeSema& sema) const {
+    return Type();
+}
+
+Type Typedef::check(TypeSema& sema) const {
+    return Type();
+}
+
+Type EnumDecl::check(TypeSema& sema) const {
+    return Type();
+}
+
+Type StructDecl::check(TypeSema& sema) const {
+    return Type();
+}
+
+void FieldDecl::check(TypeSema&) const {
+}
+
 /*
- * Item::check
+ * MiscItem
  */
-
-void ModDecl::check(TypeSema& sema) const {
-    if (mod_contents())
-        mod_contents()->check(sema);
-}
-
-void ForeignMod::check(TypeSema& sema) const {
-}
-
-void Typedef::check(TypeSema& sema) const {
-}
-
-void EnumDecl::check(TypeSema& sema) const {
-}
-
-void StaticItem::check(TypeSema& sema) const {
-}
 
 void FnDecl::check(TypeSema& sema) const {
     check_type_params(sema);
@@ -275,10 +271,7 @@ void FnDecl::check(TypeSema& sema) const {
     }
 }
 
-void StructDecl::check(TypeSema& sema) const {
-}
-
-void FieldDecl::check(TypeSema&) const {
+void StaticItem::check(TypeSema& sema) const {
 }
 
 void TraitDecl::check(TypeSema& sema) const {

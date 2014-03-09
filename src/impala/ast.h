@@ -143,6 +143,7 @@ public:
 
 protected:
     mutable Type type_;
+    friend class TypeSema;
 };
 
 /*
@@ -316,13 +317,14 @@ class TypeOrTraitDecl : public Decl {
 
 /// Base class for all \p Type declarations.
 class TypeDecl : public TypeOrTraitDecl, public Typeable {
-public:
-    virtual Type to_type(TypeSema&) const = 0;
-};
+private:
+    virtual void check(NameSema&) const = 0;
+    virtual Type check(TypeSema&) const = 0;
 
-/// Base class for all \p Type declarations having \p TypeParam%s.
-class ParametricTypeDecl : public TypeDecl, public TypeParamList {
-    friend class Parser;
+    mutable bool checked_ = false;
+
+    friend class NameSema;
+    friend class TypeSema;
 };
 
 /// Base class for all declarations which have a type.
@@ -370,9 +372,11 @@ public:
     const ASTTypes& bounds() const { return bounds_; }
     TypeVar type_var(TypeSema&) const;
     virtual std::ostream& print(Printer&) const;
-    virtual Type to_type(TypeSema&) const;
 
 private:
+    virtual void check(NameSema&) const;
+    virtual Type check(TypeSema&) const;
+
     ASTTypes bounds_;
 
     friend class Parser;
@@ -433,59 +437,65 @@ class Item : virtual public ASTNode {
 public:
     Visibility visibility() const { return  visibility_; }
     virtual void check_head(NameSema&) const = 0;
-    virtual void check(NameSema&) const = 0;
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    virtual void check(TypeSema&) const = 0;
-
     Visibility visibility_;
-    mutable bool checked_ = false;
 
     friend class Parser;
+};
+
+/// Base class for all \p Type declarations having \p TypeParam%s.
+class TypeDeclItem : public Item, public TypeDecl, public TypeParamList {
+    friend class Parser;
+};
+
+class MiscItem : public Item {
+private:
+    virtual void check(NameSema&) const = 0;
+    virtual void check(TypeSema&) const = 0;
+
+    friend class NameSema;
     friend class TypeSema;
 };
 
-class ModDecl : public Item, public ParametricTypeDecl {
+class ModDecl : public TypeDeclItem {
 public:
     const ModContents* mod_contents() const { return mod_contents_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    virtual void check(TypeSema&) const;
+    virtual Type check(TypeSema&) const;
 
     AutoPtr<const ModContents> mod_contents_;
 
     friend class Parser;
 };
 
-class ForeignMod : public Item, public ParametricTypeDecl {
+class ForeignMod : public TypeDeclItem {
 public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    virtual void check(TypeSema&) const;
+    virtual Type check(TypeSema&) const;
 };
 
-class Typedef : public Item, public ParametricTypeDecl {
+class Typedef : public TypeDeclItem {
 public:
     const ASTType* type() const { return type_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    virtual void check(TypeSema&) const;
+    virtual Type check(TypeSema&) const;
 
     AutoPtr<const ASTType> type_;
 
@@ -505,36 +515,34 @@ private:
     friend class Parser;
 };
 
-class StructDecl : public Item, public ParametricTypeDecl {
+class StructDecl : public TypeDeclItem {
 public:
     const AutoVector<const FieldDecl*>& fields() const { return fields_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    virtual void check(TypeSema&) const;
+    virtual Type check(TypeSema&) const;
 
     AutoVector<const FieldDecl*> fields_;
 
     friend class Parser;
 };
 
-class EnumDecl : public Item, public ParametricTypeDecl {
+class EnumDecl : public TypeDeclItem {
 public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    virtual void check(TypeSema&) const;
+    virtual Type check(TypeSema&) const;
 };
 
-class StaticItem : public Item, public ValueDecl {
+class StaticItem : public MiscItem, public ValueDecl {
 public:
     bool is_mut() const { return is_mut_; }
     Symbol symbol() const { return symbol_; }
@@ -543,10 +551,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
+    virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    virtual void check(TypeSema&) const;
 
     bool is_mut_;
     Symbol symbol_;
@@ -556,17 +564,17 @@ private:
     friend class Parser;
 };
 
-class FnDecl : public TypeParamList, public Item, public Decl, public Typeable {
+class FnDecl : public MiscItem, public TypeParamList, public ValueDecl {
 public:
     const Fn& fn() const { return fn_; }
     bool is_extern() const { return extern_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
+    virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    virtual void check(TypeSema&) const;
 
     Fn fn_;
     bool extern_;
@@ -574,7 +582,7 @@ private:
     friend class Parser;
 };
 
-class TraitDecl : public Item, public TypeOrTraitDecl, public TypeParamList {
+class TraitDecl : public MiscItem, public TypeOrTraitDecl, public TypeParamList {
 public:
     const AutoVector<const ASTTypeApp*>& super() const { return super_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
@@ -583,10 +591,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
+    virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    virtual void check(TypeSema&) const;
 
     AutoVector<const FnDecl*> methods_;
     AutoVector<const ASTTypeApp*> super_;
@@ -595,7 +603,7 @@ private:
     friend class Parser;
 };
 
-class Impl : public Item, public TypeParamList {
+class Impl : public MiscItem, public TypeParamList {
 public:
     /// May be nullptr as trait is optional.
     const ASTType* trait() const { return trait_; }
@@ -604,10 +612,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
+    virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
-    virtual void check(TypeSema&) const;
 
     AutoPtr<const ASTType> trait_;
     AutoPtr<const ASTType> for_type_;
