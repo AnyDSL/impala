@@ -23,7 +23,6 @@ public:
     }
 
     template<class T> T gen_error();
-
     void expect_num(const Expr* exp);
     Type match_types(const Expr* pos, Type t1, Type t2);
     void expect_type(const Expr* found, Type expected, std::string typetype);
@@ -234,8 +233,6 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
 Type ValueDecl::check(TypeSema& sema) const { 
     return sema.check(ast_type());
 }
-
-// TraitDecl::to_trait
 
 Trait TraitDecl::to_trait(TypeSema& sema) const {
     check(sema);

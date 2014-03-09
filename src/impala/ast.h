@@ -597,7 +597,6 @@ public:
     //virtual void emit(CodeGen& cg) const;
 
 private:
-
     AutoVector<const FnDecl*> methods_;
     AutoVector<const ASTTypeApp*> super_;
     mutable Trait trait_;
