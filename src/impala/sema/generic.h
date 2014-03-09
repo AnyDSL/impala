@@ -21,7 +21,7 @@ template<class T> struct NodeEqual {
 template<class T> using NodeSet = thorin::HashSet<T, NodeHash<T>, NodeEqual<T>>;
 
 template<class T> struct UniHash {
-    size_t operator () (const T t) const { return thorin::hash_value(*t); }
+    size_t operator () (const T t) const { return t->hash(); }
 };
 template<class T> struct UniEqual {
     bool operator () (const T t1, const T t2) const { return t1 == t2; }
