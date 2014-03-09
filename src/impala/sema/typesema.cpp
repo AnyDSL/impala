@@ -318,10 +318,12 @@ Type FnDecl::check(TypeSema& sema) const {
         fn_type->add_bound_var(tp->type_var(sema));
     type_ = fn_type;
 
-    sema.check(fn().body());
-    if (fn().body()->type() != sema.type_noreturn()) {
-        Type ret_func = fn_type->elem(fn_type->size() - 1);
-        sema.expect_type(fn().body(), sema.create_return_type(this, ret_func), "return");
+    if (fn().body() != nullptr) {
+        sema.check(fn().body());
+        if (fn().body()->type() != sema.type_noreturn()) {
+            Type ret_func = fn_type->elem(fn_type->size() - 1);
+            sema.expect_type(fn().body(), sema.create_return_type(this, ret_func), "return");
+        }
     }
 
     type_.clear(); // will be set again by TypeSema's wrapper
@@ -345,6 +347,10 @@ void TraitDecl::check(TypeSema& sema) const {
     for (auto tp : type_params()) {
         trait_->add_bound_var(tp->type_var(sema));
     }
+
+    // check methods
+    for (auto m : methods())
+        trait_->add_method(m->symbol(), sema.check(m));
 
     sema.unify(trait());
 }
