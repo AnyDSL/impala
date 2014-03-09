@@ -14,6 +14,9 @@ std::string TraitInstanceNode::to_string() const {
     std::string result = trait()->to_string();
 
     assert(!var_instances_.empty());
+    if (var_instances_.size() == 1)
+        return result;
+
     assert(var_instances_.size() == trait()->num_bound_vars());
     const char* separator = "[";
     for (size_t i = 1; i < trait()->num_bound_vars(); ++i) {
