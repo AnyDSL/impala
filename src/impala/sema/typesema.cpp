@@ -27,6 +27,7 @@ public:
     Type match_types(const Expr* pos, Type t1, Type t2);
     void expect_type(const Expr* found, Type expected, std::string typetype);
     Type create_return_type(const ASTNode* node, Type ret_func);
+    Type check(const Expr* expr) { return expr->type_ = expr->check(*this); }
 
 private:
     bool nossa_;
@@ -268,7 +269,7 @@ void FnDecl::check(TypeSema& sema) const {
     sema.unify(fn_type); // TODO is this call necessary?
     set_type(fn_type);
 
-    fn().body()->check(sema);
+    sema.check(fn().body());
     if (fn().body()->type() != sema.type_noreturn()) {
         Type ret_func = fn_type->elem(fn_type->size() - 1);
         sema.expect_type(fn().body(), sema.create_return_type(this, ret_func), "return");
@@ -337,24 +338,25 @@ void Impl::check(TypeSema& sema) const {
  * Expr::check
  */
 
-void EmptyExpr::check(TypeSema& sema) const { set_type(sema.unit()); }
+Type EmptyExpr::check(TypeSema& sema) const { return sema.unit(); }
 
-void BlockExpr::check(TypeSema& sema) const {
+Type BlockExpr::check(TypeSema& sema) const {
     for (auto stmt : stmts())
         stmt->check(sema);
 
-    expr()->check(sema);
-    set_type(expr() ? expr()->type() : Type(sema.unit()));
+    sema.check(expr());
+    return expr() ? expr()->type() : Type(sema.unit());
 }
 
-void LiteralExpr::check(TypeSema& sema) const {
-    set_type(sema.primtype(literal2type()));
+Type LiteralExpr::check(TypeSema& sema) const {
+    return sema.primtype(literal2type());
 }
 
-void FnExpr::check(TypeSema& sema) const {
+Type FnExpr::check(TypeSema& sema) const {
+    return Type();
 }
 
-void PathExpr::check(TypeSema& sema) const {
+Type PathExpr::check(TypeSema& sema) const {
     // FEATURE consider longer paths
     auto last_item = path()->path_items().back();
     if (value_decl()) {
@@ -363,20 +365,20 @@ void PathExpr::check(TypeSema& sema) const {
             for (const ASTType* t : last_item->args())
                 type_args.push_back(t->to_type(sema));
 
-            set_type(value_decl()->calc_type(sema)->instantiate(type_args));
+            return value_decl()->calc_type(sema)->instantiate(type_args);
         } else
-            set_type(value_decl()->calc_type(sema));
+            return value_decl()->calc_type(sema);
     } else
-        set_type(sema.type_error());
+        return sema.type_error();
 }
 
-void PrefixExpr::check(TypeSema& sema) const {
+Type PrefixExpr::check(TypeSema& sema) const {
+    return sema.check(rhs());
 }
 
-void InfixExpr::check(TypeSema& sema) const {
-    lhs()->check(sema);
-    rhs()->check(sema);
-
+Type InfixExpr::check(TypeSema& sema) const {
+    sema.check(lhs());
+    sema.check(rhs());
     Type lhstype = lhs()->type();
     Type rhstype = rhs()->type();
 
@@ -385,98 +387,93 @@ void InfixExpr::check(TypeSema& sema) const {
         case EQ:
         case NE:
             sema.match_types(this, lhstype, rhstype);
-            set_type(sema.type_bool());
-            break;
+            return sema.type_bool();
         case ADD:
         case SUB:
         case MUL:
         case DIV:
         case REM:
             sema.expect_num(lhs());
-            set_type(sema.match_types(this, lhstype, rhstype));
-            break;
+            return sema.match_types(this, lhstype, rhstype);
         case ASGN:
-            set_type(sema.unit());
-            break;
+            return sema.unit();
         default: THORIN_UNREACHABLE;
     }
 }
 
-void PostfixExpr::check(TypeSema& sema) const {
+Type PostfixExpr::check(TypeSema& sema) const {
+    return sema.check(lhs());
 }
 
-void FieldExpr::check(TypeSema& sema) const {
+Type FieldExpr::check(TypeSema& sema) const {
+    return Type();
 }
 
-void CastExpr::check(TypeSema& sema) const {
+Type CastExpr::check(TypeSema& sema) const {
+    return Type();
 }
 
-void DefiniteArrayExpr::check(TypeSema& sema) const {
+Type DefiniteArrayExpr::check(TypeSema& sema) const {
+    return Type();
 }
 
-void RepeatedDefiniteArrayExpr::check(TypeSema& sema) const {
+Type RepeatedDefiniteArrayExpr::check(TypeSema& sema) const {
+    return Type();
 }
 
-void IndefiniteArrayExpr::check(TypeSema& sema) const {
+Type IndefiniteArrayExpr::check(TypeSema& sema) const {
+    return Type();
 }
 
-void TupleExpr::check(TypeSema& sema) const {
-    std::vector<Type> elems;
-    for (auto e : this->elems()) {
-        e->check(sema);
-        elems.push_back(e->type());
+Type TupleExpr::check(TypeSema& sema) const {
+    std::vector<Type> types;
+    for (auto e : elems()) {
+        sema.check(e);
+        types.push_back(e->type());
     }
-    set_type(sema.tupletype(elems));
+    return sema.tupletype(types);
 }
 
-void StructExpr::check(TypeSema& sema) const {
+Type StructExpr::check(TypeSema& sema) const {
+    return Type();
 }
 
-void MapExpr::check(TypeSema& sema) const {
-    lhs()->check(sema);
+Type MapExpr::check(TypeSema& sema) const {
+    sema.check(lhs());
     if (auto fn = lhs()->type().isa<FnType>()) {
         bool no_cont = fn->size() == (args().size()+1); // true if this is a normal function call (no continuation)
         if (no_cont || (fn->size() == args().size())) {
             for (size_t i = 0; i < args().size(); ++i) {
-                auto arg = args()[i];
-                arg->check(sema);
-                sema.expect_type(arg, fn->elem(i), "argument");
+                sema.check(arg(i));
+                sema.expect_type(arg(i), fn->elem(i), "argument");
             }
 
-            // set return type
-            if (no_cont) {
-                Type ret_func = fn->elem(fn->size() - 1);
-                set_type(sema.create_return_type(this, ret_func));
-            } else {
-                // same number of args as params -> continuation call
-                set_type(sema.type_noreturn());
-            }
-            return;
-        } else {
+            if (no_cont) // return type
+                return sema.create_return_type(this, fn->elems().back()); 
+            else        // same number of args as params -> continuation call
+                return sema.type_noreturn();
+        } else
             sema.error(this) << "wrong number of arguments\n";
-        }
     } else if (!lhs()->type().isa<TypeError>()) {
         // REMINDER new error message if not only fn-types are allowed
         sema.error(lhs()) << "expected function type but found " << lhs()->type() << "\n";
     }
 
-    assert(type().empty() && "this should only be reached if an error occurred");
-    set_type(sema.type_error());
+    return sema.type_error();
 }
 
-void IfExpr::check(TypeSema& sema) const {
-    // assert condition is of type bool
-    cond()->check(sema);
+Type IfExpr::check(TypeSema& sema) const {
+    sema.check(cond());
     sema.expect_type(cond(), sema.type_bool(), "");
-
-    then_expr()->check(sema);
-    else_expr()->check(sema);
+    sema.check(then_expr());
+    sema.check(else_expr());
 
     // assert that both branches have the same type and set the type
-    set_type(sema.match_types(this, then_expr()->type(), else_expr()->type()));
+    return sema.match_types(this, then_expr()->type(), else_expr()->type());
 }
 
-void ForExpr::check(TypeSema& sema) const {
+Type ForExpr::check(TypeSema& sema) const {
+    return sema.unit();
 }
 
 //------------------------------------------------------------------------------
@@ -486,7 +483,7 @@ void ForExpr::check(TypeSema& sema) const {
  */
 
 void ExprStmt::check(TypeSema& sema) const {
-    expr()->check(sema);
+    sema.check(expr());
 }
 
 void ItemStmt::check(TypeSema& sema) const {
@@ -495,7 +492,7 @@ void ItemStmt::check(TypeSema& sema) const {
 
 void LetStmt::check(TypeSema& sema) const {
     if (init())
-        init()->check(sema);
+        sema.check(init());
 }
 
 //------------------------------------------------------------------------------

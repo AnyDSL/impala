@@ -268,7 +268,7 @@ public:
     Type type() const { return type_; }
     void set_type(Type t) const;
 
-private:
+protected:
     mutable Type type_;
 };
 
@@ -599,12 +599,14 @@ class Expr : public ASTNode, public Typeable {
 public:
     virtual bool is_lvalue() const = 0;
     virtual void check(NameSema&) const = 0;
-    virtual void check(TypeSema&) const = 0;
     virtual thorin::RefPtr emit(CodeGen& cg) const { /*= 0*/ return 0; }
     virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {}
 
 private:
+    virtual Type check(TypeSema&) const = 0;
+
     friend class Parser;
+    friend class TypeSema;
 };
 
 class EmptyExpr : public Expr {
@@ -614,9 +616,9 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
 
 private:
+    virtual Type check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 };
 
@@ -632,10 +634,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     AutoVector<const Stmt*> stmts_;
     AutoPtr<const Expr> expr_;
 
@@ -664,10 +667,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     Kind kind_;
     thorin::Box box_;
 };
@@ -678,10 +682,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     Fn fn_;
     bool has_return_type_;
 
@@ -695,10 +700,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     AutoPtr<const Path> path_;
     mutable SafePtr<const ValueDecl> value_decl_; ///< Declaration of the variable in use.
 
@@ -717,11 +723,12 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
     //virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     Kind kind_;
     AutoPtr<const Expr> rhs_;
 
@@ -742,10 +749,11 @@ public:
     virtual bool is_lvalue() const { return Token::is_assign((TokenKind) kind()); }
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     Kind kind_;
     AutoPtr<const Expr> lhs_;
     AutoPtr<const Expr> rhs_;
@@ -769,10 +777,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     Kind kind_;
     AutoPtr<const Expr> lhs_;
 
@@ -786,9 +795,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return true; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     AutoPtr<const Expr> lhs_;
     Symbol symbol_;
 
@@ -802,9 +812,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     AutoPtr<const Expr> lhs_;
     AutoPtr<const ASTType> as_;
 
@@ -816,11 +827,12 @@ public:
     const Exprs& elems() const { return elems_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     virtual bool is_lvalue() const { return false; }
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     Exprs elems_;
 
     friend class Parser;
@@ -833,10 +845,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     AutoPtr<const Expr> value_;
     AutoPtr<const Expr> count_;
 
@@ -850,10 +863,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     AutoPtr<const Expr> size_;
     AutoPtr<const ASTType> elem_type_;
 
@@ -865,11 +879,12 @@ public:
     const Exprs& elems() const { return elems_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     virtual bool is_lvalue() const { return false; }
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     Exprs elems_;
 
     friend class Parser;
@@ -899,9 +914,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     AutoPtr<const Path> path_;
     std::vector<Elem> elems_;
 
@@ -911,14 +927,16 @@ private:
 class MapExpr : public Expr {
 public:
     const Exprs& args() const { return args_; }
+    const Expr* arg(size_t i) const { assert(i < args_.size()); return args_[i]; }
     const Expr* lhs() const { return lhs_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     AutoPtr<const Expr> lhs_;
     Exprs args_;
 
@@ -934,10 +952,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     AutoPtr<const Expr> cond_;
     AutoPtr<const Expr> then_expr_;
     AutoPtr<const Expr> else_expr_;
@@ -952,10 +971,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     AutoPtr<const Expr> expr_;
     Fn fn_;
 
