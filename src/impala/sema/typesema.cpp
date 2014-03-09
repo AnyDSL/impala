@@ -340,7 +340,7 @@ void TraitDecl::check(TypeSema& sema) const {
     // FEATURE consider super traits and check methods
     trait_ = sema.trait(this);
 
-    trait_->add_bound_var(self_decl()->type_var(sema));
+    trait_->add_bound_var(self_param()->type_var(sema));
     check_type_params(sema);
     for (auto tp : type_params()) {
         trait_->add_bound_var(tp->type_var(sema));
