@@ -54,6 +54,7 @@ public:
     bool add_method(Symbol name, Type method_type);
     /// return the type of the method with this name if it exists; otherwise return an empty type
     virtual Type find_method(Symbol name);
+    virtual const MethodTable& methods() { return methods_; }
 
     virtual bool is_closed() const { return true; } // TODO
 
@@ -90,6 +91,7 @@ public:
     virtual std::string to_string() const;
 
     virtual Type find_method(Symbol name);
+    virtual const MethodTable& methods();
 
     virtual bool is_closed() const;
 
@@ -104,6 +106,7 @@ private:
 
     const Trait trait_;
     SpecializeMapping var_instances_;
+    MethodTable spec_methods_;
 
     friend class TypeVarNode;
     friend class Generic;
