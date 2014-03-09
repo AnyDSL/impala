@@ -51,6 +51,9 @@ public:
         return representative() == other.representative();
     }
     bool operator != (const Proxy<T>& other) const { assert(node_ != nullptr); return !(*this == other); }
+    T* representative() const { assert(node_ != nullptr); return node_->representative()->template as<T>(); }
+    T* node() const { assert(node_ != nullptr); return node_; }
+    T* operator  * () const { assert(node_ != nullptr); return node_->is_unified() ? representative() : node_->template as<T>(); }
     T* operator -> () const { assert(node_ != nullptr); return *(*this); }
     /// Automatic up-cast in the class hierarchy.
     template<class U> operator Proxy<U>() {
@@ -64,27 +67,10 @@ public:
         assert(node_ != nullptr); return Proxy<typename U::BaseType>(node_->as<typename U::BaseType>()); 
     }
     operator bool() { return !empty(); }
+    Proxy<T>& operator= (Proxy<T> other) { assert(node_ == nullptr); node_ = *other; return *this; }
 
 private:
-    T* operator * () const { assert(node_ != nullptr); return node_->is_unified() ? representative() : node_->template as<T>(); }
-    T* representative() const { assert(node_ != nullptr); return node_->representative()->template as<T>(); }
-    T* node() const { assert(node_ != nullptr); return node_; }
     T* node_;
-
-    friend class Generic;
-    friend class TypeNode;
-    friend class PrimTypeNode;
-    friend class NoReturnTypeNode;
-    friend class TypeErrorNode;
-    friend class FnTypeNode;
-    friend class TupleTypeNode;
-    friend class TypeVarNode;
-    friend class TraitInstanceNode;
-    friend struct NodeHash<Proxy<T>>;
-    friend struct NodeEqual<Proxy<T>>;
-    friend struct UniHash<Proxy<T>>;
-    friend class TypeTable;
-    friend void verify(thorin::ArrayRef<const Proxy<TypeNode>> types);
 };
 
 class TypeVarNode;

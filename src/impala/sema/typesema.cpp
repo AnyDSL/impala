@@ -500,7 +500,9 @@ void LetStmt::check(TypeSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-void ValueDecl::check(TypeSema& sema) const { set_type(ast_type()->to_type(sema)); }
+void ValueDecl::check(TypeSema& sema) const { 
+    set_type(ast_type()->to_type(sema)); 
+}
 
 //------------------------------------------------------------------------------
 

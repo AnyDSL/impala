@@ -100,7 +100,7 @@ void TypeTable::change_repr_rec(TypeNode* t, TypeNode* repr) const {
     // change representative of all sub elements
     assert(t->size() == repr->size());
     for (size_t i = 0, e = t->size(); i != e; ++i)
-        change_repr(t->elem_(i).node_, repr->elem(i).representative());
+        change_repr(t->elem_(i).node(), repr->elem(i).representative());
 }
 
 template<class T>

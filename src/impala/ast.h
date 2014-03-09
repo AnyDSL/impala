@@ -261,13 +261,13 @@ public:
     friend class Parser;
 };
 
-/// Base class of all items that have a type assigned. Use as a mixin
+/// Base class of all entities that have a type assigned. 
+/// Use as a mixin.
 class Typable {
 public:
     Type type() const { return type_; }
-protected:
-    Typable() : type_() {}
     void set_type(Type t) const;
+
 private:
     mutable Type type_;
 };
