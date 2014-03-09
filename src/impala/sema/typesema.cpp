@@ -177,14 +177,13 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
     if (type_or_trait_decl()) {
         if (auto trait_decl = type_or_trait_decl()->isa<TraitDecl>()) {
             Trait trait = trait_decl->to_trait(sema);
-            if (elems().empty()) {
-                return trait; // TODO design the API such that this check is not necessary
-            } else {
-                std::vector<Type> type_args;
-                for (auto elem : elems())
-                    type_args.push_back(sema.check(elem));
-                return trait->instantiate(type_args);
-            }
+
+            std::vector<Type> type_args;
+            for (auto elem : elems())
+                type_args.push_back(sema.check(elem));
+            Trait tinst = trait->instantiate(type_args);
+            assert(!type_args.empty() || tinst == trait);
+            return tinst;
         } else
             sema.error(this) << '\'' << symbol() << "' does not name a trait\n";
     }
@@ -343,7 +342,7 @@ Type FnExpr::check(TypeSema& sema) const {
 Type PathExpr::check(TypeSema& sema) const {
     // FEATURE consider longer paths
     auto last_item = path()->path_items().back();
-    if (value_decl()) { // TODO design the API such that this check is not necessary
+    if (value_decl()) {
         if (!last_item->args().empty()) {
             std::vector<Type> type_args;
             for (const ASTType* arg : last_item->args())

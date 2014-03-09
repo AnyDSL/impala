@@ -53,7 +53,6 @@ void Generic::add_bound_var(TypeVar v) {
 
 SpecializeMapping Generic::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
     // TODO better error handling
-    assert(is_generic() && "Can't instantiate non-generic element!");
     assert(var_instances.size() == num_bound_vars() && "Wrong number of instances for bound type variables");
 
     // create a mapping TypeVar -> Type
