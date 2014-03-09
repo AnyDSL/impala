@@ -1,1 +1,1 @@
-subtyping2.impala:2 col 6: error: Wrong argument type; expected float but found int32
+subtyping2.impala:2 col 6: error: wrong argument type; expected float but found int32
