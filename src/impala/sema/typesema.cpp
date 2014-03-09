@@ -360,10 +360,8 @@ Type PrefixExpr::check(TypeSema& sema) const {
 }
 
 Type InfixExpr::check(TypeSema& sema) const {
-    sema.check(lhs());
-    sema.check(rhs());
-    Type lhstype = lhs()->type();
-    Type rhstype = rhs()->type();
+    auto lhstype = sema.check(lhs());
+    auto rhstype = sema.check(rhs());
 
     // FEATURE other cases
     switch (kind()) {
@@ -447,7 +445,7 @@ Type MapExpr::check(TypeSema& sema) const {
 
 Type IfExpr::check(TypeSema& sema) const {
     sema.check(cond());
-    sema.expect_type(cond(), sema.type_bool(), "");
+    sema.expect_type(cond(), sema.type_bool(), "condition");
     sema.check(then_expr());
     sema.check(else_expr());
 
