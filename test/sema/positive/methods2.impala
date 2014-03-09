@@ -1,0 +1,15 @@
+trait T {
+   fn f(self: Self) -> int32;
+}
+impl T for bool {
+   fn f(self: bool) -> int32 {
+      if (self) {
+      	 1
+      } else {
+         0
+      }
+   }
+}
+fn g() -> int32 {
+   true.f() + false.f()
+}

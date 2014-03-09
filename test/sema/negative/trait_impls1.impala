@@ -1,0 +1,8 @@
+trait T {
+   fn f(self: Self) -> int32;
+}
+impl T for bool {
+   fn f(self: int32) -> int32 {
+      self
+   }
+}

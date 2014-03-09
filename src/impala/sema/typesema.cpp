@@ -23,7 +23,7 @@ public:
     }
 
     void expect_num(const Expr* exp);
-    Type match_types(const Expr* pos, Type t1, Type t2);
+    Type match_types(const ASTNode* pos, Type t1, Type t2);
     void expect_type(const Expr* found, Type expected, std::string typetype);
     Type create_return_type(const ASTNode* node, Type ret_func);
 
@@ -72,7 +72,7 @@ void TypeSema::expect_num(const Expr* exp) {
         error(exp) << "expected number type but found " << t << "\n";
 }
 
-Type TypeSema::match_types(const Expr* pos, Type t1, Type t2) {
+Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
     if (t1 == type_error() || t2 == type_error())
         return type_error();
 
@@ -360,10 +360,11 @@ void Impl::check(TypeSema& sema) const {
     check_type_params(sema);
     Type ftype = sema.check(for_type());
 
+    Trait tinst;
     if (trait() != nullptr) {
         if (auto t = trait()->isa<ASTTypeApp>()) {
             // create impl
-            Trait tinst = t->to_trait(sema, ftype);
+            tinst = t->to_trait(sema, ftype);
             TraitImpl impl = sema.implement_trait(this, tinst);
             for (auto tp : type_params()) {
                 impl->add_bound_var(tp->type_var(sema));
@@ -377,8 +378,25 @@ void Impl::check(TypeSema& sema) const {
     }
 
     // FEATURE check that all methods are implemented
-    for (auto fn : methods())
-        sema.check(fn);
+    thorin::HashSet<Symbol> implemented_methods;
+    for (auto fn : methods()) {
+        Type fntype = sema.check(fn);
+
+        if (trait() != nullptr) {
+            assert(!tinst.empty());
+
+            Symbol meth_name = fn->symbol();
+            Type t = tinst->find_method(meth_name);
+            if (!t.empty()) {
+                // remember name for check if all methods were implemented
+                auto p = implemented_methods.insert(meth_name);
+                assert(p.second && "There should be no such name in the set"); // else name analysis failed
+
+                // check that the types match
+                sema.match_types(fn, fntype, t);
+            }
+        }
+    }
 }
 
 //------------------------------------------------------------------------------
