@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "impala/ast.h"
 #include "impala/dump.h"
 #include "impala/sema/typetable.h"

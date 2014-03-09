@@ -1,4 +1,5 @@
 #include "impala/ast.h"
+#include "impala/dump.h"
 #include "impala/sema/errorhandler.h"
 
 namespace impala {
