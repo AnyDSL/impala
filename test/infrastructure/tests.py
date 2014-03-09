@@ -78,7 +78,7 @@ def make_tests(directory, positive=True):
             res = of if os.path.exists(os.path.join(directory, of)) else ""
             tests.append(InvokeTest(positive, directory, testfile, res))
     
-    return tests
+    return sorted(tests, key=lambda test: test.getName())
 
 def executeTests(tests, gEx, pb = True):
     """Invoke this function with a list of test objects to run the tests. """

@@ -17,7 +17,7 @@ def allTests():
     
     # mark optionals
     for test in tests:
-        if os.path.join(test.basedir, test.srcfile) in optionals:
+        if test.getName() in optionals:
             test.opt()
     
     return tests
