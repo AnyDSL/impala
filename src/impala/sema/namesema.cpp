@@ -102,7 +102,6 @@ void NameSema::pop_scope() {
 //------------------------------------------------------------------------------
 
 void TypeParam::check(NameSema& sema) const {
-    sema.insert(this);
     for (const ASTType* bound : bounds())
         bound->check(sema);
 }
@@ -112,6 +111,12 @@ void TypeParam::check(NameSema& sema) const {
  */
 
 void TypeParamList::check_type_params(NameSema& sema) const {
+    // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
+    // first insert names
+    for (const TypeParam* tp : type_params())
+        sema.insert(tp);
+
+    // then check bounds
     for (const TypeParam* tp : type_params())
         tp->check(sema);
 }
@@ -132,6 +137,8 @@ void ASTTypeApp::check(NameSema& sema) const {
         type_or_trait_decl_ = decl->isa<TypeOrTraitDecl>();
         if (!type_or_trait_decl_)
             sema.error(this) << '\'' << symbol() << "' must be a type or trait declaration\n";
+        for (auto elem : elems())
+            elem->check(sema);
     }
 }
 
