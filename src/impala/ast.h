@@ -134,21 +134,38 @@ private:
     friend class Parser;
 };
 
+/// Base class of all entities that have a type assigned. 
+/// Use as a mixin.
+class Typeable {
+public:
+    Type type() const { return type_; }
+    void set_type(Type t) const;
+
+protected:
+    mutable Type type_;
+};
+
 /*
- * types
+ * AST types
  */
 
-class ASTType : public ASTNode {
+class ASTType : public ASTNode, public Typeable {
 public:
     virtual void check(NameSema&) const = 0;
-    virtual Type to_type(TypeSema&) const = 0;
+
+private:
+    virtual Type check(TypeSema&) const = 0;
+
+    friend class TypeSema;
 };
 
 class ErrorASTType : public ASTType {
 public:
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
+
+private:
+    virtual Type check(TypeSema&) const;
 };
 
 class PrimASTType : public ASTType {
@@ -161,9 +178,10 @@ public:
     Kind kind() const { return kind_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     Kind kind_;
 
     friend class Parser;
@@ -177,9 +195,10 @@ public:
     bool is_borrowed() const { return kind_ == '&'; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     char kind_;
     AutoPtr<const ASTType> referenced_type_;
 
@@ -200,7 +219,9 @@ class IndefiniteArrayASTType : public ArrayASTType {
 public:
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
+
+private:
+    virtual Type check(TypeSema&) const;
 };
 
 class DefiniteArrayASTType : public ArrayASTType {
@@ -208,9 +229,10 @@ public:
     uint64_t dim() const { return dim_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     thorin::u64 dim_;
 
     friend class Parser;
@@ -231,7 +253,9 @@ class TupleASTType : public CompoundASTType {
 public:
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
+
+private:
+    virtual Type check(TypeSema&) const;
 };
 
 class ASTTypeApp : public CompoundASTType {
@@ -240,10 +264,11 @@ public:
     const TypeOrTraitDecl* type_or_trait_decl() const { return type_or_trait_decl_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
     Trait to_trait(TypeSema&) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     Symbol symbol_;
     mutable SafePtr<const TypeOrTraitDecl> type_or_trait_decl_;
 
@@ -256,21 +281,13 @@ public:
     const FnASTType* ret_fn_type() const;
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    virtual Type to_type(TypeSema&) const;
+
+private:
+    virtual Type check(TypeSema&) const;
 
     friend class Parser;
 };
 
-/// Base class of all entities that have a type assigned. 
-/// Use as a mixin.
-class Typeable {
-public:
-    Type type() const { return type_; }
-    void set_type(Type t) const;
-
-protected:
-    mutable Type type_;
-};
 
 //------------------------------------------------------------------------------
 
@@ -298,7 +315,7 @@ class TypeOrTraitDecl : public Decl {
 };
 
 /// Base class for all \p Type declarations.
-class TypeDecl : public TypeOrTraitDecl {
+class TypeDecl : public TypeOrTraitDecl, public Typeable {
 public:
     virtual Type to_type(TypeSema&) const = 0;
 };
@@ -311,10 +328,6 @@ class ParametricTypeDecl : public TypeDecl, public TypeParamList {
 /// Base class for all declarations which have a type.
 class ValueDecl : public Decl, public Typeable {
 public:
-    ValueDecl()
-        : is_mut_(false)
-    {}
-
     const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     bool is_mut() const { return is_mut_; }
     void check(NameSema&) const;
@@ -323,7 +336,7 @@ public:
 
 protected:
     AutoPtr<const ASTType> ast_type_;
-    bool is_mut_;
+    bool is_mut_ = false;
 
     friend class Parser;
 };
@@ -361,7 +374,6 @@ public:
 
 private:
     ASTTypes bounds_;
-    mutable TypeVar type_var_;
 
     friend class Parser;
     friend class TypeParamList;
@@ -544,7 +556,7 @@ private:
     friend class Parser;
 };
 
-class FnDecl : public TypeParamList, public Item, public ValueDecl {
+class FnDecl : public TypeParamList, public Item, public Decl, public Typeable {
 public:
     const Fn& fn() const { return fn_; }
     bool is_extern() const { return extern_; }

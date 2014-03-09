@@ -29,6 +29,7 @@ public:
     Type create_return_type(const ASTNode* node, Type ret_func);
     void check(const Item* item) { if (!item->checked_) { item->checked_ = true; item->check(*this); } }
     Type check(const Expr* expr) { return expr->type_ = expr->check(*this); }
+    Type check(const ASTType* ast_type) { return ast_type->type_ = ast_type->check(*this); }
 
 private:
     bool nossa_;
@@ -86,7 +87,7 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
 //------------------------------------------------------------------------------
 
 /*
- * ASTType::to_type
+ * ASTType::check
  */
 
 void TypeParamList::check_type_params(TypeSema& sema) const {
@@ -103,14 +104,14 @@ void TypeParamList::check_type_params(TypeSema& sema) const {
 }
 
 TypeVar TypeParam::type_var(TypeSema& sema) const {
-    if (!type_var_)
-        type_var_ = sema.typevar();
-    return type_var_;
+    if (!type_)
+        type_ = sema.typevar();
+    return type().as<TypeVar>();
 }
 
-Type ErrorASTType::to_type(TypeSema& sema) const { return sema.type_error(); }
+Type ErrorASTType::check(TypeSema& sema) const { return sema.type_error(); }
 
-Type PrimASTType::to_type(TypeSema& sema) const {
+Type PrimASTType::check(TypeSema& sema) const {
     switch (kind()) {
 #define IMPALA_TYPE(itype, atype) case TYPE_##itype: return sema.primtype(PrimType_##itype);
 #include "impala/tokenlist.h"
@@ -118,32 +119,32 @@ Type PrimASTType::to_type(TypeSema& sema) const {
     }
 }
 
-Type PtrASTType::to_type(TypeSema& sema) const {
+Type PtrASTType::check(TypeSema& sema) const {
     return Type(); // FEATURE
 }
 
-Type IndefiniteArrayASTType::to_type(TypeSema& sema) const {
+Type IndefiniteArrayASTType::check(TypeSema& sema) const {
     return Type(); // FEATURE
 }
 
-Type DefiniteArrayASTType::to_type(TypeSema& sema) const {
+Type DefiniteArrayASTType::check(TypeSema& sema) const {
     return Type(); // FEATURE
 }
 
-Type TupleASTType::to_type(TypeSema& sema) const {
-    std::vector<Type> elems;
-    for (auto e : this->elems())
-        elems.push_back(e->to_type(sema));
+Type TupleASTType::check(TypeSema& sema) const {
+    std::vector<Type> types;
+    for (auto elem : elems())
+        types.push_back(sema.check(elem));
 
-    return sema.tupletype(elems);
+    return sema.tupletype(types);
 }
 
-Type FnASTType::to_type(TypeSema& sema) const {
+Type FnASTType::check(TypeSema& sema) const {
     check_type_params(sema);
 
     std::vector<Type> params;
     for (auto elem : elems())
-        params.push_back(elem->to_type(sema));
+        params.push_back(sema.check(elem));
 
     FnType fntype = sema.fntype(params);
     for (auto type_param : type_params())
@@ -152,9 +153,10 @@ Type FnASTType::to_type(TypeSema& sema) const {
     return fntype;
 }
 
-Type ASTTypeApp::to_type(TypeSema& sema) const {
+Type ASTTypeApp::check(TypeSema& sema) const {
     if (type_or_trait_decl()) {
         if (auto type_decl = type_or_trait_decl()->isa<TypeDecl>())
+            //return sema.check(type_decl);
             return type_decl->to_type(sema);
         else
             sema.error(this) << '\'' << symbol() << "' does not name a type\n";
@@ -171,8 +173,8 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
                 return trait; // TODO design the API such that this check is not necessary
             } else {
                 std::vector<Type> type_args;
-                for (auto e : elems())
-                    type_args.push_back(e->to_type(sema));
+                for (auto elem : elems())
+                    type_args.push_back(sema.check(elem));
                 return trait->instantiate(type_args);
             }
         } else
@@ -251,14 +253,10 @@ void StaticItem::check(TypeSema& sema) const {
 }
 
 void FnDecl::check(TypeSema& sema) const {
-    // this FnDecl has already been checked
-    if (!type().empty())
-        return;
-
     check_type_params(sema);
     std::vector<Type> types;
-    for (const Param* p : fn().params()) {
-        Type pt = p->ast_type()->to_type(sema);
+    for (const Param* p : fn().params()) { // TODO factor out
+        Type pt = sema.check(p->ast_type());
         p->set_type(pt);
         types.push_back(pt);
     }
@@ -299,7 +297,7 @@ void TraitDecl::check(TypeSema& sema) const {
 
 void Impl::check(TypeSema& sema) const {
     check_type_params(sema);
-    Type ftype = for_type()->to_type(sema);
+    Type ftype = sema.check(for_type());
 
     if (trait() != nullptr) {
         if (auto t = trait()->isa<ASTTypeApp>()) {
@@ -352,8 +350,8 @@ Type PathExpr::check(TypeSema& sema) const {
     if (value_decl()) {
         if (!last_item->args().empty()) {
             std::vector<Type> type_args;
-            for (const ASTType* t : last_item->args())
-                type_args.push_back(t->to_type(sema));
+            for (const ASTType* arg : last_item->args())
+                type_args.push_back(sema.check(arg));
 
             return value_decl()->calc_type(sema)->instantiate(type_args);
         } else
@@ -488,7 +486,7 @@ void LetStmt::check(TypeSema& sema) const {
 //------------------------------------------------------------------------------
 
 void ValueDecl::check(TypeSema& sema) const { 
-    set_type(ast_type()->to_type(sema)); 
+    set_type(sema.check(ast_type()));
 }
 
 //------------------------------------------------------------------------------
