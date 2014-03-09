@@ -68,6 +68,7 @@ public:
     }
     operator bool() { return !empty(); }
     Proxy<T>& operator= (Proxy<T> other) { assert(node_ == nullptr); node_ = *other; return *this; }
+    void clear() { node_ = nullptr; }
 
 private:
     T* node_;
