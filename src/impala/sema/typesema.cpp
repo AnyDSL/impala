@@ -295,8 +295,6 @@ Type FnDecl::check(TypeSema& sema) const {
     Type fn_type = sema.fntype(types);
     for (auto tp : type_params())
         fn_type->add_bound_var(tp->type_var(sema));
-
-    sema.unify(fn_type); // TODO is this call necessary?
     type_ = fn_type;
 
     sema.check(fn().body());
