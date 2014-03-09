@@ -377,7 +377,6 @@ void Impl::check(TypeSema& sema) const {
             sema.error(trait()) << "expected trait instance.\n";
     }
 
-    // FEATURE check that all methods are implemented
     thorin::HashSet<Symbol> implemented_methods;
     for (auto fn : methods()) {
         Type fntype = sema.check(fn);
@@ -394,6 +393,16 @@ void Impl::check(TypeSema& sema) const {
 
                 // check that the types match
                 sema.match_types(fn, fntype, t);
+            }
+        }
+    }
+
+    // check that all methods are implemented
+    if (!tinst.empty()) {
+        if (implemented_methods.size() != tinst->methods().size()) {
+            for (auto p : tinst->methods()) {
+                if (!implemented_methods.contains(p.first))
+                    sema.error(this) << "Must implement method '" << p.first << "'\n";
             }
         }
     }

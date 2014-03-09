@@ -1,0 +1,5 @@
+trait T {
+    fn f(self: Self) -> ();
+}
+impl T for bool {
+}
