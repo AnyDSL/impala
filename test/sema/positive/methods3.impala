@@ -1,0 +1,6 @@
+trait T[B] {
+   fn f(self: Self, b: B) -> B;
+}
+fn g[C, D:T[C]](c: C, d: D) -> C {
+   d.f(c)
+}

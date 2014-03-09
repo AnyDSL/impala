@@ -1,0 +1,16 @@
+trait T[B] {
+   fn f(self: Self, b: B) -> B;
+}
+fn g[C, D:T[C]](c: C, d: D) -> C {
+   d.f(c)
+}
+fn h[E:T[int32]](e: E) -> int32 {
+   g[int32, E](42, e)
+}
+
+impl T[int32] for bool {
+  fn f(self: bool, b: int32) -> int32 { b }
+}
+fn i() -> int32 {
+   h[bool](true)
+}
