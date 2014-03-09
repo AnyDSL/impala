@@ -1,4 +1,5 @@
 #include "impala/ast.h"
+#include "impala/dump.h"
 #include "impala/sema/errorhandler.h"
 
 namespace impala {
@@ -244,6 +245,7 @@ void Impl::check(NameSema& sema) const {
 void EmptyExpr::check(NameSema& sema) const {}
 
 void BlockExpr::check(NameSema& sema) const {
+    sema.push_scope();
     for (auto stmt : stmts()) {
         if (auto item_stmt = stmt->isa<ItemStmt>())
             item_stmt->item()->check_head(sema);
@@ -251,6 +253,7 @@ void BlockExpr::check(NameSema& sema) const {
     for (auto stmt : stmts())
         stmt->check(sema);
     expr()->check(sema);
+    sema.pop_scope();
 }
 
 void LiteralExpr::check(NameSema& sema) const {} 

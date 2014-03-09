@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "impala/ast.h"
 #include "impala/dump.h"
 #include "impala/sema/typetable.h"
@@ -25,7 +23,6 @@ public:
     }
 
     template<class T> T gen_error();
-
     void expect_num(const Expr* exp);
     Type match_types(const Expr* pos, Type t1, Type t2);
     void expect_type(const Expr* found, Type expected, std::string typetype);
@@ -237,8 +234,6 @@ Type ValueDecl::check(TypeSema& sema) const {
     return sema.check(ast_type());
 }
 
-// TraitDecl::to_trait
-
 Trait TraitDecl::to_trait(TypeSema& sema) const {
     check(sema);
     return trait();
@@ -297,8 +292,6 @@ Type FnDecl::check(TypeSema& sema) const {
     Type fn_type = sema.fntype(types);
     for (auto tp : type_params())
         fn_type->add_bound_var(tp->type_var(sema));
-
-    sema.unify(fn_type); // TODO is this call necessary?
     type_ = fn_type;
 
     sema.check(fn().body());

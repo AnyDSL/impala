@@ -431,8 +431,8 @@ std::ostream& ExprStmt::print(Printer& p) const {
 //------------------------------------------------------------------------------
 
 void dump(const ASTNode* n, bool fancy, std::ostream& o) { Printer p(o, fancy); n->print(p); }
-//std::ostream& operator << (std::ostream& o, const ASTNode* n) { Printer p(o, true); return n->print(p); }
+std::ostream& operator << (std::ostream& o, const ASTNode* n) { Printer p(o, true); return n->print(p); }
 
 //------------------------------------------------------------------------------
 
-} // namespace impala
+}
