@@ -53,6 +53,17 @@ public:
     /// Checks if all types in the type tables are sane and correctly unified.
     void verify() const;
 
+protected:
+    template<class T> SpecializeMapping create_spec_mapping(T generic, thorin::ArrayRef<Type> var_instances) const {
+        assert(generic->num_bound_vars() == var_instances.size());
+        SpecializeMapping mapping;
+        size_t i = 0;
+        for (TypeVar v : generic->bound_vars())
+            mapping[*v] = *var_instances[i++]; // CHECK ist deref correct here and below?
+        assert(mapping.size() == var_instances.size());
+        return mapping;
+    }
+
 private:
     template<class T> 
     Proxy<T> new_unifiable(T* tn) {

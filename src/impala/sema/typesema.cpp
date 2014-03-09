@@ -23,10 +23,15 @@ public:
             check(i);
         }
     }
+
+    template<class T> T gen_error();
+
     void expect_num(const Expr* exp);
     Type match_types(const Expr* pos, Type t1, Type t2);
     void expect_type(const Expr* found, Type expected, std::string typetype);
     Type create_return_type(const ASTNode* node, Type ret_func);
+    template<class T> T instantiate(const ASTNode* loc, T trait, thorin::ArrayRef<const ASTType*> var_instances);
+
     Type check(const TypeDecl* type_decl) { 
         if (!type_decl->checked_) { 
             type_decl->checked_ = true; 
@@ -51,6 +56,9 @@ private:
 };
 
 //------------------------------------------------------------------------------
+
+template<> Trait TypeSema::gen_error<Trait>() { return trait_error(); }
+template<> Type TypeSema::gen_error<Type>() { return type_error(); }
 
 void TypeSema::expect_num(const Expr* exp) {
     Type t = exp->type();
@@ -96,6 +104,38 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
         error(node) << "last argument is not a continuation function\n";
         return type_error();
     }
+}
+
+template<class T>
+T TypeSema::instantiate(const ASTNode* loc, T generic, thorin::ArrayRef<const ASTType*> var_instances) {
+    if (var_instances.size() == generic->num_bound_vars()) {
+        std::vector<Type> inst_types;
+        for (auto t : var_instances)
+            inst_types.push_back(check(t));
+        SpecializeMapping mapping = create_spec_mapping(generic, inst_types);
+
+        // check the bounds
+        for (size_t i = 0; i < generic->num_bound_vars(); ++i) {
+            TypeVar v = generic->bound_var(i);
+            Type instance = inst_types[i];
+            assert(mapping.contains(*v));
+            assert(mapping[*v] == *instance);
+
+            for (Trait bound : v->bounds()) {
+                SpecializeMapping m(mapping); // copy the mapping
+                Trait spec_bound = bound->specialize(m);
+                unify(spec_bound);
+
+                if (!instance->implements(spec_bound))
+                    error(var_instances[i]) << "'" << instance << "' does not implement bound '" << spec_bound << "'\n";
+            }
+        }
+
+        return generic->instantiate(mapping);
+    } else
+        error(loc) << "wrong number of instances for bound type variables\n";
+
+    return gen_error<T>();
 }
 
 //------------------------------------------------------------------------------
@@ -164,9 +204,10 @@ Type FnASTType::check(TypeSema& sema) const {
 
 Type ASTTypeApp::check(TypeSema& sema) const {
     if (type_or_trait_decl()) {
-        if (auto type_decl = type_or_trait_decl()->isa<TypeDecl>())
+        if (auto type_decl = type_or_trait_decl()->isa<TypeDecl>()) {
+            assert(elems().empty());
             return sema.check(type_decl);
-        else
+        } else
             sema.error(this) << '\'' << symbol() << "' does not name a type\n";
     }
 
@@ -177,12 +218,8 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
     if (type_or_trait_decl()) {
         if (auto trait_decl = type_or_trait_decl()->isa<TraitDecl>()) {
             Trait trait = trait_decl->to_trait(sema);
-
-            std::vector<Type> type_args;
-            for (auto elem : elems())
-                type_args.push_back(sema.check(elem));
-            Trait tinst = trait->instantiate(type_args);
-            assert(!type_args.empty() || tinst == trait);
+            Trait tinst = sema.instantiate(this, trait, elems());
+            assert(!elems().empty() || tinst == trait);
             return tinst;
         } else
             sema.error(this) << '\'' << symbol() << "' does not name a trait\n";
@@ -341,18 +378,17 @@ Type FnExpr::check(TypeSema& sema) const {
 
 Type PathExpr::check(TypeSema& sema) const {
     // FEATURE consider longer paths
-    auto last_item = path()->path_items().back();
+    const PathItem* last_item = path()->path_items().back();
     if (value_decl()) {
-        if (!last_item->args().empty()) {
-            std::vector<Type> type_args;
-            for (const ASTType* arg : last_item->args())
-                type_args.push_back(sema.check(arg));
-
-            return value_decl()->calc_type(sema)->instantiate(type_args);
-        } else
-            return value_decl()->calc_type(sema);
-    } else
-        return sema.type_error();
+        Type dec_type = value_decl()->calc_type(sema);
+        if (last_item->args().empty()) {
+            return dec_type;
+        } else {
+            if (dec_type != sema.type_error())
+                return sema.instantiate(last_item, dec_type, last_item->args());
+        }
+    }
+    return sema.type_error();
 }
 
 Type PrefixExpr::check(TypeSema& sema) const {

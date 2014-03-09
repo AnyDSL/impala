@@ -26,7 +26,7 @@ TraitNode* TraitNode::vspecialize(SpecializeMapping& mapping) {
 TraitNode* TraitInstanceNode::vspecialize(SpecializeMapping& mapping) {
     SpecializeMapping m;
     for (auto i : var_instances())
-        m[i.first] = i.second->specialize(mapping);
+        m[i.first] = i.second->gspecialize(mapping);
 
     return typetable().instantiate_trait(trait(), m);
 }

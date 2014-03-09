@@ -51,16 +51,8 @@ void Generic::add_bound_var(TypeVar v) {
     bound_vars_.push_back(v);
 }
 
-SpecializeMapping Generic::check_instantiation(thorin::ArrayRef<Type> var_instances) const {
-    // TODO better error handling
-    assert(var_instances.size() == num_bound_vars() && "Wrong number of instances for bound type variables");
-
-    // create a mapping TypeVar -> Type
-    SpecializeMapping mapping;
-    size_t i = 0;
-    for (TypeVar v : bound_vars())
-        mapping[*v] = *var_instances[i++]; // CHECK ist deref correct here and below?
-    assert(mapping.size() == var_instances.size());
+void Generic::check_instantiation(SpecializeMapping& mapping) const {
+    assert(mapping.size() == num_bound_vars());
 
     // check the bounds
     for (TypeVar v : bound_vars()) {
@@ -72,21 +64,19 @@ SpecializeMapping Generic::check_instantiation(thorin::ArrayRef<Type> var_instan
             SpecializeMapping m(mapping); // copy the mapping
             Trait spec_bound = Trait(bound->specialize(m)->as<TraitNode>());
             spec_bound->typetable().unify(spec_bound);
-            // TODO better error handling
             assert(instance->implements(spec_bound));
         }
     }
-
-    return mapping;
 }
 
-Generic* Generic::ginstantiate(thorin::ArrayRef<Type> var_instances) {
-    SpecializeMapping m = check_instantiation(var_instances);
-    assert(m.size() == var_instances.size());
-    return vspecialize(m);
+Generic* Generic::ginstantiate(SpecializeMapping& var_instances) {
+/*#ifndef NDEBUG
+    check_instantiation(var_instances);
+#endif*/
+    return vspecialize(var_instances);
 }
 
-Generic* Generic::specialize(SpecializeMapping& mapping) {
+Generic* Generic::gspecialize(SpecializeMapping& mapping) {
     // FEATURE this could be faster if we copy only types were something changed inside
     auto it = mapping.find(this);
     if (it != mapping.end())
