@@ -459,7 +459,15 @@ Type FieldExpr::check(TypeSema& sema) const {
     for (Trait t : lhs()->type()->trait_impls()) {
         Type fn = t->find_method(symbol());
         if (!fn.empty()) {
-            return fn;
+            FnType func = fn.as<FnType>();
+
+            // there should at least be two arguments: the continuation and the self object
+            if (func->size() > 1) {
+                sema.expect_type(lhs(), func->elem(0), "object");
+                return func->specialize_method(lhs()->type());
+            } else
+                sema.error(this) << "cannot call a method without any arguments";
+            return sema.type_error();
         }
     }
 

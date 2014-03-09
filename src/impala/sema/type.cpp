@@ -79,6 +79,16 @@ bool TypeVarNode::implements(Trait trait) const {
     return bounds().find(trait) != bounds().end();
 }
 
+FnType FnTypeNode::specialize_method(Type t) const {
+    assert(is_final_representative());
+    assert(elem(0) == t);
+
+    std::vector<Type> new_args(++elems_.begin(), elems_.end());
+    FnType f = typetable().fntype(new_args);
+    typetable().unify(f.as<Type>());
+    return f;
+}
+
 //------------------------------------------------------------------------------
 
 thorin::Array<Type> CompoundType::specialize_elems(SpecializeMapping& mapping) const {

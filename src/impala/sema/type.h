@@ -168,6 +168,8 @@ protected:
 public:
     virtual std::string to_string() const { return std::string("fn") + bound_vars_to_string() + elems_to_string(); }
 
+    FnType specialize_method(Type t) const;
+
     friend class TypeTable;
 };
 
