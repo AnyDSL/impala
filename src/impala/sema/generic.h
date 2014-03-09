@@ -112,19 +112,15 @@ protected:
     std::vector<TypeVar> bound_vars_;
     TypeTable& typetable_;
 
-    Generic* ginstantiate(thorin::ArrayRef<Type> var_instances);
-    /**
-     * if this element is in the mapping return the mapped one;
-     * otherwise copy this element with specialized sub-elements
-     */
-    Generic* specialize(SpecializeMapping&); // TODO one could always assert that this is only called on final representatives!
+    Generic* ginstantiate(SpecializeMapping& var_instances);
+    Generic* gspecialize(SpecializeMapping&); // TODO one could always assert that this is only called on final representatives!
 
     /// like specialize but does not care about generics (this method is called by specialize)
     virtual Generic* vspecialize(SpecializeMapping&) = 0;
 
 private:
     /// raise error if a type does not implement the required traits;
-    SpecializeMapping check_instantiation(thorin::ArrayRef<Type>) const;
+    void check_instantiation(SpecializeMapping&) const;
 
     friend class TypeVarNode;
     friend class TraitInstanceNode;
@@ -151,10 +147,21 @@ public:
         return false;
     }
 
-    Proxy<T> instantiate(thorin::ArrayRef<Type> var_instances) {
+    /**
+     * Instantiate a generic element using the mapping from TypeVar -> Type
+     * @param var_instances A mapping that assigns each type variable that is bound at this generic an instance
+     * @return the instantiated type
+     * @see TypeTable::create_spec_mapping()
+     */
+    Proxy<T> instantiate(SpecializeMapping& var_instances) {
         // we can not unify yet because it could be that this type is not closed yet
         return Proxy<T>(ginstantiate(var_instances)->as<T>());
     }
+    /**
+     * if this element is in the mapping return the mapped one;
+     * otherwise copy this element with specialized sub-elements
+     */
+    Proxy<T> specialize(SpecializeMapping& mapping) { return Proxy<T>(gspecialize(mapping)->as<T>()); }
 
 private:
     T* representative_;
