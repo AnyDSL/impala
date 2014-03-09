@@ -204,7 +204,8 @@ void FnDecl::check(NameSema& sema) const {
         sema.insert(param);
         param->ast_type()->check(sema);
     }
-    fn().body()->check(sema);
+    if (fn().body() != nullptr)
+        fn().body()->check(sema);
     sema.pop_scope();
 }
 
@@ -216,6 +217,7 @@ void FieldDecl::check(NameSema&) const {
 
 void TraitDecl::check(NameSema& sema) const {
     sema.push_scope();
+    sema.insert(self_decl());
     check_type_params(sema);
     for (auto method : methods())
         method->check(sema);
