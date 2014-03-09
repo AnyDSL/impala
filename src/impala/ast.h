@@ -105,7 +105,7 @@ class PathItem : public ASTNode {
 public:
     Symbol symbol() const { return symbol_; }
     const ASTTypes& args() const { return args_; }
-    const Decl* decl() const { return decl_; }
+    SafePtr<const Decl> decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const;
     void check(NameSema&) const;
 
@@ -262,7 +262,7 @@ private:
 class ASTTypeApp : public CompoundASTType {
 public:
     Symbol symbol() const { return symbol_; }
-    const TypeOrTraitDecl* type_or_trait_decl() const { return type_or_trait_decl_; }
+    SafePtr<const TypeOrTraitDecl> type_or_trait_decl() const { return type_or_trait_decl_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
     Trait to_trait(TypeSema&) const;
@@ -731,7 +731,7 @@ private:
 class PathExpr : public Expr {
 public:
     const Path* path() const { return path_; }
-    const ValueDecl* value_decl() const { return value_decl_; }
+    SafePtr<const ValueDecl> value_decl() const { return value_decl_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const;
     virtual void check(NameSema&) const;
