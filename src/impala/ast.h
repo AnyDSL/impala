@@ -36,7 +36,6 @@ class Param;
 class Printer;
 class Stmt;
 class TypeDecl;
-class TypeOrTraitDecl;
 class TypeParam;
 class TypeSema;
 
@@ -262,7 +261,7 @@ private:
 class ASTTypeApp : public CompoundASTType {
 public:
     Symbol symbol() const { return symbol_; }
-    SafePtr<const TypeOrTraitDecl> type_or_trait_decl() const { return type_or_trait_decl_; }
+    SafePtr<const Decl> decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
     Trait to_trait(TypeSema&) const;
@@ -271,7 +270,7 @@ private:
     virtual Type check(TypeSema&) const;
 
     Symbol symbol_;
-    mutable SafePtr<const TypeOrTraitDecl> type_or_trait_decl_;
+    mutable SafePtr<const Decl> decl_;
 
     friend class Parser;
     friend class NameScope;
@@ -312,11 +311,8 @@ private:
     friend class NameSema;
 };
 
-class TypeOrTraitDecl : public Decl {
-};
-
-/// Base class for all \p Type declarations.
-class TypeDecl : public TypeOrTraitDecl, public Typeable {
+/// Base class for all declarations which must have inferred a \p Type.
+class TypeDecl : public Decl, public Typeable {
 private:
     virtual void check(NameSema&) const = 0;
     virtual Type check(TypeSema&) const = 0;
@@ -328,19 +324,21 @@ private:
 };
 
 /// Base class for all declarations which have a type.
-class ValueDecl : public Decl, public Typeable {
+class ValueDecl : public TypeDecl {
 public:
     const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     bool is_mut() const { return is_mut_; }
-    void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
-    Type calc_type(TypeSema&) const;
+    virtual void check(NameSema&) const;
+
+private:
+    virtual Type check(TypeSema&) const;
 
 protected:
     AutoPtr<const ASTType> ast_type_;
     bool is_mut_ = false;
 
     friend class Parser;
+    friend class TypeSema;
 };
 
 /// Base class for all Values which may be mutated within a function.
@@ -445,8 +443,11 @@ private:
     friend class Parser;
 };
 
-/// Base class for all \p Type declarations having \p TypeParam%s.
 class TypeDeclItem : public Item, public TypeDecl, public TypeParamList {
+    friend class Parser;
+};
+
+class ValueItem : public Item, public ValueDecl {
     friend class Parser;
 };
 
@@ -507,9 +508,10 @@ public:
     Visibility visibility() const { return  visibility_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
 
 private:
+    virtual Type check(TypeSema&) const;
+
     Visibility visibility_;
 
     friend class Parser;
@@ -542,7 +544,7 @@ private:
     virtual Type check(TypeSema&) const;
 };
 
-class StaticItem : public MiscItem, public ValueDecl {
+class StaticItem : public ValueItem {
 public:
     bool is_mut() const { return is_mut_; }
     Symbol symbol() const { return symbol_; }
@@ -551,10 +553,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
 
     bool is_mut_;
     Symbol symbol_;
@@ -564,17 +566,17 @@ private:
     friend class Parser;
 };
 
-class FnDecl : public MiscItem, public TypeParamList, public ValueDecl {
+class FnDecl : public ValueItem, public TypeParamList {
 public:
     const Fn& fn() const { return fn_; }
     bool is_extern() const { return extern_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
+    virtual Type check(TypeSema&) const;
 
     Fn fn_;
     bool extern_;
@@ -582,7 +584,7 @@ private:
     friend class Parser;
 };
 
-class TraitDecl : public MiscItem, public TypeOrTraitDecl, public TypeParamList {
+class TraitDecl : public MiscItem, public Decl, public TypeParamList {
 public:
     const AutoVector<const ASTTypeApp*>& super() const { return super_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }

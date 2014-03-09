@@ -42,10 +42,13 @@ public:
     void check(const Item* item) { 
         if (auto type_decl_item = item->isa<TypeDeclItem>())
             check(type_decl_item);
+        else if (auto value_item = item->isa<ValueItem>())
+            check(value_item);
         else
             check(item->isa<MiscItem>());
     }
-    Type check(const TypeDeclItem* type_decl_item) { return type_decl_item->type_ = type_decl_item->check(*this); }
+    Type check(const TypeDeclItem* type_decl_item) { return check((const TypeDecl*) type_decl_item); }
+    Type check(const ValueItem* value_item) { return check((const TypeDecl*) value_item); }
     void check(const MiscItem* misc_item) { misc_item->check(*this); }
     Type check(const Expr* expr) { return expr->type_ = expr->check(*this); }
     Type check(const ASTType* ast_type) { return ast_type->type_ = ast_type->check(*this); }
@@ -203,8 +206,8 @@ Type FnASTType::check(TypeSema& sema) const {
 }
 
 Type ASTTypeApp::check(TypeSema& sema) const {
-    if (type_or_trait_decl()) {
-        if (auto type_decl = type_or_trait_decl()->isa<TypeDecl>()) {
+    if (decl()) {
+        if (auto type_decl = decl()->isa<TypeDecl>()) {
             assert(elems().empty());
             return sema.check(type_decl);
         } else
@@ -215,8 +218,8 @@ Type ASTTypeApp::check(TypeSema& sema) const {
 }
 
 Trait ASTTypeApp::to_trait(TypeSema& sema) const {
-    if (type_or_trait_decl()) {
-        if (auto trait_decl = type_or_trait_decl()->isa<TraitDecl>()) {
+    if (decl()) {
+        if (auto trait_decl = decl()->isa<TraitDecl>()) {
             Trait trait = trait_decl->to_trait(sema);
             Trait tinst = sema.instantiate(this, trait, elems());
             assert(!elems().empty() || tinst == trait);
@@ -229,10 +232,8 @@ Trait ASTTypeApp::to_trait(TypeSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-Type ValueDecl::calc_type(TypeSema& sema) const {
-    if (!type())
-        check(sema);
-    return type();
+Type ValueDecl::check(TypeSema& sema) const { 
+    return sema.check(ast_type());
 }
 
 // TraitDecl::to_trait
@@ -277,40 +278,40 @@ Type StructDecl::check(TypeSema& sema) const {
     return Type();
 }
 
-void FieldDecl::check(TypeSema&) const {
+Type FieldDecl::check(TypeSema&) const {
+    return Type();
 }
 
 /*
  * MiscItem
  */
 
-void FnDecl::check(TypeSema& sema) const {
-    if (!type().empty())
-        return;
-
+Type FnDecl::check(TypeSema& sema) const {
     check_type_params(sema);
     std::vector<Type> types;
-    for (const Param* p : fn().params()) { // TODO factor out
-        Type pt = sema.check(p->ast_type());
-        p->set_type(pt);
-        types.push_back(pt);
-    }
+    for (auto param : fn().params())
+        types.push_back(sema.check(param));
+
     // create FnType
     Type fn_type = sema.fntype(types);
     for (auto tp : type_params())
         fn_type->add_bound_var(tp->type_var(sema));
 
     sema.unify(fn_type); // TODO is this call necessary?
-    set_type(fn_type);
+    type_ = fn_type;
 
     sema.check(fn().body());
     if (fn().body()->type() != sema.type_noreturn()) {
         Type ret_func = fn_type->elem(fn_type->size() - 1);
         sema.expect_type(fn().body(), sema.create_return_type(this, ret_func), "return");
     }
+
+    type_.clear(); // will be set again by TypeSema's wrapper
+    return fn_type;
 }
 
-void StaticItem::check(TypeSema& sema) const {
+Type StaticItem::check(TypeSema& sema) const {
+    return Type();
 }
 
 void TraitDecl::check(TypeSema& sema) const {
@@ -382,7 +383,7 @@ Type PathExpr::check(TypeSema& sema) const {
     // FEATURE consider longer paths
     const PathItem* last_item = path()->path_items().back();
     if (value_decl()) {
-        Type dec_type = value_decl()->calc_type(sema);
+        Type dec_type = sema.check(value_decl());
         if (last_item->args().empty()) {
             return dec_type;
         } else {
@@ -515,10 +516,6 @@ void LetStmt::check(TypeSema& sema) const {
 }
 
 //------------------------------------------------------------------------------
-
-void ValueDecl::check(TypeSema& sema) const { 
-    set_type(sema.check(ast_type()));
-}
 
 //------------------------------------------------------------------------------
 

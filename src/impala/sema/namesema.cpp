@@ -37,10 +37,13 @@ public:
     void check(const Item* item) { 
         if (auto type_decl_item = item->isa<TypeDeclItem>())
             check(type_decl_item);
+        else if (auto value_item = item->isa<ValueItem>())
+            check(value_item);
         else
             check(item->isa<MiscItem>());
     }
     void check(const TypeDeclItem* type_decl_item) { type_decl_item->check(*this); }
+    void check(const ValueItem* value_item) { value_item->check(*this); }
     void check(const MiscItem* misc_item) { misc_item->check(*this); }
 
 private:
@@ -133,13 +136,9 @@ void TupleASTType::check(NameSema& sema) const {
 }
 
 void ASTTypeApp::check(NameSema& sema) const {
-    if (auto decl = sema.lookup(this, symbol())) {
-        type_or_trait_decl_ = decl->isa<TypeOrTraitDecl>();
-        if (!type_or_trait_decl_)
-            sema.error(this) << '\'' << symbol() << "' must be a type or trait declaration\n";
-        for (auto elem : elems())
-            elem->check(sema);
-    }
+    decl_ = sema.lookup(this, symbol());
+    for (auto elem : elems())
+        elem->check(sema);
 }
 
 void FnASTType::check(NameSema& sema) const {
