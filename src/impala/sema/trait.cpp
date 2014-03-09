@@ -41,7 +41,8 @@ Type TraitNode::find_method(Symbol name) {
 }
 
 Type TraitInstanceNode::find_method(Symbol name) {
-    Type fn = TraitNode::find_method(name);
+    // FEATURE store specialized methods
+    Type fn = trait()->find_method(name);
     if (fn.empty()) {
         return fn;
     } else {

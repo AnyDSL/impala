@@ -286,6 +286,7 @@ void InfixExpr::check(NameSema& sema) const   { lhs()->check(sema); rhs()->check
 void PostfixExpr::check(NameSema& sema) const { lhs()->check(sema); }
 
 void FieldExpr::check(NameSema& sema) const {
+    lhs()->check(sema);
 }
 
 void CastExpr::check(NameSema& sema) const {

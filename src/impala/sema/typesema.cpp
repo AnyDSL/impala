@@ -317,6 +317,7 @@ Type FnDecl::check(TypeSema& sema) const {
     for (auto tp : type_params())
         fn_type->add_bound_var(tp->type_var(sema));
     type_ = fn_type;
+    sema.unify(type_);
 
     if (fn().body() != nullptr) {
         sema.check(fn().body());
@@ -462,6 +463,7 @@ Type FieldExpr::check(TypeSema& sema) const {
         }
     }
 
+    sema.error(this) << "no declaration for method '" << symbol() << "' found.\n";
     return sema.type_error();
 }
 
