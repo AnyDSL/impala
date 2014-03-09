@@ -325,6 +325,8 @@ void TraitDecl::check(TypeSema& sema) const {
     for (auto tp : type_params()) {
         trait_->add_bound_var(tp->type_var(sema));
     }
+
+    sema.unify(trait());
 }
 
 void Impl::check(TypeSema& sema) const {

@@ -154,6 +154,7 @@ public:
      * @see TypeTable::create_spec_mapping()
      */
     Proxy<T> instantiate(SpecializeMapping& var_instances) {
+        assert(is_final_representative());
         // we can not unify yet because it could be that this type is not closed yet
         return Proxy<T>(ginstantiate(var_instances)->as<T>());
     }
@@ -161,7 +162,10 @@ public:
      * if this element is in the mapping return the mapped one;
      * otherwise copy this element with specialized sub-elements
      */
-    Proxy<T> specialize(SpecializeMapping& mapping) { return Proxy<T>(gspecialize(mapping)->as<T>()); }
+    Proxy<T> specialize(SpecializeMapping& mapping) {
+        assert(is_final_representative());
+        return Proxy<T>(gspecialize(mapping)->as<T>());
+    }
 
 private:
     T* representative_;
