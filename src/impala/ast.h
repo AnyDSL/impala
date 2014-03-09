@@ -333,7 +333,7 @@ public:
     const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     bool is_mut() const { return is_mut_; }
     void check(NameSema&) const;
-    void check(TypeSema&) const;
+    virtual void check(TypeSema&) const;
     Type calc_type(TypeSema&) const;
 
 protected:

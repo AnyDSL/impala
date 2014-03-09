@@ -249,6 +249,9 @@ void FieldDecl::check(TypeSema&) const {
  */
 
 void FnDecl::check(TypeSema& sema) const {
+    if (!type().empty())
+        return;
+
     check_type_params(sema);
     std::vector<Type> types;
     for (const Param* p : fn().params()) { // TODO factor out
@@ -276,7 +279,7 @@ void StaticItem::check(TypeSema& sema) const {
 
 void TraitDecl::check(TypeSema& sema) const {
     // did we already check this trait?
-    if ((!trait().empty()))
+    if (!trait().empty())
         return;
 
     // FEATURE consider super traits and check methods
@@ -340,7 +343,7 @@ Type FnExpr::check(TypeSema& sema) const {
 Type PathExpr::check(TypeSema& sema) const {
     // FEATURE consider longer paths
     auto last_item = path()->path_items().back();
-    if (value_decl()) {
+    if (value_decl()) { // TODO design the API such that this check is not necessary
         if (!last_item->args().empty()) {
             std::vector<Type> type_args;
             for (const ASTType* arg : last_item->args())
