@@ -422,13 +422,16 @@ public:
     Visibility visibility() const { return  visibility_; }
     virtual void check_head(NameSema&) const = 0;
     virtual void check(NameSema&) const = 0;
-    virtual void check(TypeSema&) const = 0;
     //virtual void emit(CodeGen& cg) const;
 
 private:
+    virtual void check(TypeSema&) const = 0;
+
     Visibility visibility_;
+    mutable bool checked_ = false;
 
     friend class Parser;
+    friend class TypeSema;
 };
 
 class ModDecl : public Item, public ParametricTypeDecl {
@@ -437,23 +440,27 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
+    virtual void check(TypeSema&) const;
+
     AutoPtr<const ModContents> mod_contents_;
 
     friend class Parser;
 };
 
 class ForeignMod : public Item, public ParametricTypeDecl {
+public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
+
+private:
+    virtual void check(TypeSema&) const;
 };
 
 class Typedef : public Item, public ParametricTypeDecl {
@@ -462,11 +469,12 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
+    virtual void check(TypeSema&) const;
+
     AutoPtr<const ASTType> type_;
 
     friend class Parser;
@@ -491,23 +499,27 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
+    virtual void check(TypeSema&) const;
+
     AutoVector<const FieldDecl*> fields_;
 
     friend class Parser;
 };
 
 class EnumDecl : public Item, public ParametricTypeDecl {
+public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     virtual Type to_type(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
+
+private:
+    virtual void check(TypeSema&) const;
 };
 
 class StaticItem : public Item, public ValueDecl {
@@ -519,10 +531,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
+    virtual void check(TypeSema&) const;
+
     bool is_mut_;
     Symbol symbol_;
     AutoPtr<const ASTType> type_;
@@ -538,10 +551,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
+    virtual void check(TypeSema&) const;
+
     Fn fn_;
     bool extern_;
 
@@ -557,10 +571,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
+    virtual void check(TypeSema&) const;
+
     AutoVector<const FnDecl*> methods_;
     AutoVector<const ASTTypeApp*> super_;
     mutable Trait trait_;
@@ -577,14 +592,14 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     //virtual void emit(CodeGen& cg) const;
 
 private:
+    virtual void check(TypeSema&) const;
+
     AutoPtr<const ASTType> trait_;
     AutoPtr<const ASTType> for_type_;
     AutoVector<const FnDecl*> methods_;
-    mutable bool checked_ = false;
 
     friend class Parser;
 };

@@ -20,13 +20,14 @@ public:
         while (!impls_.empty()) {
             const Impl* i = impls_.back();
             impls_.pop_back();
-            i->check(*this);
+            check(i);
         }
     }
     void expect_num(const Expr* exp);
     Type match_types(const Expr* pos, Type t1, Type t2);
     void expect_type(const Expr* found, Type expected, std::string typetype);
     Type create_return_type(const ASTNode* node, Type ret_func);
+    void check(const Item* item) { if (!item->checked_) { item->checked_ = true; item->check(*this); } }
     Type check(const Expr* expr) { return expr->type_ = expr->check(*this); }
 
 private:
@@ -225,7 +226,7 @@ Trait TraitDecl::to_trait(TypeSema& sema) const {
 
 void ModContents::check(TypeSema& sema) const {
     for (auto item : items()) 
-        item->check(sema);
+        sema.check(item);
 }
 
 /*
@@ -297,15 +298,7 @@ void TraitDecl::check(TypeSema& sema) const {
 }
 
 void Impl::check(TypeSema& sema) const {
-#if 0
-    if (checked_)
-        return;
-    else
-        checked_ = true;
-
-    sema.push_scope();
     check_type_params(sema);
-
     Type ftype = for_type()->to_type(sema);
 
     if (trait() != nullptr) {
@@ -314,7 +307,7 @@ void Impl::check(TypeSema& sema) const {
             Trait tinst = t->to_trait(sema);
             TraitImpl impl = sema.implement_trait(this, tinst);
             for (auto tp : type_params()) {
-                impl->add_bound_var(tp->type_var());
+                impl->add_bound_var(tp->type_var(sema));
             }
 
             // add impl to type
@@ -326,10 +319,7 @@ void Impl::check(TypeSema& sema) const {
 
     // FEATURE check that all methods are implemented
     for (auto fn : methods())
-        fn->check(sema);
-
-    sema.pop_scope();
-#endif
+        sema.check(fn);
 }
 
 //------------------------------------------------------------------------------
@@ -487,7 +477,7 @@ void ExprStmt::check(TypeSema& sema) const {
 }
 
 void ItemStmt::check(TypeSema& sema) const {
-    item()->check(sema);
+    sema.check(item());
 }
 
 void LetStmt::check(TypeSema& sema) const {
