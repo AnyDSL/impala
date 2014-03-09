@@ -109,10 +109,11 @@ Generic* TypeVarNode::vspecialize(SpecializeMapping& mapping) {
 
 TypeVar TypeVarNode::clone(SpecializeMapping& mapping) const {
     TypeVar v = typetable().typevar();
+    mapping[this] = v.node();
 
     // copy bounds!
     for (Trait b : bounds())
-        v->add_bound(Trait(b->specialize(mapping)->as<TraitNode>()));
+        v->add_bound(b->specialize(mapping));
 
     return v;
 }

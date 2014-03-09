@@ -85,7 +85,7 @@ Generic* Generic::gspecialize(SpecializeMapping& mapping) {
     for (TypeVar v : bound_vars()) {
         // CHECK is representative really correct or do we need node()? -- see also below!
         assert(!mapping.contains(v.representative()));
-        mapping[v.representative()] = v->clone(mapping).node(); // CHECK is node() correct here?
+        v->clone(mapping); // CHECK is node() correct here?
     }
 
     Generic* t = vspecialize(mapping);
