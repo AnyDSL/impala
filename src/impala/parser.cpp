@@ -975,7 +975,7 @@ const BlockExpr* Parser::parse_block_expr() {
             case Token::SEMICOLON:  lex(); continue; // ignore semicolon
             case STMT_NOT_EXPR:     stmts.push_back(parse_stmt_not_expr()); continue;
             case EXPR: {
-                bool stmt_like = la() == Token::IF || la() == Token::FOR;
+                bool stmt_like = la() == Token::IF || la() == Token::FOR || la() == Token::L_BRACE;
                 auto expr = parse_expr();
                 if (accept(Token::SEMICOLON) || (stmt_like && la() != Token::R_BRACE)) {
                     auto expr_stmt = new ExprStmt();
@@ -986,7 +986,7 @@ const BlockExpr* Parser::parse_block_expr() {
                 } else
                     block->expr_ = expr;
                 // FALLTHROUGH
-            } 
+            }
             default:
                 expect(Token::R_BRACE, "block expression");
                 if (block->expr_ == nullptr)
