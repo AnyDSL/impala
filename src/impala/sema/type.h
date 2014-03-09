@@ -65,6 +65,7 @@ public:
 
     void add_implementation(TraitImpl);
     virtual bool implements(Trait) const;
+    const TraitImplSet& trait_impls() const { return trait_impls_; }
 
     bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());

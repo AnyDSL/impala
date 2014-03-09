@@ -427,7 +427,18 @@ Type PostfixExpr::check(TypeSema& sema) const {
 }
 
 Type FieldExpr::check(TypeSema& sema) const {
-    return Type();
+    sema.check(lhs());
+
+    // FEATURE struct types
+    // FEATURE maybe store a hash map of methods in the type to make this fast!
+    for (Trait t : lhs()->type()->trait_impls()) {
+        Type fn = t->find_method(symbol());
+        if (!fn.empty()) {
+            return fn;
+        }
+    }
+
+    return sema.type_error();
 }
 
 Type CastExpr::check(TypeSema& sema) const {

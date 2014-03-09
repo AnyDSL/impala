@@ -10,6 +10,12 @@
 
 namespace impala {
 
+TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
+    : Unifiable(tt)
+    , trait_decl_(trait_decl)
+    , methods_()
+{}
+
 bool TraitInstanceNode::is_closed() const {
     // TODO review this
     for (auto i : var_instances_) {
@@ -19,13 +25,39 @@ bool TraitInstanceNode::is_closed() const {
     return true;
 }
 
+bool TraitNode::add_method(Symbol name, Type method_type) {
+    assert(!is_unified() && "Unified traits must not be changed anymore!");
+    if (methods_.contains(name)) {
+        return false;
+    } else {
+        methods_[name] = method_type;
+        return true;
+    }
+}
+
+Type TraitNode::find_method(Symbol name) {
+    auto it = methods_.find(name);
+    return it == methods_.end() ? Type() : it->second;
+}
+
+Type TraitInstanceNode::find_method(Symbol name) {
+    Type fn = TraitNode::find_method(name);
+    if (fn.empty()) {
+        return fn;
+    } else {
+        SpecializeMapping m = var_instances();
+        return fn->instantiate(m);
+    }
+
+}
+
 TraitNode* TraitNode::vspecialize(SpecializeMapping& mapping) {
     return is_generic() ? typetable().instantiate_trait(this, mapping) : this;
 }
 
 TraitNode* TraitInstanceNode::vspecialize(SpecializeMapping& mapping) {
     SpecializeMapping m;
-    for (auto i : var_instances())
+    for (auto i : var_instances_)
         m[i.first] = i.second->gspecialize(mapping);
 
     return typetable().instantiate_trait(trait(), m);

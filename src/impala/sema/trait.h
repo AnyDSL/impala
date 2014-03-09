@@ -10,12 +10,17 @@
 
 #include "impala/sema/generic.h"
 
+#include "impala/symbol.h"
+#include "thorin/util/hash.h"
+
 namespace impala {
 
 class FnTypeNode;
 class Impl;
 class TraitDecl;
 typedef Proxy<FnTypeNode> FnType;
+
+typedef thorin::HashMap<const Symbol, Type, thorin::Hash<Symbol>> MethodTable;
 
 /**
  * Represents a declared trait.
@@ -32,10 +37,7 @@ typedef Proxy<FnTypeNode> FnType;
  */
 class TraitNode : public Unifiable<TraitNode> {
 protected:
-    TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
-        : Unifiable(tt)
-        , trait_decl_(trait_decl)
-    {}
+    TraitNode(TypeTable& tt, const TraitDecl* trait_decl);
 
 private:
     TraitNode& operator = (const TraitNode&); ///< Do not copy-assign a \p Trait.
@@ -48,6 +50,11 @@ public:
     bool is_error_trait() const { return trait_decl_ == nullptr; }
     virtual std::string to_string() const;
 
+    /// add a method or return \p false if a method with this name already existed
+    bool add_method(Symbol name, Type method_type);
+    /// return the type of the method with this name if it exists; otherwise return an empty type
+    virtual Type find_method(Symbol name);
+
     virtual bool is_closed() const { return true; } // TODO
 
 protected:
@@ -56,6 +63,7 @@ protected:
 
 private:
     const TraitDecl* const trait_decl_;
+    MethodTable methods_;
 
     friend class TypeTable;
 };
@@ -81,6 +89,8 @@ public:
     virtual size_t hash() const;
     virtual std::string to_string() const;
 
+    virtual Type find_method(Symbol name);
+
     virtual bool is_closed() const;
 
 protected:
@@ -89,6 +99,7 @@ protected:
 
 private:
     const Trait trait() const { return trait_; }
+    /// return a copy of the variable instances
     SpecializeMapping var_instances() const { return var_instances_; }
 
     const Trait trait_;
