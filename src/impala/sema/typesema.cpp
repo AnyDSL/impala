@@ -129,8 +129,9 @@ T TypeSema::instantiate(const ASTNode* loc, T generic, thorin::ArrayRef<const AS
                 Trait spec_bound = bound->specialize(m);
                 unify(spec_bound);
 
-                if (!instance->implements(spec_bound))
-                    error(var_instances[i]) << "'" << instance << "' does not implement bound '" << spec_bound << "'\n";
+                if (instance != type_error() && spec_bound != trait_error())
+                    if (!instance->implements(spec_bound))
+                        error(var_instances[i]) << "'" << instance << "' does not implement bound '" << spec_bound << "'\n";
             }
         }
 
