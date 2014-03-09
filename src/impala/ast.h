@@ -264,7 +264,7 @@ public:
     SafePtr<const Decl> decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
-    Trait to_trait(TypeSema&) const;
+    Trait to_trait(TypeSema&, Type) const;
 
 private:
     virtual Type check(TypeSema&) const;

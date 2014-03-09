@@ -22,12 +22,14 @@ public:
         }
     }
 
-    template<class T> T gen_error();
     void expect_num(const Expr* exp);
     Type match_types(const Expr* pos, Type t1, Type t2);
     void expect_type(const Expr* found, Type expected, std::string typetype);
     Type create_return_type(const ASTNode* node, Type ret_func);
-    template<class T> T instantiate(const ASTNode* loc, T trait, thorin::ArrayRef<const ASTType*> var_instances);
+
+    template<class T> void check_bounds(T generic, thorin::ArrayRef<Type> inst_types, thorin::ArrayRef<const ASTType*> var_instances, SpecializeMapping& mapping);
+    Type instantiate(const ASTNode* loc, Type trait, thorin::ArrayRef<const ASTType*> var_instances);
+    Trait instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
 
     Type check(const TypeDecl* type_decl) { 
         if (!type_decl->checked_) { 
@@ -53,12 +55,11 @@ public:
 private:
     bool nossa_;
     std::vector<const Impl*> impls_;
+
+
 };
 
 //------------------------------------------------------------------------------
-
-template<> Trait TypeSema::gen_error<Trait>() { return trait_error(); }
-template<> Type TypeSema::gen_error<Type>() { return type_error(); }
 
 void TypeSema::expect_num(const Expr* exp) {
     Type t = exp->type();
@@ -106,37 +107,61 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
     }
 }
 
-template<class T>
-T TypeSema::instantiate(const ASTNode* loc, T generic, thorin::ArrayRef<const ASTType*> var_instances) {
-    if (var_instances.size() == generic->num_bound_vars()) {
-        std::vector<Type> inst_types;
-        for (auto t : var_instances)
-            inst_types.push_back(check(t));
-        SpecializeMapping mapping = create_spec_mapping(generic, inst_types);
+template<class T> void TypeSema::check_bounds(T generic, thorin::ArrayRef<Type> inst_types, thorin::ArrayRef<const ASTType*> var_instances, SpecializeMapping& mapping) {
+    assert(var_instances.size() == generic->num_bound_vars());
+    assert(var_instances.size() == mapping.size());
+    assert(var_instances.size() == inst_types.size());
+    // check the bounds
+    for (size_t i = 0; i < generic->num_bound_vars(); ++i) {
+        TypeVar v = generic->bound_var(i);
+        Type instance = inst_types[i];
+        assert(mapping.contains(*v));
+        assert(mapping[*v] == *instance);
 
-        // check the bounds
-        for (size_t i = 0; i < generic->num_bound_vars(); ++i) {
-            TypeVar v = generic->bound_var(i);
-            Type instance = inst_types[i];
-            assert(mapping.contains(*v));
-            assert(mapping[*v] == *instance);
+        for (Trait bound : v->bounds()) {
+            SpecializeMapping m(mapping); // copy the mapping
+            Trait spec_bound = bound->specialize(m);
+            unify(spec_bound);
 
-            for (Trait bound : v->bounds()) {
-                SpecializeMapping m(mapping); // copy the mapping
-                Trait spec_bound = bound->specialize(m);
-                unify(spec_bound);
-
-                if (instance != type_error() && spec_bound != trait_error())
-                    if (!instance->implements(spec_bound))
-                        error(var_instances[i]) << "'" << instance << "' does not implement bound '" << spec_bound << "'\n";
-            }
+            if (instance != type_error() && spec_bound != trait_error())
+                if (!instance->implements(spec_bound))
+                    error(var_instances[i]) << "'" << instance << "' does not implement bound '" << spec_bound << "'\n";
         }
+    }
+}
 
-        return generic->instantiate(mapping);
+Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances) {
+    if ((var_instances.size()+1) == trait->num_bound_vars()) {
+        std::vector<Type> inst_types;
+        std::vector<const ASTType*> var_instances2;
+        inst_types.push_back(self);
+        var_instances2.push_back(nullptr);
+        for (auto t : var_instances) {
+            var_instances2.push_back(t);
+            inst_types.push_back(check(t));
+        }
+        SpecializeMapping mapping = create_spec_mapping(trait, inst_types);
+
+        check_bounds(trait, inst_types, var_instances2, mapping);
+        return trait->instantiate(mapping);
     } else
         error(loc) << "wrong number of instances for bound type variables\n";
 
-    return gen_error<T>();
+    return trait_error();
+}
+
+Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances) {
+    if (var_instances.size() == type->num_bound_vars()) {
+        std::vector<Type> inst_types;
+        for (auto t : var_instances) inst_types.push_back(check(t));
+        SpecializeMapping mapping = create_spec_mapping(type, inst_types);
+
+        check_bounds(type, inst_types, var_instances, mapping);
+        return type->instantiate(mapping);
+    } else
+        error(loc) << "wrong number of instances for bound type variables\n";
+
+    return type_error();
 }
 
 //------------------------------------------------------------------------------
@@ -150,7 +175,8 @@ void TypeParamList::check_type_params(TypeSema& sema) const {
     for (const TypeParam* tp : type_params()) {
         for (const ASTType* b : tp->bounds()) {
             if (auto trait_inst = b->isa<ASTTypeApp>()) {
-                tp->type_var(sema)->add_bound(trait_inst->to_trait(sema));
+                TypeVar v = tp->type_var(sema);
+                v->add_bound(trait_inst->to_trait(sema, v));
             } else {
                 sema.error(tp) << "bounds must be trait instances, not types\n";
             }
@@ -215,13 +241,11 @@ Type ASTTypeApp::check(TypeSema& sema) const {
     return sema.type_error();
 }
 
-Trait ASTTypeApp::to_trait(TypeSema& sema) const {
+Trait ASTTypeApp::to_trait(TypeSema& sema, Type self) const {
     if (decl()) {
         if (auto trait_decl = decl()->isa<TraitDecl>()) {
             Trait trait = trait_decl->to_trait(sema);
-            Trait tinst = sema.instantiate(this, trait, elems());
-            assert(!elems().empty() || tinst == trait);
-            return tinst;
+            return sema.instantiate(this, trait, self, elems());
         } else
             sema.error(this) << '\'' << symbol() << "' does not name a trait\n";
     }
@@ -316,6 +340,7 @@ void TraitDecl::check(TypeSema& sema) const {
     // FEATURE consider super traits and check methods
     trait_ = sema.trait(this);
 
+    trait_->add_bound_var(self_decl()->type_var(sema));
     check_type_params(sema);
     for (auto tp : type_params()) {
         trait_->add_bound_var(tp->type_var(sema));
@@ -331,7 +356,7 @@ void Impl::check(TypeSema& sema) const {
     if (trait() != nullptr) {
         if (auto t = trait()->isa<ASTTypeApp>()) {
             // create impl
-            Trait tinst = t->to_trait(sema);
+            Trait tinst = t->to_trait(sema, ftype);
             TraitImpl impl = sema.implement_trait(this, tinst);
             for (auto tp : type_params()) {
                 impl->add_bound_var(tp->type_var(sema));

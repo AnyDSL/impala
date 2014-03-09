@@ -58,8 +58,9 @@ protected:
         assert(generic->num_bound_vars() == var_instances.size());
         SpecializeMapping mapping;
         size_t i = 0;
-        for (TypeVar v : generic->bound_vars())
+        for (TypeVar v : generic->bound_vars()) {
             mapping[*v] = *var_instances[i++]; // CHECK ist deref correct here and below?
+        }
         assert(mapping.size() == var_instances.size());
         return mapping;
     }
