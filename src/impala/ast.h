@@ -25,18 +25,15 @@ namespace thorin {
 namespace impala {
 
 class ASTType;
-class CodeGen;
 class Decl;
 class Expr;
-class FieldDecl;
-class FnDecl;
 class Item;
-class NameSema;
-class Param;
-class Printer;
 class Stmt;
-class TypeDecl;
 class TypeParam;
+
+class Printer;
+class CodeGen;
+class NameSema;
 class TypeSema;
 
 template<class T> using SafePtr    = thorin::SafePtr<T>;
@@ -628,7 +625,6 @@ public:
     //virtual void emit(CodeGen& cg) const;
 
 private:
-
     AutoPtr<const ASTType> trait_;
     AutoPtr<const ASTType> for_type_;
     AutoVector<const FnDecl*> methods_;
