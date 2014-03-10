@@ -396,7 +396,7 @@ public:
     friend class Parser;
 };
 
-class Fn {
+class Fn : public TypeParamList {
 public:
     const Param* param(size_t i) const { return params_[i]; }
     ArrayRef<const Param*> params() const { return params_; }
@@ -405,6 +405,8 @@ public:
     const thorin::Param* ret_param() const { return ret_param_; }
     const thorin::Enter* frame() const { return frame_; }
     std::ostream& print_params(Printer& p, bool returning) const;
+    void fn_check(NameSema&) const;
+    //void check(TypeSema&) const;
     //void emit(CodeGen& cg) const;
 
 private:
@@ -571,9 +573,8 @@ private:
     friend class Parser;
 };
 
-class FnDecl : public ValueItem, public TypeParamList {
+class FnDecl : public ValueItem, public Fn {
 public:
-    const Fn& fn() const { return fn_; }
     bool is_extern() const { return extern_; }
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
@@ -583,7 +584,6 @@ public:
 private:
     virtual Type check(TypeSema&) const;
 
-    Fn fn_;
     bool extern_;
 
     friend class Parser;
@@ -723,9 +723,8 @@ private:
     thorin::Box box_;
 };
 
-class FnExpr : public Expr {
+class FnExpr : public Expr, public Fn {
 public:
-    const Fn& fn() const { return fn_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
@@ -734,7 +733,6 @@ public:
 private:
     virtual Type check(TypeSema&) const;
 
-    Fn fn_;
     bool has_return_type_;
 
     friend class Parser;

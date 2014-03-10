@@ -142,13 +142,13 @@ std::ostream& FnDecl::print(Printer& p) const {
     print_type_params(p);
 
     const FnASTType* ret = nullptr;
-    if (!fn().params().empty() && fn().params().back()->symbol() == "return") {
-        if (auto fntype = fn().params().back()->ast_type()->isa<FnASTType>())
+    if (!params().empty() && params().back()->symbol() == "return") {
+        if (auto fntype = params().back()->ast_type()->isa<FnASTType>())
             ret = fntype;
     }
 
     p.stream() << '(';
-    fn().print_params(p, ret != nullptr);
+    print_params(p, ret != nullptr);
     p.stream() << ")";
 
     if (ret) {
@@ -159,9 +159,9 @@ std::ostream& FnDecl::print(Printer& p) const {
             p.dump_list([&] (const ASTType* type) { type->print(p); }, ret->elems(), "(", ")", ", ");
     }
 
-    if (auto body = fn().body()) {
+    if (body()) {
         p.stream() << ' ';
-        body->print(p);
+        body()->print(p);
     } else
         p.stream() << ';';
 
@@ -371,19 +371,19 @@ std::ostream& MapExpr::print(Printer& p) const {
 
 std::ostream& FnExpr::print(Printer& p) const { 
     p.stream() << '|';
-    fn().print_params(p, has_return_type_);
+    print_params(p, has_return_type_);
     p.stream() << "| ";
 
     if (has_return_type_) {
         p.stream() << "-> ";
-        auto ret = fn().params().back()->as<FnASTType>();
+        auto ret = params().back()->as<FnASTType>();
         if (ret->elems().size() == 1)
             ret->elem(0)->print(p);
         else
             p.dump_list([&] (const ASTType* type) { type->print(p); }, ret->elems(), "(", ")", ", ");
     }
 
-    return fn().body()->print(p);
+    return body()->print(p);
 }
 
 std::ostream& IfExpr::print(Printer& p) const {

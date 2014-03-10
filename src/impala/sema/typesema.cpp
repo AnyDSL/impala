@@ -309,7 +309,7 @@ Type FieldDecl::check(TypeSema&) const {
 Type FnDecl::check(TypeSema& sema) const {
     check_type_params(sema);
     std::vector<Type> types;
-    for (auto param : fn().params())
+    for (auto param : params())
         types.push_back(sema.check(param));
 
     // create FnType
@@ -319,11 +319,11 @@ Type FnDecl::check(TypeSema& sema) const {
     type_ = fn_type;
     sema.unify(type_);
 
-    if (fn().body() != nullptr) {
-        sema.check(fn().body());
-        if (fn().body()->type() != sema.type_noreturn()) {
+    if (body() != nullptr) {
+        sema.check(body());
+        if (body()->type() != sema.type_noreturn()) {
             Type ret_func = fn_type->elem(fn_type->size() - 1);
-            sema.expect_type(fn().body(), sema.create_return_type(this, ret_func), "return");
+            sema.expect_type(body(), sema.create_return_type(this, ret_func), "return");
         }
     }
 

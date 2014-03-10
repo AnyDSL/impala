@@ -198,17 +198,19 @@ void EnumDecl::check(NameSema& sema) const {
 void StaticItem::check(NameSema& sema) const {
 }
 
-void FnDecl::check(NameSema& sema) const {
+void Fn::fn_check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
-    for (const Param* param : fn().params()) {
+    for (const Param* param : params()) {
         sema.insert(param);
         param->ast_type()->check(sema);
     }
-    if (fn().body() != nullptr)
-        fn().body()->check(sema);
+    if (body() != nullptr)
+        body()->check(sema);
     sema.pop_scope();
 }
+
+void FnDecl::check(NameSema& sema) const { fn_check(sema); }
 
 void StructDecl::check(NameSema& sema) const {
 }
@@ -257,9 +259,7 @@ void BlockExpr::check(NameSema& sema) const {
 }
 
 void LiteralExpr::check(NameSema& sema) const {} 
-
-void FnExpr::check(NameSema& sema) const {
-}
+void FnExpr::check(NameSema& sema) const { fn_check(sema); }
 
 void PathItem::check(NameSema& sema) const {
     decl_ = sema.lookup(symbol());

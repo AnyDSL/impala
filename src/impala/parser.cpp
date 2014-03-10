@@ -466,18 +466,17 @@ FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
     THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     auto fn_decl = loc(new FnDecl());
-    auto& fn = fn_decl->fn_;
     eat(Token::FN);
     fn_decl->symbol_ = try_id("function name");
     parse_type_params(fn_decl->type_params_);
     expect(Token::L_PAREN, "function head");
-    parse_param_list(fn.params_, Token::R_PAREN, false);
-    parse_return_param(fn.params_);
+    parse_param_list(fn_decl->params_, Token::R_PAREN, false);
+    parse_return_param(fn_decl->params_);
 
     if (maybe_empty && accept(Token::SEMICOLON)) {
         // do nothing
     } else
-        fn.body_ = try_block_expr("body of function");
+        fn_decl->body_ = try_block_expr("body of function");
 
     return fn_decl;
 }
@@ -926,15 +925,14 @@ const FnExpr* Parser::parse_fn_expr() {
     THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     auto fn_expr = loc(new FnExpr());
-    auto& fn = fn_expr->fn_;
 
     if (accept(Token::OR))
-        parse_param_list(fn.params_, Token::OR, true);
+        parse_param_list(fn_expr->params_, Token::OR, true);
     else
         expect(Token::OROR, "parameter list of function expression");
 
-    fn_expr->has_return_type_ = parse_return_param(fn.params_);
-    fn.body_ = parse_expr();
+    fn_expr->has_return_type_ = parse_return_param(fn_expr->params_);
+    fn_expr->body_ = parse_expr();
     return fn_expr;
 }
 
