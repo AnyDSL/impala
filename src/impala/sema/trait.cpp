@@ -57,8 +57,8 @@ Type TraitNode::find_method(Symbol name) {
 }
 
 Type TraitInstanceNode::find_method(Symbol name) {
-    auto it = spec_methods_.find(name);
-    if (it != spec_methods_.end()) {
+    auto it = methods_.find(name);
+    if (it != methods_.end()) {
         return it->second;
     } else {
         Type fn = trait()->find_method(name);
@@ -68,18 +68,18 @@ Type TraitInstanceNode::find_method(Symbol name) {
             SpecializeMapping m = var_instances();
             Type t = fn->instantiate(m);
             typetable().unify(t);
-            return spec_methods_[name] = t;
+            return methods_[name] = t;
         }
     }
 }
 
-const MethodTable& TraitInstanceNode::methods() {
-    if (spec_methods_.size() < trait()->methods().size()) {
+const MethodTable TraitInstanceNode::methods() {
+    if (methods_.size() < trait()->num_methods()) {
         for (auto p : trait()->methods())
             find_method(p.first); // this will insert the specialized method
     }
-    assert(spec_methods_.size() == trait()->methods().size());
-    return spec_methods_;
+    assert(methods_.size() == trait()->num_methods());
+    return methods_;
 }
 
 TraitNode* TraitNode::vspecialize(SpecializeMapping& mapping) {

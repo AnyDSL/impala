@@ -1,0 +1,8 @@
+trait T {
+    fn f(self: Self) -> Self;
+}
+trait U : T {}
+
+impl U for int32 {
+    fn f(self: int32) -> int32 { self }
+}

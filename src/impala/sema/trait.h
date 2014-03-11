@@ -55,7 +55,23 @@ public:
     /// return the type of the method with this name if it exists; otherwise return an empty type
     virtual Type find_method(Symbol name);
     bool has_method(Symbol name) { return !find_method(name).empty(); }
-    virtual const MethodTable& methods() { return methods_; }
+    virtual const MethodTable methods() {
+        // FEATURE this could be a lot faster using a data structure with recursive iterator as in the rec_methodtable branch
+        //         another way to solve it would be to store all methods from the beginning
+        //         on the other hand: currently this is only called if a program is faulty..
+        MethodTable mt(methods_);
+        for (Trait t : super_traits()) {
+            MethodTable t_meths = t->methods();
+            mt.insert(t_meths.begin(), t_meths.end());
+        }
+        return mt;
+    }
+    /// return the number of methods
+    virtual size_t num_methods() const {
+        size_t s = methods_.size();
+        for (Trait t : super_traits()) s += t->num_methods();
+        return s;
+    }
 
     thorin::ArrayRef<Trait> super_traits() const { return super_traits_; }
 
@@ -64,11 +80,11 @@ public:
 protected:
     /// copy this trait but replace the sub-elements given in the mapping
     TraitNode* vspecialize(SpecializeMapping&);
+    MethodTable methods_;
 
 private:
     const TraitDecl* const trait_decl_;
     std::vector<Trait> super_traits_;
-    MethodTable methods_;
 
     friend class TypeTable;
 };
@@ -95,7 +111,8 @@ public:
     virtual std::string to_string() const;
 
     virtual Type find_method(Symbol name);
-    virtual const MethodTable& methods();
+    virtual const MethodTable methods();
+    virtual size_t num_methods() const { return trait()->num_methods(); }
 
     virtual bool is_closed() const;
 
@@ -110,7 +127,6 @@ private:
 
     const Trait trait_;
     SpecializeMapping var_instances_;
-    MethodTable spec_methods_;
 
     friend class TypeVarNode;
     friend class Generic;
