@@ -222,6 +222,8 @@ void TraitDecl::check(NameSema& sema) const {
     sema.push_scope();
     sema.insert(self_param());
     check_type_params(sema);
+    for (auto t : super())
+        t->check(sema);
     for (auto method : methods())
         method->check(sema);
     sema.pop_scope();
