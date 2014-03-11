@@ -1,0 +1,6 @@
+trait T {
+    fn f(self: Self) -> Self;
+}
+trait U : T {
+    fn f(self: Self) -> Self;
+}

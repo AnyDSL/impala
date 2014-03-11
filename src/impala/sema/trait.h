@@ -54,6 +54,7 @@ public:
     bool add_method(Symbol name, Type method_type);
     /// return the type of the method with this name if it exists; otherwise return an empty type
     virtual Type find_method(Symbol name);
+    bool has_method(Symbol name) { return !find_method(name).empty(); }
     virtual const MethodTable& methods() { return methods_; }
 
     thorin::ArrayRef<Trait> super_traits() const { return super_traits_; }

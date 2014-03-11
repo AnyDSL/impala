@@ -352,8 +352,10 @@ void TraitDecl::check(TypeSema& sema) const {
     }
 
     // check methods
-    for (auto m : methods())
-        trait_->add_method(m->symbol(), sema.check(m));
+    for (auto m : methods()) {
+        if (!trait_->add_method(m->symbol(), sema.check(m)))
+            sema.error(m) << "a method with this name already exists in a super trait.\n";
+    }
 
     sema.unify(trait());
 }

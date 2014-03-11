@@ -13,10 +13,13 @@ namespace impala {
 TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl, thorin::ArrayRef<Trait> super_traits)
     : Unifiable(tt)
     , trait_decl_(trait_decl)
-    , super_traits_(super_traits.size())
+    , super_traits_()
     , methods_()
 {
-    for (auto t : super_traits) super_traits_.push_back(t);
+    for (auto t : super_traits) {
+        assert(!t.empty());
+        super_traits_.push_back(t);
+    }
 }
 
 bool TraitInstanceNode::is_closed() const {
@@ -30,7 +33,8 @@ bool TraitInstanceNode::is_closed() const {
 
 bool TraitNode::add_method(Symbol name, Type method_type) {
     assert(!is_unified() && "Unified traits must not be changed anymore!");
-    if (methods_.contains(name)) {
+    assert(!methods_.contains(name));
+    if (has_method(name)) { // this means a super trait already declares this method
         return false;
     } else {
         methods_[name] = method_type;
@@ -40,7 +44,16 @@ bool TraitNode::add_method(Symbol name, Type method_type) {
 
 Type TraitNode::find_method(Symbol name) {
     auto it = methods_.find(name);
-    return it == methods_.end() ? Type() : it->second;
+    if (it == methods_.end()) {
+        for (Trait super : super_traits()) {
+            Type t = super->find_method(name);
+            if (!t.empty())
+                return t;
+        }
+        return Type();
+    } else {
+        return it->second;
+    }
 }
 
 Type TraitInstanceNode::find_method(Symbol name) {
