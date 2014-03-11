@@ -338,10 +338,14 @@ void TraitDecl::check(TypeSema& sema) const {
     if (!trait().empty())
         return;
 
-    // FEATURE consider super traits and check methods
-    trait_ = sema.trait(this);
+    TypeVar self_var = self_param()->type_var(sema);
 
-    trait_->add_bound_var(self_param()->type_var(sema));
+    std::vector<Trait> super_traits;
+    for (const ASTTypeApp* t : super())
+        super_traits.push_back(t->to_trait(sema, self_var));
+    trait_ = sema.trait(this, super_traits);
+
+    trait_->add_bound_var(self_var);
     check_type_params(sema);
     for (auto tp : type_params()) {
         trait_->add_bound_var(tp->type_var(sema));

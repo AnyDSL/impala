@@ -1,0 +1,4 @@
+trait T {}
+trait U : T {}
+trait V : T {}
+trait W : U, V {}

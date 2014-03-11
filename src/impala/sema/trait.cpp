@@ -10,11 +10,14 @@
 
 namespace impala {
 
-TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
+TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl, thorin::ArrayRef<Trait> super_traits)
     : Unifiable(tt)
     , trait_decl_(trait_decl)
+    , super_traits_(super_traits.size())
     , methods_()
-{}
+{
+    for (auto t : super_traits) super_traits_.push_back(t);
+}
 
 bool TraitInstanceNode::is_closed() const {
     // TODO review this

@@ -37,7 +37,7 @@ typedef thorin::HashMap<const Symbol, Type, thorin::Hash<Symbol>> MethodTable;
  */
 class TraitNode : public Unifiable<TraitNode> {
 protected:
-    TraitNode(TypeTable& tt, const TraitDecl* trait_decl);
+    TraitNode(TypeTable& tt, const TraitDecl* trait_decl, thorin::ArrayRef<Trait> super_traits);
 
 private:
     TraitNode& operator = (const TraitNode&); ///< Do not copy-assign a \p Trait.
@@ -56,6 +56,8 @@ public:
     virtual Type find_method(Symbol name);
     virtual const MethodTable& methods() { return methods_; }
 
+    thorin::ArrayRef<Trait> super_traits() const { return super_traits_; }
+
     virtual bool is_closed() const { return true; } // TODO
 
 protected:
@@ -64,6 +66,7 @@ protected:
 
 private:
     const TraitDecl* const trait_decl_;
+    std::vector<Trait> super_traits_;
     MethodTable methods_;
 
     friend class TypeTable;
@@ -76,7 +79,7 @@ private:
 class TraitInstanceNode : public TraitNode {
 private:
     TraitInstanceNode(const Trait trait, const SpecializeMapping& var_instances)
-        : TraitNode(trait->typetable(), trait->trait_decl())
+        : TraitNode(trait->typetable(), trait->trait_decl(), trait->super_traits())
         , trait_(trait)
         , var_instances_(var_instances)
     {
