@@ -427,7 +427,24 @@ Type LiteralExpr::check(TypeSema& sema) const {
 }
 
 Type FnExpr::check(TypeSema& sema) const {
-    return Type();
+    assert(type_params().empty());
+
+    std::vector<Type> types;
+    for (auto param : params())
+        types.push_back(sema.check(param));
+
+    // create FnType
+    Type fn_type = sema.fntype(types);
+    sema.unify(fn_type);
+
+    assert(body() != nullptr);
+    sema.check(body());
+    if (body()->type() != sema.type_noreturn()) {
+        Type ret_func = fn_type->elem(fn_type->size() - 1);
+        sema.expect_type(body(), sema.create_return_type(this, ret_func), "return");
+    }
+
+    return fn_type;
 }
 
 Type PathExpr::check(TypeSema& sema) const {

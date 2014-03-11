@@ -1,0 +1,6 @@
+fn f(x:fn(int32)->int32) -> int32 {
+   x(52)
+}
+fn g() -> int32 {
+   f(|i:int32|->int32 i)
+}
