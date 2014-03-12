@@ -1,0 +1,8 @@
+trait T {}
+trait U : T {}
+
+fn f[C: T](c: C) -> C { c }
+
+fn g[D: U](d: D) -> D {
+   f[D](d)
+}

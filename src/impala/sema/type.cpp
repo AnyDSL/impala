@@ -54,8 +54,8 @@ void TypeVarNode::bind(const Generic* const e) {
 
 void TypeVarNode::add_bound(Trait bound) {
     assert(!is_closed() && "Closed type variables must not be changed!");
-    auto p = bounds_.insert(bound);
-    assert(p.second && "hash/equal broken");
+    bounds_.insert(bound);
+    bounds_.insert(bound->super_traits().begin(), bound->super_traits().end());
 }
 
 bool TypeVarNode::is_closed() const {
@@ -65,8 +65,10 @@ bool TypeVarNode::is_closed() const {
 //------------------------------------------------------------------------------
 
 void TypeNode::add_implementation(TraitImpl impl) {
-    auto p = trait_impls_.insert(impl->trait());
+    Trait trait = impl->trait();
+    auto p = trait_impls_.insert(trait);
     assert(p.second && "hash/equal broken");
+    trait_impls_.insert(trait->super_traits().begin(), trait->super_traits().end());
 }
 
 bool TypeNode::implements(Trait trait) const {

@@ -60,8 +60,7 @@ public:
     size_t num_methods() { return all_methods().size(); }
 
     void add_super_trait(Trait);
-    // TODO trait instances need to specialize those!
-    const UniSet<Trait>& super_traits() const { return super_traits_; }
+    virtual const UniSet<Trait>& super_traits() { return super_traits_; }
 
     virtual bool is_closed() const { return true; } // TODO
 
@@ -73,6 +72,7 @@ protected:
 
 private:
     bool add_method(Symbol name, Type method_type, bool inherited);
+    /// return the names of all methods that were declared in this trait (this does not count methods in super traits)
     virtual const thorin::ArrayRef<Symbol> declared_methods() { return declared_methods_; }
 
     const TraitDecl* const trait_decl_;
@@ -88,13 +88,7 @@ private:
  */
 class TraitInstanceNode : public TraitNode {
 private:
-    TraitInstanceNode(const Trait trait, const SpecializeMapping& var_instances)
-        : TraitNode(trait->typetable(), trait->trait_decl())
-        , trait_(trait)
-        , var_instances_(var_instances)
-    {
-        assert(trait_->num_bound_vars() == var_instances_.size());
-    }
+    TraitInstanceNode(const Trait trait, const SpecializeMapping& var_instances);
     TraitInstanceNode& operator = (const TraitInstanceNode&); ///< Do not copy-assign a \p TraitInstance.
     TraitInstanceNode(const TraitInstanceNode& node);         ///< Do not copy-construct a \p TraitInstance.
 
@@ -105,6 +99,8 @@ public:
 
     virtual Type find_method(Symbol name);
     virtual const MethodTable& all_methods();
+
+    virtual const UniSet<Trait>& super_traits();
 
     virtual bool is_closed() const;
 

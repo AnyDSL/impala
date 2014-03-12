@@ -19,6 +19,14 @@ TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
     , declared_methods_()
 {}
 
+TraitInstanceNode::TraitInstanceNode(const Trait trait, const SpecializeMapping& var_instances)
+    : TraitNode(trait->typetable(), trait->trait_decl())
+    , trait_(trait)
+    , var_instances_(var_instances)
+{
+    assert(trait_->num_bound_vars() == var_instances_.size());
+}
+
 void TraitNode::add_super_trait(Trait t) {
     typetable().unify(t);
     super_traits_.insert(t);
@@ -81,6 +89,21 @@ const MethodTable& TraitInstanceNode::all_methods() {
     }
     assert(all_methods_.size() == trait()->num_methods());
     return all_methods_;
+}
+
+const UniSet<Trait>& TraitInstanceNode::super_traits() {
+    if (super_traits_.size() < trait()->super_traits().size()) {
+        // specialize super traits
+        for (Trait super : trait()->super_traits()) {
+            SpecializeMapping m = this->var_instances();
+            Trait super_inst = super->instantiate(m);
+            //typetable().unify(super_inst);
+            auto p = super_traits_.insert(super_inst);
+            assert(p.second && "Hash/Equal broken");
+        }
+    }
+    assert(super_traits_.size() == trait()->super_traits().size());
+    return super_traits_;
 }
 
 TraitNode* TraitNode::vspecialize(SpecializeMapping& mapping) {
