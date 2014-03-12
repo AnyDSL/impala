@@ -492,6 +492,13 @@ Type InfixExpr::check(TypeSema& sema) const {
         case NE:
             sema.match_types(this, lhstype, rhstype);
             return sema.type_bool();
+        case LT:
+        case LE:
+        case GT:
+        case GE:
+            sema.expect_num(lhs());
+            sema.match_types(this, lhstype, rhstype);
+            return sema.type_bool();
         case ADD:
         case SUB:
         case MUL:
