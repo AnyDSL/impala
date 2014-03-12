@@ -24,7 +24,7 @@ template<class T> struct UniHash {
     size_t operator () (const T t) const { return t->hash(); }
 };
 template<class T> struct UniEqual {
-    bool operator () (const T t1, const T t2) const { return t1 == t2; }
+    bool operator () (const T t1, const T t2) const { return (t1->is_unified() && t2->is_unified()) ? t1 == t2 : t1->equal(*t2); }
 };
 template<class T> using UniSet = thorin::HashSet<T, UniHash<T>, UniEqual<T>>;
 
