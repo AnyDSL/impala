@@ -37,7 +37,9 @@ size_t TraitImplNode::hash() const {
 //----------------------------------------------------------------------------------------
 
 bool TypeNode::equal(const TypeNode* other) const {
-    //assert(this != other && "double insert"); // TODO what happens in this case?
+    if (this == other)
+        return true;
+
     bool result = this->kind() == other->kind();
     result &= this->size() == other->size();
     result &= this->num_bound_vars() == other->num_bound_vars();
@@ -119,10 +121,14 @@ bool TypeVarNode::equal(const TypeNode* other) const {
 }
 
 bool TraitNode::equal(const TraitNode* other) const {
+    // num_bound_vars must be equal because one could be an instance of the other!
     return (this->trait_decl() == other->trait_decl()) && (this->num_bound_vars() == other->num_bound_vars());
 }
 
 bool TraitInstanceNode::equal(const TraitNode* other) const {
+    if (this == other)
+        return true;
+
     if (auto instance = other->isa<TraitInstanceNode>()) {
         if (trait() != instance->trait())
             return false;
