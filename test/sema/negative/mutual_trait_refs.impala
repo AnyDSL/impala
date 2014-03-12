@@ -1,3 +1,7 @@
 // these traits are not implementable
 trait S[A: T[int]] {}
 trait T[B: S[int]] {}
+
+// ...or are they?
+impl S[int] for int {}
+impl T[int] for int {}
