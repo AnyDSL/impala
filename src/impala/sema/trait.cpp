@@ -15,8 +15,6 @@ TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
     : Unifiable(tt)
     , trait_decl_(trait_decl)
     , super_traits_()
-    , all_methods_()
-    , declared_methods_()
 {}
 
 TraitInstanceNode::TraitInstanceNode(const Trait trait, const SpecializeMapping& var_instances)
