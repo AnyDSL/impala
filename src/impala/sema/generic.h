@@ -155,7 +155,7 @@ public:
      * @see TypeTable::create_spec_mapping()
      */
     Proxy<T> instantiate(SpecializeMapping& var_instances) {
-//        assert(is_final_representative()); FEATURE it seems nothing gets broken w.o. this assertion - still I don't feel comfortable w.o. it
+//        assert(is_final_representative()); CHECK it seems nothing gets broken w.o. this assertion - still I don't feel comfortable w.o. it
         // we can not unify yet because it could be that this type is not closed yet
         return Proxy<T>(ginstantiate(var_instances)->as<T>());
     }
@@ -164,7 +164,7 @@ public:
      * otherwise copy this element with specialized sub-elements
      */
     Proxy<T> specialize(SpecializeMapping& mapping) {
-//        assert(is_final_representative()); FEATURE it seems nothing gets broken w.o. this assertion - still I don't feel comfortable w.o. it
+//        assert(is_final_representative()); CHECK it seems nothing gets broken w.o. this assertion - still I don't feel comfortable w.o. it
         return Proxy<T>(gspecialize(mapping)->as<T>());
     }
 
