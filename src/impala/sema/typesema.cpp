@@ -26,6 +26,13 @@ public:
     Type match_types(const ASTNode* pos, Type t1, Type t2);
     void expect_type(const Expr* found, Type expected, std::string typetype);
     Type create_return_type(const ASTNode* node, Type ret_func);
+    void check_body(const ASTNode* fn, const Expr* body, Type fn_type) {
+        Type body_type = check(body);
+        if ((body_type != type_noreturn()) && (body_type != type_error())) {
+            Type ret_func = fn_type->elem(fn_type->size() - 1);
+            expect_type(body, create_return_type(fn, ret_func), "return");
+        }
+    }
 
     template<class T> void check_bounds(T generic, thorin::ArrayRef<Type> inst_types, thorin::ArrayRef<const ASTType*> var_instances, SpecializeMapping& mapping);
     Type instantiate(const ASTNode* loc, Type trait, thorin::ArrayRef<const ASTType*> var_instances);
@@ -328,13 +335,8 @@ Type FnDecl::check(TypeSema& sema) const {
     type_ = fn_type;
     sema.unify(type_);
 
-    if (body() != nullptr) {
-        sema.check(body());
-        if (body()->type() != sema.type_noreturn()) {
-            Type ret_func = fn_type->elem(fn_type->size() - 1);
-            sema.expect_type(body(), sema.create_return_type(this, ret_func), "return");
-        }
-    }
+    if (body() != nullptr)
+        sema.check_body(this, body(), fn_type);
 
     type_.clear(); // will be set again by TypeSema's wrapper
     return fn_type;
@@ -454,11 +456,7 @@ Type FnExpr::check(TypeSema& sema) const {
     sema.unify(fn_type);
 
     assert(body() != nullptr);
-    sema.check(body());
-    if (body()->type() != sema.type_noreturn()) {
-        Type ret_func = fn_type->elem(fn_type->size() - 1);
-        sema.expect_type(body(), sema.create_return_type(this, ret_func), "return");
-    }
+    sema.check_body(this, body(), fn_type);
 
     return fn_type;
 }
