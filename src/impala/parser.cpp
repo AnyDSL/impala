@@ -670,7 +670,12 @@ const FnASTType* Parser::parse_fn_type() {
     if (accept(Token::ARROW)) { // TODO remove copy/paste
         if (!accept(Token::NOT)) { // if not "no-return"
             auto ret_type = loc(new FnASTType());
-            ret_type->elems_.push_back(parse_type());
+            const ASTType* ret = parse_type();
+            if (auto tup = ret->isa<TupleASTType>()) {
+                for (auto t : tup->elems_)
+                    ret_type->elems_.push_back(t);
+            } else
+                ret_type->elems_.push_back(ret);
             fn_type->elems_.push_back(ret_type);
         }
     }
