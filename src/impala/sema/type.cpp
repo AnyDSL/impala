@@ -1,3 +1,5 @@
+#include "impala/ast.h"
+
 #include "impala/sema/type.h"
 #include "impala/sema/trait.h"
 #include "impala/sema/typetable.h"
@@ -66,9 +68,12 @@ bool TypeVarNode::is_closed() const {
 
 void TypeNode::add_implementation(TraitImpl impl) {
     Trait trait = impl->trait();
-    auto p = trait_impls_.insert(trait);
-    assert(p.second && "hash/equal broken");
-    trait_impls_.insert(trait->super_traits().begin(), trait->super_traits().end());
+    if (!trait_impls_.insert(trait).second)
+        typetable().error(impl->impl_decl()) << "Duplicated implementation of trait '" << trait << "'\n";
+    for (Trait super : trait->super_traits()) {
+        if (!trait_impls_.insert(super).second)
+            typetable().error(impl->impl_decl()) << "Duplicated implementation of trait '" << super << "'\n";
+    }
 }
 
 bool TypeNode::implements(Trait trait) const {

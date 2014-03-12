@@ -1,0 +1,1 @@
+trait_impls6.impala:5 col 1 - 19: error: Duplicated implementation of trait 'T'
