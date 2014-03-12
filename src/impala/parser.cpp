@@ -669,7 +669,7 @@ const FnASTType* Parser::parse_fn_type() {
 
     bool noret;
     const ASTType* ret_type = parse_return_type(noret);
-    if (!noret)
+    if (ret_type != nullptr)
         fn_type->elems_.push_back(ret_type);
 
     return fn_type;
