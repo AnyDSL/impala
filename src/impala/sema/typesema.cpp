@@ -121,9 +121,11 @@ template<class T> void TypeSema::check_bounds(T generic, thorin::ArrayRef<Type> 
             Trait spec_bound = bound->specialize(m);
             unify(spec_bound);
 
-            if (instance != type_error() && spec_bound != trait_error())
+            if (instance != type_error() && spec_bound != trait_error()) {
+                check_impls(); // first we need to check all implementations to be up-to-date
                 if (!instance->implements(spec_bound))
                     error(var_instances[i]) << "'" << instance << "' does not implement bound '" << spec_bound << "'\n";
+            }
         }
     }
 }
@@ -276,7 +278,16 @@ Type ModDecl::check(TypeSema& sema) const {
 }
 
 void ModContents::check(TypeSema& sema) const {
-    for (auto item : items()) 
+    std::vector<const Item*> non_impls;
+    for (auto item : items()) {
+        if (auto impl = item->isa<const Impl>()) {
+            sema.push_impl(impl);
+        } else
+            non_impls.push_back(item);
+    }
+
+    sema.check_impls();
+    for (auto item : non_impls)
         sema.check(item);
 }
 
