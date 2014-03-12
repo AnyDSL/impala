@@ -39,8 +39,7 @@ public:
     PrimType primtype(PrimTypeKind kind);
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
-    Trait trait(const TraitDecl* trait_decl, thorin::ArrayRef<Trait> super_traits) { return new_unifiable(new TraitNode(*this, trait_decl, super_traits)); }
-    Trait trait(const TraitDecl* trait_decl) { return trait(trait_decl, {}); }
+    Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
     TraitImpl implement_trait(const Impl* impl_decl, Trait trait) { return new_unifiable(new TraitImplNode(*this, impl_decl, trait)); }
 
     TypeVar typevar() { return new_unifiable(new TypeVarNode(*this)); }

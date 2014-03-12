@@ -7,18 +7,27 @@
 
 #include "impala/sema/trait.h"
 #include "impala/sema/typetable.h"
+#include "impala/ast.h"
 
 namespace impala {
 
-TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl, thorin::ArrayRef<Trait> super_traits)
+TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
     : Unifiable(tt)
     , trait_decl_(trait_decl)
     , super_traits_()
-    , methods_()
-{
-    for (auto t : super_traits) {
-        assert(!t.empty());
-        super_traits_.push_back(t);
+    , all_methods_()
+    , declared_methods_()
+{}
+
+void TraitNode::add_super_trait(Trait t) {
+    typetable().unify(t);
+    super_traits_.insert(t);
+    super_traits_.insert(t->super_traits().begin(), t->super_traits().end());
+
+    for (Symbol mname : t->declared_methods()) {
+        assert(t->has_method(mname));
+        if (!add_method(mname, t->find_method(mname), true))
+            typetable().error(this->trait_decl()) << "conflicting method name in super traits: '" << mname << "'\n";
     }
 }
 
@@ -31,34 +40,26 @@ bool TraitInstanceNode::is_closed() const {
     return true;
 }
 
-bool TraitNode::add_method(Symbol name, Type method_type) {
+bool TraitNode::add_method(Symbol name, Type method_type, bool inherited) {
     assert(!is_unified() && "Unified traits must not be changed anymore!");
-    assert(!methods_.contains(name));
-    if (has_method(name)) { // this means a super trait already declares this method
+    if (has_method(name)) {
         return false;
     } else {
-        methods_[name] = method_type;
+        all_methods_[name] = method_type;
+        if (!inherited)
+            declared_methods_.push_back(name);
         return true;
     }
 }
 
 Type TraitNode::find_method(Symbol name) {
-    auto it = methods_.find(name);
-    if (it == methods_.end()) {
-        for (Trait super : super_traits()) {
-            Type t = super->find_method(name);
-            if (!t.empty())
-                return t;
-        }
-        return Type();
-    } else {
-        return it->second;
-    }
+    auto it = all_methods_.find(name);
+    return (it == all_methods_.end()) ? Type() : it->second;
 }
 
 Type TraitInstanceNode::find_method(Symbol name) {
-    auto it = methods_.find(name);
-    if (it != methods_.end()) {
+    auto it = all_methods_.find(name);
+    if (it != all_methods_.end()) {
         return it->second;
     } else {
         Type fn = trait()->find_method(name);
@@ -68,18 +69,18 @@ Type TraitInstanceNode::find_method(Symbol name) {
             SpecializeMapping m = var_instances();
             Type t = fn->instantiate(m);
             typetable().unify(t);
-            return methods_[name] = t;
+            return all_methods_[name] = t;
         }
     }
 }
 
-const MethodTable TraitInstanceNode::methods() {
-    if (methods_.size() < trait()->num_methods()) {
-        for (auto p : trait()->methods())
+const MethodTable& TraitInstanceNode::all_methods() {
+    if (all_methods_.size() < trait()->num_methods()) {
+        for (auto p : trait()->all_methods())
             find_method(p.first); // this will insert the specialized method
     }
-    assert(methods_.size() == trait()->num_methods());
-    return methods_;
+    assert(all_methods_.size() == trait()->num_methods());
+    return all_methods_;
 }
 
 TraitNode* TraitNode::vspecialize(SpecializeMapping& mapping) {

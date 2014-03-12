@@ -37,7 +37,7 @@ typedef thorin::HashMap<const Symbol, Type, thorin::Hash<Symbol>> MethodTable;
  */
 class TraitNode : public Unifiable<TraitNode> {
 protected:
-    TraitNode(TypeTable& tt, const TraitDecl* trait_decl, thorin::ArrayRef<Trait> super_traits);
+    TraitNode(TypeTable& tt, const TraitDecl* trait_decl);
 
 private:
     TraitNode& operator = (const TraitNode&); ///< Do not copy-assign a \p Trait.
@@ -50,43 +50,36 @@ public:
     bool is_error_trait() const { return trait_decl_ == nullptr; }
     virtual std::string to_string() const;
 
-    /// add a method or return \p false if a method with this name already existed
-    bool add_method(Symbol name, Type method_type);
+    /// add a non-inherited method or return \p false if a method with this name already existed
+    bool add_method(Symbol name, Type method_type) { return add_method(name, method_type, false); }
     /// return the type of the method with this name if it exists; otherwise return an empty type
     virtual Type find_method(Symbol name);
     bool has_method(Symbol name) { return !find_method(name).empty(); }
-    virtual const MethodTable methods() {
-        // FEATURE this could be a lot faster using a data structure with recursive iterator as in the rec_methodtable branch
-        //         another way to solve it would be to store all methods from the beginning
-        //         on the other hand: currently this is only called if a program is faulty..
-        MethodTable mt(methods_);
-        for (Trait t : super_traits()) {
-            MethodTable t_meths = t->methods();
-            mt.insert(t_meths.begin(), t_meths.end());
-        }
-        return mt;
-    }
+    virtual const MethodTable& all_methods() { return all_methods_; }
     /// return the number of methods
-    virtual size_t num_methods() const {
-        size_t s = methods_.size();
-        for (Trait t : super_traits()) s += t->num_methods();
-        return s;
-    }
+    size_t num_methods() { return all_methods().size(); }
 
-    thorin::ArrayRef<Trait> super_traits() const { return super_traits_; }
+    void add_super_trait(Trait);
+    // TODO trait instances need to specialize those!
+    const UniSet<Trait>& super_traits() const { return super_traits_; }
 
     virtual bool is_closed() const { return true; } // TODO
 
 protected:
     /// copy this trait but replace the sub-elements given in the mapping
     TraitNode* vspecialize(SpecializeMapping&);
-    MethodTable methods_;
+    MethodTable all_methods_;
+    UniSet<Trait> super_traits_;
 
 private:
+    bool add_method(Symbol name, Type method_type, bool inherited);
+    virtual const thorin::ArrayRef<Symbol> declared_methods() { return declared_methods_; }
+
     const TraitDecl* const trait_decl_;
-    std::vector<Trait> super_traits_;
+    std::vector<Symbol> declared_methods_;
 
     friend class TypeTable;
+    friend class TraitInstanceNode;
 };
 
 /**
@@ -96,7 +89,7 @@ private:
 class TraitInstanceNode : public TraitNode {
 private:
     TraitInstanceNode(const Trait trait, const SpecializeMapping& var_instances)
-        : TraitNode(trait->typetable(), trait->trait_decl(), trait->super_traits())
+        : TraitNode(trait->typetable(), trait->trait_decl())
         , trait_(trait)
         , var_instances_(var_instances)
     {
@@ -111,8 +104,7 @@ public:
     virtual std::string to_string() const;
 
     virtual Type find_method(Symbol name);
-    virtual const MethodTable methods();
-    virtual size_t num_methods() const { return trait()->num_methods(); }
+    virtual const MethodTable& all_methods();
 
     virtual bool is_closed() const;
 
@@ -124,6 +116,7 @@ private:
     const Trait trait() const { return trait_; }
     /// return a copy of the variable instances
     SpecializeMapping var_instances() const { return var_instances_; }
+    virtual const thorin::ArrayRef<Symbol> declared_methods() { return trait()->declared_methods(); }
 
     const Trait trait_;
     SpecializeMapping var_instances_;

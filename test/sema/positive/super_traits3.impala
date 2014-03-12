@@ -1,0 +1,13 @@
+trait T {
+    fn f(self: Self) -> Self;
+}
+trait U : T {}
+trait V : T {
+    fn g(self: Self) -> int32;
+}
+trait W : U, V {}
+
+impl W for int32 {
+   fn f(self: int32) -> int32 { self }
+   fn g(self: int32) -> int32 { self }
+}

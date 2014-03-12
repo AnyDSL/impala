@@ -339,17 +339,15 @@ void TraitDecl::check(TypeSema& sema) const {
         return;
 
     TypeVar self_var = self_param()->type_var(sema);
-
-    std::vector<Trait> super_traits;
-    for (const ASTTypeApp* t : super())
-        super_traits.push_back(t->to_trait(sema, self_var));
-    trait_ = sema.trait(this, super_traits);
-
+    trait_ = sema.trait(this);
     trait_->add_bound_var(self_var);
+
     check_type_params(sema);
-    for (auto tp : type_params()) {
+    for (auto tp : type_params())
         trait_->add_bound_var(tp->type_var(sema));
-    }
+
+    for (const ASTTypeApp* t : super())
+        trait_->add_super_trait(t->to_trait(sema, self_var));
 
     // check methods
     for (auto m : methods()) {
@@ -404,7 +402,8 @@ void Impl::check(TypeSema& sema) const {
     // check that all methods are implemented
     if (!tinst.empty()) {
         if (implemented_methods.size() != tinst->num_methods()) {
-            for (auto p : tinst->methods()) {
+            assert(implemented_methods.size() < tinst->num_methods());
+            for (auto p : tinst->all_methods()) {
                 if (!implemented_methods.contains(p.first))
                     sema.error(this) << "Must implement method '" << p.first << "'\n";
             }
