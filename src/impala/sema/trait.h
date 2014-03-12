@@ -61,14 +61,11 @@ public:
 
     void add_super_trait(Trait);
     virtual const UniSet<Trait>& super_traits() { return super_traits_; }
-
     virtual bool is_closed() const { return true; } // TODO
 
 protected:
     /// copy this trait but replace the sub-elements given in the mapping
     TraitNode* vspecialize(SpecializeMapping&);
-    MethodTable all_methods_;
-    UniSet<Trait> super_traits_;
 
 private:
     bool add_method(Symbol name, Type method_type, bool inherited);
@@ -76,7 +73,9 @@ private:
     virtual const thorin::ArrayRef<Symbol> declared_methods() { return declared_methods_; }
 
     const TraitDecl* const trait_decl_;
+    UniSet<Trait> super_traits_;
     std::vector<Symbol> declared_methods_;
+    MethodTable all_methods_;
 
     friend class TypeTable;
     friend class TraitInstanceNode;
