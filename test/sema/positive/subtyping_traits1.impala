@@ -1,0 +1,10 @@
+trait T {}
+trait U : T {}
+
+impl U for int32 {}
+
+fn f[A: T](a: A) -> A { a }
+
+fn g() -> int32 {
+   f[int32](4)
+}

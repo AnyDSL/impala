@@ -1,0 +1,8 @@
+trait T[B] {
+    fn conv(self: Self) -> B;
+}
+trait U[D] : T[D] {}
+
+fn g[E, F: U[E]](f: F) -> E {
+   f.conv()
+}

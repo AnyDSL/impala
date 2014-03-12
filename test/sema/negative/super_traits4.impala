@@ -1,0 +1,4 @@
+trait T[B] {
+    fn f(self: Self) ->	B;
+}
+trait U : T {}
