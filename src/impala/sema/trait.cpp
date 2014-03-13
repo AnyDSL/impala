@@ -73,7 +73,7 @@ Type TraitInstanceNode::find_method(Symbol name) {
             return fn;
         } else {
             SpecializeMapping m = var_instances();
-            Type t = fn->instantiate(m);
+            Type t = fn->specialize(m);
             typetable().unify(t);
             return all_methods_[name] = t;
         }

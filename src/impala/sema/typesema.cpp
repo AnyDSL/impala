@@ -152,7 +152,7 @@ Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::
         check_bounds(trait, inst_types, var_instances2, mapping);
         return trait->instantiate(mapping);
     } else
-        error(loc) << "wrong number of instances for bound type variables\n";
+        error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << (trait->num_bound_vars()-1) << "\n";
 
     return trait_error();
 }
@@ -165,8 +165,10 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
 
         check_bounds(type, inst_types, var_instances, mapping);
         return type->instantiate(mapping);
-    } else
-        error(loc) << "wrong number of instances for bound type variables\n";
+    } else {
+        type->dump();
+        error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << type->num_bound_vars() << "\n";
+    }
 
     return type_error();
 }
@@ -523,14 +525,22 @@ Type FieldExpr::check(TypeSema& sema) const {
     for (Trait t : lhs()->type()->trait_impls()) {
         Type fn = t->find_method(path_item()->symbol());
         if (!fn.empty()) {
-            FnType func = fn.as<FnType>();
+            if (fn != sema.type_error()) {
+                FnType func;
+                if (!path_item()->args().empty()) {
+                    Type t = sema.instantiate(path_item(), fn, path_item()->args());
+                    sema.unify(t);
+                    func = t.as<FnType>();
+                } else
+                    func = fn.as<FnType>();
 
-            // there should at least be two arguments: the continuation and the self object
-            if (func->size() > 1) {
-                sema.expect_type(lhs(), func->elem(0), "object");
-                return func->specialize_method(lhs()->type());
-            } else
-                sema.error(this) << "cannot call a method without any arguments";
+                // there should at least be two arguments: the continuation and the self object
+                if (func->size() > 1) {
+                    sema.expect_type(lhs(), func->elem(0), "object");
+                    return func->specialize_method(lhs()->type());
+                } else
+                    sema.error(this) << "cannot call a method without any arguments";
+            }
             return sema.type_error();
         }
     }
