@@ -158,6 +158,8 @@ private:
 
 class ErrorASTType : public ASTType {
 public:
+    ErrorASTType(const Location& loc) { loc_ = loc; }
+
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
 

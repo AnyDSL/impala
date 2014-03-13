@@ -620,7 +620,7 @@ const ASTType* Parser::parse_type() {
         case Token::AND:        return parse_ptr_type();
         default:  {
             error("type", ""); 
-            auto error_type = new ErrorASTType();
+            auto error_type = new ErrorASTType(prev_loc());
             lex(); 
             return error_type;
         }
