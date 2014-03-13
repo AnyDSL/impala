@@ -121,7 +121,7 @@ public:
     const PathItems& path_items() const { return path_items_; }
     virtual std::ostream& print(Printer&) const;
     void check(NameSema&) const;
-    const Decl* decl() const { return path_items_.back()->decl(); }
+    SafePtr<const Decl> decl() const { return path_items_.back()->decl(); }
 
 private:
     bool is_global_;
