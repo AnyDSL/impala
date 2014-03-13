@@ -73,6 +73,7 @@ Generic* Generic::ginstantiate(SpecializeMapping& var_instances) {
 /*#ifndef NDEBUG
     check_instantiation(var_instances);
 #endif*/
+    assert(var_instances.size() == num_bound_vars());
     return vspecialize(var_instances);
 }
 
