@@ -391,6 +391,7 @@ public:
         : LocalDecl(handle)
     {}
 
+    friend class Fn;
     friend class FnDecl;
     friend class Parser;
 };

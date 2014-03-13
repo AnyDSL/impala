@@ -2,6 +2,8 @@
 #include "impala/dump.h"
 #include "impala/sema/errorhandler.h"
 
+#include <sstream>
+
 namespace impala {
 
 //------------------------------------------------------------------------------
@@ -204,16 +206,31 @@ void StaticItem::check(NameSema& sema) const {
 void Fn::fn_check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
+    int i = 0;
     for (const Param* param : params()) {
+        if (!param->symbol())  {
+            std::ostringstream oss;
+            oss << '<' << i << ">";
+            const_cast<Param*>(param)->symbol_ = oss.str().c_str();
+        }
+
         sema.insert(param);
-        param->ast_type()->check(sema);
+        if (param->ast_type())
+            param->ast_type()->check(sema);
+        ++i;
     }
     if (body() != nullptr)
         body()->check(sema);
     sema.pop_scope();
 }
 
-void FnDecl::check(NameSema& sema) const { fn_check(sema); }
+void FnDecl::check(NameSema& sema) const { 
+    fn_check(sema); 
+#ifndef NDEBUG
+    for (auto param : params())
+        assert(param->ast_type());
+#endif
+}
 
 void StructDecl::check(NameSema& sema) const {
 }
