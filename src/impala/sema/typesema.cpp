@@ -519,6 +519,7 @@ Type FieldExpr::check(TypeSema& sema) const {
 
     // FEATURE struct types
     // FEATURE maybe store a hash map of methods in the type to make this fast!
+    sema.check_impls();
     for (Trait t : lhs()->type()->trait_impls()) {
         Type fn = t->find_method(symbol());
         if (!fn.empty()) {

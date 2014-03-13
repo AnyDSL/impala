@@ -1,0 +1,10 @@
+trait T {
+    fn neg(self: Self) -> Self;
+}
+impl T for bool {
+    fn neg(self: bool) -> bool { if self { false } else { true } }
+}
+
+impl bool {
+    fn f(self: bool) -> bool { self.neg() }
+}
