@@ -20,6 +20,7 @@ public:
     const char* str() const { return str_; }
     bool operator == (Symbol symbol) const { return str() == symbol.str(); }
     bool operator != (Symbol symbol) const { return str() != symbol.str(); }
+    operator bool() const { return *str_ != '\0'; }
 
     static void destroy();
 

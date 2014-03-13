@@ -389,6 +389,7 @@ const Param* Parser::parse_param(bool lambda) {
         if (type == nullptr) {
             auto type_app = new ASTTypeApp();
             type_app->set_loc(location);
+            type_app->symbol_ = symbol;
             type = type_app;
         }
         param->ast_type_ = type;
@@ -620,7 +621,7 @@ const ASTType* Parser::parse_type() {
         case Token::AND:        return parse_ptr_type();
         default:  {
             error("type", ""); 
-            auto error_type = new ErrorASTType();
+            auto error_type = new ErrorASTType(prev_loc());
             lex(); 
             return error_type;
         }

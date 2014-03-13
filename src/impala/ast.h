@@ -121,7 +121,7 @@ public:
     const PathItems& path_items() const { return path_items_; }
     virtual std::ostream& print(Printer&) const;
     void check(NameSema&) const;
-    const Decl* decl() const { return path_items_.back()->decl(); }
+    SafePtr<const Decl> decl() const { return path_items_.back()->decl(); }
 
 private:
     bool is_global_;
@@ -158,6 +158,8 @@ private:
 
 class ErrorASTType : public ASTType {
 public:
+    ErrorASTType(const Location& loc) { loc_ = loc; }
+
     virtual std::ostream& print(Printer&) const;
     virtual void check(NameSema&) const;
 
@@ -389,6 +391,7 @@ public:
         : LocalDecl(handle)
     {}
 
+    friend class Fn;
     friend class FnDecl;
     friend class Parser;
 };

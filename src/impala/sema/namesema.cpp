@@ -2,6 +2,8 @@
 #include "impala/dump.h"
 #include "impala/sema/errorhandler.h"
 
+#include <sstream>
+
 namespace impala {
 
 //------------------------------------------------------------------------------
@@ -58,6 +60,7 @@ private:
 //------------------------------------------------------------------------------
 
 const Decl* NameSema::lookup(Symbol symbol) const {
+    assert(symbol && "symbol is empty");
     auto i = symbol2decl_.find(symbol);
     return i != symbol2decl_.end() ? i->second : nullptr;
 }
@@ -70,6 +73,7 @@ const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
 }
 
 void NameSema::insert(const Decl* decl) {
+    assert(decl->symbol() && "symbol is empty");
     if (const Decl* other = clash(decl->symbol())) {
         error(decl) << "symbol '" << decl->symbol() << "' already defined\n";
         error(other) << "previous location here\n";
@@ -87,6 +91,7 @@ void NameSema::insert(const Decl* decl) {
 }
 
 const Decl* NameSema::clash(Symbol symbol) const {
+    assert(symbol && "symbol is empty");
     if (auto decl = thorin::find(symbol2decl_, symbol))
         return (decl && decl->depth() == depth()) ? decl : nullptr;
     return nullptr;
@@ -201,16 +206,31 @@ void StaticItem::check(NameSema& sema) const {
 void Fn::fn_check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
+    int i = 0;
     for (const Param* param : params()) {
+        if (!param->symbol())  {
+            std::ostringstream oss;
+            oss << '<' << i << ">";
+            const_cast<Param*>(param)->symbol_ = oss.str().c_str();
+        }
+
         sema.insert(param);
-        param->ast_type()->check(sema);
+        if (param->ast_type())
+            param->ast_type()->check(sema);
+        ++i;
     }
     if (body() != nullptr)
         body()->check(sema);
     sema.pop_scope();
 }
 
-void FnDecl::check(NameSema& sema) const { fn_check(sema); }
+void FnDecl::check(NameSema& sema) const { 
+    fn_check(sema); 
+#ifndef NDEBUG
+    for (auto param : params())
+        assert(param->ast_type());
+#endif
+}
 
 void StructDecl::check(NameSema& sema) const {
 }
