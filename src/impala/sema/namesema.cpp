@@ -58,6 +58,7 @@ private:
 //------------------------------------------------------------------------------
 
 const Decl* NameSema::lookup(Symbol symbol) const {
+    assert(symbol && "symbol is empty");
     auto i = symbol2decl_.find(symbol);
     return i != symbol2decl_.end() ? i->second : nullptr;
 }
@@ -70,6 +71,7 @@ const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
 }
 
 void NameSema::insert(const Decl* decl) {
+    assert(decl->symbol() && "symbol is empty");
     if (const Decl* other = clash(decl->symbol())) {
         error(decl) << "symbol '" << decl->symbol() << "' already defined\n";
         error(other) << "previous location here\n";
@@ -87,6 +89,7 @@ void NameSema::insert(const Decl* decl) {
 }
 
 const Decl* NameSema::clash(Symbol symbol) const {
+    assert(symbol && "symbol is empty");
     if (auto decl = thorin::find(symbol2decl_, symbol))
         return (decl && decl->depth() == depth()) ? decl : nullptr;
     return nullptr;
