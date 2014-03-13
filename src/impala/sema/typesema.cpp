@@ -568,8 +568,8 @@ Type StructExpr::check(TypeSema& sema) const {
 }
 
 Type MapExpr::check(TypeSema& sema) const {
-    sema.check(lhs());
-    if (auto fn = lhs()->type().isa<FnType>()) {
+    Type lhst = sema.check(lhs());
+    if (auto fn = lhst.isa<FnType>()) {
         bool no_cont = fn->size() == (args().size()+1); // true if this is a normal function call (no continuation)
         if (no_cont || (fn->size() == args().size())) {
             for (size_t i = 0; i < args().size(); ++i) {
