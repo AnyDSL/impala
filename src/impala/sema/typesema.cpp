@@ -623,7 +623,7 @@ void ItemStmt::check(TypeSema& sema) const {
 void LetStmt::check(TypeSema& sema) const {
     if (init())
         sema.check(init());
-    sema.check(local()
+    sema.check(local());
 }
 
 //------------------------------------------------------------------------------
