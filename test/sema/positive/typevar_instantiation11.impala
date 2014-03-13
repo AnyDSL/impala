@@ -1,0 +1,7 @@
+trait T {
+    fn f[B](self: Self, b: B) -> B;
+}
+
+fn g[C: T](c: C) -> int32 {
+    c.f[int32](52)
+}
