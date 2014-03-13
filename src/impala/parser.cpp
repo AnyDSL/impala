@@ -389,6 +389,7 @@ const Param* Parser::parse_param(bool lambda) {
         if (type == nullptr) {
             auto type_app = new ASTTypeApp();
             type_app->set_loc(location);
+            type_app->symbol_ = symbol;
             type = type_app;
         }
         param->ast_type_ = type;
