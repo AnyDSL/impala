@@ -29,7 +29,7 @@ public:
     void check_body(const ASTNode* fn, const Expr* body, Type fn_type) {
         Type body_type = check(body);
         if ((body_type != type_noreturn()) && (body_type != type_error())) {
-            Type ret_func = fn_type->elem(fn_type->size() - 1);
+            Type ret_func = fn_type->elems().back();  // TODO may be noret
             expect_type(body, create_return_type(fn, ret_func), "return");
         }
     }
@@ -622,6 +622,7 @@ void ItemStmt::check(TypeSema& sema) const {
 void LetStmt::check(TypeSema& sema) const {
     if (init())
         sema.check(init());
+    sema.check(local()
 }
 
 //------------------------------------------------------------------------------
