@@ -852,7 +852,7 @@ private:
 class CastExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
-    const ASTType* as() const { return as_; }
+    const ASTType* ast_type() const { return ast_type(); }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
@@ -861,7 +861,7 @@ private:
     virtual Type check(TypeSema&) const;
 
     AutoPtr<const Expr> lhs_;
-    AutoPtr<const ASTType> as_;
+    AutoPtr<const ASTType> ast_type_;
 
     friend class Parser;
 };
@@ -1008,10 +1008,9 @@ private:
     friend class Parser;
 };
 
-class ForExpr : public Expr {
+class ForExpr : public Expr, public Fn {
 public:
     const Expr* expr() const { return expr_; }
-    const Fn& fn() const { return fn_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
@@ -1021,7 +1020,6 @@ private:
     virtual Type check(TypeSema&) const;
 
     AutoPtr<const Expr> expr_;
-    Fn fn_;
 
     friend class Parser;
 };

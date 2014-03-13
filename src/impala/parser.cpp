@@ -818,7 +818,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
         case Token::AS: {
             auto expr = new CastExpr();
             expr->lhs_ = lhs;
-            expr->as_ = parse_type();
+            expr->ast_type_ = parse_type();
             expr->set_loc(lhs->pos1(), prev_loc().pos2());
             return expr;
         }
@@ -955,11 +955,10 @@ const IfExpr* Parser::parse_if_expr() {
 
 const ForExpr* Parser::parse_for_expr() {
     auto for_expr = loc(new ForExpr());
-    auto& fn = for_expr->fn_;
     eat(Token::FOR);
-    parse_param_list(fn.params_, Token::IN, true);
+    parse_param_list(for_expr->params_, Token::IN, true);
     for_expr->expr_ = parse_expr();
-    fn.body_ = try_block_expr("body of function");
+    for_expr->body_ = try_block_expr("body of function");
     return for_expr;
 }
 

@@ -357,7 +357,7 @@ std::ostream& FieldExpr::print(Printer& p) const {
 
 std::ostream& CastExpr::print(Printer& p) const { 
     lhs()->print(p) << " as ";
-    return as()->print(p);
+    return ast_type()->print(p);
 }
 
 std::ostream& StructExpr::print(Printer& p) const { 
@@ -402,9 +402,9 @@ std::ostream& IfExpr::print(Printer& p) const {
 
 std::ostream& ForExpr::print(Printer& p) const {
     p.stream() << "for ";
-    p.dump_list([&](const Param* param) { param->print(p); }, fn().params()) << " in ";
+    p.dump_list([&](const Param* param) { param->print(p); }, params()) << " in ";
     expr()->print(p) << ' ';
-    return fn().body()->print(p);
+    return body()->print(p);
 }
 
 /*

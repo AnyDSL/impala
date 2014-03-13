@@ -309,18 +309,27 @@ void PostfixExpr::check(NameSema& sema) const { lhs()->check(sema); }
 
 void FieldExpr::check(NameSema& sema) const {
     lhs()->check(sema);
+    path_item()->check(sema);
 }
 
 void CastExpr::check(NameSema& sema) const {
+    lhs()->check(sema);
+    ast_type()->check(sema);
 }
 
 void DefiniteArrayExpr::check(NameSema& sema) const {
+    for (auto elem : elems())
+        elem->check(sema);
 }
 
 void RepeatedDefiniteArrayExpr::check(NameSema& sema) const {
+    value()->check(sema);
+    count()->check(sema);
 }
 
 void IndefiniteArrayExpr::check(NameSema& sema) const {
+    size()->check(sema);
+    elem_type()->check(sema);
 }
 
 void TupleExpr::check(NameSema& sema) const {
@@ -329,6 +338,11 @@ void TupleExpr::check(NameSema& sema) const {
 }
 
 void StructExpr::check(NameSema& sema) const {
+    path()->check(sema);
+    for (const auto& elem : elems()) {
+        elem.expr()->check(sema);
+        // TODO lookup elem.symbol()
+    }
 }
 
 void MapExpr::check(NameSema& sema) const {
@@ -344,6 +358,8 @@ void IfExpr::check(NameSema& sema) const {
 }
 
 void ForExpr::check(NameSema& sema) const {
+    expr()->check(sema);
+    fn_check(sema);
 }
 
 //------------------------------------------------------------------------------
