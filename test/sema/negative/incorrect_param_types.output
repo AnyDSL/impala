@@ -1,0 +1,3 @@
+incorrect_param_types.impala:1 col 9 - 11: error: expected type, got 'for'
+incorrect_param_types.impala:1 col 19: error: 'k' not found in current scope
+incorrect_param_types.impala:1 col 29 - 3 col 1: error: wrong return type; expected int but found tuple()
