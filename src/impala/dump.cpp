@@ -350,7 +350,10 @@ std::ostream& PostfixExpr::print(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& FieldExpr::print(Printer& p) const { return lhs()->print(p) << '.' << symbol(); }
+std::ostream& FieldExpr::print(Printer& p) const { 
+    lhs()->print(p) << '.'; 
+    return path_item()->print(p); 
+}
 
 std::ostream& CastExpr::print(Printer& p) const { 
     lhs()->print(p) << " as ";

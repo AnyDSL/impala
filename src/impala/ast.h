@@ -835,7 +835,7 @@ private:
 class FieldExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
-    Symbol symbol() const { return symbol_; }
+    const PathItem* path_item() const { return path_item_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return true; }
     virtual void check(NameSema&) const;
@@ -844,7 +844,7 @@ private:
     virtual Type check(TypeSema&) const;
 
     AutoPtr<const Expr> lhs_;
-    Symbol symbol_;
+    AutoPtr<const PathItem> path_item_;
 
     friend class Parser;
 };

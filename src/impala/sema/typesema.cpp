@@ -521,7 +521,7 @@ Type FieldExpr::check(TypeSema& sema) const {
     // FEATURE maybe store a hash map of methods in the type to make this fast!
     sema.check_impls();
     for (Trait t : lhs()->type()->trait_impls()) {
-        Type fn = t->find_method(symbol());
+        Type fn = t->find_method(path_item()->symbol());
         if (!fn.empty()) {
             FnType func = fn.as<FnType>();
 
@@ -535,7 +535,7 @@ Type FieldExpr::check(TypeSema& sema) const {
         }
     }
 
-    sema.error(this) << "no declaration for method '" << symbol() << "' found.\n";
+    sema.error(this) << "no declaration for method '" << path_item() << "' found.\n";
     return sema.type_error();
 }
 
