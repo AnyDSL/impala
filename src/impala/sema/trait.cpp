@@ -73,7 +73,7 @@ Type TraitInstanceNode::find_method(Symbol name) {
             return fn;
         } else {
             SpecializeMapping m = var_instances();
-            Type t = fn->instantiate(m);
+            Type t = fn->specialize(m);
             typetable().unify(t);
             return all_methods_[name] = t;
         }
@@ -94,7 +94,7 @@ const UniSet<Trait>& TraitInstanceNode::super_traits() {
         // specialize super traits
         for (Trait super : trait()->super_traits()) {
             SpecializeMapping m = this->var_instances();
-            Trait super_inst = super->instantiate(m);
+            Trait super_inst = super->specialize(m);
             //typetable().unify(super_inst);
             auto p = super_traits_.insert(super_inst);
             assert(p.second && "Hash/Equal broken");
