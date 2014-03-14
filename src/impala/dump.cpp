@@ -19,7 +19,7 @@ void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; 
  * paths
  */
 
-std::ostream& PathItem::print(Printer& p) const { 
+std::ostream& PathElem::print(Printer& p) const { 
     p.stream() << symbol();
     if (!args().empty())
         p.dump_list([&] (const ASTType* type) { type->print(p); }, args(), "[", "]");
@@ -29,7 +29,7 @@ std::ostream& PathItem::print(Printer& p) const {
 
 std::ostream& Path::print(Printer& p) const {
     p.stream() << (is_global() ? "::" : "");
-    return p.dump_list([&] (const PathItem* path_item) { path_item->print(p); }, path_items(), "", "", "::");
+    return p.dump_list([&] (const PathElem* path_elem) { path_elem->print(p); }, path_elems(), "", "", "::");
 }
 
 /*
@@ -352,7 +352,7 @@ std::ostream& PostfixExpr::print(Printer& p) const {
 
 std::ostream& FieldExpr::print(Printer& p) const { 
     lhs()->print(p) << '.'; 
-    return path_item()->print(p); 
+    return path_elem()->print(p); 
 }
 
 std::ostream& CastExpr::print(Printer& p) const { 

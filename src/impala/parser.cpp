@@ -154,7 +154,7 @@ public:
 
     // paths
     const Path* parse_path();
-    const PathItem* parse_path_item();
+    const PathElem* parse_path_elem();
 
     // parameters
     void parse_type_params(AutoVector<const TypeParam*>&);
@@ -314,20 +314,20 @@ Visibility Parser::parse_visibility() {
  * paths
  */
 
-const PathItem* Parser::parse_path_item() {
-    auto path_item = loc(new PathItem());
-    path_item->symbol_ = try_id("path");
+const PathElem* Parser::parse_path_elem() {
+    auto path_elem = loc(new PathElem());
+    path_elem->symbol_ = try_id("path");
     if (accept(Token::L_BRACKET))
-        parse_comma_list(Token::R_BRACKET, "type list", [&] { path_item->args_.push_back(parse_type()); });
+        parse_comma_list(Token::R_BRACKET, "type list", [&] { path_elem->args_.push_back(parse_type()); });
 
-    return path_item;
+    return path_elem;
 }
 
 const Path* Parser::parse_path() {
     auto path = loc(new Path());
     path->is_global_ = accept(Token::DOUBLE_COLON);
     do { 
-        path->path_items_.push_back(parse_path_item());
+        path->path_elems_.push_back(parse_path_elem());
     } while (accept(Token::DOUBLE_COLON));
     return path;
 }
@@ -811,7 +811,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
         case Token::DOT: {
             auto expr = new FieldExpr();
             expr->lhs_ = lhs;
-            expr->path_item_ = parse_path_item();
+            expr->path_elem_ = parse_path_elem();
             expr->set_loc(lhs->pos1(), prev_loc().pos2());
             return expr;
         }

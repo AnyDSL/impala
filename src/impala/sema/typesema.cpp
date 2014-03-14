@@ -465,14 +465,14 @@ Type FnExpr::check(TypeSema& sema) const {
 
 Type PathExpr::check(TypeSema& sema) const {
     // FEATURE consider longer paths
-    const PathItem* last_item = path()->path_items().back();
+    auto* last = path()->path_elems().back();
     if (value_decl()) {
         Type dec_type = sema.check(value_decl());
-        if (last_item->args().empty()) {
+        if (last->args().empty()) {
             return dec_type;
         } else {
             if (dec_type != sema.type_error())
-                return sema.instantiate(last_item, dec_type, last_item->args());
+                return sema.instantiate(last, dec_type, last->args());
         }
     }
     return sema.type_error();
@@ -523,12 +523,12 @@ Type FieldExpr::check(TypeSema& sema) const {
     // FEATURE maybe store a hash map of methods in the type to make this fast!
     sema.check_impls();
     for (Trait t : lhs()->type()->trait_impls()) {
-        Type fn = t->find_method(path_item()->symbol());
+        Type fn = t->find_method(path_elem()->symbol());
         if (!fn.empty()) {
             if (fn != sema.type_error()) {
                 FnType func;
-                if (!path_item()->args().empty()) {
-                    Type t = sema.instantiate(path_item(), fn, path_item()->args());
+                if (!path_elem()->args().empty()) {
+                    Type t = sema.instantiate(path_elem(), fn, path_elem()->args());
                     sema.unify(t);
                     func = t.as<FnType>();
                 } else
@@ -545,7 +545,7 @@ Type FieldExpr::check(TypeSema& sema) const {
         }
     }
 
-    sema.error(this) << "no declaration for method '" << path_item() << "' found.\n";
+    sema.error(this) << "no declaration for method '" << path_elem() << "' found.\n";
     return sema.type_error();
 }
 

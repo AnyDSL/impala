@@ -283,15 +283,15 @@ void BlockExpr::check(NameSema& sema) const {
 void LiteralExpr::check(NameSema& sema) const {} 
 void FnExpr::check(NameSema& sema) const { fn_check(sema); }
 
-void PathItem::check(NameSema& sema) const {
+void PathElem::check(NameSema& sema) const {
     decl_ = sema.lookup(symbol());
     for (auto arg : args())
         arg->check(sema);
 }
 
 void Path::check(NameSema& sema) const {
-    for (auto path_item : path_items())
-        path_item->check(sema);
+    for (auto path_elem : path_elems())
+        path_elem->check(sema);
 }
 
 void PathExpr::check(NameSema& sema) const {
@@ -309,7 +309,7 @@ void PostfixExpr::check(NameSema& sema) const { lhs()->check(sema); }
 
 void FieldExpr::check(NameSema& sema) const {
     lhs()->check(sema);
-    path_item()->check(sema);
+    path_elem()->check(sema);
 }
 
 void CastExpr::check(NameSema& sema) const {

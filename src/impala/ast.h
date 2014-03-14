@@ -97,7 +97,7 @@ public:
  * paths
  */
 
-class PathItem : public ASTNode {
+class PathElem : public ASTNode {
 public:
     Symbol symbol() const { return symbol_; }
     const ASTTypes& args() const { return args_; }
@@ -113,19 +113,19 @@ private:
     friend class Parser;
 };
 
-typedef AutoVector<const PathItem*> PathItems;
+typedef AutoVector<const PathElem*> PathElems;
 
 class Path : public ASTNode {
 public:
     bool is_global() const { return is_global_; }
-    const PathItems& path_items() const { return path_items_; }
+    const PathElems& path_elems() const { return path_elems_; }
     virtual std::ostream& print(Printer&) const;
     void check(NameSema&) const;
-    SafePtr<const Decl> decl() const { return path_items_.back()->decl(); }
+    SafePtr<const Decl> decl() const { return path_elems_.back()->decl(); }
 
 private:
     bool is_global_;
-    PathItems path_items_;
+    PathElems path_elems_;
 
     friend class Parser;
 };
@@ -835,7 +835,7 @@ private:
 class FieldExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
-    const PathItem* path_item() const { return path_item_; }
+    const PathElem* path_elem() const { return path_elem_; }
     virtual std::ostream& print(Printer&) const;
     virtual bool is_lvalue() const { return true; }
     virtual void check(NameSema&) const;
@@ -844,7 +844,7 @@ private:
     virtual Type check(TypeSema&) const;
 
     AutoPtr<const Expr> lhs_;
-    AutoPtr<const PathItem> path_item_;
+    AutoPtr<const PathElem> path_elem_;
 
     friend class Parser;
 };
