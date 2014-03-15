@@ -300,7 +300,8 @@ void PathExpr::check(NameSema& sema) const {
         value_decl_ = path()->decl()->isa<ValueDecl>();
         if (!value_decl_)
             sema.error(this) << '\'' << path() << "' is not a value\n";
-    }
+    } else
+        sema.error(this) << '\'' << this << "' not found in current scope\n";
 }
 
 void PrefixExpr::check(NameSema& sema) const  {                     rhs()->check(sema); }
