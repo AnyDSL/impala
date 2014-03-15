@@ -1,0 +1,7 @@
+fn f[A](a: fn() -> A, g: fn[B](B, A) -> B) -> int32 {
+    g(4, a)
+}
+
+fn main() -> () {
+    f(|| { true }, |b, a| { b })
+}

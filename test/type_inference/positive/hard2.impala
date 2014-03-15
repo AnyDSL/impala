@@ -1,0 +1,25 @@
+trait T[B] {
+    fn conv(self: Self) -> B;
+}
+
+// implementation is possible!
+struct S[C] {
+    C val
+}
+impl[D] T[D] for S[D] {
+    fn conv(self: S[D]) -> D { self.val }
+}
+
+// problems for type inference
+fn g[E, F: T[E]](f: F) -> E {
+    f.conv()
+}
+
+fn main() -> bool {
+   let x : S[bool] = { val: true };
+   g(x)
+}
+
+
+
+
