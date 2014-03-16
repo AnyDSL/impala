@@ -12,11 +12,9 @@ class NameSema : public ErrorHandler {
 public:
     /** 
      * @brief Looks up the current definition of \p symbol.
+     * Reports an error at location of \p n if was \p symbol was not found.
      * @return Returns nullptr on failure.
      */
-    const Decl* lookup(Symbol symbol) const;
-
-    /// Lookups \p symbol and reports an error at location of \p n if was not found
     const Decl* lookup(const ASTNode* n, Symbol);
 
     /** 
@@ -59,14 +57,9 @@ private:
 
 //------------------------------------------------------------------------------
 
-const Decl* NameSema::lookup(Symbol symbol) const {
-    assert(symbol && "symbol is empty");
-    auto i = symbol2decl_.find(symbol);
-    return i != symbol2decl_.end() ? i->second : nullptr;
-}
-
 const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
-    auto decl = lookup(symbol);
+    assert(symbol && "symbol is empty");
+    auto decl = thorin::find(symbol2decl_, symbol);
     if (decl == nullptr)
         error(n) << '\'' << symbol << "' not found in current scope\n";
     return decl;
@@ -122,8 +115,9 @@ void TypeParam::check(NameSema& sema) const {
 void TypeParamList::check_type_params(NameSema& sema) const {
     // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
     // first insert names
-    for (const TypeParam* tp : type_params())
+    for (const TypeParam* tp : type_params()) {
         sema.insert(tp);
+    }
 
     // then check bounds
     for (const TypeParam* tp : type_params())
