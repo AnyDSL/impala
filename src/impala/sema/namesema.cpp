@@ -284,7 +284,7 @@ void LiteralExpr::check(NameSema& sema) const {}
 void FnExpr::check(NameSema& sema) const { fn_check(sema); }
 
 void PathElem::check(NameSema& sema) const {
-    decl_ = sema.lookup(symbol());
+    decl_ = sema.lookup(this, symbol());
     for (auto arg : args())
         arg->check(sema);
 }
@@ -300,8 +300,7 @@ void PathExpr::check(NameSema& sema) const {
         value_decl_ = path()->decl()->isa<ValueDecl>();
         if (!value_decl_)
             sema.error(this) << '\'' << path() << "' is not a value\n";
-    } else
-        sema.error(this) << '\'' << this << "' not found in current scope\n";
+    }
 }
 
 void PrefixExpr::check(NameSema& sema) const  {                     rhs()->check(sema); }
@@ -310,7 +309,9 @@ void PostfixExpr::check(NameSema& sema) const { lhs()->check(sema); }
 
 void FieldExpr::check(NameSema& sema) const {
     lhs()->check(sema);
-    path_elem()->check(sema);
+    // don't check symbol here as it depends on lhs' type - must be done in TypeSema
+    for (auto arg : path_elem()->args())
+        arg->check(sema);
 }
 
 void CastExpr::check(NameSema& sema) const {
