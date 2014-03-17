@@ -623,7 +623,8 @@ Type ForExpr::check(TypeSema& sema) const {
  */
 
 void ExprStmt::check(TypeSema& sema) const {
-    sema.check(expr());
+    if (sema.check(expr()) == sema.type_noreturn())
+        sema.error(expr()) << "expression does not return rendering subsequent statements unreachable\n";
 }
 
 void ItemStmt::check(TypeSema& sema) const {
