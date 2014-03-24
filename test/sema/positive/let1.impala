@@ -1,0 +1,4 @@
+fn f() -> int32 {
+   let x:int32 = 4;
+   x
+}
