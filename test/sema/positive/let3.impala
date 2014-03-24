@@ -1,0 +1,9 @@
+trait Foo {
+    fn bar(self: Self) -> ();
+}
+
+fn f[A: Foo](a: A) -> () {
+    a.bar();
+    let x:A = a;
+    x.bar();
+}

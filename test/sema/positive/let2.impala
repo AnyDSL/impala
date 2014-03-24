@@ -1,4 +1,4 @@
 fn f[A](a: A) -> A {
-   let x:A = a;
-   x
+    let x:A = a;
+    x
 }

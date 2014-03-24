@@ -3,5 +3,5 @@ trait T[B] {
 }
 
 fn f[C: T[C]](c: C) -> C {
-   c.conv().conv()
+    c.conv().conv()
 }
