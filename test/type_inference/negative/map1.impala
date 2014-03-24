@@ -1,9 +1,9 @@
 struct ListElem[A] {
     val: A,
-    next: ListElem[A]&
+    next: ~ListElem[A]
 }
 
-fn map[B, C](f: fn(B)->C, l: ListElem[B]&) -> ListElem[C]& {
+fn map[B, C](f: fn(B)->C, l: &ListElem[B]) -> &ListElem[C] {
     if (l == null) {
         null
     } else {
