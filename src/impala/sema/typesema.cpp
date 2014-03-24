@@ -497,15 +497,24 @@ Type LiteralExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type FnExpr::check(TypeSema& sema, Type expected) const {
-    // TODO use expected type!
     assert(type_params().empty());
 
-    std::vector<Type> types;
-    for (auto param : params())
-        types.push_back(sema.check(param));
+    std::vector<Type> par_types;
+    if (FnType exp_fn = expected.isa<FnType>()) {
+        if (exp_fn->size() != params().size())
+            sema.error(this) << "expected function with " << exp_fn->size() << " parameters, but found lambda expression with " << params().size() << " parameters.\n";
+
+        size_t i = 0;
+        for (auto param : params())
+            // TODO par_types.push_back(sema.check(param, exp_fn->elem(i++)));
+            par_types.push_back(sema.check(param));
+    } else {
+        for (auto param : params())
+            par_types.push_back(sema.check(param));
+    }
 
     // create FnType
-    Type fn_type = sema.fntype(types);
+    Type fn_type = sema.fntype(par_types);
     sema.unify(fn_type);
 
     assert(body() != nullptr);
@@ -631,7 +640,7 @@ Type TupleExpr::check(TypeSema& sema, Type expected) const {
 
         size_t i = 0;
         for (auto e : elems()) {
-            sema.check(e, exp_tup->elem(i));
+            sema.check(e, exp_tup->elem(i++));
             types.push_back(e->type());
         }
     } else {
