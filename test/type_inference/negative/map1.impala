@@ -1,0 +1,16 @@
+struct ListElem[A] {
+    val: A,
+    next: ListElem[A]&
+}
+
+fn map[B, C](f: fn(B)->C, l: ListElem[B]&) -> ListElem[C]& {
+    if (l == null) {
+        null
+    } else {
+        ListElem[C] { val: f(l.val), next: map(f, l.next) }
+    }
+}
+
+fn main() -> () {
+    map(|x| x, null);
+}

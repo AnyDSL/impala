@@ -1,0 +1,18 @@
+struct ListElem[A] {
+    val: A,
+    next: ListElem[A]&
+}
+
+fn map[B, C](f: fn(B)->C, l: ListElem[B]&) -> ListElem[C]& {
+    if (l == null) {
+        null
+    } else {
+        ListElem[C] { val: f(l.val), next: map(f, l.next) }
+    }
+}
+
+fn main() -> ListElem[int32]& {
+    let l1: ListElem[int32] = ListElem[int32] { val: 2,	next: null };
+    let l2: ListElem[int32] = ListElem[int32] { val: 2, next: l1 };
+    map(|x| x+1, l2)
+}

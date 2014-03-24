@@ -6,7 +6,10 @@ tests.py for semantic analysis tests
 from infrastructure.tests import InvokeTest, make_tests
 import os
 
-optionals = []
+optionals = ["type_inference/positive/map.impala",
+    "type_inference/negative/map1.impala",
+    "type_inference/negative/map2.impala"
+]
 
 def allTests():
     """

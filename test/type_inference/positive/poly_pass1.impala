@@ -1,0 +1,9 @@
+fn id[A](a: A) -> A { a }
+
+fn f(g: fn(int32)->int32) -> int32 {
+    g(4)
+}
+
+fn main() -> int32 {
+    f(id)
+}
