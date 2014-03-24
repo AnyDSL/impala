@@ -1,9 +1,4 @@
-trait Foo {
-    fn bar(self: Self) -> ();
-}
-
-fn f[A: Foo](a: A) -> () {
-    a.bar();
+fn f[A](a: A) -> A {
     let x:A = a;
-    x.bar();
+    x
 }
