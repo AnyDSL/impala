@@ -67,7 +67,7 @@ public:
         assert(node_ != nullptr); return Proxy<typename U::BaseType>(node_->as<typename U::BaseType>()); 
     }
     operator bool() { return !empty(); }
-    Proxy<T>& operator= (Proxy<T> other) { assert(node_ == nullptr); node_ = *other; return *this; }
+    Proxy<T>& operator= (Proxy<T> other) { /* assert(node_ == nullptr); CHECK do we need this? */ node_ = *other; return *this; }
     void clear() { node_ = nullptr; }
 
 private:

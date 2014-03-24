@@ -4,6 +4,14 @@
 
 namespace impala {
 
+struct InstantiationHash {
+    size_t operator () (const TypeVar t) const { return t->hash(); }
+};
+struct InstantiationEqual {
+    bool operator () (TypeVar t1, TypeVar t2) const { return (t1->is_unified() && t2->is_unified()) ? t1.as<Type>() == t2.as<Type>() : t1->equal(*t2); }
+};
+typedef thorin::HashMap<TypeVar, Type, InstantiationHash, InstantiationEqual> InstantiationMapping;
+
 //------------------------------------------------------------------------------
 
 class TypeSema : public TypeTable {
@@ -34,6 +42,16 @@ public:
         }
     }
 
+    void add_inst_var(TypeVar v) {
+        assert(!insts_.contains(v));
+        insts_[v] = v;
+    }
+    void remove_inst_var(TypeVar v) {
+        assert(insts_.contains(v));
+        insts_.erase(v);
+    }
+
+
     template<class T> void check_bounds(T generic, thorin::ArrayRef<Type> inst_types, thorin::ArrayRef<const ASTType*> var_instances, SpecializeMapping& mapping);
     Type instantiate(const ASTNode* loc, Type trait, thorin::ArrayRef<const ASTType*> var_instances);
     Trait instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
@@ -56,12 +74,43 @@ public:
     Type check(const TypeDeclItem* type_decl_item) { return check((const TypeDecl*) type_decl_item); }
     Type check(const ValueItem* value_item) { return check((const TypeDecl*) value_item); }
     void check(const MiscItem* misc_item) { misc_item->check(*this); }
-    Type check(const Expr* expr) { return expr->type_ = expr->check(*this); }
+    Type check(const Expr* expr, Type expected, std::string typetype) {
+        if (!expr->type_.empty())
+            return expr->type_;
+
+        if (auto tv = expected.isa<TypeVar>()) {
+            auto it = insts_.find(tv);
+            if (it != insts_.end()) {
+                expr->type_ = expr->check(*this, it->second);
+                if (!expr->type_.empty()) {
+                    // if this variable has no instantiation yet instantiate it
+                    if (*tv == *(it->second)) {
+                        insts_[tv] = expr->type_;
+                    } else
+                        expect_type(expr, it->second, typetype);
+                }
+                return it->second;
+            }
+        }
+        expr->type_ = expr->check(*this, expected);
+        expect_type(expr, expected, typetype);
+        return expected;
+    }
+    Type check(const Expr* expr, Type expected) { return check(expr, expected, ""); }
+    /// a check that does not expect any type (i.e. any type is allowed)
+    Type check(const Expr* expr) {
+        TypeVar v = typevar();
+        add_inst_var(v);
+        Type t = check(expr, v);
+        remove_inst_var(v);
+        return t;
+    }
     Type check(const ASTType* ast_type) { return ast_type->type_ = ast_type->check(*this); }
 
 private:
     bool nossa_;
     std::vector<const Impl*> impls_;
+    InstantiationMapping insts_;
 };
 
 //------------------------------------------------------------------------------
@@ -432,21 +481,23 @@ void Impl::check(TypeSema& sema) const {
  * Expr::check
  */
 
-Type EmptyExpr::check(TypeSema& sema) const { return sema.unit(); }
+Type EmptyExpr::check(TypeSema& sema, Type) const { return sema.unit(); }
 
-Type BlockExpr::check(TypeSema& sema) const {
+Type BlockExpr::check(TypeSema& sema, Type expected) const {
     for (auto stmt : stmts())
         stmt->check(sema);
 
-    sema.check(expr());
+    sema.check(expr(), expected);
     return expr() ? expr()->type() : Type(sema.unit());
 }
 
-Type LiteralExpr::check(TypeSema& sema) const {
+Type LiteralExpr::check(TypeSema& sema, Type expected) const {
+    // FEATURE we could enhance this using the expected type (e.g. 4 could be interpreted as int8 if needed)
     return sema.primtype(literal2type());
 }
 
-Type FnExpr::check(TypeSema& sema) const {
+Type FnExpr::check(TypeSema& sema, Type expected) const {
+    // TODO use expected type!
     assert(type_params().empty());
 
     std::vector<Type> types;
@@ -463,7 +514,7 @@ Type FnExpr::check(TypeSema& sema) const {
     return fn_type;
 }
 
-Type PathExpr::check(TypeSema& sema) const {
+Type PathExpr::check(TypeSema& sema, Type expected) const {
     // FEATURE consider longer paths
     auto* last = path()->path_elems().back();
     if (value_decl()) {
@@ -478,24 +529,27 @@ Type PathExpr::check(TypeSema& sema) const {
     return sema.type_error();
 }
 
-Type PrefixExpr::check(TypeSema& sema) const {
-    return sema.check(rhs());
+Type PrefixExpr::check(TypeSema& sema, Type expected) const {
+    return sema.check(rhs(), expected); // TODO check if operator supports the type
 }
 
-Type InfixExpr::check(TypeSema& sema) const {
-    auto lhstype = sema.check(lhs());
-    auto rhstype = sema.check(rhs());
-
+Type InfixExpr::check(TypeSema& sema, Type expected) const {
+    Type lhstype;
+    Type rhstype;
     // FEATURE other cases
     switch (kind()) {
         case EQ:
         case NE:
+            lhstype = sema.check(lhs());
+            rhstype = sema.check(rhs());
             sema.match_types(this, lhstype, rhstype);
             return sema.type_bool();
         case LT:
         case LE:
         case GT:
         case GE:
+            lhstype = sema.check(lhs());
+            rhstype = sema.check(rhs());
             sema.expect_num(lhs());
             sema.match_types(this, lhstype, rhstype);
             return sema.type_bool();
@@ -504,19 +558,23 @@ Type InfixExpr::check(TypeSema& sema) const {
         case MUL:
         case DIV:
         case REM:
+            lhstype = sema.check(lhs(), expected);
+            rhstype = sema.check(rhs(), expected);
             sema.expect_num(lhs());
-            return sema.match_types(this, lhstype, rhstype);
+            return lhstype;
         case ASGN:
-            return sema.unit();
+            lhstype = sema.check(lhs(), expected);
+            rhstype = sema.check(rhs(), expected);
+            return lhstype;
         default: THORIN_UNREACHABLE;
     }
 }
 
-Type PostfixExpr::check(TypeSema& sema) const {
-    return sema.check(lhs());
+Type PostfixExpr::check(TypeSema& sema, Type expected) const {
+    return sema.check(lhs(), expected); // TODO check if operator supports the type
 }
 
-Type FieldExpr::check(TypeSema& sema) const {
+Type FieldExpr::check(TypeSema& sema, Type expected) const {
     sema.check(lhs());
 
     // FEATURE struct types
@@ -549,43 +607,53 @@ Type FieldExpr::check(TypeSema& sema) const {
     return sema.type_error();
 }
 
-Type CastExpr::check(TypeSema& sema) const {
+Type CastExpr::check(TypeSema& sema, Type expected) const {
     return Type();
 }
 
-Type DefiniteArrayExpr::check(TypeSema& sema) const {
+Type DefiniteArrayExpr::check(TypeSema& sema, Type expected) const {
     return Type();
 }
 
-Type RepeatedDefiniteArrayExpr::check(TypeSema& sema) const {
+Type RepeatedDefiniteArrayExpr::check(TypeSema& sema, Type expected) const {
     return Type();
 }
 
-Type IndefiniteArrayExpr::check(TypeSema& sema) const {
+Type IndefiniteArrayExpr::check(TypeSema& sema, Type expected) const {
     return Type();
 }
 
-Type TupleExpr::check(TypeSema& sema) const {
+Type TupleExpr::check(TypeSema& sema, Type expected) const {
     std::vector<Type> types;
-    for (auto e : elems()) {
-        sema.check(e);
-        types.push_back(e->type());
+    if (auto exp_tup = expected.isa<TupleType>()) {
+        if (exp_tup->size() != elems().size())
+            sema.error(this) << "expected tuple with " << exp_tup->size() << " elements, but found tuple expression with " << elems().size() << " elements.\n";
+
+        size_t i = 0;
+        for (auto e : elems()) {
+            sema.check(e, exp_tup->elem(i));
+            types.push_back(e->type());
+        }
+    } else {
+        for (auto e : elems()) {
+            sema.check(e);
+            types.push_back(e->type());
+        }
     }
     return sema.tupletype(types);
 }
 
-Type StructExpr::check(TypeSema& sema) const {
+Type StructExpr::check(TypeSema& sema, Type expected) const {
     return Type();
 }
 
-Type MapExpr::check(TypeSema& sema) const {
+Type MapExpr::check(TypeSema& sema, Type expected) const {
     Type lhst = sema.check(lhs());
     if (auto fn = lhst.isa<FnType>()) {
         bool no_cont = fn->size() == (args().size()+1); // true if this is a normal function call (no continuation)
         if (no_cont || (fn->size() == args().size())) {
             for (size_t i = 0; i < args().size(); ++i) {
-                sema.check(arg(i));
-                sema.expect_type(arg(i), fn->elem(i), "argument");
+                sema.check(arg(i), fn->elem(i), "argument");
             }
 
             if (no_cont) // return type
@@ -602,17 +670,16 @@ Type MapExpr::check(TypeSema& sema) const {
     return sema.type_error();
 }
 
-Type IfExpr::check(TypeSema& sema) const {
-    sema.check(cond());
-    sema.expect_type(cond(), sema.type_bool(), "condition");
-    sema.check(then_expr());
-    sema.check(else_expr());
-
-    // assert that both branches have the same type and set the type
-    return sema.match_types(this, then_expr()->type(), else_expr()->type());
+Type IfExpr::check(TypeSema& sema, Type expected) const {
+    sema.check(cond(), sema.type_bool(), "condition");
+    Type then_type = sema.check(then_expr(), expected);
+    Type else_type = sema.check(else_expr(), expected);
+    if (then_type == sema.type_error() || else_type == sema.type_error())
+        return sema.type_error();
+    return then_type;
 }
 
-Type ForExpr::check(TypeSema& sema) const {
+Type ForExpr::check(TypeSema& sema, Type expected) const {
     return sema.unit();
 }
 
@@ -632,9 +699,9 @@ void ItemStmt::check(TypeSema& sema) const {
 }
 
 void LetStmt::check(TypeSema& sema) const {
+    Type expected = sema.check(local());
     if (init())
-        sema.check(init());
-    sema.check(local());
+        sema.check(init(), expected);
 }
 
 //------------------------------------------------------------------------------

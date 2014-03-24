@@ -649,7 +649,7 @@ public:
     virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {}
 
 private:
-    virtual Type check(TypeSema&) const = 0;
+    virtual Type check(TypeSema&, Type) const = 0;
 
     friend class Parser;
     friend class TypeSema;
@@ -664,7 +664,7 @@ public:
     virtual void check(NameSema&) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 };
 
@@ -683,7 +683,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     AutoVector<const Stmt*> stmts_;
     AutoPtr<const Expr> expr_;
@@ -716,7 +716,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     Kind kind_;
     thorin::Box box_;
@@ -730,7 +730,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     bool has_return_type_;
 
@@ -747,7 +747,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     AutoPtr<const Path> path_;
     mutable SafePtr<const ValueDecl> value_decl_; ///< Declaration of the variable in use.
@@ -771,7 +771,7 @@ public:
     //virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     Kind kind_;
     AutoPtr<const Expr> rhs_;
@@ -796,7 +796,7 @@ public:
     //virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     Kind kind_;
     AutoPtr<const Expr> lhs_;
@@ -824,7 +824,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     Kind kind_;
     AutoPtr<const Expr> lhs_;
@@ -841,7 +841,7 @@ public:
     virtual void check(NameSema&) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     AutoPtr<const Expr> lhs_;
     AutoPtr<const PathElem> path_elem_;
@@ -858,7 +858,7 @@ public:
     virtual void check(NameSema&) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     AutoPtr<const Expr> lhs_;
     AutoPtr<const ASTType> ast_type_;
@@ -875,7 +875,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     Exprs elems_;
 
@@ -892,7 +892,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     AutoPtr<const Expr> value_;
     AutoPtr<const Expr> count_;
@@ -910,7 +910,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     AutoPtr<const Expr> size_;
     AutoPtr<const ASTType> elem_type_;
@@ -927,7 +927,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     Exprs elems_;
 
@@ -960,7 +960,7 @@ public:
     virtual void check(NameSema&) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     AutoPtr<const Path> path_;
     std::vector<Elem> elems_;
@@ -979,7 +979,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     AutoPtr<const Expr> lhs_;
     Exprs args_;
@@ -999,7 +999,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     AutoPtr<const Expr> cond_;
     AutoPtr<const Expr> then_expr_;
@@ -1017,7 +1017,7 @@ public:
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    virtual Type check(TypeSema&, Type) const;
 
     AutoPtr<const Expr> expr_;
 
