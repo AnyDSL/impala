@@ -46,14 +46,21 @@ public:
         assert(!insts_.contains(v));
         insts_[v] = v;
     }
-    void remove_inst_var(TypeVar v) {
+    Type pop_inst_var(TypeVar v) {
         assert(insts_.contains(v));
+        Type t = insts_[v];
         insts_.erase(v);
+        return t;
+    }
+    bool is_instantiated(TypeVar v) {
+        assert(insts_.contains(v));
+        return *insts_[v] != *v;
     }
 
 
-    template<class T> void check_bounds(T generic, thorin::ArrayRef<Type> inst_types, thorin::ArrayRef<const ASTType*> var_instances, SpecializeMapping& mapping);
-    Type instantiate(const ASTNode* loc, Type trait, thorin::ArrayRef<const ASTType*> var_instances);
+    template<class T> void check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping);
+    Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances);
+    Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<Type> var_instances);
     Trait instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
 
     Type check(const TypeDecl* type_decl) { 
@@ -84,7 +91,7 @@ public:
                 expr->type_ = expr->check(*this, it->second);
                 if (!expr->type_.empty()) {
                     // if this variable has no instantiation yet instantiate it
-                    if (*tv == *(it->second)) {
+                    if (!is_instantiated(tv)) {
                         insts_[tv] = expr->type_;
                     } else
                         expect_type(expr, it->second, typetype);
@@ -102,7 +109,8 @@ public:
         TypeVar v = typevar();
         add_inst_var(v);
         Type t = check(expr, v);
-        remove_inst_var(v);
+        Type t2 = pop_inst_var(v);
+        assert(t == t2);
         return t;
     }
     Type check(const ASTType* ast_type) { return ast_type->type_ = ast_type->check(*this); }
@@ -161,10 +169,9 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
     }
 }
 
-template<class T> void TypeSema::check_bounds(T generic, thorin::ArrayRef<Type> inst_types, thorin::ArrayRef<const ASTType*> var_instances, SpecializeMapping& mapping) {
-    assert(var_instances.size() == generic->num_bound_vars());
-    assert(var_instances.size() == mapping.size());
-    assert(var_instances.size() == inst_types.size());
+template<class T> void TypeSema::check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping) {
+    assert(inst_types.size() == generic->num_bound_vars());
+    assert(inst_types.size() == mapping.size());
     // check the bounds
     for (size_t i = 0; i < generic->num_bound_vars(); ++i) {
         TypeVar v = generic->bound_var(i);
@@ -180,7 +187,7 @@ template<class T> void TypeSema::check_bounds(T generic, thorin::ArrayRef<Type> 
             if (instance != type_error() && spec_bound != trait_error()) {
                 check_impls(); // first we need to check all implementations to be up-to-date
                 if (!instance->implements(spec_bound))
-                    error(var_instances[i]) << "'" << instance << "' does not implement bound '" << spec_bound << "'\n";
+                    error(loc) << "'" << instance << "' does not implement bound '" << spec_bound << "'\n";
             }
         }
     }
@@ -189,16 +196,11 @@ template<class T> void TypeSema::check_bounds(T generic, thorin::ArrayRef<Type> 
 Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances) {
     if ((var_instances.size()+1) == trait->num_bound_vars()) {
         std::vector<Type> inst_types;
-        std::vector<const ASTType*> var_instances2;
         inst_types.push_back(self);
-        var_instances2.push_back(nullptr);
-        for (auto t : var_instances) {
-            var_instances2.push_back(t);
-            inst_types.push_back(check(t));
-        }
+        for (auto t : var_instances) inst_types.push_back(check(t));
         SpecializeMapping mapping = create_spec_mapping(trait, inst_types);
 
-        check_bounds(trait, inst_types, var_instances2, mapping);
+        check_bounds(loc, trait, inst_types, mapping);
         return trait->instantiate(mapping);
     } else
         error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << (trait->num_bound_vars()-1) << "\n";
@@ -212,7 +214,7 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
         for (auto t : var_instances) inst_types.push_back(check(t));
         SpecializeMapping mapping = create_spec_mapping(type, inst_types);
 
-        check_bounds(type, inst_types, var_instances, mapping);
+        check_bounds(loc, type, inst_types, mapping);
         return type->instantiate(mapping);
     } else {
         type->dump();
@@ -220,6 +222,13 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
     }
 
     return type_error();
+}
+
+Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<Type> var_instances) {
+    assert(var_instances.size() == type->num_bound_vars());
+    SpecializeMapping mapping = create_spec_mapping(type, var_instances);
+    check_bounds(loc, type, var_instances, mapping);
+    return type->instantiate(mapping);
 }
 
 //------------------------------------------------------------------------------
@@ -504,7 +513,7 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
         if (exp_fn->size() != params().size())
             sema.error(this) << "expected function with " << exp_fn->size() << " parameters, but found lambda expression with " << params().size() << " parameters.\n";
 
-        size_t i = 0;
+        //size_t i = 0;
         for (auto param : params())
             // TODO par_types.push_back(sema.check(param, exp_fn->elem(i++)));
             par_types.push_back(sema.check(param));
@@ -659,10 +668,29 @@ Type StructExpr::check(TypeSema& sema, Type expected) const {
 Type MapExpr::check(TypeSema& sema, Type expected) const {
     Type lhst = sema.check(lhs());
     if (auto fn = lhst.isa<FnType>()) {
+        if (fn->is_generic()) {
+            for (TypeVar v : fn->bound_vars())
+                sema.add_inst_var(v);
+        }
+
         bool no_cont = fn->size() == (args().size()+1); // true if this is a normal function call (no continuation)
         if (no_cont || (fn->size() == args().size())) {
             for (size_t i = 0; i < args().size(); ++i) {
                 sema.check(arg(i), fn->elem(i), "argument");
+            }
+
+            // instantiate fn type
+            if (fn->is_generic()) {
+                std::vector<Type> type_args;
+                for (TypeVar v : fn->bound_vars()) {
+                    if (sema.is_instantiated(v))
+                        type_args.push_back(sema.pop_inst_var(v));
+                }
+                if (type_args.size() == fn->num_bound_vars()) {
+                    // TODO where should be set this new type? should we set it at all?
+                    fn = sema.instantiate(this, fn, type_args).as<FnType>();
+                } else
+                    sema.error(this) << "could not find instances for all type variables";
             }
 
             if (no_cont) // return type

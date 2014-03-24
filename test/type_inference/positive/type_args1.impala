@@ -1,0 +1,6 @@
+fn id[A](a: A) -> A {
+    a
+}
+fn main() -> int32 {
+    id(4)
+}
