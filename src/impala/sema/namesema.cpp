@@ -374,7 +374,11 @@ void LetStmt::check(NameSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-void ValueDecl::check(NameSema& sema) const { sema.insert(this); }
+void ValueDecl::check(NameSema& sema) const {
+    if (ast_type())
+        ast_type()->check(sema);
+    sema.insert(this);
+}
 
 //------------------------------------------------------------------------------
 
