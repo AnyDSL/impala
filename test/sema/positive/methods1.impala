@@ -1,6 +1,6 @@
 trait T {
-   fn f(self: Self) -> int32;
+    fn f(self: Self) -> int32;
 }
 fn g[A:T](x: A) -> int32 {
-   x.f()
+    x.f()
 }
