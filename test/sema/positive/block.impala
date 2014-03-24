@@ -1,7 +1,7 @@
-fn main(i: int) -> int {
-    let j: int = 0;
+fn main(i: int32) -> int32 {
+    let j: int32 = 0;
     {
-        let j: int = 0;
+        let j: int32 = 0;
         { /* test a stmt-like block-expr for parsing */ }
         j
     }
