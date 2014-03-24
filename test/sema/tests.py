@@ -7,7 +7,8 @@ from infrastructure.tests import InvokeTest, make_tests
 import os
 
 optionals = ["sema/positive/int_is_int32.impala",
-    "sema/positive/subtyping1.impala"]
+    "sema/positive/subtyping1.impala",
+    "sema/positive/map.impala"]
 
 def allTests():
     """
