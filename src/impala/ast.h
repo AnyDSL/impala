@@ -649,8 +649,13 @@ public:
     virtual thorin::RefPtr emit(CodeGen& cg) const { /*= 0*/ return 0; }
     virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {}
 
+    void add_inferred_arg(Type t) const { inferred_args_.push_back(t); }
+    const thorin::ArrayRef<Type> inferred_args() const { return inferred_args_; }
+
 private:
     virtual Type check(TypeSema&, Type) const = 0;
+
+    mutable std::vector<Type> inferred_args_;
 
     friend class Parser;
     friend class TypeSema;

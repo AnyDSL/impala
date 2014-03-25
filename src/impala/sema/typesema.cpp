@@ -691,14 +691,13 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
 
             // instantiate fn type
             if (fn->is_generic()) {
-                std::vector<Type> type_args;
                 for (TypeVar v : fn->bound_vars()) {
                     if (sema.is_instantiated(v))
-                        type_args.push_back(sema.pop_inst_var(v));
+                        lhs()->add_inferred_arg(sema.pop_inst_var(v));
                 }
-                if (type_args.size() == fn->num_bound_vars()) {
+                if (lhs()->inferred_args().size() == fn->num_bound_vars()) {
                     // TODO where should be set this new type? should we set it at all?
-                    fn = sema.instantiate(this, fn, type_args).as<FnType>();
+                    fn = sema.instantiate(this, fn, lhs()->inferred_args()).as<FnType>();
                 } else
                     sema.error(this) << "could not find instances for all type variables";
             }
