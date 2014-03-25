@@ -8,7 +8,8 @@ import os
 
 optionals = ["type_inference/positive/map.impala",
     "type_inference/negative/map1.impala",
-    "type_inference/negative/map2.impala"
+    "type_inference/negative/map2.impala",
+    "type_inference/positive/hard2.impala"
 ]
 
 def allTests():
