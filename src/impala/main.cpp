@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
         if (emit_ast)
             impala::dump(prg, fancy);
 
-        result &= check(prg, nossa);
+        result &= check(init, prg, nossa);
         //result &= result ? emit(init.world, prg) : false;
 
         if (result) {

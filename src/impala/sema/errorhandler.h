@@ -13,6 +13,7 @@ public:
     ErrorHandler()
         : result_(true)
     {}
+    virtual ~ErrorHandler() {}
 
     bool result() const { return result_; }   ///< Has an error occurred?
     std::ostream& error(const ASTNode* n);    ///< Emit an error while using \p n as \p Location.

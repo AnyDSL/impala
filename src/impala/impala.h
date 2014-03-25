@@ -6,6 +6,8 @@
 
 #include "thorin/world.h"
 
+#include "impala/sema/typetable.h"
+
 namespace thorin {
     class World;
 }
@@ -26,12 +28,13 @@ struct Init {
     ~Init() { destroy(); }
 
     thorin::World world;
+    thorin::AutoPtr<TypeTable> typetable;
 };
 
 const ModContents* parse(bool& result, std::istream&, const std::string&);
 bool name_analysis(const ModContents* mod);
-bool type_analysis(const ModContents* mod, bool nossa);
-bool check(const ModContents* mod, bool nossa);
+bool type_analysis(Init&, const ModContents*, bool nossa);
+bool check(Init&, const ModContents* mod, bool nossa);
 bool emit(thorin::World&, const ModContents*);
 
 }
