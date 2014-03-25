@@ -1,5 +1,6 @@
 #include "impala/ast.h"
 #include "impala/dump.h"
+#include "impala/impala.h"
 #include "impala/sema/typetable.h"
 
 namespace impala {
@@ -752,15 +753,16 @@ void LetStmt::check(TypeSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-//------------------------------------------------------------------------------
-
-bool type_analysis(const ModContents* mod, bool nossa) {
-    TypeSema sema(nossa);
-    mod->check(sema);
+bool type_analysis(Init& init, const ModContents* mod, bool nossa) {
+    auto sema = new TypeSema(nossa);
+    init.typetable = sema;
+    mod->check(*sema);
 #ifndef NDEBUG
-    sema.verify();
+    sema->verify();
 #endif
-    return sema.result();
+    return sema->result();
 }
+
+//------------------------------------------------------------------------------
 
 }
