@@ -330,7 +330,8 @@ public:
     virtual void check(NameSema&) const;
 
 private:
-    virtual Type check(TypeSema&) const;
+    Type check(TypeSema&, Type) const;
+    virtual Type check(TypeSema& sema) const { return check(sema, Type()); }
 
 protected:
     AutoPtr<const ASTType> ast_type_;

@@ -63,12 +63,19 @@ public:
     Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<Type> var_instances);
     Trait instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
 
-    Type check(const TypeDecl* type_decl) { 
+    Type check(const TypeDecl* type_decl) {
         if (!type_decl->checked_) { 
             type_decl->checked_ = true; 
-            type_decl->type_ = type_decl->check(*this); 
+            type_decl->type_ = type_decl->check(*this);
         }
         return type_decl->type();
+    }
+    Type check(const ValueDecl* decl, Type expected) {
+        if (!decl->checked_) {
+            decl->checked_ = true;
+            decl->type_ = decl->check(*this, expected);
+        }
+        return decl->type();
     }
     void check(const Item* item) { 
         if (auto type_decl_item = item->isa<TypeDeclItem>())
@@ -321,8 +328,12 @@ Trait ASTTypeApp::to_trait(TypeSema& sema, Type self) const {
 
 //------------------------------------------------------------------------------
 
-Type ValueDecl::check(TypeSema& sema) const { 
-    return sema.check(ast_type());
+Type ValueDecl::check(TypeSema& sema, Type expected) const {
+    if (ast_type()) {
+        return sema.check(ast_type());
+    } else {
+        return expected;
+    }
 }
 
 Trait TraitDecl::to_trait(TypeSema& sema) const {
@@ -513,10 +524,9 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
         if (exp_fn->size() != params().size())
             sema.error(this) << "expected function with " << exp_fn->size() << " parameters, but found lambda expression with " << params().size() << " parameters.\n";
 
-        //size_t i = 0;
+        size_t i = 0;
         for (auto param : params())
-            // TODO par_types.push_back(sema.check(param, exp_fn->elem(i++)));
-            par_types.push_back(sema.check(param));
+            par_types.push_back(sema.check(param, exp_fn->elem(i++)));
     } else {
         for (auto param : params())
             par_types.push_back(sema.check(param));

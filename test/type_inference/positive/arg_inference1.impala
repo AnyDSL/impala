@@ -1,0 +1,8 @@
+fn f(g: fn(int32)->int32) -> int32 {
+    g(5)
+}
+
+fn main() -> int32 {
+    f(|x| -> int32 x+1)
+}
+
