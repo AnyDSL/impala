@@ -383,11 +383,21 @@ std::ostream& FnExpr::print(Printer& p) const {
 
     if (has_return_type_) {
         p.stream() << "-> ";
-        auto ret = params().back()->as<FnASTType>();
-        if (ret->elems().size() == 1)
-            ret->elem(0)->print(p);
-        else
-            p.dump_list([&] (const ASTType* type) { type->print(p); }, ret->elems(), "(", ")", ", ");
+        auto ret = params().back();
+        if (!ret->type().empty()) {
+            auto rettype = ret->type().as<FnType>();
+            if (rettype->elems().size() == 1)
+                p.stream() << rettype->elem(0);
+            else
+                p.dump_list([&] (Type type) { p.stream() << type; }, rettype->elems(), "(", ")", ", ");
+        } else if (ret->ast_type()) {
+            auto rettype = ret->ast_type()->as<FnASTType>();
+            if (rettype->elems().size() == 1)
+                rettype->elem(0)->print(p);
+            else
+                p.dump_list([&] (const ASTType* type) { type->print(p); }, rettype->elems(), "(", ")", ", ");
+        }
+        p.stream() << " ";
     }
 
     return body()->print(p);

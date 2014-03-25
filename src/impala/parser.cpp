@@ -161,7 +161,7 @@ public:
     const TypeParam* parse_type_param();
     const Param* parse_param(bool lambda);
     void parse_param_list(AutoVector<const Param*>& params, TokenKind delimiter, bool lambda);
-    bool parse_return_param(AutoVector<const Param*>&);
+    Param* parse_return_param(AutoVector<const Param*>&, bool&);
 
     // types
     const ASTType*      parse_type();
@@ -398,17 +398,19 @@ const Param* Parser::parse_param(bool lambda) {
     return param;
 }
 
-bool Parser::parse_return_param(AutoVector<const Param*>& params) {
-    bool noret;
-    if (auto fn_type = parse_return_type(noret)) {
-        auto param = new Param(cur_var_handle++);
+Param* Parser::parse_return_param(AutoVector<const Param*>& params, bool& noret) {
+    auto fn_type = parse_return_type(noret);
+    Param* param = nullptr;
+    if (!noret) {
+        param = new Param(cur_var_handle++);
         param->is_mut_ = false;
         param->symbol_ = "return";
         param->ast_type_ = fn_type;
-        param->set_loc(fn_type->loc());
+        if (fn_type != nullptr)
+            param->set_loc(fn_type->loc());
         params.push_back(param);
     }
-    return noret;
+    return param;
 }
 
 /*
@@ -472,7 +474,8 @@ FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
     parse_type_params(fn_decl->type_params_);
     expect(Token::L_PAREN, "function head");
     parse_param_list(fn_decl->params_, Token::R_PAREN, false);
-    parse_return_param(fn_decl->params_);
+    bool noret_by_default = true;
+    parse_return_param(fn_decl->params_, noret_by_default);
 
     if (maybe_empty && accept(Token::SEMICOLON)) {
         // do nothing
@@ -677,13 +680,14 @@ const FnASTType* Parser::parse_fn_type() {
 }
 
 const ASTType* Parser::parse_return_type(bool& noret) {
-    noret = false;
-
     if (accept(Token::ARROW)) {
         if (accept(Token::NOT)) {
             noret = true; // if "no-return" specified
             return nullptr;
         }
+
+        noret = false;
+
         auto ret_type = loc(new FnASTType());
         if (accept(Token::L_PAREN)) {                   // in-place tuple
             parse_comma_list(Token::R_PAREN, "closing parenthesis of return type list", [&] { 
@@ -929,7 +933,12 @@ const FnExpr* Parser::parse_fn_expr() {
     else
         expect(Token::OROR, "parameter list of function expression");
 
-    fn_expr->has_return_type_ = parse_return_param(fn_expr->params_);
+    bool noret = false;
+    Param* retpar = parse_return_param(fn_expr->params_, noret);
+    assert(noret == (retpar == nullptr));
+    if ((retpar != nullptr) && (!retpar->loc().is_set()))
+        retpar->set_loc(fn_expr->loc().pos1());
+    fn_expr->has_return_type_ = !noret;
     fn_expr->body_ = parse_expr();
     return fn_expr;
 }

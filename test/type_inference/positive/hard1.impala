@@ -5,3 +5,4 @@ fn f[A](a: fn() -> A, g: fn[B](B, A) -> B) -> int32 {
 fn main() -> () {
     f(|| { true }, |b, a| { b })
 }
+
