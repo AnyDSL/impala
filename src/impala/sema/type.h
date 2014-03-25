@@ -190,9 +190,10 @@ public:
 
 class TypeVarNode : public TypeNode {
 private:
-    TypeVarNode(TypeTable& tt)
+    TypeVarNode(TypeTable& tt, Symbol name)
         : TypeNode(tt, Type_var, 0)
         , id_(counter++)
+        , name_(name)
         , bound_at_(nullptr)
         , equiv_var_(nullptr)
     {}
@@ -226,6 +227,7 @@ public:
 
 private:
     const int id_;       ///< Used for unambiguous dumping.
+    Symbol name_;
     UniSet<Trait> bounds_;///< All traits that restrict the instantiation of this variable.
     /**
      * The type where this variable is bound.

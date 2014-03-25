@@ -347,7 +347,7 @@ Trait TraitDecl::to_trait(TypeSema& sema) const {
  * TypeDecl
  */
 
-Type TypeParam::check(TypeSema& sema) const { return sema.typevar(); }
+Type TypeParam::check(TypeSema& sema) const { return sema.typevar(symbol()); }
 
 Type ModDecl::check(TypeSema& sema) const {
     if (mod_contents())

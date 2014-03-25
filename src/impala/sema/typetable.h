@@ -42,7 +42,8 @@ public:
     Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
     TraitImpl implement_trait(const Impl* impl_decl, Trait trait) { return new_unifiable(new TraitImplNode(*this, impl_decl, trait)); }
 
-    TypeVar typevar() { return new_unifiable(new TypeVarNode(*this)); }
+    TypeVar typevar() { return new_unifiable(new TypeVarNode(*this, Symbol())); }
+    TypeVar typevar(Symbol name) { return new_unifiable(new TypeVarNode(*this, name)); }
     FnType fntype(thorin::ArrayRef<Type> params) { return new_unifiable(new FnTypeNode(*this, params)); }
     TupleType tupletype(thorin::ArrayRef<Type> elems) { return new_unifiable(new TupleTypeNode(*this, elems)); }
     TupleType unit() { return tupletype({}); }

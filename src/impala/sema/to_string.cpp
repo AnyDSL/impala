@@ -53,10 +53,10 @@ std::string CompoundType::elems_to_string() const {
 }
 
 std::string TypeVarNode::to_string() const {
-    if (id_ < 26) {
-        return std::string(1, 'A' + id_);
+    if (name_) {
+        return name_.str();
     } else {
-        return std::string("Z") + std::to_string(id_);
+        return std::string("_") + std::to_string(id_) + std::string("_");
     }
 }
 
