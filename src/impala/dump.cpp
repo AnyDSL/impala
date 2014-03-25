@@ -237,7 +237,14 @@ std::ostream& ModContents::print(Printer& p) const {
  * expr
  */
 
-std::ostream& BlockExpr::print(Printer& p) const {
+std::ostream& Expr::print(Printer& p) const {
+    vprint(p);
+    if (!inferred_args().empty())
+        return p.dump_list([&] (Type t) { p.stream() << t; }, inferred_args(), "[", "]", ", ", false);
+    return p.stream();
+}
+
+std::ostream& BlockExpr::vprint(Printer& p) const {
     p.stream() << '{';
     if (empty())
         return p.newline() << '}';
@@ -252,7 +259,7 @@ std::ostream& BlockExpr::print(Printer& p) const {
     return p.down() << "}";
 }
 
-std::ostream& LiteralExpr::print(Printer& p) const {
+std::ostream& LiteralExpr::vprint(Printer& p) const {
     switch (kind()) {
 #define IMPALA_LIT(itype, atype) \
         case LIT_##itype: return p.stream() << box().get_##atype();
@@ -262,27 +269,27 @@ std::ostream& LiteralExpr::print(Printer& p) const {
     }
 }
 
-std::ostream& PathExpr ::print(Printer& p) const { return path()->print(p); }
-std::ostream& EmptyExpr::print(Printer& p) const { return p.stream() << "/*empty*/"; }
-std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { expr->print(p); }, elems(), "(", ")"); }
+std::ostream& PathExpr ::vprint(Printer& p) const { return path()->print(p); }
+std::ostream& EmptyExpr::vprint(Printer& p) const { return p.stream() << "/*empty*/"; }
+std::ostream& TupleExpr::vprint(Printer& p) const { return p.dump_list([&] (const Expr* expr) { expr->print(p); }, elems(), "(", ")"); }
 
-std::ostream& DefiniteArrayExpr::print(Printer& p) const { 
+std::ostream& DefiniteArrayExpr::vprint(Printer& p) const {
     return p.dump_list([&] (const Expr* expr) { expr->print(p); }, elems(), "[", "]"); 
 }
 
-std::ostream& RepeatedDefiniteArrayExpr::print(Printer& p) const { 
+std::ostream& RepeatedDefiniteArrayExpr::vprint(Printer& p) const {
     p.stream() << '[';
     value()->print(p) << ", .. ";
     return count()->print(p) << ']';
 }
 
-std::ostream& IndefiniteArrayExpr::print(Printer& p) const { 
+std::ostream& IndefiniteArrayExpr::vprint(Printer& p) const {
     p.stream() << '[';
     size()->print(p) << ": ";
     return elem_type()->print(p) << ']';
 }
 
-std::ostream& PrefixExpr::print(Printer& p) const {
+std::ostream& PrefixExpr::vprint(Printer& p) const {
     Prec r = PrecTable::prefix_r[kind()];
     Prec old = p.prec;
     bool paren = !p.is_fancy();
@@ -304,7 +311,7 @@ std::ostream& PrefixExpr::print(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& InfixExpr::print(Printer& p) const {
+std::ostream& InfixExpr::vprint(Printer& p) const {
     Prec l = PrecTable::infix_l[kind()];
     Prec r = PrecTable::infix_r[kind()];
     Prec old = p.prec;
@@ -331,7 +338,7 @@ std::ostream& InfixExpr::print(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& PostfixExpr::print(Printer& p) const {
+std::ostream& PostfixExpr::vprint(Printer& p) const {
     Prec l = PrecTable::postfix_l[kind()];
     Prec old = p.prec;
     bool paren = !p.is_fancy() || p.prec > l;
@@ -354,29 +361,29 @@ std::ostream& PostfixExpr::print(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& FieldExpr::print(Printer& p) const { 
+std::ostream& FieldExpr::vprint(Printer& p) const {
     lhs()->print(p) << '.'; 
     return path_elem()->print(p); 
 }
 
-std::ostream& CastExpr::print(Printer& p) const { 
+std::ostream& CastExpr::vprint(Printer& p) const {
     lhs()->print(p) << " as ";
     return ast_type()->print(p);
 }
 
-std::ostream& StructExpr::print(Printer& p) const { 
+std::ostream& StructExpr::vprint(Printer& p) const {
     path()->print(p) << '{';
     p.dump_list([&] (const Elem& elem) { p.stream() << elem.symbol() << ": "; elem.expr()->print(p); }, elems());
 
     return p.stream() << '}';
 }
 
-std::ostream& MapExpr::print(Printer& p) const {
+std::ostream& MapExpr::vprint(Printer& p) const {
     lhs()->print(p);
     return p.dump_list([&](const Expr* expr) { expr->print(p); }, args(), "(", ")");
 }
 
-std::ostream& FnExpr::print(Printer& p) const { 
+std::ostream& FnExpr::vprint(Printer& p) const {
     p.stream() << '|';
     print_params(p, has_return_type_);
     p.stream() << "| ";
@@ -403,7 +410,7 @@ std::ostream& FnExpr::print(Printer& p) const {
     return body()->print(p);
 }
 
-std::ostream& IfExpr::print(Printer& p) const {
+std::ostream& IfExpr::vprint(Printer& p) const {
     p.stream() << "if ";
     cond()->print(p) << " ";
     then_expr()->print(p);
@@ -414,7 +421,7 @@ std::ostream& IfExpr::print(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& ForExpr::print(Printer& p) const {
+std::ostream& ForExpr::vprint(Printer& p) const {
     p.stream() << "for ";
     p.dump_list([&](const Param* param) { param->print(p); }, params()) << " in ";
     expr()->print(p) << ' ';

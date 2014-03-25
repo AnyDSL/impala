@@ -652,6 +652,9 @@ public:
     void add_inferred_arg(Type t) const { inferred_args_.push_back(t); }
     const thorin::ArrayRef<Type> inferred_args() const { return inferred_args_; }
 
+    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const = 0;
+
 private:
     virtual Type check(TypeSema&, Type) const = 0;
 
@@ -665,7 +668,7 @@ class EmptyExpr : public Expr {
 public:
     EmptyExpr(const Location& loc) { loc_ = loc; }
 
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
 
@@ -683,7 +686,7 @@ public:
     const Expr* expr() const { return expr_; }
     const Stmt* stmt(size_t i) const { return stmts_[i]; }
     bool empty() const { return stmts_.empty() && expr_->isa<EmptyExpr>(); }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -716,7 +719,7 @@ public:
     thorin::Box box() const { return box_; }
     uint64_t get_u64() const;
     PrimTypeKind literal2type() const;
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -730,7 +733,7 @@ private:
 
 class FnExpr : public Expr, public Fn {
 public:
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -747,7 +750,7 @@ class PathExpr : public Expr {
 public:
     const Path* path() const { return path_; }
     SafePtr<const ValueDecl> value_decl() const { return value_decl_; }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const;
     virtual void check(NameSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -770,7 +773,7 @@ public:
 
     const Expr* rhs() const { return rhs_; }
     Kind kind() const { return kind_; }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -797,7 +800,7 @@ public:
     const Expr* lhs() const { return lhs_; }
     const Expr* rhs() const { return rhs_; }
     virtual bool is_lvalue() const { return Token::is_assign((TokenKind) kind()); }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual void check(NameSema&) const;
     //virtual void emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
@@ -824,7 +827,7 @@ public:
 
     Kind kind() const { return kind_; }
     const Expr* lhs() const { return lhs_; }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -842,7 +845,7 @@ class FieldExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
     const PathElem* path_elem() const { return path_elem_; }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return true; }
     virtual void check(NameSema&) const;
 
@@ -859,7 +862,7 @@ class CastExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
     const ASTType* ast_type() const { return ast_type(); }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
 
@@ -875,7 +878,7 @@ private:
 class DefiniteArrayExpr : public Expr {
 public:
     const Exprs& elems() const { return elems_; }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual void check(NameSema&) const;
     virtual bool is_lvalue() const { return false; }
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -892,7 +895,7 @@ class RepeatedDefiniteArrayExpr : public Expr {
 public:
     const Expr* value() const { return value_; }
     const Expr* count() const { return count_; }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -910,7 +913,7 @@ class IndefiniteArrayExpr : public Expr {
 public:
     const Expr* size() const { return size_; }
     const ASTType* elem_type() const { return elem_type_; }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -927,7 +930,7 @@ private:
 class TupleExpr : public Expr {
 public:
     const Exprs& elems() const { return elems_; }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual void check(NameSema&) const;
     virtual bool is_lvalue() const { return false; }
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -961,7 +964,7 @@ public:
 
     const Path* path() const { return path_; }
     const Elems& elems() const { return elems_; }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
 
@@ -979,7 +982,7 @@ public:
     const Exprs& args() const { return args_; }
     const Expr* arg(size_t i) const { assert(i < args_.size()); return args_[i]; }
     const Expr* lhs() const { return lhs_; }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const;
     virtual void check(NameSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -999,7 +1002,7 @@ public:
     const Expr* then_expr() const { return then_expr_; }
     const Expr* else_expr() const { return else_expr_; }
     bool has_else() const;
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
@@ -1017,7 +1020,7 @@ private:
 class ForExpr : public Expr, public Fn {
 public:
     const Expr* expr() const { return expr_; }
-    virtual std::ostream& print(Printer&) const;
+    virtual std::ostream& vprint(Printer&) const;
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
     //virtual thorin::RefPtr emit(CodeGen& cg) const;
