@@ -1,0 +1,7 @@
+fn b1[A](a: A) -> bool { true }
+fn b2[A](a: A) -> bool { false }
+
+fn main() -> bool {
+    b1(b2(5))
+}
+
