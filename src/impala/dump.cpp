@@ -111,12 +111,16 @@ std::ostream& Fn::print_params(Printer& p, bool returning) const {
 
 std::ostream& LocalDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" );;
-    if (!is_anonymous())
-         p.stream() << symbol();
-    if (!is_anonymous() && ast_type())
-        p.stream() << ": "; 
-    if (ast_type())
-        ast_type()->print(p);
+    if (!is_anonymous()) {
+        p.stream() << symbol();
+        if (!type().empty()) {
+            p.stream() << ": ";
+            p.stream() << type();
+        } else if (ast_type()) {
+            p.stream() << ": ";
+            ast_type()->print(p);
+        }
+    }
 
     return p.stream();
 }

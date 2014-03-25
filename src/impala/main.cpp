@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
         Names breakpoints;
 #endif
         string outfile;
-        bool help, emit_all, emit_thorin, emit_il, emit_ast, emit_llvm, emit_looptree, fancy, nocolor, opt, verify, nocleanup, nossa = false;
+        bool help, emit_all, emit_thorin, emit_il, emit_ast, emit_annotated, emit_llvm, emit_looptree, fancy, nocolor, opt, verify, nocleanup, nossa = false;
         int vectorlength = 0;
         auto cmd_parser = ArgParser()
             .implicit_option("infiles", "input files", infiles)
@@ -57,6 +57,7 @@ int main(int argc, char** argv) {
             .add_option<bool>("emit-il", "emit textual IL representation of impala program", emit_il, false)
             .add_option<bool>("emit-all", "emit AST, AIR, LLVM and loop tree", emit_all, false)
             .add_option<bool>("emit-ast", "emit AST of impala program", emit_ast, false)
+            .add_option<bool>("emit-annotated", "emit AST of impala program after semantical analysis", emit_annotated, false)
             .add_option<bool>("emit-looptree", "emit loop tree", emit_looptree, false)
             .add_option<bool>("emit-llvm", "emit llvm from AIR representation (implies -O)", emit_llvm, false)
             .add_option<bool>("f", "use fancy output", fancy, false)
@@ -67,7 +68,7 @@ int main(int argc, char** argv) {
         cmd_parser.parse(argc, argv);
 
         if (emit_all)
-            emit_thorin = emit_looptree = emit_ast = emit_llvm = true;
+            emit_thorin = emit_looptree = emit_ast = emit_annotated = emit_llvm = true;
         opt |= emit_llvm;
 
         if (infiles.empty() && !help) {
@@ -128,6 +129,10 @@ int main(int argc, char** argv) {
 
         result &= check(prg, nossa);
         //result &= result ? emit(init.world, prg) : false;
+
+        if (emit_annotated)
+            // TODO currently this fails because the Typetable was destroyed and thus all types
+            impala::dump(prg, fancy);
 
         if (result) {
             if (!nocleanup)
