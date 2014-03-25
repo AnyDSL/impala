@@ -92,7 +92,7 @@ bool TypeVarNode::equal(const TypeNode* other) const {
 
     if (const TypeVarNode* t = other->isa<TypeVarNode>()) {
         if ((this->equiv_var_ == nullptr) && (t->equiv_var_ == nullptr)) {
-            if (this->bound_at() == nullptr) { // unbound type vars are by definition unequal
+            if ((this->bound_at() == nullptr) || (t->bound_at() == nullptr)) { // unbound type vars are by definition unequal
                 return false;
             } else {
                 // two type vars are equal if the types where they are bound are
