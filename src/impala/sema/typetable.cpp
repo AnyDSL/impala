@@ -136,11 +136,6 @@ bool TypeTable::unify(Proxy<T> elem) {
     }
 }
 
-// force instantiation REMINDER remove this
-/*template bool TypeTable::unify_base(TypetableSet<TypeNode>& set, TypeNode* unifiable);
-template bool TypeTable::unify_base(TypetableSet<TraitNode>& set, TraitNode* unifiable);
-template bool TypeTable::unify_base(TypetableSet<TraitImplNode>& set, TraitImplNode* unifiable);*/
-
 PrimType TypeTable::primtype(const PrimTypeKind kind) {
     switch (kind) {
 #define IMPALA_TYPE(itype, atype) case PrimType_##itype: return itype##_;
@@ -153,6 +148,7 @@ void TypeTable::verify() const {
     for (Generic* g : unifiables_) {
         assert(g != nullptr);
         if (auto type = g->isa<TypeNode>()) {
+            assert(type->is_real());
             assert(type->is_sane());
             assert(type->is_final_representative());
         } else if (auto trait = g->isa<TraitNode>()) {

@@ -107,6 +107,14 @@ public:
     std::string bound_vars_to_string() const;
     virtual std::string to_string() const = 0;
 
+    /**
+     * replace any \p UninstantiatedTypeNodes within this Generic with their instances
+     * and set the representatives of these nodes to their instances
+     */
+    virtual void make_real();
+    /// a \p Generic is real if it does not contain any \p UninstantiatedTypeNodes
+    virtual bool is_real();
+
     void dump() const;
 
 protected:

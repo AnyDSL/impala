@@ -16,6 +16,7 @@ enum Kind {
 #define IMPALA_TYPE(itype, atype) Type_##itype,
 #include "impala/tokenlist.h"
     Type_error,
+    Type_uninstantiated,
     Type_noReturn,
     Type_fn,
     Type_tuple,
@@ -33,8 +34,38 @@ private:
     TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p TypeNode.
 
 protected:
-    TypeNode(TypeTable& typetable, Kind kind, size_t size)
+    TypeNode(TypeTable& typetable)
         : Unifiable(typetable)
+    {}
+
+public:
+    virtual Kind kind() const;
+    virtual bool equal(const TypeNode*) const;
+    virtual size_t hash() const;
+
+    virtual void add_implementation(TraitImpl);
+    virtual bool implements(Trait) const;
+    virtual const UniSet<Trait>& trait_impls() const;
+
+    /// A type is closed if it contains no unbound type variables.
+    virtual bool is_closed() const;
+
+    /// @return true if this is a subtype of super_type.
+    virtual bool is_subtype(const Type super_type) const;
+
+    /**
+     * A type is sane if all type variables are bound correctly,
+     * i.e. forall type variables v, v is a subtype of v.bound_at().
+     *
+     * This also means that a sane type is always closed!
+     */
+    virtual bool is_sane() const;
+};
+
+class RealTypeNode : public TypeNode {
+protected:
+    RealTypeNode(TypeTable& typetable, Kind kind, size_t size)
+        : TypeNode(typetable)
         , kind_(kind)
         , elems_(size)
     {}
@@ -43,7 +74,7 @@ protected:
     Type elem_(size_t i) const { return elems_[i]; }
 
 public:
-    Kind kind() const { return kind_; }
+    virtual Kind kind() const { return kind_; }
     thorin::ArrayRef<Type> elems() const { return thorin::ArrayRef<Type>(elems_); }
     const Type elem(size_t i) const { return elems_[i]; }
     /// Returns number of \p TypeNode operands (\p elems_).
@@ -57,7 +88,7 @@ public:
     virtual bool equal(const TypeNode*) const;
     virtual size_t hash() const;
 
-    void add_implementation(TraitImpl);
+    virtual void add_implementation(TraitImpl);
     virtual bool implements(Trait) const;
     virtual const UniSet<Trait>& trait_impls() const { return trait_impls_; }
 
@@ -72,7 +103,7 @@ public:
     virtual bool is_closed() const;
 
     /// @return true if this is a subtype of super_type.
-    bool is_subtype(const Type super_type) const;
+    virtual bool is_subtype(const Type super_type) const;
 
     /**
      * A type is sane if all type variables are bound correctly,
@@ -90,11 +121,37 @@ protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
 
     friend class TraitInstanceNode;
-    friend class CompoundType;
+    friend class CompoundTypeNode;
     friend class TypeTable;
 };
 
-class TypeErrorNode : public TypeNode {
+class UninstantiatedTypeNode : public TypeNode {
+private:
+    UninstantiatedTypeNode(TypeTable& typetable)
+        : TypeNode(typetable)
+        , id_(counter++)
+    {}
+
+protected:
+    virtual Generic* vspecialize(SpecializeMapping&);
+
+public:
+    virtual std::string to_string() const; /*{ return std::string("?") + std::string(id_); }*/
+
+    bool is_instantiated() { return !instance_.empty(); }
+    Type instance() const { return instance_; }
+    void instantiate(Type instance) const { assert(!is_instantiated()); instance_ = instance; }
+
+private:
+    const int id_;       ///< Used for unambiguous dumping.
+    static int counter;
+
+    Type instance_;
+
+    friend class TypeTable;
+};
+
+class TypeErrorNode : public RealTypeNode {
 private:
     TypeErrorNode(TypeTable& typetable)
         : TypeNode(typetable, Type_error, 0)
@@ -109,7 +166,7 @@ public:
     friend class TypeTable;
 };
 
-class NoReturnTypeNode : public TypeNode {
+class NoReturnTypeNode : public RealTypeNode {
 private:
     NoReturnTypeNode(TypeTable& typetable)
         : TypeNode(typetable, Type_noReturn, 0)
@@ -124,7 +181,7 @@ public:
     friend class TypeTable;
 };
 
-class PrimTypeNode : public TypeNode {
+class PrimTypeNode : public RealTypeNode {
 private:
     PrimTypeNode(TypeTable& typetable, PrimTypeKind kind)
         : TypeNode(typetable, (Kind) kind, 0)
@@ -141,10 +198,10 @@ public:
     friend class TypeTable;
 };
 
-class CompoundType : public TypeNode {
+class CompoundTypeNode : public RealTypeNode {
 protected:
-    CompoundType(TypeTable& typetable, Kind kind, thorin::ArrayRef<Type> elems)
-        : TypeNode(typetable, kind, elems.size())
+    CompoundTypeNode(TypeTable& typetable, Kind kind, thorin::ArrayRef<Type> elems)
+        : RealTypeNode(typetable, kind, elems.size())
     {
         size_t i = 0;
         for (auto elem : elems)
@@ -156,10 +213,10 @@ protected:
     thorin::Array<Type> specialize_elems(SpecializeMapping& mapping) const;
 };
 
-class FnTypeNode : public CompoundType {
+class FnTypeNode : public CompoundTypeNode {
 private:
     FnTypeNode(TypeTable& typetable, thorin::ArrayRef<Type> elems)
-        : CompoundType(typetable, Type_fn, elems)
+        : CompoundTypeNode(typetable, Type_fn, elems)
     {}
 
 protected:
@@ -173,10 +230,10 @@ public:
     friend class TypeTable;
 };
 
-class TupleTypeNode : public CompoundType {
+class TupleTypeNode : public CompoundTypeNode {
 private:
     TupleTypeNode(TypeTable& typetable, thorin::ArrayRef<Type> elems)
-        : CompoundType(typetable, Type_tuple, elems)
+        : NodeCompoundType(typetable, Type_tuple, elems)
     {}
 
 protected:
@@ -188,7 +245,7 @@ public:
     friend class TypeTable;
 };
 
-class TypeVarNode : public TypeNode {
+class TypeVarNode : public RealTypeNode {
 private:
     TypeVarNode(TypeTable& tt, Symbol name)
         : TypeNode(tt, Type_var, 0)
