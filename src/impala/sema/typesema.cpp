@@ -700,7 +700,7 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
                     // TODO where should be set this new type? should we set it at all?
                     fn = sema.instantiate(this, fn, lhs()->inferred_args()).as<FnType>();
                 } else
-                    sema.error(this) << "could not find instances for all type variables";
+                    sema.error(this) << "could not find instances for all type variables.\n";
             }
 
             if (no_cont) // return type
