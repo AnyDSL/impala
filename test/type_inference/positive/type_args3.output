@@ -1,0 +1,8 @@
+fn f[A](a: A, g: fn(fn(A, fn(A)), fn())) -> () {
+}
+
+fn main() -> () {
+    f[bool](true, |x: fn(bool, fn(bool))| -> () {
+    })
+}
+
