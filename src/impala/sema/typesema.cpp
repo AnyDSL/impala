@@ -665,11 +665,9 @@ Type StructExpr::check(TypeSema& sema, Type expected) const {
 
 Type MapExpr::check(TypeSema& sema, Type expected) const {
     Type lhst = sema.check(lhs());
-    if (auto fn = lhst.isa<FnType>()) {
-        bool was_generic = fn->is_generic();
+    if (auto ofn = lhst.isa<FnType>()) {
         std::vector<Type> inst_types;
-        if (was_generic)
-            fn = sema.instantiate_unknown(lhst, inst_types).as<FnType>();
+        FnType fn = ofn->is_generic() ? sema.instantiate_unknown(lhst, inst_types).as<FnType>() : ofn;
 
         bool no_cont = fn->size() == (args().size()+1); // true if this is a normal function call (no continuation)
         if (no_cont || (fn->size() == args().size())) {
@@ -678,15 +676,20 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
             }
 
             // instantiate fn type
-            if (was_generic) {
+            if (ofn->is_generic()) {
+                bool no_error = true;
                 for (size_t i = 0; i < inst_types.size(); ++i) {
                     UninstantiatedType ut = inst_types[i].as<UninstantiatedType>();
                     if (ut->is_instantiated()) {
                         lhs()->add_inferred_arg(ut->instance());
-                    } else
+                    } else {
                         sema.error(this) << "could not find instance for type variable #" << i << ".\n";
+                        no_error = false;
+                    }
                 }
-                // TODO where should be set this new type? should we set it at all?
+                if (no_error)
+                    // TODO where should be set this new type? should we set it at all?
+                    sema.unify(fn.as<Type>());
             }
 
             if (no_cont) // return type
