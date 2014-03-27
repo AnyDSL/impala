@@ -676,15 +676,14 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
 
             // instantiate fn type
             if (was_generic) {
-                for (Type t : inst_types) {
-                    UninstantiatedType ut = t.as<UninstantiatedType>();
-                    if (ut->is_instantiated())
+                for (size_t i = 0; i < inst_types.size(); ++i) {
+                    UninstantiatedType ut = inst_types[i].as<UninstantiatedType>();
+                    if (ut->is_instantiated()) {
                         lhs()->add_inferred_arg(ut->instance());
+                    } else
+                        sema.error(this) << "could not find instance for type variable #" << i << ".\n";
                 }
-                if (lhs()->inferred_args().size() == fn->num_bound_vars()) {
-                    // TODO where should be set this new type? should we set it at all?
-                } else
-                    sema.error(this) << "could not find instances for all type variables.\n";
+                // TODO where should be set this new type? should we set it at all?
             }
 
             if (no_cont) // return type
