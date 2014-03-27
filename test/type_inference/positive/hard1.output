@@ -1,0 +1,11 @@
+fn f[A](a: fn() -> A, g: fn[B](B, A) -> B) -> int32 {
+    g[int32](4, a())
+}
+
+fn main() -> () {
+    f[bool](|| -> bool {
+        true
+    }, |b: B, a: bool| -> B {
+        b
+    });
+}
