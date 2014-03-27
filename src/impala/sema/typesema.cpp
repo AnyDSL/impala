@@ -44,6 +44,10 @@ public:
     }
 
     template<class T> void check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping);
+    /**
+     * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
+     * therefore it is important to call \p instantiate after all unknowns have been resolved!
+     */
     template<class T> T instantiate_unknown(T, std::vector<Type>& inst_types);
     Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances);
     Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<Type> var_instances);
@@ -172,14 +176,13 @@ template<class T> void TypeSema::check_bounds(const ASTNode* loc, T generic, tho
             if (instance != type_error() && spec_bound != trait_error()) {
                 check_impls(); // first we need to check all implementations to be up-to-date
                 if (!instance->implements(spec_bound))
-                    error(loc) << "'" << instance << "' does not implement bound '" << spec_bound << "'\n";
+                    error(loc) << "'" << instance << "' (instance for '" << v << "') does not implement bound '" << spec_bound << "'\n";
             }
         }
     }
 }
 
 template<class T> T TypeSema::instantiate_unknown(T t, std::vector<Type>& inst_types) {
-    // FIXME remember bound checking
     for (size_t i = 0; i < t->num_bound_vars(); ++i) inst_types.push_back(uninstantiated_type());
     SpecializeMapping mapping = create_spec_mapping(t, inst_types);
     return t->instantiate(mapping);
@@ -687,9 +690,11 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
                         no_error = false;
                     }
                 }
-                if (no_error)
+                if (no_error) {
                     // TODO where should be set this new type? should we set it at all?
-                    sema.unify(fn.as<Type>());
+                    auto inst = sema.instantiate(this, ofn, lhs()->inferred_args());
+                    assert(inst == fn);
+                }
             }
 
             if (no_cont) // return type
