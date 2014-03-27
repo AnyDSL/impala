@@ -3,6 +3,5 @@ fn f(g: fn(int32, fn(int32))) -> int32 {
 }
 
 fn main() -> int32 {
-    f(|x: int32| -> int32 x + 1)
+    f(|x: int32| -> int32 (x + 1))
 }
-

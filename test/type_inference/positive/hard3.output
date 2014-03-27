@@ -9,4 +9,3 @@ fn b2[A](a: A) -> bool {
 fn main() -> bool {
     b1[bool](b2[int32](5))
 }
-

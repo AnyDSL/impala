@@ -5,4 +5,3 @@ fn main() -> () {
     f[bool](|x: fn(bool, fn(bool))| -> () {
     })
 }
-

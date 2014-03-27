@@ -5,10 +5,10 @@ trait Iterator {
 
 impl Iterator for int32 {
     fn inc(self: int32) -> int32 {
-        self + 1
+        (self + 1)
     }
     fn lt(self: int32, other: int32) -> bool {
-        self < other
+        (self < other)
     }
 }
 
@@ -25,4 +25,3 @@ fn main() -> () {
     range[int32](0, 10, |i: int32| -> () {
     });
 }
-
