@@ -504,22 +504,25 @@ Type LiteralExpr::check(TypeSema& sema, Type expected) const {
 Type FnExpr::check(TypeSema& sema, Type expected) const {
     assert(type_params().empty());
 
-    std::vector<Type> par_types;
+    Type fn_type;
     if (FnType exp_fn = expected.isa<FnType>()) {
         if (exp_fn->size() != params().size())
             sema.error(this) << "expected function with " << exp_fn->size() << " parameters, but found lambda expression with " << params().size() << " parameters.\n";
 
         size_t i = 0;
         for (auto param : params())
-            par_types.push_back(sema.check(param, exp_fn->elem(i++)));
+            sema.check(param, exp_fn->elem(i++));
+
+        fn_type = exp_fn;
     } else {
+        std::vector<Type> par_types;
         for (auto param : params())
             par_types.push_back(sema.check(param));
-    }
 
-    // create FnType
-    Type fn_type = sema.fntype(par_types);
-    sema.unify(fn_type);
+        // create FnType
+        fn_type = sema.fntype(par_types);
+        sema.unify(fn_type);
+    }
 
     assert(body() != nullptr);
     sema.check_body(this, body(), fn_type);

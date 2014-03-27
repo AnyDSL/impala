@@ -1,0 +1,7 @@
+fn f(g: fn[A](A, fn(A))) -> int32 {
+    g[int32](5)
+}
+
+fn main() -> int32 {
+    f(|x: A| -> A x)
+}
