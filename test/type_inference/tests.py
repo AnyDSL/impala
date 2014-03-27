@@ -16,7 +16,7 @@ def allTests():
     """
     This function returns a list of tests.
     """
-    tests = make_tests("type_inference/positive", True) + make_tests("type_inference/negative", False)
+    tests = make_tests("type_inference/positive", True, ["--emit-annotated"]) + make_tests("type_inference/negative", False)
     
     # mark optionals
     for test in tests:

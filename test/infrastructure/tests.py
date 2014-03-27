@@ -57,7 +57,7 @@ class InvokeTest(Test):
             fails = 0
             for cp in diff.compare(expected, output):
                 if cp.startswith('-') or cp.startswith('+'):
-                    print(cp)
+                    print(cp.rstrip())
                     fails=fails+1
             
             return True if fails == 0 else False
@@ -65,7 +65,7 @@ class InvokeTest(Test):
     def getName(self):
         return os.path.join(self.basedir, self.srcfile)
 
-def make_tests(directory, positive=True):
+def make_tests(directory, positive=True, options=[]):
     """Create a list of tests based on the .impala files in directory
     
     Output files are expected to have the same name but with .output extension.
@@ -76,7 +76,7 @@ def make_tests(directory, positive=True):
         if os.path.splitext(testfile)[1] == ".impala":
             of = os.path.splitext(testfile)[0] + ".output"
             res = of if os.path.exists(os.path.join(directory, of)) else ""
-            tests.append(InvokeTest(positive, directory, testfile, res))
+            tests.append(InvokeTest(positive, directory, testfile, res, options))
     
     return sorted(tests, key=lambda test: test.getName())
 
