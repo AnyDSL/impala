@@ -37,6 +37,31 @@ void TraitNode::add_super_trait(Trait t) {
     }
 }
 
+void TraitInstanceNode::make_real() {
+    for (size_t i = 1; i < trait()->num_bound_vars(); ++i) {
+        TypeVar tv = trait()->bound_var(i);
+        assert(var_instances_.find(tv.node()) != var_instances_.end()); // CHECK is node() correct here?
+        Generic* e = var_instances_.find(tv.node())->second;
+
+        if (UninstantiatedTypeNode* utn = e->isa<UninstantiatedTypeNode>()) {
+            assert(utn->is_instantiated());
+            utn->instance()->make_real();
+            var_instances_[tv.node()] = utn;
+        } else {
+            e->make_real();
+        }
+    }
+}
+
+bool TraitInstanceNode::is_real() const {
+    bool result = true;
+    for (TypeVar tv : trait()->bound_vars()) {
+        assert(var_instances_.find(tv.node()) != var_instances_.end()); // CHECK is node() correct here?
+        result = result && var_instances_.find(tv.node())->second->is_real();
+    }
+    return result;
+}
+
 bool TraitInstanceNode::is_closed() const {
     // TODO review this
     for (auto i : var_instances_) {

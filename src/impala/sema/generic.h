@@ -30,6 +30,9 @@ template<class T> using UniSet = thorin::HashSet<T, UniHash<T>, UniEqual<T>>;
 
 class TypeNode;
 
+template<class T> class Proxy;
+template<class T> void unify(TypeTable&, const Proxy<T>&);
+
 template<class T>
 class Proxy {
 public:
@@ -46,8 +49,8 @@ public:
     bool operator == (const Proxy<T>& other) const {
         assert(node_ != nullptr);         
         assert(&node()->typetable() == &other.node()->typetable());
-        node()->typetable().unify(*this);
-        node()->typetable().unify(other);
+        unify(node()->typetable(), *this);
+        unify(node()->typetable(), other);
         return representative() == other.representative();
     }
     bool operator != (const Proxy<T>& other) const { assert(node_ != nullptr); return !(*this == other); }
@@ -74,10 +77,12 @@ private:
     T* node_;
 };
 
+class UninstantiatedTypeNode;
 class TypeVarNode;
 class TraitNode;
 class TraitImplNode;
 typedef Proxy<TypeNode> Type;
+typedef Proxy<UninstantiatedTypeNode> UninstantiatedType;
 typedef Proxy<TypeVarNode> TypeVar;
 typedef Proxy<TraitNode> Trait;
 typedef Proxy<TraitImplNode> TraitImpl;
@@ -95,31 +100,34 @@ protected:
 
 public:
     TypeTable& typetable() const { return typetable_; }
-    size_t num_bound_vars() const { return bound_vars_.size(); }
-    thorin::ArrayRef<TypeVar> bound_vars() const { return thorin::ArrayRef<TypeVar>(bound_vars_); }
-    TypeVar bound_var(size_t i) const { return bound_vars_[i]; }
+    virtual size_t num_bound_vars() const { return bound_vars_.size(); }
+    virtual thorin::ArrayRef<TypeVar> bound_vars() const { return thorin::ArrayRef<TypeVar>(bound_vars_); }
+    virtual TypeVar bound_var(size_t i) const { return bound_vars_[i]; }
     /// Returns true if this \p Type does have any bound type variabes (\p bound_vars_).
-    bool is_generic() const { return !bound_vars_.empty(); }
+    virtual bool is_generic() const { return !bound_vars_.empty(); }
     virtual bool is_closed() const = 0; // TODO
-    void add_bound_var(TypeVar v);
+    virtual void add_bound_var(TypeVar v);
     virtual bool equal(const Generic*) const = 0;
     virtual size_t hash() const = 0;
-    std::string bound_vars_to_string() const;
     virtual std::string to_string() const = 0;
 
     /**
      * replace any \p UninstantiatedTypeNodes within this Generic with their instances
      * and set the representatives of these nodes to their instances
      */
-    virtual void make_real();
+    virtual void make_real() = 0;
     /// a \p Generic is real if it does not contain any \p UninstantiatedTypeNodes
-    virtual bool is_real();
+    virtual bool is_real() const = 0;
 
     void dump() const;
 
 protected:
     std::vector<TypeVar> bound_vars_;
     TypeTable& typetable_;
+
+    std::string bound_vars_to_string() const;
+    void make_bound_vars_real();
+    bool bound_vars_real() const;
 
     Generic* ginstantiate(SpecializeMapping& var_instances);
     Generic* gspecialize(SpecializeMapping&); // TODO one could always assert that this is only called on final representatives!

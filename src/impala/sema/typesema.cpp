@@ -60,6 +60,7 @@ public:
 
 
     template<class T> void check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping);
+    template<class T> T instantiate_unknown(T);
     Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances);
     Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<Type> var_instances);
     Trait instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
@@ -199,6 +200,14 @@ template<class T> void TypeSema::check_bounds(const ASTNode* loc, T generic, tho
             }
         }
     }
+}
+
+template<class T> T TypeSema::instantiate_unknown(T t) {
+    // FIXME remember bound checking
+    std::vector<Type> inst_types;
+    for (size_t i = 0; i < t->num_bound_vars(); ++i) inst_types.push_back(uninstantiated_type());
+    SpecializeMapping mapping = create_spec_mapping(t, inst_types);
+    return t->instantiate(mapping);
 }
 
 Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances) {
@@ -680,8 +689,9 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
     Type lhst = sema.check(lhs());
     if (auto fn = lhst.isa<FnType>()) {
         if (fn->is_generic()) {
-            for (TypeVar v : fn->bound_vars())
-                sema.add_inst_var(v);
+            fn = sema.instantiate_unknown(lhst).as<FnType>(); // FIXME
+            /*for (TypeVar v : fn->bound_vars())
+                sema.add_inst_var(v);*/
         }
 
         bool no_cont = fn->size() == (args().size()+1); // true if this is a normal function call (no continuation)

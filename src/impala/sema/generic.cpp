@@ -14,29 +14,22 @@
 
 namespace impala {
 
-std::string Generic::bound_vars_to_string() const {
-    std::string result;
+template<class T> void unify(TypeTable& tt, const Proxy<T>& p) { tt.unify(p); }
 
-    if (!is_generic())
-        return result;
+template void unify(TypeTable&, const Proxy<TypeNode>&);
+template void unify(TypeTable&, const Proxy<TraitNode>&);
+//template void unify(TypeTable&, const Proxy<TraitImplNode>&);
 
-    const char* separator = "[";
-    for (auto v : bound_vars()) {
-        result += separator + v->to_string();
+void Generic::make_bound_vars_real() {
+    for (auto v : bound_vars())
+        v->make_real();
+}
 
-        const UniSet<Trait> restr = v->bounds();
-
-        if (!restr.empty()) {
-            auto inner_sep = ":";
-            for (auto t : restr) {
-                result += inner_sep + t->to_string();
-                inner_sep = "+";
-            }
-        }
-
-        separator = ",";
-    }
-    return result + ']';
+bool Generic::bound_vars_real() const {
+    bool result = true;
+    for (auto v : bound_vars())
+        result = result && v->is_real();
+    return result;
 }
 
 void Generic::add_bound_var(TypeVar v) {

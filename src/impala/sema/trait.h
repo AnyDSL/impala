@@ -50,6 +50,10 @@ public:
     bool is_error_trait() const { return trait_decl_ == nullptr; }
     virtual std::string to_string() const;
 
+    // all methods should be real, so nothing to do here
+    virtual void make_real() {}
+    virtual bool is_real() const { return true; }
+
     /// add a non-inherited method or return \p false if a method with this name already existed
     bool add_method(Symbol name, Type method_type) { return add_method(name, method_type, false); }
     /// return the type of the method with this name if it exists; otherwise return an empty type
@@ -96,6 +100,9 @@ public:
     virtual size_t hash() const;
     virtual std::string to_string() const;
 
+    virtual void make_real();
+    virtual bool is_real() const;
+
     virtual Type find_method(Symbol name);
     virtual const MethodTable& all_methods();
 
@@ -136,6 +143,10 @@ public:
     virtual size_t hash() const;
     const Impl* impl_decl() const { return impl_decl_; }
     Trait trait() const { return trait_; }
+
+    // CHECK is this correct?
+    virtual void make_real() {}
+    virtual bool is_real() const { return true; }
 
     virtual bool is_closed() const { return true; } // TODO
 

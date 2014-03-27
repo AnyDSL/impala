@@ -6,11 +6,12 @@
 
 namespace impala {
 
-int TypeVarNode::counter = 0;
+int TypeVarNode::counter_ = 0;
+int UninstantiatedTypeNode::counter_ = 0;
 
 //------------------------------------------------------------------------------
 
-bool TypeNode::is_closed() const {
+bool RealTypeNode::is_closed() const {
     for (auto v : bound_vars()) {
         for (auto r : v->bounds()) {
             if (! r->is_closed())
@@ -26,7 +27,7 @@ bool TypeNode::is_closed() const {
 }
 
 // TODO test this
-bool TypeNode::is_subtype(const Type super_type) const {
+bool RealTypeNode::is_subtype(const Type super_type) const {
     if (this == *super_type)
         return true;
 
@@ -37,7 +38,7 @@ bool TypeNode::is_subtype(const Type super_type) const {
     return false;
 }
 
-bool TypeNode::is_sane() const {
+bool RealTypeNode::is_sane() const {
     for (auto t : elems_) {
         if (!t->is_sane()) {
             return false;
@@ -66,7 +67,7 @@ bool TypeVarNode::is_closed() const {
 
 //------------------------------------------------------------------------------
 
-void TypeNode::add_implementation(TraitImpl impl) {
+void RealTypeNode::add_implementation(TraitImpl impl) {
     Trait trait = impl->trait();
     if (!trait_impls_.insert(trait).second)
         typetable().error(impl->impl_decl()) << "Duplicated implementation of trait '" << trait << "'\n";
@@ -76,7 +77,7 @@ void TypeNode::add_implementation(TraitImpl impl) {
     }
 }
 
-bool TypeNode::implements(Trait trait) const {
+bool RealTypeNode::implements(Trait trait) const {
     // CHECK is this enough?
     return trait_impls_.find(trait) != trait_impls_.end();
 }
@@ -98,7 +99,9 @@ FnType FnTypeNode::specialize_method(Type t) const {
 
 //------------------------------------------------------------------------------
 
-thorin::Array<Type> CompoundType::specialize_elems(SpecializeMapping& mapping) const {
+Generic* UninstantiatedTypeNode::vspecialize(SpecializeMapping& mapping) { assert(false); return nullptr; }
+
+thorin::Array<Type> CompoundTypeNode::specialize_elems(SpecializeMapping& mapping) const {
     thorin::Array<Type> nelems(size());
     for (size_t i = 0, e = size(); i != e; ++i)
         nelems[i] = Type(elem(i)->specialize(mapping)->as<TypeNode>());
@@ -137,6 +140,30 @@ void TypeVarNode::refresh_bounds() {
         auto p = bounds_.insert(i);
         assert(p.second && "hash/equal broken");
     }
+}
+
+//------------------------------------------------------------------------------
+
+void RealTypeNode::make_real() {
+    make_bound_vars_real();
+    for (size_t i = 0; i < size(); ++i) {
+        Type e = elem(i);
+        if (UninstantiatedType utn = e.isa<UninstantiatedType>()) {
+            assert(utn->is_instantiated());
+            utn->instance()->make_real();
+            set(i, utn->instance());
+        } else {
+            e->make_real();
+        }
+    }
+
+}
+
+bool RealTypeNode::is_real() const {
+    bool result = bound_vars_real();
+    for (auto e : elems())
+        result = result && e->is_real();
+    return result;
 }
 
 //------------------------------------------------------------------------------

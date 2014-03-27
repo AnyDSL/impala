@@ -50,7 +50,8 @@ template<class T> void TypeTable::insert_new(T* unifiable) {
     assert(p.second && "hash/equal broken");
 }
 
-void TypeTable::insert_new_rec(TypeNode* type) {
+void TypeTable::insert_new_rec(TypeNode* t) {
+    RealTypeNode* type = t->as<RealTypeNode>();
     for (Type elem : type->elems_) {
         if (!elem->is_unified()) {
             unify(elem);
@@ -96,7 +97,10 @@ void TypeTable::change_repr_generic(T* t, T* repr) const {
     }
 }
 
-void TypeTable::change_repr_rec(TypeNode* t, TypeNode* repr) const {
+void TypeTable::change_repr_rec(TypeNode* ty, TypeNode* reprt) const {
+    RealTypeNode* t = ty->as<RealTypeNode>();
+    RealTypeNode* repr = reprt->as<RealTypeNode>();
+
     // change representative of all sub elements
     assert(t->size() == repr->size());
     for (size_t i = 0, e = t->size(); i != e; ++i)
@@ -120,7 +124,15 @@ bool TypeTable::unify(Proxy<T> elem) {
     if (unifiable->is_unified())
         return false;
 
+    if (auto utn = unifiable->template isa<UninstantiatedTypeNode>()) {
+        bool res = unify(utn->instance());
+        utn->set_representative(*utn->instance());
+        return res;
+    }
+
     assert(unifiable->is_closed() && "Only closed unifiables can be unified!");
+    unifiable->make_real();
+
     auto i = unifiables_.find(unifiable);
 
     if (i != unifiables_.end()) {

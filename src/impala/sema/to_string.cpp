@@ -8,6 +8,35 @@ namespace impala {
 
 void Generic::dump() const { std::cout << to_string() << std::endl; }
 
+std::string Generic::bound_vars_to_string() const {
+    std::string result;
+
+    if (!is_generic())
+        return result;
+
+    const char* separator = "[";
+    for (auto v : bound_vars()) {
+        result += separator + v->to_string();
+
+        const UniSet<Trait> restr = v->bounds();
+
+        if (!restr.empty()) {
+            auto inner_sep = ":";
+            for (auto t : restr) {
+                result += inner_sep + t->to_string();
+                inner_sep = "+";
+            }
+        }
+
+        separator = ",";
+    }
+    return result + ']';
+}
+
+std::string UninstantiatedTypeNode::to_string() const {
+    return is_instantiated() ? instance()->to_string() : (std::string("?") + std::to_string(id_));
+}
+
 std::string TraitNode::to_string() const { return is_error_trait() ? "<trait error>" : trait_decl()->symbol().str(); }
 
 std::string TraitInstanceNode::to_string() const {
@@ -38,7 +67,7 @@ std::string PrimTypeNode::to_string() const {
     }
 }
 
-std::string CompoundType::elems_to_string() const {
+std::string CompoundTypeNode::elems_to_string() const {
     std::string result;
 
     if (is_empty())
