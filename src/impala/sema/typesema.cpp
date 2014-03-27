@@ -43,24 +43,8 @@ public:
         }
     }
 
-    void add_inst_var(TypeVar v) {
-        assert(!insts_.contains(v));
-        insts_[v] = v;
-    }
-    Type pop_inst_var(TypeVar v) {
-        assert(insts_.contains(v));
-        Type t = insts_[v];
-        insts_.erase(v);
-        return t;
-    }
-    bool is_instantiated(TypeVar v) {
-        assert(insts_.contains(v));
-        return *insts_[v] != *v;
-    }
-
-
     template<class T> void check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping);
-    template<class T> T instantiate_unknown(T);
+    template<class T> T instantiate_unknown(T, std::vector<Type>& inst_types);
     Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances);
     Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<Type> var_instances);
     Trait instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
@@ -94,19 +78,19 @@ public:
         if (!expr->type_.empty())
             return expr->type_;
 
-        if (auto tv = expected.isa<TypeVar>()) {
-            auto it = insts_.find(tv);
-            if (it != insts_.end()) {
-                expr->type_ = expr->check(*this, it->second);
+        if (auto ut = expected.isa<UninstantiatedType>()) {
+            if (!ut->is_instantiated()) {
+                expr->type_ = expr->check(*this, ut);
                 if (!expr->type_.empty()) {
                     // if this variable has no instantiation yet instantiate it
-                    if (!is_instantiated(tv)) {
-                        insts_[tv] = expr->type_;
+                    if (!ut->is_instantiated()) {
+                        ut->instantiate(expr->type_);
                     } else
-                        expect_type(expr, it->second, typetype);
+                        assert(expr->type_ == ut->instance());
                 }
-                return it->second;
-            }
+                return ut->instance();
+            } else
+                expected = ut->instance();
         }
         expr->type_ = expr->check(*this, expected);
         expect_type(expr, expected, typetype);
@@ -114,20 +98,12 @@ public:
     }
     Type check(const Expr* expr, Type expected) { return check(expr, expected, ""); }
     /// a check that does not expect any type (i.e. any type is allowed)
-    Type check(const Expr* expr) {
-        TypeVar v = typevar();
-        add_inst_var(v);
-        Type t = check(expr, v);
-        Type t2 = pop_inst_var(v);
-        assert(t == t2);
-        return t;
-    }
+    Type check(const Expr* expr) { return check(expr, uninstantiated_type()); }
     Type check(const ASTType* ast_type) { return ast_type->type_ = ast_type->check(*this); }
 
 private:
     bool nossa_;
     std::vector<const Impl*> impls_;
-    InstantiationMapping insts_;
 };
 
 //------------------------------------------------------------------------------
@@ -202,9 +178,8 @@ template<class T> void TypeSema::check_bounds(const ASTNode* loc, T generic, tho
     }
 }
 
-template<class T> T TypeSema::instantiate_unknown(T t) {
+template<class T> T TypeSema::instantiate_unknown(T t, std::vector<Type>& inst_types) {
     // FIXME remember bound checking
-    std::vector<Type> inst_types;
     for (size_t i = 0; i < t->num_bound_vars(); ++i) inst_types.push_back(uninstantiated_type());
     SpecializeMapping mapping = create_spec_mapping(t, inst_types);
     return t->instantiate(mapping);
@@ -688,11 +663,10 @@ Type StructExpr::check(TypeSema& sema, Type expected) const {
 Type MapExpr::check(TypeSema& sema, Type expected) const {
     Type lhst = sema.check(lhs());
     if (auto fn = lhst.isa<FnType>()) {
-        if (fn->is_generic()) {
-            fn = sema.instantiate_unknown(lhst).as<FnType>(); // FIXME
-            /*for (TypeVar v : fn->bound_vars())
-                sema.add_inst_var(v);*/
-        }
+        bool was_generic = fn->is_generic();
+        std::vector<Type> inst_types;
+        if (was_generic)
+            fn = sema.instantiate_unknown(lhst, inst_types).as<FnType>();
 
         bool no_cont = fn->size() == (args().size()+1); // true if this is a normal function call (no continuation)
         if (no_cont || (fn->size() == args().size())) {
@@ -701,14 +675,14 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
             }
 
             // instantiate fn type
-            if (fn->is_generic()) {
-                for (TypeVar v : fn->bound_vars()) {
-                    if (sema.is_instantiated(v))
-                        lhs()->add_inferred_arg(sema.pop_inst_var(v));
+            if (was_generic) {
+                for (Type t : inst_types) {
+                    UninstantiatedType ut = t.as<UninstantiatedType>();
+                    if (ut->is_instantiated())
+                        lhs()->add_inferred_arg(ut->instance());
                 }
                 if (lhs()->inferred_args().size() == fn->num_bound_vars()) {
                     // TODO where should be set this new type? should we set it at all?
-                    fn = sema.instantiate(this, fn, lhs()->inferred_args()).as<FnType>();
                 } else
                     sema.error(this) << "could not find instances for all type variables.\n";
             }
