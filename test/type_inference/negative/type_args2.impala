@@ -1,0 +1,6 @@
+fn f[A](g: fn(fn(A)->A)->(), a: A) -> () {
+}
+
+fn main() -> () {
+    f(|x: fn(bool)->int32| -> () {}, true)
+}
