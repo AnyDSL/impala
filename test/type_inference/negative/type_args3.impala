@@ -1,0 +1,7 @@
+trait T {}
+
+fn f[A: T](a: A) -> A { a }
+
+fn main() -> () {
+    f(5);
+}
