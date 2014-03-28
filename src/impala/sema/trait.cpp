@@ -37,6 +37,23 @@ void TraitNode::add_super_trait(Trait t) {
     }
 }
 
+bool TraitInstanceNode::unify_with(TraitNode* other) {
+    if (auto tinst = other->isa<TraitInstanceNode>()) {
+        if (trait() == tinst->trait()) {
+            if (var_instances().size() == tinst->var_instances().size()) {
+                bool result = true;
+                for (TypeVar v : trait()->bound_vars()) {
+                    TypeVarNode* vnode = v.node();
+                    assert(var_instances().find(vnode) != var_instances().end());
+                    assert(tinst->var_instances().find(vnode) != tinst->var_instances().end());
+                    result = result && var_instances()[vnode]->unify_with(tinst->var_instances()[vnode]);
+                }
+            }
+        }
+    }
+    return false;
+}
+
 void TraitInstanceNode::make_real() {
     for (size_t i = 1; i < trait()->num_bound_vars(); ++i) {
         TypeVar tv = trait()->bound_var(i);

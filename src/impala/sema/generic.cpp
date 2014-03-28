@@ -20,6 +20,15 @@ template void unify(TypeTable&, const Proxy<TypeNode>&);
 template void unify(TypeTable&, const Proxy<TraitNode>&);
 //template void unify(TypeTable&, const Proxy<TraitImplNode>&);
 
+//------------------------------------------------------------------------------
+
+bool Generic::unify_bound_vars(thorin::ArrayRef<TypeVar> other_vars) {
+    if (num_bound_vars() == other_vars.size()) {
+        return !is_generic(); // TODO enable unification of generic elements!
+    }
+    return false;
+}
+
 void Generic::make_bound_vars_real() {
     for (auto v : bound_vars())
         v->make_real();

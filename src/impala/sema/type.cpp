@@ -11,6 +11,34 @@ int UninstantiatedTypeNode::counter_ = 0;
 
 //------------------------------------------------------------------------------
 
+bool RealTypeNode::unify_with(TypeNode* other) {
+    if (kind() == other->kind()) {
+        RealTypeNode* rtn = other->as<RealTypeNode>();
+
+        if (unify_bound_vars(other->bound_vars())) {
+            // go through all sub elements
+            if (size() == rtn->size()) {
+                bool result = true;
+                for (size_t i = 0; i < size(); ++i)
+                    result = result && elem(i)->unify_with(rtn->elem(i));
+
+                return result;
+            }
+        }
+    }
+    return false;
+}
+
+bool UninstantiatedTypeNode::unify_with(TypeNode* other) {
+    if (!is_instantiated()) {
+        instantiate(Type(other));
+        return true;
+    } else
+        return false;
+}
+
+//------------------------------------------------------------------------------
+
 bool RealTypeNode::is_closed() const {
     for (auto v : bound_vars()) {
         for (auto r : v->bounds()) {

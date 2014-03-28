@@ -54,6 +54,8 @@ public:
     virtual void make_real() {}
     virtual bool is_real() const { return true; }
 
+    virtual bool unify_with(TraitNode*) { assert(false); return false; }
+
     /// add a non-inherited method or return \p false if a method with this name already existed
     bool add_method(Symbol name, Type method_type) { return add_method(name, method_type, false); }
     /// return the type of the method with this name if it exists; otherwise return an empty type
@@ -103,6 +105,8 @@ public:
     virtual void make_real();
     virtual bool is_real() const;
 
+    virtual bool unify_with(TraitNode*);
+
     virtual Type find_method(Symbol name);
     virtual const MethodTable& all_methods();
 
@@ -147,6 +151,8 @@ public:
     // CHECK is this correct?
     virtual void make_real() {}
     virtual bool is_real() const { return true; }
+
+    virtual bool unify_with(TraitImplNode*) { assert(false); return false; }
 
     virtual bool is_closed() const { return true; } // TODO
 

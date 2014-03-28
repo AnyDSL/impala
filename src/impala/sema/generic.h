@@ -112,6 +112,15 @@ public:
     virtual std::string to_string() const = 0;
 
     /**
+     * Try to fill in missing type information by matching this possibly incomplete Generic with a complete Generic.
+     * Example: fn(?0, ?1) unified_with fn(int, bool)  will set ?0=int and ?1=bool
+     * @return \p true if unification worked, i.e. both generics were structurally equal
+     *         and there were no contradictions during unification (a contradiction
+     *         would be fn(?0, ?0) unified with fn(int, bool)).
+     */
+    virtual bool unify_with(Generic*) = 0;
+
+    /**
      * replace any \p UninstantiatedTypeNodes within this Generic with their instances
      * and set the representatives of these nodes to their instances
      */
@@ -126,6 +135,7 @@ protected:
     TypeTable& typetable_;
 
     std::string bound_vars_to_string() const;
+    bool unify_bound_vars(thorin::ArrayRef<TypeVar>);
     void make_bound_vars_real();
     bool bound_vars_real() const;
 
@@ -161,6 +171,24 @@ public:
     virtual bool equal(const Generic* other) const {
         if (const T* t = other->isa<T>())
             return equal(t);
+        return false;
+    }
+
+    /// @see Generic::unify_with(Generic*)
+    virtual bool unify_with(T*) = 0;
+    virtual bool unify_with(Proxy<T> other) {
+        assert(other->is_closed());
+        bool b = unify_with(*other);
+        assert(!b || is_closed());
+        return b;
+    }
+    virtual bool unify_with(Generic* other) {
+        assert(other->is_closed());
+        if (T* t = other->isa<T>()) {
+            bool b = unify_with(t);
+            assert(!b || is_closed());
+            return b;
+        }
         return false;
     }
 

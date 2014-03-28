@@ -94,6 +94,8 @@ public:
     virtual bool equal(const TypeNode*) const;
     virtual size_t hash() const;
 
+    virtual bool unify_with(TypeNode*);
+
     virtual void add_implementation(TraitImpl);
     virtual bool implements(Trait) const;
     virtual const UniSet<Trait>& trait_impls() const { return trait_impls_; }
@@ -143,6 +145,7 @@ public:
 
     virtual bool equal(const TypeNode*) const;
     virtual size_t hash() const;
+    virtual bool unify_with(TypeNode*);
 
     virtual void add_implementation(TraitImpl) { assert(false); }
     virtual bool implements(Trait t) const { return is_instantiated() && instance()->implements(t); }
