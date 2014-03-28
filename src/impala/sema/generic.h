@@ -176,7 +176,7 @@ public:
 
     /// @see Generic::unify_with(Generic*)
     virtual bool unify_with(T*) = 0;
-    virtual bool unify_with(Proxy<T> other) {
+    bool unify_with(Proxy<T> other) {
         assert(other->is_closed());
         bool b = unify_with(*other);
         assert(!b || is_closed());

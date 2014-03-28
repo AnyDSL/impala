@@ -158,4 +158,6 @@ TraitNode* TraitInstanceNode::vspecialize(SpecializeMapping& mapping) {
     return typetable().instantiate_trait(trait(), m);
 }
 
+Generic* TraitImplNode::vspecialize(SpecializeMapping& m) { return m[this] = typetable().implement_trait(impl_decl(), trait()->specialize(m)).node(); }
+
 }
