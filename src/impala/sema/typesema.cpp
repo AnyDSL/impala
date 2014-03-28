@@ -333,7 +333,13 @@ Trait ASTTypeApp::to_trait(TypeSema& sema, Type self) const {
 
 Type ValueDecl::check(TypeSema& sema, Type expected) const {
     if (ast_type()) {
-        return sema.check(ast_type());
+        Type t = sema.check(ast_type());
+        if (expected.empty() || expected->unify_with(t)) {
+            return t;
+        } else {
+            sema.error(this) << "could not unify types: expected '" << expected << "' but found '" << t << "'.\n";
+            return sema.type_error();
+        }
     } else {
         return expected;
     }
