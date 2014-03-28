@@ -55,7 +55,25 @@ public:
     /// Checks if all types in the type tables are sane and correctly unified.
     void verify() const;
 
+    /**
+     * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
+     * therefore it is important to call \p check_bounds after all unknowns have been resolved!
+     */
+    template<class T> T instantiate_unknown(T t, std::vector<Type>& inst_types) {
+        for (size_t i = 0; i < t->num_bound_vars(); ++i) inst_types.push_back(uninstantiated_type());
+        SpecializeMapping mapping = create_spec_mapping(t, inst_types);
+        return t->instantiate(mapping);
+    }
+
+    virtual void check_impls() {}
+    template<class T> bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types) {
+        assert(inst_types.size() == generic->num_bound_vars());
+        SpecializeMapping mapping = create_spec_mapping(generic, inst_types);
+        return check_bounds(loc, generic, inst_types, mapping);
+    }
+
 protected:
+    template<class T> bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping);
     template<class T> SpecializeMapping create_spec_mapping(T generic, thorin::ArrayRef<Type> var_instances) const {
         assert(generic->num_bound_vars() == var_instances.size());
         SpecializeMapping mapping;

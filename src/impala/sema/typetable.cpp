@@ -156,6 +156,42 @@ PrimType TypeTable::primtype(const PrimTypeKind kind) {
     }
 }
 
+template<class T> bool TypeTable::check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping) {
+    assert(inst_types.size() == generic->num_bound_vars());
+    assert(inst_types.size() == mapping.size());
+
+    bool no_error = true;
+
+    // check the bounds
+    for (size_t i = 0; i < generic->num_bound_vars(); ++i) {
+        TypeVar v = generic->bound_var(i);
+        Type instance = inst_types[i];
+        assert(mapping.contains(*v));
+        assert(mapping[*v] == *instance);
+
+        for (Trait bound : v->bounds()) {
+            SpecializeMapping m(mapping); // copy the mapping
+            Trait spec_bound = bound->specialize(m);
+            unify(spec_bound);
+
+            if (instance != type_error() && spec_bound != trait_error()) {
+                check_impls(); // first we need to check all implementations to be up-to-date
+                if (!instance->implements(spec_bound)) {
+                    if (loc)
+                        error(loc) << "'" << instance << "' (instance for '" << v << "') does not implement bound '" << spec_bound << "'\n";
+                    no_error = false;
+                }
+            }
+        }
+    }
+
+    return no_error;
+}
+
+template bool TypeTable::check_bounds(const ASTNode* loc, Type generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping);
+template bool TypeTable::check_bounds(const ASTNode* loc, Trait generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping);
+template bool TypeTable::check_bounds(const ASTNode* loc, TraitImpl generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping);
+
 void TypeTable::verify() const {
     for (Generic* g : unifiables_) {
         assert(g != nullptr);

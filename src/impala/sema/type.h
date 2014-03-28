@@ -50,7 +50,8 @@ public:
 
     virtual void add_implementation(TraitImpl) = 0;
     virtual bool implements(Trait) const = 0;
-    virtual const UniSet<Trait>& trait_impls() const = 0;
+    /// @return The method type or an empty type if no method with this name was found
+    virtual Type find_method(Symbol s) const = 0;
 
     /// A type is closed if it contains no unbound type variables.
     virtual bool is_closed() const = 0;
@@ -98,7 +99,7 @@ public:
 
     virtual void add_implementation(TraitImpl);
     virtual bool implements(Trait) const;
-    virtual const UniSet<Trait>& trait_impls() const { return trait_impls_; }
+    virtual Type find_method(Symbol s) const;
 
     virtual bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());
@@ -112,6 +113,7 @@ public:
 private:
     const Kind kind_;
     UniSet<Trait> trait_impls_; // TODO do we want to have the impls or only the traits?
+    std::vector<TraitImpl> gen_trait_impls_; // TODO use a mapping trait_name -> impls to make this faster!
 
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
@@ -149,7 +151,7 @@ public:
 
     virtual void add_implementation(TraitImpl) { assert(false); }
     virtual bool implements(Trait t) const { return is_instantiated() && instance()->implements(t); }
-    virtual const UniSet<Trait>& trait_impls() const  { assert(is_instantiated()); return instance()->trait_impls(); }
+    virtual Type find_method(Symbol s) const { assert(is_instantiated()); return instance()->find_method(s); }
 
     virtual size_t num_bound_vars() const { return is_instantiated() ? instance()->num_bound_vars() : 0; }
     virtual thorin::ArrayRef<TypeVar> bound_vars() const { return is_instantiated() ? instance()->bound_vars() : thorin::ArrayRef<TypeVar>(); }
@@ -291,7 +293,7 @@ public:
     std::string to_string() const;
 
     virtual bool implements(Trait) const;
-    virtual const UniSet<Trait>& trait_impls() const { return bounds(); }
+    virtual Type find_method(Symbol s) const;
 
     /**
      * A type variable is closed if it is bound and all restrictions are closed.

@@ -96,23 +96,54 @@ bool TypeVarNode::is_closed() const {
 //------------------------------------------------------------------------------
 
 void RealTypeNode::add_implementation(TraitImpl impl) {
-    Trait trait = impl->trait();
-    if (!trait_impls_.insert(trait).second)
-        typetable().error(impl->impl_decl()) << "Duplicated implementation of trait '" << trait << "'\n";
-    for (Trait super : trait->super_traits()) {
-        if (!trait_impls_.insert(super).second)
-            typetable().error(impl->impl_decl()) << "Duplicated implementation of trait '" << super << "'\n";
+    // TODO fail if a method was implemented multiple times!
+    if (impl->is_generic()) {
+        gen_trait_impls_.push_back(impl);
+    } else {
+        Trait trait = impl->trait();
+        if (!trait_impls_.insert(trait).second)
+            typetable().error(impl->impl_decl()) << "Duplicated implementation of trait '" << trait << "'\n";
+        for (Trait super : trait->super_traits()) {
+            if (!trait_impls_.insert(super).second)
+                typetable().error(impl->impl_decl()) << "Duplicated implementation of trait '" << super << "'\n";
+        }
     }
 }
 
 bool RealTypeNode::implements(Trait trait) const {
-    // CHECK is this enough?
-    return trait_impls_.find(trait) != trait_impls_.end();
+    if (trait_impls_.find(trait) == trait_impls_.end()) {
+        // try to instantiate the generic implementations
+        for (TraitImpl ti : gen_trait_impls_) {
+            std::vector<Type> inst_types;
+            TraitImpl inst = typetable().instantiate_unknown(ti, inst_types);
+            if (inst->trait()->unify_with(*trait)) { // TODO why do we have to deref here explicitly? It *should* work without deref
+                if (typetable().check_bounds(nullptr, ti, inst_types))
+                    return true;
+            }
+        }
+        return false;
+    }
+    return true;
 }
 
 bool TypeVarNode::implements(Trait trait) const {
     // CHECK is this enough?
     return bounds().find(trait) != bounds().end();
+}
+
+Type RealTypeNode::find_method(Symbol s) const {
+    // TODO what about generic implementations?
+    for (Trait t : trait_impls_) {
+        if (auto fn = t->find_method(s)) return fn;
+    }
+    return Type();
+}
+
+Type TypeVarNode::find_method(Symbol s) const {
+    for (Trait t : bounds()) {
+        if (auto fn = t->find_method(s)) return fn;
+    }
+    return Type();
 }
 
 FnType FnTypeNode::specialize_method(Type t) const {

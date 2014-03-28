@@ -23,7 +23,7 @@ public:
 
     bool nossa() const { return nossa_; }
     void push_impl(const Impl* i) { impls_.push_back(i); }
-    void check_impls() {
+    virtual void check_impls() {
         while (!impls_.empty()) {
             const Impl* i = impls_.back();
             impls_.pop_back();
@@ -43,14 +43,7 @@ public:
         }
     }
 
-    template<class T> void check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping);
-    /**
-     * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
-     * therefore it is important to call \p instantiate after all unknowns have been resolved!
-     */
-    template<class T> T instantiate_unknown(T, std::vector<Type>& inst_types);
     Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances);
-    Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<Type> var_instances);
     Trait instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
 
     Type check(const TypeDecl* type_decl) {
@@ -150,6 +143,8 @@ void TypeSema::expect_type(const Expr* found, Type expected, std::string typetyp
                     assert(ut->is_instantiated());
                     found->add_inferred_arg(ut->instance());
                 }
+                // needed for bound checking
+                check_bounds(found, found_type, found->inferred_args());
                 return;
             }
         }
@@ -171,36 +166,6 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
         error(node) << "last argument is not a continuation function\n";
         return type_error();
     }
-}
-
-template<class T> void TypeSema::check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping) {
-    assert(inst_types.size() == generic->num_bound_vars());
-    assert(inst_types.size() == mapping.size());
-    // check the bounds
-    for (size_t i = 0; i < generic->num_bound_vars(); ++i) {
-        TypeVar v = generic->bound_var(i);
-        Type instance = inst_types[i];
-        assert(mapping.contains(*v));
-        assert(mapping[*v] == *instance);
-
-        for (Trait bound : v->bounds()) {
-            SpecializeMapping m(mapping); // copy the mapping
-            Trait spec_bound = bound->specialize(m);
-            unify(spec_bound);
-
-            if (instance != type_error() && spec_bound != trait_error()) {
-                check_impls(); // first we need to check all implementations to be up-to-date
-                if (!instance->implements(spec_bound))
-                    error(loc) << "'" << instance << "' (instance for '" << v << "') does not implement bound '" << spec_bound << "'\n";
-            }
-        }
-    }
-}
-
-template<class T> T TypeSema::instantiate_unknown(T t, std::vector<Type>& inst_types) {
-    for (size_t i = 0; i < t->num_bound_vars(); ++i) inst_types.push_back(uninstantiated_type());
-    SpecializeMapping mapping = create_spec_mapping(t, inst_types);
-    return t->instantiate(mapping);
 }
 
 Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances) {
@@ -232,13 +197,6 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
     }
 
     return type_error();
-}
-
-Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<Type> var_instances) {
-    assert(var_instances.size() == type->num_bound_vars());
-    SpecializeMapping mapping = create_spec_mapping(type, var_instances);
-    check_bounds(loc, type, var_instances, mapping);
-    return type->instantiate(mapping);
 }
 
 //------------------------------------------------------------------------------
@@ -620,29 +578,26 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
     // FEATURE struct types
     // FEATURE maybe store a hash map of methods in the type to make this fast!
     sema.check_impls();
-    for (Trait t : lhs()->type()->trait_impls()) {
-        Type fn = t->find_method(path_elem()->symbol());
-        if (!fn.empty()) {
-            if (fn != sema.type_error()) {
-                FnType func;
-                if (!path_elem()->args().empty()) {
-                    Type t = sema.instantiate(path_elem(), fn, path_elem()->args());
-                    sema.unify(t);
-                    func = t.as<FnType>();
-                } else
-                    func = fn.as<FnType>();
+    Type fn = lhs()->type()->find_method(path_elem()->symbol());
+    if (!fn.empty()) {
+        if (fn != sema.type_error()) {
+            FnType func;
+            if (!path_elem()->args().empty()) {
+                Type t = sema.instantiate(path_elem(), fn, path_elem()->args());
+                sema.unify(t);
+                func = t.as<FnType>();
+            } else
+                func = fn.as<FnType>();
 
-                // there should at least be two arguments: the continuation and the self object
-                if (func->size() > 1) {
-                    sema.expect_type(lhs(), func->elem(0), "object");
-                    return func->specialize_method(lhs()->type());
-                } else
-                    sema.error(this) << "cannot call a method without any arguments";
-            }
-            return sema.type_error();
+            // there should at least be two arguments: the continuation and the self object
+            if (func->size() > 1) {
+                sema.expect_type(lhs(), func->elem(0), "object");
+                return func->specialize_method(lhs()->type());
+            } else
+                sema.error(this) << "cannot call a method without any arguments";
         }
+        return sema.type_error();
     }
-
     sema.error(this) << "no declaration for method '" << path_elem() << "' found.\n";
     return sema.type_error();
 }
@@ -713,8 +668,7 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
                 }
                 if (no_error) {
                     // TODO where should be set this new type? should we set it at all?
-                    auto inst = sema.instantiate(this, ofn, lhs()->inferred_args());
-                    assert(inst == fn);
+                    sema.check_bounds(this, lhst, lhs()->inferred_args());
                 }
             }
 
