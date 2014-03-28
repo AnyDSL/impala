@@ -40,14 +40,17 @@ void TraitNode::add_super_trait(Trait t) {
 bool TraitInstanceNode::unify_with(TraitNode* other) {
     if (auto tinst = other->isa<TraitInstanceNode>()) {
         if (trait() == tinst->trait()) {
-            if (var_instances().size() == tinst->var_instances().size()) {
+            auto other_vinsts = tinst->var_instances_;
+            if (var_instances_.size() == other_vinsts.size()) {
                 bool result = true;
                 for (TypeVar v : trait()->bound_vars()) {
                     TypeVarNode* vnode = v.node();
-                    assert(var_instances().find(vnode) != var_instances().end());
-                    assert(tinst->var_instances().find(vnode) != tinst->var_instances().end());
-                    result = result && var_instances()[vnode]->unify_with(tinst->var_instances()[vnode]);
+                    assert(var_instances_.find(vnode) != var_instances_.end());
+                    assert(other_vinsts.find(vnode) != other_vinsts.end());
+
+                    result = result && var_instances_[vnode]->unify_with(other_vinsts[vnode]);
                 }
+                return result;
             }
         }
     }
