@@ -34,7 +34,7 @@ bool UninstantiatedTypeNode::unify_with(TypeNode* other) {
         instantiate(Type(other));
         return true;
     } else
-        return false;
+        return instance()->unify_with(other);
 }
 
 //------------------------------------------------------------------------------
