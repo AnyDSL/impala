@@ -136,10 +136,25 @@ Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
 }
 
 void TypeSema::expect_type(const Expr* found, Type expected, std::string typetype) {
-    if (found->type() == type_error() || expected == type_error())
+    Type found_type = found->type();
+    if (found_type == type_error() || expected == type_error())
         return;
-    if (found->type() != expected)
+    if (found_type != expected) {
+        if (found_type->is_generic()) {
+            // try to infer instantiations for this generic type
+            std::vector<Type> inst_types;
+            Type inst = instantiate_unknown(found_type, inst_types);
+            if (inst->unify_with(expected)) {
+                for (Type t : inst_types) {
+                    UninstantiatedType ut = t.as<UninstantiatedType>();
+                    assert(ut->is_instantiated());
+                    found->add_inferred_arg(ut->instance());
+                }
+                return;
+            }
+        }
         error(found) << "wrong " << typetype << " type; expected " << expected << " but found " << found->type() << "\n";
+    }
 }
 
 Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
