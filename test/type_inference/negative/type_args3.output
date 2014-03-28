@@ -1,1 +1,1 @@
-type_args3.impala:6 col 5 - 8: error: 'int32' (instance for 'A') does not implement bound 'T'
+type_args3.impala:5 col 14 - 32: error: could not unify types: expected 'fn(bool, fn(bool))' but found 'fn(int32, fn(int32))'.

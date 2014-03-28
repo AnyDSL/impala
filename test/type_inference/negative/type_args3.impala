@@ -1,7 +1,6 @@
-trait T {}
-
-fn f[A: T](a: A) -> A { a }
+fn f[A](a: A, g: fn(fn(A)->A)->()) -> () {
+}
 
 fn main() -> () {
-    f(5);
+    f(true, |x: fn(int32)->int32| -> () {})
 }

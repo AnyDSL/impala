@@ -1,0 +1,1 @@
+type_args1.impala:5 col 39 - 42: error: wrong argument type; expected int32 but found bool

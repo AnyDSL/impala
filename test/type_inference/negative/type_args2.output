@@ -1,0 +1,1 @@
+type_args2.impala:5 col 8 - 25: error: could not unify types: expected 'fn(bool, fn(bool))' but found 'fn(bool, fn(int32))'.

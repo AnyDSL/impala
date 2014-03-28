@@ -1,0 +1,1 @@
+type_args4.impala:6 col 5 - 8: error: 'int32' (instance for 'A') does not implement bound 'T'
