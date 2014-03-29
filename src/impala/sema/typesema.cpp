@@ -200,7 +200,6 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
         check_bounds(loc, type, inst_types, mapping);
         return type->instantiate(mapping);
     } else {
-        type->dump();
         error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << type->num_bound_vars() << "\n";
     }
 
