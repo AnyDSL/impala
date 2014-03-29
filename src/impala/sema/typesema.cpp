@@ -38,8 +38,8 @@ public:
     void check_body(const ASTNode* fn, const Expr* body, Type fn_type) {
         Type body_type = check(body);
         if ((body_type != type_noreturn()) && (body_type != type_error())) {
-            Type ret_func = fn_type->elems().back();  // TODO may be noret
-            expect_type(body, create_return_type(fn, ret_func), "return");
+            Type rettype = create_return_type(fn, fn_type->elems().back()); // TODO last elem may be noret
+            expect_type(body, rettype, "return");
         }
     }
 
@@ -130,6 +130,14 @@ Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
 
 void TypeSema::expect_type(const Expr* found, Type expected, std::string typetype) {
     Type found_type = found->type();
+
+    if (auto ut = expected.isa<UninstantiatedType>()) {
+        if (!ut->is_instantiated()) {
+            ut->instantiate(found_type);
+            return;
+        }
+    }
+
     if (found_type == type_error() || expected == type_error())
         return;
     if (found_type != expected) {
