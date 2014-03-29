@@ -37,6 +37,7 @@ public:
     Type create_return_type(const ASTNode* node, Type ret_func);
     void check_body(const ASTNode* fn, const Expr* body, Type fn_type) {
         Type body_type = check(body);
+        if (!body_type->is_closed()) return; // FEATURE make this check faster - e.g. store a "potentially not closed" flag
         if ((body_type != type_noreturn()) && (body_type != type_error())) {
             Type rettype = create_return_type(fn, fn_type->elems().back()); // TODO last elem may be noret
             expect_type(body, rettype, "return");
@@ -137,6 +138,10 @@ void TypeSema::expect_type(const Expr* found, Type expected, std::string typetyp
             return;
         }
     }
+
+    // FEATURE make this check faster - e.g. store a "potentially not closed" flag
+    if (!expected->is_closed())
+        return;
 
     if (found_type == type_error() || expected == type_error())
         return;

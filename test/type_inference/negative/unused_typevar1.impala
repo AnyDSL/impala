@@ -3,5 +3,5 @@ fn f[A](g: fn(A) -> A) -> int32 {
 }
 
 fn main() -> () {
-    f(|x| x)
+    f(|x| x);
 }
