@@ -124,13 +124,14 @@ bool TypeTable::unify(Proxy<T> elem) {
     if (unifiable->is_unified())
         return false;
 
+    assert(unifiable->is_closed() && "Only closed unifiables can be unified!");
+
     if (auto utn = unifiable->template isa<UninstantiatedTypeNode>()) {
         bool res = unify(utn->instance());
         utn->set_representative(*utn->instance());
         return res;
     }
 
-    assert(unifiable->is_closed() && "Only closed unifiables can be unified!");
     unifiable->make_real();
 
     auto i = unifiables_.find(unifiable);
