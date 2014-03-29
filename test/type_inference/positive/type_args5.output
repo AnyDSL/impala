@@ -1,0 +1,10 @@
+trait T[X] {
+    
+}
+
+fn f[A, B: T[A]](b: B) -> () {
+}
+
+fn main[C, D: T[C]](d: D) -> () {
+    f[C, D](d)
+}

@@ -1,0 +1,8 @@
+trait T[X] {}
+impl T[bool] for int32 {}
+
+fn f[A, B: T[A]](b: B) -> () {}
+
+fn main() -> () {
+    f(4)
+}
