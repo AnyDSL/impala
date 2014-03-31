@@ -33,9 +33,8 @@ std::string Generic::bound_vars_to_string() const {
     return result + ']';
 }
 
-std::string UnknownTypeNode::to_string() const {
-    return is_instantiated() ? instance()->to_string() : (std::string("?") + std::to_string(id_));
-}
+//std::string UnknownTypeNode::to_string() const { return is_instantiated() ? std::string("[") + std::to_string(id_) + instance()->to_string() + "]" : (std::string("?") + std::to_string(id_)); }
+std::string UnknownTypeNode::to_string() const { return is_instantiated() ? instance()->to_string() : (std::string("?") + std::to_string(id_)); }
 
 std::string TraitNode::to_string() const { return is_error_trait() ? "<trait error>" : trait_decl()->symbol().str(); }
 
