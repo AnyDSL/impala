@@ -69,6 +69,8 @@ public:
     bool is_assign()  const { return is_assign(kind_); }
     bool is_op()      const { return is_op(kind_); }
 
+    static Kind sym2ilit(Symbol sym);
+    static Kind sym2flit(Symbol sym);
     static bool is_prefix(Kind kind)  { return (tok2op_[kind] &  PREFIX) != 0; }
     static bool is_infix(Kind kind)   { return (tok2op_[kind] &   INFIX) != 0; }
     static bool is_postfix(Kind kind) { return (tok2op_[kind] & POSTFIX) != 0; }
@@ -85,23 +87,19 @@ public:
 
 private:
     static void init();
+    static Symbol insert(Kind tok, const char* str);
+    static void insert_key(Kind tok, const char* str);
 
     Symbol symbol_;
     Kind kind_;
     thorin::Box box_;
 
     static int tok2op_[NUM_TOKENS];
-    static Symbol insert(Kind tok, const char* str);
-    static void insert_key(Kind tok, const char* str);
-
-    typedef thorin::HashMap<Kind, Symbol, KindHash> Tok2Sym;
-    static Tok2Sym tok2sym_;
-
-    typedef thorin::HashMap<Symbol, Kind> Sym2Tok;
-    static Sym2Tok keywords_;
-
-    typedef thorin::HashMap<Kind, const char*, KindHash> Tok2Str;
-    static Tok2Str tok2str_;
+    static thorin::HashMap<Kind, const char*, KindHash> tok2str_;
+    static thorin::HashMap<Kind, Symbol, KindHash> tok2sym_;
+    static thorin::HashMap<Symbol, Kind> keywords_;
+    static thorin::HashMap<Symbol, Kind> sym2ilit_;
+    static thorin::HashMap<Symbol, Kind> sym2flit_;
 
     friend void init();
     friend std::ostream& operator << (std::ostream& os, const Token& tok);

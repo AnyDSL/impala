@@ -17,10 +17,7 @@ public:
 
 private:
     std::ostream& error(const Location& loc);
-
-    /*
-     * peek, next and accept
-     */
+    bool lex_identifier(std::string&);
 
     int next();
     int peek() const { return stream_.peek(); }

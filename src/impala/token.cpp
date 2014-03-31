@@ -8,10 +8,6 @@ using namespace thorin;
 
 namespace impala {
 
-/*
- * constructors
- */
-
 Token::Token(const Location& loc, Kind tok)
     : HasLocation(loc)
     , symbol_(tok2sym_[tok])
@@ -37,16 +33,14 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
     using namespace std;
 
     switch (kind_) {
-        case LIT_i8:   box_ = Box(bcast< uint8_t,  int8_t>( int8_t(strtol  (symbol_.str(), 0, 0)))); break;
-        case LIT_i16:  box_ = Box(bcast<uint16_t, int16_t>(int16_t(strtol  (symbol_.str(), 0, 0)))); break;
-        case LIT_i32:  box_ = Box(bcast<uint32_t, int32_t>(int32_t(strtol  (symbol_.str(), 0, 0)))); break;
-        case LIT_i64:  box_ = Box(bcast<uint64_t, int64_t>(int64_t(strtoll (symbol_.str(), 0, 0)))); break;
-
-        //case LIT_uint8:  box_ = Box(uint8_t (strtoul (symbol_.str(), 0, 0))); break;
-        //case LIT_uint16: box_ = Box(uint16_t(strtoul (symbol_.str(), 0, 0))); break;
-        //case LIT_uint32: box_ = Box(uint32_t(strtoul (symbol_.str(), 0, 0))); break;
-        //case LIT_uint64: box_ = Box(uint64_t(strtoull(symbol_.str(), 0, 0))); break;
-
+        case LIT_i8:  box_ = Box(  int8_t(strtol  (symbol_.str(), 0, 0))); break;
+        case LIT_i16: box_ = Box( int16_t(strtol  (symbol_.str(), 0, 0))); break;
+        case LIT_i32: box_ = Box( int32_t(strtol  (symbol_.str(), 0, 0))); break;
+        case LIT_i64: box_ = Box( int64_t(strtoll (symbol_.str(), 0, 0))); break;
+        case LIT_u8:  box_ = Box(uint8_t (strtoul (symbol_.str(), 0, 0))); break;
+        case LIT_u16: box_ = Box(uint16_t(strtoul (symbol_.str(), 0, 0))); break;
+        case LIT_u32: box_ = Box(uint32_t(strtoul (symbol_.str(), 0, 0))); break;
+        case LIT_u64: box_ = Box(uint64_t(strtoull(symbol_.str(), 0, 0))); break;
         case LIT_f32: box_ = Box(strtof(symbol_.str(), 0)); break;
         case LIT_f64: box_ = Box(strtod(symbol_.str(), 0)); break;
 
@@ -108,14 +102,30 @@ int Token::to_binop(Kind kind) {
  * static member variables
  */
 
-int Token::tok2op_[NUM_TOKENS];
-Token::Sym2Tok Token::keywords_;
-Token::Tok2Sym Token::tok2sym_;
-Token::Tok2Str Token::tok2str_;
+int                                                         Token::tok2op_[NUM_TOKENS];
+thorin::HashMap<Token::Kind, const char*, Token::KindHash>  Token::tok2str_;
+thorin::HashMap<Token::Kind, Symbol, Token::KindHash>       Token::tok2sym_;
+thorin::HashMap<Symbol, Token::Kind>                        Token::keywords_;
+thorin::HashMap<Symbol, Token::Kind>                        Token::sym2ilit_;
+thorin::HashMap<Symbol, Token::Kind>                        Token::sym2flit_;
 
 /*
  * static methods
  */
+
+TokenKind Token::sym2ilit(Symbol sym) {
+    auto i = sym2ilit_.find(sym);
+    if (i != sym2ilit_.end())
+        return i->second;
+    return TYPE_error;
+}
+
+TokenKind Token::sym2flit(Symbol sym) {
+    auto i = sym2flit_.find(sym);
+    if (i != sym2flit_.end())
+        return i->second;
+    return TYPE_error;
+}
 
 void Token::init() {
     THORIN_CALL_ONCE;
@@ -147,9 +157,13 @@ void Token::init() {
     tok2str_[ID]         = Symbol("<identifier>").str();
     insert(END_OF_FILE, "<end of file>");
     insert_key(MUT, "mut");
+    sym2ilit_["i8"]  = LIT_i8;  sym2ilit_["u8"]  = LIT_u8;
+    sym2ilit_["i16"] = LIT_i16; sym2ilit_["u16"] = LIT_u16;
+    sym2ilit_["i32"] = LIT_i32; sym2ilit_["u32"] = LIT_u32; sym2flit_["f32"] = LIT_f32;
+    sym2ilit_["i64"] = LIT_i64; sym2ilit_["u64"] = LIT_u64; sym2flit_["f64"] = LIT_f64;
 }
 
-/*static*/ void Token::insert_key(TokenKind tok, const char* str) {
+void Token::insert_key(TokenKind tok, const char* str) {
     Symbol s = str;
     assert(keywords_.find(s) == keywords_.end() && "already inserted");
     keywords_[s] = tok;
@@ -157,7 +171,7 @@ void Token::init() {
 }
 
 
-/*static*/ Symbol Token::insert(TokenKind tok, const char* str) {
+Symbol Token::insert(TokenKind tok, const char* str) {
     Symbol s = str;
     auto p = tok2sym_.emplace(tok, s);
 
@@ -191,4 +205,4 @@ std::ostream& operator << (std::ostream& os, const Token& tok) {
 
 //------------------------------------------------------------------------------
 
-} // namespace impala
+}

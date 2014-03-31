@@ -12,8 +12,10 @@ static inline bool sym(int c) { return std::isalpha(c) || c == '_'; }
 static inline bool dec(int c) { return std::isdigit(c) != 0; }
 static inline bool dec_nonzero(int c) { return c >= '1' && c <= '9'; }
 static inline bool space(int c) { return std::isspace(c) != 0; }
-static inline bool oct(int c) { return '0' <= c && c <= '7'; }
-static inline bool hex(int c) { return std::isxdigit(c) != 0; }
+static inline bool bin_(int c) { return ('0' <= c && c <= '1') || c == '_'; }
+static inline bool oct_(int c) { return ('0' <= c && c <= '7') || c == '_'; }
+static inline bool dec_(int c) { return std::isdigit(c) != 0 || c == '_'; }
+static inline bool hex_(int c) { return std::isxdigit(c) != 0 || c == '_'; }
 
 static inline bool bB(int c) { return c == 'b' || c == 'B'; }
 static inline bool eE(int c) { return c == 'e' || c == 'E'; }
@@ -56,6 +58,14 @@ int Lexer::next() {
         pos_.inc_col();
 
     return c;
+}
+
+bool Lexer::lex_identifier(std::string& str) {
+    if (accept(str, sym)) {
+        while (accept(str, sym) || accept(str, dec)) {}
+        return true;
+    }
+    return false;
 }
 
 Token Lexer::lex() {
@@ -186,113 +196,88 @@ Token Lexer::lex() {
         }
 
         // identifiers/keywords
-        if (accept(str, sym)) {
-            while (accept(str, sym) || accept(str, dec)) {}
-
+        if (lex_identifier(str))
             return Token(loc_, str);
-        }
 
         /*
          * literals
          */
 
         if (accept(str, '0')) goto l_0;
-        if (accept(str, dec_nonzero)) goto l_decimal;
+        if (accept(str, dec_nonzero)) goto l_dec;
 
         // invalid input char
         error(pos_) << "invalid input character '" << (char) next() << "'\n";
         continue;
 
-l_0: // 0
+l_0:
+        if (accept(str,  bB)) goto l_bin;
+        if (accept(str,  oO)) goto l_oct;
+        if (accept(str, dec)) goto l_dec;
+        if (accept(str,  xX)) goto l_hex;
         if (accept(str, '.')) goto l_fractional_dot;
-        if (accept(str, oct)) goto l_octal;
-        if (accept(str, _89)) goto l_fractional;
-        if (accept(str,  eE)) goto l_exp;
-        if (accept(str,  xX)) goto l_0x;
-        goto l_out;
+        goto l_suffix;
 
-l_0x: // 0x
-        if (accept(str, '.')) goto l_0x_dot;
-        if (accept(str, hex)) goto l_hexadecimal;
-        goto l_error;
+l_bin:  // [0-1]*
+		while (accept(str, bin_)) {}
+        goto l_suffix;
 
-l_0x_dot: // 0x.
-		if (accept(str, hex)) goto l_hex_dot;
-        goto l_error;
+l_oct:  // [0-7]*
+		while (accept(str, oct_)) {}
+        goto l_suffix;
 
-l_decimal: // [1-9][0-9]*
+l_dec:  // [0-9]*
+		while (accept(str, dec_)) {}
 		if (accept(str, '.')) goto l_fractional_dot;
-		if (accept(str, dec)) goto l_decimal;
 		if (accept(str,  eE)) goto l_exp;
-        goto l_out;
+        goto l_suffix;
+
+l_hex:  // [0-9A-Fa-f]*
+		while (accept(str, hex_)) {}
+        goto l_suffix;
+
+l_fractional_dot: // [0-9]*
+		while (accept(str, dec)) {}
+		if (accept(str,  eE)) goto l_exp;
+        floating = true;
+        goto l_suffix;
 
 l_exp: // ...[eE]|[pP]
         floating = true;
         accept(str, sgn);
         if (accept(str, dec)) {
             while (accept(str, dec)) {}
-            goto l_out;
+            goto l_suffix;
         }
         goto l_error;
-
-l_fractional: // 0[0-7]*[89][0-9]*
-		while (accept(str, dec)) {}
-		if (accept(str, '.')) goto l_fractional_dot;
-		if (accept(str,  eE)) goto l_exp;
-        goto l_error;
-
-l_fractional_dot: // [0-9]+.[0-9]* .[0-9]+
-		while (accept(str, dec)) {}
-		if (accept(str,  eE)) goto l_exp;
-        floating = true;
-        goto l_out;
-
-l_hex_dot: // 0x[0-9A-Fa-f]+.[0-9A-Fa-f]*  0x.[0-9A-Fa-f]+
-		while (accept(str, hex)) {}
-		if (accept(str,  pP)) goto l_exp;
-        goto l_error;
-
-l_hexadecimal: // 0[Xx][0-9A-Fa-f]+
-		while (accept(str, hex)) {}
-		if (accept(str, '.')) goto l_hex_dot;
-		if (accept(str,  pP)) goto l_exp;
-        goto l_out;
-
-l_octal: // 0[0-7]+
-		while (accept(str, oct)) {}
-		if (accept(str, '.')) goto l_fractional_dot;
-		if (accept(str, _89)) goto l_fractional;
-		if (accept(str,  eE)) goto l_exp;
-        goto l_out;
 
 l_error: 
         error(pos_) << "invalid constant '" << str << "'\n";
         // fall through intended
-l_out:
+l_suffix:
         // lex suffix
         TokenKind tok = floating ? Token::LIT_f64 : Token::LIT_i32;
+        std::string suffix_str;
+        if (lex_identifier(suffix_str)) {
+            Symbol suffix(suffix_str);
+            if (floating) {
+                auto lit = Token::sym2flit(suffix);
+                if (lit == Token::TYPE_error) {
+                    error(loc_) << "invalid suffix on floating constant '" << suffix << "'\n";
+                    return Token(loc_, tok, str);
+                }
+                tok = lit;
+            } else {
+                auto lit = Token::sym2ilit(suffix);
+                if (lit == Token::TYPE_error) {
+                    error(loc_) << "invalid suffix on integer constant '" << suffix << "'\n";
+                    return Token(loc_, tok, str);
+                }
+                tok = lit;
+            }
+            str += suffix;
+        }
         
-        if (floating) {
-            if (accept(str, fF))
-                tok = Token::LIT_f32;
-        } else {
-            //if (accept(str, uU)) {
-                     //if (accept(str, bB)) tok = Token::LIT_uint8;
-                //else if (accept(str, sS)) tok = Token::LIT_uint16;
-                //else if (accept(str, lL)) tok = Token::LIT_uint64;
-            //} else {
-                     if (accept(str, bB)) tok = Token::LIT_i8;
-                else if (accept(str, sS)) tok = Token::LIT_i16;
-                else if (accept(str, lL)) tok = Token::LIT_i64;
-            //}
-        }
-
-        // eat up erroneous trailing suffixing chars
-        if (accept(str, sym)) {
-            while (accept(str, sym)) {}
-            error(loc_) << "invalid suffix on " << (floating ? "floating" : "integer") << " constant '" << str << "'\n";
-        }
-
         return Token(loc_, tok, str);
     }
 }
