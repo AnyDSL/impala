@@ -123,9 +123,9 @@ protected:
     friend class TypeTable;
 };
 
-class UninstantiatedTypeNode : public TypeNode {
+class UnknownTypeNode : public TypeNode {
 private:
-    UninstantiatedTypeNode(TypeTable& typetable)
+    UnknownTypeNode(TypeTable& typetable)
         : TypeNode(typetable)
         , id_(counter_++)
     {}

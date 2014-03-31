@@ -76,7 +76,7 @@ public:
         if (!expr->type_.empty())
             return expr->type_;
 
-        if (auto ut = expected.isa<UninstantiatedType>()) {
+        if (auto ut = expected.isa<UnknownType>()) {
             if (!ut->is_instantiated()) {
                 expr->type_ = expr->check(*this, ut);
                 if (!expr->type_.empty()) {
@@ -96,7 +96,7 @@ public:
     }
     Type check(const Expr* expr, Type expected) { return check(expr, expected, ""); }
     /// a check that does not expect any type (i.e. any type is allowed)
-    Type check(const Expr* expr) { return check(expr, uninstantiated_type()); }
+    Type check(const Expr* expr) { return check(expr, unknown_type()); }
     Type check(const ASTType* ast_type) { return ast_type->type_ = ast_type->check(*this); }
 
 private:
@@ -132,7 +132,7 @@ Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
 void TypeSema::expect_type(const Expr* found, Type expected, std::string typetype) {
     Type found_type = found->type();
 
-    if (auto ut = expected.isa<UninstantiatedType>()) {
+    if (auto ut = expected.isa<UnknownType>()) {
         if (!ut->is_instantiated()) {
             ut->instantiate(found_type);
             return;
@@ -152,7 +152,7 @@ void TypeSema::expect_type(const Expr* found, Type expected, std::string typetyp
             Type inst = instantiate_unknown(found_type, inst_types);
             if (inst->unify_with(expected)) {
                 for (Type t : inst_types) {
-                    UninstantiatedType ut = t.as<UninstantiatedType>();
+                    UnknownType ut = t.as<UnknownType>();
                     assert(ut->is_instantiated());
                     found->add_inferred_arg(ut->instance());
                 }
@@ -670,7 +670,7 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
             if (ofn->is_generic()) {
                 bool no_error = true;
                 for (size_t i = 0; i < inst_types.size(); ++i) {
-                    UninstantiatedType ut = inst_types[i].as<UninstantiatedType>();
+                    UnknownType ut = inst_types[i].as<UnknownType>();
                     if (ut->is_instantiated()) {
                         lhs()->add_inferred_arg(ut->instance());
                     } else {

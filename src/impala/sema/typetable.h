@@ -42,7 +42,7 @@ public:
     Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
     TraitImpl implement_trait(const Impl* impl_decl, Trait trait) { return new_unifiable(new TraitImplNode(*this, impl_decl, trait)); }
 
-    UninstantiatedType uninstantiated_type() { return new_unifiable(new UninstantiatedTypeNode(*this)); }
+    UnknownType unknown_type() { return new_unifiable(new UnknownTypeNode(*this)); }
     TypeVar typevar() { return new_unifiable(new TypeVarNode(*this, Symbol())); }
     TypeVar typevar(Symbol name) { return new_unifiable(new TypeVarNode(*this, name)); }
     FnType fntype(thorin::ArrayRef<Type> params) { return new_unifiable(new FnTypeNode(*this, params)); }
@@ -60,7 +60,7 @@ public:
      * therefore it is important to call \p check_bounds after all unknowns have been resolved!
      */
     template<class T> T instantiate_unknown(T t, std::vector<Type>& inst_types) {
-        for (size_t i = 0; i < t->num_bound_vars(); ++i) inst_types.push_back(uninstantiated_type());
+        for (size_t i = 0; i < t->num_bound_vars(); ++i) inst_types.push_back(unknown_type());
         SpecializeMapping mapping = create_spec_mapping(t, inst_types);
         return t->instantiate(mapping);
     }

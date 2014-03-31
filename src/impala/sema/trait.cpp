@@ -63,7 +63,7 @@ void TraitInstanceNode::make_real() {
         assert(var_instances_.find(tv.node()) != var_instances_.end()); // CHECK is node() correct here?
         Generic* e = var_instances_.find(tv.node())->second;
 
-        if (UninstantiatedTypeNode* utn = e->isa<UninstantiatedTypeNode>()) {
+        if (UnknownTypeNode* utn = e->isa<UnknownTypeNode>()) {
             assert(utn->is_instantiated());
             utn->instance()->make_real();
             var_instances_[tv.node()] = utn;

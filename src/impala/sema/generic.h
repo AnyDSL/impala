@@ -77,12 +77,12 @@ private:
     T* node_;
 };
 
-class UninstantiatedTypeNode;
+class UnknownTypeNode;
 class TypeVarNode;
 class TraitNode;
 class TraitImplNode;
 typedef Proxy<TypeNode> Type;
-typedef Proxy<UninstantiatedTypeNode> UninstantiatedType;
+typedef Proxy<UnknownTypeNode> UnknownType;
 typedef Proxy<TypeVarNode> TypeVar;
 typedef Proxy<TraitNode> Trait;
 typedef Proxy<TraitImplNode> TraitImpl;
@@ -121,11 +121,11 @@ public:
     virtual bool unify_with(Generic*) = 0;
 
     /**
-     * replace any \p UninstantiatedTypeNodes within this Generic with their instances
+     * replace any \p UnknownTypeNodes within this Generic with their instances
      * and set the representatives of these nodes to their instances
      */
     virtual void make_real() = 0;
-    /// a \p Generic is real if it does not contain any \p UninstantiatedTypeNodes
+    /// a \p Generic is real if it does not contain any \p UnknownTypeNodes
     virtual bool is_real() const = 0;
 
     void dump() const;

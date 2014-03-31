@@ -7,7 +7,7 @@
 namespace impala {
 
 int TypeVarNode::counter_ = 0;
-int UninstantiatedTypeNode::counter_ = 0;
+int UnknownTypeNode::counter_ = 0;
 
 //------------------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ bool RealTypeNode::unify_with(TypeNode* other) {
     return false;
 }
 
-bool UninstantiatedTypeNode::unify_with(TypeNode* other) {
+bool UnknownTypeNode::unify_with(TypeNode* other) {
     if (!is_instantiated()) {
         instantiate(Type(other));
         return true;
@@ -158,7 +158,7 @@ FnType FnTypeNode::specialize_method(Type t) const {
 
 //------------------------------------------------------------------------------
 
-Generic* UninstantiatedTypeNode::vspecialize(SpecializeMapping& mapping) { assert(false); return nullptr; }
+Generic* UnknownTypeNode::vspecialize(SpecializeMapping& mapping) { assert(false); return nullptr; }
 
 thorin::Array<Type> CompoundTypeNode::specialize_elems(SpecializeMapping& mapping) const {
     thorin::Array<Type> nelems(size());
@@ -207,7 +207,7 @@ void RealTypeNode::make_real() {
     make_bound_vars_real();
     for (size_t i = 0; i < size(); ++i) {
         Type e = elem(i);
-        if (UninstantiatedType utn = e.isa<UninstantiatedType>()) {
+        if (UnknownType utn = e.isa<UnknownType>()) {
             assert(utn->is_instantiated());
             utn->instance()->make_real();
             set(i, utn->instance());

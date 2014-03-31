@@ -126,7 +126,7 @@ bool TypeTable::unify(Proxy<T> elem) {
 
     assert(unifiable->is_closed() && "Only closed unifiables can be unified!");
 
-    if (auto utn = unifiable->template isa<UninstantiatedTypeNode>()) {
+    if (auto utn = unifiable->template isa<UnknownTypeNode>()) {
         bool res = unify(utn->instance());
         utn->set_representative(*utn->instance());
         return res;

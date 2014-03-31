@@ -13,7 +13,7 @@ using namespace thorin;
 
 namespace impala {
 
-size_t UninstantiatedTypeNode::hash() const {
+size_t UnknownTypeNode::hash() const {
     return is_instantiated() ? instance()->hash() : hash_combine(hash_value((int) kind()), 0); // 0 because this is a TypeNode
 }
 
@@ -40,12 +40,12 @@ size_t TraitImplNode::hash() const {
 
 //----------------------------------------------------------------------------------------
 
-bool UninstantiatedTypeNode::equal(const TypeNode* other) const {
+bool UnknownTypeNode::equal(const TypeNode* other) const {
     return is_instantiated() ? instance()->equal(other) : this == other;
 }
 
 bool RealTypeNode::equal(const TypeNode* t) const {
-    if (auto utn = t->isa<const UninstantiatedTypeNode>())
+    if (auto utn = t->isa<const UnknownTypeNode>())
         return utn->equal(this);
     const RealTypeNode* other = t->as<const RealTypeNode>();
     if (this == other)

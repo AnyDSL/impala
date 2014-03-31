@@ -33,7 +33,7 @@ std::string Generic::bound_vars_to_string() const {
     return result + ']';
 }
 
-std::string UninstantiatedTypeNode::to_string() const {
+std::string UnknownTypeNode::to_string() const {
     return is_instantiated() ? instance()->to_string() : (std::string("?") + std::to_string(id_));
 }
 
