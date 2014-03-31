@@ -1,0 +1,23 @@
+fn main() -> () {
+    { let i: i8  = 0i8; }
+    { let i: i16 = 0i16; }
+    { let i: i32 = 0i32; }
+    { let i: i64 = 0i64; }
+    { let i: u8  = 0u8; }
+    { let i: u16 = 0u16; }
+    { let i: u32 = 0u32; }
+    { let i: u64 = 0u64; }
+    { let f: f32 = 0f32; }
+    { let f: f64 = 0f64; }
+
+    { let i: u8  = 0u16; }
+    { let i: u16 = 0u32; }
+    { let i: u32 = 0u64; }
+    { let i: u64 = 0u8; }
+    { let i: i8  = 0i16; }
+    { let i: i16 = 0i32; }
+    { let i: i32 = 0i64; }
+    { let i: i64 = 0i8; }
+    { let f: f32 = 0f64; }
+    { let f: f64 = 0f32; }
+}
