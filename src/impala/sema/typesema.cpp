@@ -673,9 +673,8 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
             if (ofn->is_generic()) {
                 bool no_error = true;
                 for (size_t i = 0; i < inst_types.size(); ++i) {
-                    UnknownType ut = inst_types[i].as<UnknownType>();
-                    if (ut->is_instantiated()) {
-                        lhs()->add_inferred_arg(ut->instance());
+                    if (!inst_types[i].isa<UnknownType>()) {
+                        lhs()->add_inferred_arg(Type(inst_types[i].representative()));
                     } else {
                         sema.error(this) << "could not find instance for type variable #" << i << ".\n";
                         no_error = false;
