@@ -1,0 +1,7 @@
+fn iid(i: int) -> int {
+    i
+}
+
+fn main() -> () {
+    let x: bool = iid(5);
+}

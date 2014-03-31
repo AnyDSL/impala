@@ -1,0 +1,4 @@
+fn main(f: fn[A,B]()->B) -> () {
+    let x:int = f();
+}
+

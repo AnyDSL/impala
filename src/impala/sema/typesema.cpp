@@ -675,6 +675,8 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
             for (size_t i = 0; i < args().size(); ++i) {
                 sema.check(arg(i), fn->elem(i), "argument");
             }
+            if (no_cont && !expected.isa<UnknownType>())
+                sema.create_return_type(this, fn->elems().back())->unify_with(expected);
 
             // instantiate fn type
             if (ofn->is_generic()) {
