@@ -67,6 +67,6 @@ private:
     bool result_;
 };
 
-} // namespace impala
+}
 
 #endif

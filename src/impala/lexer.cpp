@@ -297,4 +297,4 @@ l_out:
     }
 }
 
-} // namespace impala
+}
