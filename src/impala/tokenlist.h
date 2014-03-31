@@ -186,7 +186,6 @@ IMPALA_LIT(f64, pf64)
 #define IMPALA_TYPE(itype, atype)
 #endif
 
-IMPALA_TYPE(int, ps32)
 IMPALA_TYPE(i8,  ps8)
 IMPALA_TYPE(i16, ps16)
 IMPALA_TYPE(i32, ps32)

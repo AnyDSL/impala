@@ -1,1 +1,1 @@
-wrong_condition_type.impala:2 col 9: error: wrong condition type; expected bool but found int
+wrong_condition_type.impala:2 col 9: error: wrong condition type; expected bool but found i32

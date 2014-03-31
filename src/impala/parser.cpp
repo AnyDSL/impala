@@ -79,7 +79,6 @@
     case Token::TYPE_f32: \
     case Token::TYPE_f64:  \
     case Token::TYPE_bool: \
-    case Token::TYPE_int: \
     case Token::TILDE: \
     case Token::AND
 

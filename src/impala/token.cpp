@@ -142,6 +142,7 @@ void Token::init() {
 #define IMPALA_TYPE(itype, atype)         insert_key(TYPE_ ## itype, #itype );
 #include "impala/tokenlist.h"
 
+    insert_key(TYPE_i32, "int");
     tok2str_[ID]         = Symbol("<identifier>").str();
     insert(END_OF_FILE, "<end of file>");
     insert_key(MUT, "mut");

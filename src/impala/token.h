@@ -43,7 +43,7 @@ public:
     };
 
     Token() {}
-    /// Create a literal operator or special char token
+    /// Create a operator or special char token
     Token(const Location& loc, Kind tok);
     /// Create an identifier or a keyword (depends on \p str)
     Token(const Location& loc, const std::string& str);
