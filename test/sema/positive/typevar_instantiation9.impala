@@ -1,8 +1,8 @@
 trait T[X] {}
-impl[A] T[A] for int32 {}
+impl[A] T[A] for i32 {}
 fn g[B:T[A], A](x:B) -> B {
    x
 }
-fn main() -> int32 {
-   g[int32, bool](4)
+fn main() -> i32 {
+   g[i32, bool](4)
 }

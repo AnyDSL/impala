@@ -4,6 +4,6 @@ trait T[B] {
 fn g[C, D:T[C]](c: C, d: D) -> C {
     d.f(c)
 }
-fn h[E:T[int32]](e: E) -> int32 {
-    g[int32, E](42, e)
+fn h[E:T[i32]](e: E) -> i32 {
+    g[i32, E](42, e)
 }

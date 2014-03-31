@@ -1,4 +1,4 @@
-fn f() -> int32 {
+fn f() -> i32 {
     return(17);
     42
 }

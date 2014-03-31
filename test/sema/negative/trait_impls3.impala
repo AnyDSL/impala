@@ -1,5 +1,5 @@
 trait T {
-   fn f(self: Self) -> int32;
+   fn f(self: Self) -> i32;
 }
 impl T for bool {
    fn f(self: bool) -> bool { self }

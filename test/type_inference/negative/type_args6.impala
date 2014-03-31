@@ -1,6 +1,6 @@
 trait T[X] {}
-impl T[bool] for int32 {}
-impl T[int32] for int32 {}
+impl T[bool] for i32 {}
+impl T[i32] for i32 {}
 
 fn f[A, B: T[A]](b: B) -> () {}
 

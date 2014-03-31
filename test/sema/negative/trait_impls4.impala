@@ -1,3 +1,3 @@
 trait T {}
-impl T for int32 {}
-impl T for int32 {}
+impl T for i32 {}
+impl T for i32 {}

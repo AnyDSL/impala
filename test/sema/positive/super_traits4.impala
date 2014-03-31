@@ -1,11 +1,11 @@
 trait T {
-    fn to_i(self: Self) -> int32;
+    fn to_i(self: Self) -> i32;
 }
 trait U : T {
     fn to_b(self: Self) -> bool;
 }
 
-fn h[A: U](a: A) -> int32 {
+fn h[A: U](a: A) -> i32 {
    if (a.to_b()) {
       a.to_i()
    } else {

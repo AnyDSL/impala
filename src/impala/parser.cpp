@@ -31,12 +31,12 @@
     case ITEM
 
 #define EXPR \
-         Token::LIT_int8: \
-    case Token::LIT_int16: \
-    case Token::LIT_int32: \
-    case Token::LIT_int64: \
-    case Token::LIT_float: \
-    case Token::LIT_double: \
+         Token::LIT_i8: \
+    case Token::LIT_i16: \
+    case Token::LIT_i32: \
+    case Token::LIT_i64: \
+    case Token::LIT_f32: \
+    case Token::LIT_f64: \
     case Token::TRUE: \
     case Token::FALSE: \
     case Token::DOUBLE_COLON: \
@@ -72,12 +72,12 @@
     case Token::L_PAREN: \
     case Token::ID: \
     case Token::L_BRACKET: \
-    case Token::TYPE_int8: \
-    case Token::TYPE_int16: \
-    case Token::TYPE_int32: \
-    case Token::TYPE_int64: \
-    case Token::TYPE_float: \
-    case Token::TYPE_double: \
+    case Token::TYPE_i8: \
+    case Token::TYPE_i16: \
+    case Token::TYPE_i32: \
+    case Token::TYPE_i64: \
+    case Token::TYPE_f32: \
+    case Token::TYPE_f64:  \
     case Token::TYPE_bool: \
     case Token::TYPE_int: \
     case Token::TILDE: \
@@ -638,10 +638,10 @@ const ArrayASTType* Parser::parse_array_type() {
     if (accept(Token::MUL)) {
         u64 dim;
         switch (la()) {
-            case Token::LIT_int8:   dim = la().box().get_s8();  break;
-            case Token::LIT_int16:  dim = la().box().get_s16(); break;
-            case Token::LIT_int32:  dim = la().box().get_s32(); break;
-            case Token::LIT_int64:  dim = la().box().get_s64(); break;
+            case Token::LIT_i8:   dim = la().box().get_s8();  break;
+            case Token::LIT_i16:  dim = la().box().get_s16(); break;
+            case Token::LIT_i32:  dim = la().box().get_s32(); break;
+            case Token::LIT_i64:  dim = la().box().get_s64(); break;
             default:
                 dim = 0;
                 error("integer literal", "definite array type");

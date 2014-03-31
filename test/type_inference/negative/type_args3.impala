@@ -2,5 +2,5 @@ fn f[A](a: A, g: fn(fn(A)->A)->()) -> () {
 }
 
 fn main() -> () {
-    f(true, |x: fn(int32)->int32| -> () {})
+    f(true, |x: fn(i32)->i32| -> () {})
 }

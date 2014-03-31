@@ -1,8 +1,8 @@
-fn f(g: fn(int32)->int32) -> int32 {
+fn f(g: fn(i32)->i32) -> i32 {
     g(5)
 }
 
-fn main() -> int32 {
-    f(|x| -> int32 x+1)
+fn main() -> i32 {
+    f(|x| -> i32 x+1)
 }
 

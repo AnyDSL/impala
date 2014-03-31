@@ -4,13 +4,13 @@ trait T[B] {
 fn g[C, D:T[C]](c: C, d: D) -> C {
     d.f(c)
 }
-fn h[E:T[int32]](e: E) -> int32 {
-    g[int32, E](42, e)
+fn h[E:T[i32]](e: E) -> i32 {
+    g[i32, E](42, e)
 }
 
-impl T[int32] for bool {
-    fn f(self: bool, b: int32) -> int32 { b }
+impl T[i32] for bool {
+    fn f(self: bool, b: i32) -> i32 { b }
 }
-fn i() -> int32 {
+fn i() -> i32 {
     h[bool](true)
 }

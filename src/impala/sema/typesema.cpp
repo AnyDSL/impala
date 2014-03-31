@@ -112,8 +112,8 @@ void TypeSema::expect_num(const Expr* exp) {
     if (t == type_error())
         return;
 
-    if ((t != type_int()) && (t != type_int8()) && (t != type_int16()) && (t != type_int32()) &&
-            (t != type_int64()) && (t != type_float()) && (t != type_double()))
+    if ((t != type_int()) && (t != type_i8()) && (t != type_i16()) && (t != type_i32()) && // TODO factor this test out
+            (t != type_i64()) && (t != type_f32()) && (t != type_f64()))
         error(exp) << "expected number type but found " << t << "\n";
 }
 

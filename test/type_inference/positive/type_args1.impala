@@ -1,6 +1,6 @@
 fn id[A](a: A) -> A {
     a
 }
-fn main() -> int32 {
+fn main() -> i32 {
     id(4)
 }

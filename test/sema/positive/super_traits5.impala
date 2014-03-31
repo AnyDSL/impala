@@ -3,8 +3,8 @@ trait T[B] {
 }
 trait U[D] : T[D] {}
 
-impl U[int32] for bool {
-    fn f(self: bool) -> int32 {
+impl U[i32] for bool {
+    fn f(self: bool) -> i32 {
        if (self) { 1 } else { 0 }
     }
 }

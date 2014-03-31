@@ -1,8 +1,8 @@
 trait T {
-   fn f(self: Self) -> int32;
+   fn f(self: Self) -> i32;
 }
 impl T for bool {
-   fn f(self: int32) -> int32 {
+   fn f(self: i32) -> i32 {
       self
    }
 }

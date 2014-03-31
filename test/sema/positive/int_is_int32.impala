@@ -1,6 +1,6 @@
-fn f(x:int) -> int32 {
+fn f(x:int) -> i32 {
    x
 }
-fn g(x:int32) -> int {
+fn g(x:i32) -> int {
    x
 }

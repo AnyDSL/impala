@@ -3,11 +3,11 @@ trait T {
 }
 trait U : T {}
 trait V : T {
-    fn g(self: Self) -> int32;
+    fn g(self: Self) -> i32;
 }
 trait W : U, V {}
 
-impl W for int32 {
-   fn f(self: int32) -> int32 { self }
-   fn g(self: int32) -> int32 { self }
+impl W for i32 {
+   fn f(self: i32) -> i32 { self }
+   fn g(self: i32) -> i32 { self }
 }

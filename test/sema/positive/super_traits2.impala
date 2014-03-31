@@ -3,6 +3,6 @@ trait T {
 }
 trait U : T {}
 
-impl U for int32 {
-    fn f(self: int32) -> int32 { self }
+impl U for i32 {
+    fn f(self: i32) -> i32 { self }
 }

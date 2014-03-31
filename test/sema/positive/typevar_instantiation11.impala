@@ -2,6 +2,6 @@ trait T {
     fn f[B](self: Self, b: B) -> B;
 }
 
-fn g[C: T](c: C) -> int32 {
-    c.f[int32](52)
+fn g[C: T](c: C) -> i32 {
+    c.f[i32](52)
 }

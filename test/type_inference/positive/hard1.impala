@@ -1,4 +1,4 @@
-fn f[A](a: fn() -> A, g: fn[B](B, A) -> B) -> int32 {
+fn f[A](a: fn() -> A, g: fn[B](B, A) -> B) -> i32 {
     g(4, a())
 }
 

@@ -1,5 +1,5 @@
-fn myf(f: fn[A:T](A) -> A) -> int32 {
-   f[int32](4)
+fn myf(f: fn[A:T](A) -> A) -> i32 {
+   f[i32](4)
 }
-impl T for int32 {}
+impl T for i32 {}
 trait T {}

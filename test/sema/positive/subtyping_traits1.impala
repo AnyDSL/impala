@@ -1,10 +1,10 @@
 trait T {}
 trait U : T {}
 
-impl U for int32 {}
+impl U for i32 {}
 
 fn f[A: T](a: A) -> A { a }
 
-fn g() -> int32 {
-   f[int32](4)
+fn g() -> i32 {
+   f[i32](4)
 }

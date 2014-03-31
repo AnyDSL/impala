@@ -1,5 +1,5 @@
 trait T {}
 trait U : T {}
 
-impl T for int32 {}
-impl U for int32 {}
+impl T for i32 {}
+impl U for i32 {}

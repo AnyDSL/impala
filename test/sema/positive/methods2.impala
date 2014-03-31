@@ -1,8 +1,8 @@
 trait T {
-    fn f(self: Self) -> int32;
+    fn f(self: Self) -> i32;
 }
 impl T for bool {
-    fn f(self: bool) -> int32 {
+    fn f(self: bool) -> i32 {
         if (self) {
             1
         } else {
@@ -10,6 +10,6 @@ impl T for bool {
         }
     }
 }
-fn g() -> int32 {
+fn g() -> i32 {
     true.f() + false.f()
 }
