@@ -307,6 +307,8 @@ Trait ASTTypeApp::to_trait(TypeSema& sema, Type self) const {
 
 //------------------------------------------------------------------------------
 
+Type ValueDecl::check(TypeSema& sema) const { return check(sema, Type()); }
+
 Type ValueDecl::check(TypeSema& sema, Type expected) const {
     if (ast_type()) {
         Type t = sema.check(ast_type());
@@ -736,7 +738,7 @@ void ItemStmt::check(TypeSema& sema) const {
 }
 
 void LetStmt::check(TypeSema& sema) const {
-    Type expected = sema.check(local());
+    Type expected = sema.check(local(), sema.unknown_type());
     if (init())
         sema.check(init(), expected);
 }
