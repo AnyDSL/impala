@@ -64,13 +64,13 @@ public:
         assert(node_ != nullptr); return Proxy<U>((U*) node_);
     }
     template<class U> Proxy<typename U::BaseType> isa() { 
-        assert(node_ != nullptr); return Proxy<typename U::BaseType>(node_->isa<typename U::BaseType>()); 
+        assert(node_ != nullptr); return Proxy<typename U::BaseType>((*this)->isa<typename U::BaseType>()); 
     }
     template<class U> Proxy<typename U::BaseType> as() { 
-        assert(node_ != nullptr); return Proxy<typename U::BaseType>(node_->as<typename U::BaseType>()); 
+        assert(node_ != nullptr); return Proxy<typename U::BaseType>((*this)->as <typename U::BaseType>()); 
     }
     operator bool() { return !empty(); }
-    Proxy<T>& operator= (Proxy<T> other) { /* assert(node_ == nullptr); CHECK do we need this? */ node_ = *other; return *this; }
+    Proxy<T>& operator= (Proxy<T> other) { assert(node_ == nullptr); node_ = *other; return *this; }
     void clear() { node_ = nullptr; }
 
 private:
