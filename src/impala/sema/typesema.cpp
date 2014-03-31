@@ -76,6 +76,7 @@ public:
         if (!expr->type_.empty())
             return expr->type_;
 
+        Type expected_unpacked;
         if (auto ut = expected.isa<UnknownType>()) {
             if (!ut->is_instantiated()) {
                 expr->type_ = expr->check(*this, ut);
@@ -88,11 +89,13 @@ public:
                 }
                 return ut->instance();
             } else
-                expected = ut->instance();
-        }
-        expr->type_ = expr->check(*this, expected);
-        expect_type(expr, expected, typetype);
-        return expected;
+                expected_unpacked = ut->instance();
+        } else
+            expected_unpacked = expected;
+
+        expr->type_ = expr->check(*this, expected_unpacked);
+        expect_type(expr, expected_unpacked, typetype);
+        return expected_unpacked;
     }
     Type check(const Expr* expr, Type expected) { return check(expr, expected, ""); }
     /// a check that does not expect any type (i.e. any type is allowed)
