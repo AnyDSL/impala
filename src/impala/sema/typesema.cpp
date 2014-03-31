@@ -33,7 +33,8 @@ public:
 
     void expect_num(const Expr* exp);
     Type match_types(const ASTNode* pos, Type t1, Type t2);
-    void expect_type(const Expr* found, Type expected, std::string typetype);
+    Type expect_type(const Expr* expr, Type found, Type expected, std::string typetype);
+    Type expect_type(const Expr* expr, Type expected, std::string typetype) { return expect_type(expr, expr->type(), expected, typetype); }
     Type create_return_type(const ASTNode* node, Type ret_func);
     void check_body(const ASTNode* fn, const Expr* body, Type fn_type) {
         Type body_type = check(body);
@@ -76,7 +77,7 @@ public:
         if (!expr->type_.empty())
             return expr->type_;
 
-        Type expected_unpacked;
+        /*Type expected_unpacked;
         if (auto ut = expected.isa<UnknownType>()) {
             if (!ut->is_instantiated()) {
                 expr->type_ = expr->check(*this, ut);
@@ -84,18 +85,18 @@ public:
                     // if this variable has no instantiation yet instantiate it
                     if (!ut->is_instantiated()) {
                         ut->instantiate(expr->type_);
+                        unify(Type(ut));
                     } else
                         assert(expr->type_ == ut->instance());
                 }
-                return ut->instance();
+                return expr->type_;
             } else
                 expected_unpacked = ut->instance();
         } else
-            expected_unpacked = expected;
+            expected_unpacked = expected;*/
 
-        expr->type_ = expr->check(*this, expected_unpacked);
-        expect_type(expr, expected_unpacked, typetype);
-        return expected_unpacked;
+        Type inferred = expr->check(*this, expected);
+        return expr->type_ = expect_type(expr, inferred, expected, typetype);
     }
     Type check(const Expr* expr, Type expected) { return check(expr, expected, ""); }
     /// a check that does not expect any type (i.e. any type is allowed)
@@ -132,22 +133,24 @@ Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
     }
 }
 
-void TypeSema::expect_type(const Expr* found, Type expected, std::string typetype) {
-    Type found_type = found->type();
-
+Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std::string typetype) {
     if (auto ut = expected.isa<UnknownType>()) {
         if (!ut->is_instantiated()) {
-            ut->instantiate(found_type);
-            return;
+            if (found_type.isa<UnknownType>()) {
+                return found_type;
+            } else {
+                ut->instantiate(found_type);
+                return found_type;
+            }
         }
     }
 
     // FEATURE make this check faster - e.g. store a "potentially not closed" flag
     if (!expected->is_closed())
-        return;
+        return found_type;
 
     if (found_type == type_error() || expected == type_error())
-        return;
+        return Type(*expected);
     if (found_type != expected) {
         if (found_type->is_generic()) {
             // try to infer instantiations for this generic type
@@ -155,17 +158,17 @@ void TypeSema::expect_type(const Expr* found, Type expected, std::string typetyp
             Type inst = instantiate_unknown(found_type, inst_types);
             if (inst->unify_with(expected)) {
                 for (Type t : inst_types) {
-                    UnknownType ut = t.as<UnknownType>();
-                    assert(ut->is_instantiated());
-                    found->add_inferred_arg(ut->instance());
+                    assert(t.representative() != nullptr);
+                    expr->add_inferred_arg(Type(t.representative()));
                 }
                 // needed for bound checking
-                check_bounds(found, found_type, found->inferred_args());
-                return;
+                check_bounds(expr, found_type, expr->inferred_args());
+                return Type(*expected);
             }
         }
-        error(found) << "wrong " << typetype << " type; expected " << expected << " but found " << found->type() << "\n";
+        error(expr) << "wrong " << typetype << " type; expected " << expected << " but found " << found_type << "\n";
     }
+    return Type(*expected);
 }
 
 Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
@@ -564,7 +567,7 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
             lhstype = sema.check(lhs());
             rhstype = sema.check(rhs());
             sema.expect_num(lhs());
-            sema.match_types(this, lhstype, rhstype);
+            //sema.match_types(this, lhstype, rhstype);
             return sema.type_bool();
         case ADD:
         case SUB:
@@ -572,7 +575,7 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
         case DIV:
         case REM:
             lhstype = sema.check(lhs(), expected);
-            rhstype = sema.check(rhs(), expected);
+            rhstype = sema.check(rhs(), lhstype);
             sema.expect_num(lhs());
             return lhstype;
         case ASGN:
@@ -659,6 +662,8 @@ Type StructExpr::check(TypeSema& sema, Type expected) const {
 
 Type MapExpr::check(TypeSema& sema, Type expected) const {
     Type lhst = sema.check(lhs());
+    sema.unify(lhst);
+
     if (auto ofn = lhst.isa<FnType>()) {
         std::vector<Type> inst_types;
         FnType fn = ofn->is_generic() ? sema.instantiate_unknown(lhst, inst_types).as<FnType>() : ofn;
@@ -673,7 +678,9 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
             if (ofn->is_generic()) {
                 bool no_error = true;
                 for (size_t i = 0; i < inst_types.size(); ++i) {
-                    if (!inst_types[i].isa<UnknownType>()) {
+                    UnknownType ut = inst_types[i].isa<UnknownType>();
+                    if (!ut || ut->is_instantiated()) {
+                        sema.unify(inst_types[i]);
                         lhs()->add_inferred_arg(Type(inst_types[i].representative()));
                     } else {
                         sema.error(this) << "could not find instance for type variable #" << i << ".\n";

@@ -2,5 +2,5 @@ fn range[T](n: int, f: fn(T) -> ()) -> () {
 }
 
 fn main() -> () {
-    range(23, |x| x+1)
+    range(23, |x| { x+1; })
 }
