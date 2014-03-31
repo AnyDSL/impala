@@ -4,7 +4,7 @@ trait T[B] {
 
 // implementation is possible!
 struct S[C] {
-    C val
+    val: C
 }
 impl[D] T[D] for S[D] {
     fn conv(self: S[D]) -> D { self.val }
@@ -16,7 +16,7 @@ fn g[E, F: T[E]](f: F) -> E {
 }
 
 fn main() -> bool {
-   let x : S[bool] = { val: true };
+   let x = S[bool]{ val: true };
    g(x)
 }
 

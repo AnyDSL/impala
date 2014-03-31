@@ -2,6 +2,6 @@ fn id[A](a: A) -> A {
     a
 }
 
-fn main() -> int32 {
-    id[int32](4)
+fn main() -> i32 {
+    id[i32](4)
 }

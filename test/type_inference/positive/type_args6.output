@@ -2,7 +2,7 @@ trait T[X] {
     
 }
 
-impl T[bool] for int32 {
+impl T[bool] for i32 {
     
 }
 
@@ -10,5 +10,5 @@ fn f[A, B: T[A]](b: B) -> () {
 }
 
 fn main() -> () {
-    f[bool, int32](4)
+    f[bool, i32](4)
 }

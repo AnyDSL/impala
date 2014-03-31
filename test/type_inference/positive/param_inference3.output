@@ -1,7 +1,7 @@
-fn f(g: fn[A](A, fn(A))) -> int32 {
-    g[int32](5)
+fn f(g: fn[A](A, fn(A))) -> i32 {
+    g[i32](5)
 }
 
-fn main() -> int32 {
+fn main() -> i32 {
     f(|x: A| -> A x)
 }

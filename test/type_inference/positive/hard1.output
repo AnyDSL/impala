@@ -1,5 +1,5 @@
-fn f[A](a: fn(fn(A)), g: fn[B](B, A, fn(B))) -> int32 {
-    g[int32](4, a())
+fn f[A](a: fn(fn(A)), g: fn[B](B, A, fn(B))) -> i32 {
+    g[i32](4, a())
 }
 
 fn main() -> () {

@@ -3,11 +3,11 @@ trait Iterator {
     fn lt(self: Self, other: Self) -> bool;
 }
 
-impl Iterator for int32 {
-    fn inc(self: int32) -> int32 {
+impl Iterator for i32 {
+    fn inc(self: i32) -> i32 {
         (self + 1)
     }
-    fn lt(self: int32, other: int32) -> bool {
+    fn lt(self: i32, other: i32) -> bool {
         (self < other)
     }
 }
@@ -22,6 +22,6 @@ fn range[I: Iterator](a: I, b: I, body: fn(I, fn())) -> () {
 }
 
 fn main() -> () {
-    range[int32](0, 10, |i: int32| -> () {
+    range[i32](0, 10, |i: i32| -> () {
     });
 }

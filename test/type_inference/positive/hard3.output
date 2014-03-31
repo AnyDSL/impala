@@ -7,5 +7,5 @@ fn b2[A](a: A) -> bool {
 }
 
 fn main() -> bool {
-    b1[bool](b2[int32](5))
+    b1[bool](b2[i32](5))
 }
