@@ -100,6 +100,7 @@ protected:
 
 public:
     TypeTable& typetable() const { return typetable_; }
+
     virtual size_t num_bound_vars() const { return bound_vars_.size(); }
     virtual thorin::ArrayRef<TypeVar> bound_vars() const { return thorin::ArrayRef<TypeVar>(bound_vars_); }
     virtual TypeVar bound_var(size_t i) const { return bound_vars_[i]; }
@@ -124,8 +125,8 @@ public:
      * Replace any \p UnknownTypeNode%s within this Generic with their instances
      * and set the representatives of these nodes to their instances
      */
-    virtual void make_real() = 0;
-    /// a \p Generic is real if it does not contain any \p UnknownTypeNode%s
+    virtual void refine() = 0;
+    /// A \p Generic is known if it does not contain any \p UnknownTypeNode%s
     virtual bool is_known() const = 0;
 
     void dump() const;
@@ -136,8 +137,8 @@ protected:
 
     std::string bound_vars_to_string() const;
     bool unify_bound_vars(thorin::ArrayRef<TypeVar>);
-    void make_bound_vars_real();
-    bool bound_vars_real() const;
+    void refine_bound_vars();
+    bool bound_vars_known() const;
 
     Generic* ginstantiate(SpecializeMapping& var_instances);
     Generic* gspecialize(SpecializeMapping&); // TODO one could always assert that this is only called on final representatives!

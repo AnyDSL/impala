@@ -29,12 +29,12 @@ bool Generic::unify_bound_vars(thorin::ArrayRef<TypeVar> other_vars) {
     return false;
 }
 
-void Generic::make_bound_vars_real() {
+void Generic::refine_bound_vars() {
     for (auto v : bound_vars())
-        v->make_real();
+        v->refine();
 }
 
-bool Generic::bound_vars_real() const {
+bool Generic::bound_vars_known() const {
     bool result = true;
     for (auto v : bound_vars())
         result = result && v->is_known();

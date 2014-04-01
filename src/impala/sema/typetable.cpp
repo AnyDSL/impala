@@ -132,7 +132,7 @@ bool TypeTable::unify(Proxy<T> elem) {
         return res;
     }
 
-    unifiable->make_real();
+    unifiable->refine();
 
     auto i = unifiables_.find(unifiable);
 

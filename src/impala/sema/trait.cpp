@@ -57,7 +57,7 @@ bool TraitInstanceNode::unify_with(TraitNode* other) {
     return false;
 }
 
-void TraitInstanceNode::make_real() {
+void TraitInstanceNode::refine() {
     for (size_t i = 1; i < trait()->num_bound_vars(); ++i) {
         TypeVar tv = trait()->bound_var(i);
         assert(var_instances_.find(tv.node()) != var_instances_.end()); // CHECK is node() correct here?
@@ -65,10 +65,10 @@ void TraitInstanceNode::make_real() {
 
         if (UnknownTypeNode* utn = e->isa<UnknownTypeNode>()) {
             assert(utn->is_instantiated());
-            utn->instance()->make_real();
+            utn->instance()->refine();
             var_instances_[tv.node()] = utn;
         } else {
-            e->make_real();
+            e->refine();
         }
     }
 }

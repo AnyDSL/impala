@@ -50,8 +50,8 @@ public:
     bool is_error_trait() const { return trait_decl_ == nullptr; }
     virtual std::string to_string() const;
 
-    // all methods should be real, so nothing to do here
-    virtual void make_real() {}
+    // all methods should be known, so nothing to do here
+    virtual void refine() {}
     virtual bool is_known() const override { return true; }
 
     virtual bool unify_with(TraitNode*) { assert(false); return false; }
@@ -102,7 +102,7 @@ public:
     virtual size_t hash() const;
     virtual std::string to_string() const;
 
-    virtual void make_real();
+    virtual void refine();
     virtual bool is_known() const override;
 
     virtual bool unify_with(TraitNode*);
@@ -149,7 +149,7 @@ public:
     Trait trait() const { return trait_; }
 
     // CHECK is this correct?
-    virtual void make_real() {}
+    virtual void refine() {}
     virtual bool is_known() const override { return true; }
 
     virtual bool unify_with(TraitImplNode*) { assert(false); return false; }

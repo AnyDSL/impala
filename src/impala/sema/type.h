@@ -89,7 +89,7 @@ public:
         return elems_.empty();
     }
 
-    virtual void make_real();
+    virtual void refine();
     virtual bool is_known() const override;
 
     virtual bool equal(const TypeNode*) const;
@@ -142,7 +142,7 @@ public:
     virtual size_t size() const { return is_instantiated() ? instance()->size() : 0; }
     virtual bool is_empty() const { return !is_instantiated() || instance()->is_empty(); }
 
-    virtual void make_real() { assert(false); }
+    virtual void refine() { assert(false); }
     virtual bool is_known() const override { return false; }
 
     virtual bool equal(const TypeNode*) const;

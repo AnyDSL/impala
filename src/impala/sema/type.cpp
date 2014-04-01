@@ -204,23 +204,23 @@ void TypeVarNode::refresh_bounds() {
 
 //------------------------------------------------------------------------------
 
-void KnownTypeNode::make_real() {
-    make_bound_vars_real();
+void KnownTypeNode::refine() {
+    refine_bound_vars();
     for (size_t i = 0; i < size(); ++i) {
         Type e = elem(i);
         if (UnknownTypeNode* utn = e.node()->isa<UnknownTypeNode>()) {
             assert(utn->is_instantiated());
-            utn->instance()->make_real();
+            utn->instance()->refine();
             set(i, utn->instance());
         } else {
-            e->make_real();
+            e->refine();
         }
     }
 
 }
 
 bool KnownTypeNode::is_known() const {
-    bool result = bound_vars_real();
+    bool result = bound_vars_known();
     for (auto e : elems())
         result = result && e->is_known();
     return result;
