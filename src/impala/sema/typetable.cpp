@@ -197,7 +197,7 @@ void TypeTable::verify() const {
     for (Generic* g : unifiables_) {
         assert(g != nullptr);
         if (auto type = g->isa<TypeNode>()) {
-            assert(type->is_real());
+            assert(type->is_known());
             assert(type->is_sane());
             assert(type->is_final_representative());
         } else if (auto trait = g->isa<TraitNode>()) {

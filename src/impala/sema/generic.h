@@ -121,12 +121,12 @@ public:
     virtual bool unify_with(Generic*) = 0;
 
     /**
-     * replace any \p UnknownTypeNodes within this Generic with their instances
+     * Replace any \p UnknownTypeNode%s within this Generic with their instances
      * and set the representatives of these nodes to their instances
      */
     virtual void make_real() = 0;
-    /// a \p Generic is real if it does not contain any \p UnknownTypeNodes
-    virtual bool is_real() const = 0;
+    /// a \p Generic is real if it does not contain any \p UnknownTypeNode%s
+    virtual bool is_known() const = 0;
 
     void dump() const;
 

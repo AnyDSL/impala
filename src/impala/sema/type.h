@@ -90,7 +90,7 @@ public:
     }
 
     virtual void make_real();
-    virtual bool is_real() const;
+    virtual bool is_known() const override;
 
     virtual bool equal(const TypeNode*) const;
     virtual size_t hash() const;
@@ -143,7 +143,7 @@ public:
     virtual bool is_empty() const { return !is_instantiated() || instance()->is_empty(); }
 
     virtual void make_real() { assert(false); }
-    virtual bool is_real() const { return false; }
+    virtual bool is_known() const override { return false; }
 
     virtual bool equal(const TypeNode*) const;
     virtual size_t hash() const;

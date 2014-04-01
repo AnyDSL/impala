@@ -219,10 +219,10 @@ void KnownTypeNode::make_real() {
 
 }
 
-bool KnownTypeNode::is_real() const {
+bool KnownTypeNode::is_known() const {
     bool result = bound_vars_real();
     for (auto e : elems())
-        result = result && e->is_real();
+        result = result && e->is_known();
     return result;
 }
 

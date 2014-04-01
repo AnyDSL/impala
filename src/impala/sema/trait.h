@@ -52,7 +52,7 @@ public:
 
     // all methods should be real, so nothing to do here
     virtual void make_real() {}
-    virtual bool is_real() const { return true; }
+    virtual bool is_known() const override { return true; }
 
     virtual bool unify_with(TraitNode*) { assert(false); return false; }
 
@@ -103,7 +103,7 @@ public:
     virtual std::string to_string() const;
 
     virtual void make_real();
-    virtual bool is_real() const;
+    virtual bool is_known() const override;
 
     virtual bool unify_with(TraitNode*);
 
@@ -150,7 +150,7 @@ public:
 
     // CHECK is this correct?
     virtual void make_real() {}
-    virtual bool is_real() const { return true; }
+    virtual bool is_known() const override { return true; }
 
     virtual bool unify_with(TraitImplNode*) { assert(false); return false; }
 

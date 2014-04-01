@@ -73,11 +73,11 @@ void TraitInstanceNode::make_real() {
     }
 }
 
-bool TraitInstanceNode::is_real() const {
+bool TraitInstanceNode::is_known() const {
     bool result = true;
     for (TypeVar tv : trait()->bound_vars()) {
         assert(var_instances_.find(tv.node()) != var_instances_.end()); // CHECK is node() correct here?
-        result = result && var_instances_.find(tv.node())->second->is_real();
+        result = result && var_instances_.find(tv.node())->second->is_known();
     }
     return result;
 }

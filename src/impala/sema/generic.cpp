@@ -37,7 +37,7 @@ void Generic::make_bound_vars_real() {
 bool Generic::bound_vars_real() const {
     bool result = true;
     for (auto v : bound_vars())
-        result = result && v->is_real();
+        result = result && v->is_known();
     return result;
 }
 
