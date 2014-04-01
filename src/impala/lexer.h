@@ -17,7 +17,6 @@ public:
 private:
     std::ostream& error(const Location& loc);
     bool lex_identifier(std::string&);
-    Token lex_exp(std::string&);
     Token lex_suffix(std::string&, bool floating);
     Token literal_error(std::string&, bool floating);
     int next();

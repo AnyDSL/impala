@@ -32,15 +32,32 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
 {
     using namespace std;
 
+    int base = 10;
+    const char* nptr = &str.front();
+    if (str.size() >= 3) {
+        if (str[0] == '0') {
+            if (str[1] == 'b') {
+                base = 2;
+                nptr += 2;
+            } else if (str[1] == 'o') {
+                base = 8;
+                nptr += 2;
+            } else if (str[2] == 'x') {
+                base = 16;
+                nptr += 2;
+            }
+        }
+    }
+
     switch (kind_) {
-        case LIT_i8:  box_ = Box(  int8_t(strtol  (symbol_.str(), 0, 0))); break;
-        case LIT_i16: box_ = Box( int16_t(strtol  (symbol_.str(), 0, 0))); break;
-        case LIT_i32: box_ = Box( int32_t(strtol  (symbol_.str(), 0, 0))); break;
-        case LIT_i64: box_ = Box( int64_t(strtoll (symbol_.str(), 0, 0))); break;
-        case LIT_u8:  box_ = Box(uint8_t (strtoul (symbol_.str(), 0, 0))); break;
-        case LIT_u16: box_ = Box(uint16_t(strtoul (symbol_.str(), 0, 0))); break;
-        case LIT_u32: box_ = Box(uint32_t(strtoul (symbol_.str(), 0, 0))); break;
-        case LIT_u64: box_ = Box(uint64_t(strtoull(symbol_.str(), 0, 0))); break;
+        case LIT_i8:  box_ = Box(  int8_t(strtol  (nptr, 0, base))); break;
+        case LIT_i16: box_ = Box( int16_t(strtol  (nptr, 0, base))); break;
+        case LIT_i32: box_ = Box( int32_t(strtol  (nptr, 0, base))); break;
+        case LIT_i64: box_ = Box( int64_t(strtoll (nptr, 0, base))); break;
+        case LIT_u8:  box_ = Box( uint8_t(strtoul (nptr, 0, base))); break;
+        case LIT_u16: box_ = Box(uint16_t(strtoul (nptr, 0, base))); break;
+        case LIT_u32: box_ = Box(uint32_t(strtoul (nptr, 0, base))); break;
+        case LIT_u64: box_ = Box(uint64_t(strtoull(nptr, 0, base))); break;
         case LIT_f32: box_ = Box(strtof(symbol_.str(), 0)); break;
         case LIT_f64: box_ = Box(strtod(symbol_.str(), 0)); break;
 
@@ -162,8 +179,10 @@ void Token::init() {
     sym2lit_["i32"] = LIT_i32; sym2lit_["u32"] = LIT_u32; 
     sym2lit_["i64"] = LIT_i64; sym2lit_["u64"] = LIT_u64; 
 
+    sym2lit_["f"] = LIT_f32;
     sym2lit_["f32"] = LIT_f32;
     sym2lit_["f64"] = LIT_f64;
+    sym2flit_["f"] = LIT_f32;
     sym2flit_["f32"] = LIT_f32;
     sym2flit_["f64"] = LIT_f64;
 }

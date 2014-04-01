@@ -1,5 +1,4 @@
 fn main() -> () {
-    // check wethe types match
     { let i: i8  = 0i8; }
     { let i: i16 = 0i16; }
     { let i: i32 = 0i32; }
@@ -27,4 +26,6 @@ fn main() -> () {
     { let f: f64 = 1.8e-_5; }
     { let f: f64 = 1.9e+_6; }
     { let f: f64 = 1.1_2_3_; }
+    { let f: f32 = 1.1_2_3_f32; }
+    { let f: f32 = 1.1_2_3_e+16f; }
 }
