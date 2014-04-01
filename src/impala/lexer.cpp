@@ -15,10 +15,6 @@ static inline bool bin(int c) { return '0' <= c && c <= '1'; }
 static inline bool oct(int c) { return '0' <= c && c <= '7'; }
 static inline bool dec(int c) { return std::isdigit(c) != 0; }
 static inline bool hex(int c) { return std::isxdigit(c) != 0; }
-static inline bool bin_(int c) { return bin(c) || c == '_'; }
-static inline bool oct_(int c) { return oct(c) || c == '_'; }
-static inline bool dec_(int c) { return dec(c) || c == '_'; }
-static inline bool hex_(int c) { return hex(c) || c == '_'; }
 static inline bool eE(int c) { return c == 'e' || c == 'E'; }
 static inline bool sgn(int c){ return c == '+' || c == '-'; }
 
@@ -51,14 +47,6 @@ int Lexer::next() {
         pos_.inc_col();
 
     return c;
-}
-
-bool Lexer::lex_identifier(std::string& str) {
-    if (accept(str, sym)) {
-        while (accept(str, sym) || accept(str, dec)) {}
-        return true;
-    }
-    return false;
 }
 
 Token Lexer::lex() {
@@ -193,94 +181,103 @@ Token Lexer::lex() {
          * literals
          */
 
-        if (accept(str, '0')) goto l_0;
         if (accept(str, dec_nonzero)) goto l_dec;
+        if (accept(str, '0')) {
+            if (accept(str, 'b')) {     // 0b[01][01_]*
+                if (accept(str, bin)) {
+                    while (accept(str, bin) || accept('_')) {}
+                    return lex_suffix(str, false);
+                }
+                return literal_error(str, false);
+            } 
+
+            if (accept(str, 'o')) {     // 0[bB][0-7][0-7_]*
+                if (accept(str, oct)) {
+                    while (accept(str, oct) || accept('_')) {}
+                    return lex_suffix(str, false);
+                }
+                return literal_error(str, false);
+            } 
+
+            if (accept(str, 'x')) {     // 0[xX][0-7][0-7_]*
+                if (accept(str, hex)) {
+                    while (accept(str, hex) || accept('_')) {}
+                    return lex_suffix(str, false);
+                }
+                return literal_error(str, false);
+            }
+
+            goto l_dec;
+        }
 
         // invalid input char
         error(pos_) << "invalid input character '" << (char) next() << "'\n";
         continue;
 
-l_0:
-        if (accept(str, 'b')) {     // 0b[01][01_]*
-            if (accept(str, bin)) {
-                while (accept(str, bin_)) {}
-                goto l_suffix;
-            }
-            goto l_error;
-        } 
-
-        if (accept(str, 'o')) {     // 0[bB][0-7][0-7_]*
-            if (accept(str, oct)) {
-                while (accept(str, oct_)) {}
-                goto l_suffix;
-            }
-            goto l_error;
-        } 
-
-        if (accept(str, 'x')) {     // 0[xX][0-7][0-7_]*
-            if (accept(str, hex)) {
-                while (accept(str, hex_)) {}
-                goto l_suffix;
-            }
-            goto l_error;
-        }
-
-l_dec:                              // [0-9_]*
-        while (accept(str, dec_)) {}
+l_dec:                                  // [0-9_]*
+        while (accept(str, dec) || accept('_')) {}
         if (accept(str, '.')) goto l_fractional_dot;
-        if (accept(str,  eE)) goto l_exp;
-        goto l_suffix;
+        if (accept(str,  eE)) return lex_exp(str);
+        return lex_suffix(str, false);
 
-l_fractional_dot:                   // [0-9]
-        floating = true;
-        if (accept(str, dec)) goto l_fractional_dot;
-		if (accept(str,  eE)) goto l_exp;
-        goto l_suffix;
+l_fractional_dot:                       // [0-9]
+        if (accept(str, dec)) goto l_fractional_dot_rest;
+		if (accept(str,  eE)) return lex_exp(str);
+        return lex_suffix(str, true);
 
-l_fractional_dot_rest:              // [0-9_]*
-        floating = true;
-		while (accept(str, dec_)) {}
-		if (accept(str,  eE)) goto l_exp;
-        goto l_suffix;
-
-l_exp:                              // [eE][+-]?[0-9_]+
-        floating = true;
-        accept(str, sgn);
-        if (accept(str, dec_)) {
-            while (accept(str, dec_)) {}
-            goto l_suffix;
-        }
-        goto l_error;
-
-l_error: 
-        error(pos_) << "invalid constant '" << str << "'\n";
-        // fall through intended
-l_suffix:
-        // lex suffix
-        TokenKind tok = floating ? Token::LIT_f64 : Token::LIT_i32;
-        std::string suffix_str;
-        if (lex_identifier(suffix_str)) {
-            Symbol suffix(suffix_str);
-            if (floating) {
-                auto lit = Token::sym2flit(suffix);
-                if (lit == Token::TYPE_error) {
-                    error(loc_) << "invalid suffix on floating constant '" << suffix << "'\n";
-                    return Token(loc_, tok, str);
-                }
-                tok = lit;
-            } else {
-                auto lit = Token::sym2lit(suffix);
-                if (lit == Token::TYPE_error) {
-                    error(loc_) << "invalid suffix on constant '" << suffix << "'\n";
-                    return Token(loc_, tok, str);
-                }
-                tok = lit;
-            }
-            str += suffix;
-        }
-        
-        return Token(loc_, tok, str);
+l_fractional_dot_rest:                  // [0-9_]*
+		while (accept(str, dec) || accept('_')) {}
+		if (accept(str,  eE)) return lex_exp(str);
+        return lex_suffix(str, true);
     }
+}
+
+bool Lexer::lex_identifier(std::string& str) {
+    if (accept(str, sym)) {
+        while (accept(str, sym) || accept(str, dec)) {}
+        return true;
+    }
+    return false;
+}
+
+Token Lexer::lex_exp(std::string& str) {    // [eE][+-]?[0-9_]+
+    accept(str, sgn);
+    if (accept(str, dec) || accept('_')) {
+        while (accept(str, dec) || accept('_')) {}
+        return lex_suffix(str, true);
+    }
+    return literal_error(str, true);
+}
+
+Token Lexer::lex_suffix(std::string& str, bool floating) {
+    TokenKind tok = floating ? Token::LIT_f64 : Token::LIT_i32;
+    std::string suffix_str;
+    if (lex_identifier(suffix_str)) {
+        Symbol suffix(suffix_str);
+        if (floating) {
+            auto lit = Token::sym2flit(suffix);
+            if (lit == Token::TYPE_error) {
+                error(loc_) << "invalid suffix on floating constant '" << suffix << "'\n";
+                return Token(loc_, tok, str);
+            }
+            tok = lit;
+        } else {
+            auto lit = Token::sym2lit(suffix);
+            if (lit == Token::TYPE_error) {
+                error(loc_) << "invalid suffix on constant '" << suffix << "'\n";
+                return Token(loc_, tok, str);
+            }
+            tok = lit;
+        }
+        str += suffix;
+    }
+    
+    return Token(loc_, tok, str);
+}
+
+Token Lexer::literal_error(std::string& str, bool floating) {
+    error(pos_) << "invalid constant '" << str << "'\n";
+    return lex_suffix(str, floating);
 }
 
 }
