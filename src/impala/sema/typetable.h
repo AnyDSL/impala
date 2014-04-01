@@ -114,11 +114,11 @@ private:
         return new_unifiable(new TraitInstanceNode(trait, mapping)).node();
     }
 
+    TypetableSet<Generic> unifiables_;
+    std::vector<Generic*> garbage_;
     Trait trait_error_;
     TypeError type_error_;
     NoReturnType type_noreturn_;
-    TypetableSet<Generic> unifiables_;
-    std::vector<Generic*> garbage_;
 #define IMPALA_TYPE(itype, atype) PrimType itype##_;
 #include "impala/tokenlist.h"
 
