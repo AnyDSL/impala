@@ -106,16 +106,16 @@ int                                                         Token::tok2op_[NUM_T
 thorin::HashMap<Token::Kind, const char*, Token::KindHash>  Token::tok2str_;
 thorin::HashMap<Token::Kind, Symbol, Token::KindHash>       Token::tok2sym_;
 thorin::HashMap<Symbol, Token::Kind>                        Token::keywords_;
-thorin::HashMap<Symbol, Token::Kind>                        Token::sym2ilit_;
+thorin::HashMap<Symbol, Token::Kind>                        Token::sym2lit_;
 thorin::HashMap<Symbol, Token::Kind>                        Token::sym2flit_;
 
 /*
  * static methods
  */
 
-TokenKind Token::sym2ilit(Symbol sym) {
-    auto i = sym2ilit_.find(sym);
-    if (i != sym2ilit_.end())
+TokenKind Token::sym2lit(Symbol sym) {
+    auto i = sym2lit_.find(sym);
+    if (i != sym2lit_.end())
         return i->second;
     return TYPE_error;
 }
@@ -157,10 +157,15 @@ void Token::init() {
     tok2str_[ID]         = Symbol("<identifier>").str();
     insert(END_OF_FILE, "<end of file>");
     insert_key(MUT, "mut");
-    sym2ilit_["i8"]  = LIT_i8;  sym2ilit_["u8"]  = LIT_u8;
-    sym2ilit_["i16"] = LIT_i16; sym2ilit_["u16"] = LIT_u16;
-    sym2ilit_["i32"] = LIT_i32; sym2ilit_["u32"] = LIT_u32; sym2flit_["f32"] = LIT_f32;
-    sym2ilit_["i64"] = LIT_i64; sym2ilit_["u64"] = LIT_u64; sym2flit_["f64"] = LIT_f64;
+    sym2lit_["i8"]  = LIT_i8;  sym2lit_["u8"]  = LIT_u8;
+    sym2lit_["i16"] = LIT_i16; sym2lit_["u16"] = LIT_u16;
+    sym2lit_["i32"] = LIT_i32; sym2lit_["u32"] = LIT_u32; 
+    sym2lit_["i64"] = LIT_i64; sym2lit_["u64"] = LIT_u64; 
+
+    sym2lit_["f32"] = LIT_f32;
+    sym2lit_["f64"] = LIT_f64;
+    sym2flit_["f32"] = LIT_f32;
+    sym2flit_["f64"] = LIT_f64;
 }
 
 void Token::insert_key(TokenKind tok, const char* str) {

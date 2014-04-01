@@ -1,7 +1,26 @@
-extern fn foo(n : int) -> int {
-    let mut a : int = 0;
-    for (let mut i : int = 0; i < n; ++i)
-        ++a;
+trait Iterator {
+    fn inc(self: Self) -> Self;
+    fn lt(self: Self, other: Self) -> bool;
+}
 
-    return a;
+impl Iterator for int {
+    fn inc(self: int) -> int { self + 1 }
+    fn lt(self: int, other: int) -> bool { self < other }
+}
+
+fn range[I: Iterator](a: I, b: I, body: fn(I)->()) -> () {
+    if (a.lt(b)) {
+        body(a);
+        range[I](a.inc(), b, body, return)
+    } else {
+        return()
+    }
+}
+
+fn main() -> int {
+    let sum = 0;
+    for i: int in range(0, 10) {
+        sum += i;
+    }
+    sum
 }

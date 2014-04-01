@@ -69,7 +69,7 @@ public:
     bool is_assign()  const { return is_assign(kind_); }
     bool is_op()      const { return is_op(kind_); }
 
-    static Kind sym2ilit(Symbol sym);
+    static Kind sym2lit(Symbol sym);
     static Kind sym2flit(Symbol sym);
     static bool is_prefix(Kind kind)  { return (tok2op_[kind] &  PREFIX) != 0; }
     static bool is_infix(Kind kind)   { return (tok2op_[kind] &   INFIX) != 0; }
@@ -98,7 +98,7 @@ private:
     static thorin::HashMap<Kind, const char*, KindHash> tok2str_;
     static thorin::HashMap<Kind, Symbol, KindHash> tok2sym_;
     static thorin::HashMap<Symbol, Kind> keywords_;
-    static thorin::HashMap<Symbol, Kind> sym2ilit_;
+    static thorin::HashMap<Symbol, Kind> sym2lit_;
     static thorin::HashMap<Symbol, Kind> sym2flit_;
 
     friend void init();
