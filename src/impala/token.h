@@ -35,6 +35,7 @@ public:
         // these do ont appear in impala/tokenlist.h -- they are too special
         MUT, ID, END_OF_FILE,
         TYPE_app, TYPE_generic, TYPE_genericref, TYPE_error, TYPE_tuple, TYPE_definite_array, TYPE_indefinite_array,
+        LIT_char, LIT_str,
         NUM_TOKENS
     };
 
@@ -43,7 +44,7 @@ public:
     };
 
     Token() {}
-    /// Create a operator or special char token
+    /// Create an operator token
     Token(const Location& loc, Kind tok);
     /// Create an identifier or a keyword (depends on \p str)
     Token(const Location& loc, const std::string& str);
