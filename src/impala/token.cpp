@@ -184,13 +184,9 @@ void Token::init() {
     sym2lit_["i16"] = LIT_i16; sym2lit_["u16"] = LIT_u16;
     sym2lit_["i32"] = LIT_i32; sym2lit_["u32"] = LIT_u32; 
     sym2lit_["i64"] = LIT_i64; sym2lit_["u64"] = LIT_u64; 
-
-    sym2lit_["f"] = LIT_f32;
-    sym2lit_["f32"] = LIT_f32;
-    sym2lit_["f64"] = LIT_f64;
-    sym2flit_["f"] = LIT_f32;
-    sym2flit_["f32"] = LIT_f32;
-    sym2flit_["f64"] = LIT_f64;
+    sym2lit_["f"]   = LIT_f32; sym2flit_["f"]   = LIT_f32;
+    sym2lit_["f32"] = LIT_f32; sym2flit_["f32"] = LIT_f32;
+    sym2lit_["f64"] = LIT_f64; sym2flit_["f64"] = LIT_f64;
 }
 
 void Token::insert_key(TokenKind tok, const char* str) {
