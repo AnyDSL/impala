@@ -68,9 +68,9 @@ public:
     virtual bool is_sane() const = 0;
 };
 
-class RealTypeNode : public TypeNode {
+class KnownTypeNode : public TypeNode {
 protected:
-    RealTypeNode(TypeTable& typetable, Kind kind, size_t size)
+    KnownTypeNode(TypeTable& typetable, Kind kind, size_t size)
         : TypeNode(typetable)
         , kind_(kind)
         , elems_(size)
@@ -176,10 +176,10 @@ private:
     friend class TypeTable;
 };
 
-class TypeErrorNode : public RealTypeNode {
+class TypeErrorNode : public KnownTypeNode {
 private:
     TypeErrorNode(TypeTable& typetable)
-        : RealTypeNode(typetable, Type_error, 0)
+        : KnownTypeNode(typetable, Type_error, 0)
     {}
 
 protected:
@@ -191,10 +191,10 @@ public:
     friend class TypeTable;
 };
 
-class NoReturnTypeNode : public RealTypeNode {
+class NoReturnTypeNode : public KnownTypeNode {
 private:
     NoReturnTypeNode(TypeTable& typetable)
-        : RealTypeNode(typetable, Type_noReturn, 0)
+        : KnownTypeNode(typetable, Type_noReturn, 0)
     {}
 
 protected:
@@ -206,10 +206,10 @@ public:
     friend class TypeTable;
 };
 
-class PrimTypeNode : public RealTypeNode {
+class PrimTypeNode : public KnownTypeNode {
 private:
     PrimTypeNode(TypeTable& typetable, PrimTypeKind kind)
-        : RealTypeNode(typetable, (Kind) kind, 0)
+        : KnownTypeNode(typetable, (Kind) kind, 0)
     {}
 
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
@@ -223,10 +223,10 @@ public:
     friend class TypeTable;
 };
 
-class CompoundTypeNode : public RealTypeNode {
+class CompoundTypeNode : public KnownTypeNode {
 protected:
     CompoundTypeNode(TypeTable& typetable, Kind kind, thorin::ArrayRef<Type> elems)
-        : RealTypeNode(typetable, kind, elems.size())
+        : KnownTypeNode(typetable, kind, elems.size())
     {
         size_t i = 0;
         for (auto elem : elems)
@@ -270,10 +270,10 @@ public:
     friend class TypeTable;
 };
 
-class TypeVarNode : public RealTypeNode {
+class TypeVarNode : public KnownTypeNode {
 private:
     TypeVarNode(TypeTable& tt, Symbol name)
-        : RealTypeNode(tt, Type_var, 0)
+        : KnownTypeNode(tt, Type_var, 0)
         , id_(counter_++)
         , name_(name)
         , bound_at_(nullptr)
@@ -326,7 +326,7 @@ protected:
     void refresh_bounds();
 
     friend class TypeTable;
-    friend class RealTypeNode;
+    friend class KnownTypeNode;
     friend class Generic;
 };
 

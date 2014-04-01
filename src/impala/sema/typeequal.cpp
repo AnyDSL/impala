@@ -17,7 +17,7 @@ size_t UnknownTypeNode::hash() const {
     return is_instantiated() ? instance()->hash() : hash_combine(hash_value((int) kind()), 0); // 0 because this is a TypeNode
 }
 
-size_t RealTypeNode::hash() const {
+size_t KnownTypeNode::hash() const {
     // FEATURE take type variables of generic types better into the equation
     size_t seed = hash_combine(hash_value((int) kind()), size());
     seed = hash_combine(seed, num_bound_vars());
@@ -44,10 +44,10 @@ bool UnknownTypeNode::equal(const TypeNode* other) const {
     return is_instantiated() ? instance()->equal(other) : this == other;
 }
 
-bool RealTypeNode::equal(const TypeNode* t) const {
+bool KnownTypeNode::equal(const TypeNode* t) const {
     if (auto utn = t->isa<const UnknownTypeNode>())
         return utn->equal(this);
-    const RealTypeNode* other = t->as<const RealTypeNode>();
+    const KnownTypeNode* other = t->as<const KnownTypeNode>();
     if (this == other)
         return true;
 

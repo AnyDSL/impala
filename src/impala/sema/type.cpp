@@ -11,16 +11,16 @@ int UnknownTypeNode::counter_ = 0;
 
 //------------------------------------------------------------------------------
 
-bool RealTypeNode::unify_with(TypeNode* other) {
+bool KnownTypeNode::unify_with(TypeNode* other) {
     if (kind() == other->kind()) {
-        RealTypeNode* rtn = other->as<RealTypeNode>();
+        KnownTypeNode* ktn = other->as<KnownTypeNode>();
 
         if (unify_bound_vars(other->bound_vars())) {
             // go through all sub elements
-            if (size() == rtn->size()) {
+            if (size() == ktn->size()) {
                 bool result = true;
                 for (size_t i = 0; i < size(); ++i)
-                    result = result && elem(i)->unify_with(rtn->elem(i));
+                    result = result && elem(i)->unify_with(ktn->elem(i));
 
                 return result;
             }
@@ -40,7 +40,7 @@ bool UnknownTypeNode::unify_with(TypeNode* other) {
 
 //------------------------------------------------------------------------------
 
-bool RealTypeNode::is_closed() const {
+bool KnownTypeNode::is_closed() const {
     for (auto v : bound_vars()) {
         for (auto r : v->bounds()) {
             if (! r->is_closed())
@@ -56,7 +56,7 @@ bool RealTypeNode::is_closed() const {
 }
 
 // TODO test this
-bool RealTypeNode::is_subtype(const Type super_type) const {
+bool KnownTypeNode::is_subtype(const Type super_type) const {
     if (this == *super_type)
         return true;
 
@@ -67,7 +67,7 @@ bool RealTypeNode::is_subtype(const Type super_type) const {
     return false;
 }
 
-bool RealTypeNode::is_sane() const {
+bool KnownTypeNode::is_sane() const {
     for (auto t : elems_) {
         if (!t->is_sane()) {
             return false;
@@ -96,7 +96,7 @@ bool TypeVarNode::is_closed() const {
 
 //------------------------------------------------------------------------------
 
-void RealTypeNode::add_implementation(TraitImpl impl) {
+void KnownTypeNode::add_implementation(TraitImpl impl) {
     // TODO fail if a method was implemented multiple times!
     if (impl->is_generic()) {
         gen_trait_impls_.push_back(impl);
@@ -111,7 +111,7 @@ void RealTypeNode::add_implementation(TraitImpl impl) {
     }
 }
 
-bool RealTypeNode::implements(Trait trait) const {
+bool KnownTypeNode::implements(Trait trait) const {
     if (trait_impls_.find(trait) == trait_impls_.end()) {
         // try to instantiate the generic implementations
         for (TraitImpl ti : gen_trait_impls_) {
@@ -132,7 +132,7 @@ bool TypeVarNode::implements(Trait trait) const {
     return bounds().find(trait) != bounds().end();
 }
 
-Type RealTypeNode::find_method(Symbol s) const {
+Type KnownTypeNode::find_method(Symbol s) const {
     // TODO what about generic implementations?
     for (Trait t : trait_impls_) {
         if (auto fn = t->find_method(s)) return fn;
@@ -204,7 +204,7 @@ void TypeVarNode::refresh_bounds() {
 
 //------------------------------------------------------------------------------
 
-void RealTypeNode::make_real() {
+void KnownTypeNode::make_real() {
     make_bound_vars_real();
     for (size_t i = 0; i < size(); ++i) {
         Type e = elem(i);
@@ -219,7 +219,7 @@ void RealTypeNode::make_real() {
 
 }
 
-bool RealTypeNode::is_real() const {
+bool KnownTypeNode::is_real() const {
     bool result = bound_vars_real();
     for (auto e : elems())
         result = result && e->is_real();

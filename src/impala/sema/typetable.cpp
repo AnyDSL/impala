@@ -51,7 +51,7 @@ template<class T> void TypeTable::insert_new(T* unifiable) {
 }
 
 void TypeTable::insert_new_rec(TypeNode* t) {
-    RealTypeNode* type = t->as<RealTypeNode>();
+    KnownTypeNode* type = t->as<KnownTypeNode>();
     for (Type elem : type->elems_) {
         if (!elem->is_unified()) {
             unify(elem);
@@ -98,8 +98,8 @@ void TypeTable::change_repr_generic(T* t, T* repr) const {
 }
 
 void TypeTable::change_repr_rec(TypeNode* ty, TypeNode* reprt) const {
-    RealTypeNode* t = ty->as<RealTypeNode>();
-    RealTypeNode* repr = reprt->as<RealTypeNode>();
+    KnownTypeNode* t = ty->as<KnownTypeNode>();
+    KnownTypeNode* repr = reprt->as<KnownTypeNode>();
 
     // change representative of all sub elements
     assert(t->size() == repr->size());
