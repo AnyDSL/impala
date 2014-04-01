@@ -1,0 +1,3 @@
+fn main(f: fn[A](fn(A))) -> () {
+    let x: i32 = f[i32]();
+}

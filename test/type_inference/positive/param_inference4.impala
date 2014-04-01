@@ -1,0 +1,4 @@
+fn main() -> () {
+    let x:fn(int)->int = |p| p;
+}
+

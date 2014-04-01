@@ -32,6 +32,7 @@ bool RealTypeNode::unify_with(TypeNode* other) {
 bool UnknownTypeNode::unify_with(TypeNode* other) {
     if (!is_instantiated()) {
         instantiate(Type(other));
+        typetable().unify(Type(this));
         return true;
     } else
         return instance()->unify_with(other);
@@ -207,7 +208,7 @@ void RealTypeNode::make_real() {
     make_bound_vars_real();
     for (size_t i = 0; i < size(); ++i) {
         Type e = elem(i);
-        if (UnknownType utn = e.isa<UnknownType>()) {
+        if (UnknownTypeNode* utn = e.node()->isa<UnknownTypeNode>()) {
             assert(utn->is_instantiated());
             utn->instance()->make_real();
             set(i, utn->instance());

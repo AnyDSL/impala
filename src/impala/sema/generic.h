@@ -29,6 +29,7 @@ template<class T> struct UniEqual {
 template<class T> using UniSet = thorin::HashSet<T, UniHash<T>, UniEqual<T>>;
 
 class TypeNode;
+class UnknownTypeNode;
 
 template<class T> class Proxy;
 template<class T> void unify(TypeTable&, const Proxy<T>&);
@@ -60,7 +61,7 @@ public:
     T* operator -> () const { assert(node_ != nullptr); return *(*this); }
     /// Automatic up-cast in the class hierarchy.
     template<class U> operator Proxy<U>() {
-        static_assert(std::is_base_of<U, T>::value, "R is not a base type of L");
+        static_assert(std::is_base_of<U, T>::value, "U is not a base type of T");
         assert(node_ != nullptr); return Proxy<U>((U*) node_);
     }
     template<class U> Proxy<typename U::BaseType> isa() { 
@@ -70,14 +71,13 @@ public:
         assert(node_ != nullptr); return Proxy<typename U::BaseType>((*this)->as <typename U::BaseType>()); 
     }
     operator bool() { return !empty(); }
-    Proxy<T>& operator= (Proxy<T> other) { assert(node_ == nullptr); node_ = *other; return *this; }
+    Proxy<T>& operator= (Proxy<T> other) { assert(node_ == nullptr || node_->template isa<UnknownTypeNode>()); node_ = *other; return *this; }
     void clear() { node_ = nullptr; }
 
 private:
     T* node_;
 };
 
-class UnknownTypeNode;
 class TypeVarNode;
 class TraitNode;
 class TraitImplNode;

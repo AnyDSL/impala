@@ -265,7 +265,7 @@ protected:
     virtual Generic* vspecialize(SpecializeMapping&);
 
 public:
-    virtual std::string to_string() const { return std::string("tuple") + bound_vars_to_string() + elems_to_string(); }
+    virtual std::string to_string() const { return bound_vars_to_string() + elems_to_string(); }
 
     friend class TypeTable;
 };
