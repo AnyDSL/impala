@@ -143,12 +143,6 @@ public:
 
     // misc
     Symbol try_id(const std::string& what);
-    bool is_expr() const {
-        switch (la()) {
-            case EXPR: return true;
-            default:   return false;
-        }
-    }
     Visibility parse_visibility();
 
     // paths
@@ -207,7 +201,6 @@ public:
 
     // statements
     const Stmt*     parse_stmt_not_expr();
-    const ExprStmt* parse_expr_stmt();
     const ItemStmt* parse_item_stmt();
     const LetStmt*  parse_let_stmt();
 
@@ -1021,13 +1014,6 @@ const Stmt* Parser::parse_stmt_not_expr() {
         case Token::LET: return parse_let_stmt();
         default:         THORIN_UNREACHABLE;
     }
-}
-
-const ExprStmt* Parser::parse_expr_stmt() {
-    auto s = loc(new ExprStmt());
-    s->expr_ = parse_expr();
-    expect(Token::SEMICOLON, "the end of an expression statement");
-    return s;
 }
 
 const LetStmt* Parser::parse_let_stmt() {

@@ -1,10 +1,3 @@
-/*
- * TypeTable.h
- *
- *  Created on: Dec 14, 2013
- *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
- */
-
 #ifndef IMPALA_SEMA_TYPETABLE_H
 #define IMPALA_SEMA_TYPETABLE_H
 
@@ -41,7 +34,6 @@ public:
 #include "impala/tokenlist.h"
     Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
     TraitImpl implement_trait(const Impl* impl_decl, Trait trait) { return new_unifiable(new TraitImplNode(*this, impl_decl, trait)); }
-
     UnknownType unknown_type() { return new_unifiable(new UnknownTypeNode(*this)); }
     TypeVar typevar() { return new_unifiable(new TypeVarNode(*this, Symbol())); }
     TypeVar typevar(Symbol name) { return new_unifiable(new TypeVarNode(*this, name)); }
@@ -49,9 +41,8 @@ public:
     TupleType tupletype(thorin::ArrayRef<Type> elems) { return new_unifiable(new TupleTypeNode(*this, elems)); }
     TupleType unit() { return tupletype({}); }
 
-    /// unify a type and return \p true if the representative changed
+    /// Unify a type and return \p true if the representative changed.
     template<class T> bool unify(Proxy<T> t);
-
     /// Checks if all types in the type tables are sane and correctly unified.
     void verify() const;
 
@@ -59,18 +50,21 @@ public:
      * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
      * therefore it is important to call \p check_bounds after all unknowns have been resolved!
      */
-    template<class T> T instantiate_unknown(T t, std::vector<Type>& inst_types) {
+    template<class T> 
+    T instantiate_unknown(T t, std::vector<Type>& inst_types) {
         for (size_t i = 0; i < t->num_bound_vars(); ++i) inst_types.push_back(unknown_type());
         SpecializeMapping mapping = create_spec_mapping(t, inst_types);
         return t->instantiate(mapping);
     }
 
-    virtual void check_impls() {}
-    template<class T> bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types) {
+    template<class T> 
+    bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types) {
         assert(inst_types.size() == generic->num_bound_vars());
         SpecializeMapping mapping = create_spec_mapping(generic, inst_types);
         return check_bounds(loc, generic, inst_types, mapping);
     }
+
+    virtual void check_impls() {}
 
 protected:
     template<class T> bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping);
@@ -113,18 +107,20 @@ private:
     void change_repr_rec(TraitNode* t, TraitNode* repr) const {}
     void change_repr_rec(TraitImplNode* t, TraitImplNode* repr) const {}
 
-    TraitInstanceNode* instantiate_trait(TraitNode* trait, SpecializeMapping& mapping) { return instantiate_trait(Trait(trait), mapping); }
+    TraitInstanceNode* instantiate_trait(TraitNode* trait, SpecializeMapping& mapping) { 
+        return instantiate_trait(Trait(trait), mapping); 
+    }
     TraitInstanceNode* instantiate_trait(Trait trait, SpecializeMapping& mapping) {
         return new_unifiable(new TraitInstanceNode(trait, mapping)).node();
     }
 
+    Trait trait_error_;
+    TypeError type_error_;
+    NoReturnType type_noreturn_;
     TypetableSet<Generic> unifiables_;
     std::vector<Generic*> garbage_;
 #define IMPALA_TYPE(itype, atype) PrimType itype##_;
 #include "impala/tokenlist.h"
-    Trait trait_error_;
-    TypeError type_error_;
-    NoReturnType type_noreturn_;
 
     friend class TypeVarNode;
     friend class TraitNode;

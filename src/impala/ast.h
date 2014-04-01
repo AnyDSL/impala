@@ -135,7 +135,6 @@ private:
 class Typeable {
 public:
     Type type() const { return type_; }
-    void set_type(Type t) const;
 
 protected:
     mutable Type type_;

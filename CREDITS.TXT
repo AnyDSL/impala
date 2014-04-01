@@ -1,0 +1,17 @@
+This file is a list of people who contributed to Impala.
+
+The list is sorted by surname and formatted as follows:
+name (N), email (E), description (D)
+
+(N) Marcel Köster
+(E) koester@cs.uni-saarland.de
+(D) build system
+(D) MSVC port
+
+(N) Roland Leißa 
+(E) leissa@cs.uni-saarland.de
+(D) primary architect
+
+(N) David Poetzsch-Heffter 
+(E) s9dapoet@stud.uni-saarland.de
+(D) type system, semantic analysis

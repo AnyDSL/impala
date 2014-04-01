@@ -1,10 +1,3 @@
-/*
- * generic.cpp
- *
- *  Created on: Mar 5, 2014
- *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
- */
-
 #include "impala/sema/generic.h"
 
 #include "thorin/util/assert.h"
@@ -23,9 +16,8 @@ template void unify(TypeTable&, const Proxy<TraitNode>&);
 //------------------------------------------------------------------------------
 
 bool Generic::unify_bound_vars(thorin::ArrayRef<TypeVar> other_vars) {
-    if (num_bound_vars() == other_vars.size()) {
+    if (num_bound_vars() == other_vars.size())
         return !is_generic(); // TODO enable unification of generic elements!
-    }
     return false;
 }
 
@@ -35,10 +27,11 @@ void Generic::refine_bound_vars() {
 }
 
 bool Generic::bound_vars_known() const {
-    bool result = true;
-    for (auto v : bound_vars())
-        result = result && v->is_known();
-    return result;
+    for (auto v : bound_vars()) {
+        if (!v->is_known())
+            return false;
+    }
+    return true;
 }
 
 void Generic::add_bound_var(TypeVar v) {
@@ -57,12 +50,12 @@ void Generic::check_instantiation(SpecializeMapping& mapping) const {
     assert(mapping.size() == num_bound_vars());
 
     // check the bounds
-    for (TypeVar v : bound_vars()) {
+    for (auto v : bound_vars()) {
         auto it = mapping.find(*v);
         assert(it != mapping.end());
         Type instance = Type(it->second->as<TypeNode>());
 
-        for (Trait bound : v->bounds()) {
+        for (auto bound : v->bounds()) {
             SpecializeMapping m(mapping); // copy the mapping
             Trait spec_bound = Trait(bound->specialize(m)->as<TraitNode>());
             spec_bound->typetable().unify(spec_bound);
@@ -80,12 +73,12 @@ Generic* Generic::ginstantiate(SpecializeMapping& var_instances) {
 }
 
 Generic* Generic::gspecialize(SpecializeMapping& mapping) {
-    // FEATURE this could be faster if we copy only types were something changed inside
+    // FEATURE this could be faster if we copy only types where something changed inside
     auto it = mapping.find(this);
     if (it != mapping.end())
         return it->second;
 
-    for (TypeVar v : bound_vars()) {
+    for (auto v : bound_vars()) {
         // CHECK is representative really correct or do we need node()? -- see also below!
         assert(!mapping.contains(v.representative()));
         v->clone(mapping); // CHECK is node() correct here?

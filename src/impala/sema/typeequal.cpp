@@ -1,10 +1,3 @@
-/*
- * typeequal.cpp
- *
- *  Created on: Feb 24, 2014
- *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
- */
-
 #include "impala/sema/type.h"
 #include "impala/sema/trait.h"
 #include "impala/sema/typetable.h"
@@ -14,29 +7,22 @@ using namespace thorin;
 namespace impala {
 
 size_t UnknownTypeNode::hash() const {
-    return is_instantiated() ? instance()->hash() : hash_combine(hash_value((int) kind()), 0); // 0 because this is a TypeNode
+    return is_instantiated() ? instance()->hash() : hash_begin((int) kind());
 }
 
 size_t KnownTypeNode::hash() const {
     // FEATURE take type variables of generic types better into the equation
-    size_t seed = hash_combine(hash_value((int) kind()), size());
+    size_t seed = hash_combine(hash_begin((int) kind()), size());
     seed = hash_combine(seed, num_bound_vars());
     for (auto elem : elems_)
         seed = hash_combine(seed, elem->hash());
 
-    return hash_combine(seed, 0); // 0 because this is a TypeNode
+    return seed;
 }
 
-size_t TraitNode::hash() const {
-    return hash_combine(hash_value(trait_decl()), 1); // 1 because this is a TraitNode
-}
-
-// FEATURE better hash function
-size_t TraitInstanceNode::hash() const { return trait()->hash(); }
-
-size_t TraitImplNode::hash() const {
-    return hash_combine(hash_value(impl_decl()), 2); // 2 because this is a TraitImplNode
-}
+size_t TraitNode::hash() const { return hash_value(trait_decl()); }
+size_t TraitInstanceNode::hash() const { return trait()->hash(); } // FEATURE better hash function
+size_t TraitImplNode::hash() const { return hash_value(impl_decl()); }
 
 //----------------------------------------------------------------------------------------
 
@@ -83,13 +69,13 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
 
     // FEATURE this works but seems too much effort, at least use a set that uses representatives
     TypetableSet<TraitNode> obounds;
-    for (Trait r : other->bounds()) {
+    for (auto r : other->bounds()) {
         auto p = obounds.insert(*r); // TODO is deref here and below correct?
         assert(p.second && "hash/equal broken");
     }
 
     // this->bounds() subset of trestr
-    for (Trait r : this->bounds()) {
+    for (auto r : this->bounds()) {
         if (!obounds.contains(*r))
             return false;
     }

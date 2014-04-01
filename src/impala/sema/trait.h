@@ -1,10 +1,3 @@
-/*
- * trait.h
- *
- *  Created on: Dec 14, 2013
- *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
- */
-
 #ifndef IMPALA_SEMA_TRAIT_H
 #define IMPALA_SEMA_TRAIT_H
 

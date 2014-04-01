@@ -157,7 +157,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
             std::vector<Type> inst_types;
             Type inst = instantiate_unknown(found_type, inst_types);
             if (inst->unify_with(expected)) {
-                for (Type t : inst_types) {
+                for (auto t : inst_types) {
                     assert(t.representative() != nullptr);
                     expr->add_inferred_arg(Type(t.representative()));
                 }
@@ -225,8 +225,8 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
 
 void TypeParamList::check_type_params(TypeSema& sema) const {
     // check bounds
-    for (const TypeParam* tp : type_params()) {
-        for (const ASTType* b : tp->bounds()) {
+    for (auto tp : type_params()) {
+        for (auto b : tp->bounds()) {
             if (auto trait_inst = b->isa<ASTTypeApp>()) {
                 TypeVar v = tp->type_var(sema);
                 v->add_bound(trait_inst->to_trait(sema, v));
@@ -417,7 +417,7 @@ void TraitDecl::check(TypeSema& sema) const {
     for (auto tp : type_params())
         trait_->add_bound_var(tp->type_var(sema));
 
-    for (const ASTTypeApp* t : super())
+    for (auto t : super())
         trait_->add_super_trait(t->to_trait(sema, self_var));
 
     // check methods

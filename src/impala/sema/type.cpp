@@ -60,7 +60,7 @@ bool KnownTypeNode::is_subtype(const Type super_type) const {
     if (this == *super_type)
         return true;
 
-    for (Type t : super_type->elems()) {
+    for (auto t : super_type->elems()) {
         if (this->is_subtype(t))
             return true;
     }
@@ -104,7 +104,7 @@ void KnownTypeNode::add_implementation(TraitImpl impl) {
         Trait trait = impl->trait();
         if (!trait_impls_.insert(trait).second)
             typetable().error(impl->impl_decl()) << "Duplicated implementation of trait '" << trait << "'\n";
-        for (Trait super : trait->super_traits()) {
+        for (auto super : trait->super_traits()) {
             if (!trait_impls_.insert(super).second)
                 typetable().error(impl->impl_decl()) << "Duplicated implementation of trait '" << super << "'\n";
         }
@@ -114,7 +114,7 @@ void KnownTypeNode::add_implementation(TraitImpl impl) {
 bool KnownTypeNode::implements(Trait trait) const {
     if (trait_impls_.find(trait) == trait_impls_.end()) {
         // try to instantiate the generic implementations
-        for (TraitImpl ti : gen_trait_impls_) {
+        for (auto ti : gen_trait_impls_) {
             std::vector<Type> inst_types;
             TraitImpl inst = typetable().instantiate_unknown(ti, inst_types);
             if (inst->trait()->unify_with(*trait)) { // TODO why do we have to deref here explicitly? It *should* work without deref
@@ -134,14 +134,14 @@ bool TypeVarNode::implements(Trait trait) const {
 
 Type KnownTypeNode::find_method(Symbol s) const {
     // TODO what about generic implementations?
-    for (Trait t : trait_impls_) {
+    for (auto t : trait_impls_) {
         if (auto fn = t->find_method(s)) return fn;
     }
     return Type();
 }
 
 Type TypeVarNode::find_method(Symbol s) const {
-    for (Trait t : bounds()) {
+    for (auto t : bounds()) {
         if (auto fn = t->find_method(s)) return fn;
     }
     return Type();
@@ -185,7 +185,7 @@ TypeVar TypeVarNode::clone(SpecializeMapping& mapping) const {
     mapping[this] = v.node();
 
     // copy bounds!
-    for (Trait b : bounds())
+    for (auto b : bounds())
         v->add_bound(b->specialize(mapping));
 
     return v;
@@ -193,10 +193,10 @@ TypeVar TypeVarNode::clone(SpecializeMapping& mapping) const {
 
 void TypeVarNode::refresh_bounds() {
     std::vector<Trait> tmp;
-    for (Trait i : bounds())
+    for (auto i : bounds())
         tmp.push_back(i);
     bounds_.clear();
-    for (Trait i : tmp) {
+    for (auto i : tmp) {
         auto p = bounds_.insert(i);
         assert(p.second && "hash/equal broken");
     }
@@ -232,9 +232,9 @@ void verify(thorin::ArrayRef<const Type> types) {
     for (auto t : types)
         assert(t->is_sane());
 
-    for (Type ty1 : types) {
+    for (auto ty1 : types) {
         TypeNode* t1 = ty1.node();
-        for (Type ty2 : types) {
+        for (auto ty2 : types) {
             TypeNode* t2 = ty2.node();
             if (t1->is_unified() && t2->is_unified()) {
                 if (!((!t1->equal(t2)) || (t1->representative() == t2->representative()))) {

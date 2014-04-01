@@ -9,30 +9,14 @@
 
 namespace impala {
 
-class TypeTable;
-template<class T> class Unifiable;
-
-template<class T> struct NodeHash {
-    size_t operator () (const T t) const { return thorin::hash_value(t.node()); }
-};
-template<class T> struct NodeEqual {
-    bool operator () (const T t1, const T t2) const { return t1.node() == t2.node(); }
-};
-template<class T> using NodeSet = thorin::HashSet<T, NodeHash<T>, NodeEqual<T>>;
-
-template<class T> struct UniHash {
-    size_t operator () (const T t) const { return t->hash(); }
-};
-template<class T> struct UniEqual {
-    bool operator () (const T t1, const T t2) const { return (t1->is_unified() && t2->is_unified()) ? t1 == t2 : t1->equal(*t2); }
-};
-template<class T> using UniSet = thorin::HashSet<T, UniHash<T>, UniEqual<T>>;
-
 class TypeNode;
+class TypeTable;
 class UnknownTypeNode;
-
 template<class T> class Proxy;
+template<class T> class Unifiable;
 template<class T> void unify(TypeTable&, const Proxy<T>&);
+
+//------------------------------------------------------------------------------
 
 template<class T>
 class Proxy {
@@ -71,12 +55,18 @@ public:
         assert(node_ != nullptr); return Proxy<typename U::BaseType>((*this)->as <typename U::BaseType>()); 
     }
     operator bool() { return !empty(); }
-    Proxy<T>& operator= (Proxy<T> other) { assert(node_ == nullptr || node_->template isa<UnknownTypeNode>()); node_ = *other; return *this; }
+    Proxy<T>& operator= (Proxy<T> other) { 
+        assert(node_ == nullptr || node_->template isa<UnknownTypeNode>()); 
+        node_ = *other; 
+        return *this; 
+    }
     void clear() { node_ = nullptr; }
 
 private:
     T* node_;
 };
+
+//------------------------------------------------------------------------------
 
 class TypeVarNode;
 class TraitNode;
@@ -224,8 +214,22 @@ protected:
     friend class TypeTable;
 };
 
+//------------------------------------------------------------------------------
+
 template<class T>
 std::ostream& operator << (std::ostream& o, Proxy<T> u) { return o << u->to_string(); }
+
+//------------------------------------------------------------------------------
+
+template<class T> struct UniHash {
+    size_t operator () (const T t) const { return t->hash(); }
+};
+template<class T> struct UniEqual {
+    bool operator () (const T t1, const T t2) const { return (t1->is_unified() && t2->is_unified()) ? t1 == t2 : t1->equal(*t2); }
+};
+template<class T> using UniSet = thorin::HashSet<T, UniHash<T>, UniEqual<T>>;
+
+//------------------------------------------------------------------------------
 
 }
 

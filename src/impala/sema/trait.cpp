@@ -1,10 +1,3 @@
-/*
- * trait.cpp
- *
- *  Created on: Dec 14, 2013
- *      Author: David Poetzsch-Heffter <s9dapoet@stud.uni-saarland.de>
- */
-
 #include "impala/sema/trait.h"
 #include "impala/sema/typetable.h"
 #include "impala/ast.h"
@@ -30,7 +23,7 @@ void TraitNode::add_super_trait(Trait t) {
     super_traits_.insert(t);
     super_traits_.insert(t->super_traits().begin(), t->super_traits().end());
 
-    for (Symbol mname : t->declared_methods()) {
+    for (auto mname : t->declared_methods()) {
         assert(t->has_method(mname));
         if (!add_method(mname, t->find_method(mname), true))
             typetable().error(this->trait_decl()) << "conflicting method name in super traits: '" << mname << "'\n";
@@ -43,7 +36,7 @@ bool TraitInstanceNode::unify_with(TraitNode* other) {
             auto other_vinsts = tinst->var_instances_;
             if (var_instances_.size() == other_vinsts.size()) {
                 bool result = true;
-                for (TypeVar v : trait()->bound_vars()) {
+                for (auto v : trait()->bound_vars()) {
                     TypeVarNode* vnode = v.node();
                     assert(var_instances_.find(vnode) != var_instances_.end());
                     assert(other_vinsts.find(vnode) != other_vinsts.end());
@@ -75,7 +68,7 @@ void TraitInstanceNode::refine() {
 
 bool TraitInstanceNode::is_known() const {
     bool result = true;
-    for (TypeVar tv : trait()->bound_vars()) {
+    for (auto tv : trait()->bound_vars()) {
         assert(var_instances_.find(tv.node()) != var_instances_.end()); // CHECK is node() correct here?
         result = result && var_instances_.find(tv.node())->second->is_known();
     }
@@ -137,7 +130,7 @@ const MethodTable& TraitInstanceNode::all_methods() {
 const UniSet<Trait>& TraitInstanceNode::super_traits() {
     if (super_traits_.size() < trait()->super_traits().size()) {
         // specialize super traits
-        for (Trait super : trait()->super_traits()) {
+        for (auto super : trait()->super_traits()) {
             SpecializeMapping m = this->var_instances();
             Trait super_inst = super->specialize(m);
             //typetable().unify(super_inst);
