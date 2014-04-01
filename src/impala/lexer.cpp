@@ -183,24 +183,20 @@ Token Lexer::lex() {
 
         if (accept(str, dec_nonzero)) goto l_dec;
         if (accept(str, '0')) {
-            if (accept(str, 'b')) {         // 0b[01][01_]*
-                if (accept(str, bin)) {
-                    while (accept(str, bin) || accept('_')) {}
-                    return lex_suffix(str, false);
-                }
-            } else if (accept(str, 'o')) {  // 0[bB][0-7][0-7_]*
-                if (accept(str, oct)) {
-                    while (accept(str, oct) || accept('_')) {}
-                    return lex_suffix(str, false);
-                }
-            } else if (accept(str, 'x')) {  // 0[xX][0-7][0-7_]*
-                if (accept(str, hex)) {
-                    while (accept(str, hex) || accept('_')) {}
-                    return lex_suffix(str, false);
-                }
-            } else 
-                goto l_dec;
-            return literal_error(str, false);
+#define IMPALA_LEX_BASE_NUM(prefix, pred) \
+            if (accept(str, (prefix))) { \
+                while (accept(str, '_')) {} \
+                if (accept(str, (pred))) { \
+                    while (accept(str, (pred)) || accept(str, '_')) {} \
+                    return lex_suffix(str, false); \
+                } \
+                return literal_error(str, false); \
+            }  
+
+            IMPALA_LEX_BASE_NUM('b', bin)
+            IMPALA_LEX_BASE_NUM('o', oct)
+            IMPALA_LEX_BASE_NUM('x', hex)
+            goto l_dec;
         }
 
         // invalid input char
@@ -208,7 +204,7 @@ Token Lexer::lex() {
         continue;
 
 l_dec:                                      // [0-9_]*
-        while (accept(str, dec) || accept('_')) {}
+        while (accept(str, dec) || accept(str, '_')) {}
         if (accept(str, '.')) {             // [0-9]
             if (accept(str, dec)) goto l_fractional_dot_rest;
             if (accept(str,  eE)) goto l_exp;
@@ -218,14 +214,14 @@ l_dec:                                      // [0-9_]*
         return lex_suffix(str, false);
 
 l_fractional_dot_rest:                      // [0-9_]*
-		while (accept(str, dec) || accept('_')) {}
+		while (accept(str, dec) || accept(str, '_')) {}
 		if (accept(str,  eE)) goto l_exp;
         return lex_suffix(str, true);
 
 l_exp:                                      // [eE][+-]?[0-9_]+
         accept(str, sgn);
-        if (accept(str, dec) || accept('_')) {
-            while (accept(str, dec) || accept('_')) {}
+        if (accept(str, dec) || accept(str, '_')) {
+            while (accept(str, dec) || accept(str, '_')) {}
             return lex_suffix(str, true);
         }
         return literal_error(str, true);

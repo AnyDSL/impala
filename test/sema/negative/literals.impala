@@ -12,4 +12,10 @@ fn main() -> () {
     { let i: i32 = 0b_; }
     { let i: i32 = 0b_0; }
     { let i: i32 = 0b2; }
+    { let i: i32 = 0o_; }
+    { let i: i32 = 0o_0; }
+    { let i: i32 = 0o8; }
+    { let i: i32 = 0x_; }
+    { let i: i32 = 0x_0; }
+    { let i: i32 = 0x8; }
 }

@@ -1,5 +1,7 @@
 #include "impala/token.h"
 
+#include <algorithm>
+
 #include "thorin/util/assert.h"
 #include "thorin/util/cast.h"
 #include "thorin/util/stdlib.h"
@@ -32,22 +34,27 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
 {
     using namespace std;
 
+    std::string literal;
     int base = 10;
-    const char* nptr = &str.front();
-    if (str.size() >= 3) {
+    auto begin = str.begin();
+    if (str.size() >= 2) {
         if (str[0] == '0') {
             if (str[1] == 'b') {
                 base = 2;
-                nptr += 2;
+                begin += 2;
             } else if (str[1] == 'o') {
                 base = 8;
-                nptr += 2;
+                begin += 2;
             } else if (str[2] == 'x') {
                 base = 16;
-                nptr += 2;
+                begin += 2;
             }
         }
     }
+
+    // remove underscores and '0b'/'0x'/'0x' prefix
+    std::copy_if(begin, str.end(), std::back_inserter(literal), [] (char c) { return c != '_'; });
+    auto nptr = &literal.front();
 
     switch (kind_) {
         case LIT_i8:  box_ = Box(  int8_t(strtol  (nptr, 0, base))); break;
@@ -60,12 +67,11 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
         case LIT_u64: box_ = Box(uint64_t(strtoull(nptr, 0, base))); break;
         case LIT_f32: box_ = Box(strtof(symbol_.str(), 0)); break;
         case LIT_f64: box_ = Box(strtod(symbol_.str(), 0)); break;
-
         default: THORIN_UNREACHABLE;
     }
 }
 
-/*static */ bool Token::is_rel(Kind op) {
+bool Token::is_rel(Kind op) {
     switch (op) {
         case EQ: case LT: case LE: 
         case NE: case GT: case GE: return true;
