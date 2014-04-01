@@ -37,6 +37,8 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
     std::string literal;
     int base = 10;
     auto begin = str.begin();
+
+    // find out base and move begin iterator to the actual number
     if (str.size() >= 2) {
         if (str[0] == '0') {
             if (str[1] == 'b') {
@@ -195,7 +197,6 @@ void Token::insert_key(TokenKind tok, const char* str) {
     keywords_[s] = tok;
     tok2str_ [tok] = s.str();
 }
-
 
 Symbol Token::insert(TokenKind tok, const char* str) {
     Symbol s = str;
