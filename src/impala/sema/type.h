@@ -16,7 +16,7 @@ enum Kind {
 #define IMPALA_TYPE(itype, atype) Type_##itype,
 #include "impala/tokenlist.h"
     Type_error,
-    Type_uninstantiated,
+    Type_unknown,
     Type_noReturn,
     Type_fn,
     Type_tuple,
@@ -134,7 +134,7 @@ protected:
     virtual Generic* vspecialize(SpecializeMapping&);
 
 public:
-    virtual Kind kind() const { return is_instantiated() ? instance()->kind() : Type_uninstantiated; }
+    virtual Kind kind() const { return is_instantiated() ? instance()->kind() : Type_unknown; }
     virtual std::string to_string() const;
 
     virtual thorin::ArrayRef<Type> elems() const { return is_instantiated() ? instance()->elems() : thorin::ArrayRef<Type>(); }
