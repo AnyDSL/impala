@@ -10,7 +10,7 @@ TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
     , super_traits_()
 {}
 
-TraitInstanceNode::TraitInstanceNode(const Trait trait, const SpecializeMapping& var_instances)
+TraitInstanceNode::TraitInstanceNode(const Trait trait, const SpecializeMap& var_instances)
     : TraitNode(trait->typetable(), trait->trait_decl())
     , trait_(trait)
     , var_instances_(var_instances)
@@ -110,7 +110,7 @@ Type TraitInstanceNode::find_method(Symbol name) {
         if (fn.empty()) {
             return fn;
         } else {
-            SpecializeMapping m = var_instances();
+            SpecializeMap m = var_instances();
             Type t = fn->specialize(m);
             typetable().unify(t);
             return all_methods_[name] = t;
@@ -131,7 +131,7 @@ const UniSet<Trait>& TraitInstanceNode::super_traits() {
     if (super_traits_.size() < trait()->super_traits().size()) {
         // specialize super traits
         for (auto super : trait()->super_traits()) {
-            SpecializeMapping m = this->var_instances();
+            SpecializeMap m = this->var_instances();
             Trait super_inst = super->specialize(m);
             //typetable().unify(super_inst);
             auto p = super_traits_.insert(super_inst);
@@ -142,18 +142,18 @@ const UniSet<Trait>& TraitInstanceNode::super_traits() {
     return super_traits_;
 }
 
-TraitNode* TraitNode::vspecialize(SpecializeMapping& mapping) {
-    return is_generic() ? typetable().instantiate_trait(this, mapping) : this;
+TraitNode* TraitNode::vspecialize(SpecializeMap& map) {
+    return is_generic() ? typetable().instantiate_trait(this, map) : this;
 }
 
-TraitNode* TraitInstanceNode::vspecialize(SpecializeMapping& mapping) {
-    SpecializeMapping m;
+TraitNode* TraitInstanceNode::vspecialize(SpecializeMap& map) {
+    SpecializeMap m;
     for (auto i : var_instances_)
-        m[i.first] = i.second->gspecialize(mapping);
+        m[i.first] = i.second->gspecialize(map);
 
     return typetable().instantiate_trait(trait(), m);
 }
 
-Generic* TraitImplNode::vspecialize(SpecializeMapping& m) { return m[this] = typetable().implement_trait(impl_decl(), trait()->specialize(m)).node(); }
+Generic* TraitImplNode::vspecialize(SpecializeMap& m) { return m[this] = typetable().implement_trait(impl_decl(), trait()->specialize(m)).node(); }
 
 }

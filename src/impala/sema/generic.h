@@ -78,7 +78,7 @@ typedef Proxy<TraitNode> Trait;
 typedef Proxy<TraitImplNode> TraitImpl;
 
 class Generic;
-typedef thorin::HashMap<const Generic*, Generic*> SpecializeMapping;
+typedef thorin::HashMap<const Generic*, Generic*> SpecializeMap;
 
 //------------------------------------------------------------------------------
 
@@ -130,15 +130,15 @@ protected:
     void refine_bound_vars();
     bool bound_vars_known() const;
 
-    Generic* ginstantiate(SpecializeMapping& var_instances);
-    Generic* gspecialize(SpecializeMapping&); // TODO one could always assert that this is only called on final representatives!
+    Generic* ginstantiate(SpecializeMap& var_instances);
+    Generic* gspecialize(SpecializeMap&); // TODO one could always assert that this is only called on final representatives!
 
     /// like specialize but does not care about generics (this method is called by specialize)
-    virtual Generic* vspecialize(SpecializeMapping&) = 0;
+    virtual Generic* vspecialize(SpecializeMap&) = 0;
 
 private:
     /// raise error if a type does not implement the required traits;
-    void check_instantiation(SpecializeMapping&) const;
+    void check_instantiation(SpecializeMap&) const;
 
     friend class TypeVarNode;
     friend class TraitInstanceNode;
@@ -184,23 +184,23 @@ public:
     }
 
     /**
-     * Instantiate a generic element using the mapping from TypeVar -> Type
-     * @param var_instances A mapping that assigns each type variable that is bound at this generic an instance
+     * Instantiate a generic element using the map from TypeVar -> Type
+     * @param var_instances A map that assigns each type variable that is bound at this generic an instance
      * @return the instantiated type
-     * @see TypeTable::create_spec_mapping()
+     * @see TypeTable::create_spec_map()
      */
-    Proxy<T> instantiate(SpecializeMapping& var_instances) {
+    Proxy<T> instantiate(SpecializeMap& var_instances) {
 //        assert(is_final_representative()); CHECK it seems nothing gets broken w.o. this assertion - still I don't feel comfortable w.o. it
         // we can not unify yet because it could be that this type is not closed yet
         return Proxy<T>(ginstantiate(var_instances)->as<T>());
     }
     /**
-     * if this element is in the mapping return the mapped one;
+     * if this element is in the map return the mapped one;
      * otherwise copy this element with specialized sub-elements
      */
-    Proxy<T> specialize(SpecializeMapping& mapping) {
+    Proxy<T> specialize(SpecializeMap& map) {
 //        assert(is_final_representative()); CHECK it seems nothing gets broken w.o. this assertion - still I don't feel comfortable w.o. it
-        return Proxy<T>(gspecialize(mapping)->as<T>());
+        return Proxy<T>(gspecialize(map)->as<T>());
     }
 
 private:

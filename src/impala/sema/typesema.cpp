@@ -11,7 +11,7 @@ struct InstantiationHash {
 struct InstantiationEqual {
     bool operator () (TypeVar t1, TypeVar t2) const { return (t1->is_unified() && t2->is_unified()) ? t1.as<Type>() == t2.as<Type>() : t1->equal(*t2); }
 };
-typedef thorin::HashMap<TypeVar, Type, InstantiationHash, InstantiationEqual> InstantiationMapping;
+typedef thorin::HashMap<TypeVar, Type, InstantiationHash, InstantiationEqual> Instantiationmap;
 
 //------------------------------------------------------------------------------
 
@@ -196,10 +196,10 @@ Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::
         std::vector<Type> inst_types;
         inst_types.push_back(self);
         for (auto t : var_instances) inst_types.push_back(check(t));
-        SpecializeMapping mapping = create_spec_mapping(trait, inst_types);
+        auto map = create_spec_map(trait, inst_types);
 
-        check_bounds(loc, trait, inst_types, mapping);
-        return trait->instantiate(mapping);
+        check_bounds(loc, trait, inst_types, map);
+        return trait->instantiate(map);
     } else
         error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << (trait->num_bound_vars()-1) << "\n";
 
@@ -210,10 +210,10 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
     if (var_instances.size() == type->num_bound_vars()) {
         std::vector<Type> inst_types;
         for (auto t : var_instances) inst_types.push_back(check(t));
-        SpecializeMapping mapping = create_spec_mapping(type, inst_types);
+        auto map = create_spec_map(type, inst_types);
 
-        check_bounds(loc, type, inst_types, mapping);
-        return type->instantiate(mapping);
+        check_bounds(loc, type, inst_types, map);
+        return type->instantiate(map);
     } else {
         error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << type->num_bound_vars() << "\n";
     }

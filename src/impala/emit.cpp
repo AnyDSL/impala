@@ -608,5 +608,6 @@ void FunItem::emit(CodeGen& cg) const { cg.emit_body(fun()); }
 void ProtoItem::emit(CodeGen& cg) const { }
 void StructItem::emit(CodeGen& cg) const { assert( false && "todo"); }
 
-} // namespace impala
+}
+
 #endif

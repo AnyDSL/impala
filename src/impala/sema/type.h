@@ -113,7 +113,7 @@ public:
 private:
     const Kind kind_;
     UniSet<Trait> trait_impls_; // TODO do we want to have the impls or only the traits?
-    std::vector<TraitImpl> gen_trait_impls_; // TODO use a mapping trait_name -> impls to make this faster!
+    std::vector<TraitImpl> gen_trait_impls_; // TODO use a map trait_name -> impls to make this faster!
 
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
@@ -131,7 +131,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMapping&);
+    virtual Generic* vspecialize(SpecializeMap&);
 
 public:
     virtual Kind kind() const { return is_instantiated() ? instance()->kind() : Type_unknown; }
@@ -183,7 +183,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMapping&);
+    virtual Generic* vspecialize(SpecializeMap&);
 
 public:
     virtual std::string to_string() const { return "<type error>"; }
@@ -198,7 +198,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMapping&);
+    virtual Generic* vspecialize(SpecializeMap&);
 
 public:
     virtual std::string to_string() const { return "<type no-return>"; }
@@ -215,7 +215,7 @@ private:
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
 
 protected:
-    virtual Generic* vspecialize(SpecializeMapping&);
+    virtual Generic* vspecialize(SpecializeMap&);
 
 public:
     virtual std::string to_string() const;
@@ -235,7 +235,7 @@ protected:
 
     std::string elems_to_string() const;
 
-    thorin::Array<Type> specialize_elems(SpecializeMapping& mapping) const;
+    thorin::Array<Type> specialize_elems(SpecializeMap&) const;
 };
 
 class FnTypeNode : public CompoundTypeNode {
@@ -245,7 +245,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMapping&);
+    virtual Generic* vspecialize(SpecializeMap&);
 
 public:
     virtual std::string to_string() const { return std::string("fn") + bound_vars_to_string() + elems_to_string(); }
@@ -262,7 +262,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMapping&);
+    virtual Generic* vspecialize(SpecializeMap&);
 
 public:
     virtual std::string to_string() const { return bound_vars_to_string() + elems_to_string(); }
@@ -305,7 +305,7 @@ public:
     virtual bool is_sane() const { return is_closed(); }
 
     /// Create a copy of this \p TypeVar that considers the specialization (the binding is not copied)
-    TypeVar clone(SpecializeMapping&) const;
+    TypeVar clone(SpecializeMap&) const;
 
 private:
     const int id_;       ///< Used for unambiguous dumping.
@@ -320,7 +320,7 @@ private:
     static int counter_;
 
 protected:
-    virtual Generic* vspecialize(SpecializeMapping&);
+    virtual Generic* vspecialize(SpecializeMap&);
 
     /// re-add all elements to the bounds set -- needed if during unification the representatives of bounds change
     void refresh_bounds();

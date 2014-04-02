@@ -157,34 +157,34 @@ FnType FnTypeNode::specialize_method(Type t) const {
 
 //------------------------------------------------------------------------------
 
-Generic* UnknownTypeNode::vspecialize(SpecializeMapping& mapping) { assert(false); return nullptr; }
+Generic* UnknownTypeNode::vspecialize(SpecializeMap& map) { assert(false); return nullptr; }
 
-thorin::Array<Type> CompoundTypeNode::specialize_elems(SpecializeMapping& mapping) const {
+thorin::Array<Type> CompoundTypeNode::specialize_elems(SpecializeMap& map) const {
     thorin::Array<Type> nelems(size());
     for (size_t i = 0, e = size(); i != e; ++i)
-        nelems[i] = Type(elem(i)->specialize(mapping)->as<TypeNode>());
+        nelems[i] = Type(elem(i)->specialize(map)->as<TypeNode>());
     return nelems;
 }
 
-Generic* TypeErrorNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().type_error().node(); }
-Generic* NoReturnTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().type_noreturn().node(); }
-Generic* PrimTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().primtype(primtype_kind()).node(); }
-Generic* FnTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().fntype(specialize_elems(mapping)).node(); }
-Generic* TupleTypeNode::vspecialize(SpecializeMapping& mapping) { return mapping[this] = typetable().tupletype(specialize_elems(mapping)).node(); }
+Generic* TypeErrorNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type_error().node(); }
+Generic* NoReturnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type_noreturn().node(); }
+Generic* PrimTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().primtype(primtype_kind()).node(); }
+Generic* FnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().fntype(specialize_elems(map)).node(); }
+Generic* TupleTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().tupletype(specialize_elems(map)).node(); }
 
-Generic* TypeVarNode::vspecialize(SpecializeMapping& mapping) {
+Generic* TypeVarNode::vspecialize(SpecializeMap& map) {
     // was not bound in the specialized type -> return orginal type var
     // CHECK do we need to create a new copy here? unification lead to segmentation faults in the past...
-    return mapping[this] = this;
+    return map[this] = this;
 }
 
-TypeVar TypeVarNode::clone(SpecializeMapping& mapping) const {
+TypeVar TypeVarNode::clone(SpecializeMap& map) const {
     TypeVar v = typetable().typevar();
-    mapping[this] = v.node();
+    map[this] = v.node();
 
     // copy bounds!
     for (auto b : bounds())
-        v->add_bound(b->specialize(mapping));
+        v->add_bound(b->specialize(map));
 
     return v;
 }

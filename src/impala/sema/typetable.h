@@ -53,30 +53,30 @@ public:
     template<class T> 
     T instantiate_unknown(T t, std::vector<Type>& inst_types) {
         for (size_t i = 0; i < t->num_bound_vars(); ++i) inst_types.push_back(unknown_type());
-        SpecializeMapping mapping = create_spec_mapping(t, inst_types);
-        return t->instantiate(mapping);
+        SpecializeMap map = create_spec_map(t, inst_types);
+        return t->instantiate(map);
     }
 
     template<class T> 
     bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types) {
         assert(inst_types.size() == generic->num_bound_vars());
-        SpecializeMapping mapping = create_spec_mapping(generic, inst_types);
-        return check_bounds(loc, generic, inst_types, mapping);
+        SpecializeMap map = create_spec_map(generic, inst_types);
+        return check_bounds(loc, generic, inst_types, map);
     }
 
     virtual void check_impls() {}
 
 protected:
-    template<class T> bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMapping& mapping);
-    template<class T> SpecializeMapping create_spec_mapping(T generic, thorin::ArrayRef<Type> var_instances) const {
+    template<class T> bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
+    template<class T> SpecializeMap create_spec_map(T generic, thorin::ArrayRef<Type> var_instances) const {
         assert(generic->num_bound_vars() == var_instances.size());
-        SpecializeMapping mapping;
+        SpecializeMap map;
         size_t i = 0;
         for (TypeVar v : generic->bound_vars()) {
-            mapping[*v] = *var_instances[i++]; // CHECK ist deref correct here and below?
+            map[*v] = *var_instances[i++]; // CHECK ist deref correct here and below?
         }
-        assert(mapping.size() == var_instances.size());
-        return mapping;
+        assert(map.size() == var_instances.size());
+        return map;
     }
 
 private:
@@ -107,11 +107,11 @@ private:
     void change_repr_rec(TraitNode* t, TraitNode* repr) const {}
     void change_repr_rec(TraitImplNode* t, TraitImplNode* repr) const {}
 
-    TraitInstanceNode* instantiate_trait(TraitNode* trait, SpecializeMapping& mapping) { 
-        return instantiate_trait(Trait(trait), mapping); 
+    TraitInstanceNode* instantiate_trait(TraitNode* trait, SpecializeMap& map) { 
+        return instantiate_trait(Trait(trait), map); 
     }
-    TraitInstanceNode* instantiate_trait(Trait trait, SpecializeMapping& mapping) {
-        return new_unifiable(new TraitInstanceNode(trait, mapping)).node();
+    TraitInstanceNode* instantiate_trait(Trait trait, SpecializeMap& map) {
+        return new_unifiable(new TraitInstanceNode(trait, map)).node();
     }
 
     TypetableSet<Generic> unifiables_;

@@ -46,17 +46,17 @@ void Generic::add_bound_var(TypeVar v) {
     bound_vars_.push_back(v);
 }
 
-void Generic::check_instantiation(SpecializeMapping& mapping) const {
-    assert(mapping.size() == num_bound_vars());
+void Generic::check_instantiation(SpecializeMap& map) const {
+    assert(map.size() == num_bound_vars());
 
     // check the bounds
     for (auto v : bound_vars()) {
-        auto it = mapping.find(*v);
-        assert(it != mapping.end());
+        auto it = map.find(*v);
+        assert(it != map.end());
         Type instance = Type(it->second->as<TypeNode>());
 
         for (auto bound : v->bounds()) {
-            SpecializeMapping m(mapping); // copy the mapping
+            SpecializeMap m(map); // copy the map
             Trait spec_bound = Trait(bound->specialize(m)->as<TraitNode>());
             spec_bound->typetable().unify(spec_bound);
             assert(instance->implements(spec_bound));
@@ -64,7 +64,7 @@ void Generic::check_instantiation(SpecializeMapping& mapping) const {
     }
 }
 
-Generic* Generic::ginstantiate(SpecializeMapping& var_instances) {
+Generic* Generic::ginstantiate(SpecializeMap& var_instances) {
 /*#ifndef NDEBUG
     check_instantiation(var_instances);
 #endif*/
@@ -72,23 +72,23 @@ Generic* Generic::ginstantiate(SpecializeMapping& var_instances) {
     return vspecialize(var_instances);
 }
 
-Generic* Generic::gspecialize(SpecializeMapping& mapping) {
+Generic* Generic::gspecialize(SpecializeMap& map) {
     // FEATURE this could be faster if we copy only types where something changed inside
-    auto it = mapping.find(this);
-    if (it != mapping.end())
+    auto it = map.find(this);
+    if (it != map.end())
         return it->second;
 
     for (auto v : bound_vars()) {
         // CHECK is representative really correct or do we need node()? -- see also below!
-        assert(!mapping.contains(v.representative()));
-        v->clone(mapping); // CHECK is node() correct here?
+        assert(!map.contains(v.representative()));
+        v->clone(map); // CHECK is node() correct here?
     }
 
-    Generic* t = vspecialize(mapping);
+    Generic* t = vspecialize(map);
 
     for (auto v : bound_vars()) {
-        assert(mapping.find(v.representative()) != mapping.end());
-        t->add_bound_var(TypeVar(mapping[v.representative()]->as<TypeVarNode>()));
+        assert(map.find(v.representative()) != map.end());
+        t->add_bound_var(TypeVar(map[v.representative()]->as<TypeVarNode>()));
     }
 
     return t;

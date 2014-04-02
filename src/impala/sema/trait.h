@@ -63,8 +63,8 @@ public:
     virtual bool is_closed() const { return true; } // TODO
 
 protected:
-    /// copy this trait but replace the sub-elements given in the mapping
-    TraitNode* vspecialize(SpecializeMapping&);
+    /// copy this trait but replace the sub-elements given in the map
+    TraitNode* vspecialize(SpecializeMap&);
 
 private:
     bool add_method(Symbol name, Type method_type, bool inherited);
@@ -86,7 +86,7 @@ private:
  */
 class TraitInstanceNode : public TraitNode {
 private:
-    TraitInstanceNode(const Trait trait, const SpecializeMapping& var_instances);
+    TraitInstanceNode(const Trait trait, const SpecializeMap& var_instances);
     TraitInstanceNode& operator = (const TraitInstanceNode&); ///< Do not copy-assign a \p TraitInstance.
     TraitInstanceNode(const TraitInstanceNode& node);         ///< Do not copy-construct a \p TraitInstance.
 
@@ -108,17 +108,17 @@ public:
     virtual bool is_closed() const;
 
 protected:
-    /// copy this trait but replace the sub-elements given in the mapping
-    TraitNode* vspecialize(SpecializeMapping&);
+    /// copy this trait but replace the sub-elements given in the map
+    TraitNode* vspecialize(SpecializeMap&);
 
 private:
     const Trait trait() const { return trait_; }
     /// return a copy of the variable instances
-    SpecializeMapping var_instances() const { return var_instances_; }
+    SpecializeMap var_instances() const { return var_instances_; }
     virtual const thorin::ArrayRef<Symbol> declared_methods() { return trait()->declared_methods(); }
 
     const Trait trait_;
-    SpecializeMapping var_instances_;
+    SpecializeMap var_instances_;
 
     friend class TypeVarNode;
     friend class Generic;
@@ -150,8 +150,8 @@ public:
     virtual bool is_closed() const { return true; } // TODO
 
 protected:
-    /// copy this \p TraitImplNode but replace the sub-elements given in the mapping
-    Generic* vspecialize(SpecializeMapping& m);
+    /// copy this \p TraitImplNode but replace the sub-elements given in the map
+    Generic* vspecialize(SpecializeMap& m);
 
     virtual std::string to_string() const { return ""; } // TODO
 
