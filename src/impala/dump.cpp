@@ -4,10 +4,23 @@
 #include "impala/dump.h"
 #include "impala/prec.h"
 
+#include "thorin/util/printer.h"
+
 using thorin::ArrayRef;
 using thorin::Type;
 
 namespace impala {
+
+class Printer : public thorin::Printer {
+public:
+    Printer(std::ostream& o, bool fancy)
+        : thorin::Printer(o, fancy)
+        , prec(BOTTOM)
+    {}
+
+    Prec prec;
+};
+
 
 //------------------------------------------------------------------------------
 
