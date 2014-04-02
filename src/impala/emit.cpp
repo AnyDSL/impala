@@ -1,4 +1,3 @@
-#if 0
 #include "impala/ast.h"
 
 #include <iostream>
@@ -14,13 +13,16 @@
 #include "thorin/util/push.h"
 #include "thorin/world.h"
 
-#include "impala/type.h"
-
-using namespace thorin;
+using thorin::Def;
+using thorin::Lambda;
+using thorin::Ref;
+using thorin::RefPtr;
+using thorin::JumpTarget;
+using thorin::World;
 
 namespace impala {
 
-class CodeGen : public IRBuilder {
+class CodeGen : public thorin::IRBuilder {
 public:
     CodeGen(World& world)
         : IRBuilder(world)
@@ -29,27 +31,214 @@ public:
         , result(true)
     {}
 
-    bool emit_prg(const Scope*);
-    void emit(const Scope*, JumpTarget&);
-    Lambda* emit_head(const Fun* fun);
-    const Lambda* emit_body(const Fun* fun);
-    RefPtr emit(const VarDecl*);
-    Array<Def> emit_ops(const Expr* expr, size_t additional_size = 0);
-    RefPtr emit(const Expr* expr) { return is_reachable() ? expr->emit(*this) : nullptr; }
+    RefPtr lemit(const Expr* expr) { return is_reachable() ? expr->lemit(*this) : nullptr; }
+    Def remit(const Expr* expr) { return is_reachable() ? expr->remit(*this) : nullptr; }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
     void emit(const Stmt* stmt, JumpTarget& exit) { if (is_reachable()) stmt->emit(*this, exit); }
     void emit(const Item* item) { item->emit(*this); }
 
-    std::map<const Proto*, Lambda*> protos_;
     JumpTarget* break_target;
     JumpTarget* continue_target;
     bool result;
 };
 
+/*
+ * Type
+ */
+
+/*
+ * Item
+ */
+
+void ModContents::emit(CodeGen& cg) const {
+    for (auto item : items())
+        cg.emit(item);
+}
+
+void FnDecl::emit(CodeGen& cg) const {
+}
+
+void ForeignMod::emit(CodeGen& cg) const {
+}
+
+void ModDecl::emit(CodeGen& cg) const {
+}
+
+void Impl::emit(CodeGen& cg) const {
+}
+
+void StaticItem::emit(CodeGen& cg) const {
+}
+
+void StructDecl::emit(CodeGen& cg) const {
+}
+
+void TraitDecl::emit(CodeGen& cg) const {
+}
+
+void Typedef::emit(CodeGen& cg) const {
+}
+
+/*
+ * Expr
+ */
+
+thorin::RefPtr Expr::lemit(CodeGen& cg) const { THORIN_UNREACHABLE; }
+thorin::Def Expr::remit(CodeGen& cg) const { return lemit(cg)->load(); }
+
+void Expr::emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {
+}
+
+Def LiteralExpr::remit(CodeGen& cg) const {
+    thorin::PrimTypeKind tkind;
+
+    switch (kind()) {
+#define IMPALA_LIT(itype, ttype) \
+        case LIT_##itype: tkind = thorin::PrimType_##ttype; break;
+#include "impala/tokenlist.h"
+        case LIT_bool: tkind = thorin::PrimType_bool; break;
+        default: THORIN_UNREACHABLE;
+    }
+
+    return cg.world().literal(tkind, box());
+}
+
+Def PrefixExpr::remit(CodeGen& cg) const {
+    auto ref = cg.lemit(rhs());
+    Def def = ref->load();
+
+    switch (kind()) {
+        case INC:
+        case DEC: {
+            Def one = cg.world().one(def->type());
+            Def ndef = cg.world().arithop(Token::to_arithop((TokenKind) kind()), def, one);
+            ref->store(ndef);
+            return ndef;
+        }
+        case ADD: return def;
+        case SUB: return cg.world().arithop_minus(def);
+        case NOT: return cg.world().arithop_not(def);
+        default: THORIN_UNREACHABLE;
+    }
+}
+
+Def InfixExpr::remit(CodeGen& cg) const {
+    const bool is_or = kind() == OROR;
+    //auto rdef = cg.remit(rhs());
+    //auto ldef = cg.remit(lhs());
+
+    if (is_or || kind() == ANDAND) {
+        JumpTarget t(is_or ? "l_or_true"  : "l_and_true");
+        JumpTarget f(is_or ? "l_or_false" : "l_and_false");
+        JumpTarget x(is_or ? "l_or_exit"  : "l_and_exit");
+        cg.emit_branch(lhs(), t, f);
+
+        if (Lambda* tl = cg.enter(t)) {
+            tl->set_value(1, is_or ? cg.world().literal(true) : cg.remit(rhs()));
+            cg.jump(x);
+        }
+
+        if (Lambda* fl = cg.enter(f)) {
+            fl->set_value(1, is_or ? cg.remit(rhs()) : cg.world().literal_bool(false));
+            cg.jump(x);
+        }
+
+        if (Lambda* xl = cg.enter(x))
+            return xl->get_value(1, cg.world().type_bool(), is_or ? "l_or" : "l_and");
+        return nullptr;
+    }
+
+    const TokenKind op = (TokenKind) kind();
+
+    if (Token::is_assign(op)) {
+        Def rdef = cg.remit(rhs());
+        RefPtr lref = cg.lemit(lhs());
+
+        if (op != Token::ASGN) {
+            TokenKind sop = Token::separate_assign(op);
+            rdef = cg.world().binop(Token::to_binop(sop), lref->load(), rdef);
+        }
+
+        lref->store(rdef);
+        return cg.world().tuple({});
+    }
+        
+    Def ldef = cg.remit(lhs());
+    Def rdef = cg.remit(rhs());
+    return cg.world().binop(Token::to_binop(op), ldef, rdef);
+}
+
+Def PostfixExpr::remit(CodeGen& cg) const {
+    RefPtr ref = cg.lemit(lhs());
+    Def def = ref->load();
+    Def one = cg.world().one(def->type());
+    ref->store(cg.world().arithop(Token::to_arithop((TokenKind) kind()), def, one));
+    return def;
+}
+
+Def IfExpr::remit(CodeGen& cg) const {
+    JumpTarget t("cond_true");
+    JumpTarget f("cond_false");
+    JumpTarget x("cond_exit");
+
+    cg.emit_branch(cond(), t, f);
+
+    if (Lambda* tl = cg.enter(t)) {
+        tl->set_value(1, cg.remit(then_expr()));
+        cg.jump(x);
+    }
+
+    if (Lambda* fl = cg.enter(f)) {
+        fl->set_value(1, cg.remit(else_expr()));
+        cg.jump(x);
+    }
+
+    if (Lambda* xl = cg.enter(x))
+        //return xl->get_value(1, then_expr()->type()->convert(cg.world()), "if");
+        return xl->get_value(1, cg.world().type_ps32(), "if");
+    return nullptr;
+}
+
+/*
+ * Stmt
+ */
+
+void ExprStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
+    if (cg.is_reachable()) {
+        cg.lemit(expr());
+        cg.jump(exit_bb);
+    }
+}
+
+void ItemStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const { 
+    //cg.emit(item()); cg.jump(exit_bb); 
+}
+
+void LetStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
+    if (cg.is_reachable()) {
+        //RefPtr ref = cg.emit(var_decl());
+        //if (init()) {
+            //auto def = cg.emit(init())->load();
+            //def->name = var_decl()->symbol().str();
+            //ref->store(def);
+        //}
+        cg.jump(exit_bb);
+    }
+}
+
 //------------------------------------------------------------------------------
 
-bool emit(World& world, const Scope* prg) { return CodeGen(world).emit_prg(prg); }
+bool emit(World& world, const ModContents* mod) { 
+    CodeGen cg(world);
+    mod->emit(cg);
+    return cg.result;
+}
 
+//------------------------------------------------------------------------------
+
+}
+
+#if 0
 //------------------------------------------------------------------------------
 
 bool CodeGen::emit_prg(const Scope* prg) {
@@ -199,20 +388,6 @@ RefPtr EmptyExpr::emit(CodeGen& cg) const {
     return Ref::create(cg.world().bottom(cg.world().sigma0())); 
 }
 
-RefPtr Literal::emit(CodeGen& cg) const {
-    PrimTypeKind akind;
-
-    switch (kind()) {
-#define IMPALA_LIT(itype, atype) \
-        case LIT_##itype: akind = PrimType_##atype; break;
-#include "impala/tokenlist.h"
-        case LIT_bool: akind = PrimType_bool; break;
-        default: THORIN_UNREACHABLE;
-    }
-
-    return Ref::create(cg.world().literal(akind, box()));
-}
-
 RefPtr FunExpr::emit(CodeGen& cg) const {
     cg.emit_head(fun());
     return Ref::create(cg.emit_body(fun()));
@@ -239,131 +414,6 @@ RefPtr Id::emit(CodeGen& cg) const {
         return Ref::create(cg, cg.world().slot(air_type, vardecl->fun()->frame(), vardecl->handle(), symbol().str()));
 
     return Ref::create(cg.cur_bb, vardecl->handle(), air_type, symbol().str());
-}
-
-RefPtr PrefixExpr::emit(CodeGen& cg) const {
-    auto rref = cg.emit(rhs());
-
-    switch (kind()) {
-        case INC:
-        case DEC: {
-            Def def = rref->load();
-            Def one = cg.world().one(def->type());
-            Def ndef = cg.world().arithop(Token::to_arithop((TokenKind) kind()), def, one);
-            rref->store(ndef);
-            return rref;
-        }
-        case ADD: return rref; // this is a NOP
-        case SUB: return Ref::create(cg.world().arithop_minus(rref->load()));
-        case NOT:
-        case L_N: return Ref::create(cg.world().arithop_not(rref->load()));
-        case RUN: 
-            if (auto call = rhs()->isa<Call>()) {
-                bool is_continuation_call = call->is_continuation_call();
-                auto callee = call->callee();
-                auto args = is_continuation_call ? callee->args() : callee->args().slice_num_from_end(1);
-                for (size_t i = 0, e = args.size(); i != e; ++i) {
-                    Def def = args[i];
-                    if (def->is_const())
-                        callee->update_arg(i, cg.world().run(def));
-                }
-
-                if (!is_continuation_call) {
-                    auto def = callee->ops().back();
-                    callee->update_op(callee->size()-1, cg.world().halt(def));
-                }
-                callee->update_to(cg.world().run(callee->to()));
-                return rref;
-            } else
-                return Ref::create(cg.world().run(rref->load()));
-        case HALT: 
-            if (auto call = rhs()->isa<Call>()) {
-                auto callee = call->callee();
-                for (size_t i = 0, e = callee->args().size(); i != e; ++i) {
-                    Def def = callee->arg(i);
-                    callee->update_arg(i, cg.world().halt(def));
-                }
-                callee->update_to(cg.world().halt(callee->to()));
-                return rref;
-            } else
-                return Ref::create(cg.world().halt(rref->load()));
-        default: THORIN_UNREACHABLE;
-    }
-}
-
-RefPtr InfixExpr::emit(CodeGen& cg) const {
-    const bool is_or = kind() == L_O;
-
-    if (is_or || kind() == L_A) {
-        JumpTarget t(is_or ? "l_or_true"  : "l_and_true");
-        JumpTarget f(is_or ? "l_or_false" : "l_and_false");
-        JumpTarget x(is_or ? "l_or_exit"  : "l_and_exit");
-        cg.emit_branch(lhs(), t, f);
-
-        if (Lambda* tl = cg.enter(t)) {
-            tl->set_value(1, is_or ? cg.world().literal(true) : cg.emit(rhs())->load());
-            cg.jump(x);
-        }
-
-        if (Lambda* fl = cg.enter(f)) {
-            fl->set_value(1, is_or ? cg.emit(rhs())->load() : cg.world().literal_bool(false));
-            cg.jump(x);
-        }
-
-        if (Lambda* xl = cg.enter(x))
-            return Ref::create(xl->get_value(1, cg.world().type_bool(), is_or ? "l_or" : "l_and"));
-        return Ref::create(nullptr);
-    }
-
-    const TokenKind op = (TokenKind) kind();
-
-    if (Token::is_assign(op)) {
-        Def rdef = cg.emit(rhs())->load();
-        RefPtr lref = cg.emit(lhs());
-
-        if (op != Token::ASGN) {
-            TokenKind sop = Token::separate_assign(op);
-            rdef = cg.world().binop(Token::to_binop(sop), lref->load(), rdef);
-        }
-
-        lref->store(rdef);
-        return lref;
-    }
-        
-    Def ldef = cg.emit(lhs())->load();
-    Def rdef = cg.emit(rhs())->load();
-
-    return Ref::create(cg.world().binop(Token::to_binop(op), ldef, rdef));
-}
-
-RefPtr PostfixExpr::emit(CodeGen& cg) const {
-    RefPtr ref = cg.emit(lhs());
-    Def def = ref->load();
-    Def one = cg.world().one(def->type());
-    ref->store(cg.world().arithop(Token::to_arithop((TokenKind) kind()), def, one));
-    return Ref::create(def);
-}
-
-RefPtr ConditionalExpr::emit(CodeGen& cg) const {
-    JumpTarget t("cond_true");
-    JumpTarget f("cond_false");
-    JumpTarget x("cond_exit");
-
-    cg.emit_branch(cond(), t, f);
-
-    if (Lambda* tl = cg.enter(t)) {
-        tl->set_value(1, cg.emit(t_expr())->load());
-        cg.jump(x);
-    }
-
-    if (Lambda* fl = cg.enter(f)) {
-        fl->set_value(1, cg.emit(f_expr())->load());
-        cg.jump(x);
-    }
-
-    if (Lambda* xl = cg.enter(x))
-        return Ref::create(xl->get_value(1, t_expr()->type()->convert(cg.world()), "cond"));
-    return Ref::create(nullptr);
 }
 
 RefPtr IndexExpr::emit(CodeGen& cg) const {
@@ -425,27 +475,6 @@ void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
 /*
  * Stmt
  */
-
-void ItemStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const { cg.emit(item()); cg.jump(exit_bb); }
-
-void InitStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
-    if (cg.is_reachable()) {
-        RefPtr ref = cg.emit(var_decl());
-        if (init()) {
-            auto def = cg.emit(init())->load();
-            def->name = var_decl()->symbol().str();
-            ref->store(def);
-        }
-        cg.jump(exit_bb);
-    }
-}
-
-void ExprStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
-    if (cg.is_reachable()) {
-        cg.emit(expr());
-        cg.jump(exit_bb);
-    }
-}
 
 void IfElseStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
     JumpTarget then_bb("if_then");

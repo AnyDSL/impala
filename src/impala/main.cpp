@@ -131,7 +131,6 @@ int main(int argc, char** argv) {
         //result &= result ? emit(init.world, prg) : false;
 
         if (emit_annotated)
-            // TODO currently this fails because the Typetable was destroyed and thus all types
             impala::dump(prg, fancy);
 
         if (result) {
