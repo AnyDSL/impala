@@ -53,28 +53,29 @@ public:
     template<class T> 
     T instantiate_unknown(T t, std::vector<Type>& inst_types) {
         for (size_t i = 0; i < t->num_bound_vars(); ++i) inst_types.push_back(unknown_type());
-        SpecializeMap map = create_spec_map(t, inst_types);
+        auto map = infer(t, inst_types);
         return t->instantiate(map);
     }
 
     template<class T> 
     bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types) {
         assert(inst_types.size() == generic->num_bound_vars());
-        SpecializeMap map = create_spec_map(generic, inst_types);
+        auto map = infer(generic, inst_types);
         return check_bounds(loc, generic, inst_types, map);
     }
 
     virtual void check_impls() {}
 
 protected:
-    template<class T> bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
-    template<class T> SpecializeMap create_spec_map(T generic, thorin::ArrayRef<Type> var_instances) const {
+    template<class T> 
+    bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
+    template<class T> 
+    SpecializeMap infer(T generic, thorin::ArrayRef<Type> var_instances) const {
         assert(generic->num_bound_vars() == var_instances.size());
         SpecializeMap map;
         size_t i = 0;
-        for (TypeVar v : generic->bound_vars()) {
+        for (TypeVar v : generic->bound_vars())
             map[*v] = *var_instances[i++]; // CHECK ist deref correct here and below?
-        }
         assert(map.size() == var_instances.size());
         return map;
     }

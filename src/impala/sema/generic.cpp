@@ -46,7 +46,7 @@ void Generic::add_bound_var(TypeVar v) {
     bound_vars_.push_back(v);
 }
 
-void Generic::check_instantiation(SpecializeMap& map) const {
+void Generic::verify_instantiation(SpecializeMap& map) const {
     assert(map.size() == num_bound_vars());
 
     // check the bounds

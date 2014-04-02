@@ -196,7 +196,7 @@ Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::
         std::vector<Type> inst_types;
         inst_types.push_back(self);
         for (auto t : var_instances) inst_types.push_back(check(t));
-        auto map = create_spec_map(trait, inst_types);
+        auto map = infer(trait, inst_types);
 
         check_bounds(loc, trait, inst_types, map);
         return trait->instantiate(map);
@@ -210,7 +210,7 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
     if (var_instances.size() == type->num_bound_vars()) {
         std::vector<Type> inst_types;
         for (auto t : var_instances) inst_types.push_back(check(t));
-        auto map = create_spec_map(type, inst_types);
+        auto map = infer(type, inst_types);
 
         check_bounds(loc, type, inst_types, map);
         return type->instantiate(map);

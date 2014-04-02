@@ -138,7 +138,7 @@ protected:
 
 private:
     /// raise error if a type does not implement the required traits;
-    void check_instantiation(SpecializeMap&) const;
+    void verify_instantiation(SpecializeMap&) const;
 
     friend class TypeVarNode;
     friend class TraitInstanceNode;
