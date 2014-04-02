@@ -513,7 +513,7 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
     Type fn_type;
     if (FnType exp_fn = expected.isa<FnType>()) {
         if (exp_fn->size() != params().size())
-            sema.error(this) << "expected function with " << exp_fn->size() << " parameters, but found lambda expression with " << params().size() << " parameters.\n";
+            sema.error(this) << "expected function with " << exp_fn->size() << " parameters, but found lambda expression with " << params().size() << " parameters\n";
 
         size_t i = 0;
         for (auto param : params())
