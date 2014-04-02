@@ -150,9 +150,7 @@ Type TypeVarNode::find_method(Symbol s) const {
 FnType FnTypeNode::specialize_method(Type t) const {
     assert(is_final_representative());
     assert(elem(0) == t);
-
-    std::vector<Type> new_args(++elems_.begin(), elems_.end());
-    FnType f = typetable().fntype(new_args);
+    FnType f = typetable().fntype(elems().slice_from_begin(1));
     typetable().unify(f.as<Type>());
     return f;
 }
