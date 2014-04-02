@@ -13,6 +13,8 @@
 #include "thorin/util/push.h"
 #include "thorin/world.h"
 
+using thorin::Array;
+using thorin::ArrayRef;
 using thorin::Def;
 using thorin::Lambda;
 using thorin::Ref;
@@ -45,6 +47,24 @@ public:
 /*
  * Type
  */
+
+Array<const thorin::Type*> TypeNode::convert_elems(thorin::World& world) const {
+    Array<const thorin::Type*> result(size());
+    for (size_t i = 0, e = size(); i != e; ++i)
+        result[i] = elem(i)->convert(world);
+}
+
+const thorin::Type* PrimTypeNode::convert(World& world) const {
+    switch (kind()) {
+#define IMPALA_TYPE(itype, ttype) \
+        case Token::TYPE_##itype: return world.type_##ttype();
+#include "impala/tokenlist.h"
+        default: THORIN_UNREACHABLE;
+    }
+}
+
+const thorin::Type* FnTypeNode::convert(World& world) const { return world.pi(convert_elems(world)); }
+const thorin::Type* TupleTypeNode::convert(World& world) const { return world.sigma(convert_elems(world)); }
 
 /*
  * Item

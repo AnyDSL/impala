@@ -8,6 +8,11 @@
 #include "impala/sema/generic.h"
 #include "impala/sema/trait.h"
 
+namespace thorin {
+    class Type;
+    class World;
+}
+
 namespace impala {
 
 //------------------------------------------------------------------------------
@@ -66,6 +71,8 @@ public:
      * This also means that a sane type is always closed!
      */
     virtual bool is_sane() const = 0;
+    virtual const thorin::Type* convert(thorin::World&) const = 0;
+    thorin::Array<const thorin::Type*> convert_elems(thorin::World&) const;
 };
 
 class KnownTypeNode : public TypeNode {
@@ -166,6 +173,7 @@ public:
     bool is_instantiated() const { return !instance_.empty(); }
     Type instance() const { return instance_; }
     void instantiate(Type instance) { assert(!is_instantiated()); instance_ = instance; }
+    virtual const thorin::Type* convert(thorin::World&) const { assert(false); return nullptr; }
 
 private:
     const int id_;       ///< Used for unambiguous dumping.
@@ -187,6 +195,7 @@ protected:
 
 public:
     virtual std::string to_string() const { return "<type error>"; }
+    virtual const thorin::Type* convert(thorin::World&) const { assert(false); return nullptr; }
 
     friend class TypeTable;
 };
@@ -202,6 +211,7 @@ protected:
 
 public:
     virtual std::string to_string() const { return "<type no-return>"; }
+    virtual const thorin::Type* convert(thorin::World&) const { assert(false); return nullptr; }
 
     friend class TypeTable;
 };
@@ -219,6 +229,7 @@ protected:
 
 public:
     virtual std::string to_string() const;
+    virtual const thorin::Type* convert(thorin::World&) const;
 
     friend class TypeTable;
 };
@@ -249,6 +260,7 @@ protected:
 
 public:
     virtual std::string to_string() const { return std::string("fn") + bound_vars_to_string() + elems_to_string(); }
+    virtual const thorin::Type* convert(thorin::World&) const;
 
     FnType specialize_method(Type t) const;
 
@@ -266,6 +278,7 @@ protected:
 
 public:
     virtual std::string to_string() const { return bound_vars_to_string() + elems_to_string(); }
+    virtual const thorin::Type* convert(thorin::World&) const;
 
     friend class TypeTable;
 };
@@ -291,9 +304,9 @@ public:
     void add_bound(Trait);
     virtual bool equal(const TypeNode* other) const;
     std::string to_string() const;
-
     virtual bool implements(Trait) const;
     virtual Type find_method(Symbol s) const;
+    virtual const thorin::Type* convert(thorin::World&) const { assert(false && "TODO"); return nullptr; }
 
     /**
      * A type variable is closed if it is bound and all restrictions are closed.
