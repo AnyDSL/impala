@@ -225,23 +225,4 @@ bool KnownTypeNode::is_known() const {
 
 //------------------------------------------------------------------------------
 
-void verify(thorin::ArrayRef<const Type> types) {
-    for (auto t : types)
-        assert(t->is_sane());
-
-    for (auto ty1 : types) {
-        TypeNode* t1 = ty1.node();
-        for (auto ty2 : types) {
-            TypeNode* t2 = ty2.node();
-            if (t1->is_unified() && t2->is_unified()) {
-                if (!((!t1->equal(t2)) || (t1->representative() == t2->representative()))) {
-                    t1->dump();
-                    t2->dump();
-                    assert(false);
-                }
-            }
-        }
-    }
-}
-
 }

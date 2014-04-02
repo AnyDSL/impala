@@ -190,41 +190,4 @@ template bool TypeTable::check_bounds(const ASTNode* loc, Type generic, thorin::
 template bool TypeTable::check_bounds(const ASTNode* loc, Trait generic, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
 template bool TypeTable::check_bounds(const ASTNode* loc, TraitImpl generic, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
 
-void TypeTable::verify() const {
-    for (auto g : unifiables_) {
-        assert(g != nullptr);
-        if (auto type = g->isa<TypeNode>()) {
-            assert(type->is_known());
-            assert(type->is_sane());
-            assert(type->is_final_representative());
-        } else if (auto trait = g->isa<TraitNode>()) {
-            assert(trait->is_closed());
-            assert(trait->is_final_representative());
-        } else if (auto impl = g->isa<TraitImplNode>()) {
-            assert(impl->is_closed());
-            assert(impl->is_final_representative());
-        }
-    }
-
-    for (size_t i = 0; i < garbage_.size(); ++i) {
-        Generic* g = garbage_[i];
-        assert(g != nullptr);
-
-        // no element should be twice in the garbage vector - else deletion will fail!
-        for (size_t j = i+1; j < garbage_.size(); ++j)
-            assert(g != garbage_[j]);
-
-        if (auto type = g->isa<TypeNode>()) {
-            if (type->is_unified())
-                assert(unifiables_.contains(type->representative()));
-        } else if (auto trait = g->isa<TraitNode>()) {
-            if (trait->is_unified())
-                assert(unifiables_.contains(trait->representative()));
-        } else if (auto impl = g->isa<TraitImplNode>()) {
-            if (impl->is_unified())
-                assert(unifiables_.contains(impl->representative()));
-        }
-    }
-}
-
 }

@@ -46,27 +46,9 @@ void Generic::add_bound_var(TypeVar v) {
     bound_vars_.push_back(v);
 }
 
-void Generic::verify_instantiation(SpecializeMap& map) const {
-    assert(map.size() == num_bound_vars());
-
-    // check the bounds
-    for (auto v : bound_vars()) {
-        auto it = map.find(*v);
-        assert(it != map.end());
-        Type instance = Type(it->second->as<TypeNode>());
-
-        for (auto bound : v->bounds()) {
-            SpecializeMap m(map); // copy the map
-            Trait spec_bound = Trait(bound->specialize(m)->as<TraitNode>());
-            spec_bound->typetable().unify(spec_bound);
-            assert(instance->implements(spec_bound));
-        }
-    }
-}
-
 Generic* Generic::ginstantiate(SpecializeMap& var_instances) {
 /*#ifndef NDEBUG
-    check_instantiation(var_instances);
+    verify_instantiation(var_instances);
 #endif*/
     assert(var_instances.size() == num_bound_vars());
     return vspecialize(var_instances);
