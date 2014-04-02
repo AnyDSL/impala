@@ -72,7 +72,7 @@ public:
      */
     virtual bool is_sane() const = 0;
     virtual const thorin::Type* convert(thorin::World&) const = 0;
-    thorin::Array<const thorin::Type*> convert_elems(thorin::World&) const;
+    void convert_elems(thorin::World& world, std::vector<const thorin::Type*>& nelems) const;
 };
 
 class KnownTypeNode : public TypeNode {

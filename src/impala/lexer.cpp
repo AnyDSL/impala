@@ -52,7 +52,6 @@ int Lexer::next() {
 Token Lexer::lex() {
     while (true) {
         std::string str; // the token string is concatenated here
-        bool floating = false;
         loc_.set_pos1(pos_);
 
         // end of file

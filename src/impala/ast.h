@@ -409,12 +409,14 @@ public:
     //void check(TypeSema&) const;
     //void emit(CodeGen&) const;
 
-private:
-    AutoVector<const Param*> params_;
-    AutoPtr<const Expr> body_;
+protected:
     mutable thorin::Lambda* lambda_;
     mutable const thorin::Param* ret_param_;
     mutable const thorin::Enter* frame_;
+
+private:
+    AutoVector<const Param*> params_;
+    AutoPtr<const Expr> body_;
 
     friend class Parser;
 };
@@ -682,11 +684,11 @@ public:
     bool empty() const { return stmts_.empty() && expr_->isa<EmptyExpr>(); }
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    //virtual thorin::RefPtr emit(CodeGen&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;
     virtual Type check(TypeSema&, Type) const;
+    virtual thorin::Def remit(CodeGen&) const;
 
     AutoVector<const Stmt*> stmts_;
     AutoPtr<const Expr> expr_;

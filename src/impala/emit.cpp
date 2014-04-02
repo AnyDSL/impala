@@ -48,23 +48,32 @@ public:
  * Type
  */
 
-Array<const thorin::Type*> TypeNode::convert_elems(thorin::World& world) const {
-    Array<const thorin::Type*> result(size());
-    for (size_t i = 0, e = size(); i != e; ++i)
-        result[i] = elem(i)->convert(world);
+void TypeNode::convert_elems(thorin::World& world, std::vector<const thorin::Type*>& nelems) const {
+    for (auto elem : elems())
+        nelems.push_back(elem->convert(world));
 }
 
 const thorin::Type* PrimTypeNode::convert(World& world) const {
-    switch (kind()) {
+    switch (primtype_kind()) {
 #define IMPALA_TYPE(itype, ttype) \
-        case Token::TYPE_##itype: return world.type_##ttype();
+        case PrimType_##itype: return world.type_##ttype();
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
 }
 
-const thorin::Type* FnTypeNode::convert(World& world) const { return world.pi(convert_elems(world)); }
-const thorin::Type* TupleTypeNode::convert(World& world) const { return world.sigma(convert_elems(world)); }
+const thorin::Type* FnTypeNode::convert(World& world) const { 
+    std::vector<const thorin::Type*> nelems;
+    nelems.push_back(world.mem());
+    convert_elems(world, nelems);
+    return world.pi(nelems); 
+}
+
+const thorin::Type* TupleTypeNode::convert(World& world) const { 
+    std::vector<const thorin::Type*> nelems;
+    convert_elems(world, nelems);
+    return world.sigma(nelems);
+}
 
 /*
  * Item
@@ -76,6 +85,72 @@ void ModContents::emit(CodeGen& cg) const {
 }
 
 void FnDecl::emit(CodeGen& cg) const {
+    // create thorin function
+    auto pi = type()->convert(cg.world())->as<thorin::Pi>();
+    lambda_ = cg.world().lambda(pi, symbol().str());
+    if (is_extern())
+        lambda_->attribute().set(Lambda::Extern);
+
+    // handle main function
+    if (symbol() == Symbol("main")) {
+        lambda()->name += "_impala";
+        lambda()->attribute().set(Lambda::Extern);
+    }
+
+    // setup builtin functions
+    if (lambda()->name == "nvvm")
+        lambda()->attribute().set(Lambda::NVVM);
+    if (lambda()->name == "spir")
+        lambda()->attribute().set(Lambda::SPIR);
+    if (lambda()->name == "array")
+        lambda()->attribute().set(Lambda::ArrayInit);
+    if (lambda()->name == "vectorized")
+        lambda()->attribute().set(Lambda::Vectorize);
+    if (lambda()->name == "wfv_get_tid")
+        lambda()->attribute().set(Lambda::VectorizeTid | Lambda::Extern);
+
+    // setup memory + frame
+    auto mem = lambda()->param(0);
+    mem->name = "mem";
+    cg.set_mem(mem);
+    frame_ = cg.world().enter(mem);
+
+    // name params and setup store locations
+    for (size_t i = 0, e = params().size(); i != e; ++i) {
+        auto p = lambda()->param(i+1);
+        p->name = param(i)->symbol().str();
+        //emit(fun->param(i))->store(p);
+    }
+    ret_param_ = lambda()->params().back();
+
+    // setup function nest
+    lambda()->set_parent(cg.cur_bb);
+    THORIN_PUSH(cg.cur_bb, lambda());
+
+    // descent into body
+    auto def = cg.remit(body());
+    if (def) {
+        // TODO
+        cg.cur_bb->jump(ret_param_, {mem, def});
+    }
+
+#if 0
+    if (is_reachable()) {
+        if (!fun->is_continuation() && fun->refined_fntype()->return_type()->is_void())
+            cur_bb->jump(fun->ret_param(), {get_mem()});
+        else {
+            if (fun->is_continuation())
+                fun->body()->pos2().error() << "'" << fun->symbol() << "' does not end with a call\n";
+            else
+                fun->body()->pos2().error() << "'" << fun->symbol() << "' does not end with 'return'\n";
+
+            result = false;
+            cur_bb->jump(world().bottom(world().pi0()), {});
+        }
+    }
+
+    return fun->lambda();
+#endif
 }
 
 void ForeignMod::emit(CodeGen& cg) const {
@@ -107,6 +182,15 @@ thorin::RefPtr Expr::lemit(CodeGen& cg) const { THORIN_UNREACHABLE; }
 thorin::Def Expr::remit(CodeGen& cg) const { return lemit(cg)->load(); }
 
 void Expr::emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {
+}
+
+Def BlockExpr::remit(CodeGen& cg) const {
+    for (auto stmt : stmts()) {
+        JumpTarget stmt_exit_bb("next");
+        cg.emit(stmt, stmt_exit_bb);
+        cg.enter(stmt_exit_bb);
+    }
+    return cg.remit(expr());
 }
 
 Def LiteralExpr::remit(CodeGen& cg) const {
@@ -261,76 +345,6 @@ bool emit(World& world, const ModContents* mod) {
 #if 0
 //------------------------------------------------------------------------------
 
-bool CodeGen::emit_prg(const Scope* prg) {
-    for (auto stmt : prg->stmts()) {
-        auto item = stmt->as<ItemStmt>()->item();
-        if (auto fun_item = item->isa<FunItem>()) {
-            auto fun = fun_item->fun();
-            Lambda* lambda = emit_head(fun);
-            if (fun->symbol() == Symbol("main")) {
-                lambda->name += "_impala";
-                lambda->attribute().set(Lambda::Extern);
-            }
-        } else if (auto proto_item = item->isa<ProtoItem>()) {
-            auto proto = proto_item->proto();
-            auto lambda = world().lambda(proto->refined_type()->convert(world())->as<Pi>());
-            if (proto->is_extern())
-                lambda->attribute().set(Lambda::Extern);
-            else
-                lambda->attribute().set(Lambda::Intrinsic);
-            lambda->name = proto->symbol().str();
-            // HACK: eliminate this hack
-            if (lambda->name == "nvvm")
-                lambda->attribute().set(Lambda::NVVM);
-            if (lambda->name == "spir")
-                lambda->attribute().set(Lambda::SPIR);
-            if (lambda->name == "array")
-                lambda->attribute().set(Lambda::ArrayInit);
-            if (lambda->name == "vectorized")
-                lambda->attribute().set(Lambda::Vectorize);
-            if (lambda->name == "wfv_get_tid")
-                lambda->attribute().set(Lambda::VectorizeTid | Lambda::Extern);
-            // register proto
-            protos_[proto] = lambda;
-        }
-    }
-
-    for (auto stmt : prg->stmts())
-        emit(stmt->as<ItemStmt>()->item());
-
-    world().eliminate_params();
-
-    return result;
-}
-
-
-void CodeGen::emit(const Scope* scope, JumpTarget& exit_bb) {
-    for (auto stmt : scope->stmts()) {
-        if (auto item_stmt = stmt->isa<ItemStmt>()) {
-            if (auto fun_item = item_stmt->item()->isa<FunItem>())
-                emit_head(fun_item->fun());
-        }
-    }
-
-    size_t size = scope->stmts().size();
-    if (size == 0)
-        jump(exit_bb);
-    else {
-        size_t i = 0;
-        for (; i != size - 1; ++i) {
-            if (auto stmt = scope->stmt(i)->isa<Stmt>()) {
-                JumpTarget stmt_exit_bb("next");
-                emit(stmt, stmt_exit_bb);
-                enter(stmt_exit_bb);
-            } else
-                assert(false && "TODO");
-        }
-        if (auto stmt = scope->stmt(i)->isa<Stmt>())
-            emit(stmt, exit_bb);
-        else
-            assert(false && "TODO");
-    }
-}
 
 Lambda* CodeGen::emit_head(const Fun* fun) {
     auto type = fun->refined_fntype();
