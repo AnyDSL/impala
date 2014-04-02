@@ -442,7 +442,6 @@ private:
 class Item : virtual public ASTNode {
 public:
     Visibility visibility() const { return  visibility_; }
-    virtual void check_head(NameSema&) const = 0;
 
 private:
     virtual void emit(CodeGen&) const = 0;
@@ -473,7 +472,6 @@ class ModDecl : public TypeDeclItem {
 public:
     const ModContents* mod_contents() const { return mod_contents_; }
     virtual std::ostream& print(Printer&) const;
-    virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
 
 private:
@@ -488,7 +486,6 @@ private:
 class ForeignMod : public TypeDeclItem {
 public:
     virtual std::ostream& print(Printer&) const;
-    virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
 
 private:
@@ -500,7 +497,6 @@ class Typedef : public TypeDeclItem {
 public:
     const ASTType* type() const { return type_; }
     virtual std::ostream& print(Printer&) const;
-    virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
 
 private:
@@ -530,7 +526,6 @@ class StructDecl : public TypeDeclItem {
 public:
     const AutoVector<const FieldDecl*>& fields() const { return fields_; }
     virtual std::ostream& print(Printer&) const;
-    virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
 
 private:
@@ -545,7 +540,6 @@ private:
 class EnumDecl : public TypeDeclItem {
 public:
     virtual std::ostream& print(Printer&) const;
-    virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
 
 private:
@@ -560,7 +554,6 @@ public:
     const ASTType* type() const { return type_; }
     const Expr* init() const { return init_; }
     virtual std::ostream& print(Printer&) const;
-    virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
 
 private:
@@ -579,7 +572,6 @@ class FnDecl : public ValueItem, public Fn {
 public:
     bool is_extern() const { return extern_; }
     virtual std::ostream& print(Printer&) const;
-    virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
 
 private:
@@ -603,7 +595,6 @@ public:
     Trait trait() const { return trait_; }
     Trait to_trait(TypeSema&) const;
     virtual std::ostream& print(Printer&) const;
-    virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
 
 private:
@@ -625,7 +616,6 @@ public:
     const ASTType* for_type() const { return for_type_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
     virtual std::ostream& print(Printer&) const;
-    virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
     virtual void emit(CodeGen&) const;
 

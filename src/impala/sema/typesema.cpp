@@ -525,7 +525,6 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
         for (auto param : params())
             par_types.push_back(sema.check(param));
 
-        // create FnType
         fn_type = sema.fntype(par_types);
         sema.unify(fn_type);
     }
@@ -573,7 +572,7 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
             lhstype = sema.check(lhs());
             rhstype = sema.check(rhs());
             sema.expect_num(lhs());
-            //sema.match_types(this, lhstype, rhstype);
+            sema.match_types(this, lhstype, rhstype);
             return sema.type_bool();
         case ADD:
         case SUB:

@@ -43,6 +43,10 @@ public:
         else
             check(item->isa<MiscItem>());
     }
+    void check_head(const Item* item) {
+        if (auto decl = item->isa<Decl>())
+            insert(decl);
+    }
     void check(const TypeDeclItem* type_decl_item) { type_decl_item->check(*this); }
     void check(const ValueItem* value_item) { value_item->check(*this); }
     void check(const MiscItem* misc_item) { misc_item->check(*this); }
@@ -152,25 +156,9 @@ void FnASTType::check(NameSema& sema) const {
 //------------------------------------------------------------------------------
 
 void ModContents::check(NameSema& sema) const {
-    for (auto item : items()) item->check_head(sema);
+    for (auto item : items()) sema.check_head(item);
     for (auto item : items()) sema.check(item);
 }
-
-/*
- * Item::check_head
- */
-
-// TODO factor this to default implementation
-
-void ModDecl::check_head(NameSema& sema) const { sema.insert(this); }
-void ForeignMod::check_head(NameSema& sema) const { sema.insert(this); }
-void EnumDecl::check_head(NameSema& sema) const { sema.insert(this); }
-void FnDecl::check_head(NameSema& sema) const { sema.insert(this); }
-void StaticItem::check_head(NameSema& sema) const { sema.insert(this); }
-void StructDecl::check_head(NameSema& sema) const { sema.insert(this); }
-void TraitDecl::check_head(NameSema& sema) const { sema.insert(this); }
-void Typedef::check_head(NameSema& sema) const { sema.insert(this); }
-void Impl::check_head(NameSema& sema) const {}
 
 //------------------------------------------------------------------------------
 
@@ -266,7 +254,7 @@ void BlockExpr::check(NameSema& sema) const {
     sema.push_scope();
     for (auto stmt : stmts()) {
         if (auto item_stmt = stmt->isa<ItemStmt>())
-            item_stmt->item()->check_head(sema);
+            sema.check_head(item_stmt->item());
     }
     for (auto stmt : stmts())
         stmt->check(sema);
