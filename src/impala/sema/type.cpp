@@ -43,13 +43,13 @@ bool UnknownTypeNode::unify_with(TypeNode* other) {
 bool KnownTypeNode::is_closed() const {
     for (auto v : bound_vars()) {
         for (auto r : v->bounds()) {
-            if (! r->is_closed())
+            if (!r->is_closed())
                 return false;
         }
     }
 
     for (auto t : elems()) {
-        if (! t->is_closed())
+        if (!t->is_closed())
             return false;
     }
     return true;
