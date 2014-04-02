@@ -574,6 +574,11 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
             sema.expect_num(lhs());
             sema.match_types(this, lhstype, rhstype);
             return sema.type_bool();
+        case OROR:
+        case ANDAND:
+            sema.check(lhs(), sema.type_bool(), "left-hand side of logical boolean expression");
+            sema.check(rhs(), sema.type_bool(), "right-hand side of logical boolean expression");
+            return sema.type_bool();
         case ADD:
         case SUB:
         case MUL:

@@ -653,7 +653,7 @@ private:
     virtual Type check(TypeSema&, Type) const = 0;
     virtual thorin::Var lemit(CodeGen&) const;
     virtual thorin::Def remit(CodeGen&) const;
-    virtual void emit_branch(CodeGen&, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
+    virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
 
     mutable std::vector<Type> inferred_args_;
 
@@ -775,7 +775,7 @@ public:
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
     virtual thorin::Def remit(CodeGen&) const;
-    //virtual void emit_branch(CodeGen&, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
+    virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;
@@ -801,7 +801,7 @@ public:
     virtual bool is_lvalue() const { return Token::is_assign((TokenKind) kind()); }
     virtual void check(NameSema&) const;
     virtual thorin::Def remit(CodeGen&) const;
-    //virtual void emit_branch(CodeGen&, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
+    virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;

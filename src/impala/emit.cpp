@@ -36,6 +36,7 @@ public:
     Var lemit(const Expr* expr) { return is_reachable() ? expr->lemit(*this) : Var(); }
     Def remit(const Expr* expr) { return is_reachable() ? expr->remit(*this) : nullptr; }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
+    Def emit_mux(const Expr* expr);
     void emit(const Stmt* stmt, JumpTarget& exit) { if (is_reachable()) stmt->emit(*this, exit); }
     void emit(const Item* item) { item->emit(*this); }
 
@@ -196,6 +197,27 @@ void Expr::emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f
     cg.branch(cg.remit(this), t, f);
 }
 
+Def CodeGen::emit_mux(const Expr* expr) {
+    JumpTarget t("mux1");
+    JumpTarget f("mux0");
+    JumpTarget x("mux10");
+
+    emit_branch(expr, t, f);
+
+    if (auto tl = enter(t)) {
+        tl->set_value(1, world().literal(true));
+        jump(x);
+    }
+    if (auto fl = enter(f)) {
+        fl->set_value(1, world().literal(false));
+        jump(x);
+    }
+    if (auto xl = enter(x))
+        return xl->get_value(1, world().type_bool());
+
+    return nullptr;
+}
+
 Def BlockExpr::remit(CodeGen& cg) const {
     for (auto stmt : stmts()) {
         JumpTarget stmt_exit_bb("next");
@@ -238,50 +260,59 @@ Def PrefixExpr::remit(CodeGen& cg) const {
     }
 }
 
+void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
+    if (kind() == NOT)
+        cg.emit_branch(rhs(), f, t);
+    //cg.branch(cg.remit(cg)->load(), t, f);
+}
+
+void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
+    switch (kind()) {
+        case ANDAND: {
+            JumpTarget x("and_extra");
+            cg.emit_branch(lhs(), x, f);
+            if (cg.enter(x))
+                cg.emit_branch(rhs(), t, f);
+            return;
+        }
+        case OROR: {
+            JumpTarget x("or_extra");
+            cg.emit_branch(lhs(), t, x);
+            if (cg.enter(x))
+                cg.emit_branch(rhs(), t, f);
+            return;
+        }
+        default: 
+            cg.branch(cg.remit(this), t, f);
+            return;
+    }
+}
+
 Def InfixExpr::remit(CodeGen& cg) const {
-    const bool is_or = kind() == OROR;
-    //auto rdef = cg.remit(rhs());
-    //auto ldef = cg.remit(lhs());
+    switch (kind()) {
+        case OROR:
+        case ANDAND: 
+            return cg.emit_mux(this);
+        default:
+            const TokenKind op = (TokenKind) kind();
 
-    if (is_or || kind() == ANDAND) {
-        JumpTarget t(is_or ? "l_or_true"  : "l_and_true");
-        JumpTarget f(is_or ? "l_or_false" : "l_and_false");
-        JumpTarget x(is_or ? "l_or_exit"  : "l_and_exit");
-        cg.emit_branch(lhs(), t, f);
+            if (Token::is_assign(op)) {
+                Var lvar = cg.lemit(lhs());
+                Def rdef = cg.remit(rhs());
 
-        if (Lambda* tl = cg.enter(t)) {
-            tl->set_value(1, is_or ? cg.world().literal(true) : cg.remit(rhs()));
-            cg.jump(x);
-        }
+                if (op != Token::ASGN) {
+                    TokenKind sop = Token::separate_assign(op);
+                    rdef = cg.world().binop(Token::to_binop(sop), lvar.load(), rdef);
+                }
 
-        if (Lambda* fl = cg.enter(f)) {
-            fl->set_value(1, is_or ? cg.remit(rhs()) : cg.world().literal_bool(false));
-            cg.jump(x);
-        }
-
-        if (Lambda* xl = cg.enter(x))
-            return xl->get_value(1, cg.world().type_bool(), is_or ? "l_or" : "l_and");
-        return nullptr;
+                lvar.store(rdef);
+                return cg.world().tuple({});
+            }
+                
+            Def ldef = cg.remit(lhs());
+            Def rdef = cg.remit(rhs());
+            return cg.world().binop(Token::to_binop(op), ldef, rdef);
     }
-
-    const TokenKind op = (TokenKind) kind();
-
-    if (Token::is_assign(op)) {
-        Var lvar = cg.lemit(lhs());
-        Def rdef = cg.remit(rhs());
-
-        if (op != Token::ASGN) {
-            TokenKind sop = Token::separate_assign(op);
-            rdef = cg.world().binop(Token::to_binop(sop), lvar.load(), rdef);
-        }
-
-        lvar.store(rdef);
-        return cg.world().tuple({});
-    }
-        
-    Def ldef = cg.remit(lhs());
-    Def rdef = cg.remit(rhs());
-    return cg.world().binop(Token::to_binop(op), ldef, rdef);
 }
 
 Def PostfixExpr::remit(CodeGen& cg) const {
@@ -495,25 +526,6 @@ Var Call::emit(CodeGen& cg) const {
  * Expr -- emit_branch
  */
 
-void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.branch(cg.emit(this)->load(), t, f); }
-
-void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
-    if (kind() == L_N)
-        return cg.emit_branch(rhs(), f, t);
-    cg.branch(emit(cg)->load(), t, f);
-}
-
-void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
-    if (kind() == L_O || kind() == L_A) {
-        bool is_or = kind() == L_O;
-        JumpTarget extra(is_or ? "l_or_extra" : "l_and_extra");
-        cg.emit_branch(lhs(), is_or ? t : extra, is_or ? extra : f);
-        if (cg.enter(extra))
-            cg.emit_branch(rhs(), t, f);
-    } else
-        Expr::emit_branch(cg, t, f);
-}
-
 /*
  * Stmt
  */
@@ -534,28 +546,6 @@ void IfElseStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
         cg.enter(else_bb);
         cg.emit(else_scope(), exit_bb);
     }
-}
-
-void ForStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
-    JumpTarget head_bb("for_head");
-    JumpTarget body_bb("for_body");
-    JumpTarget step_bb("for_step");
-
-    THORIN_PUSH(cg.break_target, &exit_bb);
-    THORIN_PUSH(cg.continue_target, &step_bb);
-
-    cg.emit(init(), head_bb);
-
-    cg.enter_unsealed(head_bb);
-    cg.emit_branch(cond(), body_bb, exit_bb);
-
-    cg.enter(body_bb);
-    cg.emit(body(), step_bb);
-
-    cg.enter(step_bb);
-    cg.emit(step());
-    cg.jump(head_bb);
-    head_bb.seal();
 }
 
 void ForeachStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
