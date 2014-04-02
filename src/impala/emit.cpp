@@ -182,6 +182,7 @@ thorin::RefPtr Expr::lemit(CodeGen& cg) const { THORIN_UNREACHABLE; }
 thorin::Def Expr::remit(CodeGen& cg) const { return lemit(cg)->load(); }
 
 void Expr::emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {
+    cg.branch(cg.remit(this), t, f);
 }
 
 Def BlockExpr::remit(CodeGen& cg) const {
@@ -315,7 +316,8 @@ void ExprStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
 }
 
 void ItemStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const { 
-    //cg.emit(item()); cg.jump(exit_bb); 
+    cg.emit(item()); 
+    cg.jump(exit_bb); 
 }
 
 void LetStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
@@ -528,23 +530,6 @@ void IfElseStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
     }
 }
 
-void DoWhileStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
-    JumpTarget body_bb("do_while_body");
-    JumpTarget cond_bb("do_while_cond");
-
-    THORIN_PUSH(cg.break_target, &exit_bb);
-    THORIN_PUSH(cg.continue_target, &cond_bb);
-
-    cg.jump(body_bb);
-
-    cg.enter_unsealed(body_bb);
-    cg.emit(body(), cond_bb);
-
-    cg.enter(cond_bb);
-    cg.emit_branch(cond(), body_bb, exit_bb);
-    body_bb.seal();
-}
-
 void ForStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
     JumpTarget head_bb("for_head");
     JumpTarget body_bb("for_body");
@@ -608,39 +593,6 @@ void ForeachStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
     cg.cur_bb = next;
     cg.jump(exit_bb);
 }
-
-void BreakStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const { cg.jump(*cg.break_target); }
-void ContinueStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const { cg.jump(*cg.continue_target); }
-
-void ReturnStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
-    if (cg.is_reachable()) {
-        const Param* ret_param = fun()->ret_param();
-        if (const Call* call = expr()->isa<Call>()) {
-            Array<Def> ops = cg.emit_ops(call);
-            Array<Def> args(call->num_args() + 2);
-            std::copy(ops.begin() + 1, ops.end(), args.begin() + 1);
-            args[0] = cg.get_mem();
-            args.back() = ret_param;
-            cg.tail_call(ops[0], args);
-        } else {
-            if (expr()) {
-                auto retval = cg.emit(expr())->load();
-                cg.param_call(ret_param, {cg.world().leave(cg.get_mem(), fun()->frame()), retval});
-            } else
-                cg.param_call(ret_param, {cg.world().leave(cg.get_mem(), fun()->frame())});
-        }
-    }
-}
-
-void ScopeStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const { cg.emit(scope(), exit_bb); }
-
-/*
- * items
- */
-
-void FunItem::emit(CodeGen& cg) const { cg.emit_body(fun()); }
-void ProtoItem::emit(CodeGen& cg) const { }
-void StructItem::emit(CodeGen& cg) const { assert( false && "todo"); }
 
 }
 
