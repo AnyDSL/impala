@@ -86,7 +86,7 @@ Generic* Generic::gspecialize(SpecializeMap& map) {
     Generic* t = vspecialize(map);
 
     for (auto v : bound_vars()) {
-        assert(map.find(v.representative()) != map.end());
+        assert(map.contains(v.representative()));
         t->add_bound_var(TypeVar(map[v.representative()]->as<TypeVarNode>()));
     }
 
