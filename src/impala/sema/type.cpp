@@ -103,10 +103,10 @@ void KnownTypeNode::add_implementation(TraitImpl impl) {
     } else {
         Trait trait = impl->trait();
         if (!trait_impls_.insert(trait).second)
-            typetable().error(impl->impl_decl()) << "Duplicated implementation of trait '" << trait << "'\n";
+            typetable().error(impl->impl_decl()) << "duplicated implementation of trait '" << trait << "'\n";
         for (auto super : trait->super_traits()) {
             if (!trait_impls_.insert(super).second)
-                typetable().error(impl->impl_decl()) << "Duplicated implementation of trait '" << super << "'\n";
+                typetable().error(impl->impl_decl()) << "duplicated implementation of trait '" << super << "'\n";
         }
     }
 }

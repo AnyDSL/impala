@@ -1,1 +1,1 @@
-trait_impls5.impala:4 col 1 - 17: error: Duplicated implementation of trait 'T'
+trait_impls5.impala:4 col 1 - 17: error: duplicated implementation of trait 'T'
