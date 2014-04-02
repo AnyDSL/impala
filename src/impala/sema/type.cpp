@@ -157,15 +157,14 @@ FnType FnTypeNode::specialize_method(Type t) const {
 
 //------------------------------------------------------------------------------
 
-Generic* UnknownTypeNode::vspecialize(SpecializeMap& map) { assert(false); return nullptr; }
-
 thorin::Array<Type> CompoundTypeNode::specialize_elems(SpecializeMap& map) const {
     thorin::Array<Type> nelems(size());
     for (size_t i = 0, e = size(); i != e; ++i)
-        nelems[i] = Type(elem(i)->specialize(map)->as<TypeNode>());
+        nelems[i] = elem(i)->specialize(map);
     return nelems;
 }
 
+Generic* UnknownTypeNode::vspecialize(SpecializeMap& map) { assert(false); return nullptr; }
 Generic* TypeErrorNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type_error().node(); }
 Generic* NoReturnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type_noreturn().node(); }
 Generic* PrimTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().primtype(primtype_kind()).node(); }
