@@ -74,9 +74,8 @@ Generic* Generic::ginstantiate(SpecializeMap& var_instances) {
 
 Generic* Generic::gspecialize(SpecializeMap& map) {
     // FEATURE this could be faster if we copy only types where something changed inside
-    auto it = map.find(this);
-    if (it != map.end())
-        return it->second;
+    if (auto result = thorin::find(map, this))
+        return result;
 
     for (auto v : bound_vars()) {
         // CHECK is representative really correct or do we need node()? -- see also below!
