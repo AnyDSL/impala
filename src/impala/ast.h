@@ -348,11 +348,14 @@ public:
     {}
 
     size_t handle() const { return handle_; }
+    bool is_address_taken() const { return is_address_taken_; }
     bool is_anonymous() const { return symbol() == Symbol(); }
     virtual std::ostream& print(Printer&) const;
+    thorin::Var var(CodeGen&) const;
 
 protected:
     size_t handle_;
+    mutable thorin::Var var_;
     mutable bool is_address_taken_;
 
     friend class Parser;
@@ -648,7 +651,7 @@ public:
 private:
     virtual std::ostream& print(Printer&) const = 0;
     virtual Type check(TypeSema&, Type) const = 0;
-    virtual thorin::RefPtr lemit(CodeGen&) const;
+    virtual thorin::Var lemit(CodeGen&) const;
     virtual thorin::Def remit(CodeGen&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
@@ -670,7 +673,7 @@ public:
 private:
     virtual std::ostream& print(Printer&) const;
     virtual Type check(TypeSema&, Type) const;
-    //virtual thorin::RefPtr emit(CodeGen&) const;
+    //virtual thorin::Var emit(CodeGen&) const;
 };
 
 class BlockExpr : public Expr {
@@ -731,7 +734,7 @@ class FnExpr : public Expr, public Fn {
 public:
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    //virtual thorin::RefPtr emit(CodeGen&) const;
+    //virtual thorin::Var emit(CodeGen&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;
@@ -748,11 +751,11 @@ public:
     SafePtr<const ValueDecl> value_decl() const { return value_decl_; }
     virtual bool is_lvalue() const;
     virtual void check(NameSema&) const;
-    //virtual thorin::RefPtr emit(CodeGen&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;
     virtual Type check(TypeSema&, Type) const;
+    virtual thorin::Var lemit(CodeGen&) const;
 
     AutoPtr<const Path> path_;
     mutable SafePtr<const ValueDecl> value_decl_; ///< Declaration of the variable in use.
@@ -877,7 +880,7 @@ public:
     const Exprs& elems() const { return elems_; }
     virtual void check(NameSema&) const;
     virtual bool is_lvalue() const { return false; }
-    //virtual thorin::RefPtr emit(CodeGen&) const;
+    //virtual thorin::Var emit(CodeGen&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;
@@ -894,7 +897,7 @@ public:
     const Expr* count() const { return count_; }
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    //virtual thorin::RefPtr emit(CodeGen&) const;
+    //virtual thorin::Var emit(CodeGen&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;
@@ -912,7 +915,7 @@ public:
     const ASTType* elem_type() const { return elem_type_; }
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    //virtual thorin::RefPtr emit(CodeGen&) const;
+    //virtual thorin::Var emit(CodeGen&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;
@@ -929,7 +932,7 @@ public:
     const Exprs& elems() const { return elems_; }
     virtual void check(NameSema&) const;
     virtual bool is_lvalue() const { return false; }
-    //virtual thorin::RefPtr emit(CodeGen&) const;
+    //virtual thorin::Var emit(CodeGen&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;
@@ -981,7 +984,7 @@ public:
     const Expr* lhs() const { return lhs_; }
     virtual bool is_lvalue() const;
     virtual void check(NameSema&) const;
-    //virtual thorin::RefPtr emit(CodeGen&) const;
+    //virtual thorin::Var emit(CodeGen&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;
@@ -1019,7 +1022,7 @@ public:
     const Expr* expr() const { return expr_; }
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    //virtual thorin::RefPtr emit(CodeGen&) const;
+    //virtual thorin::Var emit(CodeGen&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;

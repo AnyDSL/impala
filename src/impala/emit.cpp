@@ -18,7 +18,7 @@ using thorin::ArrayRef;
 using thorin::Def;
 using thorin::Lambda;
 using thorin::Ref;
-using thorin::RefPtr;
+using thorin::Var;
 using thorin::JumpTarget;
 using thorin::World;
 
@@ -33,16 +33,27 @@ public:
         , result(true)
     {}
 
-    RefPtr lemit(const Expr* expr) { return is_reachable() ? expr->lemit(*this) : nullptr; }
+    Var lemit(const Expr* expr) { return is_reachable() ? expr->lemit(*this) : Var(); }
     Def remit(const Expr* expr) { return is_reachable() ? expr->remit(*this) : nullptr; }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
     void emit(const Stmt* stmt, JumpTarget& exit) { if (is_reachable()) stmt->emit(*this, exit); }
     void emit(const Item* item) { item->emit(*this); }
 
+    const thorin::Enter* frame;
     JumpTarget* break_target;
     JumpTarget* continue_target;
     bool result;
 };
+
+Var LocalDecl::var(CodeGen& cg) const {
+    if (!var_) {
+        auto thorin_type = type()->convert(cg.world());
+        if (is_address_taken())
+            return var_ = Var(cg, cg.world().slot(thorin_type, cg.frame, handle(), symbol().str()));
+        return var_ = Var(cg, handle(), thorin_type, symbol().str());
+    }
+    return var_;
+}
 
 /*
  * Type
@@ -91,6 +102,10 @@ void FnDecl::emit(CodeGen& cg) const {
     if (is_extern())
         lambda_->attribute().set(Lambda::Extern);
 
+    // setup function nest
+    lambda()->set_parent(cg.cur_bb);
+    THORIN_PUSH(cg.cur_bb, lambda());
+
     // handle main function
     if (symbol() == Symbol("main")) {
         lambda()->name += "_impala";
@@ -113,19 +128,15 @@ void FnDecl::emit(CodeGen& cg) const {
     auto mem = lambda()->param(0);
     mem->name = "mem";
     cg.set_mem(mem);
-    frame_ = cg.world().enter(mem);
+    cg.frame = frame_ = cg.world().enter(mem); // TODO
 
     // name params and setup store locations
     for (size_t i = 0, e = params().size(); i != e; ++i) {
         auto p = lambda()->param(i+1);
         p->name = param(i)->symbol().str();
-        //emit(fun->param(i))->store(p);
+        param(i)->var(cg).store(p);
     }
     ret_param_ = lambda()->params().back();
-
-    // setup function nest
-    lambda()->set_parent(cg.cur_bb);
-    THORIN_PUSH(cg.cur_bb, lambda());
 
     // descent into body
     auto def = cg.remit(body());
@@ -178,8 +189,8 @@ void Typedef::emit(CodeGen& cg) const {
  * Expr
  */
 
-thorin::RefPtr Expr::lemit(CodeGen& cg) const { THORIN_UNREACHABLE; }
-thorin::Def Expr::remit(CodeGen& cg) const { return lemit(cg)->load(); }
+Var Expr::lemit(CodeGen& cg) const { THORIN_UNREACHABLE; }
+thorin::Def Expr::remit(CodeGen& cg) const { return lemit(cg).load(); }
 
 void Expr::emit_branch(CodeGen& cg, thorin::JumpTarget& t, thorin::JumpTarget& f) const {
     cg.branch(cg.remit(this), t, f);
@@ -209,15 +220,15 @@ Def LiteralExpr::remit(CodeGen& cg) const {
 }
 
 Def PrefixExpr::remit(CodeGen& cg) const {
-    auto ref = cg.lemit(rhs());
-    Def def = ref->load();
+    auto var = cg.lemit(rhs());
+    Def def = var.load();
 
     switch (kind()) {
         case INC:
         case DEC: {
             Def one = cg.world().one(def->type());
             Def ndef = cg.world().arithop(Token::to_arithop((TokenKind) kind()), def, one);
-            ref->store(ndef);
+            var.store(ndef);
             return ndef;
         }
         case ADD: return def;
@@ -256,15 +267,15 @@ Def InfixExpr::remit(CodeGen& cg) const {
     const TokenKind op = (TokenKind) kind();
 
     if (Token::is_assign(op)) {
+        Var lvar = cg.lemit(lhs());
         Def rdef = cg.remit(rhs());
-        RefPtr lref = cg.lemit(lhs());
 
         if (op != Token::ASGN) {
             TokenKind sop = Token::separate_assign(op);
-            rdef = cg.world().binop(Token::to_binop(sop), lref->load(), rdef);
+            rdef = cg.world().binop(Token::to_binop(sop), lvar.load(), rdef);
         }
 
-        lref->store(rdef);
+        lvar.store(rdef);
         return cg.world().tuple({});
     }
         
@@ -274,17 +285,21 @@ Def InfixExpr::remit(CodeGen& cg) const {
 }
 
 Def PostfixExpr::remit(CodeGen& cg) const {
-    RefPtr ref = cg.lemit(lhs());
-    Def def = ref->load();
+    Var var = cg.lemit(lhs());
+    Def def = var.load();
     Def one = cg.world().one(def->type());
-    ref->store(cg.world().arithop(Token::to_arithop((TokenKind) kind()), def, one));
+    var.store(cg.world().arithop(Token::to_arithop((TokenKind) kind()), def, one));
     return def;
 }
 
+thorin::Var PathExpr::lemit(CodeGen& cg) const {
+    return value_decl()->isa<LocalDecl>()->var(cg);
+}
+
 Def IfExpr::remit(CodeGen& cg) const {
-    JumpTarget t("cond_true");
-    JumpTarget f("cond_false");
-    JumpTarget x("cond_exit");
+    JumpTarget t("if_then");
+    JumpTarget f("if_else");
+    JumpTarget x("next");
 
     cg.emit_branch(cond(), t, f);
 
@@ -299,8 +314,7 @@ Def IfExpr::remit(CodeGen& cg) const {
     }
 
     if (Lambda* xl = cg.enter(x))
-        //return xl->get_value(1, then_expr()->type()->convert(cg.world()), "if");
-        return xl->get_value(1, cg.world().type_ps32(), "if");
+        return xl->get_value(1, then_expr()->type()->convert(cg.world()), "if");
     return nullptr;
 }
 
@@ -310,7 +324,7 @@ Def IfExpr::remit(CodeGen& cg) const {
 
 void ExprStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
     if (cg.is_reachable()) {
-        cg.lemit(expr());
+        cg.remit(expr());
         cg.jump(exit_bb);
     }
 }
@@ -322,12 +336,12 @@ void ItemStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
 
 void LetStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
     if (cg.is_reachable()) {
-        //RefPtr ref = cg.emit(var_decl());
-        //if (init()) {
-            //auto def = cg.emit(init())->load();
-            //def->name = var_decl()->symbol().str();
-            //ref->store(def);
-        //}
+        auto var = local()->var(cg);
+        if (init()) {
+            auto def = cg.remit(init());
+            def->name = local()->symbol().str();
+            var.store(def);
+        }
         cg.jump(exit_bb);
     }
 }
@@ -399,14 +413,6 @@ const Lambda* CodeGen::emit_body(const Fun* fun) {
 
 //------------------------------------------------------------------------------
 
-RefPtr CodeGen::emit(const VarDecl* decl) {
-    const thorin::Type* air_type = decl->refined_type()->convert(world());
-    if (decl->is_address_taken())
-        return Ref::create(*this, world().slot(air_type, decl->fun()->frame(), decl->handle(), decl->symbol().str()));
-
-    return Ref::create(cur_bb, decl->handle(), air_type, decl->symbol().str());
-}
-
 /*
  * Expr -- emit
  */
@@ -420,19 +426,19 @@ Array<Def> CodeGen::emit_ops(const Expr* expr, size_t additional_size) {
     return defs;
 }
 
-RefPtr EmptyExpr::emit(CodeGen& cg) const { 
+Var EmptyExpr::emit(CodeGen& cg) const { 
     return Ref::create(cg.world().bottom(cg.world().sigma0())); 
 }
 
-RefPtr FunExpr::emit(CodeGen& cg) const {
+Var FunExpr::emit(CodeGen& cg) const {
     cg.emit_head(fun());
     return Ref::create(cg.emit_body(fun()));
 }
 
-RefPtr ArrayExpr::emit(CodeGen& cg) const { return Ref::create(cg.world().array(cg.emit_ops(this))); }
-RefPtr Tuple::emit(CodeGen& cg) const     { return Ref::create(cg.world().tuple(cg.emit_ops(this))); }
+Var ArrayExpr::emit(CodeGen& cg) const { return Ref::create(cg.world().array(cg.emit_ops(this))); }
+Var Tuple::emit(CodeGen& cg) const     { return Ref::create(cg.world().tuple(cg.emit_ops(this))); }
 
-RefPtr Id::emit(CodeGen& cg) const {
+Var Id::emit(CodeGen& cg) const {
     if (auto fun = decl()->isa<Fun>())
         return Ref::create(fun->lambda());
     if (auto proto = decl()->isa<Proto>()) {
@@ -452,7 +458,7 @@ RefPtr Id::emit(CodeGen& cg) const {
     return Ref::create(cg.cur_bb, vardecl->handle(), air_type, symbol().str());
 }
 
-RefPtr IndexExpr::emit(CodeGen& cg) const {
+Var IndexExpr::emit(CodeGen& cg) const {
     Def x = cg.emit(index())->load();
     if (lhs()->type()->isa<DefiniteArray>())
         return Ref::create(cg.emit(lhs()), x);
@@ -464,7 +470,7 @@ RefPtr IndexExpr::emit(CodeGen& cg) const {
     }
 }
 
-RefPtr Call::emit(CodeGen& cg) const {
+Var Call::emit(CodeGen& cg) const {
     Array<Def> ops = cg.emit_ops(this);
     Array<Def> args(num_args() + 1);
     std::copy(ops.begin() + 1, ops.end(), args.begin() + 1);
@@ -474,7 +480,7 @@ RefPtr Call::emit(CodeGen& cg) const {
     if (is_continuation_call()) {
         cg.cur_bb->jump(ops[0], args);
         cg.cur_bb = nullptr;
-        return RefPtr(nullptr);
+        return Var(nullptr);
     }
 
     cg.mem_call(ops[0], args, type()->is_void() ? nullptr : type()->convert(cg.world()));
