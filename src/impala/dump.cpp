@@ -424,7 +424,7 @@ std::ostream& FnExpr::print(Printer& p) const {
 
 std::ostream& IfExpr::print(Printer& p) const {
     p.stream() << "if ";
-    p.print(cond());
+    p.print(cond()) << ' ';
     p.print(then_expr());
     if (has_else()) {
         p.stream() << " else ";

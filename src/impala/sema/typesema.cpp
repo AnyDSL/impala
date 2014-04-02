@@ -31,6 +31,8 @@ public:
         }
     }
 
+    // error handling
+
     void expect_num(const Expr* exp);
     Type match_types(const ASTNode* pos, Type t1, Type t2);
     Type expect_type(const Expr* expr, Type found, Type expected, std::string typetype);
@@ -47,6 +49,8 @@ public:
 
     Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances);
     Trait instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
+
+    // check wrappers
 
     Type check(const TypeDecl* type_decl) {
         if (!type_decl->checked_) { 

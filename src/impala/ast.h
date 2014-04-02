@@ -443,11 +443,12 @@ class Item : virtual public ASTNode {
 public:
     Visibility visibility() const { return  visibility_; }
     virtual void check_head(NameSema&) const = 0;
-    virtual void emit(CodeGen&) const = 0;
 
 private:
+    virtual void emit(CodeGen&) const = 0;
     Visibility visibility_;
 
+    friend class CodeGen;
     friend class Parser;
 };
 
@@ -474,10 +475,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void emit(CodeGen&) const;
 
 private:
     virtual Type check(TypeSema&) const;
+    virtual void emit(CodeGen&) const;
 
     AutoPtr<const ModContents> mod_contents_;
 
@@ -489,10 +490,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void emit(CodeGen&) const;
 
 private:
     virtual Type check(TypeSema&) const;
+    virtual void emit(CodeGen&) const;
 };
 
 class Typedef : public TypeDeclItem {
@@ -501,10 +502,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void emit(CodeGen&) const;
 
 private:
     virtual Type check(TypeSema&) const;
+    virtual void emit(CodeGen&) const;
 
     AutoPtr<const ASTType> type_;
 
@@ -531,10 +532,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void emit(CodeGen&) const;
 
 private:
     virtual Type check(TypeSema&) const;
+    virtual void emit(CodeGen&) const;
 
     AutoVector<const FieldDecl*> fields_;
 
@@ -546,10 +547,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void emit(CodeGen&) const;
 
 private:
     virtual Type check(TypeSema&) const;
+    virtual void emit(CodeGen&) const;
 };
 
 class StaticItem : public ValueItem {
@@ -561,10 +562,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void emit(CodeGen&) const;
 
 private:
     virtual Type check(TypeSema&) const;
+    virtual void emit(CodeGen&) const;
 
     bool is_mut_;
     Symbol symbol_;
@@ -580,10 +581,10 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void emit(CodeGen&) const;
 
 private:
     virtual Type check(TypeSema&) const;
+    virtual void emit(CodeGen&) const;
 
     bool extern_;
 
@@ -604,10 +605,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
+
+private:
     virtual void check(TypeSema&) const;
     virtual void emit(CodeGen&) const;
 
-private:
     const SelfParam self_param_;
     AutoVector<const FnDecl*> methods_;
     AutoVector<const ASTTypeApp*> super_;
@@ -625,10 +627,11 @@ public:
     virtual std::ostream& print(Printer&) const;
     virtual void check_head(NameSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(TypeSema&) const;
     virtual void emit(CodeGen&) const;
 
 private:
+    virtual void check(TypeSema&) const;
+
     AutoPtr<const ASTType> trait_;
     AutoPtr<const ASTType> for_type_;
     AutoVector<const FnDecl*> methods_;
@@ -646,9 +649,6 @@ class Expr : public ASTNode, public Typeable {
 public:
     virtual bool is_lvalue() const = 0;
     virtual void check(NameSema&) const = 0;
-    virtual thorin::RefPtr lemit(CodeGen&) const;
-    virtual thorin::Def remit(CodeGen&) const;
-    virtual void emit_branch(CodeGen&, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
     void add_inferred_arg(Type t) const { inferred_args_.push_back(t); }
     const thorin::ArrayRef<Type> inferred_args() const { return inferred_args_; }
@@ -656,9 +656,13 @@ public:
 private:
     virtual std::ostream& print(Printer&) const = 0;
     virtual Type check(TypeSema&, Type) const = 0;
+    virtual thorin::RefPtr lemit(CodeGen&) const;
+    virtual thorin::Def remit(CodeGen&) const;
+    virtual void emit_branch(CodeGen&, thorin::JumpTarget& t, thorin::JumpTarget& f) const;
 
     mutable std::vector<Type> inferred_args_;
 
+    friend class CodeGen;
     friend class Parser;
     friend class Printer;
     friend class TypeSema;
