@@ -673,7 +673,7 @@ public:
 private:
     virtual std::ostream& print(Printer&) const;
     virtual Type check(TypeSema&, Type) const;
-    //virtual thorin::Var emit(CodeGen&) const;
+    virtual thorin::Def remit(CodeGen&) const;
 };
 
 class BlockExpr : public Expr {

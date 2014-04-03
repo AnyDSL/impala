@@ -1,6 +1,7 @@
 fn main(i : int) -> int {
-    if ( ~~~(i == 42) ) 
-        return 42;
-    else
-        return 23;
+    if  !!!(i == !42) {
+        23
+    } else {
+        42
+    }
 }
