@@ -52,14 +52,13 @@ int main(int argc, char** argv) {
             .add_option<bool>("nossa", "use slots + load/store instead of SSA construction", nossa, false)
             .add_option<bool>("verify", "run verifier", verify, false)
             .add_option<int>("vectorize", "run vectorizer on main with given vector length (experimantal!!!), arg=<vector length>", vectorlength, false)
-            .add_option<bool>("emit-air", "emit textual THORIN representation of impala program", emit_thorin, false) // legacy support
             .add_option<bool>("emit-thorin", "emit textual THORIN representation of impala program", emit_thorin, false)
             .add_option<bool>("emit-il", "emit textual IL representation of impala program", emit_il, false)
-            .add_option<bool>("emit-all", "emit AST, AIR, LLVM and loop tree", emit_all, false)
+            .add_option<bool>("emit-all", "emit AST, THORIN, LLVM and loop tree", emit_all, false)
             .add_option<bool>("emit-ast", "emit AST of impala program", emit_ast, false)
             .add_option<bool>("emit-annotated", "emit AST of impala program after semantical analysis", emit_annotated, false)
             .add_option<bool>("emit-looptree", "emit loop tree", emit_looptree, false)
-            .add_option<bool>("emit-llvm", "emit llvm from AIR representation (implies -O)", emit_llvm, false)
+            .add_option<bool>("emit-llvm", "emit llvm from THORIN representation (implies -O)", emit_llvm, false)
             .add_option<bool>("f", "use fancy output", fancy, false)
             .add_option<bool>("nc", "use uncolored output", nocolor, false)
             .add_option<bool>("O", "optimize", opt, false);
