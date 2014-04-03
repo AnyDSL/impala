@@ -266,15 +266,15 @@ Def InfixExpr::remit(CodeGen& cg) const {
         case ANDAND: {
             JumpTarget t("and_true"), f("and_false"), x("and_exit");
             cg.emit_branch(lhs(), t, f);
-            cg.split(t, x, [&] () { return cg.remit(rhs()); });
-            cg.split(f, x, [&] () { return cg.world().literal(false); });
+            cg.split(t, x, [&] { return cg.remit(rhs()); });
+            cg.split(f, x, [&] { return cg.world().literal(false); });
             return cg.converge(x, cg.world().type_bool(), "and");
         }
         case OROR: {
             JumpTarget t("or_true"), f("or_false"), x("or_exit");
             cg.emit_branch(lhs(), t, f);
-            cg.split(t, x, [&] () { return cg.world().literal(true); });
-            cg.split(f, x, [&] () { return cg.remit(rhs()); });
+            cg.split(t, x, [&] { return cg.world().literal(true); });
+            cg.split(f, x, [&] { return cg.remit(rhs()); });
             return cg.converge(x, cg.world().type_bool(), "or");
         }
         default:
@@ -310,8 +310,8 @@ Def PostfixExpr::remit(CodeGen& cg) const {
 Def IfExpr::remit(CodeGen& cg) const {
     JumpTarget t("if_then"), f("if_else"), x("if_next");
     cg.emit_branch(cond(), t, f);
-    cg.split(t, x, [&] () { return cg.remit(then_expr()); });
-    cg.split(f, x, [&] () { return cg.remit(else_expr()); });
+    cg.split(t, x, [&] { return cg.remit(then_expr()); });
+    cg.split(f, x, [&] { return cg.remit(else_expr()); });
     return cg.converge(x, then_expr()->type()->convert(cg.world()), "if");
 }
 
