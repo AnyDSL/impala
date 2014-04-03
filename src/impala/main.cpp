@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
 
         result &= check(init, prg, nossa);
         if (emit_thorin)
-            result &= result ? emit(init.world, prg) : false;
+            emit(init.world, prg);
 
         if (emit_annotated)
             impala::dump(prg, fancy);

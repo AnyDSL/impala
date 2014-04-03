@@ -21,9 +21,6 @@ class CodeGen : public IRBuilder {
 public:
     CodeGen(World& world)
         : IRBuilder(world)
-        , break_target(nullptr)
-        , continue_target(nullptr)
-        , result(true)
     {}
 
     Var lemit(const Expr* expr) { return is_reachable() ? expr->lemit(*this) : Var(); }
@@ -45,9 +42,6 @@ public:
     }
 
     const Enter* frame;
-    JumpTarget* break_target;
-    JumpTarget* continue_target;
-    bool result;
 };
 
 Var LocalDecl::var(CodeGen& cg) const {
@@ -345,13 +339,11 @@ void LetStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
 
 //------------------------------------------------------------------------------
 
-bool emit(World& world, const ModContents* mod) { 
+void emit(World& world, const ModContents* mod) { 
     CodeGen cg(world);
     mod->emit(cg);
-    return cg.result;
 }
 
 //------------------------------------------------------------------------------
 
 }
-
