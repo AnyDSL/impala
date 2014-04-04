@@ -28,7 +28,7 @@ typedef thorin::HashMap<const Symbol, Type, thorin::Hash<Symbol>> MethodTable;
  *
  * @see TraitInstance
  */
-class TraitNode : public Unifiable<TraitNode> {
+class TraitNode : public TUnifiable<TraitNode> {
 protected:
     TraitNode(TypeTable& tt, const TraitDecl* trait_decl);
 
@@ -37,7 +37,7 @@ private:
     TraitNode(const TraitNode& node);         ///< Do not copy-construct a \p Trait.
 
 public:
-    virtual bool equal(const TraitNode* other) const;
+    virtual bool equal(const Unifiable* other) const;
     virtual size_t hash() const;
     const TraitDecl* trait_decl() const { return trait_decl_; }
     bool is_error_trait() const { return trait_decl_ == nullptr; }
@@ -47,7 +47,7 @@ public:
     virtual void refine() {}
     virtual bool is_known() const override { return true; }
 
-    virtual bool unify_with(TraitNode*) { assert(false); return false; }
+    virtual bool unify_with(Unifiable*) { assert(false); return false; }
 
     /// add a non-inherited method or return \p false if a method with this name already existed
     bool add_method(Symbol name, Type method_type) { return add_method(name, method_type, false); }
@@ -91,14 +91,14 @@ private:
     TraitInstanceNode(const TraitInstanceNode& node);         ///< Do not copy-construct a \p TraitInstance.
 
 public:
-    virtual bool equal(const TraitNode* other) const;
+    virtual bool equal(const Unifiable* other) const;
     virtual size_t hash() const;
     virtual std::string to_string() const;
 
     virtual void refine();
     virtual bool is_known() const override;
 
-    virtual bool unify_with(TraitNode*);
+    virtual bool unify_with(Unifiable*);
 
     virtual Type find_method(Symbol name);
     virtual const MethodTable& all_methods();
@@ -125,10 +125,10 @@ private:
     friend class TypeTable;
 };
 
-class TraitImplNode : public Unifiable<TraitImplNode> {
+class TraitImplNode : public TUnifiable<TraitImplNode> {
 private:
     TraitImplNode(TypeTable& tt, const Impl* impl_decl, Trait trait)
-        : Unifiable(tt)
+        : TUnifiable(tt)
         , impl_decl_(impl_decl)
         , trait_(trait)
     {}
@@ -136,7 +136,7 @@ private:
     TraitImplNode(const TraitImplNode&);              ///< Do not copy-construct a \p TraitImpl.
 
 public:
-    virtual bool equal(const TraitImplNode* other) const { return this->impl_decl() == other->impl_decl(); }
+    virtual bool equal(const Unifiable* other) const { return this->impl_decl() == other->as<TraitImplNode>()->impl_decl(); }
     virtual size_t hash() const;
     const Impl* impl_decl() const { return impl_decl_; }
     Trait trait() const { return trait_; }
@@ -145,13 +145,13 @@ public:
     virtual void refine() {}
     virtual bool is_known() const override { return true; }
 
-    virtual bool unify_with(TraitImplNode*) { assert(false); return false; }
+    virtual bool unify_with(Unifiable*) { assert(false); return false; }
 
     virtual bool is_closed() const { return true; } // TODO
 
 protected:
     /// copy this \p TraitImplNode but replace the sub-elements given in the map
-    Generic* vspecialize(SpecializeMap& m);
+    TraitImplNode* vspecialize(SpecializeMap& m);
 
     virtual std::string to_string() const { return ""; } // TODO
 

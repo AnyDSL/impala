@@ -1,6 +1,7 @@
 #ifndef IMPALA_SEMA_GENERIC_H
 #define IMPALA_SEMA_GENERIC_H
 
+#include <typeinfo>
 #include <vector>
 
 #include "thorin/util/array.h"
@@ -13,7 +14,7 @@ class TypeNode;
 class TypeTable;
 class UnknownTypeNode;
 template<class T> class Proxy;
-template<class T> class Unifiable;
+class Unifiable;
 template<class T> void unify(TypeTable&, const Proxy<T>&);
 
 //------------------------------------------------------------------------------
@@ -83,20 +84,22 @@ typedef Proxy<TypeVarNode> TypeVar;
 typedef Proxy<TraitNode> Trait;
 typedef Proxy<TraitImplNode> TraitImpl;
 
-class Generic;
-typedef thorin::HashMap<const Generic*, Generic*> SpecializeMap;
+typedef thorin::HashMap<const Unifiable*, Unifiable*> SpecializeMap;
 
 //------------------------------------------------------------------------------
 
-class Generic : public thorin::MagicCast<Generic> {
+class Unifiable : public thorin::MagicCast<Unifiable> {
 protected:
-    Generic(TypeTable& tt)
+    Unifiable(TypeTable& tt)
         : typetable_(tt)
+        , representative_(nullptr)
     {}
 
 public:
     TypeTable& typetable() const { return typetable_; }
 
+    Unifiable* representative() const { return representative_; }
+    bool is_unified() const { return representative_ != nullptr; }
     virtual size_t num_bound_vars() const { return bound_vars_.size(); }
     virtual thorin::ArrayRef<TypeVar> bound_vars() const { return thorin::ArrayRef<TypeVar>(bound_vars_); }
     virtual TypeVar bound_var(size_t i) const { return bound_vars_[i]; }
@@ -104,90 +107,35 @@ public:
     virtual bool is_generic() const { return !bound_vars_.empty(); }
     virtual bool is_closed() const = 0; // TODO
     virtual void add_bound_var(TypeVar v);
-    virtual bool equal(const Generic*) const = 0;
+    virtual bool equal(const Unifiable*) const = 0;
     virtual size_t hash() const = 0;
     virtual std::string to_string() const = 0;
 
     /**
-     * Try to fill in missing type information by matching this possibly incomplete Generic with a complete Generic.
+     * Try to fill in missing type information by matching this possibly incomplete Unifiable with a complete Unifiable.
      * Example: fn(?0, ?1) unified_with fn(int, bool)  will set ?0=int and ?1=bool
      * @return \p true if unification worked, i.e. both generics were structurally equal
      *         and there were no contradictions during unification (a contradiction
      *         would be fn(?0, ?0) unified with fn(int, bool)).
      */
-    virtual bool unify_with(Generic*) = 0;
-
-    /**
-     * Replace any \p UnknownTypeNode%s within this Generic with their instances
-     * and set the representatives of these nodes to their instances
-     */
-    virtual void refine() = 0;
-    /// A \p Generic is known if it does not contain any \p UnknownTypeNode%s
-    virtual bool is_known() const = 0;
-
-    void dump() const;
-
-protected:
-    std::vector<TypeVar> bound_vars_;
-    TypeTable& typetable_;
-
-    std::string bound_vars_to_string() const;
-    bool unify_bound_vars(thorin::ArrayRef<TypeVar>);
-    void refine_bound_vars();
-    bool bound_vars_known() const;
-
-    Generic* ginstantiate(SpecializeMap& var_instances);
-    Generic* gspecialize(SpecializeMap&); // TODO one could always assert that this is only called on final representatives!
-
-    /// like specialize but does not care about generics (this method is called by specialize)
-    virtual Generic* vspecialize(SpecializeMap&) = 0;
-
-private:
-    /// raise error if a type does not implement the required traits;
-    void verify_instantiation(SpecializeMap&) const;
-
-    friend class TypeVarNode;
-    friend class TraitInstanceNode;
-};
-
-template<class T>
-class Unifiable : public Generic {
-protected:
-    Unifiable(TypeTable& tt)
-        : Generic(tt)
-        , representative_(nullptr)
-    {
-        static_assert(std::is_base_of<Unifiable<T>, T>::value, "Unifiable<T> is not a base type of T");
-    }
-
-public:
-    T* representative() const { return representative_; }
-    bool is_final_representative() const { return representative() == this->template as<T>(); }
-    bool is_unified() const { return representative_ != nullptr; }
-    virtual bool equal(const T*) const = 0;
-    virtual bool equal(const Generic* other) const {
-        if (const T* t = other->isa<T>())
-            return equal(t);
-        return false;
-    }
-
-    /// @see Generic::unify_with(Generic*)
-    virtual bool unify_with(T*) = 0;
+    virtual bool unify_with(Unifiable*) = 0;
+    template<class T>
     bool unify_with(Proxy<T> other) {
         assert(other->is_closed());
         bool b = unify_with(*other);
         assert(!b || is_closed());
         return b;
     }
-    virtual bool unify_with(Generic* other) {
-        assert(other->is_closed());
-        if (T* t = other->isa<T>()) {
-            bool b = unify_with(t);
-            assert(!b || is_closed());
-            return b;
-        }
-        return false;
-    }
+
+    /**
+     * Replace any \p UnknownTypeNode%s within this Unifiable with their instances
+     * and set the representatives of these nodes to their instances
+     */
+    virtual void refine() = 0;
+    /// A \p Unifiable is known if it does not contain any \p UnknownTypeNode%s
+    virtual bool is_known() const = 0;
+
+    void dump() const;
 
     /**
      * Instantiate a generic element using the map from TypeVar -> Type
@@ -195,29 +143,45 @@ public:
      * @return the instantiated type
      * @see TypeTable::create_spec_map()
      */
-    Proxy<T> instantiate(SpecializeMap& var_instances) {
-//        assert(is_final_representative()); CHECK it seems nothing gets broken w.o. this assertion - still I don't feel comfortable w.o. it
-        // we can not unify yet because it could be that this type is not closed yet
-        return Proxy<T>(ginstantiate(var_instances)->as<T>());
-    }
-    /**
-     * if this element is in the map return the mapped one;
-     * otherwise copy this element with specialized sub-elements
-     */
-    Proxy<T> specialize(SpecializeMap& map) {
-//        assert(is_final_representative()); CHECK it seems nothing gets broken w.o. this assertion - still I don't feel comfortable w.o. it
-        return Proxy<T>(gspecialize(map)->as<T>());
-    }
+    Unifiable* instantiate(SpecializeMap& var_instances);
+    Unifiable* specialize(SpecializeMap& map);
+
+protected:
+
+    std::string bound_vars_to_string() const;
+    bool unify_bound_vars(thorin::ArrayRef<TypeVar>);
+    void refine_bound_vars();
+    bool bound_vars_known() const;
+
+    /// like specialize but does not care about generics (this method is called by specialize)
+    virtual Unifiable* vspecialize(SpecializeMap&) = 0;
 
 private:
-    T* representative_;
+    /// raise error if a type does not implement the required traits;
+    void verify_instantiation(SpecializeMap&) const;
+    void set_representative(Unifiable* representative) { representative_ = representative; }
 
-    void set_representative(T* representative) { representative_ = representative; }
+    TypeTable& typetable_;
+    Unifiable* representative_;
 
 protected:
     std::vector<TypeVar> bound_vars_;
 
     friend class TypeTable;
+    friend class TypeVarNode;
+    friend class TraitInstanceNode;
+};
+
+template<class T>
+class TUnifiable : public Unifiable {
+public:
+    TUnifiable(TypeTable& tt)
+        : Unifiable(tt)
+    {}
+
+    //Unifiable* representative() const { return representative_; }
+    Proxy<T> instantiate(SpecializeMap& map) { return Proxy<T>(Unifiable::instantiate(map)->as<T>()); }
+    Proxy<T> specialize(SpecializeMap& map) { return Proxy<T>(Unifiable::specialize(map)->as<T>()); }
 };
 
 //------------------------------------------------------------------------------

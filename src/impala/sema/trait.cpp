@@ -5,7 +5,7 @@
 namespace impala {
 
 TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
-    : Unifiable(tt)
+    : TUnifiable(tt)
     , trait_decl_(trait_decl)
     , super_traits_()
 {}

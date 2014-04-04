@@ -15,18 +15,18 @@ template void unify(TypeTable&, const Proxy<TraitNode>&);
 
 //------------------------------------------------------------------------------
 
-bool Generic::unify_bound_vars(thorin::ArrayRef<TypeVar> other_vars) {
+bool Unifiable::unify_bound_vars(thorin::ArrayRef<TypeVar> other_vars) {
     if (num_bound_vars() == other_vars.size())
         return !is_generic(); // TODO enable unification of generic elements!
     return false;
 }
 
-void Generic::refine_bound_vars() {
+void Unifiable::refine_bound_vars() {
     for (auto v : bound_vars())
         v->refine();
 }
 
-bool Generic::bound_vars_known() const {
+bool Unifiable::bound_vars_known() const {
     for (auto v : bound_vars()) {
         if (!v->is_known())
             return false;
@@ -34,7 +34,7 @@ bool Generic::bound_vars_known() const {
     return true;
 }
 
-void Generic::add_bound_var(TypeVar v) {
+void Unifiable::add_bound_var(TypeVar v) {
     assert(!v->is_closed() && "Type variables already bound");
 
     // CHECK should variables only be bound in this case? does this also hold for traits?
@@ -46,7 +46,7 @@ void Generic::add_bound_var(TypeVar v) {
     bound_vars_.push_back(v);
 }
 
-Generic* Generic::ginstantiate(SpecializeMap& var_instances) {
+Unifiable* Unifiable::instantiate(SpecializeMap& var_instances) {
 /*#ifndef NDEBUG
     verify_instantiation(var_instances);
 #endif*/
@@ -54,7 +54,7 @@ Generic* Generic::ginstantiate(SpecializeMap& var_instances) {
     return vspecialize(var_instances);
 }
 
-Generic* Generic::gspecialize(SpecializeMap& map) {
+Unifiable* Unifiable::specialize(SpecializeMap& map) {
     // FEATURE this could be faster if we copy only types where something changed inside
     if (auto result = thorin::find(map, this))
         return result;
@@ -65,7 +65,7 @@ Generic* Generic::gspecialize(SpecializeMap& map) {
         v->clone(map); // CHECK is node() correct here?
     }
 
-    Generic* t = vspecialize(map);
+    Unifiable* t = vspecialize(map);
 
     for (auto v : bound_vars()) {
         assert(map.contains(v.representative()));

@@ -115,8 +115,8 @@ private:
         return new_unifiable(new TraitInstanceNode(trait, map)).node();
     }
 
-    TypetableSet<Generic> unifiables_;
-    std::vector<Generic*> garbage_;
+    TypetableSet<Unifiable> unifiables_;
+    std::vector<Unifiable*> garbage_;
     Trait trait_error_;
     TypeError type_error_;
     NoReturnType type_noreturn_;

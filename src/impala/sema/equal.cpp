@@ -26,11 +26,11 @@ size_t TraitImplNode::hash() const { return hash_value(impl_decl()); }
 
 //----------------------------------------------------------------------------------------
 
-bool UnknownTypeNode::equal(const TypeNode* other) const {
+bool UnknownTypeNode::equal(const Unifiable* other) const {
     return is_instantiated() ? instance()->equal(other) : this == other;
 }
 
-bool KnownTypeNode::equal(const TypeNode* t) const {
+bool KnownTypeNode::equal(const Unifiable* t) const {
     if (auto utn = t->isa<const UnknownTypeNode>())
         return utn->equal(this);
     const KnownTypeNode* other = t->as<const KnownTypeNode>();
@@ -83,7 +83,7 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
     return true;
 }
 
-bool TypeVarNode::equal(const TypeNode* other) const {
+bool TypeVarNode::equal(const Unifiable* other) const {
     if (this == other)
         return true;
 
@@ -117,12 +117,14 @@ bool TypeVarNode::equal(const TypeNode* other) const {
     return false;
 }
 
-bool TraitNode::equal(const TraitNode* other) const {
+bool TraitNode::equal(const Unifiable* other) const {
     // num_bound_vars must be equal because one could be an instance of the other!
-    return (this->trait_decl() == other->trait_decl()) && (this->num_bound_vars() == other->num_bound_vars());
+    if (auto trait = other->isa<TraitNode>())
+        return (this->trait_decl() == trait->trait_decl()) && (this->num_bound_vars() == trait->num_bound_vars());
+    return false;
 }
 
-bool TraitInstanceNode::equal(const TraitNode* other) const {
+bool TraitInstanceNode::equal(const Unifiable* other) const {
     if (this == other)
         return true;
 

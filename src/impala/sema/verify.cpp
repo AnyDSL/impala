@@ -2,7 +2,7 @@
 
 namespace impala {
 
-void Generic::verify_instantiation(SpecializeMap& map) const {
+void Unifiable::verify_instantiation(SpecializeMap& map) const {
     assert(map.size() == num_bound_vars());
 
     // check the bounds
@@ -26,18 +26,15 @@ void TypeTable::verify() const {
         if (auto type = g->isa<TypeNode>()) {
             assert(type->is_known());
             assert(type->is_sane());
-            assert(type->is_final_representative());
         } else if (auto trait = g->isa<TraitNode>()) {
             assert(trait->is_closed());
-            assert(trait->is_final_representative());
         } else if (auto impl = g->isa<TraitImplNode>()) {
             assert(impl->is_closed());
-            assert(impl->is_final_representative());
         }
     }
 
     for (size_t i = 0; i < garbage_.size(); ++i) {
-        Generic* g = garbage_[i];
+        Unifiable* g = garbage_[i];
         assert(g != nullptr);
 
         // no element should be twice in the garbage vector - else deletion will fail!

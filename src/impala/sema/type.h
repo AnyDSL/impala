@@ -8,6 +8,8 @@
 #include "impala/sema/generic.h"
 #include "impala/sema/trait.h"
 
+#define private public
+
 namespace thorin {
     class Type;
     class World;
@@ -33,14 +35,14 @@ enum PrimTypeKind {
 #include "impala/tokenlist.h"
 };
 
-class TypeNode : public Unifiable<TypeNode> {
+class TypeNode : public TUnifiable<TypeNode> {
 private:
     TypeNode& operator = (const TypeNode&); ///< Do not copy-assign a \p TypeNode.
     TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p TypeNode.
 
 protected:
     TypeNode(TypeTable& typetable)
-        : Unifiable(typetable)
+        : TUnifiable(typetable)
     {}
 
 public:
@@ -99,10 +101,10 @@ public:
     virtual void refine();
     virtual bool is_known() const override;
 
-    virtual bool equal(const TypeNode*) const;
+    virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
 
-    virtual bool unify_with(TypeNode*);
+    virtual bool unify_with(Unifiable*);
 
     virtual void add_implementation(TraitImpl);
     virtual bool implements(Trait) const;
@@ -110,7 +112,7 @@ public:
 
     virtual bool is_generic() const {
         assert (!elems_.empty() || bound_vars_.empty());
-        return Generic::is_generic();
+        return Unifiable::is_generic();
     }
 
     virtual bool is_closed() const;
@@ -138,7 +140,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMap&);
+    virtual Unifiable* vspecialize(SpecializeMap&);
 
 public:
     virtual Kind kind() const { return is_instantiated() ? instance()->kind() : Type_unknown; }
@@ -152,9 +154,9 @@ public:
     virtual void refine() { assert(false); }
     virtual bool is_known() const override { return false; }
 
-    virtual bool equal(const TypeNode*) const;
+    virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
-    virtual bool unify_with(TypeNode*);
+    virtual bool unify_with(Unifiable*);
 
     virtual void add_implementation(TraitImpl) { assert(false); }
     virtual bool implements(Trait t) const { return is_instantiated() && instance()->implements(t); }
@@ -191,7 +193,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMap&);
+    virtual Unifiable* vspecialize(SpecializeMap&);
 
 public:
     virtual std::string to_string() const { return "<type error>"; }
@@ -207,7 +209,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMap&);
+    virtual Unifiable* vspecialize(SpecializeMap&);
 
 public:
     virtual std::string to_string() const { return "<type no-return>"; }
@@ -225,7 +227,7 @@ private:
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
 
 protected:
-    virtual Generic* vspecialize(SpecializeMap&);
+    virtual Unifiable* vspecialize(SpecializeMap&);
 
 public:
     virtual std::string to_string() const;
@@ -256,7 +258,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMap&);
+    virtual Unifiable* vspecialize(SpecializeMap&);
 
 public:
     Type return_type() const;
@@ -275,7 +277,7 @@ private:
     {}
 
 protected:
-    virtual Generic* vspecialize(SpecializeMap&);
+    virtual Unifiable* vspecialize(SpecializeMap&);
 
 public:
     virtual std::string to_string() const { return bound_vars_to_string() + elems_to_string(); }
@@ -296,14 +298,14 @@ private:
 
     void set_equiv_variable(const TypeVarNode* v) const { assert(equiv_var_ == nullptr); assert(v != nullptr); equiv_var_ = v; }
     void unset_equiv_variable() const { assert(equiv_var_ != nullptr); equiv_var_ = nullptr; }
-    void bind(const Generic* const e);
-    bool bounds_equal(const TypeVar other) const;
+    void bind(const Unifiable* const);
+    bool bounds_equal(const TypeVar) const;
 
 public:
     const UniSet<Trait>& bounds() const { return bounds_; }
-    const Generic* bound_at() const { return bound_at_; }
+    const Unifiable* bound_at() const { return bound_at_; }
     void add_bound(Trait);
-    virtual bool equal(const TypeNode* other) const;
+    virtual bool equal(const Unifiable* other) const;
     std::string to_string() const;
     virtual bool implements(Trait) const;
     virtual Type find_method(Symbol s) const;
@@ -329,12 +331,12 @@ private:
      * The type where this variable is bound.
      * If such a type is set, then the variable must not be changed anymore!
      */
-    const Generic* bound_at_;
+    const Unifiable* bound_at_;
     mutable const TypeVarNode* equiv_var_;///< Used to define equivalence constraints when checking equality of types.
     static int counter_;
 
 protected:
-    virtual Generic* vspecialize(SpecializeMap&);
+    virtual Unifiable* vspecialize(SpecializeMap&);
 
     /// re-add all elements to the bounds set -- needed if during unification the representatives of bounds change
     void refresh_bounds();

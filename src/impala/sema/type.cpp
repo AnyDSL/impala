@@ -11,7 +11,7 @@ int UnknownTypeNode::counter_ = 0;
 
 //------------------------------------------------------------------------------
 
-bool KnownTypeNode::unify_with(TypeNode* other) {
+bool KnownTypeNode::unify_with(Unifiable* other) {
     if (kind() == other->kind()) {
         KnownTypeNode* ktn = other->as<KnownTypeNode>();
 
@@ -29,7 +29,7 @@ bool KnownTypeNode::unify_with(TypeNode* other) {
     return false;
 }
 
-bool UnknownTypeNode::unify_with(TypeNode* other) {
+bool UnknownTypeNode::unify_with(Unifiable* other) {
     if (!is_instantiated()) {
         instantiate(Type(other));
         typetable().unify(Type(this));
@@ -79,7 +79,7 @@ bool KnownTypeNode::is_sane() const {
 
 //------------------------------------------------------------------------------
 
-void TypeVarNode::bind(const Generic* const e) {
+void TypeVarNode::bind(const Unifiable* const e) {
     assert(bound_at_ == nullptr && "type variables can only be bound once!");
     bound_at_ = e;
 }
@@ -150,7 +150,6 @@ Type TypeVarNode::find_method(Symbol s) const {
 }
 
 FnType FnTypeNode::specialize_method(Type t) const {
-    assert(is_final_representative());
     assert(elem(0) == t);
     FnType f = typetable().fntype(elems().slice_from_begin(1));
     typetable().unify(f.as<Type>());
@@ -177,14 +176,14 @@ thorin::Array<Type> CompoundTypeNode::specialize_elems(SpecializeMap& map) const
     return nelems;
 }
 
-Generic* UnknownTypeNode::vspecialize(SpecializeMap& map) { assert(false); return nullptr; }
-Generic* TypeErrorNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type_error().node(); }
-Generic* NoReturnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type_noreturn().node(); }
-Generic* PrimTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().primtype(primtype_kind()).node(); }
-Generic* FnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().fntype(specialize_elems(map)).node(); }
-Generic* TupleTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().tupletype(specialize_elems(map)).node(); }
+Unifiable* UnknownTypeNode::vspecialize(SpecializeMap& map) { assert(false); return nullptr; }
+Unifiable* TypeErrorNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type_error().node(); }
+Unifiable* NoReturnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type_noreturn().node(); }
+Unifiable* PrimTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().primtype(primtype_kind()).node(); }
+Unifiable* FnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().fntype(specialize_elems(map)).node(); }
+Unifiable* TupleTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().tupletype(specialize_elems(map)).node(); }
 
-Generic* TypeVarNode::vspecialize(SpecializeMap& map) {
+TypeVarNode* TypeVarNode::vspecialize(SpecializeMap& map) {
     // was not bound in the specialized type -> return orginal type var
     // CHECK do we need to create a new copy here? unification lead to segmentation faults in the past...
     return map[this] = this;
