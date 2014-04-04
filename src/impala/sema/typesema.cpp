@@ -324,11 +324,11 @@ Trait TraitDecl::to_trait(TypeSema& sema) const {
     return trait();
 }
 
-void Fn::check_body(TypeSema& sema, Type fn_type) const {
+void Fn::check_body(TypeSema& sema, FnType fn_type) const {
     Type body_type = sema.check(body());
     if (!body_type->is_closed()) return; // FEATURE make this check faster - e.g. store a "potentially not closed" flag
     if (body_type != sema.type_noreturn() && body_type != sema.type_error())
-        sema.expect_type(body(), fn_type.as<FnType>()->return_type(), "return");
+        sema.expect_type(body(), fn_type->return_type(), "return");
 }
 
 //------------------------------------------------------------------------------
@@ -390,7 +390,7 @@ Type FnDecl::check(TypeSema& sema) const {
         types.push_back(sema.check(param));
 
     // create FnType
-    Type fn_type = sema.fntype(types);
+    FnType fn_type = sema.fntype(types);
     for (auto tp : type_params())
         fn_type->add_bound_var(tp->type_var(sema));
     type_ = fn_type;
@@ -509,7 +509,7 @@ Type LiteralExpr::check(TypeSema& sema, Type expected) const {
 Type FnExpr::check(TypeSema& sema, Type expected) const {
     assert(type_params().empty());
 
-    Type fn_type;
+    FnType fn_type;
     if (FnType exp_fn = expected.isa<FnType>()) {
         if (exp_fn->size() != params().size())
             sema.error(this) << "expected function with " << exp_fn->size() << " parameters, but found lambda expression with " << params().size() << " parameters\n";
@@ -525,7 +525,7 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
             par_types.push_back(sema.check(param));
 
         fn_type = sema.fntype(par_types);
-        sema.unify(fn_type);
+        sema.unify(fn_type.as<Type>());
     }
 
     assert(body() != nullptr);

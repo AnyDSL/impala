@@ -409,7 +409,7 @@ public:
     const thorin::Enter* frame() const { return frame_; }
     std::ostream& print_params(Printer& p, bool returning) const;
     void fn_check(NameSema&) const;
-    void check_body(TypeSema&, Type fn_type) const;
+    void check_body(TypeSema&, FnType) const;
 
 protected:
     mutable thorin::Lambda* lambda_;
