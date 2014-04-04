@@ -22,7 +22,7 @@ TypeTable::~TypeTable() {
         delete g; 
 }
 
-template<class T> void TypeTable::insert_new(T* unifiable) {
+void TypeTable::insert_new(Unifiable* unifiable) {
     assert(!unifiable->is_unified());
     unifiable->set_representative(unifiable);
 
@@ -39,25 +39,20 @@ template<class T> void TypeTable::insert_new(T* unifiable) {
             v->refresh_bounds();
     }
 
-    insert_new_rec(unifiable);
+    if (auto ktn = unifiable->isa<KnownTypeNode>()) {
+        for (auto elem : ktn->elems()) {
+            if (!elem->is_unified()) {
+                unify(elem);
+                assert(elem->is_unified());
+            }
+        }
+    } else {
+        // TODO insert methods for traits
+    }
 
     // CHECK does it cause any problems to put TypeVars into the type-set?
     auto p = unifiables_.insert(unifiable->representative());
     assert(p.second && "hash/equal broken");
-}
-
-void TypeTable::insert_new_rec(TypeNode* t) {
-    auto type = t->as<KnownTypeNode>();
-    for (auto elem : type->elems_) {
-        if (!elem->is_unified()) {
-            unify(elem);
-            assert(elem->is_unified());
-        }
-    }
-}
-
-void TypeTable::insert_new_rec(TraitNode* t) {
-    // TODO insert methods
 }
 
 void TypeTable::change_repr_generic(Unifiable* u, Unifiable* repr) const {
@@ -113,16 +108,13 @@ void TypeTable::change_repr(Unifiable* u, Unifiable* repr) const {
         assert(u->representative() == repr);
 }
 
-template<class T>
-bool TypeTable::unify(Proxy<T> elem) {
-    T* unifiable = elem.node();
-
+bool TypeTable::unify(Unifiable* unifiable) {
     if (unifiable->is_unified())
         return false;
 
     assert(unifiable->is_closed() && "Only closed unifiables can be unified!");
 
-    if (auto utn = unifiable->template isa<UnknownTypeNode>()) {
+    if (auto utn = unifiable->isa<UnknownTypeNode>()) {
         bool res = unify(utn->instance());
         utn->set_representative(*utn->instance());
         return res;
@@ -132,7 +124,7 @@ bool TypeTable::unify(Proxy<T> elem) {
 
     auto i = unifiables_.find(unifiable);
     if (i != unifiables_.end()) {
-        T* repr = (*i)->template as<T>();
+        auto repr = *i;
         assert(repr != unifiable && "Already unified");
         change_repr(unifiable, repr);
         assert(unifiable->representative() == repr);

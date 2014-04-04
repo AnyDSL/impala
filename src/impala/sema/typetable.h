@@ -42,7 +42,8 @@ public:
     TupleType unit() { return tupletype({}); }
 
     /// Unify a type and return \p true if the representative changed.
-    template<class T> bool unify(Proxy<T> t);
+    bool unify(Unifiable*);
+    template<class T> bool unify(Proxy<T> proxy) { return unify(proxy.node()); }
     /// Checks if all types in the type tables are sane and correctly unified.
     void verify() const;
 
@@ -88,11 +89,7 @@ private:
     }
 
     /// insert all contained unifiables that are not yet unified
-    template<class T> void insert_new(T*);
-    /// insert all contained types
-    void insert_new_rec(TypeNode*);
-    void insert_new_rec(TraitNode*);
-    void insert_new_rec(TraitImplNode*) {}
+    void insert_new(Unifiable*);
 
     /**
      * Recursively change the representatives of the not-unified elements in t to the
