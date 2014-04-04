@@ -38,14 +38,6 @@ public:
     Type expect_type(const Expr* expr, Type found, Type expected, std::string typetype);
     Type expect_type(const Expr* expr, Type expected, std::string typetype) { return expect_type(expr, expr->type(), expected, typetype); }
     Type create_return_type(const ASTNode* node, Type ret_func);
-    void check_body(const ASTNode* fn, const Expr* body, Type fn_type) {
-        Type body_type = check(body);
-        if (!body_type->is_closed()) return; // FEATURE make this check faster - e.g. store a "potentially not closed" flag
-        if ((body_type != type_noreturn()) && (body_type != type_error())) {
-            Type rettype = create_return_type(fn, fn_type->elems().back()); // TODO last elem may be noret
-            expect_type(body, rettype, "return");
-        }
-    }
 
     Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances);
     Trait instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
@@ -332,6 +324,13 @@ Trait TraitDecl::to_trait(TypeSema& sema) const {
     return trait();
 }
 
+void Fn::check_body(TypeSema& sema, Type fn_type) const {
+    Type body_type = sema.check(body());
+    if (!body_type->is_closed()) return; // FEATURE make this check faster - e.g. store a "potentially not closed" flag
+    if (body_type != sema.type_noreturn() && body_type != sema.type_error())
+        sema.expect_type(body(), fn_type.as<FnType>()->return_type(), "return");
+}
+
 //------------------------------------------------------------------------------
 
 /*
@@ -398,7 +397,7 @@ Type FnDecl::check(TypeSema& sema) const {
     sema.unify(type_);
 
     if (body() != nullptr)
-        sema.check_body(this, body(), fn_type);
+        check_body(sema, fn_type);
 
     type_.clear(); // will be set again by TypeSema's wrapper
     return fn_type;
@@ -530,7 +529,7 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
     }
 
     assert(body() != nullptr);
-    sema.check_body(this, body(), fn_type);
+    check_body(sema, fn_type);
 
     return fn_type;
 }

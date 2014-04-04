@@ -409,8 +409,7 @@ public:
     const thorin::Enter* frame() const { return frame_; }
     std::ostream& print_params(Printer& p, bool returning) const;
     void fn_check(NameSema&) const;
-    //void check(TypeSema&) const;
-    //void emit(CodeGen&) const;
+    void check_body(TypeSema&, Type fn_type) const;
 
 protected:
     mutable thorin::Lambda* lambda_;
@@ -734,11 +733,11 @@ class FnExpr : public Expr, public Fn {
 public:
     virtual bool is_lvalue() const { return false; }
     virtual void check(NameSema&) const;
-    //virtual thorin::Var emit(CodeGen&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;
     virtual Type check(TypeSema&, Type) const;
+    //virtual Def remit(CodeGen&) const;
 
     bool has_return_type_;
 
