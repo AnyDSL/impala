@@ -259,6 +259,7 @@ protected:
     virtual Generic* vspecialize(SpecializeMap&);
 
 public:
+    Type return_type() const;
     virtual std::string to_string() const { return std::string("fn") + bound_vars_to_string() + elems_to_string(); }
     virtual const thorin::Type* convert(thorin::World&) const;
 

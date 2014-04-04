@@ -135,14 +135,16 @@ bool TypeVarNode::implements(Trait trait) const {
 Type KnownTypeNode::find_method(Symbol s) const {
     // TODO what about generic implementations?
     for (auto t : trait_impls_) {
-        if (auto fn = t->find_method(s)) return fn;
+        if (auto fn = t->find_method(s)) 
+            return fn;
     }
     return Type();
 }
 
 Type TypeVarNode::find_method(Symbol s) const {
     for (auto t : bounds()) {
-        if (auto fn = t->find_method(s)) return fn;
+        if (auto fn = t->find_method(s)) 
+            return fn;
     }
     return Type();
 }
@@ -153,6 +155,17 @@ FnType FnTypeNode::specialize_method(Type t) const {
     FnType f = typetable().fntype(elems().slice_from_begin(1));
     typetable().unify(f.as<Type>());
     return f;
+}
+
+Type FnTypeNode::return_type() const {
+    if (!is_empty()) {
+        if (auto fn = elems().back().isa<FnType>()) {
+            if (fn->size() == 1)
+                return fn->elems().front();
+            return typetable().tupletype(fn->elems());
+        }
+    }
+    return typetable().type_noreturn();
 }
 
 //------------------------------------------------------------------------------
