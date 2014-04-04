@@ -10,12 +10,21 @@
 
 namespace impala {
 
+class TraitImplNode;
+class TraitNode;
 class TypeNode;
 class TypeTable;
+class TypeVarNode;
+class Unifiable;
 class UnknownTypeNode;
 template<class T> class Proxy;
-class Unifiable;
 template<class T> void unify(TypeTable&, const Proxy<T>&);
+typedef Proxy<TraitImplNode> TraitImpl;
+typedef Proxy<TraitNode> Trait;
+typedef Proxy<TypeNode> Type;
+typedef Proxy<TypeVarNode> TypeVar;
+typedef Proxy<UnknownTypeNode> UnknownType;
+typedef thorin::HashMap<const Unifiable*, Unifiable*> SpecializeMap;
 
 //------------------------------------------------------------------------------
 
@@ -72,19 +81,6 @@ public:
 private:
     T* node_;
 };
-
-//------------------------------------------------------------------------------
-
-class TypeVarNode;
-class TraitNode;
-class TraitImplNode;
-typedef Proxy<TypeNode> Type;
-typedef Proxy<UnknownTypeNode> UnknownType;
-typedef Proxy<TypeVarNode> TypeVar;
-typedef Proxy<TraitNode> Trait;
-typedef Proxy<TraitImplNode> TraitImpl;
-
-typedef thorin::HashMap<const Unifiable*, Unifiable*> SpecializeMap;
 
 //------------------------------------------------------------------------------
 
