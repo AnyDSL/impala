@@ -17,9 +17,8 @@ bool KnownTypeNode::unify_with(Unifiable* other) {
             // go through all sub elements
             if (size() == ktn->size()) {
                 bool result = true;
-                for (size_t i = 0; i < size(); ++i)
-                    result = result && elem(i)->unify_with(ktn->elem(i));
-
+                for (size_t i = 0, e = size(); i != e && result; ++i)
+                    result &= elem(i)->unify_with(ktn->elem(i));
                 return result;
             }
         }
