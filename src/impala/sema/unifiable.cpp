@@ -1,6 +1,7 @@
-#include "impala/sema/generic.h"
+#include "impala/sema/unifiable.h"
 
 #include "thorin/util/assert.h"
+
 #include "impala/sema/type.h"
 #include "impala/sema/trait.h"
 #include "impala/sema/typetable.h"

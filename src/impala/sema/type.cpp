@@ -12,9 +12,7 @@ int UnknownTypeNode::counter_ = 0;
 //------------------------------------------------------------------------------
 
 bool KnownTypeNode::unify_with(Unifiable* other) {
-    if (kind() == other->kind()) {
-        KnownTypeNode* ktn = other->as<KnownTypeNode>();
-
+    if (auto ktn = other->isa<KnownTypeNode>()) {
         if (unify_bound_vars(other->bound_vars())) {
             // go through all sub elements
             if (size() == ktn->size()) {
@@ -31,7 +29,7 @@ bool KnownTypeNode::unify_with(Unifiable* other) {
 
 bool UnknownTypeNode::unify_with(Unifiable* other) {
     if (!is_instantiated()) {
-        instantiate(Type(other));
+        instantiate(Type(other->as<TypeNode>()));
         typetable().unify(Type(this));
         return true;
     } else
@@ -183,7 +181,7 @@ Unifiable* PrimTypeNode::vspecialize(SpecializeMap& map) { return map[this] = ty
 Unifiable* FnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().fntype(specialize_elems(map)).node(); }
 Unifiable* TupleTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().tupletype(specialize_elems(map)).node(); }
 
-TypeVarNode* TypeVarNode::vspecialize(SpecializeMap& map) {
+Unifiable* TypeVarNode::vspecialize(SpecializeMap& map) {
     // was not bound in the specialized type -> return orginal type var
     // CHECK do we need to create a new copy here? unification lead to segmentation faults in the past...
     return map[this] = this;

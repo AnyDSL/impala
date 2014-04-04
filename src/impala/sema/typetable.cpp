@@ -60,18 +60,17 @@ void TypeTable::insert_new_rec(TraitNode* t) {
     // TODO insert methods
 }
 
-template<class T>
-void TypeTable::change_repr_generic(T* t, T* repr) const {
+void TypeTable::change_repr_generic(Unifiable* u, Unifiable* repr) const {
     // first change the representative of all bound variables
-    assert(t->bound_vars().size() == repr->bound_vars().size());
-    for (size_t i = 0, e = t->bound_vars().size(); i != e; ++i) {
-        change_repr(t->bound_var(i).node(), repr->bound_var(i).representative());
+    assert(u->bound_vars().size() == repr->bound_vars().size());
+    for (size_t i = 0, e = u->bound_vars().size(); i != e; ++i) {
+        change_repr(u->bound_var(i).node(), repr->bound_var(i).representative());
     }
 
     // change representatives of the bounds (i.e. Traits) of type variables
-    assert(t->num_bound_vars() == repr->num_bound_vars());
-    for (size_t i = 0; i != t->num_bound_vars(); ++i) {
-        UniSet<Trait> old_bounds = t->bound_var(i)->bounds();
+    assert(u->num_bound_vars() == repr->num_bound_vars());
+    for (size_t i = 0; i != u->num_bound_vars(); ++i) {
+        UniSet<Trait> old_bounds = u->bound_var(i)->bounds();
         UniSet<Trait> repr_bounds = repr->bound_var(i)->bounds();
 
         assert(old_bounds.size() == repr_bounds.size());
@@ -93,24 +92,25 @@ void TypeTable::change_repr_generic(T* t, T* repr) const {
     }
 }
 
-void TypeTable::change_repr_rec(TypeNode* ty, TypeNode* reprt) const {
-    auto t = ty->as<KnownTypeNode>();
-    auto repr = reprt->as<KnownTypeNode>();
+void TypeTable::change_repr_rec(Unifiable* u, Unifiable* repr) const {
+    if (auto ty = u->isa<TypeNode>()) {
+        auto t = ty->as<KnownTypeNode>();
+        auto ktn = repr->as<KnownTypeNode>();
 
-    // change representative of all sub elements
-    assert(t->size() == repr->size());
-    for (size_t i = 0, e = t->size(); i != e; ++i)
-        change_repr(t->elem_(i).node(), repr->elem(i).representative());
+        // change representative of all sub elements
+        assert(t->size() == ktn->size());
+        for (size_t i = 0, e = t->size(); i != e; ++i)
+            change_repr(t->elem_(i).node(), ktn->elem(i).representative());
+    }
 }
 
-template<class T>
-void TypeTable::change_repr(T* t, T* repr) const {
-    if (!t->is_unified()) {
-        change_repr_generic(t, repr);
-        change_repr_rec(t, repr);
-        t->set_representative(repr);
+void TypeTable::change_repr(Unifiable* u, Unifiable* repr) const {
+    if (!u->is_unified()) {
+        change_repr_generic(u, repr);
+        change_repr_rec(u, repr);
+        u->set_representative(repr);
     } else
-        assert(t->representative() == repr);
+        assert(u->representative() == repr);
 }
 
 template<class T>

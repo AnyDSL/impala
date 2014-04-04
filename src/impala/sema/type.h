@@ -1,12 +1,13 @@
 #ifndef IMPALA_SEMA_TYPE_H
 #define IMPALA_SEMA_TYPE_H
 
+#include "impala/sema/trait.h"
+
 #include "thorin/util/autoptr.h"
 #include "thorin/util/array.h"
 #include "thorin/util/hash.h"
 
-#include "impala/sema/generic.h"
-#include "impala/sema/trait.h"
+#include "impala/sema/unifiable.h"
 
 #define private public
 

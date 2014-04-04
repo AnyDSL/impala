@@ -100,13 +100,10 @@ private:
      *
      * This assumes that t is equal to repr.
      */
-    template<class T> void change_repr(T* t, T* repr) const;
-    /// change the representative of the bound type variables
-    template<class T> void change_repr_generic(T* t, T* repr) const;
+    void change_repr(Unifiable* unifiable, Unifiable* representative) const;
+    void change_repr_generic(Unifiable* unifiable, Unifiable* representative) const;
     /// change the representative of the contained types
-    void change_repr_rec(TypeNode* t, TypeNode* repr) const;
-    void change_repr_rec(TraitNode* t, TraitNode* repr) const {}
-    void change_repr_rec(TraitImplNode* t, TraitImplNode* repr) const {}
+    void change_repr_rec(Unifiable* u, Unifiable* repr) const;
 
     TraitInstanceNode* instantiate_trait(TraitNode* trait, SpecializeMap& map) { 
         return instantiate_trait(Trait(trait), map); 

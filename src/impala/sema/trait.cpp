@@ -30,7 +30,7 @@ void TraitNode::add_super_trait(Trait t) {
     }
 }
 
-bool TraitInstanceNode::unify_with(TraitNode* other) {
+bool TraitInstanceNode::unify_with(Unifiable* other) {
     if (auto tinst = other->isa<TraitInstanceNode>()) {
         if (trait() == tinst->trait()) {
             auto other_vinsts = tinst->var_instances_;
@@ -54,15 +54,14 @@ void TraitInstanceNode::refine() {
     for (size_t i = 1; i < trait()->num_bound_vars(); ++i) {
         TypeVar tv = trait()->bound_var(i);
         assert(var_instances_.find(tv.node()) != var_instances_.end()); // CHECK is node() correct here?
-        Generic* e = var_instances_.find(tv.node())->second;
+        auto u = var_instances_.find(tv.node())->second;
 
-        if (UnknownTypeNode* utn = e->isa<UnknownTypeNode>()) {
+        if (UnknownTypeNode* utn = u->isa<UnknownTypeNode>()) {
             assert(utn->is_instantiated());
             utn->instance()->refine();
             var_instances_[tv.node()] = utn;
-        } else {
-            e->refine();
-        }
+        } else
+            u->refine();
     }
 }
 
@@ -142,18 +141,20 @@ const UniSet<Trait>& TraitInstanceNode::super_traits() {
     return super_traits_;
 }
 
-TraitNode* TraitNode::vspecialize(SpecializeMap& map) {
+Unifiable* TraitNode::vspecialize(SpecializeMap& map) {
     return is_generic() ? typetable().instantiate_trait(this, map) : this;
 }
 
-TraitNode* TraitInstanceNode::vspecialize(SpecializeMap& map) {
+Unifiable* TraitInstanceNode::vspecialize(SpecializeMap& map) {
     SpecializeMap m;
     for (auto i : var_instances_)
-        m[i.first] = i.second->gspecialize(map);
+        m[i.first] = i.second->specialize(map);
 
     return typetable().instantiate_trait(trait(), m);
 }
 
-Generic* TraitImplNode::vspecialize(SpecializeMap& m) { return m[this] = typetable().implement_trait(impl_decl(), trait()->specialize(m)).node(); }
+Unifiable* TraitImplNode::vspecialize(SpecializeMap& map) { 
+    return map[this] = typetable().implement_trait(impl_decl(), trait()->specialize(map)).node(); 
+}
 
 }

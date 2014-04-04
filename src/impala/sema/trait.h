@@ -1,10 +1,10 @@
 #ifndef IMPALA_SEMA_TRAIT_H
 #define IMPALA_SEMA_TRAIT_H
 
-#include "impala/sema/generic.h"
+#include "thorin/util/hash.h"
 
 #include "impala/symbol.h"
-#include "thorin/util/hash.h"
+#include "impala/sema/unifiable.h"
 
 namespace impala {
 
@@ -63,8 +63,7 @@ public:
     virtual bool is_closed() const { return true; } // TODO
 
 protected:
-    /// copy this trait but replace the sub-elements given in the map
-    TraitNode* vspecialize(SpecializeMap&);
+    Unifiable* vspecialize(SpecializeMap&);
 
 private:
     bool add_method(Symbol name, Type method_type, bool inherited);
@@ -108,8 +107,7 @@ public:
     virtual bool is_closed() const;
 
 protected:
-    /// copy this trait but replace the sub-elements given in the map
-    TraitNode* vspecialize(SpecializeMap&);
+    Unifiable* vspecialize(SpecializeMap&);
 
 private:
     const Trait trait() const { return trait_; }
@@ -150,8 +148,7 @@ public:
     virtual bool is_closed() const { return true; } // TODO
 
 protected:
-    /// copy this \p TraitImplNode but replace the sub-elements given in the map
-    TraitImplNode* vspecialize(SpecializeMap& m);
+    Unifiable* vspecialize(SpecializeMap& m);
 
     virtual std::string to_string() const { return ""; } // TODO
 
