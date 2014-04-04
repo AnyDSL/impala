@@ -13,13 +13,15 @@ int UnknownTypeNode::counter_ = 0;
 
 bool KnownTypeNode::unify_with(Unifiable* other) {
     if (auto ktn = other->isa<KnownTypeNode>()) {
-        if (unify_bound_vars(other->bound_vars())) {
-            // go through all sub elements
-            if (size() == ktn->size()) {
-                bool result = true;
-                for (size_t i = 0, e = size(); i != e && result; ++i)
-                    result &= elem(i)->unify_with(ktn->elem(i));
-                return result;
+        if (this->kind() == ktn->kind()) { // TODO make this kind handling better
+            if (unify_bound_vars(other->bound_vars())) {
+                // go through all sub elements
+                if (size() == ktn->size()) {
+                    bool result = true;
+                    for (size_t i = 0, e = size(); i != e && result; ++i)
+                        result &= elem(i)->unify_with(ktn->elem(i));
+                    return result;
+                }
             }
         }
     }
