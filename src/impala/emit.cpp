@@ -301,6 +301,23 @@ Def PostfixExpr::remit(CodeGen& cg) const {
     return def;
 }
 
+Def MapExpr::remit(CodeGen& cg) const {
+    Def ldef = cg.remit(lhs());
+
+    if (auto fn = type().isa<FnType>()) {
+        std::vector<Def> defs;
+        defs.push_back(cg.get_mem());
+        for (auto arg : args())
+            defs.push_back(cg.remit(arg));
+
+        cg.mem_call(ldef, defs, fn->return_type()->convert(cg.world()));
+        return cg.cur_bb->params().back();
+    } else {
+        assert(false && "TODO");
+        return Def();
+    }
+}
+
 Def IfExpr::remit(CodeGen& cg) const {
     JumpTarget t("if_then"), f("if_else"), x("if_next");
     cg.emit_branch(cond(), t, f);

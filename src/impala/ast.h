@@ -984,11 +984,11 @@ public:
     const Expr* lhs() const { return lhs_; }
     virtual bool is_lvalue() const;
     virtual void check(NameSema&) const;
-    //virtual thorin::Var emit(CodeGen&) const;
 
 private:
     virtual std::ostream& print(Printer&) const;
     virtual Type check(TypeSema&, Type) const;
+    virtual thorin::Def remit(CodeGen&) const;
 
     AutoPtr<const Expr> lhs_;
     Exprs args_;
