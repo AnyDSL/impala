@@ -143,7 +143,6 @@ public:
     Unifiable* specialize(SpecializeMap& map);
 
 protected:
-
     std::string bound_vars_to_string() const;
     bool unify_bound_vars(thorin::ArrayRef<TypeVar>);
     void refine_bound_vars();
@@ -175,7 +174,6 @@ public:
         : Unifiable(tt)
     {}
 
-    //Unifiable* representative() const { return representative_; }
     Proxy<T> instantiate(SpecializeMap& map) { return Proxy<T>(Unifiable::instantiate(map)->as<T>()); }
     Proxy<T> specialize(SpecializeMap& map) { return Proxy<T>(Unifiable::specialize(map)->as<T>()); }
 };

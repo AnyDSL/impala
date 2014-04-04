@@ -9,8 +9,6 @@
 
 #include "impala/sema/unifiable.h"
 
-#define private public
-
 namespace thorin {
     class Type;
     class World;
@@ -345,6 +343,7 @@ protected:
     friend class TypeTable;
     friend class KnownTypeNode;
     friend class Generic;
+    friend void Unifiable::add_bound_var(TypeVar); // maybe we can design things better to avoid this friend
 };
 
 typedef Proxy<TypeErrorNode> TypeError;
