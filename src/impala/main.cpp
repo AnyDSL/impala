@@ -127,11 +127,12 @@ int main(int argc, char** argv) {
             impala::dump(prg, fancy);
 
         result &= check(init, prg, nossa);
+
+        if (result && emit_annotated)
+            impala::dump(prg, fancy);
+
         if (emit_thorin)
             emit(init.world, prg);
-
-        if (emit_annotated)
-            impala::dump(prg, fancy);
 
         if (result) {
             if (!nocleanup)
