@@ -1,0 +1,7 @@
+fn id[X](x: X) -> X {
+    x
+}
+
+fn main() -> () {
+    id(id);
+}
