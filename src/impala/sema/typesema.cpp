@@ -314,6 +314,9 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
             sema.error(this) << "could not unify types: expected '" << expected << "' but found '" << t << "'.\n";
             return sema.type_error();
         }
+    } else if (expected.empty()) {
+        sema.error(this) << "could not infer parameter type for " << this << ".\n";
+        return sema.type_error();
     } else {
         return expected;
     }
