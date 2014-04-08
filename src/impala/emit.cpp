@@ -44,6 +44,8 @@ public:
     const Enter* frame;
 };
 
+Var ValueDecl::var(CodeGen& cg) const { return var_; }
+
 Var LocalDecl::var(CodeGen& cg) const {
     if (!var_) {
         auto thorin_type = type()->convert(cg.world());
@@ -98,6 +100,7 @@ void FnDecl::emit(CodeGen& cg) const {
     // create thorin function
     auto pi = type()->convert(cg.world())->as<thorin::Pi>();
     lambda_ = cg.world().lambda(pi, symbol().str());
+    var_ = Var(cg, lambda_);
     if (is_extern())
         lambda_->attribute().set(Lambda::Extern);
 
@@ -205,7 +208,7 @@ Def LiteralExpr::remit(CodeGen& cg) const {
 }
 
 Var PathExpr::lemit(CodeGen& cg) const {
-    return value_decl()->isa<LocalDecl>()->var(cg);
+    return value_decl()->var(cg);
 }
 
 Def PrefixExpr::remit(CodeGen& cg) const {
@@ -304,7 +307,7 @@ Def PostfixExpr::remit(CodeGen& cg) const {
 Def MapExpr::remit(CodeGen& cg) const {
     Def ldef = cg.remit(lhs());
 
-    if (auto fn = type().isa<FnType>()) {
+    if (auto fn = lhs()->type().isa<FnType>()) {
         std::vector<Def> defs;
         defs.push_back(cg.get_mem());
         for (auto arg : args())

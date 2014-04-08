@@ -326,15 +326,17 @@ class ValueDecl : public TypeDecl {
 public:
     const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     bool is_mut() const { return is_mut_; }
+    virtual thorin::Var var(CodeGen&) const;
     virtual void check(NameSema&) const;
 
 private:
     Type check(TypeSema&, Type) const;
     virtual Type check(TypeSema& sema) const;
-
-protected:
     AutoPtr<const ASTType> ast_type_;
     bool is_mut_ = false;
+
+protected:
+    mutable thorin::Var var_;
 
     friend class Parser;
     friend class TypeSema;
@@ -345,17 +347,17 @@ class LocalDecl : public ValueDecl {
 public:
     LocalDecl(size_t handle)
         : handle_(handle)
+        , is_address_taken_(false)
     {}
 
     size_t handle() const { return handle_; }
     bool is_address_taken() const { return is_address_taken_; }
     bool is_anonymous() const { return symbol() == Symbol(); }
     virtual std::ostream& print(Printer&) const;
-    thorin::Var var(CodeGen&) const;
+    virtual thorin::Var var(CodeGen&) const;
 
 protected:
     size_t handle_;
-    mutable thorin::Var var_;
     mutable bool is_address_taken_;
 
     friend class Parser;
