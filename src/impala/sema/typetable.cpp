@@ -172,7 +172,7 @@ bool TypeTable::check_bounds(const ASTNode* loc, Unifiable* unifiable, thorin::A
         TypeVar v = unifiable->bound_var(i);
         Type instance = inst_types[i];
         assert(map.contains(*v));
-        assert(map[*v] == *instance);
+        assert(map.find(*v)->second == *instance);
 
         for (auto bound : v->bounds()) {
             SpecializeMap m(map); // copy the map
