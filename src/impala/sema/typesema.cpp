@@ -528,7 +528,7 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
             par_types.push_back(sema.check(param));
 
         fn_type = sema.fntype(par_types);
-        sema.unify(fn_type.as<Type>());
+        sema.unify(fn_type);
     }
 
     assert(body() != nullptr);
