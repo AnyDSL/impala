@@ -58,14 +58,8 @@ public:
         static_assert(std::is_base_of<U, T>::value, "U is not a base type of T");
         assert(node_ != nullptr); return Proxy<U>((U*) node_);
     }
-    template<class U> Proxy<typename U::BaseType> isa() { 
-        assert(node_ != nullptr); return Proxy<typename U::BaseType>((*this)->isa<typename U::BaseType>()); 
-    }
     template<class U> Proxy<typename U::BaseType> isa() const { 
         assert(node_ != nullptr); return Proxy<typename U::BaseType>((*this)->isa<typename U::BaseType>()); 
-    }
-    template<class U> Proxy<typename U::BaseType> as() { 
-        assert(node_ != nullptr); return Proxy<typename U::BaseType>((*this)->as <typename U::BaseType>()); 
     }
     template<class U> Proxy<typename U::BaseType> as() const { 
         assert(node_ != nullptr); return Proxy<typename U::BaseType>((*this)->as <typename U::BaseType>()); 
