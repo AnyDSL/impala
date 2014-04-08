@@ -55,6 +55,23 @@ void TypeTable::insert_new(Unifiable* unifiable) {
     assert(p.second && "hash/equal broken");
 }
 
+Unifiable* TypeTable::instantiate_unknown(Unifiable* unifiable, std::vector<Type>& types) {
+    for (size_t i = 0; i < unifiable->num_bound_vars(); ++i) 
+        types.push_back(unknown_type());
+    auto map = infer(unifiable, types);
+    return unifiable->instantiate(map);
+}
+
+SpecializeMap TypeTable::infer(Unifiable* unifiable, thorin::ArrayRef<Type> var_instances) const {
+    assert(unifiable->num_bound_vars() == var_instances.size());
+    SpecializeMap map;
+    size_t i = 0;
+    for (TypeVar v : unifiable->bound_vars())
+        map[*v] = *var_instances[i++]; // CHECK ist deref correct here and below?
+    assert(map.size() == var_instances.size());
+    return map;
+}
+
 void TypeTable::change_repr_unifiable(Unifiable* u, Unifiable* repr) const {
     // first change the representative of all bound variables
     assert(u->bound_vars().size() == repr->bound_vars().size());
@@ -177,9 +194,5 @@ bool TypeTable::check_bounds(const ASTNode* loc, Unifiable* unifiable, thorin::A
 
     return no_error;
 }
-
-//template bool TypeTable::check_bounds(const ASTNode* loc, Type unifiable, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
-//template bool TypeTable::check_bounds(const ASTNode* loc, Trait unifiable, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
-//template bool TypeTable::check_bounds(const ASTNode* loc, TraitImpl unifiable, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
 
 }

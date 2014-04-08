@@ -42,74 +42,54 @@ public:
     TupleType unit() { return tupletype({}); }
 
     /// Unify a type and return \p true if the representative changed.
-    bool unify(Unifiable*);
-    template<class T> bool unify(Proxy<T> proxy) { return unify(proxy.node()); }
-    /// Checks if all types in the type tables are sane and correctly unified.
-    void verify() const;
+    template<class T> bool unify(Proxy<T> proxy) { return unify(*proxy); }
 
     /**
      * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
      * therefore it is important to call \p check_bounds after all unknowns have been resolved!
      */
-    Unifiable* instantiate_unknown(Unifiable* unifiable, std::vector<Type>& inst_types) {
-        for (size_t i = 0; i < unifiable->num_bound_vars(); ++i) 
-            inst_types.push_back(unknown_type());
-        auto map = infer(unifiable, inst_types);
-        return unifiable->instantiate(map);
-    }
     template<class T>
     Proxy<T> instantiate_unknown(Proxy<T> proxy, std::vector<Type>& types) { 
         return Proxy<T>(instantiate_unknown(*proxy, types)->template as<T>());
     }
-
-    bool check_bounds(const ASTNode* loc, Unifiable* unifiable, thorin::ArrayRef<Type> types) {
-        assert(types.size() == unifiable->num_bound_vars());
-        auto map = infer(unifiable, types);
-        return check_bounds(loc, unifiable, types, map);
-    }
     template<class T>
     bool check_bounds(const ASTNode* loc, Proxy<T> proxy, thorin::ArrayRef<Type> types) { 
-        return check_bounds(loc, *proxy, types);
+        auto map = infer(*proxy, types);
+        return check_bounds(loc, *proxy, types, map);
     }
-
-    virtual void check_impls() {}
-
-protected:
     template<class T>
     bool check_bounds(const ASTNode* loc, Proxy<T> proxy, thorin::ArrayRef<Type> types, SpecializeMap& map) {
         return check_bounds(loc, *proxy, types, map);
     }
+
+    virtual void check_impls() = 0;
+    void verify() const; ///< Checks if all types in the type tables are sane and correctly unified.
+
+protected:
     bool check_bounds(const ASTNode* loc, Unifiable* unifiable, thorin::ArrayRef<Type> types, SpecializeMap& map);
-    SpecializeMap infer(Unifiable* unifiable, thorin::ArrayRef<Type> var_instances) const {
-        assert(unifiable->num_bound_vars() == var_instances.size());
-        SpecializeMap map;
-        size_t i = 0;
-        for (TypeVar v : unifiable->bound_vars())
-            map[*v] = *var_instances[i++]; // CHECK ist deref correct here and below?
-        assert(map.size() == var_instances.size());
-        return map;
-    }
+    SpecializeMap infer(Unifiable*, thorin::ArrayRef<Type>) const;
     template<class T>
     SpecializeMap infer(Proxy<T> proxy, thorin::ArrayRef<Type> var_instances) const { return infer(*proxy, var_instances); }
 
 private:
+    /// insert all contained unifiables that are not yet unified
+    void insert_new(Unifiable*);
+    bool unify(Unifiable*);
+    Unifiable* instantiate_unknown(Unifiable*, std::vector<Type>&);
     template<class T> 
     Proxy<T> new_unifiable(T* tn) {
         garbage_.push_back(tn);
         return Proxy<T>(tn);
     }
 
-    /// insert all contained unifiables that are not yet unified
-    void insert_new(Unifiable*);
-
     /**
      * Recursively change the representatives of the not-unified elements in t to the
      * corresponding types in repr.
      *
-     * This assumes that t is equal to repr.
+     * This assumes that \p unifiable is equal to repr.
      */
-    void change_repr(Unifiable* unifiable, Unifiable* representative) const;
-    void change_repr_unifiable(Unifiable* unifiable, Unifiable* representative) const;
+    void change_repr(Unifiable* unifiable, Unifiable* repr) const;
+    void change_repr_unifiable(Unifiable* unifiable, Unifiable* repr) const;
     /// change the representative of the contained types
     void change_repr_rec(Unifiable* u, Unifiable* repr) const;
 
