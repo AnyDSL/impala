@@ -108,7 +108,6 @@ private:
 #define IMPALA_TYPE(itype, atype) PrimType itype##_;
 #include "impala/tokenlist.h"
 
-    friend class TypeVarNode;
     friend class TraitNode;
     friend class TraitInstanceNode;
 };

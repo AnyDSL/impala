@@ -1,5 +1,5 @@
-#ifndef IMPALA_SEMA_GENERIC_H
-#define IMPALA_SEMA_GENERIC_H
+#ifndef IMPALA_SEMA_UNIFIABLE_H
+#define IMPALA_SEMA_UNIFIABLE_H
 
 #include <typeinfo>
 #include <vector>
@@ -157,8 +157,6 @@ protected:
     std::vector<TypeVar> bound_vars_;
 
     friend class TypeTable;
-    friend class TypeVarNode;
-    friend class TraitInstanceNode;
 };
 
 template<class T>

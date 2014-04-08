@@ -179,7 +179,6 @@ public:
 private:
     const int id_;       ///< Used for unambiguous dumping.
     static int counter_;
-
     Type instance_;
 
     friend class TypeTable;
@@ -341,8 +340,6 @@ protected:
     void refresh_bounds();
 
     friend class TypeTable;
-    friend class KnownTypeNode;
-    friend class Generic;
     friend void Unifiable::add_bound_var(TypeVar); // maybe we can design things better to avoid this friend
 };
 
