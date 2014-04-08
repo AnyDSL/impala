@@ -55,7 +55,7 @@ void TypeTable::insert_new(Unifiable* unifiable) {
     assert(p.second && "hash/equal broken");
 }
 
-void TypeTable::change_repr_generic(Unifiable* u, Unifiable* repr) const {
+void TypeTable::change_repr_unifiable(Unifiable* u, Unifiable* repr) const {
     // first change the representative of all bound variables
     assert(u->bound_vars().size() == repr->bound_vars().size());
     for (size_t i = 0, e = u->bound_vars().size(); i != e; ++i) {
@@ -101,7 +101,7 @@ void TypeTable::change_repr_rec(Unifiable* u, Unifiable* repr) const {
 
 void TypeTable::change_repr(Unifiable* u, Unifiable* repr) const {
     if (!u->is_unified()) {
-        change_repr_generic(u, repr);
+        change_repr_unifiable(u, repr);
         change_repr_rec(u, repr);
         u->set_representative(repr);
     } else
@@ -144,15 +144,15 @@ PrimType TypeTable::primtype(const PrimTypeKind kind) {
     }
 }
 
-template<class T> bool TypeTable::check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMap& map) {
-    assert(inst_types.size() == generic->num_bound_vars());
+bool TypeTable::check_bounds(const ASTNode* loc, Unifiable* unifiable, thorin::ArrayRef<Type> inst_types, SpecializeMap& map) {
+    assert(inst_types.size() == unifiable->num_bound_vars());
     assert(inst_types.size() == map.size());
 
     bool no_error = true;
 
     // check the bounds
-    for (size_t i = 0; i < generic->num_bound_vars(); ++i) {
-        TypeVar v = generic->bound_var(i);
+    for (size_t i = 0; i < unifiable->num_bound_vars(); ++i) {
+        TypeVar v = unifiable->bound_var(i);
         Type instance = inst_types[i];
         assert(map.contains(*v));
         assert(map[*v] == *instance);
@@ -178,8 +178,8 @@ template<class T> bool TypeTable::check_bounds(const ASTNode* loc, T generic, th
     return no_error;
 }
 
-template bool TypeTable::check_bounds(const ASTNode* loc, Type generic, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
-template bool TypeTable::check_bounds(const ASTNode* loc, Trait generic, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
-template bool TypeTable::check_bounds(const ASTNode* loc, TraitImpl generic, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
+//template bool TypeTable::check_bounds(const ASTNode* loc, Type unifiable, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
+//template bool TypeTable::check_bounds(const ASTNode* loc, Trait unifiable, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
+//template bool TypeTable::check_bounds(const ASTNode* loc, TraitImpl unifiable, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
 
 }

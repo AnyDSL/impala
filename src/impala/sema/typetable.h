@@ -51,35 +51,46 @@ public:
      * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
      * therefore it is important to call \p check_bounds after all unknowns have been resolved!
      */
-    template<class T> 
-    T instantiate_unknown(T t, std::vector<Type>& inst_types) {
-        for (size_t i = 0; i < t->num_bound_vars(); ++i) inst_types.push_back(unknown_type());
-        auto map = infer(t, inst_types);
-        return t->instantiate(map);
+    Unifiable* instantiate_unknown(Unifiable* unifiable, std::vector<Type>& inst_types) {
+        for (size_t i = 0; i < unifiable->num_bound_vars(); ++i) 
+            inst_types.push_back(unknown_type());
+        auto map = infer(unifiable, inst_types);
+        return unifiable->instantiate(map);
+    }
+    template<class T>
+    Proxy<T> instantiate_unknown(Proxy<T> proxy, std::vector<Type>& types) { 
+        return Proxy<T>(instantiate_unknown(*proxy, types)->template as<T>());
     }
 
-    template<class T> 
-    bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types) {
-        assert(inst_types.size() == generic->num_bound_vars());
-        auto map = infer(generic, inst_types);
-        return check_bounds(loc, generic, inst_types, map);
+    bool check_bounds(const ASTNode* loc, Unifiable* unifiable, thorin::ArrayRef<Type> types) {
+        assert(types.size() == unifiable->num_bound_vars());
+        auto map = infer(unifiable, types);
+        return check_bounds(loc, unifiable, types, map);
+    }
+    template<class T>
+    bool check_bounds(const ASTNode* loc, Proxy<T> proxy, thorin::ArrayRef<Type> types) { 
+        return check_bounds(loc, *proxy, types);
     }
 
     virtual void check_impls() {}
 
 protected:
-    template<class T> 
-    bool check_bounds(const ASTNode* loc, T generic, thorin::ArrayRef<Type> inst_types, SpecializeMap& map);
-    template<class T> 
-    SpecializeMap infer(T generic, thorin::ArrayRef<Type> var_instances) const {
-        assert(generic->num_bound_vars() == var_instances.size());
+    template<class T>
+    bool check_bounds(const ASTNode* loc, Proxy<T> proxy, thorin::ArrayRef<Type> types, SpecializeMap& map) {
+        return check_bounds(loc, *proxy, types, map);
+    }
+    bool check_bounds(const ASTNode* loc, Unifiable* unifiable, thorin::ArrayRef<Type> types, SpecializeMap& map);
+    SpecializeMap infer(Unifiable* unifiable, thorin::ArrayRef<Type> var_instances) const {
+        assert(unifiable->num_bound_vars() == var_instances.size());
         SpecializeMap map;
         size_t i = 0;
-        for (TypeVar v : generic->bound_vars())
+        for (TypeVar v : unifiable->bound_vars())
             map[*v] = *var_instances[i++]; // CHECK ist deref correct here and below?
         assert(map.size() == var_instances.size());
         return map;
     }
+    template<class T>
+    SpecializeMap infer(Proxy<T> proxy, thorin::ArrayRef<Type> var_instances) const { return infer(*proxy, var_instances); }
 
 private:
     template<class T> 
@@ -98,7 +109,7 @@ private:
      * This assumes that t is equal to repr.
      */
     void change_repr(Unifiable* unifiable, Unifiable* representative) const;
-    void change_repr_generic(Unifiable* unifiable, Unifiable* representative) const;
+    void change_repr_unifiable(Unifiable* unifiable, Unifiable* representative) const;
     /// change the representative of the contained types
     void change_repr_rec(Unifiable* u, Unifiable* repr) const;
 
