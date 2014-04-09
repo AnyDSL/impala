@@ -1,11 +1,27 @@
 #ifndef IMPALA_DUMP_H
 #define IMPALA_DUMP_H
 
+#include "thorin/util/printer.h"
+
+#include "impala/prec.h"
+
 #include <iostream>
 
 namespace impala {
 
 class ASTNode;
+class Expr;
+
+class Printer : public thorin::Printer {
+public:
+    Printer(std::ostream& o, bool fancy)
+        : thorin::Printer(o, fancy)
+        , prec(BOTTOM)
+    {}
+    std::ostream& print(const Expr* expr);
+
+    Prec prec;
+};
 
 /** 
  * @brief Dumps a human readable representation of the ASTNode \p n to output stream \p o.

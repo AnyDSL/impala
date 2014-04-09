@@ -2,31 +2,11 @@
 
 #include "impala/ast.h"
 #include "impala/dump.h"
-#include "impala/prec.h"
-
-#include "thorin/util/printer.h"
 
 using thorin::ArrayRef;
 using thorin::Type;
 
 namespace impala {
-
-class Printer : public thorin::Printer {
-public:
-    Printer(std::ostream& o, bool fancy)
-        : thorin::Printer(o, fancy)
-        , prec(BOTTOM)
-    {}
-
-    std::ostream& print(const Expr* expr) {
-        expr->print(*this);
-        if (!expr->inferred_args().empty())
-            return dump_list([&] (Type t) { stream() << t; }, expr->inferred_args(), "[", "]", ", ", false);
-        return stream();
-    }
-
-    Prec prec;
-};
 
 //------------------------------------------------------------------------------
 
@@ -255,6 +235,13 @@ std::ostream& ModContents::print(Printer& p) const {
 /*
  * expr
  */
+
+std::ostream& Printer::print(const Expr* expr) {
+    expr->print(*this);
+    if (!expr->inferred_args().empty())
+        return dump_list([&] (Type t) { stream() << t; }, expr->inferred_args(), "[", "]", ", ", false);
+    return stream();
+}
 
 std::ostream& BlockExpr::print(Printer& p) const {
     p.stream() << '{';
