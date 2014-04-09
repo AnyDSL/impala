@@ -1,0 +1,10 @@
+fn f[X](i: int, x: X) -> X {
+    x
+}
+
+fn g[Y](h: fn[Z](Y, Z) -> Z) -> () {
+}
+
+fn main() -> () {
+    g(f);
+}
