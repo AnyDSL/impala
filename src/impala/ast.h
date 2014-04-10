@@ -146,12 +146,11 @@ protected:
  */
 
 class ASTType : public ASTNode, public Typeable {
-public:
-    virtual void check(NameSema&) const = 0;
-
 private:
+    virtual void check(NameSema&) const = 0;
     virtual Type check(TypeSema&) const = 0;
 
+    friend class NameSema;
     friend class TypeSema;
 };
 
@@ -160,9 +159,9 @@ public:
     ErrorASTType(const Location& loc) { loc_ = loc; }
 
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
 
 private:
+    virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 };
 
@@ -175,9 +174,9 @@ public:
 
     Kind kind() const { return kind_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
 
 private:
+    virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 
     Kind kind_;
@@ -192,9 +191,9 @@ public:
     bool is_owned() const { return kind_ == '~'; }
     bool is_borrowed() const { return kind_ == '&'; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
 
 private:
+    virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 
     char kind_;
@@ -216,9 +215,9 @@ protected:
 class IndefiniteArrayASTType : public ArrayASTType {
 public:
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
 
 private:
+    virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 };
 
@@ -226,9 +225,9 @@ class DefiniteArrayASTType : public ArrayASTType {
 public:
     uint64_t dim() const { return dim_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
 
 private:
+    virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 
     thorin::u64 dim_;
@@ -250,9 +249,9 @@ protected:
 class TupleASTType : public CompoundASTType {
 public:
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
 
 private:
+    virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 };
 
@@ -261,10 +260,10 @@ public:
     Symbol symbol() const { return symbol_; }
     SafePtr<const Decl> decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
     Trait to_trait(TypeSema&, Type) const;
 
 private:
+    virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 
     Symbol symbol_;
@@ -278,9 +277,9 @@ class FnASTType : public TypeParamList, public CompoundASTType {
 public:
     const FnASTType* ret_fn_type() const;
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
 
 private:
+    virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 
     friend class Parser;

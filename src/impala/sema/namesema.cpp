@@ -34,6 +34,7 @@ public:
     void pop_scope();                                            ///< Discards current scope.
 
 
+    void check(const ASTType* ast_type) { ast_type->check(*this); }
     void check(const TypeDecl* type_decl) { type_decl->check(*this); }
     void check(const Item* item) { 
         if (auto type_decl_item = item->isa<TypeDeclItem>())
@@ -109,7 +110,7 @@ void NameSema::pop_scope() {
 
 void TypeParam::check(NameSema& sema) const {
     for (const ASTType* bound : bounds())
-        bound->check(sema);
+        sema.check(bound);
 }
 
 /*
@@ -118,38 +119,37 @@ void TypeParam::check(NameSema& sema) const {
 
 void TypeParamList::check_type_params(NameSema& sema) const {
     // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
-    // first insert names
-    for (const TypeParam* tp : type_params()) {
-        sema.insert(tp);
-    }
-
-    // then check bounds
+    // first, insert names
     for (const TypeParam* tp : type_params())
-        tp->check(sema);
+        sema.insert(tp);
+
+    // then, check bounds
+    for (const TypeParam* tp : type_params())
+        sema.check(tp);
 }
 
 void ErrorASTType::check(NameSema& sema) const {}
 void PrimASTType::check(NameSema& sema) const {}
-void PtrASTType::check(NameSema& sema) const { referenced_type()->check(sema); }
-void IndefiniteArrayASTType::check(NameSema& sema) const { elem_type()->check(sema); }
-void DefiniteArrayASTType::check(NameSema& sema) const { elem_type()->check(sema); }
+void PtrASTType::check(NameSema& sema) const { sema.check(referenced_type()); }
+void IndefiniteArrayASTType::check(NameSema& sema) const { sema.check(elem_type()); }
+void DefiniteArrayASTType::check(NameSema& sema) const { sema.check(elem_type()); }
 
 void TupleASTType::check(NameSema& sema) const {
     for (auto elem : this->elems())
-        elem->check(sema);
+        sema.check(elem);
 }
 
 void ASTTypeApp::check(NameSema& sema) const {
     decl_ = sema.lookup(this, symbol());
     for (auto elem : elems())
-        elem->check(sema);
+        sema.check(elem);
 }
 
 void FnASTType::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
     for (auto elem : elems())
-        elem->check(sema);
+        sema.check(elem);
     sema.pop_scope();
 }
 
@@ -198,7 +198,7 @@ void Fn::fn_check(NameSema& sema) const {
 
         sema.insert(param);
         if (param->ast_type())
-            param->ast_type()->check(sema);
+            sema.check(param->ast_type());
         ++i;
     }
     if (body() != nullptr)
@@ -225,7 +225,7 @@ void TraitDecl::check(NameSema& sema) const {
     sema.insert(self_param());
     check_type_params(sema);
     for (auto t : super())
-        t->check(sema);
+        sema.check(t);
     for (auto method : methods())
         method->check(sema);
     sema.pop_scope();
@@ -235,8 +235,8 @@ void Impl::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
     if (trait())
-        trait()->check(sema);
-    for_type()->check(sema);
+        sema.check(trait());
+    sema.check(for_type());
     for (auto fn : methods())
         fn->check(sema);
     sema.pop_scope();
@@ -268,7 +268,7 @@ void FnExpr::check(NameSema& sema) const { fn_check(sema); }
 void PathElem::check(NameSema& sema) const {
     decl_ = sema.lookup(this, symbol());
     for (auto arg : args())
-        arg->check(sema);
+        sema.check(arg);
 }
 
 void Path::check(NameSema& sema) const {
@@ -293,12 +293,12 @@ void FieldExpr::check(NameSema& sema) const {
     lhs()->check(sema);
     // don't check symbol here as it depends on lhs' type - must be done in TypeSema
     for (auto arg : path_elem()->args())
-        arg->check(sema);
+        sema.check(arg);
 }
 
 void CastExpr::check(NameSema& sema) const {
     lhs()->check(sema);
-    ast_type()->check(sema);
+    sema.check(ast_type());
 }
 
 void DefiniteArrayExpr::check(NameSema& sema) const {
@@ -313,7 +313,7 @@ void RepeatedDefiniteArrayExpr::check(NameSema& sema) const {
 
 void IndefiniteArrayExpr::check(NameSema& sema) const {
     size()->check(sema);
-    elem_type()->check(sema);
+    sema.check(elem_type());
 }
 
 void TupleExpr::check(NameSema& sema) const {
@@ -364,7 +364,7 @@ void LetStmt::check(NameSema& sema) const {
 
 void ValueDecl::check(NameSema& sema) const {
     if (ast_type())
-        ast_type()->check(sema);
+        sema.check(ast_type());
     sema.insert(this);
 }
 
