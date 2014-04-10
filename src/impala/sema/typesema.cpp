@@ -630,6 +630,7 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
                 func = fn.as<FnType>();
 
             // there should at least be two arguments: the continuation and the self object
+            // TODO what about methods which don't return?
             if (func->size() > 1) {
                 sema.expect_type(lhs(), func->elem(0), "object");
                 return func->specialize_method(lhs()->type());
@@ -741,6 +742,13 @@ Type IfExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type ForExpr::check(TypeSema& sema, Type expected) const {
+    if (auto map = expr()->isa<MapExpr>()) {
+        assert(false && map && "TODO");
+    } else if (auto field_expr = expr()->isa<FieldExpr>()) {
+        assert(false && field_expr && "TODO");
+    }
+
+    sema.error(expr()) << "the looping expression does not support the 'for' protocol\n";
     return sema.unit();
 }
 
