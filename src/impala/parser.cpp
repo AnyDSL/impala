@@ -957,6 +957,7 @@ const IfExpr* Parser::parse_if_expr() {
 const ForExpr* Parser::parse_for_expr() {
     auto for_expr = loc(new ForExpr());
     eat(Token::FOR);
+    THORIN_PUSH(cur_var_handle, cur_var_handle);
     auto fn_expr = loc(new FnExpr());
     for_expr->fn_expr_ = fn_expr.get();
     parse_param_list(fn_expr->params_, Token::IN, true);
@@ -965,11 +966,21 @@ const ForExpr* Parser::parse_for_expr() {
     auto param = new Param(cur_var_handle++);
     param->is_mut_ = false;
     param->symbol_ = "break";
-    auto unit = new FnASTType();
-    unit->set_loc(prev_loc_);
+    auto break_type = new FnASTType();
+    break_type->set_loc(prev_loc_);
     param->set_loc(prev_loc_);
-    param->ast_type_ = unit;
+    param->ast_type_ = break_type;
     fn_expr->params_.push_back(param);
+
+    // create continue local
+    auto cont = loc(new LocalDecl(cur_var_handle++));
+    cont->is_mut_ = false;
+    cont->symbol_ = "continue";
+    auto cont_type = new FnASTType();
+    cont_type->set_loc(prev_loc_);
+    cont->set_loc(prev_loc_);
+    cont->ast_type_ = cont_type;
+    for_expr->cont_ = cont.get();
 
     for_expr->expr_ = parse_expr();
     fn_expr->body_ = try_block_expr("body of function");
