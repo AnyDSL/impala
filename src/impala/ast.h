@@ -654,6 +654,7 @@ private:
     virtual Type check(TypeSema&, Type) const = 0;
     virtual thorin::Var lemit(CodeGen&) const;
     virtual thorin::Def remit(CodeGen&) const;
+    virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
 
     mutable std::vector<Type> inferred_args_;
@@ -985,6 +986,7 @@ public:
     bool has_else() const;
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
+    virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
 
 private:
     virtual std::ostream& print(Printer&) const override;
@@ -1001,6 +1003,7 @@ class ForExpr : public Expr {
 public:
     const FnExpr* fn_expr() const { return fn_expr_; }
     const Expr* expr() const { return expr_; }
+    const LocalDecl* cont() const { return cont_; }
     virtual void check(NameSema&) const override;
 
 private:
@@ -1009,6 +1012,7 @@ private:
 
     AutoPtr<const FnExpr> fn_expr_;
     AutoPtr<const Expr> expr_;
+    AutoPtr<const LocalDecl> cont_;
 
     friend class Parser;
 };
@@ -1023,7 +1027,7 @@ class Stmt : public ASTNode {
 public:
     virtual void check(NameSema&) const = 0;
     virtual void check(TypeSema&) const = 0;
-    virtual void emit(CodeGen&, thorin::JumpTarget& exit) const = 0;
+    virtual void emit(CodeGen&) const = 0;
 };
 
 class ExprStmt : public Stmt {
@@ -1032,7 +1036,7 @@ public:
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
     virtual void check(TypeSema&) const override;
-    virtual void emit(CodeGen&, thorin::JumpTarget& exit) const override;
+    virtual void emit(CodeGen&) const override;
 
 private:
     AutoPtr<const Expr> expr_;
@@ -1046,7 +1050,7 @@ public:
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
     virtual void check(TypeSema&) const override;
-    virtual void emit(CodeGen&, thorin::JumpTarget& exit) const override;
+    virtual void emit(CodeGen&) const override;
 
 private:
     AutoPtr<const Item> item_;
@@ -1061,7 +1065,7 @@ public:
     const Expr* init() const { return init_; }
     virtual void check(NameSema&) const override;
     virtual void check(TypeSema&) const override;
-    virtual void emit(CodeGen&, thorin::JumpTarget& exit) const override;
+    virtual void emit(CodeGen&) const override;
 
 private:
     AutoPtr<const LocalDecl> local_;

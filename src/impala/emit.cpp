@@ -25,22 +25,24 @@ public:
     {}
 
     const thorin::Enter* frame() const { assert(cur_fn); return cur_fn->frame(); }
-    void split(JumpTarget& jt, JumpTarget& x, std::function<Def()> def) {
-        if (auto lambda = enter(jt)) {
-            lambda->set_value(1, def());
-            jump(x);
-        }
-    }
-    Def converge(JumpTarget& x, const thorin::Type* type, const char* name) {
-        if (auto lambda = enter(x))
-            return lambda->get_value(1, type, name);
+    /// Enter \p x and perform \p get_value to collect return value.
+    Def converge(const Expr* expr, JumpTarget& x) {
+        emit_jump(expr, x);
+        if (enter(x))
+            return cur_bb->get_value(1, expr->type()->convert(world()));
         return Def();
     }
-
+    void emit_jump(bool val, JumpTarget& x) {
+        if (is_reachable()) {
+            cur_bb->set_value(1, world().literal(val)); 
+            jump(x); 
+        } 
+    }
     Var lemit(const Expr* expr) { return is_reachable() ? expr->lemit(*this) : Var(); }
-    Def remit(const Expr* expr) { return is_reachable() ? expr->remit(*this) : nullptr; }
+    Def remit(const Expr* expr) { return is_reachable() ? expr->remit(*this) : Def(); }
+    void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
-    void emit(const Stmt* stmt, JumpTarget& exit) { if (is_reachable()) stmt->emit(*this, exit); }
+    void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }
     void emit(const Item* item) { item->emit(*this); }
 
     const Fn* cur_fn;
@@ -126,13 +128,13 @@ void FnDecl::emit(CodeGen& cg) const {
     // setup builtin functions
     if (lambda()->name == "nvvm")
         lambda()->attribute().set(Lambda::NVVM);
-    if (lambda()->name == "spir")
+    else if (lambda()->name == "spir")
         lambda()->attribute().set(Lambda::SPIR);
-    if (lambda()->name == "array")
+    else if (lambda()->name == "array")
         lambda()->attribute().set(Lambda::ArrayInit);
-    if (lambda()->name == "vectorized")
+    else if (lambda()->name == "vectorized")
         lambda()->attribute().set(Lambda::Vectorize);
-    if (lambda()->name == "wfv_get_tid")
+    else if (lambda()->name == "wfv_get_tid")
         lambda()->attribute().set(Lambda::VectorizeTid | Lambda::Extern);
 
     // setup memory + frame
@@ -191,15 +193,20 @@ void Typedef::emit(CodeGen& cg) const {
 
 Var Expr::lemit(CodeGen& cg) const { THORIN_UNREACHABLE; }
 Def Expr::remit(CodeGen& cg) const { return lemit(cg).load(); }
+void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const { 
+    if (auto def = cg.remit(this)) {
+        assert(cg.is_reachable());
+        cg.cur_bb->set_value(1, def); 
+        cg.jump(x); 
+    } else
+        assert(!cg.is_reachable());
+}
 void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.branch(cg.remit(this), t, f); }
 Def EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}); }
 
 Def BlockExpr::remit(CodeGen& cg) const {
-    for (auto stmt : stmts()) {
-        JumpTarget stmt_exit_bb("next");
-        cg.emit(stmt, stmt_exit_bb);
-        cg.enter(stmt_exit_bb);
-    }
+    for (auto stmt : stmts())
+        cg.emit(stmt);
     return cg.remit(expr());
 }
 
@@ -273,16 +280,16 @@ Def InfixExpr::remit(CodeGen& cg) const {
         case ANDAND: {
             JumpTarget t("and_true"), f("and_false"), x("and_exit");
             cg.emit_branch(lhs(), t, f);
-            cg.split(t, x, [&] { return cg.remit(rhs()); });
-            cg.split(f, x, [&] { return cg.world().literal(false); });
-            return cg.converge(x, cg.world().type_bool(), "and");
+            if (cg.enter(t)) cg.emit_jump(lhs(), x);
+            if (cg.enter(f)) cg.emit_jump(false, x);
+            return cg.converge(this, x);
         }
         case OROR: {
             JumpTarget t("or_true"), f("or_false"), x("or_exit");
             cg.emit_branch(lhs(), t, f);
-            cg.split(t, x, [&] { return cg.world().literal(true); });
-            cg.split(f, x, [&] { return cg.remit(rhs()); });
-            return cg.converge(x, cg.world().type_bool(), "or");
+            if (cg.enter(t)) cg.emit_jump(true, x);
+            if (cg.enter(f)) cg.emit_jump(rhs(), x);
+            return cg.converge(this, x);
         }
         default:
             const TokenKind op = (TokenKind) kind();
@@ -330,33 +337,35 @@ Def MapExpr::remit(CodeGen& cg) const {
     }
 }
 
-Def IfExpr::remit(CodeGen& cg) const {
-    JumpTarget t("if_then"), f("if_else"), x("if_next");
+void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
+    JumpTarget t("if_then"), f("if_else");
     cg.emit_branch(cond(), t, f);
-    cg.split(t, x, [&] { return cg.remit(then_expr()); });
-    cg.split(f, x, [&] { return cg.remit(else_expr()); });
-    if (!then_expr()->type().isa<NoReturnType>()) // HACK
-        return cg.converge(x, then_expr()->type()->convert(cg.world()), "if");
-    return Def();
+    if (cg.enter(t))
+        cg.emit_jump(then_expr(), x);
+    if (cg.enter(f))
+        cg.emit_jump(else_expr(), x);
+    cg.jump(x);
+}
+
+Def IfExpr::remit(CodeGen& cg) const { 
+    JumpTarget x("next");
+    return cg.converge(this, x); 
 }
 
 /*
  * Stmt
  */
 
-void ExprStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
-    if (cg.is_reachable()) {
+void ExprStmt::emit(CodeGen& cg) const {
+    if (cg.is_reachable())
         cg.remit(expr());
-        cg.jump(exit_bb);
-    }
 }
 
-void ItemStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const { 
+void ItemStmt::emit(CodeGen& cg) const { 
     cg.emit(item()); 
-    cg.jump(exit_bb); 
 }
 
-void LetStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
+void LetStmt::emit(CodeGen& cg) const {
     if (cg.is_reachable()) {
         auto var = local()->var(cg);
         if (init()) {
@@ -364,7 +373,6 @@ void LetStmt::emit(CodeGen& cg, JumpTarget& exit_bb) const {
             def->name = local()->symbol().str();
             var.store(def);
         }
-        cg.jump(exit_bb);
     }
 }
 

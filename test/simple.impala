@@ -1,12 +1,20 @@
 fn main(mut i : int) -> int {
     let mut a: int = 0;
-    let mut b: int = 0;
-    if !(i == 0 || i == 1) && i == 3 {
-        a++;
-        a = 23
-    } else {
-        a = 42
-    }
-
+    let mut b: int =
+        //if (i == 0 || i == 1) && i == 3 {
+        if 0 == 0 {
+            a++;
+            a = 23;
+            1
+        } else if i == 4 {
+            a = 42;
+            2
+        } else {
+            3
+        };
     a + a
+}
+
+extern fn f(i: int) -> bool {
+    i == 0 || i == 1
 }

@@ -939,13 +939,13 @@ const IfExpr* Parser::parse_if_expr() {
     auto if_expr = loc(new IfExpr());
     eat(Token::IF);
     if_expr->cond_ = parse_expr();
-    if_expr->then_expr_ = try_block_expr("then branch of an if expression");
+    if_expr->then_expr_ = try_block_expr("consequence of an if expression");
     if (accept(Token::ELSE)) {
         switch (la()) {
             case Token::IF:      if_expr->else_expr_ = parse_if_expr(); break;
             case Token::L_BRACE: if_expr->else_expr_ = parse_block_expr(); break;
             default:
-                error("block or if expression", "else branch of an if expression");
+                error("block or if expression", "alternative of an if expression");
         }
     }
         
