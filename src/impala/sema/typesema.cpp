@@ -3,6 +3,9 @@
 #include "impala/impala.h"
 #include "impala/sema/typetable.h"
 
+using thorin::Array;
+using thorin::ArrayRef;
+
 namespace impala {
 
 struct InstantiationHash {
@@ -41,6 +44,7 @@ public:
 
     Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances);
     Trait instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
+    Type check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Expr*> args, Type expected);
 
     // check wrappers
 
@@ -663,47 +667,53 @@ Type StructExpr::check(TypeSema& sema, Type expected) const {
     return Type();
 }
 
+Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Expr*> args, Type expected) {
+    std::vector<Type> inst_types;
+    FnType ofn = lhs->type().as<FnType>();
+    FnType fn = ofn->is_generic() ? instantiate_unknown(ofn, inst_types).as<FnType>() : ofn;
+
+    bool no_cont = fn->size() == (args.size()+1); // true if this is a normal function call (no continuation)
+    if (no_cont || (fn->size() == args.size())) {
+        for (size_t i = 0; i < args.size(); ++i) {
+            check(args[i], fn->elem(i), "argument");
+        }
+        if (no_cont && !expected.isa<UnknownType>())
+            create_return_type(whole, fn->elems().back())->unify_with(expected);
+
+        // instantiate fn type
+        if (ofn->is_generic()) {
+            bool no_error = true;
+            for (size_t i = 0; i < inst_types.size(); ++i) {
+                UnknownType ut = inst_types[i].isa<UnknownType>();
+                if (!ut || ut->is_instantiated()) {
+                    unify(inst_types[i]);
+                    lhs->add_inferred_arg(Type(inst_types[i].representative()));
+                } else {
+                    error(whole) << "could not find instance for type variable #" << i << ".\n";
+                    no_error = false;
+                }
+            }
+            if (no_error) {
+                // TODO where should be set this new type? should we set it at all?
+                check_bounds(whole, ofn, lhs->inferred_args());
+            }
+        }
+
+        if (no_cont) // return type
+            return create_return_type(whole, fn->elems().back()); 
+        else        // same number of args as params -> continuation call
+            return type_noreturn();
+    } else
+        error(whole) << "wrong number of arguments\n";
+    return type_error();
+}
+
 Type MapExpr::check(TypeSema& sema, Type expected) const {
     Type lhst = sema.check(lhs());
     sema.unify(lhst);
 
     if (auto ofn = lhst.isa<FnType>()) {
-        std::vector<Type> inst_types;
-        FnType fn = ofn->is_generic() ? sema.instantiate_unknown(lhst, inst_types).as<FnType>() : ofn;
-
-        bool no_cont = fn->size() == (args().size()+1); // true if this is a normal function call (no continuation)
-        if (no_cont || (fn->size() == args().size())) {
-            for (size_t i = 0; i < args().size(); ++i) {
-                sema.check(arg(i), fn->elem(i), "argument");
-            }
-            if (no_cont && !expected.isa<UnknownType>())
-                sema.create_return_type(this, fn->elems().back())->unify_with(expected);
-
-            // instantiate fn type
-            if (ofn->is_generic()) {
-                bool no_error = true;
-                for (size_t i = 0; i < inst_types.size(); ++i) {
-                    UnknownType ut = inst_types[i].isa<UnknownType>();
-                    if (!ut || ut->is_instantiated()) {
-                        sema.unify(inst_types[i]);
-                        lhs()->add_inferred_arg(Type(inst_types[i].representative()));
-                    } else {
-                        sema.error(this) << "could not find instance for type variable #" << i << ".\n";
-                        no_error = false;
-                    }
-                }
-                if (no_error) {
-                    // TODO where should be set this new type? should we set it at all?
-                    sema.check_bounds(this, lhst, lhs()->inferred_args());
-                }
-            }
-
-            if (no_cont) // return type
-                return sema.create_return_type(this, fn->elems().back()); 
-            else        // same number of args as params -> continuation call
-                return sema.type_noreturn();
-        } else
-            sema.error(this) << "wrong number of arguments\n";
+        return sema.check_call(lhs(), this, args(), expected);
     } else if (!lhs()->type().isa<TypeError>()) {
         // REMINDER new error message if not only fn-types are allowed
         sema.error(lhs()) << "expected function type but found " << lhs()->type() << "\n";
@@ -723,7 +733,14 @@ Type IfExpr::check(TypeSema& sema, Type expected) const {
 
 Type ForExpr::check(TypeSema& sema, Type expected) const {
     if (auto map = expr()->isa<MapExpr>()) {
-        assert(false && map && "TODO");
+        Type lhst = sema.check(map->lhs());
+        sema.unify(lhst);
+
+        if (auto ofn = lhst.isa<FnType>()) {
+            Array<const Expr*> args(map->args().size()+1);
+            *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
+            return sema.check_call(map->lhs(), this, args, expected);
+        }
     } else if (auto field_expr = expr()->isa<FieldExpr>()) {
         assert(false && field_expr && "TODO");
     }

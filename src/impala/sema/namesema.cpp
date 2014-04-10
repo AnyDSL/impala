@@ -342,7 +342,7 @@ void IfExpr::check(NameSema& sema) const {
 
 void ForExpr::check(NameSema& sema) const {
     expr()->check(sema);
-    fn_check(sema);
+    fn_expr()->check(sema);
 }
 
 //------------------------------------------------------------------------------

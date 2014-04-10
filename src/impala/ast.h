@@ -997,16 +997,17 @@ private:
     friend class Parser;
 };
 
-class ForExpr : public Expr, public Fn {
+class ForExpr : public Expr {
 public:
+    const FnExpr* fn_expr() const { return fn_expr_; }
     const Expr* expr() const { return expr_; }
-    virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual void check(NameSema&) const override;
 
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
 
+    AutoPtr<const FnExpr> fn_expr_;
     AutoPtr<const Expr> expr_;
 
     friend class Parser;

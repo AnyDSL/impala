@@ -957,9 +957,22 @@ const IfExpr* Parser::parse_if_expr() {
 const ForExpr* Parser::parse_for_expr() {
     auto for_expr = loc(new ForExpr());
     eat(Token::FOR);
-    parse_param_list(for_expr->params_, Token::IN, true);
+    auto fn_expr = loc(new FnExpr());
+    for_expr->fn_expr_ = fn_expr.get();
+    parse_param_list(fn_expr->params_, Token::IN, true);
+
+    // create break param
+    auto param = new Param(cur_var_handle++);
+    param->is_mut_ = false;
+    param->symbol_ = "break";
+    auto unit = new FnASTType();
+    unit->set_loc(prev_loc_);
+    param->set_loc(prev_loc_);
+    param->ast_type_ = unit;
+    fn_expr->params_.push_back(param);
+
     for_expr->expr_ = parse_expr();
-    for_expr->body_ = try_block_expr("body of function");
+    fn_expr->body_ = try_block_expr("body of function");
     return for_expr;
 }
 
