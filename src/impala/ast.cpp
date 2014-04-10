@@ -26,18 +26,7 @@ PrimTypeKind LiteralExpr::literal2type() const {
     }
 }
 
-bool PathExpr::is_lvalue() const { 
-    //if (auto vardecl = decl()->isa<VarDecl>())
-        //return vardecl->is_mut();
-    return false;
-}
-
 uint64_t LiteralExpr::get_u64() const { return thorin::bcast<uint64_t, thorin::Box>(box()); }
-
-bool MapExpr::is_lvalue() const {
-    assert(false && "TODO");
-    return true;
-}
 
 bool IfExpr::has_else() const {
     if (auto block = else_expr_->isa<BlockExpr>())
