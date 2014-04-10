@@ -21,14 +21,10 @@ class CodeGen : public IRBuilder {
 public:
     CodeGen(World& world)
         : IRBuilder(world)
+        , cur_fn(nullptr)
     {}
 
-    Var lemit(const Expr* expr) { return is_reachable() ? expr->lemit(*this) : Var(); }
-    Def remit(const Expr* expr) { return is_reachable() ? expr->remit(*this) : nullptr; }
-    void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
-    void emit(const Stmt* stmt, JumpTarget& exit) { if (is_reachable()) stmt->emit(*this, exit); }
-    void emit(const Item* item) { item->emit(*this); }
-
+    const thorin::Enter* frame() const { assert(cur_fn); return cur_fn->frame(); }
     void split(JumpTarget& jt, JumpTarget& x, std::function<Def()> def) {
         if (auto lambda = enter(jt)) {
             lambda->set_value(1, def());
@@ -41,7 +37,13 @@ public:
         return Def();
     }
 
-    const Enter* frame;
+    Var lemit(const Expr* expr) { return is_reachable() ? expr->lemit(*this) : Var(); }
+    Def remit(const Expr* expr) { return is_reachable() ? expr->remit(*this) : nullptr; }
+    void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
+    void emit(const Stmt* stmt, JumpTarget& exit) { if (is_reachable()) stmt->emit(*this, exit); }
+    void emit(const Item* item) { item->emit(*this); }
+
+    const Fn* cur_fn;
 };
 
 Var ValueDecl::var(CodeGen& cg) const { return var_; }
@@ -50,7 +52,7 @@ Var LocalDecl::var(CodeGen& cg) const {
     if (!var_) {
         auto thorin_type = type()->convert(cg.world());
         if (is_address_taken())
-            return var_ = Var(cg, cg.world().slot(thorin_type, cg.frame, handle(), symbol().str()));
+            return var_ = Var(cg, cg.world().slot(thorin_type, cg.frame(), handle(), symbol().str()));
         return var_ = Var(cg, handle(), thorin_type, symbol().str());
     }
     return var_;
@@ -100,6 +102,7 @@ void FnDecl::emit(CodeGen& cg) const {
     // create thorin function
     auto pi = type()->convert(cg.world())->as<thorin::Pi>();
     lambda_ = cg.world().lambda(pi, symbol().str());
+    THORIN_PUSH(cg.cur_fn, this);
     var_ = Var(cg, lambda_);
     if (is_extern())
         lambda_->attribute().set(Lambda::Extern);
@@ -130,7 +133,7 @@ void FnDecl::emit(CodeGen& cg) const {
     auto mem = lambda()->param(0);
     mem->name = "mem";
     cg.set_mem(mem);
-    cg.frame = frame_ = cg.world().enter(mem); // TODO
+    frame_ = cg.world().enter(mem); 
 
     // name params and setup store locations
     for (size_t i = 0, e = params().size(); i != e; ++i) {
