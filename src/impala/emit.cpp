@@ -46,6 +46,10 @@ public:
     const Fn* cur_fn;
 };
 
+/*
+ * Decls and Function
+ */
+
 Var ValueDecl::var(CodeGen& cg) const { return var_; }
 
 Var LocalDecl::var(CodeGen& cg) const {

@@ -33,7 +33,6 @@ public:
     void push_scope() { levels_.push_back(decl_stack_.size()); } ///< Opens a new scope.
     void pop_scope();                                            ///< Discards current scope.
 
-
     void check(const ASTType* ast_type) { ast_type->check(*this); }
     void check(const TypeDecl* type_decl) { type_decl->check(*this); }
     void check(const Item* item) { 

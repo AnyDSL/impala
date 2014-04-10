@@ -402,6 +402,7 @@ public:
 
 class Fn : public TypeParamList {
 public:
+    virtual FnType fn_type() const = 0;
     const Param* param(size_t i) const { return params_[i]; }
     ArrayRef<const Param*> params() const { return params_; }
     const Expr* body() const { return body_; }
@@ -576,6 +577,7 @@ private:
 class FnDecl : public ValueItem, public Fn {
 public:
     bool is_extern() const { return extern_; }
+    virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
 
@@ -728,6 +730,7 @@ private:
 
 class FnExpr : public Expr, public Fn {
 public:
+    virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual void check(NameSema&) const override;
 
 private:
@@ -997,6 +1000,7 @@ private:
 class ForExpr : public Expr, public Fn {
 public:
     const Expr* expr() const { return expr_; }
+    virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual void check(NameSema&) const override;
 
 private:
