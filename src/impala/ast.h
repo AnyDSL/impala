@@ -1003,7 +1003,7 @@ class ForExpr : public Expr {
 public:
     const FnExpr* fn_expr() const { return fn_expr_; }
     const Expr* expr() const { return expr_; }
-    const LocalDecl* cont() const { return cont_; }
+    const LocalDecl* break_decl() const { return break_; }
     virtual void check(NameSema&) const override;
 
 private:
@@ -1012,7 +1012,7 @@ private:
 
     AutoPtr<const FnExpr> fn_expr_;
     AutoPtr<const Expr> expr_;
-    AutoPtr<const LocalDecl> cont_;
+    AutoPtr<const LocalDecl> break_;
 
     friend class Parser;
 };
