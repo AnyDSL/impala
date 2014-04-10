@@ -724,11 +724,13 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
 
 Type IfExpr::check(TypeSema& sema, Type expected) const {
     sema.check(cond(), sema.type_bool(), "condition");
-    Type then_type = sema.check(then_expr(), expected);
-    Type else_type = sema.check(else_expr(), expected);
-    if (then_type == sema.type_error() || else_type == sema.type_error())
-        return sema.type_error();
-    return then_type;
+    Type then_type = sema.check(then_expr(), sema.unknown_type());
+    Type else_type = sema.check(else_expr(), sema.unknown_type());
+    Type type = then_type.isa<NoReturnType>() ? else_type : then_type;
+    if (!type.isa<TypeError>())
+        return sema.expect_type(this, type, expected, "if expression");
+    else
+        return expected->is_known() ? expected : else_type;
 }
 
 Type ForExpr::check(TypeSema& sema, Type expected) const {
