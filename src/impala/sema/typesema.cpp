@@ -611,13 +611,11 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
             } else
                 func = fn.as<FnType>();
 
-            // there should at least be two arguments: the continuation and the self object
-            // TODO what about methods which don't return?
-            if (func->size() > 1) {
+            if (func->size() >= 1) {
                 sema.expect_type(lhs(), func->elem(0), "object");
                 return func->specialize_method(lhs()->type());
             } else
-                sema.error(this) << "cannot call a method without any arguments";
+                sema.error(this) << "cannot call a method without Self parameter";
         }
         return sema.type_error();
     }
