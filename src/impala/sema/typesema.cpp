@@ -72,25 +72,6 @@ public:
     Type check(const Expr* expr, Type expected, std::string typetype) {
         if (!expr->type_.empty())
             return expr->type_;
-
-        /*Type expected_unpacked;
-        if (auto ut = expected.isa<UnknownType>()) {
-            if (!ut->is_instantiated()) {
-                expr->type_ = expr->check(*this, ut);
-                if (!expr->type_.empty()) {
-                    // if this variable has no instantiation yet instantiate it
-                    if (!ut->is_instantiated()) {
-                        ut->instantiate(expr->type_);
-                        unify(Type(ut));
-                    } else
-                        assert(expr->type_ == ut->instance());
-                }
-                return expr->type_;
-            } else
-                expected_unpacked = ut->instance();
-        } else
-            expected_unpacked = expected;*/
-
         Type inferred = expr->check(*this, expected);
         return expr->type_ = expect_type(expr, inferred, expected, typetype);
     }
@@ -557,24 +538,19 @@ Type PrefixExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type InfixExpr::check(TypeSema& sema, Type expected) const {
-    Type lhstype;
-    Type rhstype;
     // FEATURE other cases
     switch (kind()) {
         case EQ:
         case NE:
-            lhstype = sema.check(lhs());
-            rhstype = sema.check(rhs());
-            sema.match_types(this, lhstype, rhstype);
+            sema.check(rhs(), sema.check(lhs()));
             return sema.type_bool();
         case LT:
         case LE:
         case GT:
         case GE:
-            lhstype = sema.check(lhs());
-            rhstype = sema.check(rhs());
+            sema.check(rhs(), sema.check(lhs()));
             sema.expect_num(lhs());
-            sema.match_types(this, lhstype, rhstype);
+            sema.expect_num(rhs());
             return sema.type_bool();
         case OROR:
         case ANDAND:
@@ -585,12 +561,15 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
         case SUB:
         case MUL:
         case DIV:
-        case REM:
-            lhstype = sema.check(lhs(), expected);
-            rhstype = sema.check(rhs(), lhstype);
+        case REM: {
+            auto type = sema.check(rhs(), sema.check(lhs()));
             sema.expect_num(lhs());
-            return lhstype;
-        case     ASGN:
+            sema.expect_num(rhs());
+            return type;
+        }
+        case ASGN:
+            sema.check(rhs(), sema.check(lhs()));
+            return sema.unit();
         case ADD_ASGN:
         case SUB_ASGN:
         case MUL_ASGN:
@@ -600,10 +579,13 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
         case  OR_ASGN:
         case XOR_ASGN:
         case SHL_ASGN:
-        case SHR_ASGN:
-            lhstype = sema.check(lhs(), expected);
-            rhstype = sema.check(rhs(), lhstype);
+        case SHR_ASGN: {
+            // TODO handle floats etc
+            sema.check(rhs(), sema.check(lhs()));
+            sema.expect_num(lhs());
+            sema.expect_num(rhs());
             return sema.unit();
+        }
         default: THORIN_UNREACHABLE;
     }
 }
