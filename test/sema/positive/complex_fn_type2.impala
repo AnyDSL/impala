@@ -1,0 +1,3 @@
+trait S {}
+trait T[A : S] {}
+fn f[B:T[C]+S, C:T[B]+S](x:B, y:C) -> () {}
