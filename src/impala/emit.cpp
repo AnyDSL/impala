@@ -130,7 +130,7 @@ void FnDecl::emit(CodeGen& cg) const {
         lambda()->attribute().set(Lambda::VectorizeTid | Lambda::Extern);
 
     // setup memory + frame
-    auto mem = lambda()->param(0);
+    Def mem = lambda()->param(0);
     mem->name = "mem";
     cg.set_mem(mem);
     frame_ = cg.world().enter(mem); 
@@ -146,6 +146,7 @@ void FnDecl::emit(CodeGen& cg) const {
     // descent into body
     auto def = cg.remit(body());
     if (def) {
+        mem = cg.world().leave(cg.get_mem(), frame_);
         if (auto sigma = def->type()->isa<thorin::Sigma>()) {
             std::vector<Def> args;
             args.push_back(mem);

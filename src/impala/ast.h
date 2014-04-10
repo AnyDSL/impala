@@ -346,18 +346,18 @@ class LocalDecl : public ValueDecl {
 public:
     LocalDecl(size_t handle)
         : handle_(handle)
-        , is_address_taken_(false)
+        , address_taken_(false)
     {}
 
     size_t handle() const { return handle_; }
-    bool is_address_taken() const { return is_address_taken_; }
+    bool is_address_taken() const { return address_taken_; }
     bool is_anonymous() const { return symbol() == Symbol(); }
     virtual std::ostream& print(Printer&) const override;
     virtual thorin::Var var(CodeGen&) const override;
 
 protected:
     size_t handle_;
-    mutable bool is_address_taken_;
+    mutable bool address_taken_;
 
     friend class Parser;
 };
