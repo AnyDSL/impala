@@ -421,9 +421,8 @@ std::ostream& IfExpr::print(Printer& p) const {
 }
 
 std::ostream& ForExpr::print(Printer& p) const {
-    // TODO elide dumping of return param of fn_expr()
     p.stream() << "for ";
-    p.dump_list([&](const Param* param) { param->print(p); }, fn_expr()->params()) << " in ";
+    p.dump_list([&](const Param* param) { param->print(p); }, fn_expr()->params().slice_num_from_end(1)) << " in ";
     p.print(expr()) << ' ';
     return p.print(fn_expr()->body());
 }
