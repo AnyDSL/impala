@@ -80,6 +80,8 @@ const thorin::Type* PrimTypeNode::convert(World& world) const {
     }
 }
 
+const thorin::Type* NoReturnTypeNode::convert(World& world) const { return nullptr; }
+
 const thorin::Type* FnTypeNode::convert(World& world) const { 
     std::vector<const thorin::Type*> nelems;
     nelems.push_back(world.mem());
@@ -320,9 +322,8 @@ Def MapExpr::remit(CodeGen& cg) const {
         defs.push_back(cg.get_mem());
         for (auto arg : args())
             defs.push_back(cg.remit(arg));
-
-        cg.mem_call(ldef, defs, fn->return_type()->convert(cg.world()));
-        return cg.cur_bb->params().back();
+        auto ret_type = args().size() == fn->size() ? nullptr : fn->return_type()->convert(cg.world());
+        return cg.call(ldef, defs, ret_type);
     } else {
         assert(false && "TODO");
         return Def();
@@ -334,7 +335,9 @@ Def IfExpr::remit(CodeGen& cg) const {
     cg.emit_branch(cond(), t, f);
     cg.split(t, x, [&] { return cg.remit(then_expr()); });
     cg.split(f, x, [&] { return cg.remit(else_expr()); });
-    return cg.converge(x, then_expr()->type()->convert(cg.world()), "if");
+    if (!then_expr()->type().isa<NoReturnType>()) // HACK
+        return cg.converge(x, then_expr()->type()->convert(cg.world()), "if");
+    return Def();
 }
 
 /*

@@ -211,7 +211,7 @@ protected:
 
 public:
     virtual std::string to_string() const { return "<type no-return>"; }
-    virtual const thorin::Type* convert(thorin::World&) const { assert(false); return nullptr; }
+    virtual const thorin::Type* convert(thorin::World&) const override;
 
     friend class TypeTable;
 };

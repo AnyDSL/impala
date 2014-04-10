@@ -590,10 +590,20 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
             rhstype = sema.check(rhs(), lhstype);
             sema.expect_num(lhs());
             return lhstype;
-        case ASGN:
+        case     ASGN:
+        case ADD_ASGN:
+        case SUB_ASGN:
+        case MUL_ASGN:
+        case DIV_ASGN:
+        case REM_ASGN:
+        case AND_ASGN:
+        case  OR_ASGN:
+        case XOR_ASGN:
+        case SHL_ASGN:
+        case SHR_ASGN:
             lhstype = sema.check(lhs(), expected);
-            rhstype = sema.check(rhs(), expected);
-            return lhstype;
+            rhstype = sema.check(rhs(), lhstype);
+            return sema.unit();
         default: THORIN_UNREACHABLE;
     }
 }

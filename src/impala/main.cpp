@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
         Names breakpoints;
 #endif
         string outfile;
-        bool help, emit_all, emit_thorin, emit_il, emit_ast, emit_annotated, emit_llvm, emit_looptree, fancy, nocolor, opt, verify, nocleanup, nossa = false;
+        bool help, emit_all, emit_thorin, emit_il, emit_ast, emit_annotated, emit_llvm, emit_looptree, fancy, nocolor, opt, nocleanup, nossa = false;
         int vectorlength = 0;
         auto cmd_parser = ArgParser()
             .implicit_option("infiles", "input files", infiles)
@@ -50,7 +50,6 @@ int main(int argc, char** argv) {
 #endif
             .add_option<bool>("nocleanup", "no clean-up phase", nocleanup, false)
             .add_option<bool>("nossa", "use slots + load/store instead of SSA construction", nossa, false)
-            .add_option<bool>("verify", "run verifier", verify, false)
             .add_option<int>("vectorize", "run vectorizer on main with given vector length (experimantal!!!), arg=<vector length>", vectorlength, false)
             .add_option<bool>("emit-thorin", "emit textual THORIN representation of impala program", emit_thorin, false)
             .add_option<bool>("emit-il", "emit textual IL representation of impala program", emit_il, false)
@@ -137,8 +136,6 @@ int main(int argc, char** argv) {
         if (result) {
             if (!nocleanup)
                 init.world.cleanup();
-            if (verify)
-                thorin::verify(init.world);
             if (opt)
                 init.world.opt();
             //if (vectorlength != 0) {
