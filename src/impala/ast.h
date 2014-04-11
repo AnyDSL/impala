@@ -412,6 +412,8 @@ public:
     std::ostream& print_params(Printer& p, bool returning) const;
     void fn_check(NameSema&) const;
     void check_body(TypeSema&, FnType) const;
+    thorin::Lambda* emit_head(CodeGen&, const char* name) const;
+    void emit_body(CodeGen&) const;
 
 protected:
     mutable thorin::Lambda* lambda_;
@@ -737,6 +739,7 @@ public:
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
 
     bool has_return_type_;
 

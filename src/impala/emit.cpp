@@ -64,6 +64,45 @@ Var LocalDecl::var(CodeGen& cg) const {
     return var_;
 }
 
+Lambda* Fn::emit_head(CodeGen& cg, const char* name) const {
+    return lambda_ = cg.world().lambda(fn_type()->convert(cg.world())->as<thorin::Pi>(), name);
+}
+
+void Fn::emit_body(CodeGen& cg) const {
+    // setup function nest
+    lambda()->set_parent(cg.cur_bb);
+    THORIN_PUSH(cg.cur_fn, this);
+    THORIN_PUSH(cg.cur_bb, lambda());
+
+    // setup memory + frame
+    Def mem = lambda()->param(0);
+    mem->name = "mem";
+    cg.set_mem(mem);
+    frame_ = cg.world().enter(mem); 
+
+    // name params and setup store locations
+    for (size_t i = 0, e = params().size(); i != e; ++i) {
+        auto p = lambda()->param(i+1);
+        p->name = param(i)->symbol().str();
+        param(i)->var(cg).store(p);
+    }
+    ret_param_ = lambda()->params().back();
+
+    // descent into body
+    auto def = cg.remit(body());
+    if (def) {
+        mem = cg.world().leave(cg.get_mem(), frame_);
+        if (auto sigma = def->type()->isa<thorin::Sigma>()) {
+            std::vector<Def> args;
+            args.push_back(mem);
+            for (size_t i = 0, e = sigma->size(); i != e; ++i)
+                args.push_back(cg.world().extract(def, i));
+            cg.cur_bb->jump(ret_param_, args);
+        } else
+            cg.cur_bb->jump(ret_param_, {mem, def});
+    }
+}
+
 /*
  * Type
  */
@@ -108,16 +147,9 @@ void ModContents::emit(CodeGen& cg) const {
 
 void FnDecl::emit(CodeGen& cg) const {
     // create thorin function
-    auto pi = type()->convert(cg.world())->as<thorin::Pi>();
-    lambda_ = cg.world().lambda(pi, symbol().str());
-    THORIN_PUSH(cg.cur_fn, this);
-    var_ = Var(cg, lambda_);
+    var_ = Var(cg, emit_head(cg, symbol().str()));
     if (is_extern())
         lambda_->attribute().set(Lambda::Extern);
-
-    // setup function nest
-    lambda()->set_parent(cg.cur_bb);
-    THORIN_PUSH(cg.cur_bb, lambda());
 
     // handle main function
     if (symbol() == Symbol("main")) {
@@ -137,33 +169,7 @@ void FnDecl::emit(CodeGen& cg) const {
     else if (lambda()->name == "wfv_get_tid")
         lambda()->attribute().set(Lambda::VectorizeTid | Lambda::Extern);
 
-    // setup memory + frame
-    Def mem = lambda()->param(0);
-    mem->name = "mem";
-    cg.set_mem(mem);
-    frame_ = cg.world().enter(mem); 
-
-    // name params and setup store locations
-    for (size_t i = 0, e = params().size(); i != e; ++i) {
-        auto p = lambda()->param(i+1);
-        p->name = param(i)->symbol().str();
-        param(i)->var(cg).store(p);
-    }
-    ret_param_ = lambda()->params().back();
-
-    // descent into body
-    auto def = cg.remit(body());
-    if (def) {
-        mem = cg.world().leave(cg.get_mem(), frame_);
-        if (auto sigma = def->type()->isa<thorin::Sigma>()) {
-            std::vector<Def> args;
-            args.push_back(mem);
-            for (size_t i = 0, e = sigma->size(); i != e; ++i)
-                args.push_back(cg.world().extract(def, i));
-            cg.cur_bb->jump(ret_param_, args);
-        } else
-            cg.cur_bb->jump(ret_param_, {mem, def});
-    }
+    emit_body(cg);
 }
 
 void ForeignMod::emit(CodeGen& cg) const {
@@ -335,6 +341,12 @@ Def MapExpr::remit(CodeGen& cg) const {
         assert(false && "TODO");
         return Def();
     }
+}
+
+Def FnExpr::remit(CodeGen& cg) const {
+    auto lambda = emit_head(cg, "lambda");
+    emit_body(cg);
+    return lambda;
 }
 
 void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
