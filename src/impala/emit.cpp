@@ -359,7 +359,7 @@ Def ForExpr::remit(CodeGen& cg) const {
     defs.push_back(next);
     cg.call(cg.remit(map_expr->lhs()), defs, nullptr);
 
-    // set up break/next continuation
+    // go to break continuation
     cg.cur_bb = next;
     cg.set_mem(next->param(0));
     return cg.world().tuple({});
