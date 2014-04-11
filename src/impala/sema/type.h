@@ -340,7 +340,8 @@ protected:
     void refresh_bounds();
 
     friend class TypeTable;
-    friend void Unifiable::add_bound_var(TypeVar); // maybe we can design things better to avoid this friend
+    friend void Unifiable::add_bound_var(TypeVar);            // maybe we can design things better to avoid this friend
+    friend bool KnownTypeNode::equal(const Unifiable*) const; // same here
 };
 
 typedef Proxy<TypeErrorNode> TypeError;
