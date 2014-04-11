@@ -339,6 +339,7 @@ protected:
 
     friend class Parser;
     friend class TypeSema;
+    friend class ForExpr;
 };
 
 /// Base class for all Values which may be mutated within a function.
@@ -1012,6 +1013,7 @@ public:
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const FnExpr> fn_expr_;
     AutoPtr<const Expr> expr_;

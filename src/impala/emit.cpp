@@ -343,6 +343,28 @@ Def MapExpr::remit(CodeGen& cg) const {
     }
 }
 
+Def ForExpr::remit(CodeGen& cg) const {
+    std::vector<Def> defs;
+    defs.push_back(cg.get_mem());
+
+    // prepare break continuation
+    auto next = cg.world().lambda(cg.world().pi({cg.world().mem()}), "break");
+    break_->var_ = Var(cg, next);
+
+    // emit call
+    auto map_expr = expr()->as<MapExpr>();
+    for (auto arg : map_expr->args())
+        defs.push_back(cg.remit(arg));
+    defs.push_back(cg.remit(fn_expr()));
+    defs.push_back(next);
+    cg.call(cg.remit(map_expr->lhs()), defs, nullptr);
+
+    // set up break/next continuation
+    cg.cur_bb = next;
+    cg.set_mem(next->param(0));
+    return cg.world().tuple({});
+}
+
 Def FnExpr::remit(CodeGen& cg) const {
     auto lambda = emit_head(cg, "lambda");
     emit_body(cg);
