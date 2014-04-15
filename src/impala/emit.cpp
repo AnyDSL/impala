@@ -65,7 +65,7 @@ Var LocalDecl::var(CodeGen& cg) const {
 }
 
 Lambda* Fn::emit_head(CodeGen& cg, const char* name) const {
-    return lambda_ = cg.world().lambda(fn_type()->convert(cg.world())->as<thorin::Pi>(), name);
+    return lambda_ = cg.world().lambda(fn_type()->convert(cg.world()).as<thorin::FnType>(), name);
 }
 
 void Fn::emit_body(CodeGen& cg) const {
@@ -92,7 +92,7 @@ void Fn::emit_body(CodeGen& cg) const {
     auto def = cg.remit(body());
     if (def) {
         mem = cg.world().leave(cg.get_mem(), frame_);
-        if (auto sigma = def->type()->isa<thorin::Sigma>()) {
+        if (auto sigma = def->type().isa<thorin::TupleType>()) {
             std::vector<Def> args;
             args.push_back(mem);
             for (size_t i = 0, e = sigma->size(); i != e; ++i)
@@ -107,12 +107,12 @@ void Fn::emit_body(CodeGen& cg) const {
  * Type
  */
 
-void TypeNode::convert_elems(World& world, std::vector<const thorin::Type*>& nelems) const {
+void TypeNode::convert_elems(World& world, std::vector<thorin::Type>& nelems) const {
     for (auto elem : elems())
         nelems.push_back(elem->convert(world));
 }
 
-const thorin::Type* PrimTypeNode::convert(World& world) const {
+thorin::Type PrimTypeNode::convert(World& world) const {
     switch (primtype_kind()) {
 #define IMPALA_TYPE(itype, ttype) \
         case PrimType_##itype: return world.type_##ttype();
@@ -121,19 +121,19 @@ const thorin::Type* PrimTypeNode::convert(World& world) const {
     }
 }
 
-const thorin::Type* NoReturnTypeNode::convert(World& world) const { return nullptr; }
+thorin::Type NoReturnTypeNode::convert(World& world) const { return thorin::Type(); }
 
-const thorin::Type* FnTypeNode::convert(World& world) const { 
-    std::vector<const thorin::Type*> nelems;
-    nelems.push_back(world.mem());
+thorin::Type FnTypeNode::convert(World& world) const { 
+    std::vector<thorin::Type> nelems;
+    nelems.push_back(world.mem_type());
     convert_elems(world, nelems);
-    return world.pi(nelems); 
+    return world.fn_type(nelems); 
 }
 
-const thorin::Type* TupleTypeNode::convert(World& world) const { 
-    std::vector<const thorin::Type*> nelems;
+thorin::Type TupleTypeNode::convert(World& world) const { 
+    std::vector<thorin::Type> nelems;
     convert_elems(world, nelems);
-    return world.sigma(nelems);
+    return world.tuple_type(nelems);
 }
 
 /*
@@ -335,7 +335,7 @@ Def MapExpr::remit(CodeGen& cg) const {
         defs.push_back(cg.get_mem());
         for (auto arg : args())
             defs.push_back(cg.remit(arg));
-        auto ret_type = args().size() == fn->size() ? nullptr : fn->return_type()->convert(cg.world());
+        auto ret_type = args().size() == fn->size() ? thorin::Type() : fn->return_type()->convert(cg.world());
         return cg.call(ldef, defs, ret_type);
     } else {
         assert(false && "TODO");
@@ -348,7 +348,7 @@ Def ForExpr::remit(CodeGen& cg) const {
     defs.push_back(cg.get_mem());
 
     // prepare break continuation
-    auto next = cg.world().lambda(cg.world().pi({cg.world().mem()}), "break");
+    auto next = cg.world().lambda(cg.world().fn_type({cg.world().mem_type()}), "break");
     break_->var_ = Var(cg, next);
 
     // emit call
@@ -357,7 +357,7 @@ Def ForExpr::remit(CodeGen& cg) const {
         defs.push_back(cg.remit(arg));
     defs.push_back(cg.remit(fn_expr()));
     defs.push_back(next);
-    cg.call(cg.remit(map_expr->lhs()), defs, nullptr);
+    cg.call(cg.remit(map_expr->lhs()), defs, thorin::Type());
 
     // go to break continuation
     cg.cur_bb = next;

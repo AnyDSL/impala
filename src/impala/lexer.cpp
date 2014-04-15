@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <stdexcept>
 
-#include "thorin/util/symbol.h"
+#include "impala/symbol.h"
 
 namespace impala {
 
