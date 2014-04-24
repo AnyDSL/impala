@@ -160,7 +160,7 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
             std::vector<Type> ret_types;
             for (auto t : ret_func->elems())
                 ret_types.push_back(t);
-            return tupletype(ret_types);
+            return tuple_type(ret_types);
         }
     } else {
         error(node) << "last argument is not a continuation function\n";
@@ -223,7 +223,7 @@ Type ErrorASTType::check(TypeSema& sema) const { return sema.type_error(); }
 
 Type PrimASTType::check(TypeSema& sema) const {
     switch (kind()) {
-#define IMPALA_TYPE(itype, atype) case TYPE_##itype: return sema.primtype(PrimType_##itype);
+#define IMPALA_TYPE(itype, atype) case TYPE_##itype: return sema.type(PrimType_##itype);
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
@@ -246,7 +246,7 @@ Type TupleASTType::check(TypeSema& sema) const {
     for (auto elem : elems())
         types.push_back(sema.check(elem));
 
-    return sema.tupletype(types);
+    return sema.tuple_type(types);
 }
 
 Type FnASTType::check(TypeSema& sema) const {
@@ -256,7 +256,7 @@ Type FnASTType::check(TypeSema& sema) const {
     for (auto elem : elems())
         params.push_back(sema.check(elem));
 
-    FnType fntype = sema.fntype(params);
+    FnType fntype = sema.fn_type(params);
     for (auto type_param : type_params())
         fntype->bind(type_param->type_var(sema));
 
@@ -325,7 +325,7 @@ void Fn::check_body(TypeSema& sema, FnType fn_type) const {
  * TypeDecl
  */
 
-Type TypeParam::check(TypeSema& sema) const { return sema.typevar(symbol()); }
+Type TypeParam::check(TypeSema& sema) const { return sema.type_var(symbol()); }
 
 Type ModDecl::check(TypeSema& sema) const {
     if (mod_contents())
@@ -378,7 +378,7 @@ Type FnDecl::check(TypeSema& sema) const {
         types.push_back(sema.check(param));
 
     // create FnType
-    FnType fn_type = sema.fntype(types);
+    FnType fn_type = sema.fn_type(types);
     for (auto tp : type_params())
         fn_type->bind(tp->type_var(sema));
     type_ = fn_type;
@@ -491,7 +491,7 @@ Type BlockExpr::check(TypeSema& sema, Type expected) const {
 
 Type LiteralExpr::check(TypeSema& sema, Type expected) const {
     // FEATURE we could enhance this using the expected type (e.g. 4 could be interpreted as int8 if needed)
-    return sema.primtype(literal2type());
+    return sema.type(literal2type());
 }
 
 Type FnExpr::check(TypeSema& sema, Type expected) const {
@@ -512,7 +512,7 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
         for (auto param : params())
             par_types.push_back(sema.check(param));
 
-        fn_type = sema.fntype(par_types);
+        fn_type = sema.fn_type(par_types);
         sema.unify(fn_type);
     }
 
@@ -660,7 +660,7 @@ Type TupleExpr::check(TypeSema& sema, Type expected) const {
             types.push_back(e->type());
         }
     }
-    return sema.tupletype(types);
+    return sema.tuple_type(types);
 }
 
 Type StructExpr::check(TypeSema& sema, Type expected) const {

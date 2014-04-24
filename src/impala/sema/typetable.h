@@ -29,17 +29,16 @@ public:
     TypeError type_error() { return type_error_; }
     Trait trait_error() { return trait_error_; }
     NoReturnType type_noreturn() { return type_noreturn_; }
-    PrimType primtype(PrimTypeKind kind);
+    PrimType type(PrimTypeKind kind);
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
     Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
     TraitImpl implement_trait(const Impl* impl_decl, Trait trait) { return new_unifiable(new TraitImplNode(*this, impl_decl, trait)); }
     UnknownType unknown_type() { return new_unifiable(new UnknownTypeNode(*this)); }
-    TypeVar typevar() { return new_unifiable(new TypeVarNode(*this, Symbol())); }
-    TypeVar typevar(Symbol name) { return new_unifiable(new TypeVarNode(*this, name)); }
-    FnType fntype(thorin::ArrayRef<Type> params) { return new_unifiable(new FnTypeNode(*this, params)); }
-    TupleType tupletype(thorin::ArrayRef<Type> elems) { return new_unifiable(new TupleTypeNode(*this, elems)); }
-    TupleType unit() { return tupletype({}); }
+    TypeVar type_var(Symbol name = Symbol()) { return new_unifiable(new TypeVarNode(*this, name)); }
+    FnType fn_type(thorin::ArrayRef<Type> params) { return new_unifiable(new FnTypeNode(*this, params)); }
+    TupleType tuple_type(thorin::ArrayRef<Type> elems) { return new_unifiable(new TupleTypeNode(*this, elems)); }
+    TupleType unit() { return tuple_type({}); }
 
     /// Unify a type and return \p true if the representative changed.
     template<class T> bool unify(Proxy<T> proxy) { return unify(*proxy); }

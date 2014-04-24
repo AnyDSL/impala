@@ -145,7 +145,7 @@ Type TypeVarNode::find_method(Symbol s) const {
 
 FnType FnTypeNode::specialize_method(Type t) const {
     assert(elem(0) == t);
-    FnType f = typetable().fntype(elems().slice_from_begin(1));
+    FnType f = typetable().fn_type(elems().slice_from_begin(1));
     typetable().unify(f.as<Type>());
     return f;
 }
@@ -155,7 +155,7 @@ Type FnTypeNode::return_type() const {
         if (auto fn = elems().back().isa<FnType>()) {
             if (fn->size() == 1)
                 return fn->elems().front();
-            return typetable().tupletype(fn->elems());
+            return typetable().tuple_type(fn->elems());
         }
     }
     return typetable().type_noreturn();
@@ -173,9 +173,9 @@ thorin::Array<Type> CompoundTypeNode::specialize_elems(SpecializeMap& map) const
 Unifiable* UnknownTypeNode::vspecialize(SpecializeMap& map) { assert(false); return nullptr; }
 Unifiable* TypeErrorNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type_error().node(); }
 Unifiable* NoReturnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type_noreturn().node(); }
-Unifiable* PrimTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().primtype(primtype_kind()).node(); }
-Unifiable* FnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().fntype(specialize_elems(map)).node(); }
-Unifiable* TupleTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().tupletype(specialize_elems(map)).node(); }
+Unifiable* PrimTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type(primtype_kind()).node(); }
+Unifiable* FnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().fn_type(specialize_elems(map)).node(); }
+Unifiable* TupleTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().tuple_type(specialize_elems(map)).node(); }
 
 Unifiable* TypeVarNode::vspecialize(SpecializeMap& map) {
     // was not bound in the specialized type -> return orginal type var
@@ -184,7 +184,7 @@ Unifiable* TypeVarNode::vspecialize(SpecializeMap& map) {
 }
 
 TypeVar TypeVarNode::clone(SpecializeMap& map) const {
-    TypeVar v = typetable().typevar();
+    TypeVar v = typetable().type_var();
     map[this] = v.node();
 
     // copy bounds!
