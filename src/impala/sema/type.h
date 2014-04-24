@@ -291,11 +291,9 @@ private:
         , id_(counter_++)
         , name_(name)
         , bound_at_(nullptr)
-        , equiv_var_(nullptr)
+        , equiv_(nullptr)
     {}
 
-    void set_equiv_variable(const TypeVarNode* v) const { assert(equiv_var_ == nullptr); assert(v != nullptr); equiv_var_ = v; }
-    void unset_equiv_variable() const { assert(equiv_var_ != nullptr); equiv_var_ = nullptr; }
     bool bounds_equal(const TypeVar) const;
 
 public:
@@ -329,7 +327,7 @@ private:
      * If such a type is set, then the variable must not be changed anymore!
      */
     const Unifiable* bound_at_;
-    mutable const TypeVarNode* equiv_var_;///< Used to define equivalence constraints when checking equality of types.
+    mutable const TypeVarNode* equiv_;///< Used to define equivalence constraints when checking equality of types.
     static int counter_;
 
 protected:

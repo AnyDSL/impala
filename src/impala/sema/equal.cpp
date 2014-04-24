@@ -35,28 +35,27 @@ bool KnownTypeNode::equal(const Unifiable* t) const {
     if (auto utn = t->isa<const UnknownTypeNode>()) return utn->equal(this);
 
     if (auto other = t->isa<const KnownTypeNode>()) {
-        bool result = this->kind() == other->kind();
-        result &= this->size() == other->size();
-        result &= this->num_bound_vars() == other->num_bound_vars();
+        bool result = this->kind() == other->kind() && this->size() == other->size() 
+            && this->num_bound_vars() == other->num_bound_vars();
 
-        if (!result)
-            return false;
+        if (result) {
+            // set equivalence constraints for type variables
+            for (size_t i = 0, e = num_bound_vars(); i != e; ++i) {
+                assert(this->bound_var(i)->equiv_ == nullptr);
+                this->bound_var(i)->equiv_ = *other->bound_var(i);
+            }
 
-        // CHECK is deref below correct? -- two times below!
-        // set equivalence constraints for type variables
-        for (size_t i = 0, e = num_bound_vars(); i != e; ++i)
-            this->bound_var(i)->set_equiv_variable(*other->bound_var(i));
+            // check equality of the restrictions of the type variables
+            for (size_t i = 0, e = num_bound_vars(); i != e && result; ++i)
+                result &= this->bound_var(i)->bounds_equal(other->bound_var(i));
 
-        // check equality of the restrictions of the type variables
-        for (size_t i = 0, e = num_bound_vars(); i != e && result; ++i)
-            result &= this->bound_var(i)->bounds_equal(other->bound_var(i));
+            for (size_t i = 0, e = size(); i != e && result; ++i)
+                result &= this->elem(i)->equal(*other->elem(i));
 
-        for (size_t i = 0, e = size(); i != e && result; ++i)
-            result &= this->elem(i)->equal(*other->elem(i));
-
-        // unset equivalence constraints for type variables
-        for (size_t i = 0, e = num_bound_vars(); i != e; ++i)
-            this->bound_var(i)->unset_equiv_variable();
+            // unset equivalence constraints for type variables
+            for (auto var : bound_vars())
+                var->equiv_ = nullptr;
+        }
 
         return result;
     }
@@ -89,7 +88,7 @@ bool TypeVarNode::equal(const Unifiable* other) const {
         return true;
 
     if (const TypeVarNode* t = other->isa<TypeVarNode>()) {
-        if ((this->equiv_var_ == nullptr) && (t->equiv_var_ == nullptr)) {
+        if ((this->equiv_ == nullptr) && (t->equiv_ == nullptr)) {
             if ((this->bound_at() == nullptr) || (t->bound_at() == nullptr)) { // unbound type vars are by definition unequal
                 return false;
             } else {
@@ -110,9 +109,9 @@ bool TypeVarNode::equal(const Unifiable* other) const {
 
         } else {
             // we do not use && because for performance reasons we only set the
-            // equiv_var on one side (even the right side of the || should never
+            // equiv_ on one side (even the right side of the || should never
             // be executed)
-            return (this->equiv_var_ == t) || (t->equiv_var_ == this);
+            return (this->equiv_ == t) || (t->equiv_ == this);
         }
     }
     return false;
