@@ -65,6 +65,21 @@ int main(int argc, char** argv) {
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
 
+#if 0
+        thorin::World w("unsolvable compiler error");
+        auto T = w.type_var();
+        auto ffn = w.fn_type({T});
+        ffn.bind(T);
+        auto f = w.lambda(ffn, Lambda::Attribute(Lambda::Extern), "f");
+        auto gfn = w.fn_type({T});
+        auto g = w.lambda(gfn, "g");
+        g->jump(f, {g->param(0)});
+        f->jump(g, {f->param(0)});
+        thorin::emit_thorin(w);
+        //auto f2 = w.fn_type({f1});
+        //f2->bind(T);
+#endif
+
         if (emit_all)
             emit_thorin = emit_looptree = emit_ast = emit_annotated = emit_llvm = true;
         opt |= emit_llvm;
