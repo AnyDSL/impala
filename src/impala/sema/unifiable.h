@@ -48,21 +48,21 @@ public:
         unify(node()->typetable(), other);
         return representative() == other.representative();
     }
-    bool operator != (const Proxy<T>& other) const { assert(node_ != nullptr); return !(*this == other); }
-    T* representative() const { assert(node_ != nullptr); return node_->representative()->template as<T>(); }
+    bool operator != (const Proxy<T>& other) const { return !(*this == other); }
+    T* representative() const { return node()->representative()->template as<T>(); }
     T* node() const { assert(node_ != nullptr); return node_; }
     T* operator  * () const { assert(node_ != nullptr); return node_->is_unified() ? representative() : node_; }
-    T* operator -> () const { assert(node_ != nullptr); return *(*this); }
+    T* operator -> () const { return *(*this); }
     /// Automatic up-cast in the class hierarchy.
     template<class U> operator Proxy<U>() {
         static_assert(std::is_base_of<U, T>::value, "U is not a base type of T");
-        assert(node_ != nullptr); return Proxy<U>((U*) node_);
+        return Proxy<U>((**this)->template as<T>());
     }
     template<class U> Proxy<typename U::BaseType> isa() const { 
-        assert(node_ != nullptr); return Proxy<typename U::BaseType>((*this)->isa<typename U::BaseType>()); 
+        return Proxy<typename U::BaseType>((*this)->isa<typename U::BaseType>()); 
     }
     template<class U> Proxy<typename U::BaseType> as() const { 
-        assert(node_ != nullptr); return Proxy<typename U::BaseType>((*this)->as <typename U::BaseType>()); 
+        return Proxy<typename U::BaseType>((*this)->as <typename U::BaseType>()); 
     }
     operator bool() { return !empty(); }
     Proxy<T>& operator= (Proxy<T> other) { 
@@ -70,7 +70,7 @@ public:
         node_ = *other; 
         return *this; 
     }
-    void clear() { node_ = nullptr; }
+    void clear() { assert(node_ != nullptr); node_ = nullptr; }
 
 private:
     T* node_;
