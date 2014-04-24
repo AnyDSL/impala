@@ -8,14 +8,14 @@ namespace impala {
 
 void Unifiable::dump() const { std::cout << to_string() << std::endl; }
 
-std::string Unifiable::bound_vars_to_string() const {
+std::string Unifiable::type_vars_to_string() const {
     std::string result;
 
     if (!is_generic())
         return result;
 
     const char* separator = "[";
-    for (auto v : bound_vars()) {
+    for (auto v : type_vars()) {
         result += separator + v->to_string();
 
         const UniSet<Trait> restr = v->bounds();
@@ -44,9 +44,9 @@ std::string TraitInstanceNode::to_string() const {
     if (var_instances_.size() == 1)
         return result;
 
-    assert(var_instances_.size() == trait()->num_bound_vars());
+    assert(var_instances_.size() == trait()->num_type_vars());
     const char* separator = "[";
-    for (size_t i = 1; i < trait()->num_bound_vars(); ++i) {
+    for (size_t i = 1; i < trait()->num_type_vars(); ++i) {
         TypeVar tv = trait()->bound_var(i);
         // CHECK is node() correct here?
         assert(var_instances_.find(tv.node()) != var_instances_.end());

@@ -88,13 +88,13 @@ public:
 
     Unifiable* representative() const { return representative_; }
     bool is_unified() const { return representative_ != nullptr; }
-    virtual size_t num_bound_vars() const { return bound_vars_.size(); }
-    virtual thorin::ArrayRef<TypeVar> bound_vars() const { return thorin::ArrayRef<TypeVar>(bound_vars_); }
-    virtual TypeVar bound_var(size_t i) const { return bound_vars_[i]; }
-    /// Returns true if this \p Type does have any bound type variabes (\p bound_vars_).
-    virtual bool is_generic() const { return !bound_vars_.empty(); }
+    virtual size_t num_type_vars() const { return type_vars_.size(); }
+    virtual thorin::ArrayRef<TypeVar> type_vars() const { return thorin::ArrayRef<TypeVar>(type_vars_); }
+    virtual TypeVar bound_var(size_t i) const { return type_vars_[i]; }
+    /// Returns true if this \p Type does have any bound type variabes (\p type_vars_).
+    virtual bool is_generic() const { return !type_vars_.empty(); }
     virtual bool is_closed() const = 0; // TODO
-    virtual void add_bound_var(TypeVar v);
+    virtual void bind(TypeVar v);
     virtual bool equal(const Unifiable*) const = 0;
     virtual size_t hash() const = 0;
     virtual std::string to_string() const = 0;
@@ -136,10 +136,10 @@ public:
     Unifiable* specialize(SpecializeMap& map);
 
 protected:
-    std::string bound_vars_to_string() const;
-    bool unify_bound_vars(thorin::ArrayRef<TypeVar>);
-    void refine_bound_vars();
-    bool bound_vars_known() const;
+    std::string type_vars_to_string() const;
+    bool unify_type_vars(thorin::ArrayRef<TypeVar>);
+    void refine_type_vars();
+    bool type_vars_known() const;
 
     /// like specialize but does not care about generics (this method is called by specialize)
     virtual Unifiable* vspecialize(SpecializeMap&) = 0;
@@ -153,7 +153,7 @@ private:
     Unifiable* representative_;
 
 protected:
-    std::vector<TypeVar> bound_vars_;
+    std::vector<TypeVar> type_vars_;
 
     friend class TypeTable;
 };

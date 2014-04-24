@@ -3,10 +3,10 @@
 namespace impala {
 
 void Unifiable::verify_instantiation(SpecializeMap& map) const {
-    assert(map.size() == num_bound_vars());
+    assert(map.size() == num_type_vars());
 
     // check the bounds
-    for (auto v : bound_vars()) {
+    for (auto v : type_vars()) {
         auto it = map.find(*v);
         assert(it != map.end());
         Type instance = Type(it->second->as<TypeNode>());

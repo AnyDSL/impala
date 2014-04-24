@@ -14,7 +14,7 @@ int UnknownTypeNode::counter_ = 0;
 bool KnownTypeNode::unify_with(Unifiable* other) {
     if (auto ktn = other->isa<KnownTypeNode>()) {
         if (this->kind() == ktn->kind()) { // TODO make this kind handling better
-            if (unify_bound_vars(other->bound_vars())) {
+            if (unify_type_vars(other->type_vars())) {
                 // go through all sub elements
                 if (size() == ktn->size()) {
                     bool result = true;
@@ -40,7 +40,7 @@ bool UnknownTypeNode::unify_with(Unifiable* other) {
 //------------------------------------------------------------------------------
 
 bool KnownTypeNode::is_closed() const {
-    for (auto v : bound_vars()) {
+    for (auto v : type_vars()) {
         for (auto r : v->bounds()) {
             if (!r->is_closed())
                 return false;
@@ -208,7 +208,7 @@ void TypeVarNode::refresh_bounds() {
 //------------------------------------------------------------------------------
 
 void KnownTypeNode::refine() {
-    refine_bound_vars();
+    refine_type_vars();
     for (size_t i = 0; i < size(); ++i) {
         Type e = elem(i);
         if (UnknownTypeNode* utn = e.node()->isa<UnknownTypeNode>()) {
@@ -223,7 +223,7 @@ void KnownTypeNode::refine() {
 }
 
 bool KnownTypeNode::is_known() const {
-    bool result = bound_vars_known();
+    bool result = type_vars_known();
     for (auto e : elems())
         result = result && e->is_known();
     return result;

@@ -26,7 +26,7 @@ void TypeTable::insert_new(Unifiable* unifiable) {
     assert(!unifiable->is_unified());
     unifiable->set_representative(unifiable);
 
-    for (auto v : unifiable->bound_vars()) {
+    for (auto v : unifiable->type_vars()) {
         bool changed = false;
         for (auto r : v->bounds()) {
             if (!r->is_unified()) {
@@ -56,17 +56,17 @@ void TypeTable::insert_new(Unifiable* unifiable) {
 }
 
 Unifiable* TypeTable::instantiate_unknown(Unifiable* unifiable, std::vector<Type>& types) {
-    for (size_t i = 0; i < unifiable->num_bound_vars(); ++i) 
+    for (size_t i = 0; i < unifiable->num_type_vars(); ++i) 
         types.push_back(unknown_type());
     auto map = infer(unifiable, types);
     return unifiable->instantiate(map);
 }
 
 SpecializeMap TypeTable::infer(Unifiable* unifiable, thorin::ArrayRef<Type> var_instances) const {
-    assert(unifiable->num_bound_vars() == var_instances.size());
+    assert(unifiable->num_type_vars() == var_instances.size());
     SpecializeMap map;
     size_t i = 0;
-    for (TypeVar v : unifiable->bound_vars())
+    for (TypeVar v : unifiable->type_vars())
         map[*v] = *var_instances[i++]; // CHECK ist deref correct here and below?
     assert(map.size() == var_instances.size());
     return map;
@@ -74,14 +74,14 @@ SpecializeMap TypeTable::infer(Unifiable* unifiable, thorin::ArrayRef<Type> var_
 
 void TypeTable::change_repr_unifiable(Unifiable* u, Unifiable* repr) const {
     // first change the representative of all bound variables
-    assert(u->bound_vars().size() == repr->bound_vars().size());
-    for (size_t i = 0, e = u->bound_vars().size(); i != e; ++i) {
+    assert(u->type_vars().size() == repr->type_vars().size());
+    for (size_t i = 0, e = u->type_vars().size(); i != e; ++i) {
         change_repr(u->bound_var(i).node(), repr->bound_var(i).representative());
     }
 
     // change representatives of the bounds (i.e. Traits) of type variables
-    assert(u->num_bound_vars() == repr->num_bound_vars());
-    for (size_t i = 0; i != u->num_bound_vars(); ++i) {
+    assert(u->num_type_vars() == repr->num_type_vars());
+    for (size_t i = 0; i != u->num_type_vars(); ++i) {
         UniSet<Trait> old_bounds = u->bound_var(i)->bounds();
         UniSet<Trait> repr_bounds = repr->bound_var(i)->bounds();
 
@@ -162,13 +162,13 @@ PrimType TypeTable::primtype(const PrimTypeKind kind) {
 }
 
 bool TypeTable::check_bounds(const ASTNode* loc, Unifiable* unifiable, thorin::ArrayRef<Type> inst_types, SpecializeMap& map) {
-    assert(inst_types.size() == unifiable->num_bound_vars());
+    assert(inst_types.size() == unifiable->num_type_vars());
     assert(inst_types.size() == map.size());
 
     bool no_error = true;
 
     // check the bounds
-    for (size_t i = 0; i < unifiable->num_bound_vars(); ++i) {
+    for (size_t i = 0; i < unifiable->num_type_vars(); ++i) {
         TypeVar v = unifiable->bound_var(i);
         Type instance = inst_types[i];
         assert(map.contains(*v));

@@ -13,7 +13,7 @@ size_t UnknownTypeNode::hash() const {
 size_t KnownTypeNode::hash() const {
     // FEATURE take type variables of generic types better into the equation
     size_t seed = hash_combine(hash_begin((int) kind()), size());
-    seed = hash_combine(seed, num_bound_vars());
+    seed = hash_combine(seed, num_type_vars());
     for (auto elem : elems_)
         seed = hash_combine(seed, elem->hash());
 
@@ -36,24 +36,24 @@ bool KnownTypeNode::equal(const Unifiable* t) const {
 
     if (auto other = t->isa<const KnownTypeNode>()) {
         bool result = this->kind() == other->kind() && this->size() == other->size() 
-            && this->num_bound_vars() == other->num_bound_vars();
+            && this->num_type_vars() == other->num_type_vars();
 
         if (result) {
             // set equivalence constraints for type variables
-            for (size_t i = 0, e = num_bound_vars(); i != e; ++i) {
+            for (size_t i = 0, e = num_type_vars(); i != e; ++i) {
                 assert(this->bound_var(i)->equiv_ == nullptr);
                 this->bound_var(i)->equiv_ = *other->bound_var(i);
             }
 
             // check equality of the restrictions of the type variables
-            for (size_t i = 0, e = num_bound_vars(); i != e && result; ++i)
+            for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
                 result &= this->bound_var(i)->bounds_equal(other->bound_var(i));
 
             for (size_t i = 0, e = size(); i != e && result; ++i)
                 result &= this->elem(i)->equal(*other->elem(i));
 
             // unset equivalence constraints for type variables
-            for (auto var : bound_vars())
+            for (auto var : type_vars())
                 var->equiv_ = nullptr;
         }
 
@@ -94,16 +94,16 @@ bool TypeVarNode::equal(const Unifiable* other) const {
             } else {
                 // two type vars are equal if the types where they are bound are
                 // equal and they are bound at the same position
-                bool result = bound_at()->num_bound_vars() == t->bound_at()->num_bound_vars();
+                bool result = bound_at()->num_type_vars() == t->bound_at()->num_type_vars();
                 size_t i;
-                for (i = 0; (i < bound_at()->num_bound_vars()) && result; ++i) {
+                for (i = 0; (i < bound_at()->num_type_vars()) && result; ++i) {
                     if (bound_at()->bound_var(i).node() == this) { // CHECK is node() here and below correct?
                         result &= t->bound_at()->bound_var(i).node() == t;
                         break;
                     }
                 }
-                assert(i < bound_at()->num_bound_vars()); // it should have been found!
 
+                assert(i < bound_at()->num_type_vars()); // it should have been found!
                 return result && bound_at()->equal(t->bound_at());
             }
         } else
@@ -113,9 +113,9 @@ bool TypeVarNode::equal(const Unifiable* other) const {
 }
 
 bool TraitNode::equal(const Unifiable* other) const {
-    // num_bound_vars must be equal because one could be an instance of the other!
+    // num_type_vars must be equal because one could be an instance of the other!
     if (auto trait = other->isa<TraitNode>())
-        return (this->trait_decl() == trait->trait_decl()) && (this->num_bound_vars() == trait->num_bound_vars());
+        return (this->trait_decl() == trait->trait_decl()) && (this->num_type_vars() == trait->num_type_vars());
     return false;
 }
 

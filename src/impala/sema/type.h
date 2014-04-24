@@ -93,7 +93,7 @@ public:
     virtual const Type elem(size_t i) const { return elems_[i]; }
     virtual size_t size() const { return elems_.size(); }
     virtual bool is_empty() const {
-        assert (!elems_.empty() || bound_vars_.empty());
+        assert (!elems_.empty() || type_vars_.empty());
         return elems_.empty();
     }
 
@@ -110,7 +110,7 @@ public:
     virtual Type find_method(Symbol s) const;
 
     virtual bool is_generic() const {
-        assert (!elems_.empty() || bound_vars_.empty());
+        assert (!elems_.empty() || type_vars_.empty());
         return Unifiable::is_generic();
     }
 
@@ -161,11 +161,11 @@ public:
     virtual bool implements(Trait t) const { return is_instantiated() && instance()->implements(t); }
     virtual Type find_method(Symbol s) const { assert(is_instantiated()); return instance()->find_method(s); }
 
-    virtual size_t num_bound_vars() const { return is_instantiated() ? instance()->num_bound_vars() : 0; }
-    virtual thorin::ArrayRef<TypeVar> bound_vars() const { return is_instantiated() ? instance()->bound_vars() : thorin::ArrayRef<TypeVar>(); }
+    virtual size_t num_type_vars() const { return is_instantiated() ? instance()->num_type_vars() : 0; }
+    virtual thorin::ArrayRef<TypeVar> type_vars() const { return is_instantiated() ? instance()->type_vars() : thorin::ArrayRef<TypeVar>(); }
     virtual TypeVar bound_var(size_t i) const { assert(is_instantiated()); return instance()->bound_var(i); }
     virtual void add_bound_var(TypeVar v)  { assert(false); }
-    virtual bool is_generic() const { assert(bound_vars_.empty()); return is_instantiated() ? instance()->is_generic() : false; }
+    virtual bool is_generic() const { assert(type_vars_.empty()); return is_instantiated() ? instance()->is_generic() : false; }
 
     virtual bool is_closed() const { return is_instantiated() && instance()->is_closed(); }
     virtual bool is_subtype(const Type super_type) const { return is_instantiated() && instance()->is_subtype(super_type); }
@@ -260,7 +260,7 @@ protected:
 
 public:
     Type return_type() const;
-    virtual std::string to_string() const { return std::string("fn") + bound_vars_to_string() + elems_to_string(); }
+    virtual std::string to_string() const { return std::string("fn") + type_vars_to_string() + elems_to_string(); }
     virtual thorin::Type convert(thorin::World&) const;
 
     FnType specialize_method(Type t) const;
@@ -278,7 +278,7 @@ protected:
     virtual Unifiable* vspecialize(SpecializeMap&);
 
 public:
-    virtual std::string to_string() const { return bound_vars_to_string() + elems_to_string(); }
+    virtual std::string to_string() const { return type_vars_to_string() + elems_to_string(); }
     virtual thorin::Type convert(thorin::World&) const;
 
     friend class TypeTable;
@@ -337,7 +337,7 @@ protected:
     void refresh_bounds();
 
     friend class TypeTable;
-    friend void Unifiable::add_bound_var(TypeVar);            // maybe we can design things better to avoid this friend
+    friend void Unifiable::bind(TypeVar);                     // maybe we can design things better to avoid this friend
     friend bool KnownTypeNode::equal(const Unifiable*) const; // same here
 };
 

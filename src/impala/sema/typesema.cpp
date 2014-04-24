@@ -169,7 +169,7 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
 }
 
 Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances) {
-    if ((var_instances.size()+1) == trait->num_bound_vars()) {
+    if ((var_instances.size()+1) == trait->num_type_vars()) {
         std::vector<Type> inst_types;
         inst_types.push_back(self);
         for (auto t : var_instances) inst_types.push_back(check(t));
@@ -178,13 +178,13 @@ Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::
         check_bounds(loc, trait, inst_types, map);
         return trait->instantiate(map);
     } else
-        error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << (trait->num_bound_vars()-1) << "\n";
+        error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << (trait->num_type_vars()-1) << "\n";
 
     return trait_error();
 }
 
 Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances) {
-    if (var_instances.size() == type->num_bound_vars()) {
+    if (var_instances.size() == type->num_type_vars()) {
         std::vector<Type> inst_types;
         for (auto t : var_instances) inst_types.push_back(check(t));
         auto map = infer(type, inst_types);
@@ -192,7 +192,7 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
         check_bounds(loc, type, inst_types, map);
         return type->instantiate(map);
     } else {
-        error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << type->num_bound_vars() << "\n";
+        error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << type->num_type_vars() << "\n";
     }
 
     return type_error();
@@ -258,7 +258,7 @@ Type FnASTType::check(TypeSema& sema) const {
 
     FnType fntype = sema.fntype(params);
     for (auto type_param : type_params())
-        fntype->add_bound_var(type_param->type_var(sema));
+        fntype->bind(type_param->type_var(sema));
 
     return fntype;
 }
@@ -380,7 +380,7 @@ Type FnDecl::check(TypeSema& sema) const {
     // create FnType
     FnType fn_type = sema.fntype(types);
     for (auto tp : type_params())
-        fn_type->add_bound_var(tp->type_var(sema));
+        fn_type->bind(tp->type_var(sema));
     type_ = fn_type;
     sema.unify(type_);
 
@@ -402,11 +402,11 @@ void TraitDecl::check(TypeSema& sema) const {
 
     TypeVar self_var = self_param()->type_var(sema);
     trait_ = sema.trait(this);
-    trait_->add_bound_var(self_var);
+    trait_->bind(self_var);
 
     check_type_params(sema);
     for (auto tp : type_params())
-        trait_->add_bound_var(tp->type_var(sema));
+        trait_->bind(tp->type_var(sema));
 
     for (auto t : super())
         trait_->add_super_trait(t->to_trait(sema, self_var));
@@ -431,7 +431,7 @@ void Impl::check(TypeSema& sema) const {
             tinst = t->to_trait(sema, ftype);
             TraitImpl impl = sema.implement_trait(this, tinst);
             for (auto tp : type_params()) {
-                impl->add_bound_var(tp->type_var(sema));
+                impl->bind(tp->type_var(sema));
             }
 
             // add impl to type

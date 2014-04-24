@@ -15,7 +15,7 @@ TraitInstanceNode::TraitInstanceNode(const Trait trait, const SpecializeMap& var
     , trait_(trait)
     , var_instances_(var_instances)
 {
-    assert(trait_->num_bound_vars() == var_instances_.size());
+    assert(trait_->num_type_vars() == var_instances_.size());
 }
 
 void TraitNode::add_super_trait(Trait t) {
@@ -36,7 +36,7 @@ bool TraitInstanceNode::unify_with(Unifiable* other) {
             auto other_vinsts = tinst->var_instances_;
             if (var_instances_.size() == other_vinsts.size()) {
                 bool result = true;
-                for (auto v : trait()->bound_vars()) {
+                for (auto v : trait()->type_vars()) {
                     TypeVarNode* vnode = v.node();
                     assert(var_instances_.find(vnode) != var_instances_.end());
                     assert(other_vinsts.find(vnode) != other_vinsts.end());
@@ -51,7 +51,7 @@ bool TraitInstanceNode::unify_with(Unifiable* other) {
 }
 
 void TraitInstanceNode::refine() {
-    for (size_t i = 1; i < trait()->num_bound_vars(); ++i) {
+    for (size_t i = 1; i < trait()->num_type_vars(); ++i) {
         TypeVar tv = trait()->bound_var(i);
         assert(var_instances_.find(tv.node()) != var_instances_.end()); // CHECK is node() correct here?
         auto u = var_instances_.find(tv.node())->second;
@@ -67,7 +67,7 @@ void TraitInstanceNode::refine() {
 
 bool TraitInstanceNode::is_known() const {
     bool result = true;
-    for (auto tv : trait()->bound_vars()) {
+    for (auto tv : trait()->type_vars()) {
         assert(var_instances_.find(tv.node()) != var_instances_.end()); // CHECK is node() correct here?
         result = result && var_instances_.find(tv.node())->second->is_known();
     }

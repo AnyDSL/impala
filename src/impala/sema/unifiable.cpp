@@ -8,26 +8,26 @@
 
 namespace impala {
 
-bool Unifiable::unify_bound_vars(thorin::ArrayRef<TypeVar> other_vars) {
-    if (num_bound_vars() == other_vars.size())
+bool Unifiable::unify_type_vars(thorin::ArrayRef<TypeVar> other_vars) {
+    if (num_type_vars() == other_vars.size())
         return !is_generic(); // TODO enable unification of generic elements!
     return false;
 }
 
-void Unifiable::refine_bound_vars() {
-    for (auto v : bound_vars())
+void Unifiable::refine_type_vars() {
+    for (auto v : type_vars())
         v->refine();
 }
 
-bool Unifiable::bound_vars_known() const {
-    for (auto v : bound_vars()) {
+bool Unifiable::type_vars_known() const {
+    for (auto v : type_vars()) {
         if (!v->is_known())
             return false;
     }
     return true;
 }
 
-void Unifiable::add_bound_var(TypeVar v) {
+void Unifiable::bind(TypeVar v) {
     assert(!v->is_closed() && "type variables already bound");
     assert(!is_unified() && "type already unified");
     assert(v->bound_at_ == nullptr && "type variables can only be bound once");
@@ -37,14 +37,14 @@ void Unifiable::add_bound_var(TypeVar v) {
     //assert(type->kind() != Type_var && "Types like 'forall a, a' are forbidden!");
 
     v->bound_at_ = this;
-    bound_vars_.push_back(v);
+    type_vars_.push_back(v);
 }
 
 Unifiable* Unifiable::instantiate(SpecializeMap& var_instances) {
 /*#ifndef NDEBUG
     verify_instantiation(var_instances);
 #endif*/
-    assert(var_instances.size() == num_bound_vars());
+    assert(var_instances.size() == num_type_vars());
     return vspecialize(var_instances);
 }
 
@@ -53,7 +53,7 @@ Unifiable* Unifiable::specialize(SpecializeMap& map) {
     if (auto result = thorin::find(map, this))
         return result;
 
-    for (auto v : bound_vars()) {
+    for (auto v : type_vars()) {
         // CHECK is representative really correct or do we need node()? -- see also below!
         assert(!map.contains(v.representative()));
         v->clone(map); // CHECK is node() correct here?
@@ -61,9 +61,9 @@ Unifiable* Unifiable::specialize(SpecializeMap& map) {
 
     Unifiable* t = vspecialize(map);
 
-    for (auto v : bound_vars()) {
+    for (auto v : type_vars()) {
         assert(map.contains(v.representative()));
-        t->add_bound_var(TypeVar(map[v.representative()]->as<TypeVarNode>()));
+        t->bind(TypeVar(map[v.representative()]->as<TypeVarNode>()));
     }
 
     return t;
