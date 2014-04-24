@@ -88,7 +88,7 @@ bool TypeVarNode::equal(const Unifiable* other) const {
         return true;
 
     if (const TypeVarNode* t = other->isa<TypeVarNode>()) {
-        if ((this->equiv_ == nullptr) && (t->equiv_ == nullptr)) {
+        if (this->equiv_ == nullptr) {
             if ((this->bound_at() == nullptr) || (t->bound_at() == nullptr)) { // unbound type vars are by definition unequal
                 return false;
             } else {
@@ -106,13 +106,8 @@ bool TypeVarNode::equal(const Unifiable* other) const {
 
                 return result && bound_at()->equal(t->bound_at());
             }
-
-        } else {
-            // we do not use && because for performance reasons we only set the
-            // equiv_ on one side (even the right side of the || should never
-            // be executed)
-            return (this->equiv_ == t) || (t->equiv_ == this);
-        }
+        } else
+            return this->equiv_ == t;
     }
     return false;
 }
