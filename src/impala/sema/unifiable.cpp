@@ -28,14 +28,15 @@ bool Unifiable::bound_vars_known() const {
 }
 
 void Unifiable::add_bound_var(TypeVar v) {
-    assert(!v->is_closed() && "Type variables already bound");
-
+    assert(!v->is_closed() && "type variables already bound");
+    assert(!is_unified() && "type already unified");
+    assert(v->bound_at_ == nullptr && "type variables can only be bound once");
     // CHECK should variables only be bound in this case? does this also hold for traits?
     //assert(v->is_subtype(this) && "Type variables can only be bound at t if they are a subtype of t!");
     // CHECK should 'forall a, a' be forbidden?
     //assert(type->kind() != Type_var && "Types like 'forall a, a' are forbidden!");
 
-    v->bind(this);
+    v->bound_at_ = this;
     bound_vars_.push_back(v);
 }
 

@@ -78,11 +78,6 @@ bool KnownTypeNode::is_sane() const {
 
 //------------------------------------------------------------------------------
 
-void TypeVarNode::bind(const Unifiable* const e) {
-    assert(bound_at_ == nullptr && "type variables can only be bound once!");
-    bound_at_ = e;
-}
-
 void TypeVarNode::add_bound(Trait bound) {
     assert(!is_closed() && "Closed type variables must not be changed!");
     bounds_.insert(bound);
