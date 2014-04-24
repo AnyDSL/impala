@@ -18,7 +18,6 @@ class TypeVarNode;
 class Unifiable;
 class UnknownTypeNode;
 template<class T> class Proxy;
-template<class T> void unify(TypeTable&, const Proxy<T>&);
 typedef Proxy<TraitImplNode> TraitImpl;
 typedef Proxy<TraitNode> Trait;
 typedef Proxy<TypeNode> Type;
@@ -42,10 +41,9 @@ public:
 
     bool empty() const { return node_ == nullptr; }
     bool operator == (const Proxy<T>& other) const {
-        assert(node_ != nullptr);         
         assert(&node()->typetable() == &other.node()->typetable());
-        unify(node()->typetable(), *this);
-        unify(node()->typetable(), other);
+        this->node()->unify();
+        other.node()->unify();
         return representative() == other.representative();
     }
     bool operator != (const Proxy<T>& other) const { return !(*this == other); }
@@ -100,6 +98,7 @@ public:
     virtual bool equal(const Unifiable*) const = 0;
     virtual size_t hash() const = 0;
     virtual std::string to_string() const = 0;
+    bool unify();
 
     /**
      * Try to fill in missing type information by matching this possibly incomplete Unifiable with a complete Unifiable.

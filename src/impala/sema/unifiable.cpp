@@ -8,14 +8,6 @@
 
 namespace impala {
 
-template<class T> void unify(TypeTable& tt, const Proxy<T>& p) { tt.unify(p); }
-
-template void unify(TypeTable&, const Proxy<TypeNode>&);
-template void unify(TypeTable&, const Proxy<TraitNode>&);
-//template void unify(TypeTable&, const Proxy<TraitImplNode>&);
-
-//------------------------------------------------------------------------------
-
 bool Unifiable::unify_bound_vars(thorin::ArrayRef<TypeVar> other_vars) {
     if (num_bound_vars() == other_vars.size())
         return !is_generic(); // TODO enable unification of generic elements!
@@ -75,5 +67,7 @@ Unifiable* Unifiable::specialize(SpecializeMap& map) {
 
     return t;
 }
+
+bool Unifiable::unify() { return typetable().unify(this); }
 
 }

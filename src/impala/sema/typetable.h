@@ -43,6 +43,7 @@ public:
 
     /// Unify a type and return \p true if the representative changed.
     template<class T> bool unify(Proxy<T> proxy) { return unify(*proxy); }
+    bool unify(Unifiable*);
 
     /**
      * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
@@ -74,7 +75,6 @@ protected:
 private:
     /// insert all contained unifiables that are not yet unified
     void insert_new(Unifiable*);
-    bool unify(Unifiable*);
     Unifiable* instantiate_unknown(Unifiable*, std::vector<Type>&);
     template<class T> 
     Proxy<T> new_unifiable(T* tn) {
