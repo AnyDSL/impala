@@ -51,7 +51,7 @@ public:
     bool operator != (const Proxy<T>& other) const { assert(node_ != nullptr); return !(*this == other); }
     T* representative() const { assert(node_ != nullptr); return node_->representative()->template as<T>(); }
     T* node() const { assert(node_ != nullptr); return node_; }
-    T* operator  * () const { assert(node_ != nullptr); return node_->is_unified() ? representative() : node_->template as<T>(); }
+    T* operator  * () const { assert(node_ != nullptr); return node_->is_unified() ? representative() : node_; }
     T* operator -> () const { assert(node_ != nullptr); return *(*this); }
     /// Automatic up-cast in the class hierarchy.
     template<class U> operator Proxy<U>() {
