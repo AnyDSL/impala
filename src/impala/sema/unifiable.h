@@ -99,9 +99,6 @@ public:
     virtual size_t hash() const = 0;
     virtual std::string to_string() const = 0;
     void change_repr(Unifiable* repr) const;
-    void change_repr_unifiable(Unifiable* repr) const;
-    /// change the representative of the contained types
-    void change_repr_rec(Unifiable* repr) const;
     bool unify();
 
     /**
