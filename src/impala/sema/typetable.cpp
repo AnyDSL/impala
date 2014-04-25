@@ -116,7 +116,7 @@ bool TypeTable::check_bounds(const ASTNode* loc, Unifiable* unifiable, thorin::A
 
     // check the bounds
     for (size_t i = 0; i < unifiable->num_type_vars(); ++i) {
-        TypeVar v = unifiable->bound_var(i);
+        TypeVar v = unifiable->type_var(i);
         Type instance = inst_types[i];
         assert(map.contains(*v));
         assert(map.find(*v)->second == *instance);

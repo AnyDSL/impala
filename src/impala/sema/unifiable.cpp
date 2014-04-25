@@ -80,13 +80,13 @@ void Unifiable::change_repr(Unifiable* repr) const {
 
         // change the representative of all bound variables
         for (size_t i = 0, e = num_type_vars(); i != e; ++i)
-            bound_var(i).node()->change_repr(repr->bound_var(i).representative());
+            type_var(i).node()->change_repr(repr->type_var(i).representative());
 
         // change representatives of the bounds (i.e. Traits) of type variables
         assert(num_type_vars() == repr->num_type_vars());
         for (size_t i = 0; i != num_type_vars(); ++i) {
-            UniSet<Trait> old_bounds = bound_var(i)->bounds();
-            UniSet<Trait> repr_bounds = repr->bound_var(i)->bounds();
+            UniSet<Trait> old_bounds = type_var(i)->bounds();
+            UniSet<Trait> repr_bounds = repr->type_var(i)->bounds();
 
             assert(old_bounds.size() == repr_bounds.size());
 

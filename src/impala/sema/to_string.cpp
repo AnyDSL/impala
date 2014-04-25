@@ -47,7 +47,7 @@ std::string TraitInstanceNode::to_string() const {
     assert(var_instances_.size() == trait()->num_type_vars());
     const char* separator = "[";
     for (size_t i = 1; i < trait()->num_type_vars(); ++i) {
-        TypeVar tv = trait()->bound_var(i);
+        TypeVar tv = trait()->type_var(i);
         // CHECK is node() correct here?
         assert(var_instances_.find(tv.node()) != var_instances_.end());
         result += separator + var_instances_.find(tv.node())->second->to_string();

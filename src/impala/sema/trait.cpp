@@ -52,7 +52,7 @@ bool TraitInstanceNode::unify_with(Unifiable* other) {
 
 void TraitInstanceNode::refine() {
     for (size_t i = 1; i < trait()->num_type_vars(); ++i) {
-        TypeVar tv = trait()->bound_var(i);
+        TypeVar tv = trait()->type_var(i);
         assert(var_instances_.find(tv.node()) != var_instances_.end()); // CHECK is node() correct here?
         auto u = var_instances_.find(tv.node())->second;
 

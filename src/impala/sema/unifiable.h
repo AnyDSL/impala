@@ -90,7 +90,7 @@ public:
     bool is_unified() const { return representative_ != nullptr; }
     virtual size_t num_type_vars() const { return type_vars_.size(); }
     virtual thorin::ArrayRef<TypeVar> type_vars() const { return thorin::ArrayRef<TypeVar>(type_vars_); }
-    virtual TypeVar bound_var(size_t i) const { return type_vars_[i]; }
+    virtual TypeVar type_var(size_t i) const { return type_vars_[i]; }
     /// Returns true if this \p Type does have any bound type variabes (\p type_vars_).
     virtual bool is_generic() const { return !type_vars_.empty(); }
     virtual bool is_closed() const = 0; // TODO
@@ -148,7 +148,6 @@ protected:
 private:
     /// raise error if a type does not implement the required traits;
     void verify_instantiation(SpecializeMap&) const;
-    void set_representative(Unifiable* representative) const { representative_ = representative; }
 
     TypeTable& typetable_;
     mutable Unifiable* representative_;

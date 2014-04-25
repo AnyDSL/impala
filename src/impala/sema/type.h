@@ -163,8 +163,8 @@ public:
 
     virtual size_t num_type_vars() const { return is_instantiated() ? instance()->num_type_vars() : 0; }
     virtual thorin::ArrayRef<TypeVar> type_vars() const { return is_instantiated() ? instance()->type_vars() : thorin::ArrayRef<TypeVar>(); }
-    virtual TypeVar bound_var(size_t i) const { assert(is_instantiated()); return instance()->bound_var(i); }
-    virtual void add_bound_var(TypeVar v)  { assert(false); }
+    virtual TypeVar type_var(size_t i) const { assert(is_instantiated()); return instance()->type_var(i); }
+    virtual void add_type_var(TypeVar v)  { assert(false); }
     virtual bool is_generic() const { assert(type_vars_.empty()); return is_instantiated() ? instance()->is_generic() : false; }
 
     virtual bool is_closed() const { return is_instantiated() && instance()->is_closed(); }
