@@ -214,9 +214,17 @@ void FnDecl::check(NameSema& sema) const {
 }
 
 void StructDecl::check(NameSema& sema) const {
+    sema.push_scope();
+    for (auto field : fields()) {
+        field->check(sema);
+        field_table_[field->symbol()] = field;
+    }
+    sema.pop_scope();
 }
 
-void FieldDecl::check(NameSema&) const {
+void FieldDecl::check(NameSema& sema) const {
+    sema.check(ast_type());
+    sema.insert(this);
 }
 
 void TraitDecl::check(NameSema& sema) const {
@@ -225,8 +233,10 @@ void TraitDecl::check(NameSema& sema) const {
     check_type_params(sema);
     for (auto t : super())
         sema.check(t);
-    for (auto method : methods())
+    for (auto method : methods()) {
         method->check(sema);
+        method_table_[method->symbol()] = method;
+    }
     sema.pop_scope();
 }
 

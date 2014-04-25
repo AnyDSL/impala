@@ -437,6 +437,7 @@ private:
 class ModContents : public ASTNode {
 public:
     const AutoVector<const Item*>& items() const { return items_; }
+    const thorin::HashMap<Symbol, const Item*>& item_table() const { return item_table_; }
     virtual std::ostream& print(Printer&) const override;
     void check(NameSema&) const;
     void check(TypeSema&) const;
@@ -444,6 +445,7 @@ public:
 
 private:
     AutoVector<const Item*> items_;
+    thorin::HashMap<Symbol, const Item*> item_table_;
 
     friend class Parser;
 };
@@ -534,6 +536,7 @@ private:
 class StructDecl : public TypeDeclItem {
 public:
     const AutoVector<const FieldDecl*>& fields() const { return fields_; }
+    const thorin::HashMap<Symbol, const FieldDecl*>& field_table() const { return field_table_; }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
 
@@ -542,6 +545,7 @@ private:
     virtual void emit(CodeGen&) const override;
 
     AutoVector<const FieldDecl*> fields_;
+    mutable thorin::HashMap<Symbol, const FieldDecl*> field_table_;
 
     friend class Parser;
 };
@@ -601,6 +605,7 @@ public:
 
     const AutoVector<const ASTTypeApp*>& super() const { return super_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
+    const thorin::HashMap<Symbol, const FnDecl*>& method_table() const { return method_table_; }
     const SelfParam* self_param() const { return &self_param_; }
     Trait trait() const { return trait_; }
     Trait to_trait(TypeSema&) const;
@@ -614,6 +619,7 @@ private:
     const SelfParam self_param_;
     AutoVector<const FnDecl*> methods_;
     AutoVector<const ASTTypeApp*> super_;
+    mutable thorin::HashMap<Symbol, const FnDecl*> method_table_;
     mutable Trait trait_;
 
     friend class Parser;
