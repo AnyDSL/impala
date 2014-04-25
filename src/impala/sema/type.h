@@ -85,7 +85,6 @@ protected:
     {}
 
     void set(size_t i, Type n) { elems_[i] = n; }
-    Type elem_(size_t i) const { return elems_[i]; }
 
 public:
     virtual Kind kind() const { return kind_; }
