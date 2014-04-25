@@ -296,13 +296,13 @@ private:
     friend class Parser;
 };
 
-
 //------------------------------------------------------------------------------
 
 /*
  * declarations
  */
 
+/// Base class for all entities which have a name \p symbol_.
 class Decl : virtual public ASTNode {
 public:
     Symbol symbol() const { return symbol_; }
@@ -320,7 +320,7 @@ private:
 };
 
 /// Base class for all declarations which must have inferred a \p Type.
-class TypeDecl : public Decl, public Typeable {
+class TypeableDecl : public Decl, public Typeable {
 private:
     virtual void check(NameSema&) const = 0;
     virtual Type check(TypeSema&) const = 0;
@@ -331,17 +331,22 @@ private:
     friend class TypeSema;
 };
 
-/// Base class for all declarations which have a type.
-class ValueDecl : public TypeDecl {
+/// Base class for all declarations which represent a type definition.
+class TypeDecl : public TypeableDecl {
+};
+
+/// Base class for all declarations which represent a value.
+class ValueDecl : public TypeableDecl {
 public:
     const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     bool is_mut() const { return is_mut_; }
-    virtual thorin::Var var(CodeGen&) const;
-    virtual void check(NameSema&) const override;
 
 private:
-    Type check(TypeSema&, Type) const;
+    virtual void check(NameSema&) const override;
     virtual Type check(TypeSema& sema) const override;
+    Type check(TypeSema&, Type) const;
+    virtual thorin::Var emit(CodeGen&) const = 0;
+
     AutoPtr<const ASTType> ast_type_;
     bool is_mut_ = false;
 
@@ -351,6 +356,7 @@ protected:
     friend class Parser;
     friend class TypeSema;
     friend class ForExpr;
+    friend class CodeGen;
 };
 
 /// Base class for all Values which may be mutated within a function.
@@ -365,7 +371,9 @@ public:
     bool is_address_taken() const { return address_taken_; }
     bool is_anonymous() const { return symbol() == Symbol(); }
     virtual std::ostream& print(Printer&) const override;
-    virtual thorin::Var var(CodeGen&) const override;
+
+private:
+    virtual thorin::Var emit(CodeGen&) const override;
 
 protected:
     size_t handle_;
@@ -468,7 +476,8 @@ public:
 private:
     virtual void check_item(NameSema&) const = 0;
     virtual void check_item(TypeSema&) const = 0;
-    virtual void emit(CodeGen&) const = 0;
+    virtual void emit_item(CodeGen&) const = 0;
+
     Visibility visibility_;
 
     friend class CodeGen;
@@ -500,6 +509,7 @@ public:
 private:
     virtual void check_item(NameSema&) const override;
     virtual void check_item(TypeSema&) const override;
+    virtual void emit_item(CodeGen&) const override;
 
     friend class Parser;
 };
@@ -512,7 +522,7 @@ public:
 
 private:
     virtual Type check(TypeSema&) const override;
-    virtual void emit(CodeGen&) const override;
+    virtual void emit_item(CodeGen&) const override;
 
     AutoPtr<const ModContents> mod_contents_;
 
@@ -526,7 +536,7 @@ public:
 
 private:
     virtual Type check(TypeSema&) const override;
-    virtual void emit(CodeGen&) const override;
+    virtual void emit_item(CodeGen&) const override;
 };
 
 class Typedef : public TypeDeclItem {
@@ -537,7 +547,7 @@ public:
 
 private:
     virtual Type check(TypeSema&) const override;
-    virtual void emit(CodeGen&) const override;
+    virtual void emit_item(CodeGen&) const override;
 
     AutoPtr<const ASTType> type_;
 
@@ -547,11 +557,12 @@ private:
 class FieldDecl : public ValueDecl {
 public:
     Visibility visibility() const { return  visibility_; }
-    virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type check(TypeSema&) const override;
+    virtual thorin::Var emit(CodeGen&) const override;
 
     Visibility visibility_;
 
@@ -567,7 +578,7 @@ public:
 
 private:
     virtual Type check(TypeSema&) const override;
-    virtual void emit(CodeGen&) const override;
+    virtual void emit_item(CodeGen&) const override;
 
     AutoVector<const FieldDecl*> fields_;
     mutable thorin::HashMap<Symbol, const FieldDecl*> field_table_;
@@ -582,7 +593,7 @@ public:
 
 private:
     virtual Type check(TypeSema&) const override;
-    virtual void emit(CodeGen&) const override;
+    virtual void emit_item(CodeGen&) const override;
 };
 
 class StaticItem : public ValueItem {
@@ -595,7 +606,7 @@ public:
 
 private:
     virtual Type check(TypeSema&) const override;
-    virtual void emit(CodeGen&) const override;
+    virtual thorin::Var emit(CodeGen&) const override;
 
     bool is_mut_;
     AutoPtr<const ASTType> type_;
@@ -613,7 +624,7 @@ public:
 
 private:
     virtual Type check(TypeSema&) const override;
-    virtual void emit(CodeGen&) const override;
+    virtual thorin::Var emit(CodeGen&) const override;
 
     bool extern_;
 
@@ -638,7 +649,7 @@ public:
 private:
     virtual void check_item(NameSema&) const override;
     virtual void check_item(TypeSema&) const override;
-    virtual void emit(CodeGen&) const override;
+    virtual void emit_item(CodeGen&) const override;
 
     const SelfParam self_param_;
     AutoVector<const FnDecl*> methods_;
@@ -656,11 +667,11 @@ public:
     const ASTType* for_type() const { return for_type_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void emit(CodeGen&) const override;
 
 private:
     virtual void check_item(NameSema&) const override;
     virtual void check_item(TypeSema&) const override;
+    virtual void emit_item(CodeGen&) const override;
 
     AutoPtr<const ASTType> trait_;
     AutoPtr<const ASTType> for_type_;

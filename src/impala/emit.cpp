@@ -43,7 +43,12 @@ public:
     void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
     void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }
-    void emit(const Item* item) { item->emit(*this); }
+    void emit(const Item* item) { item->emit_item(*this); }
+    Var emit(const ValueDecl* decl) { 
+        if (!decl->var_)
+            decl->var_ = decl->emit(*this); 
+        return decl->var_;
+    }
 
     const Fn* cur_fn;
 };
@@ -52,16 +57,11 @@ public:
  * Decls and Function
  */
 
-Var ValueDecl::var(CodeGen& cg) const { return var_; }
-
-Var LocalDecl::var(CodeGen& cg) const {
-    if (!var_) {
-        auto thorin_type = type()->convert(cg.world());
-        if (is_address_taken())
-            return var_ = Var(cg, cg.world().slot(thorin_type, cg.frame(), handle(), symbol().str()));
-        return var_ = Var(cg, handle(), thorin_type, symbol().str());
-    }
-    return var_;
+Var LocalDecl::emit(CodeGen& cg) const {
+    auto thorin_type = type()->convert(cg.world());
+    if (is_address_taken())
+        return var_ = Var(cg, cg.world().slot(thorin_type, cg.frame(), handle(), symbol().str()));
+    return var_ = Var(cg, handle(), thorin_type, symbol().str());
 }
 
 Lambda* Fn::emit_head(CodeGen& cg, const char* name) const {
@@ -84,7 +84,7 @@ void Fn::emit_body(CodeGen& cg) const {
     for (size_t i = 0, e = params().size(); i != e; ++i) {
         auto p = lambda()->param(i+1);
         p->name = param(i)->symbol().str();
-        param(i)->var(cg).store(p);
+        cg.emit(param(i)).store(p);
     }
     ret_param_ = lambda()->params().back();
 
@@ -140,12 +140,15 @@ thorin::Type TupleTypeNode::convert(World& world) const {
  * Item
  */
 
+
+void ValueItem::emit_item(CodeGen& cg) const { cg.emit(static_cast<const ValueDecl*>(this)); }
+
 void ModContents::emit(CodeGen& cg) const {
     for (auto item : items())
         cg.emit(item);
 }
 
-void FnDecl::emit(CodeGen& cg) const {
+Var FnDecl::emit(CodeGen& cg) const {
     // create thorin function
     var_ = Var(cg, emit_head(cg, symbol().str()));
     if (is_extern())
@@ -170,27 +173,33 @@ void FnDecl::emit(CodeGen& cg) const {
         lambda()->attribute().set(Lambda::VectorizeTid | Lambda::Extern);
 
     emit_body(cg);
+    return var_;
 }
 
-void ForeignMod::emit(CodeGen& cg) const {
+void ForeignMod::emit_item(CodeGen& cg) const {
 }
 
-void ModDecl::emit(CodeGen& cg) const {
+void ModDecl::emit_item(CodeGen& cg) const {
 }
 
-void Impl::emit(CodeGen& cg) const {
+void Impl::emit_item(CodeGen& cg) const {
 }
 
-void StaticItem::emit(CodeGen& cg) const {
+Var StaticItem::emit(CodeGen& cg) const {
+    return Var(); // TODO
 }
 
-void StructDecl::emit(CodeGen& cg) const {
+Var FieldDecl::emit(CodeGen&) const {
+    return Var(); // TODO
 }
 
-void TraitDecl::emit(CodeGen& cg) const {
+void StructDecl::emit_item(CodeGen& cg) const {
 }
 
-void Typedef::emit(CodeGen& cg) const {
+void TraitDecl::emit_item(CodeGen& cg) const {
+}
+
+void Typedef::emit_item(CodeGen& cg) const {
 }
 
 /*
@@ -231,7 +240,7 @@ Def LiteralExpr::remit(CodeGen& cg) const {
 }
 
 Var PathExpr::lemit(CodeGen& cg) const {
-    return value_decl()->var(cg);
+    return cg.emit(value_decl());
 }
 
 Def PrefixExpr::remit(CodeGen& cg) const {
@@ -401,7 +410,7 @@ void ItemStmt::emit(CodeGen& cg) const {
 
 void LetStmt::emit(CodeGen& cg) const {
     if (cg.is_reachable()) {
-        auto var = local()->var(cg);
+        auto var = cg.emit(local());
         if (init()) {
             auto def = cg.remit(init());
             def->name = local()->symbol().str();

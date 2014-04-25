@@ -48,12 +48,12 @@ public:
 
     // check wrappers
 
-    Type check(const TypeDecl* type_decl) {
-        if (!type_decl->checked_) { 
-            type_decl->checked_ = true; 
-            type_decl->type_ = type_decl->check(*this);
+    Type check(const TypeableDecl* decl) {
+        if (!decl->checked_) { 
+            decl->checked_ = true; 
+            decl->type_ = decl->check(*this);
         }
-        return type_decl->type();
+        return decl->type();
     }
     Type check(const ValueDecl* decl, Type expected) {
         if (!decl->checked_) {

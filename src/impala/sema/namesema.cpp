@@ -34,7 +34,7 @@ public:
     void pop_scope();                                            ///< Discards current scope.
 
     void check(const ASTType* ast_type) { ast_type->check(*this); }
-    void check(const TypeDecl* type_decl) { type_decl->check(*this); }
+    void check(const TypeableDecl* decl) { decl->check(*this); }
     void check_head(const Item* item) {
         if (auto decl = item->isa<Decl>())
             insert(decl);
@@ -364,7 +364,7 @@ void ItemStmt::check(NameSema& sema) const { sema.check_item(item()); }
 void LetStmt::check(NameSema& sema) const {
     if (init())
         init()->check(sema);
-    local()->check(sema);
+    sema.check(local());
 }
 
 //------------------------------------------------------------------------------
