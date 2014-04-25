@@ -47,6 +47,11 @@ typedef AutoVector<const Expr*> Exprs;
 
 //------------------------------------------------------------------------------
 
+/*
+ * helpers and mixins
+ */
+
+/// Aggregate with all entities which have a visibility.
 class Visibility {
 public:
     enum {
@@ -70,6 +75,18 @@ private:
     friend class Parser;
 };
 
+/// Mixin for all entities that have a type assigned.
+class Typeable {
+public:
+    Type type() const { return type_; }
+
+protected:
+    mutable Type type_;
+
+    friend class TypeSema;
+};
+
+/// Mixin for all entities which have a list of \p TypeParam%s: [T1, T2 : A + B[...], ...].
 class TypeParamList {
 public:
     const TypeParam* type_param(size_t i) const { return type_params_[i]; }
@@ -82,6 +99,8 @@ protected:
 
     AutoVector<const TypeParam*> type_params_;
 };
+
+//------------------------------------------------------------------------------
 
 class ASTNode : public impala::HasLocation, public thorin::MagicCast<ASTNode> {
 public:
@@ -131,16 +150,7 @@ private:
     friend class Parser;
 };
 
-/// Base class of all entities that have a type assigned. 
-/// Use as a mixin.
-class Typeable {
-public:
-    Type type() const { return type_; }
-
-protected:
-    mutable Type type_;
-    friend class TypeSema;
-};
+//------------------------------------------------------------------------------
 
 /*
  * AST types
@@ -367,7 +377,7 @@ protected:
 //------------------------------------------------------------------------------
 
 /*
- * parameters
+ * parameters and Fn
  */
 
 class TypeParam : public TypeDecl {
