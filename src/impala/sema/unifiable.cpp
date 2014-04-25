@@ -105,14 +105,13 @@ void Unifiable::set_representative(Unifiable* repr) const {
             }
         }
 
-        if (auto ty = isa<TypeNode>()) {
-            auto t = ty->as<KnownTypeNode>();
-            auto ktn = repr->as<KnownTypeNode>();
+        if (auto ktn = isa<KnownTypeNode>()) {
+            auto repr_ktn = repr->as<KnownTypeNode>();
 
             // change representative of all sub elements
-            assert(t->size() == ktn->size());
-            for (size_t i = 0, e = t->size(); i != e; ++i)
-                t->elem(i).node()->set_representative(ktn->elem(i).representative());
+            assert(ktn->size() == repr_ktn->size());
+            for (size_t i = 0, e = ktn->size(); i != e; ++i)
+                ktn->elem(i).node()->set_representative(repr_ktn->elem(i).representative());
         }
     }
 }
