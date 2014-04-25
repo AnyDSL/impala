@@ -71,7 +71,7 @@ Unifiable* Unifiable::specialize(SpecializeMap& map) {
 
 bool Unifiable::unify() { return typetable().unify(this); }
 
-void Unifiable::change_repr(Unifiable* repr) const {
+void Unifiable::set_representative(Unifiable* repr) const {
     assert(repr == repr->representative_);
     assert(num_type_vars() == repr->num_type_vars());
 
@@ -80,7 +80,7 @@ void Unifiable::change_repr(Unifiable* repr) const {
 
         // change the representative of all bound variables
         for (size_t i = 0, e = num_type_vars(); i != e; ++i)
-            type_var(i).node()->change_repr(repr->type_var(i).representative());
+            type_var(i).node()->set_representative(repr->type_var(i).representative());
 
         // change representatives of the bounds (i.e. Traits) of type variables
         assert(num_type_vars() == repr->num_type_vars());
@@ -102,7 +102,7 @@ void Unifiable::change_repr(Unifiable* repr) const {
             for (auto bound : old_bounds) {
                 auto repr_bound = bounds.find(bound.node());
                 assert(repr_bound != bounds.end());
-                bound.node()->change_repr((*repr_bound)->representative());
+                bound.node()->set_representative((*repr_bound)->representative());
             }
         }
 
@@ -113,7 +113,7 @@ void Unifiable::change_repr(Unifiable* repr) const {
             // change representative of all sub elements
             assert(t->size() == ktn->size());
             for (size_t i = 0, e = t->size(); i != e; ++i)
-                t->elem(i).node()->change_repr(ktn->elem(i).representative());
+                t->elem(i).node()->set_representative(ktn->elem(i).representative());
         }
     }
 }

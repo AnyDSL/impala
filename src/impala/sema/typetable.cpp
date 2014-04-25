@@ -24,7 +24,7 @@ TypeTable::~TypeTable() {
 
 void TypeTable::insert_new(Unifiable* unifiable) {
     assert(!unifiable->is_unified());
-    unifiable->set_representative(unifiable);
+    unifiable->representative_ = unifiable;
 
     for (auto v : unifiable->type_vars()) {
         bool changed = false;
@@ -80,7 +80,7 @@ bool TypeTable::unify(Unifiable* unifiable) {
 
     if (auto utn = unifiable->isa<UnknownTypeNode>()) {
         bool res = unify(utn->instance());
-        utn->set_representative(*utn->instance());
+        utn->representative_ = *utn->instance();
         return res;
     }
 
@@ -90,7 +90,7 @@ bool TypeTable::unify(Unifiable* unifiable) {
     if (i != unifiables_.end()) {
         auto repr = *i;
         assert(repr != unifiable && "Already unified");
-        unifiable->change_repr(repr);
+        unifiable->set_representative(repr);
         assert(unifiable->representative() == repr);
         return true;
     } else {
