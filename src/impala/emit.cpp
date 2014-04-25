@@ -29,7 +29,7 @@ public:
     Def converge(const Expr* expr, JumpTarget& x) {
         emit_jump(expr, x);
         if (enter(x))
-            return cur_bb->get_value(1, expr->type()->convert(world()));
+            return cur_bb->get_value(1, convert(expr->type()));
         return Def();
     }
     void emit_jump(bool val, JumpTarget& x) {
@@ -49,6 +49,11 @@ public:
             decl->var_ = decl->emit(*this); 
         return decl->var_;
     }
+    thorin::Type convert(Type type) { 
+        if (!type->thorin_type_)
+            type->thorin_type_ = type->convert(*this);
+        return type->thorin_type_;
+    }
 
     const Fn* cur_fn;
 };
@@ -58,14 +63,14 @@ public:
  */
 
 Var LocalDecl::emit(CodeGen& cg) const {
-    auto thorin_type = type()->convert(cg.world());
+    auto thorin_type = cg.convert(type());
     if (is_address_taken())
         return var_ = Var(cg, cg.world().slot(thorin_type, cg.frame(), handle(), symbol().str()));
     return var_ = Var(cg, handle(), thorin_type, symbol().str());
 }
 
 Lambda* Fn::emit_head(CodeGen& cg, const char* name) const {
-    return lambda_ = cg.world().lambda(fn_type()->convert(cg.world()).as<thorin::FnType>(), name);
+    return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), name);
 }
 
 void Fn::emit_body(CodeGen& cg) const {
@@ -107,33 +112,39 @@ void Fn::emit_body(CodeGen& cg) const {
  * Type
  */
 
-void TypeNode::convert_elems(World& world, std::vector<thorin::Type>& nelems) const {
+void TypeNode::convert_elems(CodeGen& cg, std::vector<thorin::Type>& nelems) const {
     for (auto elem : elems())
-        nelems.push_back(elem->convert(world));
+        nelems.push_back(elem->convert(cg));
 }
 
-thorin::Type PrimTypeNode::convert(World& world) const {
+thorin::Type PrimTypeNode::convert(CodeGen& cg) const {
     switch (primtype_kind()) {
 #define IMPALA_TYPE(itype, ttype) \
-        case PrimType_##itype: return world.type_##ttype();
+        case PrimType_##itype: return cg.world().type_##ttype();
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
 }
 
-thorin::Type NoReturnTypeNode::convert(World& world) const { return thorin::Type(); }
+thorin::Type NoReturnTypeNode::convert(CodeGen& cg) const { return thorin::Type(); }
 
-thorin::Type FnTypeNode::convert(World& world) const { 
+thorin::Type FnTypeNode::convert(CodeGen& cg) const { 
     std::vector<thorin::Type> nelems;
-    nelems.push_back(world.mem_type());
-    convert_elems(world, nelems);
-    return world.fn_type(nelems); 
+    nelems.push_back(cg.world().mem_type());
+    convert_elems(cg, nelems);
+    return cg.world().fn_type(nelems); 
 }
 
-thorin::Type TupleTypeNode::convert(World& world) const { 
+thorin::Type TupleTypeNode::convert(CodeGen& cg) const { 
     std::vector<thorin::Type> nelems;
-    convert_elems(world, nelems);
-    return world.tuple_type(nelems);
+    convert_elems(cg, nelems);
+    return cg.world().tuple_type(nelems);
+}
+
+thorin::Type StructTypeNode::convert(CodeGen& cg) const {
+    auto struct_type = cg.world().struct_type(size());
+
+    return struct_type;
 }
 
 /*
@@ -262,7 +273,7 @@ Def PrefixExpr::remit(CodeGen& cg) const {
 }
 
 void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
-    if (kind() == NOT && type()->convert(cg.world())->is_bool())
+    if (kind() == NOT && cg.convert(type())->is_bool())
         cg.emit_branch(rhs(), f, t);
     else
         cg.branch(cg.remit(rhs()), t, f);
@@ -344,7 +355,7 @@ Def MapExpr::remit(CodeGen& cg) const {
         defs.push_back(cg.get_mem());
         for (auto arg : args())
             defs.push_back(cg.remit(arg));
-        auto ret_type = args().size() == fn->size() ? thorin::Type() : fn->return_type()->convert(cg.world());
+        auto ret_type = args().size() == fn->size() ? thorin::Type() : cg.convert(fn->return_type());
         return cg.call(ldef, defs, ret_type);
     } else {
         assert(false && "TODO");

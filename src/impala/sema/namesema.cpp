@@ -211,6 +211,7 @@ void FnDecl::check(NameSema& sema) const {
 }
 
 void StructDecl::check(NameSema& sema) const {
+    check_type_params(sema);
     sema.push_scope();
     for (auto field : fields()) {
         field->check(sema);

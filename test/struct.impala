@@ -1,5 +1,10 @@
 pub struct Vec3 {
-    mut x: float, 
-    priv y: float, 
-    pub mut z: float
+    mut x: f32, 
+    priv y: f32, 
+    pub mut z: f32
+}
+
+fn main() -> () {
+    let v : Vec3;
+    v.x;
 }

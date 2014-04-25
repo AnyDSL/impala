@@ -353,7 +353,11 @@ Type EnumDecl::check(TypeSema& sema) const {
 }
 
 Type StructDecl::check(TypeSema& sema) const {
-    return Type();
+    check_type_params(sema);
+    auto struct_type = sema.struct_type(this);
+    for (auto field : fields())
+        sema.check(field);
+    return struct_type;
 }
 
 Type FieldDecl::check(TypeSema&) const {

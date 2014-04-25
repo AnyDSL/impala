@@ -1,6 +1,6 @@
-#include "impala/ast.h"
-
 #include "impala/sema/type.h"
+
+#include "impala/ast.h"
 #include "impala/sema/trait.h"
 #include "impala/sema/typetable.h"
 
@@ -173,6 +173,7 @@ Unifiable* NoReturnTypeNode::vspecialize(SpecializeMap& map) { return map[this] 
 Unifiable* PrimTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type(primtype_kind()).node(); }
 Unifiable* FnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().fn_type(specialize_elems(map)).node(); }
 Unifiable* TupleTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().tuple_type(specialize_elems(map)).node(); }
+Unifiable* StructTypeNode::vspecialize(SpecializeMap& map) { assert(false); return nullptr; }
 
 Unifiable* TypeVarNode::vspecialize(SpecializeMap& map) {
     // was not bound in the specialized type -> return orginal type var
@@ -225,6 +226,13 @@ bool KnownTypeNode::is_known() const {
         result = result && e->is_known();
     return result;
 }
+
+//------------------------------------------------------------------------------
+
+StructTypeNode::StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl)
+    : KnownTypeNode(typetable, Type_tuple, struct_decl->fields().size())
+    , struct_decl_(struct_decl)
+{}
 
 //------------------------------------------------------------------------------
 

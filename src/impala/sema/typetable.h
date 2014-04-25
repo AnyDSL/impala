@@ -39,6 +39,7 @@ public:
     FnType fn_type(thorin::ArrayRef<Type> params) { return new_unifiable(new FnTypeNode(*this, params)); }
     TupleType tuple_type(thorin::ArrayRef<Type> elems) { return new_unifiable(new TupleTypeNode(*this, elems)); }
     TupleType unit() { return tuple_type({}); }
+    StructType struct_type(const StructDecl* struct_decl) { return new_unifiable(new StructTypeNode(*this, struct_decl)); }
 
     /// Unify a type and return \p true if the representative changed.
     template<class T> bool unify(Proxy<T> proxy) { return unify(*proxy); }

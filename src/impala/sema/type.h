@@ -16,6 +16,9 @@ namespace thorin {
 
 namespace impala {
 
+class CodeGen;
+class StructDecl;
+
 //------------------------------------------------------------------------------
 
 enum Kind {
@@ -26,6 +29,7 @@ enum Kind {
     Type_noReturn,
     Type_fn,
     Type_tuple,
+    Type_struct,
     Type_var,
 };
 
@@ -43,6 +47,8 @@ protected:
     TypeNode(TypeTable& typetable)
         : TUnifiable(typetable)
     {}
+
+    void convert_elems(CodeGen& world, std::vector<thorin::Type>& nelems) const;
 
 public:
     virtual Kind kind() const = 0;
@@ -72,8 +78,13 @@ public:
      * This also means that a sane type is always closed!
      */
     virtual bool is_sane() const = 0;
-    virtual thorin::Type convert(thorin::World&) const = 0;
-    void convert_elems(thorin::World& world, std::vector<thorin::Type>& nelems) const;
+
+private:
+    virtual thorin::Type convert(CodeGen&) const = 0;
+
+    thorin::Type thorin_type_;
+
+    friend class CodeGen;
 };
 
 class KnownTypeNode : public TypeNode {
@@ -172,9 +183,10 @@ public:
     bool is_instantiated() const { return !instance_.empty(); }
     Type instance() const { return instance_; }
     void instantiate(Type instance) { assert(!is_instantiated()); instance_ = instance; }
-    virtual thorin::Type convert(thorin::World&) const { assert(false); return thorin::Type(); }
 
 private:
+    virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
+
     Type instance_;
 
     friend class TypeTable;
@@ -191,7 +203,9 @@ protected:
 
 public:
     virtual std::string to_string() const { return "<type error>"; }
-    virtual thorin::Type convert(thorin::World&) const { assert(false); return thorin::Type(); }
+
+private:
+    virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
 
     friend class TypeTable;
 };
@@ -207,7 +221,9 @@ protected:
 
 public:
     virtual std::string to_string() const { return "<type no-return>"; }
-    virtual thorin::Type convert(thorin::World&) const override;
+
+private:
+    virtual thorin::Type convert(CodeGen&) const override;
 
     friend class TypeTable;
 };
@@ -225,7 +241,9 @@ protected:
 
 public:
     virtual std::string to_string() const;
-    virtual thorin::Type convert(thorin::World&) const;
+
+private:
+    virtual thorin::Type convert(CodeGen&) const;
 
     friend class TypeTable;
 };
@@ -257,9 +275,10 @@ protected:
 public:
     Type return_type() const;
     virtual std::string to_string() const { return std::string("fn") + type_vars_to_string() + elems_to_string(); }
-    virtual thorin::Type convert(thorin::World&) const;
-
     FnType specialize_method(Type t) const;
+
+private:
+    virtual thorin::Type convert(CodeGen&) const;
 
     friend class TypeTable;
 };
@@ -275,7 +294,28 @@ protected:
 
 public:
     virtual std::string to_string() const { return type_vars_to_string() + elems_to_string(); }
-    virtual thorin::Type convert(thorin::World&) const;
+
+private:
+    virtual thorin::Type convert(CodeGen&) const;
+
+    friend class TypeTable;
+};
+
+class StructTypeNode : public KnownTypeNode {
+private:
+    StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl);
+
+protected:
+    virtual Unifiable* vspecialize(SpecializeMap&);
+
+public:
+    const StructDecl* struct_decl() const { return struct_decl_; }
+    virtual std::string to_string() const { return "TODO"; }
+
+private:
+    virtual thorin::Type convert(CodeGen&) const;
+
+    const StructDecl* struct_decl_;
 
     friend class TypeTable;
 };
@@ -299,7 +339,6 @@ public:
     std::string to_string() const;
     virtual bool implements(Trait) const;
     virtual Type find_method(Symbol s) const;
-    virtual thorin::Type convert(thorin::World&) const { assert(false && "TODO"); return thorin::Type(); }
 
     /**
      * A type variable is closed if it is bound and all restrictions are closed.
@@ -314,6 +353,8 @@ public:
     TypeVar clone(SpecializeMap&) const;
 
 private:
+    virtual thorin::Type convert(CodeGen&) const { assert(false && "TODO"); return thorin::Type(); }
+
     Symbol name_;
     UniSet<Trait> bounds_;///< All traits that restrict the instantiation of this variable.
     /**
@@ -339,6 +380,7 @@ typedef Proxy<PrimTypeNode> PrimType;
 typedef Proxy<NoReturnTypeNode> NoReturnType;
 typedef Proxy<FnTypeNode> FnType;
 typedef Proxy<TupleTypeNode> TupleType;
+typedef Proxy<StructTypeNode> StructType;
 
 //------------------------------------------------------------------------------
 
