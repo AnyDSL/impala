@@ -28,6 +28,7 @@ class ASTType;
 class Decl;
 class Expr;
 class Item;
+class NamedItem;
 class Stmt;
 class TypeParam;
 
@@ -437,7 +438,7 @@ private:
 class ModContents : public ASTNode {
 public:
     const AutoVector<const Item*>& items() const { return items_; }
-    const thorin::HashMap<Symbol, const Item*>& item_table() const { return item_table_; }
+    const thorin::HashMap<Symbol, const NamedItem*>& item_table() const { return item_table_; }
     virtual std::ostream& print(Printer&) const override;
     void check(NameSema&) const;
     void check(TypeSema&) const;
@@ -445,7 +446,7 @@ public:
 
 private:
     AutoVector<const Item*> items_;
-    thorin::HashMap<Symbol, const Item*> item_table_;
+    mutable thorin::HashMap<Symbol, const NamedItem*> item_table_;
 
     friend class Parser;
 };
@@ -466,26 +467,31 @@ private:
     friend class TypeSema;
 };
 
-class TypeDeclItem : public Item, public TypeDecl, public TypeParamList {
+class NamedItem : public Item {
+public:
+    virtual Symbol item_symbol() const = 0;
+};
+
+class TypeDeclItem : public NamedItem, public TypeDecl, public TypeParamList {
+public:
+    virtual Symbol item_symbol() const override { return TypeDecl::symbol(); }
+
 private:
-    virtual void check_item(NameSema&) const;
-    virtual void check_item(TypeSema&) const;
+    virtual void check_item(NameSema&) const override;
+    virtual void check_item(TypeSema&) const override;
 
     friend class Parser;
 };
 
-class ValueItem : public Item, public ValueDecl {
+class ValueItem : public NamedItem, public ValueDecl {
+public:
+    virtual Symbol item_symbol() const override { return ValueDecl::symbol(); }
+
 private:
-    virtual void check_item(NameSema&) const;
-    virtual void check_item(TypeSema&) const;
+    virtual void check_item(NameSema&) const override;
+    virtual void check_item(TypeSema&) const override;
 
     friend class Parser;
-};
-
-class MiscItem : public Item {
-private:
-    friend class NameSema;
-    friend class TypeSema;
 };
 
 class ModDecl : public TypeDeclItem {
@@ -572,7 +578,6 @@ private:
 class StaticItem : public ValueItem {
 public:
     bool is_mut() const { return is_mut_; }
-    Symbol symbol() const { return symbol_; }
     const ASTType* type() const { return type_; }
     const Expr* init() const { return init_; }
     virtual std::ostream& print(Printer&) const override;
@@ -583,7 +588,6 @@ private:
     virtual void emit(CodeGen&) const override;
 
     bool is_mut_;
-    Symbol symbol_;
     AutoPtr<const ASTType> type_;
     AutoPtr<const Expr> init_;;
 
@@ -606,7 +610,7 @@ private:
     friend class Parser;
 };
 
-class TraitDecl : public MiscItem, public Decl, public TypeParamList {
+class TraitDecl : public NamedItem, public Decl, public TypeParamList {
 public:
     TraitDecl()
         : self_param_(Location(loc().pos1(), loc().pos1()))
@@ -618,6 +622,7 @@ public:
     const SelfParam* self_param() const { return &self_param_; }
     Trait trait() const { return trait_; }
     Trait to_trait(TypeSema&) const;
+    virtual Symbol item_symbol() const override { return Decl::symbol(); }
     virtual std::ostream& print(Printer&) const override;
 
 private:
@@ -634,7 +639,7 @@ private:
     friend class Parser;
 };
 
-class Impl : public MiscItem, public TypeParamList {
+class Impl : public Item, public TypeParamList {
 public:
     /// May be nullptr as trait is optional.
     const ASTType* trait() const { return trait_; }

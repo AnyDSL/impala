@@ -145,7 +145,11 @@ void FnASTType::check(NameSema& sema) const {
 //------------------------------------------------------------------------------
 
 void ModContents::check(NameSema& sema) const {
-    for (auto item : items()) sema.check_head(item);
+    for (auto item : items()) {
+        sema.check_head(item);
+        if (auto named_item = item->isa<NamedItem>())
+            item_table_[named_item->item_symbol()] = named_item;
+    }
     for (auto item : items()) sema.check_item(item);
 }
 
