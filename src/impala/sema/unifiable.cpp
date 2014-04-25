@@ -79,31 +79,16 @@ void Unifiable::set_representative(Unifiable* repr) const {
         representative_ = repr;
 
         // change the representative of all bound variables
-        for (size_t i = 0, e = num_type_vars(); i != e; ++i)
-            type_var(i).node()->set_representative(repr->type_var(i).representative());
-
-        // change representatives of the bounds (i.e. Traits) of type variables
         for (size_t i = 0, e = num_type_vars(); i != e; ++i) {
-
-#if 0
-            auto& old_bounds = type_var(i)->bounds();
+            type_var(i).node()->set_representative(repr->type_var(i).representative());
+#ifndef NDEBUG
+            // check whether bounds have the same representative in DEBUG build
+            auto& bounds = type_var(i)->bounds();
             auto& repr_bounds = repr->type_var(i)->bounds();
-            assert(old_bounds.size() == repr_bounds.size());
+            assert(bounds.size() == repr_bounds.size());
 
-            // FEATURE this works but seems too much effort
-            // put them in a set were they are equal using the equal methods not ==;
-            // FEATURE if this is changed in the bounds of a TypeVar this is not needed any more
-            TypetableSet<TraitNode> bounds;
-            for (auto r : repr_bounds) {
-                auto p = bounds.insert(r.representative()); // CHECK ist representative here and node() below correct?
-                assert(p.second && "hash/equal broken");
-            }
-
-            for (auto bound : old_bounds) {
-                auto repr_bound = bounds.find(bound.node());
-                assert(repr_bound != bounds.end());
-                bound.node()->set_representative((*repr_bound)->representative());
-            }
+            for (auto i = bounds.begin(), e = bounds.end(), j = repr_bounds.begin(); i != e; ++i)
+                assert((*i)->representative_ == (*j)->representative_ && "representatives don't match");
 #endif
         }
 
