@@ -81,17 +81,6 @@ private:
         return Proxy<T>(tn);
     }
 
-    /**
-     * Recursively change the representatives of the not-unified elements in t to the
-     * corresponding types in repr.
-     *
-     * This assumes that \p unifiable is equal to repr.
-     */
-    void change_repr(Unifiable* unifiable, Unifiable* repr) const;
-    void change_repr_unifiable(Unifiable* unifiable, Unifiable* repr) const;
-    /// change the representative of the contained types
-    void change_repr_rec(Unifiable* u, Unifiable* repr) const;
-
     TraitInstanceNode* instantiate_trait(TraitNode* trait, SpecializeMap& map) { 
         return instantiate_trait(Trait(trait), map); 
     }

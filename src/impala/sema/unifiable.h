@@ -98,6 +98,10 @@ public:
     virtual bool equal(const Unifiable*) const = 0;
     virtual size_t hash() const = 0;
     virtual std::string to_string() const = 0;
+    void change_repr(Unifiable* repr) const;
+    void change_repr_unifiable(Unifiable* repr) const;
+    /// change the representative of the contained types
+    void change_repr_rec(Unifiable* repr) const;
     bool unify();
 
     /**
@@ -147,10 +151,10 @@ protected:
 private:
     /// raise error if a type does not implement the required traits;
     void verify_instantiation(SpecializeMap&) const;
-    void set_representative(Unifiable* representative) { representative_ = representative; }
+    void set_representative(Unifiable* representative) const { representative_ = representative; }
 
     TypeTable& typetable_;
-    Unifiable* representative_;
+    mutable Unifiable* representative_;
 
 protected:
     std::vector<TypeVar> type_vars_;

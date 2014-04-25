@@ -72,59 +72,6 @@ SpecializeMap TypeTable::infer(Unifiable* unifiable, thorin::ArrayRef<Type> var_
     return map;
 }
 
-void TypeTable::change_repr_unifiable(Unifiable* u, Unifiable* repr) const {
-    // first change the representative of all bound variables
-    assert(u->type_vars().size() == repr->type_vars().size());
-    for (size_t i = 0, e = u->type_vars().size(); i != e; ++i) {
-        change_repr(u->bound_var(i).node(), repr->bound_var(i).representative());
-    }
-
-    // change representatives of the bounds (i.e. Traits) of type variables
-    assert(u->num_type_vars() == repr->num_type_vars());
-    for (size_t i = 0; i != u->num_type_vars(); ++i) {
-        UniSet<Trait> old_bounds = u->bound_var(i)->bounds();
-        UniSet<Trait> repr_bounds = repr->bound_var(i)->bounds();
-
-        assert(old_bounds.size() == repr_bounds.size());
-
-        // FEATURE this works but seems too much effort
-        // put them in a set were they are equal using the equal methods not ==;
-        // FEATURE if this is changed in the bounds of a TypeVar this is not needed any more
-        TypetableSet<TraitNode> bounds;
-        for (auto r : repr_bounds) {
-            auto p = bounds.insert(r.representative()); // CHECK ist representative here and node() below correct?
-            assert(p.second && "hash/equal broken");
-        }
-
-        for (auto bound : old_bounds) {
-            auto repr_bound = bounds.find(bound.node());
-            assert(repr_bound != bounds.end());
-            change_repr(bound.node(), (*repr_bound)->representative());
-        }
-    }
-}
-
-void TypeTable::change_repr_rec(Unifiable* u, Unifiable* repr) const {
-    if (auto ty = u->isa<TypeNode>()) {
-        auto t = ty->as<KnownTypeNode>();
-        auto ktn = repr->as<KnownTypeNode>();
-
-        // change representative of all sub elements
-        assert(t->size() == ktn->size());
-        for (size_t i = 0, e = t->size(); i != e; ++i)
-            change_repr(t->elem_(i).node(), ktn->elem(i).representative());
-    }
-}
-
-void TypeTable::change_repr(Unifiable* u, Unifiable* repr) const {
-    if (!u->is_unified()) {
-        change_repr_unifiable(u, repr);
-        change_repr_rec(u, repr);
-        u->set_representative(repr);
-    } else
-        assert(u->representative() == repr);
-}
-
 bool TypeTable::unify(Unifiable* unifiable) {
     if (unifiable->is_unified())
         return false;
@@ -143,7 +90,7 @@ bool TypeTable::unify(Unifiable* unifiable) {
     if (i != unifiables_.end()) {
         auto repr = *i;
         assert(repr != unifiable && "Already unified");
-        change_repr(unifiable, repr);
+        unifiable->change_repr(repr);
         assert(unifiable->representative() == repr);
         return true;
     } else {
