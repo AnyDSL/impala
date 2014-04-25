@@ -8,6 +8,8 @@
 
 namespace impala {
 
+int Unifiable::counter_ = 0;
+
 bool Unifiable::unify_type_vars(thorin::ArrayRef<TypeVar> other_vars) {
     if (num_type_vars() == other_vars.size())
         return !is_generic(); // TODO enable unification of generic elements!

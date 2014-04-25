@@ -75,7 +75,13 @@ int main(int argc, char** argv) {
         auto g = w.lambda(gfn, "g");
         g->jump(f, {g->param(0)});
         f->jump(g, {f->param(0)});
-        thorin::emit_thorin(w);
+        thorin::emit_thorin(w, true, true);
+        std::cout << "ffn" << std::endl;
+        for (auto tv : ffn->free_type_vars())
+            tv->dump();
+        std::cout << "gfn" << std::endl;
+        for (auto tv : gfn->free_type_vars())
+            tv->dump();
         //auto f2 = w.fn_type({f1});
         //f2->bind(T);
 #endif

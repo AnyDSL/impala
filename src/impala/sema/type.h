@@ -134,7 +134,6 @@ class UnknownTypeNode : public TypeNode {
 private:
     UnknownTypeNode(TypeTable& typetable)
         : TypeNode(typetable)
-        , id_(counter_++)
     {}
 
 protected:
@@ -176,8 +175,6 @@ public:
     virtual thorin::Type convert(thorin::World&) const { assert(false); return thorin::Type(); }
 
 private:
-    const int id_;       ///< Used for unambiguous dumping.
-    static int counter_;
     Type instance_;
 
     friend class TypeTable;
@@ -287,7 +284,6 @@ class TypeVarNode : public KnownTypeNode {
 private:
     TypeVarNode(TypeTable& tt, Symbol name)
         : KnownTypeNode(tt, Type_var, 0)
-        , id_(counter_++)
         , name_(name)
         , bound_at_(nullptr)
         , equiv_(nullptr)
@@ -318,7 +314,6 @@ public:
     TypeVar clone(SpecializeMap&) const;
 
 private:
-    const int id_;       ///< Used for unambiguous dumping.
     Symbol name_;
     UniSet<Trait> bounds_;///< All traits that restrict the instantiation of this variable.
     /**
@@ -327,7 +322,6 @@ private:
      */
     const Unifiable* bound_at_;
     mutable const TypeVarNode* equiv_;///< Used to define equivalence constraints when checking equality of types.
-    static int counter_;
 
 protected:
     virtual Unifiable* vspecialize(SpecializeMap&);

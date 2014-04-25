@@ -6,9 +6,6 @@
 
 namespace impala {
 
-int TypeVarNode::counter_ = 0;
-int UnknownTypeNode::counter_ = 0;
-
 //------------------------------------------------------------------------------
 
 bool KnownTypeNode::unify_with(Unifiable* other) {

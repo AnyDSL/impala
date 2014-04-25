@@ -81,12 +81,14 @@ protected:
     Unifiable(TypeTable& tt)
         : typetable_(tt)
         , representative_(nullptr)
+        , id_(counter_++)
     {}
 
 public:
     TypeTable& typetable() const { return typetable_; }
 
     Unifiable* representative() const { return representative_; }
+    const int id() const { return id_; }
     bool is_unified() const { return representative_ != nullptr; }
     virtual size_t num_type_vars() const { return type_vars_.size(); }
     virtual thorin::ArrayRef<TypeVar> type_vars() const { return thorin::ArrayRef<TypeVar>(type_vars_); }
@@ -151,6 +153,8 @@ private:
 
     TypeTable& typetable_;
     mutable Unifiable* representative_;
+    const int id_;
+    static int counter_;
 
 protected:
     std::vector<TypeVar> type_vars_;

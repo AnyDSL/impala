@@ -41,13 +41,13 @@ bool KnownTypeNode::equal(const Unifiable* t) const {
         if (result) {
             // set equivalence constraints for type variables
             for (size_t i = 0, e = num_type_vars(); i != e; ++i) {
-                assert(this->bound_var(i)->equiv_ == nullptr);
-                this->bound_var(i)->equiv_ = *other->bound_var(i);
+                assert(this->type_var(i)->equiv_ == nullptr);
+                this->type_var(i)->equiv_ = *other->type_var(i);
             }
 
             // check equality of the restrictions of the type variables
             for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
-                result &= this->bound_var(i)->bounds_equal(other->bound_var(i));
+                result &= this->type_var(i)->bounds_equal(other->type_var(i));
 
             for (size_t i = 0, e = size(); i != e && result; ++i)
                 result &= this->elem(i)->equal(*other->elem(i));
@@ -97,8 +97,8 @@ bool TypeVarNode::equal(const Unifiable* other) const {
                 bool result = bound_at()->num_type_vars() == t->bound_at()->num_type_vars();
                 size_t i;
                 for (i = 0; (i < bound_at()->num_type_vars()) && result; ++i) {
-                    if (bound_at()->bound_var(i).node() == this) { // CHECK is node() here and below correct?
-                        result &= t->bound_at()->bound_var(i).node() == t;
+                    if (bound_at()->type_var(i).node() == this) { // CHECK is node() here and below correct?
+                        result &= t->bound_at()->type_var(i).node() == t;
                         break;
                     }
                 }
