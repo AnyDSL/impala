@@ -256,11 +256,11 @@ Type FnASTType::check(TypeSema& sema) const {
     for (auto elem : elems())
         params.push_back(sema.check(elem));
 
-    FnType fntype = sema.fn_type(params);
+    FnType fn_type = sema.fn_type(params);
     for (auto type_param : type_params())
-        fntype->bind(type_param->type_var(sema));
+        fn_type->bind(type_param->type_var(sema));
 
-    return fntype;
+    return fn_type;
 }
 
 Type ASTTypeApp::check(TypeSema& sema) const {
@@ -443,7 +443,7 @@ void Impl::check(TypeSema& sema) const {
 
     thorin::HashSet<Symbol> implemented_methods;
     for (auto fn : methods()) {
-        Type fntype = sema.check(fn);
+        Type fn_type = sema.check(fn);
 
         if (trait() != nullptr) {
             assert(!tinst.empty());
@@ -456,7 +456,7 @@ void Impl::check(TypeSema& sema) const {
                 assert(p.second && "There should be no such name in the set"); // else name analysis failed
 
                 // check that the types match
-                sema.match_types(fn, fntype, t);
+                sema.match_types(fn, fn_type, t);
             }
         }
     }

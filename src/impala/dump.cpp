@@ -146,8 +146,8 @@ std::ostream& FnDecl::print(Printer& p) const {
 
     const FnASTType* ret = nullptr;
     if (!params().empty() && params().back()->symbol() == "return") {
-        if (auto fntype = params().back()->ast_type()->isa<FnASTType>())
-            ret = fntype;
+        if (auto fn_type = params().back()->ast_type()->isa<FnASTType>())
+            ret = fn_type;
     }
 
     p.stream() << '(';
