@@ -84,9 +84,8 @@ void Unifiable::set_representative(Unifiable* repr) const {
 
         // change representatives of the bounds (i.e. Traits) of type variables
         for (size_t i = 0; i != num_type_vars(); ++i) {
-            UniSet<Trait> old_bounds = type_var(i)->bounds();
-            UniSet<Trait> repr_bounds = repr->type_var(i)->bounds();
-
+            auto& old_bounds = type_var(i)->bounds();
+            auto& repr_bounds = repr->type_var(i)->bounds();
             assert(old_bounds.size() == repr_bounds.size());
 
             // FEATURE this works but seems too much effort
