@@ -35,21 +35,11 @@ public:
 
     void check(const ASTType* ast_type) { ast_type->check(*this); }
     void check(const TypeDecl* type_decl) { type_decl->check(*this); }
-    void check(const Item* item) { 
-        if (auto type_decl_item = item->isa<TypeDeclItem>())
-            check(type_decl_item);
-        else if (auto value_item = item->isa<ValueItem>())
-            check(value_item);
-        else
-            check(item->isa<MiscItem>());
-    }
     void check_head(const Item* item) {
         if (auto decl = item->isa<Decl>())
             insert(decl);
     }
-    void check(const TypeDeclItem* type_decl_item) { type_decl_item->check(*this); }
-    void check(const ValueItem* value_item) { value_item->check(*this); }
-    void check(const MiscItem* misc_item) { misc_item->check(*this); }
+    void check_item(const Item* item) { item->check_item(*this); }
 
 private:
     size_t depth() const { return levels_.size(); }
@@ -156,7 +146,7 @@ void FnASTType::check(NameSema& sema) const {
 
 void ModContents::check(NameSema& sema) const {
     for (auto item : items()) sema.check_head(item);
-    for (auto item : items()) sema.check(item);
+    for (auto item : items()) sema.check_item(item);
 }
 
 //------------------------------------------------------------------------------
@@ -164,6 +154,9 @@ void ModContents::check(NameSema& sema) const {
 /*
  * Item::check
  */
+
+void TypeDeclItem::check_item(NameSema& sema) const { sema.check(static_cast<const TypeDecl*>(this)); }
+void ValueItem::check_item(NameSema& sema) const { sema.check(static_cast<const ValueDecl*>(this)); }
 
 void ModDecl::check(NameSema& sema) const {
     sema.push_scope();
@@ -227,7 +220,7 @@ void FieldDecl::check(NameSema& sema) const {
     sema.insert(this);
 }
 
-void TraitDecl::check(NameSema& sema) const {
+void TraitDecl::check_item(NameSema& sema) const {
     sema.push_scope();
     sema.insert(self_param());
     check_type_params(sema);
@@ -240,7 +233,7 @@ void TraitDecl::check(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void Impl::check(NameSema& sema) const {
+void Impl::check_item(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
     if (trait())
@@ -363,7 +356,7 @@ void ForExpr::check(NameSema& sema) const {
  */
 
 void ExprStmt::check(NameSema& sema) const { expr()->check(sema); }
-void ItemStmt::check(NameSema& sema) const { sema.check(item()); }
+void ItemStmt::check(NameSema& sema) const { sema.check_item(item()); }
 void LetStmt::check(NameSema& sema) const {
     if (init())
         init()->check(sema);

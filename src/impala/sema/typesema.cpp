@@ -30,7 +30,7 @@ public:
         while (!impls_.empty()) {
             const Impl* i = impls_.back();
             impls_.pop_back();
-            check(i);
+            check_item(i);
         }
     }
 
@@ -62,17 +62,7 @@ public:
         }
         return decl->type();
     }
-    void check(const Item* item) { 
-        if (auto type_decl_item = item->isa<TypeDeclItem>())
-            check(type_decl_item);
-        else if (auto value_item = item->isa<ValueItem>())
-            check(value_item);
-        else
-            check(item->isa<MiscItem>());
-    }
-    Type check(const TypeDeclItem* type_decl_item) { return check((const TypeDecl*) type_decl_item); }
-    Type check(const ValueItem* value_item) { return check((const TypeDecl*) value_item); }
-    void check(const MiscItem* misc_item) { misc_item->check(*this); }
+    void check_item(const Item* item) { item->check_item(*this); }
     Type check(const Expr* expr, Type expected, std::string typetype) {
         if (!expr->type_.empty())
             return expr->type_;
@@ -308,7 +298,7 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
 }
 
 Trait TraitDecl::to_trait(TypeSema& sema) const {
-    check(sema);
+    check_item(sema);
     return trait();
 }
 
@@ -322,8 +312,11 @@ void Fn::check_body(TypeSema& sema, FnType fn_type) const {
 //------------------------------------------------------------------------------
 
 /*
- * TypeDecl
+ * Items
  */
+
+void TypeDeclItem::check_item(TypeSema& sema) const { sema.check(static_cast<const TypeDecl*>(this)); }
+void ValueItem::check_item(TypeSema& sema) const { sema.check(static_cast<const ValueDecl*>(this)); }
 
 Type TypeParam::check(TypeSema& sema) const { return sema.type_var(symbol()); }
 
@@ -344,7 +337,7 @@ void ModContents::check(TypeSema& sema) const {
 
     sema.check_impls();
     for (auto item : non_impls)
-        sema.check(item);
+        sema.check_item(item);
 }
 
 Type ForeignMod::check(TypeSema& sema) const {
@@ -366,10 +359,6 @@ Type StructDecl::check(TypeSema& sema) const {
 Type FieldDecl::check(TypeSema&) const {
     return Type();
 }
-
-/*
- * MiscItem
- */
 
 Type FnDecl::check(TypeSema& sema) const {
     check_type_params(sema);
@@ -395,7 +384,7 @@ Type StaticItem::check(TypeSema& sema) const {
     return Type();
 }
 
-void TraitDecl::check(TypeSema& sema) const {
+void TraitDecl::check_item(TypeSema& sema) const {
     // did we already check this trait?
     if (!trait().empty())
         return;
@@ -420,7 +409,7 @@ void TraitDecl::check(TypeSema& sema) const {
     sema.unify(trait());
 }
 
-void Impl::check(TypeSema& sema) const {
+void Impl::check_item(TypeSema& sema) const {
     check_type_params(sema);
     Type ftype = sema.check(for_type());
 
@@ -763,7 +752,7 @@ void ExprStmt::check(TypeSema& sema) const {
 }
 
 void ItemStmt::check(TypeSema& sema) const {
-    sema.check(item());
+    sema.check_item(item());
 }
 
 void LetStmt::check(TypeSema& sema) const {

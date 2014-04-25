@@ -455,26 +455,35 @@ public:
     Visibility visibility() const { return  visibility_; }
 
 private:
+    virtual void check_item(NameSema&) const = 0;
+    virtual void check_item(TypeSema&) const = 0;
     virtual void emit(CodeGen&) const = 0;
     Visibility visibility_;
 
     friend class CodeGen;
     friend class Parser;
+    friend class NameSema;
+    friend class TypeSema;
 };
 
 class TypeDeclItem : public Item, public TypeDecl, public TypeParamList {
+private:
+    virtual void check_item(NameSema&) const;
+    virtual void check_item(TypeSema&) const;
+
     friend class Parser;
 };
 
 class ValueItem : public Item, public ValueDecl {
+private:
+    virtual void check_item(NameSema&) const;
+    virtual void check_item(TypeSema&) const;
+
     friend class Parser;
 };
 
 class MiscItem : public Item {
 private:
-    virtual void check(NameSema&) const = 0;
-    virtual void check(TypeSema&) const = 0;
-
     friend class NameSema;
     friend class TypeSema;
 };
@@ -610,10 +619,10 @@ public:
     Trait trait() const { return trait_; }
     Trait to_trait(TypeSema&) const;
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
 
 private:
-    virtual void check(TypeSema&) const override;
+    virtual void check_item(NameSema&) const override;
+    virtual void check_item(TypeSema&) const override;
     virtual void emit(CodeGen&) const override;
 
     const SelfParam self_param_;
@@ -632,11 +641,11 @@ public:
     const ASTType* for_type() const { return for_type_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
     virtual void emit(CodeGen&) const override;
 
 private:
-    virtual void check(TypeSema&) const override;
+    virtual void check_item(NameSema&) const override;
+    virtual void check_item(TypeSema&) const override;
 
     AutoPtr<const ASTType> trait_;
     AutoPtr<const ASTType> for_type_;
