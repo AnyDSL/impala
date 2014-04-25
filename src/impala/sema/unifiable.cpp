@@ -73,10 +73,9 @@ bool Unifiable::unify() { return typetable().unify(this); }
 
 void Unifiable::change_repr_unifiable(Unifiable* repr) const {
     // first change the representative of all bound variables
-    assert(type_vars().size() == repr->type_vars().size());
-    for (size_t i = 0, e = type_vars().size(); i != e; ++i) {
+    assert(num_type_vars() == repr->num_type_vars());
+    for (size_t i = 0, e = num_type_vars(); i != e; ++i)
         bound_var(i).node()->change_repr(repr->bound_var(i).representative());
-    }
 
     // change representatives of the bounds (i.e. Traits) of type variables
     assert(num_type_vars() == repr->num_type_vars());
