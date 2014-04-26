@@ -117,11 +117,11 @@ def executeTests(tests, gEx, pb = True):
         print("\n* All " + str(len(tests)) +  " tests were successful.")
     else:
         if failReq == 0:
-            print("\n* All required tests were successful.")
+            print("\n* All %i required tests were successful." % len(req_tests))
         else:
             print("\n!" + str(failReq) + " of " + str(len(req_tests)) + " REQUIRED tests failed.")
         if failOpt == 0:
-            print("\n* All optional tests were successful.")
+            print("\n* All %i optional tests were successful." % len(opt_tests))
         else:
             print("\n!" + str(failOpt) + " of " + str(len(opt_tests)) + " OPTIONAL tests failed.")
     
