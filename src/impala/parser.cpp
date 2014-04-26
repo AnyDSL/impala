@@ -247,11 +247,10 @@ const ModContents* parse(bool& result, std::istream& i, const std::string& filen
 
 Token Parser::lex() {
     Token result = lookahead[0]; // remember result
-    lookahead[0] = lookahead[1];  // copy over LA2 to LA1
-    lookahead[1] = lookahead[2];  // copy over LA3 to LA2
-    lookahead[2] = lexer.lex();   // fill new LA3
-    prev_loc_ = result.loc();     // remember previous location
-
+    lookahead[0] = lookahead[1]; // copy over LA2 to LA1
+    lookahead[1] = lookahead[2]; // copy over LA3 to LA2
+    lookahead[2] = lexer.lex();  // fill new LA3
+    prev_loc_ = result.loc();    // remember previous location
     return result;
 }
 
