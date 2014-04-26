@@ -1,0 +1,5 @@
+trait X {}
+
+fn foo[T: X](t: T) -> () {}
+fn bar[T: X](t: T) -> () {}
+fn boo[T: X](t: T) -> () {}
