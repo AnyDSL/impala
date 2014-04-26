@@ -35,6 +35,7 @@ void TypeTable::insert_new(Unifiable* unifiable) {
             }
         }
         // we have to renew the bounds set because the hashes may have changed during unification
+        assert(!changed && "I don't think this will ever happen");
         if (changed) 
             v->refresh_bounds();
     }
@@ -76,7 +77,7 @@ bool TypeTable::unify(Unifiable* unifiable) {
     if (unifiable->is_unified())
         return false;
 
-    assert(unifiable->is_closed() && "Only closed unifiables can be unified!");
+    assert(unifiable->is_closed() && "only closed unifiables can be unified!");
 
     if (auto utn = unifiable->isa<UnknownTypeNode>()) {
         bool res = unify(utn->instance());
@@ -89,7 +90,7 @@ bool TypeTable::unify(Unifiable* unifiable) {
     auto i = unifiables_.find(unifiable);
     if (i != unifiables_.end()) {
         auto repr = *i;
-        assert(repr != unifiable && "Already unified");
+        assert(repr != unifiable && "already unified");
         unifiable->set_representative(repr);
         assert(unifiable->representative() == repr);
         return true;
