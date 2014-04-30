@@ -27,6 +27,7 @@ namespace impala {
 class ASTType;
 class Decl;
 class Expr;
+class FnDecl;
 class Item;
 class NamedItem;
 class Stmt;
@@ -44,6 +45,7 @@ template<class T> using ArrayRef   = thorin::ArrayRef<T>;
 
 typedef AutoVector<const ASTType*> ASTTypes;
 typedef AutoVector<const Expr*> Exprs;
+typedef thorin::HashMap<Symbol, const FnDecl*> MethodTable;
 
 //------------------------------------------------------------------------------
 
@@ -637,9 +639,9 @@ public:
         : self_param_(Location(loc().pos1(), loc().pos1()))
     {}
 
-    const AutoVector<const ASTTypeApp*>& super() const { return super_; }
+    const AutoVector<const ASTTypeApp*>& super_traits() const { return super_traits_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
-    const thorin::HashMap<Symbol, const FnDecl*>& method_table() const { return method_table_; }
+    const MethodTable& method_table() const { return method_table_; }
     const SelfParam* self_param() const { return &self_param_; }
     Trait trait() const { return trait_; }
     Trait to_trait(TypeSema&) const;
@@ -653,8 +655,8 @@ private:
 
     const SelfParam self_param_;
     AutoVector<const FnDecl*> methods_;
-    AutoVector<const ASTTypeApp*> super_;
-    mutable thorin::HashMap<Symbol, const FnDecl*> method_table_;
+    AutoVector<const ASTTypeApp*> super_traits_;
+    mutable MethodTable method_table_;
     mutable Trait trait_;
 
     friend class Parser;

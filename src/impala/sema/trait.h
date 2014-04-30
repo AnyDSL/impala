@@ -13,8 +13,6 @@ class Impl;
 class TraitDecl;
 typedef Proxy<FnTypeNode> FnType;
 
-typedef thorin::HashMap<const Symbol, Type, thorin::Hash<Symbol>> MethodTable;
-
 /**
  * Represents a declared trait.
  * A trait consists of a name, a number of declared methods and a number of
@@ -49,31 +47,16 @@ public:
 
     virtual bool unify_with(Unifiable*) { assert(false); return false; }
 
-    /// add a non-inherited method or return \p false if a method with this name already existed
-    bool add_method(Symbol name, Type method_type) { return add_method(name, method_type, false); }
     /// return the type of the method with this name if it exists; otherwise return an empty type
     virtual Type find_method(Symbol name);
     bool has_method(Symbol name) { return !find_method(name).empty(); }
-    virtual const MethodTable& all_methods() { return all_methods_; }
-    /// return the number of methods
-    size_t num_methods() { return all_methods().size(); }
 
-    void add_super_trait(Trait);
-    virtual const UniSet<Trait>& super_traits() { return super_traits_; }
     virtual bool is_closed() const { return true; } // TODO
 
 protected:
     Unifiable* vspecialize(SpecializeMap&);
 
-private:
-    bool add_method(Symbol name, Type method_type, bool inherited);
-    /// return the names of all methods that were declared in this trait (this does not count methods in super traits)
-    virtual const thorin::ArrayRef<Symbol> declared_methods() { return declared_methods_; }
-
     const TraitDecl* const trait_decl_;
-    UniSet<Trait> super_traits_;
-    std::vector<Symbol> declared_methods_;
-    MethodTable all_methods_;
 
     friend class TypeTable;
     friend class TraitInstanceNode;
@@ -93,17 +76,10 @@ public:
     virtual bool equal(const Unifiable* other) const;
     virtual size_t hash() const;
     virtual std::string to_string() const;
-
     virtual void refine();
     virtual bool is_known() const override;
-
     virtual bool unify_with(Unifiable*);
-
     virtual Type find_method(Symbol name);
-    virtual const MethodTable& all_methods();
-
-    virtual const UniSet<Trait>& super_traits();
-
     virtual bool is_closed() const;
 
 protected:
@@ -113,7 +89,6 @@ private:
     const Trait trait() const { return trait_; }
     /// return a copy of the variable instances
     SpecializeMap var_instances() const { return var_instances_; }
-    virtual const thorin::ArrayRef<Symbol> declared_methods() { return trait()->declared_methods(); }
 
     const Trait trait_;
     SpecializeMap var_instances_;

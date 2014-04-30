@@ -78,7 +78,6 @@ bool KnownTypeNode::is_sane() const {
 void TypeVarNode::add_bound(Trait bound) {
     assert(!is_closed() && "closed type variables must not be changed!");
     bounds_.insert(bound);
-    bounds_.insert(bound->super_traits().begin(), bound->super_traits().end());
 }
 
 bool TypeVarNode::is_closed() const {
@@ -95,10 +94,12 @@ void KnownTypeNode::add_implementation(TraitImpl impl) {
         Trait trait = impl->trait();
         if (!trait_impls_.insert(trait).second)
             typetable().error(impl->impl_decl()) << "duplicated implementation of trait '" << trait << "'\n";
+#if 0
         for (auto super : trait->super_traits()) {
             if (!trait_impls_.insert(super).second)
                 typetable().error(impl->impl_decl()) << "duplicated implementation of trait '" << super << "'\n";
         }
+#endif
     }
 }
 

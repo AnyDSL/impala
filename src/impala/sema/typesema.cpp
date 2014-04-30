@@ -399,14 +399,11 @@ void TraitDecl::check_item(TypeSema& sema) const {
     for (auto tp : type_params())
         trait_->bind(tp->type_var(sema));
 
-    for (auto t : super())
-        trait_->add_super_trait(t->to_trait(sema, self_var));
+    for (auto t : super_traits())
+        t->to_trait(sema, self_var); // TODO is this correct?
 
-    // check methods
-    for (auto m : methods()) {
-        if (!trait_->add_method(m->symbol(), sema.check(m)))
-            sema.error(m) << "a method with this name already exists in a super trait.\n";
-    }
+    for (auto m : methods())
+        sema.check(m);
 
     sema.unify(trait());
 }
@@ -452,6 +449,8 @@ void Impl::check_item(TypeSema& sema) const {
         }
     }
 
+    // TODO
+#if 0
     // check that all methods are implemented
     if (!tinst.empty()) {
         if (implemented_methods.size() != tinst->num_methods()) {
@@ -462,6 +461,7 @@ void Impl::check_item(TypeSema& sema) const {
             }
         }
     }
+#endif
 }
 
 //------------------------------------------------------------------------------

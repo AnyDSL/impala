@@ -7,7 +7,6 @@ namespace impala {
 TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
     : TUnifiable(tt)
     , trait_decl_(trait_decl)
-    , super_traits_()
 {}
 
 TraitInstanceNode::TraitInstanceNode(const Trait trait, const SpecializeMap& var_instances)
@@ -16,18 +15,6 @@ TraitInstanceNode::TraitInstanceNode(const Trait trait, const SpecializeMap& var
     , var_instances_(var_instances)
 {
     assert(trait_->num_type_vars() == var_instances_.size());
-}
-
-void TraitNode::add_super_trait(Trait t) {
-    typetable().unify(t);
-    super_traits_.insert(t);
-    super_traits_.insert(t->super_traits().begin(), t->super_traits().end());
-
-    for (auto mname : t->declared_methods()) {
-        assert(t->has_method(mname));
-        if (!add_method(mname, t->find_method(mname), true))
-            typetable().error(this->trait_decl()) << "conflicting method name in super traits: '" << mname << "'\n";
-    }
 }
 
 bool TraitInstanceNode::unify_with(Unifiable* other) {
@@ -83,24 +70,16 @@ bool TraitInstanceNode::is_closed() const {
     return true;
 }
 
-bool TraitNode::add_method(Symbol name, Type method_type, bool inherited) {
-    assert(!is_unified() && "Unified traits must not be changed anymore!");
-    if (has_method(name)) {
-        return false;
-    } else {
-        all_methods_[name] = method_type;
-        if (!inherited)
-            declared_methods_.push_back(name);
-        return true;
-    }
-}
-
 Type TraitNode::find_method(Symbol name) {
+#if 0
     auto it = all_methods_.find(name);
     return (it == all_methods_.end()) ? Type() : it->second;
+#endif
+    return Type();
 }
 
 Type TraitInstanceNode::find_method(Symbol name) {
+#if 0
     auto it = all_methods_.find(name);
     if (it != all_methods_.end()) {
         return it->second;
@@ -115,30 +94,8 @@ Type TraitInstanceNode::find_method(Symbol name) {
             return all_methods_[name] = t;
         }
     }
-}
-
-const MethodTable& TraitInstanceNode::all_methods() {
-    if (all_methods_.size() < trait()->num_methods()) {
-        for (auto p : trait()->all_methods())
-            find_method(p.first); // this will insert the specialized method
-    }
-    assert(all_methods_.size() == trait()->num_methods());
-    return all_methods_;
-}
-
-const UniSet<Trait>& TraitInstanceNode::super_traits() {
-    if (super_traits_.size() < trait()->super_traits().size()) {
-        // specialize super traits
-        for (auto super : trait()->super_traits()) {
-            SpecializeMap m = this->var_instances();
-            Trait super_inst = super->specialize(m);
-            //typetable().unify(super_inst);
-            auto p = super_traits_.insert(super_inst);
-            assert(p.second && "Hash/Equal broken");
-        }
-    }
-    assert(super_traits_.size() == trait()->super_traits().size());
-    return super_traits_;
+#endif
+    return Type();
 }
 
 Unifiable* TraitNode::vspecialize(SpecializeMap& map) {
