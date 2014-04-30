@@ -71,11 +71,13 @@ bool TypeTable::unify(Unifiable* unifiable) {
                     assert(elem->is_unified());
                 }
             }
-        } else {
-            // TODO insert methods for traits
-        }
 
-        // CHECK does it cause any problems to put TypeVars into the type-set?
+            if (auto type_var = ktn->isa<TypeVarNode>()) {
+                for (auto bound : type_var->bounds())
+                    unify(bound);
+            }
+        } 
+
         auto p = unifiables_.insert(unifiable->representative());
         assert(p.second && "hash/equal broken");
         assert(unifiable->representative() == unifiable);

@@ -80,24 +80,22 @@ void Unifiable::set_representative(Unifiable* repr) const {
     if (representative_ != repr) {
         representative_ = repr;
 
-        // change the representative of all bound variables
         for (size_t i = 0, e = num_type_vars(); i != e; ++i) {
-            type_var(i).node()->set_representative(repr->type_var(i).representative());
-#ifndef NDEBUG
-            // TODO
             auto& bounds = type_var(i)->bounds();
-            auto& repr_bounds = repr->type_var(i)->bounds();
-            assert(bounds.size() == repr_bounds.size());
+            type_var(i).node()->set_representative(repr->type_var(i).representative());
 
-            for (auto i = bounds.begin(), e = bounds.end(), j = repr_bounds.begin(); i != e; ++i)
-                assert((*i)->representative_ == (*j)->representative_ && "representatives don't match");
-#endif
+            // change the representative of all bound variables
+            for (auto repr_bound : repr->type_var(i)->bounds()) {
+                assert(repr_bound.node() == repr_bound->representative_);
+                assert(bounds.contains(repr_bound));
+                (*bounds.find(repr_bound)).node()->representative_ = *repr_bound;
+            }
         }
 
         if (auto ktn = isa<KnownTypeNode>()) {
             auto repr_ktn = repr->as<KnownTypeNode>();
 
-            // change representative of all sub elements
+            // recursively change representative of all sub elements
             assert(ktn->size() == repr_ktn->size());
             for (size_t i = 0, e = ktn->size(); i != e; ++i)
                 ktn->elem(i).node()->set_representative(repr_ktn->elem(i).representative());
