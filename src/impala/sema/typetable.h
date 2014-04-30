@@ -73,8 +73,6 @@ protected:
     SpecializeMap infer(Proxy<T> proxy, thorin::ArrayRef<Type> var_instances) const { return infer(*proxy, var_instances); }
 
 private:
-    /// insert all contained unifiables that are not yet unified
-    void insert_new(Unifiable*);
     Unifiable* instantiate_unknown(Unifiable*, std::vector<Type>&);
     template<class T> 
     Proxy<T> new_unifiable(T* tn) {

@@ -1,7 +1,6 @@
 #ifndef IMPALA_SEMA_UNIFIABLE_H
 #define IMPALA_SEMA_UNIFIABLE_H
 
-#include <typeinfo>
 #include <vector>
 
 #include "thorin/util/array.h"

@@ -22,40 +22,6 @@ TypeTable::~TypeTable() {
         delete g; 
 }
 
-void TypeTable::insert_new(Unifiable* unifiable) {
-    assert(!unifiable->is_unified());
-    unifiable->representative_ = unifiable;
-
-    for (auto v : unifiable->type_vars()) {
-        bool changed = false;
-        for (auto r : v->bounds()) {
-            if (!r->is_unified()) {
-                changed = unify(r) || changed;
-                assert(r->is_unified());
-            }
-        }
-        // we have to renew the bounds set because the hashes may have changed during unification
-        assert(!changed && "I don't think this will ever happen");
-        if (changed) 
-            v->refresh_bounds();
-    }
-
-    if (auto ktn = unifiable->isa<KnownTypeNode>()) {
-        for (auto elem : ktn->elems()) {
-            if (!elem->is_unified()) {
-                unify(elem);
-                assert(elem->is_unified());
-            }
-        }
-    } else {
-        // TODO insert methods for traits
-    }
-
-    // CHECK does it cause any problems to put TypeVars into the type-set?
-    auto p = unifiables_.insert(unifiable->representative());
-    assert(p.second && "hash/equal broken");
-}
-
 Unifiable* TypeTable::instantiate_unknown(Unifiable* unifiable, std::vector<Type>& types) {
     for (size_t i = 0; i < unifiable->num_type_vars(); ++i) 
         types.push_back(unknown_type());
@@ -95,7 +61,23 @@ bool TypeTable::unify(Unifiable* unifiable) {
         assert(unifiable->representative() == repr);
         return true;
     } else {
-        insert_new(unifiable);
+        assert(!unifiable->is_unified());
+        unifiable->representative_ = unifiable;
+
+        if (auto ktn = unifiable->isa<KnownTypeNode>()) {
+            for (auto elem : ktn->elems()) {
+                if (!elem->is_unified()) {
+                    unify(elem);
+                    assert(elem->is_unified());
+                }
+            }
+        } else {
+            // TODO insert methods for traits
+        }
+
+        // CHECK does it cause any problems to put TypeVars into the type-set?
+        auto p = unifiables_.insert(unifiable->representative());
+        assert(p.second && "hash/equal broken");
         assert(unifiable->representative() == unifiable);
         return false;
     }

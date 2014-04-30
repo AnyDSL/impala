@@ -84,7 +84,7 @@ void Unifiable::set_representative(Unifiable* repr) const {
         for (size_t i = 0, e = num_type_vars(); i != e; ++i) {
             type_var(i).node()->set_representative(repr->type_var(i).representative());
 #ifndef NDEBUG
-            // check whether bounds have the same representative in DEBUG build
+            // TODO
             auto& bounds = type_var(i)->bounds();
             auto& repr_bounds = repr->type_var(i)->bounds();
             assert(bounds.size() == repr_bounds.size());

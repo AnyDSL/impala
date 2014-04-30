@@ -76,7 +76,7 @@ bool KnownTypeNode::is_sane() const {
 //------------------------------------------------------------------------------
 
 void TypeVarNode::add_bound(Trait bound) {
-    assert(!is_closed() && "Closed type variables must not be changed!");
+    assert(!is_closed() && "closed type variables must not be changed!");
     bounds_.insert(bound);
     bounds_.insert(bound->super_traits().begin(), bound->super_traits().end());
 }
@@ -190,17 +190,6 @@ TypeVar TypeVarNode::clone(SpecializeMap& map) const {
         v->add_bound(b->specialize(map));
 
     return v;
-}
-
-void TypeVarNode::refresh_bounds() {
-    std::vector<Trait> tmp;
-    for (auto i : bounds())
-        tmp.push_back(i);
-    bounds_.clear();
-    for (auto i : tmp) {
-        auto p = bounds_.insert(i);
-        assert(p.second && "hash/equal broken");
-    }
 }
 
 //------------------------------------------------------------------------------

@@ -367,9 +367,6 @@ private:
 protected:
     virtual Unifiable* vspecialize(SpecializeMap&);
 
-    /// re-add all elements to the bounds set -- needed if during unification the representatives of bounds change
-    void refresh_bounds();
-
     friend class TypeTable;
     friend void Unifiable::bind(TypeVar);                     // maybe we can design things better to avoid this friend
     friend bool KnownTypeNode::equal(const Unifiable*) const; // same here
