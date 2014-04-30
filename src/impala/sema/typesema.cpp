@@ -195,7 +195,6 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
  */
 
 void TypeParamList::check_type_params(TypeSema& sema) const {
-    // check bounds
     for (auto tp : type_params()) {
         for (auto b : tp->bounds()) {
             if (auto trait_inst = b->isa<ASTTypeApp>()) {
@@ -209,6 +208,7 @@ void TypeParamList::check_type_params(TypeSema& sema) const {
 }
 
 TypeVar TypeParam::type_var(TypeSema& sema) const { return sema.check(this).as<TypeVar>(); }
+Type TypeParam::check(TypeSema& sema) const { return sema.type_var(symbol()); }
 Type ErrorASTType::check(TypeSema& sema) const { return sema.type_error(); }
 
 Type PrimASTType::check(TypeSema& sema) const {
@@ -317,8 +317,6 @@ void Fn::check_body(TypeSema& sema, FnType fn_type) const {
 
 void TypeDeclItem::check_item(TypeSema& sema) const { sema.check(static_cast<const TypeDecl*>(this)); }
 void ValueItem::check_item(TypeSema& sema) const { sema.check(static_cast<const ValueDecl*>(this)); }
-
-Type TypeParam::check(TypeSema& sema) const { return sema.type_var(symbol()); }
 
 Type ModDecl::check(TypeSema& sema) const {
     if (mod_contents())
