@@ -17,8 +17,7 @@ std::string Unifiable::type_vars_to_string() const {
     const char* separator = "[";
     for (auto v : type_vars()) {
         result += separator + v->to_string();
-
-        const UniSet<Trait> restr = v->bounds();
+        auto& restr = v->bounds();
 
         if (!restr.empty()) {
             auto inner_sep = ":";
