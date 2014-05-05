@@ -71,30 +71,29 @@ bool TraitInstanceNode::is_closed() const {
 }
 
 Type TraitNode::find_method(Symbol name) {
-#if 0
-    auto it = all_methods_.find(name);
-    return (it == all_methods_.end()) ? Type() : it->second;
-#endif
+    auto i = trait_decl()->method_table().find(name);
+    if (i != trait_decl()->method_table().end())
+        return i->second->type();
+
+    for (auto super : trait_decl()->super_traits()) {
+        if (auto super_trait_decl = super->decl()->isa<TraitDecl>()) {
+            if (auto type = super_trait_decl->trait()->find_method(name))
+                return type;
+        }
+    }
+
     return Type();
 }
 
 Type TraitInstanceNode::find_method(Symbol name) {
-#if 0
-    auto it = all_methods_.find(name);
-    if (it != all_methods_.end()) {
-        return it->second;
-    } else {
-        Type fn = trait()->find_method(name);
-        if (fn.empty()) {
-            return fn;
-        } else {
-            SpecializeMap m = var_instances();
-            Type t = fn->specialize(m);
-            typetable().unify(t);
-            return all_methods_[name] = t;
-        }
+    // TODO cache found methods
+    if (auto type = TraitNode::find_method(name)) {
+        auto m = var_instances();
+        Type t = type->specialize(m);
+        typetable().unify(t);
+        return t;
     }
-#endif
+
     return Type();
 }
 
