@@ -130,9 +130,8 @@ bool TraitInstanceNode::equal(const Unifiable* other) const {
         assert(var_instances_.size() == instance->var_instances_.size());
         for (auto p : var_instances_) {
             assert(instance->var_instances_.find(p.first) != instance->var_instances_.end());
-            if (! p.second->equal(instance->var_instances_.find(p.first)->second)) {
+            if (!p.second->equal(instance->var_instances_.find(p.first)->second))
                 return false;
-            }
         }
         return true;
     }

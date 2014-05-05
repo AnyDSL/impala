@@ -104,19 +104,32 @@ void KnownTypeNode::add_implementation(TraitImpl impl) {
 }
 
 bool KnownTypeNode::implements(Trait trait) const {
-    if (trait_impls_.find(trait) == trait_impls_.end()) {
-        // try to instantiate the generic implementations
-        for (auto ti : gen_trait_impls_) {
-            std::vector<Type> inst_types;
-            TraitImpl inst = typetable().instantiate_unknown(ti, inst_types);
-            if (inst->trait()->unify_with(*trait)) { // TODO why do we have to deref here explicitly? It *should* work without deref
-                if (typetable().check_bounds(nullptr, ti, inst_types))
+    if (trait_impls_.contains(trait))
+        return true;
+
+#if 0
+    // try to find impl in super traits
+    for (auto trait_impl : trait_impls_) {
+        for (auto super : trait_impl->trait_decl()->super_traits()) {
+            if (auto super_trait_decl = super->decl()->isa<TraitDecl>()) {
+                if (implements(super_trait_decl->trait()))
                     return true;
             }
         }
-        return false;
     }
-    return true;
+#endif
+
+    // try to instantiate the generic implementations
+    for (auto ti : gen_trait_impls_) {
+        std::vector<Type> inst_types;
+        TraitImpl inst = typetable().instantiate_unknown(ti, inst_types);
+        if (inst->trait()->unify_with(*trait)) { // TODO why do we have to deref here explicitly? It *should* work without deref
+            if (typetable().check_bounds(nullptr, ti, inst_types))
+                return true;
+        }
+    }
+
+    return false;
 }
 
 bool TypeVarNode::implements(Trait trait) const {

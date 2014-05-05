@@ -400,7 +400,7 @@ void TraitDecl::check_item(TypeSema& sema) const {
         trait_->bind(tp->type_var(sema));
 
     for (auto t : super_traits())
-        t->to_trait(sema, self_var); // TODO is this correct?
+        sema.unify(t->to_trait(sema, self_var)); // TODO is this correct?
 
     for (auto m : methods())
         sema.check(m);
