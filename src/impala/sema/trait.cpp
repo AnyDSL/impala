@@ -17,6 +17,12 @@ TraitInstanceNode::TraitInstanceNode(const Trait trait, const SpecializeMap& var
     assert(trait_->num_type_vars() == var_instances_.size());
 }
 
+bool TraitNode::add_super_trait(Trait t) {
+    typetable().unify(t);
+    auto p = super_traits_.insert(t);
+    return p.second;
+}
+
 bool TraitInstanceNode::unify_with(Unifiable* other) {
     if (auto tinst = other->isa<TraitInstanceNode>()) {
         if (trait() == tinst->trait()) {
@@ -75,11 +81,9 @@ Type TraitNode::find_method(Symbol name) {
     if (i != trait_decl()->method_table().end())
         return i->second->type();
 
-    for (auto super : trait_decl()->super_traits()) {
-        if (auto super_trait_decl = super->decl()->isa<TraitDecl>()) {
-            if (auto type = super_trait_decl->trait()->find_method(name))
-                return type;
-        }
+    for (auto super : super_traits()) {
+        if (auto type = super->find_method(name))
+            return type;
     }
 
     return Type();

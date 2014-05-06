@@ -40,6 +40,8 @@ public:
     const TraitDecl* trait_decl() const { return trait_decl_; }
     bool is_error_trait() const { return trait_decl_ == nullptr; }
     virtual std::string to_string() const;
+    bool add_super_trait(Trait);
+    const UniSet<Trait>& super_traits() const { return super_traits_; }
 
     // all methods should be known, so nothing to do here
     virtual void refine() {}
@@ -57,6 +59,7 @@ protected:
     Unifiable* vspecialize(SpecializeMap&);
 
     const TraitDecl* const trait_decl_;
+    UniSet<Trait> super_traits_;
 
     friend class TypeTable;
     friend class TraitInstanceNode;

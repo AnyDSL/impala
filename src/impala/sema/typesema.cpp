@@ -399,8 +399,10 @@ void TraitDecl::check_item(TypeSema& sema) const {
     for (auto tp : type_params())
         trait_->bind(tp->type_var(sema));
 
-    for (auto t : super_traits())
-        sema.unify(t->to_trait(sema, self_var)); // TODO is this correct?
+    for (auto t : super_traits()) {
+        if (!trait_->add_super_trait(t->to_trait(sema, self_var)))
+            sema.error(t) << "duplicate super trait '" << t << "' for trait '" << symbol() << "'\n";
+    }
 
     for (auto m : methods())
         sema.check(m);
