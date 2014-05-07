@@ -20,8 +20,8 @@ void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; 
 
 std::ostream& PathElem::print(Printer& p) const { 
     p.stream() << symbol();
-    if (!args().empty())
-        p.dump_list([&] (const ASTType* type) { type->print(p); }, args(), "[", "]");
+    if (!type_args().empty())
+        p.dump_list([&] (const ASTType* type) { type->print(p); }, type_args(), "[", "]");
 
     return p.stream();
 }

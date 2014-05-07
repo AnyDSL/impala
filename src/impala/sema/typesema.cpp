@@ -166,21 +166,18 @@ Bound TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::
 }
 
 Type TypeSema::specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> args) {
-    return Type();
-#if 0
     if (args.size() == type->num_type_vars()) {
         std::vector<Type> type_args;
-        for (auto t : args) type_args.push_back(check(t));
+        for (auto t : args) 
+            type_args.push_back(check(t));
         auto map = infer(type, type_args);
 
         check_bounds(loc, type, type_args, map);
-        return type->instantiate(map);
-    } else {
+        return Type(type->vspecialize(map));
+    } else
         error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << type->num_type_vars() << "\n";
-    }
 
     return type_error();
-#endif
 }
 
 //------------------------------------------------------------------------------
@@ -508,12 +505,12 @@ Type PathExpr::check(TypeSema& sema, Type expected) const {
     // FEATURE consider longer paths
     auto* last = path()->path_elems().back();
     if (value_decl()) {
-        Type dec_type = sema.check(value_decl());
-        if (last->args().empty()) {
-            return dec_type;
+        Type decl_type = sema.check(value_decl());
+        if (last->type_args().empty()) {
+            return decl_type;
         } else {
-            if (dec_type != sema.type_error())
-                return sema.specialize(last, dec_type, last->args());
+            if (decl_type != sema.type_error())
+                return sema.specialize(last, decl_type, last->type_args());
         }
     }
     return sema.type_error();
@@ -590,8 +587,8 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
     if (!fn.empty()) {
         if (fn != sema.type_error()) {
             FnType func;
-            if (!path_elem()->args().empty()) {
-                Type t = sema.specialize(path_elem(), fn, path_elem()->args());
+            if (!path_elem()->type_args().empty()) {
+                Type t = sema.specialize(path_elem(), fn, path_elem()->type_args());
                 sema.unify(t);
                 func = t.as<FnType>();
             } else

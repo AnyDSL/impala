@@ -309,7 +309,7 @@ const PathElem* Parser::parse_path_elem() {
     auto path_elem = loc(new PathElem());
     path_elem->symbol_ = try_id("path");
     if (accept(Token::L_BRACKET))
-        parse_comma_list(Token::R_BRACKET, "type list", [&] { path_elem->args_.push_back(parse_type()); });
+        parse_comma_list(Token::R_BRACKET, "type list", [&] { path_elem->type_args_.push_back(parse_type()); });
 
     return path_elem;
 }

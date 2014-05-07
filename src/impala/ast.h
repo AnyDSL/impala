@@ -122,14 +122,14 @@ public:
 class PathElem : public ASTNode {
 public:
     Symbol symbol() const { return symbol_; }
-    const ASTTypes& args() const { return args_; }
+    const ASTTypes& type_args() const { return type_args_; }
     SafePtr<const Decl> decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const override;
     void check(NameSema&) const;
 
 private:
     Symbol symbol_;
-    ASTTypes args_;
+    ASTTypes type_args_;
     mutable SafePtr<const Decl> decl_;
 
     friend class Parser;

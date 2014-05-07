@@ -274,8 +274,8 @@ void FnExpr::check(NameSema& sema) const { fn_check(sema); }
 
 void PathElem::check(NameSema& sema) const {
     decl_ = sema.lookup(this, symbol());
-    for (auto arg : args())
-        sema.check(arg);
+    for (auto type_arg : type_args())
+        sema.check(type_arg);
 }
 
 void Path::check(NameSema& sema) const {
@@ -299,8 +299,8 @@ void PostfixExpr::check(NameSema& sema) const { lhs()->check(sema); }
 void FieldExpr::check(NameSema& sema) const {
     lhs()->check(sema);
     // don't check symbol here as it depends on lhs' type - must be done in TypeSema
-    for (auto arg : path_elem()->args())
-        sema.check(arg);
+    for (auto type_arg : path_elem()->type_args())
+        sema.check(type_arg);
 }
 
 void CastExpr::check(NameSema& sema) const {
