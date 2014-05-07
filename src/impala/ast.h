@@ -273,7 +273,7 @@ public:
     Symbol symbol() const { return symbol_; }
     SafePtr<const Decl> decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const override;
-    Trait to_trait(TypeSema&, Type) const;
+    Bound bound(TypeSema&, Type) const;
 
 private:
     virtual void check(NameSema&) const override;
@@ -644,7 +644,6 @@ public:
     const MethodTable& method_table() const { return method_table_; }
     const SelfParam* self_param() const { return &self_param_; }
     Trait trait() const { return trait_; }
-    Trait to_trait(TypeSema&) const;
     virtual Symbol item_symbol() const override { return Decl::symbol(); }
     virtual std::ostream& print(Printer&) const override;
 

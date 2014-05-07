@@ -5,8 +5,9 @@ namespace impala {
 //------------------------------------------------------------------------------
 
 TypeTable::TypeTable()
-    : trait_error_(trait(nullptr))
-    , type_error_(new_unifiable(new TypeErrorNode(*this)))
+    : type_error_(new_unifiable(new TypeErrorNode(*this)))
+    , trait_error_(trait(nullptr))
+    , bound_error_(bound(trait_error(), {}))
     , type_noreturn_(new_unifiable(new NoReturnTypeNode(*this)))
 #define IMPALA_TYPE(itype, atype) , itype##_(new_unifiable(new PrimTypeNode(*this, PrimType_##itype)))
 #include "impala/tokenlist.h"

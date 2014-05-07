@@ -24,58 +24,55 @@ typedef Proxy<FnTypeNode> FnType;
  * allowed (I guess):
  * @code trait TT<X:TT<Self>> {}; impl TT<int> for int {} @endcode
  *
- * @see TraitInstanceNode
+ * @see BoundNode
  */
 class TraitNode : public Unifiable {
 private:
     TraitNode(TypeTable& tt, const TraitDecl* trait_decl);
 
 public:
+    const TraitDecl* trait_decl() const { return trait_decl_; }
+    const UniSet<Bound>& super_bounds() const { return super_bounds_; }
+    bool is_error_trait() const { return trait_decl_ == nullptr; }
+    bool add_super_bound(Bound) const;
+    /// return the type of the method with this name if it exists; otherwise return an empty type
+    Type find_method(Symbol name) const;
+    bool has_method(Symbol name) const { return !find_method(name).empty(); }
+    Bound instantiate(thorin::ArrayRef<Type> args);
+
+    virtual void refine() const override {} // all methods should be known, so nothing to do here
     virtual bool equal(const Unifiable* other) const;
     virtual size_t hash() const;
-    const TraitDecl* trait_decl() const { return trait_decl_; }
-    bool is_error_trait() const { return trait_decl_ == nullptr; }
-    virtual std::string to_string() const;
-    bool add_super_trait(Trait) const;
-    const UniSet<Trait>& super_traits() const { return super_traits_; }
-
-    // all methods should be known, so nothing to do here
-    virtual void refine() const override {}
     virtual bool is_known() const override { return true; }
     virtual bool unify_with(const Unifiable*) const override { assert(false); return false; }
-
-    /// return the type of the method with this name if it exists; otherwise return an empty type
-    virtual Type find_method(Symbol name) const;
-    bool has_method(Symbol name) const { return !find_method(name).empty(); }
-
     virtual bool is_closed() const { return true; } // TODO
-    TraitInstance instantiate(thorin::ArrayRef<Type> args);
+    virtual std::string to_string() const;
 
 protected:
     const TraitDecl* const trait_decl_;
-    mutable UniSet<Trait> super_traits_;
+    mutable UniSet<Bound> super_bounds_;
 
     friend class TypeTable;
-    friend class TraitInstanceNode;
+    friend class BoundNode;
 };
 
 /// An instance of a trait is a trait where all type variables are instantiated by concrete types.
-class TraitInstanceNode : public Unifiable {
+class BoundNode : public Unifiable {
 private:
-    TraitInstanceNode(const Trait trait, thorin::ArrayRef<Type> args);
+    BoundNode(const Trait trait, thorin::ArrayRef<Type> args);
 
 public:
     const Trait trait() const { return trait_; }
     const Type arg(size_t i) const { return args_[i]; }
     thorin::ArrayRef<Type> args() const { return args_; }
     size_t num_args() const { return args_.size(); }
-    virtual bool equal(const Unifiable* other) const;
-    virtual size_t hash() const;
+    Type find_method(Symbol name) const;
+    virtual bool equal(const Unifiable* other) const override;
+    virtual size_t hash() const override;
     virtual std::string to_string() const;
     virtual void refine() const override;
     virtual bool is_known() const override;
     virtual bool unify_with(const Unifiable*) const override;
-    virtual Type find_method(Symbol name);
     virtual bool is_closed() const;
 
 private:
@@ -89,17 +86,17 @@ private:
 
 class ImplNode : public Unifiable {
 private:
-    ImplNode(TypeTable& tt, const ImplItem* impl_item, Trait trait)
+    ImplNode(TypeTable& tt, const ImplItem* impl_item, Bound bound)
         : Unifiable(tt)
         , impl_item_(impl_item)
-        , trait_(trait)
+        , bound_(bound)
     {}
 
 public:
     virtual bool equal(const Unifiable* other) const { return this->impl_item() == other->as<ImplNode>()->impl_item(); }
     virtual size_t hash() const;
     const ImplItem* impl_item() const { return impl_item_; }
-    Trait trait() const { return trait_; }
+    Bound bound() const { return bound_; }
 
     // CHECK is this correct?
     virtual void refine() const override {}
@@ -112,7 +109,7 @@ protected:
 
 private:
     const ImplItem* const impl_item_;
-    Trait trait_;
+    Bound bound_;
 
     friend class TypeTable;
 };

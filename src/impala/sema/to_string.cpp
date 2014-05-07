@@ -40,7 +40,7 @@ std::string Unifiable::type_vars_to_string() const {
 std::string UnknownTypeNode::to_string() const { return is_instantiated() ? instance()->to_string() : (std::string("?") + std::to_string(id())); }
 std::string TraitNode::to_string() const { return is_error_trait() ? "<trait error>" : trait_decl()->symbol().str(); }
 
-std::string TraitInstanceNode::to_string() const {
+std::string BoundNode::to_string() const {
     std::string result = trait()->to_string();
 
     assert(!args_.empty());

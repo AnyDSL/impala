@@ -75,7 +75,7 @@ bool KnownTypeNode::is_sane() const {
 
 //------------------------------------------------------------------------------
 
-void TypeVarNode::add_bound(Trait bound) const {
+void TypeVarNode::add_bound(Bound bound) const {
     assert(!is_closed() && "closed type variables must not be changed!");
     bounds_.insert(bound);
 }
@@ -87,6 +87,8 @@ bool TypeVarNode::is_closed() const {
 //------------------------------------------------------------------------------
 
 void KnownTypeNode::add_implementation(Impl impl) const {
+    impls_.push_back(impl);
+#if 0
     // TODO fail if a method was implemented multiple times!
     if (impl->is_generic()) {
         gen_trait_impls_.push_back(impl);
@@ -94,20 +96,19 @@ void KnownTypeNode::add_implementation(Impl impl) const {
         Trait trait = impl->trait();
         if (!trait_impls_.insert(trait).second)
             typetable().error(impl->impl_item()) << "duplicated implementation of trait '" << trait << "'\n";
-#if 0
         for (auto super : trait->super_traits()) {
             if (!trait_impls_.insert(super).second)
                 typetable().error(impl->impl_decl()) << "duplicated implementation of trait '" << super << "'\n";
         }
-#endif
     }
+#endif
 }
 
-bool KnownTypeNode::implements(Trait trait) const {
-    if (trait_impls_.contains(trait))
+bool KnownTypeNode::implements(Bound bound) const {
+#if 0
+    if (trait_impls_.contains(bound))
         return true;
 
-#if 0
     // try to find impl in super traits
     for (auto trait_impl : trait_impls_) {
         for (auto super : trait_impl->trait_decl()->super_traits()) {
@@ -134,17 +135,20 @@ bool KnownTypeNode::implements(Trait trait) const {
     return false;
 }
 
-bool TypeVarNode::implements(Trait trait) const {
+bool TypeVarNode::implements(Bound bound) const {
     // CHECK is this enough?
-    return bounds().find(trait) != bounds().end();
+    return bounds().find(bound) != bounds().end();
 }
 
 Type KnownTypeNode::find_method(Symbol s) const {
+#if 0
     // TODO what about generic implementations?
     for (auto t : trait_impls_) {
         if (auto fn = t->find_method(s)) 
             return fn;
     }
+    return Type();
+#endif
     return Type();
 }
 

@@ -61,7 +61,7 @@ public:
     virtual bool is_empty() const = 0;
 
     virtual void add_implementation(Impl) const = 0;
-    virtual bool implements(Trait) const = 0;
+    virtual bool implements(Bound) const = 0;
     /// @return The method type or an empty type if no method with this name was found
     virtual Type find_method(Symbol s) const = 0;
 
@@ -118,7 +118,7 @@ public:
     virtual bool unify_with(const Unifiable*) const override;
 
     virtual void add_implementation(Impl) const;
-    virtual bool implements(Trait) const;
+    virtual bool implements(Bound) const;
     virtual Type find_method(Symbol s) const;
 
     virtual bool is_generic() const {
@@ -132,13 +132,12 @@ public:
 
 private:
     const Kind kind_;
-    mutable UniSet<Trait> trait_impls_; // TODO do we want to have the impls or only the traits?
-    mutable std::vector<Impl> gen_trait_impls_; // TODO use a map trait_name -> impls to make this faster!
+    mutable std::vector<Impl> impls_;
 
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
 
-    friend class TraitInstanceNode;
+    friend class BoundNode;
     friend class CompoundTypeNode;
     friend class TypeTable;
 };
@@ -169,7 +168,7 @@ public:
     virtual bool unify_with(const Unifiable*) const override;
 
     virtual void add_implementation(Impl) const { assert(false); }
-    virtual bool implements(Trait t) const { return is_instantiated() && instance()->implements(t); }
+    virtual bool implements(Bound bound) const { return is_instantiated() && instance()->implements(bound); }
     virtual Type find_method(Symbol s) const { assert(is_instantiated()); return instance()->find_method(s); }
 
     virtual size_t num_type_vars() const { return is_instantiated() ? instance()->num_type_vars() : 0; }
@@ -334,12 +333,12 @@ private:
     bool bounds_equal(const TypeVar) const;
 
 public:
-    const UniSet<Trait>& bounds() const { return bounds_; }
+    const UniSet<Bound>& bounds() const { return bounds_; }
     const Unifiable* bound_at() const { return bound_at_; }
-    void add_bound(Trait) const;
+    void add_bound(Bound) const;
     virtual bool equal(const Unifiable* other) const;
     std::string to_string() const;
-    virtual bool implements(Trait) const;
+    virtual bool implements(Bound) const;
     virtual Type find_method(Symbol s) const;
 
     /**
@@ -358,7 +357,7 @@ private:
     virtual thorin::Type convert(CodeGen&) const { assert(false && "TODO"); return thorin::Type(); }
 
     Symbol name_;
-    mutable UniSet<Trait> bounds_;///< All traits that restrict the instantiation of this variable.
+    mutable UniSet<Bound> bounds_;///< All traits that restrict the instantiation of this variable.
     /**
      * The type where this variable is bound.
      * If such a type is set, then the variable must not be changed anymore!

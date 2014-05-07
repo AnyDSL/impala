@@ -28,6 +28,7 @@ public:
 
     TypeError type_error() { return type_error_; }
     Trait trait_error() { return trait_error_; }
+    Bound bound_error() { return bound_error_; }
     NoReturnType type_noreturn() { return type_noreturn_; }
     PrimType type(PrimTypeKind kind);
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
@@ -38,9 +39,9 @@ public:
     StructType struct_type(const StructDecl* struct_decl) { return new_unifiable(new StructTypeNode(*this, struct_decl)); }
     TypeVar type_var(Symbol name = Symbol()) { return new_unifiable(new TypeVarNode(*this, name)); }
     UnknownType unknown_type() { return new_unifiable(new UnknownTypeNode(*this)); }
-    TraitInstance trait_instance(Trait trait, thorin::ArrayRef<Type> args) { return new_unifiable(new TraitInstanceNode(trait, args)); }
+    Bound bound(Trait trait, thorin::ArrayRef<Type> args) { return new_unifiable(new BoundNode(trait, args)); }
     Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
-    Impl impl(const ImplItem* impl, Trait trait) { return new_unifiable(new ImplNode(*this, impl, trait)); }
+    Impl impl(const ImplItem* impl, Bound bound) { return new_unifiable(new ImplNode(*this, impl, bound)); }
 
     /// Unify a type and return \p true if the representative changed.
     template<class T> bool unify(Proxy<T> proxy) { return unify(*proxy); }
@@ -79,14 +80,15 @@ private:
 
     TypetableSet<const Unifiable> unifiables_;
     std::vector<const Unifiable*> garbage_;
-    Trait trait_error_;
     TypeError type_error_;
+    Trait trait_error_;
+    Bound bound_error_;
     NoReturnType type_noreturn_;
 #define IMPALA_TYPE(itype, atype) PrimType itype##_;
 #include "impala/tokenlist.h"
 
     friend class TraitNode;
-    friend class TraitInstanceNode;
+    friend class BoundNode;
 };
 
 }

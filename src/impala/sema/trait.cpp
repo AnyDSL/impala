@@ -11,9 +11,9 @@ TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
     , trait_decl_(trait_decl)
 {}
 
-bool TraitNode::add_super_trait(Trait t) const {
-    typetable().unify(t);
-    auto p = super_traits_.insert(t);
+bool TraitNode::add_super_bound(Bound bound) const {
+    typetable().unify(bound);
+    auto p = super_bounds_.insert(bound);
     return p.second;
 }
 
@@ -22,7 +22,7 @@ Type TraitNode::find_method(Symbol name) const {
     if (i != trait_decl()->method_table().end())
         return i->second->type();
 
-    for (auto super : super_traits()) {
+    for (auto super : super_bounds()) {
         if (auto type = super->find_method(name))
             return type;
     }
@@ -32,7 +32,7 @@ Type TraitNode::find_method(Symbol name) const {
 
 //------------------------------------------------------------------------------
 
-TraitInstanceNode::TraitInstanceNode(const Trait trait, thorin::ArrayRef<Type> args)
+BoundNode::BoundNode(const Trait trait, thorin::ArrayRef<Type> args)
     : Unifiable(trait->typetable())
     , trait_(trait)
     , args_(args)
@@ -40,10 +40,10 @@ TraitInstanceNode::TraitInstanceNode(const Trait trait, thorin::ArrayRef<Type> a
     assert(trait_->num_type_vars() == num_args());
 }
 
-bool TraitInstanceNode::unify_with(const Unifiable* other) const {
+bool BoundNode::unify_with(const Unifiable* other) const {
     // TODO
 #if 0
-    if (auto tinst = other->isa<TraitInstanceNode>()) {
+    if (auto tinst = other->isa<BoundNode>()) {
         if (trait() == tinst->trait()) {
             auto other_vinsts = tinst->var_instances_;
             if (var_instances_.size() == other_vinsts.size()) {
@@ -64,7 +64,7 @@ bool TraitInstanceNode::unify_with(const Unifiable* other) const {
     return false;
 }
 
-void TraitInstanceNode::refine() const {
+void BoundNode::refine() const {
 #if 0
     // TODO review this code
     for (size_t i = 1, e = num_args(); i != e; ++i) {
@@ -82,7 +82,7 @@ void TraitInstanceNode::refine() const {
 #endif
 }
 
-bool TraitInstanceNode::is_known() const {
+bool BoundNode::is_known() const {
     for (auto arg : args()) {
         if (!arg->is_known())
             return false;
@@ -90,7 +90,7 @@ bool TraitInstanceNode::is_known() const {
     return true;
 }
 
-bool TraitInstanceNode::is_closed() const {
+bool BoundNode::is_closed() const {
     for (auto arg : args()) {
         if (!arg->is_closed())
             return false;
@@ -98,7 +98,7 @@ bool TraitInstanceNode::is_closed() const {
     return true;
 }
 
-Type TraitInstanceNode::find_method(Symbol name) {
+Type BoundNode::find_method(Symbol name) const {
     // TODO cache found methods
     if (auto type = trait()->find_method(name)) {
 #if 0

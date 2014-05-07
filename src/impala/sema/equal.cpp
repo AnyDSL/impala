@@ -21,7 +21,7 @@ size_t KnownTypeNode::hash() const {
 }
 
 size_t TraitNode::hash() const { return hash_value(trait_decl()); }
-size_t TraitInstanceNode::hash() const { return trait()->hash(); } // FEATURE better hash function
+size_t BoundNode::hash() const { return trait()->hash(); } // FEATURE better hash function
 size_t ImplNode::hash() const { return hash_value(impl_item()); }
 
 //----------------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
         return false;
 
     // FEATURE this works but seems too much effort, at least use a set that uses representatives
-    TypetableSet<const TraitNode> obounds;
+    TypetableSet<const BoundNode> obounds;
     for (auto r : other->bounds()) {
         auto p = obounds.insert(*r); // TODO is deref here and below correct?
         assert(p.second && "hash/equal broken");
@@ -119,11 +119,11 @@ bool TraitNode::equal(const Unifiable* other) const {
     return false;
 }
 
-bool TraitInstanceNode::equal(const Unifiable* other) const {
+bool BoundNode::equal(const Unifiable* other) const {
     if (this == other)
         return true;
 
-    if (auto instance = other->isa<TraitInstanceNode>()) {
+    if (auto instance = other->isa<BoundNode>()) {
         if (trait() != instance->trait())
             return false;
 

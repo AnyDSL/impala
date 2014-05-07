@@ -34,8 +34,8 @@ public:
     Type expect_type(const Expr* expr, Type expected, std::string typetype) { return expect_type(expr, expr->type(), expected, typetype); }
     Type create_return_type(const ASTNode* node, Type ret_func);
 
-    Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances);
-    Trait instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
+    Bound instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
+    Type specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances);
     Type check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Expr*> args, Type expected);
 
     // check wrappers
@@ -150,8 +150,8 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
     }
 }
 
-Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances) {
-    return Trait();
+Bound TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances) {
+    return Bound();
 #if 0
     if ((var_instances.size()+1) == trait->num_type_vars()) {
         std::vector<Type> inst_types;
@@ -169,7 +169,7 @@ Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::
 #endif
 }
 
-Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances) {
+Type TypeSema::specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances) {
     return Type();
 #if 0
     if (var_instances.size() == type->num_type_vars()) {
@@ -194,13 +194,13 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
  */
 
 void TypeParamList::check_type_params(TypeSema& sema) const {
-    for (auto tp : type_params()) {
-        for (auto b : tp->bounds()) {
-            if (auto trait_inst = b->isa<ASTTypeApp>()) {
-                TypeVar v = tp->type_var(sema);
-                v->add_bound(trait_inst->to_trait(sema, v));
+    for (auto type_param : type_params()) {
+        for (auto bound : type_param->bounds()) {
+            if (auto type_app = bound->isa<ASTTypeApp>()) {
+                auto type_var = type_param->type_var(sema);
+                type_var->add_bound(type_app->bound(sema, type_var));
             } else {
-                sema.error(tp) << "bounds must be trait instances, not types\n";
+                sema.error(type_param) << "bounds must be trait instances, not types\n";
             }
         }
     }
@@ -264,15 +264,15 @@ Type ASTTypeApp::check(TypeSema& sema) const {
     return sema.type_error();
 }
 
-Trait ASTTypeApp::to_trait(TypeSema& sema, Type self) const {
+Bound ASTTypeApp::bound(TypeSema& sema, Type self) const {
     if (decl()) {
         if (auto trait_decl = decl()->isa<TraitDecl>()) {
-            Trait trait = trait_decl->to_trait(sema);
-            return sema.instantiate(this, trait, self, elems());
+            sema.check_item(trait_decl);
+            return sema.instantiate(this, trait_decl->trait(), self, elems());
         } else
             sema.error(this) << '\'' << symbol() << "' does not name a trait\n";
     }
-    return sema.trait_error();
+    return sema.bound_error();
 }
 
 //------------------------------------------------------------------------------
@@ -294,11 +294,6 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
     } else {
         return expected;
     }
-}
-
-Trait TraitDecl::to_trait(TypeSema& sema) const {
-    check_item(sema);
-    return trait();
 }
 
 void Fn::check_body(TypeSema& sema, FnType fn_type) const {
@@ -398,9 +393,9 @@ void TraitDecl::check_item(TypeSema& sema) const {
     for (auto tp : type_params())
         trait_->bind(tp->type_var(sema));
 
-    for (auto t : super_traits()) {
-        if (!trait_->add_super_trait(t->to_trait(sema, self_var)))
-            sema.error(t) << "duplicate super trait '" << t << "' for trait '" << symbol() << "'\n";
+    for (auto type_app : super_traits()) {
+        if (!trait_->add_super_bound(type_app->bound(sema, self_var)))
+            sema.error(type_app) << "duplicate super trait '" << type_app << "' for trait '" << symbol() << "'\n";
     }
 
     for (auto m : methods())
@@ -411,20 +406,20 @@ void TraitDecl::check_item(TypeSema& sema) const {
 
 void ImplItem::check_item(TypeSema& sema) const {
     check_type_params(sema);
-    Type ftype = sema.check(for_type());
+    Type for_type = sema.check(this->for_type());
 
-    Trait tinst;
+    Bound bound;
     if (trait() != nullptr) {
-        if (auto t = trait()->isa<ASTTypeApp>()) {
+        if (auto type_app = trait()->isa<ASTTypeApp>()) {
             // create impl
-            tinst = t->to_trait(sema, ftype);
-            auto impl = sema.impl(this, tinst);
+            bound = type_app->bound(sema, for_type);
+            auto impl = sema.impl(this, bound);
             for (auto tp : type_params())
                 impl->bind(tp->type_var(sema));
 
             // add impl to type
-            if ((ftype != sema.type_error()) && (tinst != sema.trait_error()))
-                ftype->add_implementation(impl);
+            if ((for_type != sema.type_error()) && (bound != sema.bound_error()))
+                for_type->add_implementation(impl);
         } else
             sema.error(trait()) << "expected trait instance.\n";
     }
@@ -434,10 +429,10 @@ void ImplItem::check_item(TypeSema& sema) const {
         Type fn_type = sema.check(fn);
 
         if (trait() != nullptr) {
-            assert(!tinst.empty());
+            assert(!bound.empty());
 
             Symbol meth_name = fn->symbol();
-            Type t = tinst->find_method(meth_name);
+            Type t = bound->find_method(meth_name);
             if (!t.empty()) {
                 // remember name for check if all methods were implemented
                 auto p = implemented_methods.insert(meth_name);
@@ -452,10 +447,10 @@ void ImplItem::check_item(TypeSema& sema) const {
     // TODO
 #if 0
     // check that all methods are implemented
-    if (!tinst.empty()) {
-        if (implemented_methods.size() != tinst->num_methods()) {
-            assert(implemented_methods.size() < tinst->num_methods());
-            for (auto p : tinst->all_methods()) {
+    if (!bound.empty()) {
+        if (implemented_methods.size() != bound->num_methods()) {
+            assert(implemented_methods.size() < bound->num_methods());
+            for (auto p : bound->all_methods()) {
                 if (!implemented_methods.contains(p.first))
                     sema.error(this) << "Must implement method '" << p.first << "'\n";
             }
@@ -522,7 +517,7 @@ Type PathExpr::check(TypeSema& sema, Type expected) const {
             return dec_type;
         } else {
             if (dec_type != sema.type_error())
-                return sema.instantiate(last, dec_type, last->args());
+                return sema.specialize(last, dec_type, last->args());
         }
     }
     return sema.type_error();
@@ -600,7 +595,7 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
         if (fn != sema.type_error()) {
             FnType func;
             if (!path_elem()->args().empty()) {
-                Type t = sema.instantiate(path_elem(), fn, path_elem()->args());
+                Type t = sema.specialize(path_elem(), fn, path_elem()->args());
                 sema.unify(t);
                 func = t.as<FnType>();
             } else
