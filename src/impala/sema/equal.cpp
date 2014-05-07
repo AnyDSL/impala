@@ -68,7 +68,7 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
         return false;
 
     // FEATURE this works but seems too much effort, at least use a set that uses representatives
-    TypetableSet<TraitNode> obounds;
+    TypetableSet<const TraitNode> obounds;
     for (auto r : other->bounds()) {
         auto p = obounds.insert(*r); // TODO is deref here and below correct?
         assert(p.second && "hash/equal broken");
