@@ -117,10 +117,10 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
     if (found_type != expected) {
         if (found_type->is_generic()) {
             // try to infer instantiations for this generic type
-            std::vector<Type> inst_types;
-            Type inst = instantiate_unknown(found_type, inst_types);
+            std::vector<Type> type_args;
+            Type inst = instantiate_unknown(found_type, type_args);
             if (inst->unify_with(expected)) {
-                for (auto t : inst_types) {
+                for (auto t : type_args) {
                     assert(t.representative() != nullptr);
                     expr->add_inferred_arg(Type(t.representative()));
                 }
@@ -152,13 +152,13 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
 
 Bound TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> args) {
     if ((args.size()+1) == trait->num_type_vars()) {
-        std::vector<Type> inst_types;
-        inst_types.push_back(self);
+        std::vector<Type> type_args;
+        type_args.push_back(self);
         for (auto t : args) 
-            inst_types.push_back(check(t));
-        auto map = infer(trait, inst_types);
-        check_bounds(loc, trait, inst_types, map);
-        return trait->instantiate(inst_types);
+            type_args.push_back(check(t));
+        auto map = infer(trait, type_args);
+        check_bounds(loc, trait, type_args, map);
+        return trait->instantiate(type_args);
     } else
         error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << (trait->num_type_vars()-1) << "\n";
 
@@ -169,11 +169,11 @@ Type TypeSema::specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const 
     return Type();
 #if 0
     if (args.size() == type->num_type_vars()) {
-        std::vector<Type> inst_types;
-        for (auto t : args) inst_types.push_back(check(t));
-        auto map = infer(type, inst_types);
+        std::vector<Type> type_args;
+        for (auto t : args) type_args.push_back(check(t));
+        auto map = infer(type, type_args);
 
-        check_bounds(loc, type, inst_types, map);
+        check_bounds(loc, type, type_args, map);
         return type->instantiate(map);
     } else {
         error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << type->num_type_vars() << "\n";
@@ -650,9 +650,9 @@ Type StructExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Expr*> args, Type expected) {
-    std::vector<Type> inst_types;
+    std::vector<Type> type_args;
     FnType ofn = lhs->type().as<FnType>();
-    FnType fn = ofn->is_generic() ? instantiate_unknown(ofn, inst_types).as<FnType>() : ofn;
+    FnType fn = ofn->is_generic() ? instantiate_unknown(ofn, type_args).as<FnType>() : ofn;
 
     bool no_cont = fn->size() == (args.size()+1); // true if this is a normal function call (no continuation)
     if (no_cont || (fn->size() == args.size())) {
@@ -665,11 +665,11 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
         // instantiate fn type
         if (ofn->is_generic()) {
             bool no_error = true;
-            for (size_t i = 0; i < inst_types.size(); ++i) {
-                UnknownType ut = inst_types[i].isa<UnknownType>();
+            for (size_t i = 0; i < type_args.size(); ++i) {
+                UnknownType ut = type_args[i].isa<UnknownType>();
                 if (!ut || ut->is_instantiated()) {
-                    unify(inst_types[i]);
-                    lhs->add_inferred_arg(Type(inst_types[i].representative()));
+                    unify(type_args[i]);
+                    lhs->add_inferred_arg(Type(type_args[i].representative()));
                 } else {
                     error(whole) << "could not find instance for type variable #" << i << ".\n";
                     no_error = false;
