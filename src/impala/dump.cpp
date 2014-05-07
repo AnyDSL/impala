@@ -125,8 +125,12 @@ std::ostream& LocalDecl::print(Printer& p) const {
 }
 
 /*
- * items
+ * items + item helpers
  */
+
+std::ostream& ModContents::print(Printer& p) const {
+    return p.dump_list([&] (const Item* item) { item->print(p); p.newline(); }, items(), "", "", "", true);
+}
 
 std::ostream& ModDecl::print(Printer& p) const {
     p.stream() << "mod " << symbol();
@@ -222,14 +226,6 @@ std::ostream& ImplItem::print(Printer& p) const {
     p.up();
     p.dump_list([&] (const FnDecl* method) { method->print(p); }, methods(), "", "", "", true);
     return p.down() << "}";
-}
-
-/*
- * item helpers
- */
-
-std::ostream& ModContents::print(Printer& p) const {
-    return p.dump_list([&] (const Item* item) { item->print(p); p.newline(); }, items(), "", "", "", true);
 }
 
 /*

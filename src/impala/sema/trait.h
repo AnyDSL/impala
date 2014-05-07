@@ -79,8 +79,6 @@ private:
     const Trait trait_;
     thorin::Array<Type> args_;
 
-    friend class TypeVarNode;
-    friend class Generic;
     friend class TypeTable;
 };
 

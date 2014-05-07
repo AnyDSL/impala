@@ -105,12 +105,12 @@ bool BoundNode::is_closed() const {
 Type BoundNode::find_method(Symbol name) const {
     // TODO cache found methods
     if (auto type = trait()->find_method(name)) {
-#if 0
-        auto m = var_instances();
-        Type t = type->specialize(m);
+        SpecializeMap map;
+        for (size_t i = 0, e = num_args(); i != e; ++i)
+            map[*trait()->type_var(i)] = *arg(i);
+        Type t = type->specialize(map);
         typetable().unify(t);
         return t;
-#endif
     }
 
     return Type();

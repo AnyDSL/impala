@@ -147,7 +147,6 @@ Type KnownTypeNode::find_method(Symbol s) const {
         if (auto fn = t->find_method(s)) 
             return fn;
     }
-    return Type();
 #endif
     return Type();
 }
