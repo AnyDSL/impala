@@ -27,12 +27,8 @@ typedef Proxy<FnTypeNode> FnType;
  * @see TraitInstanceNode
  */
 class TraitNode : public TUnifiable<TraitNode> {
-protected:
-    TraitNode(TypeTable& tt, const TraitDecl* trait_decl);
-
 private:
-    TraitNode& operator = (const TraitNode&); ///< Do not copy-assign a \p TraitNode.
-    TraitNode(const TraitNode& node);         ///< Do not copy-construct a \p TraitNode.
+    TraitNode(TypeTable& tt, const TraitDecl* trait_decl);
 
 public:
     virtual bool equal(const Unifiable* other) const;
@@ -68,11 +64,12 @@ protected:
 /// An instance of a trait is a trait where all type variables are instantiated by concrete types.
 class TraitInstanceNode : public TUnifiable<TraitInstanceNode> {
 private:
-    TraitInstanceNode(const Trait trait, const SpecializeMap& var_instances);
-    TraitInstanceNode& operator = (const TraitInstanceNode&); ///< Do not copy-assign a \p TraitInstanceNode.
-    TraitInstanceNode(const TraitInstanceNode& node);         ///< Do not copy-construct a \p TraitInstanceNode.
+    TraitInstanceNode(const Trait trait, thorin::ArrayRef<Type> args);
 
 public:
+    const Trait trait() const { return trait_; }
+    const Type arg(size_t i) const { return args_[i]; }
+    thorin::ArrayRef<Type> args() const { return args_; }
     virtual bool equal(const Unifiable* other) const;
     virtual size_t hash() const;
     virtual std::string to_string() const;
@@ -86,12 +83,8 @@ protected:
     Unifiable* vspecialize(SpecializeMap&);
 
 private:
-    const Trait trait() const { return trait_; }
-    /// return a copy of the variable instances
-    SpecializeMap var_instances() const { return var_instances_; }
-
     const Trait trait_;
-    SpecializeMap var_instances_;
+    thorin::Array<Type> args_;
 
     friend class TypeVarNode;
     friend class Generic;

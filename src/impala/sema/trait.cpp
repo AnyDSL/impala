@@ -30,7 +30,7 @@ Type TraitNode::find_method(Symbol name) {
     return Type();
 }
 
-Unifiable* TraitNode::vspecialize(SpecializeMap& map) { return typetable().instantiate_trait(Trait(this), map); }
+Unifiable* TraitNode::vspecialize(SpecializeMap& map) { return typetable().instantiate(Trait(this), map); }
 
 //------------------------------------------------------------------------------
 
@@ -94,8 +94,6 @@ bool TraitInstanceNode::is_closed() const {
     }
     return true;
 }
-
-//------------------------------------------------------------------------------
 
 Type TraitInstanceNode::find_method(Symbol name) {
     // TODO cache found methods

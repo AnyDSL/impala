@@ -6,6 +6,10 @@
 
 namespace impala {
 
+/*
+ * TODO remove copy & paste code
+ */
+
 void Unifiable::dump() const { std::cout << to_string() << std::endl; }
 
 std::string Unifiable::type_vars_to_string() const {
@@ -39,17 +43,14 @@ std::string TraitNode::to_string() const { return is_error_trait() ? "<trait err
 std::string TraitInstanceNode::to_string() const {
     std::string result = trait()->to_string();
 
-    assert(!var_instances_.empty());
-    if (var_instances_.size() == 1)
+    assert(!args_.empty());
+    if (args_.size() == 1)
         return result;
 
-    assert(var_instances_.size() == trait()->num_type_vars());
+    assert(args_.size() == trait()->num_type_vars());
     const char* separator = "[";
     for (size_t i = 1; i < trait()->num_type_vars(); ++i) {
-        TypeVar tv = trait()->type_var(i);
-        // CHECK is node() correct here?
-        assert(var_instances_.find(tv.node()) != var_instances_.end());
-        result += separator + var_instances_.find(tv.node())->second->to_string();
+        result += separator + arg(i)->to_string();
         separator = ",";
     }
 

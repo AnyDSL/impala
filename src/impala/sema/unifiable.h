@@ -10,6 +10,7 @@
 namespace impala {
 
 class TraitImplNode;
+class TraitInstanceNode;
 class TraitNode;
 class TypeNode;
 class TypeTable;
@@ -18,6 +19,7 @@ class Unifiable;
 class UnknownTypeNode;
 template<class T> class Proxy;
 typedef Proxy<TraitImplNode> TraitImpl;
+typedef Proxy<TraitInstanceNode> TraitInstance;
 typedef Proxy<TraitNode> Trait;
 typedef Proxy<TypeNode> Type;
 typedef Proxy<TypeVarNode> TypeVar;
@@ -76,6 +78,10 @@ private:
 //------------------------------------------------------------------------------
 
 class Unifiable : public thorin::MagicCast<Unifiable> {
+private:
+    Unifiable& operator = (const Unifiable&); ///< Do not copy-assign a \p Unifiable.
+    Unifiable(const Unifiable&);              ///< Do not copy-construct a \p Unifiable.
+
 protected:
     Unifiable(TypeTable& tt)
         : typetable_(tt)
@@ -85,7 +91,6 @@ protected:
 
 public:
     TypeTable& typetable() const { return typetable_; }
-
     Unifiable* representative() const { return representative_; }
     const int id() const { return id_; }
     bool is_unified() const { return representative_ != nullptr; }
@@ -129,12 +134,12 @@ public:
     void dump() const;
 
     /**
-     * Instantiate a generic element using the map from TypeVar -> Type
-     * @param var_instances A map that assigns each type variable that is bound at this generic an instance
+     * Instantiate a \p Unifiable using the map from TypeVar -> Type
+     * @param map A map that assigns each type variable that is bound at this generic an instance
      * @return the instantiated type
      * @see TypeTable::create_spec_map()
      */
-    Unifiable* instantiate(SpecializeMap& var_instances);
+    Unifiable* instantiate(SpecializeMap& map);
     Unifiable* specialize(SpecializeMap& map);
 
 protected:

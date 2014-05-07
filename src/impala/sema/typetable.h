@@ -80,8 +80,8 @@ private:
         return Proxy<T>(tn);
     }
 
-    TraitInstanceNode* instantiate_trait(Trait trait, SpecializeMap& map) {
-        return new_unifiable(new TraitInstanceNode(trait, map)).node();
+    TraitInstance instantiate(Trait trait, thorin::ArrayRef<Type> args) {
+        return new_unifiable(new TraitInstanceNode(trait, args));
     }
 
     TypetableSet<Unifiable> unifiables_;
