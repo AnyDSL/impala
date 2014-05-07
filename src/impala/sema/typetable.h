@@ -69,7 +69,7 @@ protected:
     bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> types, SpecializeMap& map);
     SpecializeMap infer(const Unifiable*, thorin::ArrayRef<Type>) const;
     template<class T>
-    SpecializeMap infer(Proxy<T> proxy, thorin::ArrayRef<Type> var_instances) const { return infer(*proxy, var_instances); }
+    SpecializeMap infer(Proxy<T> proxy, thorin::ArrayRef<Type> type_args) const { return infer(*proxy, type_args); }
 
 private:
     template<class T> 

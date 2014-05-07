@@ -23,24 +23,21 @@ TypeTable::~TypeTable() {
         delete g; 
 }
 
-Type TypeTable::instantiate_unknown(Type type, std::vector<Type>& with) {
+Type TypeTable::instantiate_unknown(Type type, std::vector<Type>& type_args) {
+    for (size_t i = 0, e = type->num_type_vars(); i != e;  ++i) 
+        type_args.push_back(unknown_type());
+    auto map = infer(type, type_args);
+    //return type->instantiate(map);
     return Type();
-    // TODO
-#if 0
-    for (size_t i = 0; i < type->num_type_vars(); ++i) 
-        with.push_back(unknown_type());
-    auto map = infer(type, with);
-    return type->instantiate(map);
-#endif
 }
 
-SpecializeMap TypeTable::infer(const Unifiable* unifiable, thorin::ArrayRef<Type> var_instances) const {
-    assert(unifiable->num_type_vars() == var_instances.size());
+SpecializeMap TypeTable::infer(const Unifiable* unifiable, thorin::ArrayRef<Type> type_args) const {
+    assert(unifiable->num_type_vars() == type_args.size());
     SpecializeMap map;
     size_t i = 0;
     for (TypeVar v : unifiable->type_vars())
-        map[*v] = *var_instances[i++]; // CHECK ist deref correct here and below?
-    assert(map.size() == var_instances.size());
+        map[*v] = *type_args[i++]; // CHECK ist deref correct here and below?
+    assert(map.size() == type_args.size());
     return map;
 }
 
