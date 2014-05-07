@@ -27,8 +27,7 @@ Type TypeTable::instantiate_unknown(Type type, std::vector<Type>& type_args) {
     for (size_t i = 0, e = type->num_type_vars(); i != e;  ++i) 
         type_args.push_back(unknown_type());
     auto map = infer(type, type_args);
-    //return type->instantiate(map);
-    return Type();
+    return Type(type->vspecialize(map));
 }
 
 SpecializeMap TypeTable::infer(const Unifiable* unifiable, thorin::ArrayRef<Type> type_args) const {

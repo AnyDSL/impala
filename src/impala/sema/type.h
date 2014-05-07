@@ -80,9 +80,9 @@ public:
     virtual bool is_sane() const = 0;
     Type specialize() const { SpecializeMap map; return specialize(map); }
     Type specialize(SpecializeMap&) const;
+    virtual const TypeNode* vspecialize(SpecializeMap&) const = 0;
 
 private:
-    virtual const TypeNode* vspecialize(SpecializeMap&) const = 0;
     virtual thorin::Type convert(CodeGen&) const = 0;
 
     mutable thorin::Type thorin_type_;
