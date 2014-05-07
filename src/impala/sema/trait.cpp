@@ -11,13 +11,13 @@ TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
     , trait_decl_(trait_decl)
 {}
 
-bool TraitNode::add_super_trait(Trait t) {
+bool TraitNode::add_super_trait(Trait t) const {
     typetable().unify(t);
     auto p = super_traits_.insert(t);
     return p.second;
 }
 
-Type TraitNode::find_method(Symbol name) {
+Type TraitNode::find_method(Symbol name) const {
     auto i = trait_decl()->method_table().find(name);
     if (i != trait_decl()->method_table().end())
         return i->second->type();
@@ -30,19 +30,19 @@ Type TraitNode::find_method(Symbol name) {
     return Type();
 }
 
-Unifiable* TraitNode::vspecialize(SpecializeMap& map) { return typetable().instantiate(Trait(this), map); }
-
 //------------------------------------------------------------------------------
 
-TraitInstanceNode::TraitInstanceNode(const Trait trait, const SpecializeMap& var_instances)
+TraitInstanceNode::TraitInstanceNode(const Trait trait, thorin::ArrayRef<Type> args)
     : TUnifiable(trait->typetable())
     , trait_(trait)
-    , var_instances_(var_instances)
+    , args_(args)
 {
-    assert(trait_->num_type_vars() == var_instances_.size());
+    assert(trait_->num_type_vars() == num_args());
 }
 
-bool TraitInstanceNode::unify_with(Unifiable* other) {
+bool TraitInstanceNode::unify_with(const Unifiable* other) const {
+    // TODO
+#if 0
     if (auto tinst = other->isa<TraitInstanceNode>()) {
         if (trait() == tinst->trait()) {
             auto other_vinsts = tinst->var_instances_;
@@ -60,36 +60,39 @@ bool TraitInstanceNode::unify_with(Unifiable* other) {
         }
     }
     return false;
+#endif
+    return false;
 }
 
-void TraitInstanceNode::refine() {
-    for (size_t i = 1; i < trait()->num_type_vars(); ++i) {
-        TypeVar tv = trait()->type_var(i);
-        assert(var_instances_.find(tv.node()) != var_instances_.end()); // CHECK is node() correct here?
-        auto u = var_instances_.find(tv.node())->second;
+void TraitInstanceNode::refine() const {
+#if 0
+    // TODO review this code
+    for (size_t i = 1, e = num_args(); i != e; ++i) {
+        auto v = trait()->type_var(i);
+        auto t = arg(i);
 
-        if (UnknownTypeNode* utn = u->isa<UnknownTypeNode>()) {
+        if (auto utn = t->isa<UnknownTypeNode>()) {
             assert(utn->is_instantiated());
             utn->instance()->refine();
-            var_instances_[tv.node()] = utn;
+            //var_instances_[v.node()] = utn;
+            args_[i] = Type(utn);
         } else
-            u->refine();
+            t->refine();
     }
+#endif
 }
 
 bool TraitInstanceNode::is_known() const {
-    bool result = true;
-    for (auto tv : trait()->type_vars()) {
-        assert(var_instances_.find(tv.node()) != var_instances_.end()); // CHECK is node() correct here?
-        result = result && var_instances_.find(tv.node())->second->is_known();
+    for (auto arg : args()) {
+        if (!arg->is_known())
+            return false;
     }
-    return result;
+    return true;
 }
 
 bool TraitInstanceNode::is_closed() const {
-    // TODO review this
-    for (auto i : var_instances_) {
-        if (!i.second->is_closed())
+    for (auto arg : args()) {
+        if (!arg->is_closed())
             return false;
     }
     return true;
@@ -98,27 +101,15 @@ bool TraitInstanceNode::is_closed() const {
 Type TraitInstanceNode::find_method(Symbol name) {
     // TODO cache found methods
     if (auto type = trait()->find_method(name)) {
+#if 0
         auto m = var_instances();
         Type t = type->specialize(m);
         typetable().unify(t);
         return t;
+#endif
     }
 
     return Type();
-}
-
-Unifiable* TraitInstanceNode::vspecialize(SpecializeMap& map) {
-    SpecializeMap m;
-    for (auto i : var_instances_)
-        m[i.first] = i.second->specialize(map);
-
-    return typetable().instantiate_trait(trait(), m);
-}
-
-//------------------------------------------------------------------------------
-
-Unifiable* TraitImplNode::vspecialize(SpecializeMap& map) { 
-    return map[this] = typetable().implement_trait(impl_decl(), trait()->specialize(map)).node(); 
 }
 
 //------------------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 namespace impala {
 
+#if 0
 void Unifiable::verify_instantiation(SpecializeMap& map) const {
     assert(map.size() == num_type_vars());
 
@@ -20,6 +21,8 @@ void Unifiable::verify_instantiation(SpecializeMap& map) const {
     }
 }
 
+#endif
+
 void TypeTable::verify() const {
     for (auto g : unifiables_) {
         assert(g != nullptr);
@@ -34,7 +37,7 @@ void TypeTable::verify() const {
     }
 
     for (size_t i = 0; i < garbage_.size(); ++i) {
-        Unifiable* g = garbage_[i];
+        auto g = garbage_[i];
         assert(g != nullptr);
 
         // no element should be twice in the garbage vector - else deletion will fail!
@@ -59,9 +62,9 @@ void verify(thorin::ArrayRef<const Type> types) {
         assert(t->is_sane());
 
     for (auto ty1 : types) {
-        TypeNode* t1 = ty1.node();
+        auto t1 = ty1.node();
         for (auto ty2 : types) {
-            TypeNode* t2 = ty2.node();
+            auto t2 = ty2.node();
             if (t1->is_unified() && t2->is_unified()) {
                 if (!((!t1->equal(t2)) || (t1->representative() == t2->representative()))) {
                     t1->dump();

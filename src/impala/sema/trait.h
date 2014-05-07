@@ -36,26 +36,24 @@ public:
     const TraitDecl* trait_decl() const { return trait_decl_; }
     bool is_error_trait() const { return trait_decl_ == nullptr; }
     virtual std::string to_string() const;
-    bool add_super_trait(Trait);
+    bool add_super_trait(Trait) const;
     const UniSet<Trait>& super_traits() const { return super_traits_; }
 
     // all methods should be known, so nothing to do here
-    virtual void refine() {}
+    virtual void refine() const override {}
     virtual bool is_known() const override { return true; }
-
-    virtual bool unify_with(Unifiable*) { assert(false); return false; }
+    virtual bool unify_with(const Unifiable*) const override { assert(false); return false; }
 
     /// return the type of the method with this name if it exists; otherwise return an empty type
-    virtual Type find_method(Symbol name);
-    bool has_method(Symbol name) { return !find_method(name).empty(); }
+    virtual Type find_method(Symbol name) const;
+    bool has_method(Symbol name) const { return !find_method(name).empty(); }
 
     virtual bool is_closed() const { return true; } // TODO
+    TraitInstance instantiate(thorin::ArrayRef<Type> args);
 
 protected:
-    Unifiable* vspecialize(SpecializeMap&);
-
     const TraitDecl* const trait_decl_;
-    UniSet<Trait> super_traits_;
+    mutable UniSet<Trait> super_traits_;
 
     friend class TypeTable;
     friend class TraitInstanceNode;
@@ -70,17 +68,15 @@ public:
     const Trait trait() const { return trait_; }
     const Type arg(size_t i) const { return args_[i]; }
     thorin::ArrayRef<Type> args() const { return args_; }
+    size_t num_args() const { return args_.size(); }
     virtual bool equal(const Unifiable* other) const;
     virtual size_t hash() const;
     virtual std::string to_string() const;
-    virtual void refine();
+    virtual void refine() const override;
     virtual bool is_known() const override;
-    virtual bool unify_with(Unifiable*);
+    virtual bool unify_with(const Unifiable*) const override;
     virtual Type find_method(Symbol name);
     virtual bool is_closed() const;
-
-protected:
-    Unifiable* vspecialize(SpecializeMap&);
 
 private:
     const Trait trait_;
@@ -108,16 +104,12 @@ public:
     Trait trait() const { return trait_; }
 
     // CHECK is this correct?
-    virtual void refine() {}
+    virtual void refine() const override {}
     virtual bool is_known() const override { return true; }
-
-    virtual bool unify_with(Unifiable*) { assert(false); return false; }
-
+    virtual bool unify_with(const Unifiable*) const override { assert(false); return false; }
     virtual bool is_closed() const { return true; } // TODO
 
 protected:
-    Unifiable* vspecialize(SpecializeMap& m);
-
     virtual std::string to_string() const { return ""; } // TODO
 
 private:

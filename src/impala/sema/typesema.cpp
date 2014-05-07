@@ -159,10 +159,13 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
 }
 
 Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances) {
+    return Trait();
+#if 0
     if ((var_instances.size()+1) == trait->num_type_vars()) {
         std::vector<Type> inst_types;
         inst_types.push_back(self);
-        for (auto t : var_instances) inst_types.push_back(check(t));
+        for (auto t : var_instances) 
+            inst_types.push_back(check(t));
         auto map = infer(trait, inst_types);
 
         check_bounds(loc, trait, inst_types, map);
@@ -171,9 +174,12 @@ Trait TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::
         error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << (trait->num_type_vars()-1) << "\n";
 
     return trait_error();
+#endif
 }
 
 Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances) {
+    return Type();
+#if 0
     if (var_instances.size() == type->num_type_vars()) {
         std::vector<Type> inst_types;
         for (auto t : var_instances) inst_types.push_back(check(t));
@@ -186,6 +192,7 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
     }
 
     return type_error();
+#endif
 }
 
 //------------------------------------------------------------------------------

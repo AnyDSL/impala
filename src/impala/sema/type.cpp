@@ -8,7 +8,7 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-bool KnownTypeNode::unify_with(Unifiable* other) {
+bool KnownTypeNode::unify_with(const Unifiable* other) const {
     if (auto ktn = other->isa<KnownTypeNode>()) {
         if (this->kind() == ktn->kind()) { // TODO make this kind handling better
             if (unify_type_vars(other->type_vars())) {
@@ -25,7 +25,7 @@ bool KnownTypeNode::unify_with(Unifiable* other) {
     return false;
 }
 
-bool UnknownTypeNode::unify_with(Unifiable* other) {
+bool UnknownTypeNode::unify_with(const Unifiable* other) const {
     if (!is_instantiated()) {
         instantiate(Type(other->as<TypeNode>()));
         typetable().unify(Type(this));
@@ -75,7 +75,7 @@ bool KnownTypeNode::is_sane() const {
 
 //------------------------------------------------------------------------------
 
-void TypeVarNode::add_bound(Trait bound) {
+void TypeVarNode::add_bound(Trait bound) const {
     assert(!is_closed() && "closed type variables must not be changed!");
     bounds_.insert(bound);
 }
@@ -86,7 +86,7 @@ bool TypeVarNode::is_closed() const {
 
 //------------------------------------------------------------------------------
 
-void KnownTypeNode::add_implementation(TraitImpl impl) {
+void KnownTypeNode::add_implementation(TraitImpl impl) const {
     // TODO fail if a method was implemented multiple times!
     if (impl->is_generic()) {
         gen_trait_impls_.push_back(impl);
@@ -119,6 +119,7 @@ bool KnownTypeNode::implements(Trait trait) const {
     }
 #endif
 
+#if 0
     // try to instantiate the generic implementations
     for (auto ti : gen_trait_impls_) {
         std::vector<Type> inst_types;
@@ -128,6 +129,7 @@ bool KnownTypeNode::implements(Trait trait) const {
                 return true;
         }
     }
+#endif
 
     return false;
 }
@@ -174,6 +176,27 @@ Type FnTypeNode::return_type() const {
 
 //------------------------------------------------------------------------------
 
+Type TypeNode::specialize(SpecializeMap& map) const {
+    // FEATURE this could be faster if we copy only types where something changed inside
+    if (auto result = thorin::find(map, this))
+        return Type(result);
+
+    for (auto v : type_vars()) {
+        // CHECK is representative really correct or do we need node()? -- see also below!
+        assert(!map.contains(v.representative()));
+        v->clone(map); // CHECK is node() correct here?
+    }
+
+    auto t = vspecialize(map);
+
+    for (auto v : type_vars()) {
+        assert(map.contains(v.representative()));
+        t->bind(TypeVar(map[v.representative()]->as<TypeVarNode>()));
+    }
+
+    return Type(t);
+}
+
 thorin::Array<Type> CompoundTypeNode::specialize_elems(SpecializeMap& map) const {
     thorin::Array<Type> nelems(size());
     for (size_t i = 0, e = size(); i != e; ++i)
@@ -181,15 +204,14 @@ thorin::Array<Type> CompoundTypeNode::specialize_elems(SpecializeMap& map) const
     return nelems;
 }
 
-Unifiable* UnknownTypeNode::vspecialize(SpecializeMap& map) { assert(false); return nullptr; }
-Unifiable* TypeErrorNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type_error().node(); }
-Unifiable* NoReturnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type_noreturn().node(); }
-Unifiable* PrimTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().type(primtype_kind()).node(); }
-Unifiable* FnTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().fn_type(specialize_elems(map)).node(); }
-Unifiable* TupleTypeNode::vspecialize(SpecializeMap& map) { return map[this] = typetable().tuple_type(specialize_elems(map)).node(); }
-Unifiable* StructTypeNode::vspecialize(SpecializeMap& map) { assert(false); return nullptr; }
-
-Unifiable* TypeVarNode::vspecialize(SpecializeMap& map) {
+const TypeNode* UnknownTypeNode::vspecialize(SpecializeMap& map) const { assert(false); return nullptr; }
+const TypeNode* TypeErrorNode::vspecialize(SpecializeMap& map) const { return map[this] = typetable().type_error().node(); }
+const TypeNode* NoReturnTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = typetable().type_noreturn().node(); }
+const TypeNode* PrimTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = typetable().type(primtype_kind()).node(); }
+const TypeNode* FnTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = typetable().fn_type(specialize_elems(map)).node(); }
+const TypeNode* TupleTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = typetable().tuple_type(specialize_elems(map)).node(); }
+const TypeNode* StructTypeNode::vspecialize(SpecializeMap& map) const { assert(false); return nullptr; }
+const TypeNode* TypeVarNode::vspecialize(SpecializeMap& map) const {
     // was not bound in the specialized type -> return orginal type var
     // CHECK do we need to create a new copy here? unification lead to segmentation faults in the past...
     return map[this] = this;
@@ -199,23 +221,24 @@ TypeVar TypeVarNode::clone(SpecializeMap& map) const {
     TypeVar v = typetable().type_var();
     map[this] = v.node();
 
-    // copy bounds!
+    // copy bounds
     for (auto b : bounds())
-        v->add_bound(b->specialize(map));
+        //v->add_bound(b->specialize(map));
+        v->add_bound(b);
 
     return v;
 }
 
 //------------------------------------------------------------------------------
 
-void KnownTypeNode::refine() {
+void KnownTypeNode::refine() const {
     refine_type_vars();
     for (size_t i = 0; i < size(); ++i) {
         Type e = elem(i);
-        if (UnknownTypeNode* utn = e.node()->isa<UnknownTypeNode>()) {
+        if (auto utn = e.node()->isa<UnknownTypeNode>()) {
             assert(utn->is_instantiated());
             utn->instance()->refine();
-            set(i, utn->instance());
+            const_cast<KnownTypeNode*>(this)->set(i, utn->instance());
         } else {
             e->refine();
         }

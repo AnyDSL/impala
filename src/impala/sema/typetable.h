@@ -43,16 +43,13 @@ public:
 
     /// Unify a type and return \p true if the representative changed.
     template<class T> bool unify(Proxy<T> proxy) { return unify(*proxy); }
-    bool unify(Unifiable*);
+    bool unify(const Unifiable*);
 
     /**
      * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
      * therefore it is important to call \p check_bounds after all unknowns have been resolved!
      */
-    template<class T>
-    Proxy<T> instantiate_unknown(Proxy<T> proxy, std::vector<Type>& types) { 
-        return Proxy<T>(instantiate_unknown(*proxy, types)->template as<T>());
-    }
+    Type instantiate_unknown(Type, std::vector<Type>&);
     template<class T>
     bool check_bounds(const ASTNode* loc, Proxy<T> proxy, thorin::ArrayRef<Type> types) { 
         auto map = infer(*proxy, types);
@@ -67,13 +64,12 @@ public:
     void verify() const; ///< Checks if all types in the type tables are sane and correctly unified.
 
 protected:
-    bool check_bounds(const ASTNode* loc, Unifiable* unifiable, thorin::ArrayRef<Type> types, SpecializeMap& map);
-    SpecializeMap infer(Unifiable*, thorin::ArrayRef<Type>) const;
+    bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> types, SpecializeMap& map);
+    SpecializeMap infer(const Unifiable*, thorin::ArrayRef<Type>) const;
     template<class T>
     SpecializeMap infer(Proxy<T> proxy, thorin::ArrayRef<Type> var_instances) const { return infer(*proxy, var_instances); }
 
 private:
-    Unifiable* instantiate_unknown(Unifiable*, std::vector<Type>&);
     template<class T> 
     Proxy<T> new_unifiable(T* tn) {
         garbage_.push_back(tn);
@@ -84,8 +80,8 @@ private:
         return new_unifiable(new TraitInstanceNode(trait, args));
     }
 
-    TypetableSet<Unifiable> unifiables_;
-    std::vector<Unifiable*> garbage_;
+    TypetableSet<const Unifiable> unifiables_;
+    std::vector<const Unifiable*> garbage_;
     Trait trait_error_;
     TypeError type_error_;
     NoReturnType type_noreturn_;

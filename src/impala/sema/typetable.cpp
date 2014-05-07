@@ -22,14 +22,18 @@ TypeTable::~TypeTable() {
         delete g; 
 }
 
-Unifiable* TypeTable::instantiate_unknown(Unifiable* unifiable, std::vector<Type>& types) {
-    for (size_t i = 0; i < unifiable->num_type_vars(); ++i) 
-        types.push_back(unknown_type());
-    auto map = infer(unifiable, types);
-    return unifiable->instantiate(map);
+Type TypeTable::instantiate_unknown(Type type, std::vector<Type>& with) {
+    return Type();
+    // TODO
+#if 0
+    for (size_t i = 0; i < type->num_type_vars(); ++i) 
+        with.push_back(unknown_type());
+    auto map = infer(type, with);
+    return type->instantiate(map);
+#endif
 }
 
-SpecializeMap TypeTable::infer(Unifiable* unifiable, thorin::ArrayRef<Type> var_instances) const {
+SpecializeMap TypeTable::infer(const Unifiable* unifiable, thorin::ArrayRef<Type> var_instances) const {
     assert(unifiable->num_type_vars() == var_instances.size());
     SpecializeMap map;
     size_t i = 0;
@@ -39,7 +43,7 @@ SpecializeMap TypeTable::infer(Unifiable* unifiable, thorin::ArrayRef<Type> var_
     return map;
 }
 
-bool TypeTable::unify(Unifiable* unifiable) {
+bool TypeTable::unify(const Unifiable* unifiable) {
     if (unifiable->is_unified())
         return false;
 
@@ -93,7 +97,8 @@ PrimType TypeTable::type(const PrimTypeKind kind) {
     }
 }
 
-bool TypeTable::check_bounds(const ASTNode* loc, Unifiable* unifiable, thorin::ArrayRef<Type> inst_types, SpecializeMap& map) {
+bool TypeTable::check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> inst_types, SpecializeMap& map) {
+#if 0
     assert(inst_types.size() == unifiable->num_type_vars());
     assert(inst_types.size() == map.size());
 
@@ -125,6 +130,8 @@ bool TypeTable::check_bounds(const ASTNode* loc, Unifiable* unifiable, thorin::A
     }
 
     return no_error;
+#endif
+    return true;
 }
 
 }

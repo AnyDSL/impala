@@ -1,13 +1,12 @@
 #ifndef IMPALA_SEMA_TYPE_H
 #define IMPALA_SEMA_TYPE_H
 
-#include "impala/sema/trait.h"
-
 #include "thorin/type.h"
 #include "thorin/util/autoptr.h"
 #include "thorin/util/array.h"
 #include "thorin/util/hash.h"
 
+#include "impala/sema/trait.h"
 #include "impala/sema/unifiable.h"
 
 namespace thorin {
@@ -18,6 +17,7 @@ namespace impala {
 
 class CodeGen;
 class StructDecl;
+typedef thorin::HashMap<const TypeNode*, const TypeNode*> SpecializeMap;
 
 //------------------------------------------------------------------------------
 
@@ -60,7 +60,7 @@ public:
     /// Returns true if this \p TypeNode does not have any \p TypeNode operands (\p elems_).
     virtual bool is_empty() const = 0;
 
-    virtual void add_implementation(TraitImpl) = 0;
+    virtual void add_implementation(TraitImpl) const = 0;
     virtual bool implements(Trait) const = 0;
     /// @return The method type or an empty type if no method with this name was found
     virtual Type find_method(Symbol s) const = 0;
@@ -78,11 +78,14 @@ public:
      * This also means that a sane type is always closed!
      */
     virtual bool is_sane() const = 0;
+    Type specialize() const { SpecializeMap map; return specialize(map); }
+    Type specialize(SpecializeMap&) const;
 
 private:
+    virtual const TypeNode* vspecialize(SpecializeMap&) const = 0;
     virtual thorin::Type convert(CodeGen&) const = 0;
 
-    thorin::Type thorin_type_;
+    mutable thorin::Type thorin_type_;
 
     friend class CodeGen;
 };
@@ -107,15 +110,14 @@ public:
         return elems_.empty();
     }
 
-    virtual void refine();
+    virtual void refine() const override;
     virtual bool is_known() const override;
 
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
+    virtual bool unify_with(const Unifiable*) const override;
 
-    virtual bool unify_with(Unifiable*);
-
-    virtual void add_implementation(TraitImpl);
+    virtual void add_implementation(TraitImpl) const;
     virtual bool implements(Trait) const;
     virtual Type find_method(Symbol s) const;
 
@@ -130,8 +132,8 @@ public:
 
 private:
     const Kind kind_;
-    UniSet<Trait> trait_impls_; // TODO do we want to have the impls or only the traits?
-    std::vector<TraitImpl> gen_trait_impls_; // TODO use a map trait_name -> impls to make this faster!
+    mutable UniSet<Trait> trait_impls_; // TODO do we want to have the impls or only the traits?
+    mutable std::vector<TraitImpl> gen_trait_impls_; // TODO use a map trait_name -> impls to make this faster!
 
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
@@ -148,7 +150,7 @@ private:
     {}
 
 protected:
-    virtual Unifiable* vspecialize(SpecializeMap&);
+    virtual const TypeNode* vspecialize(SpecializeMap&) const;
 
 public:
     virtual Kind kind() const { return is_instantiated() ? instance()->kind() : Type_unknown; }
@@ -159,14 +161,14 @@ public:
     virtual size_t size() const { return is_instantiated() ? instance()->size() : 0; }
     virtual bool is_empty() const { return !is_instantiated() || instance()->is_empty(); }
 
-    virtual void refine() { assert(false); }
+    virtual void refine() const override { assert(false); }
     virtual bool is_known() const override { return false; }
 
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
-    virtual bool unify_with(Unifiable*);
+    virtual bool unify_with(const Unifiable*) const override;
 
-    virtual void add_implementation(TraitImpl) { assert(false); }
+    virtual void add_implementation(TraitImpl) const { assert(false); }
     virtual bool implements(Trait t) const { return is_instantiated() && instance()->implements(t); }
     virtual Type find_method(Symbol s) const { assert(is_instantiated()); return instance()->find_method(s); }
 
@@ -182,12 +184,12 @@ public:
 
     bool is_instantiated() const { return !instance_.empty(); }
     Type instance() const { return instance_; }
-    void instantiate(Type instance) { assert(!is_instantiated()); instance_ = instance; }
+    void instantiate(Type instance) const { assert(!is_instantiated()); instance_ = instance; }
 
 private:
     virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
 
-    Type instance_;
+    mutable Type instance_;
 
     friend class TypeTable;
 };
@@ -199,7 +201,7 @@ private:
     {}
 
 protected:
-    virtual Unifiable* vspecialize(SpecializeMap&);
+    virtual const TypeNode* vspecialize(SpecializeMap&) const;
 
 public:
     virtual std::string to_string() const { return "<type error>"; }
@@ -217,7 +219,7 @@ private:
     {}
 
 protected:
-    virtual Unifiable* vspecialize(SpecializeMap&);
+    virtual const TypeNode* vspecialize(SpecializeMap&) const;
 
 public:
     virtual std::string to_string() const { return "<type no-return>"; }
@@ -237,7 +239,7 @@ private:
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
 
 protected:
-    virtual Unifiable* vspecialize(SpecializeMap&);
+    virtual const TypeNode* vspecialize(SpecializeMap&) const;
 
 public:
     virtual std::string to_string() const;
@@ -270,7 +272,7 @@ private:
     {}
 
 protected:
-    virtual Unifiable* vspecialize(SpecializeMap&);
+    virtual const TypeNode* vspecialize(SpecializeMap&) const;
 
 public:
     Type return_type() const;
@@ -290,7 +292,7 @@ private:
     {}
 
 protected:
-    virtual Unifiable* vspecialize(SpecializeMap&);
+    virtual const TypeNode* vspecialize(SpecializeMap&) const;
 
 public:
     virtual std::string to_string() const { return type_vars_to_string() + elems_to_string(); }
@@ -306,7 +308,7 @@ private:
     StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl);
 
 protected:
-    virtual Unifiable* vspecialize(SpecializeMap&);
+    virtual const TypeNode* vspecialize(SpecializeMap&) const;
 
 public:
     const StructDecl* struct_decl() const { return struct_decl_; }
@@ -334,7 +336,7 @@ private:
 public:
     const UniSet<Trait>& bounds() const { return bounds_; }
     const Unifiable* bound_at() const { return bound_at_; }
-    void add_bound(Trait);
+    void add_bound(Trait) const;
     virtual bool equal(const Unifiable* other) const;
     std::string to_string() const;
     virtual bool implements(Trait) const;
@@ -356,19 +358,19 @@ private:
     virtual thorin::Type convert(CodeGen&) const { assert(false && "TODO"); return thorin::Type(); }
 
     Symbol name_;
-    UniSet<Trait> bounds_;///< All traits that restrict the instantiation of this variable.
+    mutable UniSet<Trait> bounds_;///< All traits that restrict the instantiation of this variable.
     /**
      * The type where this variable is bound.
      * If such a type is set, then the variable must not be changed anymore!
      */
-    const Unifiable* bound_at_;
+    mutable const Unifiable* bound_at_;
     mutable const TypeVarNode* equiv_;///< Used to define equivalence constraints when checking equality of types.
 
 protected:
-    virtual Unifiable* vspecialize(SpecializeMap&);
+    virtual const TypeNode* vspecialize(SpecializeMap&) const;
 
     friend class TypeTable;
-    friend void Unifiable::bind(TypeVar);                     // maybe we can design things better to avoid this friend
+    friend void Unifiable::bind(TypeVar) const;               // maybe we can design things better to avoid this friend
     friend bool KnownTypeNode::equal(const Unifiable*) const; // same here
 };
 

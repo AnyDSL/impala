@@ -24,7 +24,6 @@ typedef Proxy<TraitNode> Trait;
 typedef Proxy<TypeNode> Type;
 typedef Proxy<TypeVarNode> TypeVar;
 typedef Proxy<UnknownTypeNode> UnknownType;
-typedef thorin::HashMap<const Unifiable*, Unifiable*> SpecializeMap;
 
 //------------------------------------------------------------------------------
 
@@ -36,7 +35,7 @@ public:
     Proxy()
         : node_(nullptr)
     {}
-    explicit Proxy(T* node)
+    explicit Proxy(const T* node)
         : node_(node)
     {}
 
@@ -48,10 +47,10 @@ public:
         return representative() == other.representative();
     }
     bool operator != (const Proxy<T>& other) const { return !(*this == other); }
-    T* representative() const { return node()->representative()->template as<T>(); }
-    T* node() const { assert(node_ != nullptr); return node_; }
-    T* operator  * () const { assert(node_ != nullptr); return node_->is_unified() ? representative() : node_; }
-    T* operator -> () const { return *(*this); }
+    const T* representative() const { return node()->representative()->template as<T>(); }
+    const T* node() const { assert(node_ != nullptr); return node_; }
+    const T* operator  * () const { assert(node_ != nullptr); return node_->is_unified() ? representative() : node_; }
+    const T* operator -> () const { return *(*this); }
     /// Automatic up-cast in the class hierarchy.
     template<class U> operator Proxy<U>() {
         static_assert(std::is_base_of<U, T>::value, "U is not a base type of T");
@@ -72,7 +71,7 @@ public:
     void clear() { assert(node_ != nullptr); node_ = nullptr; }
 
 private:
-    T* node_;
+    const T* node_;
 };
 
 //------------------------------------------------------------------------------
@@ -91,7 +90,7 @@ protected:
 
 public:
     TypeTable& typetable() const { return typetable_; }
-    Unifiable* representative() const { return representative_; }
+    const Unifiable* representative() const { return representative_; }
     const int id() const { return id_; }
     bool is_unified() const { return representative_ != nullptr; }
     virtual size_t num_type_vars() const { return type_vars_.size(); }
@@ -100,12 +99,12 @@ public:
     /// Returns true if this \p Type does have any bound type variabes (\p type_vars_).
     virtual bool is_generic() const { return !type_vars_.empty(); }
     virtual bool is_closed() const = 0; // TODO
-    virtual void bind(TypeVar v);
+    virtual void bind(TypeVar v) const;
     virtual bool equal(const Unifiable*) const = 0;
     virtual size_t hash() const = 0;
     virtual std::string to_string() const = 0;
-    void set_representative(Unifiable* repr) const;
-    bool unify();
+    void set_representative(const Unifiable* repr) const;
+    bool unify() const;
 
     /**
      * Try to fill in missing type information by matching this possibly incomplete Unifiable with a complete Unifiable.
@@ -114,9 +113,9 @@ public:
      *         and there were no contradictions during unification (a contradiction
      *         would be fn(?0, ?0) unified with fn(int, bool)).
      */
-    virtual bool unify_with(Unifiable*) = 0;
+    virtual bool unify_with(const Unifiable*) const = 0;
     template<class T>
-    bool unify_with(Proxy<T> other) {
+    bool unify_with(Proxy<T> other) const {
         assert(other->is_closed());
         bool b = unify_with(*other);
         assert(!b || is_closed());
@@ -127,41 +126,26 @@ public:
      * Replace any \p UnknownTypeNode%s within this Unifiable with their instances
      * and set the representatives of these nodes to their instances
      */
-    virtual void refine() = 0;
+    virtual void refine() const = 0;
     /// A \p Unifiable is known if it does not contain any \p UnknownTypeNode%s
     virtual bool is_known() const = 0;
 
     void dump() const;
 
-    /**
-     * Instantiate a \p Unifiable using the map from TypeVar -> Type
-     * @param map A map that assigns each type variable that is bound at this generic an instance
-     * @return the instantiated type
-     * @see TypeTable::create_spec_map()
-     */
-    Unifiable* instantiate(SpecializeMap& map);
-    Unifiable* specialize(SpecializeMap& map);
-
 protected:
     std::string type_vars_to_string() const;
-    bool unify_type_vars(thorin::ArrayRef<TypeVar>);
-    void refine_type_vars();
+    bool unify_type_vars(thorin::ArrayRef<TypeVar>) const;
+    void refine_type_vars() const;
     bool type_vars_known() const;
 
-    /// like specialize but does not care about generics (this method is called by specialize)
-    virtual Unifiable* vspecialize(SpecializeMap&) = 0;
-
 private:
-    /// raise error if a type does not implement the required traits;
-    void verify_instantiation(SpecializeMap&) const;
-
     TypeTable& typetable_;
-    mutable Unifiable* representative_;
+    mutable const Unifiable* representative_;
     const int id_;
     static int counter_;
 
 protected:
-    std::vector<TypeVar> type_vars_;
+    mutable std::vector<TypeVar> type_vars_;
 
     friend class TypeTable;
 };
@@ -172,9 +156,6 @@ public:
     TUnifiable(TypeTable& tt)
         : Unifiable(tt)
     {}
-
-    Proxy<T> instantiate(SpecializeMap& map) { return Proxy<T>(Unifiable::instantiate(map)->as<T>()); }
-    Proxy<T> specialize(SpecializeMap& map) { return Proxy<T>(Unifiable::specialize(map)->as<T>()); }
 };
 
 //------------------------------------------------------------------------------
