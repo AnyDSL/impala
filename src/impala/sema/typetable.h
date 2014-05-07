@@ -80,9 +80,6 @@ private:
         return Proxy<T>(tn);
     }
 
-    TraitInstanceNode* instantiate_trait(TraitNode* trait, SpecializeMap& map) { 
-        return instantiate_trait(Trait(trait), map); 
-    }
     TraitInstanceNode* instantiate_trait(Trait trait, SpecializeMap& map) {
         return new_unifiable(new TraitInstanceNode(trait, map)).node();
     }

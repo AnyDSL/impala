@@ -4,23 +4,42 @@
 
 namespace impala {
 
+//------------------------------------------------------------------------------
+
 TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
     : TUnifiable(tt)
     , trait_decl_(trait_decl)
 {}
 
-TraitInstanceNode::TraitInstanceNode(const Trait trait, const SpecializeMap& var_instances)
-    : TraitNode(trait->typetable(), trait->trait_decl())
-    , trait_(trait)
-    , var_instances_(var_instances)
-{
-    assert(trait_->num_type_vars() == var_instances_.size());
-}
-
 bool TraitNode::add_super_trait(Trait t) {
     typetable().unify(t);
     auto p = super_traits_.insert(t);
     return p.second;
+}
+
+Type TraitNode::find_method(Symbol name) {
+    auto i = trait_decl()->method_table().find(name);
+    if (i != trait_decl()->method_table().end())
+        return i->second->type();
+
+    for (auto super : super_traits()) {
+        if (auto type = super->find_method(name))
+            return type;
+    }
+
+    return Type();
+}
+
+Unifiable* TraitNode::vspecialize(SpecializeMap& map) { return typetable().instantiate_trait(Trait(this), map); }
+
+//------------------------------------------------------------------------------
+
+TraitInstanceNode::TraitInstanceNode(const Trait trait, const SpecializeMap& var_instances)
+    : TUnifiable(trait->typetable())
+    , trait_(trait)
+    , var_instances_(var_instances)
+{
+    assert(trait_->num_type_vars() == var_instances_.size());
 }
 
 bool TraitInstanceNode::unify_with(Unifiable* other) {
@@ -76,22 +95,11 @@ bool TraitInstanceNode::is_closed() const {
     return true;
 }
 
-Type TraitNode::find_method(Symbol name) {
-    auto i = trait_decl()->method_table().find(name);
-    if (i != trait_decl()->method_table().end())
-        return i->second->type();
-
-    for (auto super : super_traits()) {
-        if (auto type = super->find_method(name))
-            return type;
-    }
-
-    return Type();
-}
+//------------------------------------------------------------------------------
 
 Type TraitInstanceNode::find_method(Symbol name) {
     // TODO cache found methods
-    if (auto type = TraitNode::find_method(name)) {
+    if (auto type = trait()->find_method(name)) {
         auto m = var_instances();
         Type t = type->specialize(m);
         typetable().unify(t);
@@ -99,10 +107,6 @@ Type TraitInstanceNode::find_method(Symbol name) {
     }
 
     return Type();
-}
-
-Unifiable* TraitNode::vspecialize(SpecializeMap& map) {
-    return is_generic() ? typetable().instantiate_trait(this, map) : this;
 }
 
 Unifiable* TraitInstanceNode::vspecialize(SpecializeMap& map) {
@@ -113,8 +117,12 @@ Unifiable* TraitInstanceNode::vspecialize(SpecializeMap& map) {
     return typetable().instantiate_trait(trait(), m);
 }
 
+//------------------------------------------------------------------------------
+
 Unifiable* TraitImplNode::vspecialize(SpecializeMap& map) { 
     return map[this] = typetable().implement_trait(impl_decl(), trait()->specialize(map)).node(); 
 }
+
+//------------------------------------------------------------------------------
 
 }

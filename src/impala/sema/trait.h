@@ -65,11 +65,8 @@ protected:
     friend class TraitInstanceNode;
 };
 
-/**
- * An instance of a trait is a trait where all generic type variables are
- * instantiated by concrete types.
- */
-class TraitInstanceNode : public TraitNode {
+/// An instance of a trait is a trait where all type variables are instantiated by concrete types.
+class TraitInstanceNode : public TUnifiable<TraitInstanceNode> {
 private:
     TraitInstanceNode(const Trait trait, const SpecializeMap& var_instances);
     TraitInstanceNode& operator = (const TraitInstanceNode&); ///< Do not copy-assign a \p TraitInstanceNode.
