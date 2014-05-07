@@ -30,6 +30,10 @@ Type TraitNode::find_method(Symbol name) const {
     return Type();
 }
 
+Bound TraitNode::instantiate(thorin::ArrayRef<Type> args) const {
+    return typetable().bound(Trait(this), args);
+}
+
 //------------------------------------------------------------------------------
 
 BoundNode::BoundNode(const Trait trait, thorin::ArrayRef<Type> args)

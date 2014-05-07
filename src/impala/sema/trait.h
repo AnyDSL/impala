@@ -38,7 +38,7 @@ public:
     /// return the type of the method with this name if it exists; otherwise return an empty type
     Type find_method(Symbol name) const;
     bool has_method(Symbol name) const { return !find_method(name).empty(); }
-    Bound instantiate(thorin::ArrayRef<Type> args);
+    Bound instantiate(thorin::ArrayRef<Type> args) const;
 
     virtual void refine() const override {} // all methods should be known, so nothing to do here
     virtual bool equal(const Unifiable* other) const;

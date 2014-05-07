@@ -34,8 +34,8 @@ public:
     Type expect_type(const Expr* expr, Type expected, std::string typetype) { return expect_type(expr, expr->type(), expected, typetype); }
     Type create_return_type(const ASTNode* node, Type ret_func);
 
-    Bound instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances);
-    Type specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances);
+    Bound instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> args);
+    Type specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> args);
     Type check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Expr*> args, Type expected);
 
     // check wrappers
@@ -150,37 +150,33 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
     }
 }
 
-Bound TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> var_instances) {
-    return Bound();
-#if 0
-    if ((var_instances.size()+1) == trait->num_type_vars()) {
+Bound TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> args) {
+    if ((args.size()+1) == trait->num_type_vars()) {
         std::vector<Type> inst_types;
         inst_types.push_back(self);
-        for (auto t : var_instances) 
+        for (auto t : args) 
             inst_types.push_back(check(t));
         auto map = infer(trait, inst_types);
-
         check_bounds(loc, trait, inst_types, map);
-        return trait->instantiate(map);
+        return trait->instantiate(inst_types);
     } else
-        error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << (trait->num_type_vars()-1) << "\n";
+        error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << (trait->num_type_vars()-1) << "\n";
 
-    return trait_error();
-#endif
+    return bound_error();
 }
 
-Type TypeSema::specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> var_instances) {
+Type TypeSema::specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> args) {
     return Type();
 #if 0
-    if (var_instances.size() == type->num_type_vars()) {
+    if (args.size() == type->num_type_vars()) {
         std::vector<Type> inst_types;
-        for (auto t : var_instances) inst_types.push_back(check(t));
+        for (auto t : args) inst_types.push_back(check(t));
         auto map = infer(type, inst_types);
 
         check_bounds(loc, type, inst_types, map);
         return type->instantiate(map);
     } else {
-        error(loc) << "wrong number of instances for bound type variables: " << var_instances.size() << " for " << type->num_type_vars() << "\n";
+        error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << type->num_type_vars() << "\n";
     }
 
     return type_error();
