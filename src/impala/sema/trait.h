@@ -9,7 +9,7 @@
 namespace impala {
 
 class FnTypeNode;
-class Impl;
+class ImplItem;
 class TraitDecl;
 typedef Proxy<FnTypeNode> FnType;
 
@@ -87,20 +87,18 @@ private:
     friend class TypeTable;
 };
 
-class TraitImplNode : public TUnifiable<TraitImplNode> {
+class ImplNode : public TUnifiable<ImplNode> {
 private:
-    TraitImplNode(TypeTable& tt, const Impl* impl_decl, Trait trait)
+    ImplNode(TypeTable& tt, const ImplItem* impl_item, Trait trait)
         : TUnifiable(tt)
-        , impl_decl_(impl_decl)
+        , impl_item_(impl_item)
         , trait_(trait)
     {}
-    TraitImplNode& operator = (const TraitImplNode&); ///< Do not copy-assign a \p TraitImpl.
-    TraitImplNode(const TraitImplNode&);              ///< Do not copy-construct a \p TraitImpl.
 
 public:
-    virtual bool equal(const Unifiable* other) const { return this->impl_decl() == other->as<TraitImplNode>()->impl_decl(); }
+    virtual bool equal(const Unifiable* other) const { return this->impl_item() == other->as<ImplNode>()->impl_item(); }
     virtual size_t hash() const;
-    const Impl* impl_decl() const { return impl_decl_; }
+    const ImplItem* impl_item() const { return impl_item_; }
     Trait trait() const { return trait_; }
 
     // CHECK is this correct?
@@ -113,7 +111,7 @@ protected:
     virtual std::string to_string() const { return ""; } // TODO
 
 private:
-    const Impl* const impl_decl_;
+    const ImplItem* const impl_item_;
     Trait trait_;
 
     friend class TypeTable;

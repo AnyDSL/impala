@@ -662,7 +662,7 @@ private:
     friend class Parser;
 };
 
-class Impl : public Item, public TypeParamList {
+class ImplItem : public Item, public TypeParamList {
 public:
     /// May be nullptr as trait is optional.
     const ASTType* trait() const { return trait_; }

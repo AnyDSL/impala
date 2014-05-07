@@ -172,7 +172,7 @@ public:
     EnumDecl*   parse_enum_decl();
     FnDecl*     parse_fn_decl(bool maybe_empty);
     ForeignMod* parse_foreign_mod();
-    Impl*       parse_impl();
+    ImplItem*   parse_impl();
     ModDecl*    parse_mod_decl();
     Item*       parse_foreign_mod_or_fn_decl();
     StructDecl* parse_struct_decl();
@@ -476,8 +476,8 @@ FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
     return fn_decl;
 }
 
-Impl* Parser::parse_impl() {
-    auto impl = loc(new Impl());
+ImplItem* Parser::parse_impl() {
+    auto impl = loc(new ImplItem());
     eat(Token::IMPL);
     parse_type_params(impl->type_params_);
     auto type = parse_type();

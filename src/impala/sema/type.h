@@ -60,7 +60,7 @@ public:
     /// Returns true if this \p TypeNode does not have any \p TypeNode operands (\p elems_).
     virtual bool is_empty() const = 0;
 
-    virtual void add_implementation(TraitImpl) const = 0;
+    virtual void add_implementation(Impl) const = 0;
     virtual bool implements(Trait) const = 0;
     /// @return The method type or an empty type if no method with this name was found
     virtual Type find_method(Symbol s) const = 0;
@@ -117,7 +117,7 @@ public:
     virtual size_t hash() const;
     virtual bool unify_with(const Unifiable*) const override;
 
-    virtual void add_implementation(TraitImpl) const;
+    virtual void add_implementation(Impl) const;
     virtual bool implements(Trait) const;
     virtual Type find_method(Symbol s) const;
 
@@ -133,7 +133,7 @@ public:
 private:
     const Kind kind_;
     mutable UniSet<Trait> trait_impls_; // TODO do we want to have the impls or only the traits?
-    mutable std::vector<TraitImpl> gen_trait_impls_; // TODO use a map trait_name -> impls to make this faster!
+    mutable std::vector<Impl> gen_trait_impls_; // TODO use a map trait_name -> impls to make this faster!
 
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
@@ -168,7 +168,7 @@ public:
     virtual size_t hash() const;
     virtual bool unify_with(const Unifiable*) const override;
 
-    virtual void add_implementation(TraitImpl) const { assert(false); }
+    virtual void add_implementation(Impl) const { assert(false); }
     virtual bool implements(Trait t) const { return is_instantiated() && instance()->implements(t); }
     virtual Type find_method(Symbol s) const { assert(is_instantiated()); return instance()->find_method(s); }
 

@@ -9,7 +9,7 @@
 
 namespace impala {
 
-class TraitImplNode;
+class ImplNode;
 class TraitInstanceNode;
 class TraitNode;
 class TypeNode;
@@ -18,7 +18,7 @@ class TypeVarNode;
 class Unifiable;
 class UnknownTypeNode;
 template<class T> class Proxy;
-typedef Proxy<TraitImplNode> TraitImpl;
+typedef Proxy<ImplNode> Impl;
 typedef Proxy<TraitInstanceNode> TraitInstance;
 typedef Proxy<TraitNode> Trait;
 typedef Proxy<TypeNode> Type;

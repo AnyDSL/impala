@@ -32,14 +32,15 @@ public:
     PrimType type(PrimTypeKind kind);
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
-    Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
-    TraitImpl implement_trait(const Impl* impl_decl, Trait trait) { return new_unifiable(new TraitImplNode(*this, impl_decl, trait)); }
-    UnknownType unknown_type() { return new_unifiable(new UnknownTypeNode(*this)); }
-    TypeVar type_var(Symbol name = Symbol()) { return new_unifiable(new TypeVarNode(*this, name)); }
     FnType fn_type(thorin::ArrayRef<Type> params) { return new_unifiable(new FnTypeNode(*this, params)); }
     TupleType tuple_type(thorin::ArrayRef<Type> elems) { return new_unifiable(new TupleTypeNode(*this, elems)); }
     TupleType unit() { return tuple_type({}); }
     StructType struct_type(const StructDecl* struct_decl) { return new_unifiable(new StructTypeNode(*this, struct_decl)); }
+    TypeVar type_var(Symbol name = Symbol()) { return new_unifiable(new TypeVarNode(*this, name)); }
+    UnknownType unknown_type() { return new_unifiable(new UnknownTypeNode(*this)); }
+    TraitInstance trait_instance(Trait trait, thorin::ArrayRef<Type> args) { return new_unifiable(new TraitInstanceNode(trait, args)); }
+    Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
+    Impl impl(const ImplItem* impl, Trait trait) { return new_unifiable(new ImplNode(*this, impl, trait)); }
 
     /// Unify a type and return \p true if the representative changed.
     template<class T> bool unify(Proxy<T> proxy) { return unify(*proxy); }
@@ -74,10 +75,6 @@ private:
     Proxy<T> new_unifiable(T* tn) {
         garbage_.push_back(tn);
         return Proxy<T>(tn);
-    }
-
-    TraitInstance instantiate(Trait trait, thorin::ArrayRef<Type> args) {
-        return new_unifiable(new TraitInstanceNode(trait, args));
     }
 
     TypetableSet<const Unifiable> unifiables_;

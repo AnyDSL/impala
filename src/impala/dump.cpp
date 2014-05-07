@@ -212,7 +212,7 @@ std::ostream& TraitDecl::print(Printer& p) const {
     return p.down() << "}";
 }
 
-std::ostream& Impl::print(Printer& p) const {
+std::ostream& ImplItem::print(Printer& p) const {
     p.stream() << "impl";
     print_type_params(p) << ' ';
     if (trait())

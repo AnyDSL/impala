@@ -193,7 +193,7 @@ void ForeignMod::emit_item(CodeGen& cg) const {
 void ModDecl::emit_item(CodeGen& cg) const {
 }
 
-void Impl::emit_item(CodeGen& cg) const {
+void ImplItem::emit_item(CodeGen& cg) const {
 }
 
 Var StaticItem::emit(CodeGen& cg) const {

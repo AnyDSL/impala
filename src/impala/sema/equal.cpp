@@ -22,7 +22,7 @@ size_t KnownTypeNode::hash() const {
 
 size_t TraitNode::hash() const { return hash_value(trait_decl()); }
 size_t TraitInstanceNode::hash() const { return trait()->hash(); } // FEATURE better hash function
-size_t TraitImplNode::hash() const { return hash_value(impl_decl()); }
+size_t ImplNode::hash() const { return hash_value(impl_item()); }
 
 //----------------------------------------------------------------------------------------
 

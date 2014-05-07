@@ -86,14 +86,14 @@ bool TypeVarNode::is_closed() const {
 
 //------------------------------------------------------------------------------
 
-void KnownTypeNode::add_implementation(TraitImpl impl) const {
+void KnownTypeNode::add_implementation(Impl impl) const {
     // TODO fail if a method was implemented multiple times!
     if (impl->is_generic()) {
         gen_trait_impls_.push_back(impl);
     } else {
         Trait trait = impl->trait();
         if (!trait_impls_.insert(trait).second)
-            typetable().error(impl->impl_decl()) << "duplicated implementation of trait '" << trait << "'\n";
+            typetable().error(impl->impl_item()) << "duplicated implementation of trait '" << trait << "'\n";
 #if 0
         for (auto super : trait->super_traits()) {
             if (!trait_impls_.insert(super).second)
@@ -123,7 +123,7 @@ bool KnownTypeNode::implements(Trait trait) const {
     // try to instantiate the generic implementations
     for (auto ti : gen_trait_impls_) {
         std::vector<Type> inst_types;
-        TraitImpl inst = typetable().instantiate_unknown(ti, inst_types);
+        Impl inst = typetable().instantiate_unknown(ti, inst_types);
         if (inst->trait()->unify_with(*trait)) { // TODO why do we have to deref here explicitly? It *should* work without deref
             if (typetable().check_bounds(nullptr, ti, inst_types))
                 return true;

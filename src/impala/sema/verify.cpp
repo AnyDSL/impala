@@ -31,7 +31,7 @@ void TypeTable::verify() const {
             assert(type->is_sane());
         } else if (auto trait = g->isa<TraitNode>()) {
             assert(trait->is_closed());
-        } else if (auto impl = g->isa<TraitImplNode>()) {
+        } else if (auto impl = g->isa<ImplNode>()) {
             assert(impl->is_closed());
         }
     }
@@ -50,7 +50,7 @@ void TypeTable::verify() const {
         } else if (auto trait = g->isa<TraitNode>()) {
             if (trait->is_unified())
                 assert(unifiables_.contains(trait->representative()));
-        } else if (auto impl = g->isa<TraitImplNode>()) {
+        } else if (auto impl = g->isa<ImplNode>()) {
             if (impl->is_unified())
                 assert(unifiables_.contains(impl->representative()));
         }

@@ -238,7 +238,7 @@ void TraitDecl::check_item(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void Impl::check_item(NameSema& sema) const {
+void ImplItem::check_item(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
     if (trait())

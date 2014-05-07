@@ -25,10 +25,10 @@ public:
     {}
 
     bool nossa() const { return nossa_; }
-    void push_impl(const Impl* i) { impls_.push_back(i); }
+    void push_impl(const ImplItem* i) { impls_.push_back(i); }
     virtual void check_impls() {
         while (!impls_.empty()) {
-            const Impl* i = impls_.back();
+            const ImplItem* i = impls_.back();
             impls_.pop_back();
             check_item(i);
         }
@@ -76,7 +76,7 @@ public:
 
 private:
     bool nossa_;
-    std::vector<const Impl*> impls_;
+    std::vector<const ImplItem*> impls_;
 };
 
 //------------------------------------------------------------------------------
@@ -334,7 +334,7 @@ Type ModDecl::check(TypeSema& sema) const {
 void ModContents::check(TypeSema& sema) const {
     std::vector<const Item*> non_impls;
     for (auto item : items()) {
-        if (auto impl = item->isa<const Impl>()) {
+        if (auto impl = item->isa<const ImplItem>()) {
             sema.push_impl(impl);
         } else
             non_impls.push_back(item);
@@ -417,7 +417,7 @@ void TraitDecl::check_item(TypeSema& sema) const {
     sema.unify(trait());
 }
 
-void Impl::check_item(TypeSema& sema) const {
+void ImplItem::check_item(TypeSema& sema) const {
     check_type_params(sema);
     Type ftype = sema.check(for_type());
 
@@ -426,10 +426,9 @@ void Impl::check_item(TypeSema& sema) const {
         if (auto t = trait()->isa<ASTTypeApp>()) {
             // create impl
             tinst = t->to_trait(sema, ftype);
-            TraitImpl impl = sema.implement_trait(this, tinst);
-            for (auto tp : type_params()) {
+            auto impl = sema.impl(this, tinst);
+            for (auto tp : type_params())
                 impl->bind(tp->type_var(sema));
-            }
 
             // add impl to type
             if ((ftype != sema.type_error()) && (tinst != sema.trait_error()))
