@@ -24,15 +24,15 @@ typedef Proxy<FnTypeNode> FnType;
  * allowed (I guess):
  * @code trait TT<X:TT<Self>> {}; impl TT<int> for int {} @endcode
  *
- * @see TraitInstance
+ * @see TraitInstanceNode
  */
 class TraitNode : public TUnifiable<TraitNode> {
 protected:
     TraitNode(TypeTable& tt, const TraitDecl* trait_decl);
 
 private:
-    TraitNode& operator = (const TraitNode&); ///< Do not copy-assign a \p Trait.
-    TraitNode(const TraitNode& node);         ///< Do not copy-construct a \p Trait.
+    TraitNode& operator = (const TraitNode&); ///< Do not copy-assign a \p TraitNode.
+    TraitNode(const TraitNode& node);         ///< Do not copy-construct a \p TraitNode.
 
 public:
     virtual bool equal(const Unifiable* other) const;
@@ -72,8 +72,8 @@ protected:
 class TraitInstanceNode : public TraitNode {
 private:
     TraitInstanceNode(const Trait trait, const SpecializeMap& var_instances);
-    TraitInstanceNode& operator = (const TraitInstanceNode&); ///< Do not copy-assign a \p TraitInstance.
-    TraitInstanceNode(const TraitInstanceNode& node);         ///< Do not copy-construct a \p TraitInstance.
+    TraitInstanceNode& operator = (const TraitInstanceNode&); ///< Do not copy-assign a \p TraitInstanceNode.
+    TraitInstanceNode(const TraitInstanceNode& node);         ///< Do not copy-construct a \p TraitInstanceNode.
 
 public:
     virtual bool equal(const Unifiable* other) const;
