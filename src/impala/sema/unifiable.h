@@ -150,14 +150,6 @@ protected:
     friend class TypeTable;
 };
 
-template<class T>
-class TUnifiable : public Unifiable {
-public:
-    TUnifiable(TypeTable& tt)
-        : Unifiable(tt)
-    {}
-};
-
 //------------------------------------------------------------------------------
 
 template<class T>

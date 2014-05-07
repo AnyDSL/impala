@@ -26,7 +26,7 @@ typedef Proxy<FnTypeNode> FnType;
  *
  * @see TraitInstanceNode
  */
-class TraitNode : public TUnifiable<TraitNode> {
+class TraitNode : public Unifiable {
 private:
     TraitNode(TypeTable& tt, const TraitDecl* trait_decl);
 
@@ -60,7 +60,7 @@ protected:
 };
 
 /// An instance of a trait is a trait where all type variables are instantiated by concrete types.
-class TraitInstanceNode : public TUnifiable<TraitInstanceNode> {
+class TraitInstanceNode : public Unifiable {
 private:
     TraitInstanceNode(const Trait trait, thorin::ArrayRef<Type> args);
 
@@ -87,10 +87,10 @@ private:
     friend class TypeTable;
 };
 
-class ImplNode : public TUnifiable<ImplNode> {
+class ImplNode : public Unifiable {
 private:
     ImplNode(TypeTable& tt, const ImplItem* impl_item, Trait trait)
-        : TUnifiable(tt)
+        : Unifiable(tt)
         , impl_item_(impl_item)
         , trait_(trait)
     {}

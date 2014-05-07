@@ -7,7 +7,7 @@ namespace impala {
 //------------------------------------------------------------------------------
 
 TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
-    : TUnifiable(tt)
+    : Unifiable(tt)
     , trait_decl_(trait_decl)
 {}
 
@@ -33,7 +33,7 @@ Type TraitNode::find_method(Symbol name) const {
 //------------------------------------------------------------------------------
 
 TraitInstanceNode::TraitInstanceNode(const Trait trait, thorin::ArrayRef<Type> args)
-    : TUnifiable(trait->typetable())
+    : Unifiable(trait->typetable())
     , trait_(trait)
     , args_(args)
 {

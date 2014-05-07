@@ -38,14 +38,14 @@ enum PrimTypeKind {
 #include "impala/tokenlist.h"
 };
 
-class TypeNode : public TUnifiable<TypeNode> {
+class TypeNode : public Unifiable {
 private:
     TypeNode& operator = (const TypeNode&); ///< Do not copy-assign a \p TypeNode.
     TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p TypeNode.
 
 protected:
     TypeNode(TypeTable& typetable)
-        : TUnifiable(typetable)
+        : Unifiable(typetable)
     {}
 
     void convert_elems(CodeGen& world, std::vector<thorin::Type>& nelems) const;

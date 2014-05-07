@@ -8,14 +8,6 @@ using thorin::ArrayRef;
 
 namespace impala {
 
-struct InstantiationHash {
-    size_t operator () (const TypeVar t) const { return t->hash(); }
-};
-struct InstantiationEqual {
-    bool operator () (TypeVar t1, TypeVar t2) const { return (t1->is_unified() && t2->is_unified()) ? t1.as<Type>() == t2.as<Type>() : t1->equal(*t2); }
-};
-typedef thorin::HashMap<TypeVar, Type, InstantiationHash, InstantiationEqual> Instantiationmap;
-
 //------------------------------------------------------------------------------
 
 class TypeSema : public TypeTable {
