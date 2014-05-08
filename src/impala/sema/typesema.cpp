@@ -156,7 +156,7 @@ Bound TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::
         type_args.push_back(self);
         for (auto t : args) 
             type_args.push_back(check(t));
-        auto map = infer(trait, type_args);
+        auto map = specialize_map(trait, type_args);
         check_bounds(loc, trait, type_args, map);
         return trait->instantiate(type_args);
     } else
@@ -170,7 +170,7 @@ Type TypeSema::specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const 
         std::vector<Type> type_args;
         for (auto t : args) 
             type_args.push_back(check(t));
-        auto map = infer(type, type_args);
+        auto map = specialize_map(type, type_args);
 
         check_bounds(loc, type, type_args, map);
         return Type(type->vspecialize(map));

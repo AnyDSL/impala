@@ -54,7 +54,7 @@ public:
     Type instantiate_unknown(Type, std::vector<Type>&);
     template<class T>
     bool check_bounds(const ASTNode* loc, Proxy<T> proxy, thorin::ArrayRef<Type> types) { 
-        auto map = infer(*proxy, types);
+        auto map = specialize_map(*proxy, types);
         return check_bounds(loc, *proxy, types, map);
     }
     template<class T>
@@ -67,9 +67,9 @@ public:
 
 protected:
     bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> types, SpecializeMap& map);
-    SpecializeMap infer(const Unifiable*, thorin::ArrayRef<Type>) const;
+    SpecializeMap specialize_map(const Unifiable*, thorin::ArrayRef<Type>) const;
     template<class T>
-    SpecializeMap infer(Proxy<T> proxy, thorin::ArrayRef<Type> type_args) const { return infer(*proxy, type_args); }
+    SpecializeMap specialize_map(Proxy<T> proxy, thorin::ArrayRef<Type> type_args) const { return specialize_map(*proxy, type_args); }
 
 private:
     template<class T> 

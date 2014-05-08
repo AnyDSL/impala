@@ -26,16 +26,16 @@ TypeTable::~TypeTable() {
 Type TypeTable::instantiate_unknown(Type type, std::vector<Type>& type_args) {
     for (size_t i = 0, e = type->num_type_vars(); i != e;  ++i) 
         type_args.push_back(unknown_type());
-    auto map = infer(type, type_args);
+    auto map = specialize_map(type, type_args);
     return Type(type->vspecialize(map));
 }
 
-SpecializeMap TypeTable::infer(const Unifiable* unifiable, thorin::ArrayRef<Type> type_args) const {
+SpecializeMap TypeTable::specialize_map(const Unifiable* unifiable, thorin::ArrayRef<Type> type_args) const {
     assert(unifiable->num_type_vars() == type_args.size());
     SpecializeMap map;
     size_t i = 0;
     for (TypeVar v : unifiable->type_vars())
-        map[*v] = *type_args[i++]; // CHECK ist deref correct here and below?
+        map[*v] = *type_args[i++];
     assert(map.size() == type_args.size());
     return map;
 }
