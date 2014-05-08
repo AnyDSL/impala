@@ -140,14 +140,11 @@ bool TypeVarNode::implements(Bound bound) const {
     return bounds().find(bound) != bounds().end();
 }
 
-Type KnownTypeNode::find_method(Symbol s) const {
-#if 0
-    // TODO what about generic implementations?
-    for (auto t : trait_impls_) {
-        if (auto fn = t->find_method(s)) 
-            return fn;
+Type KnownTypeNode::find_method(Symbol name) const {
+    for (auto impl : impls_) {
+        if (auto type = impl->bound()->find_method(name))
+            return type;
     }
-#endif
     return Type();
 }
 
