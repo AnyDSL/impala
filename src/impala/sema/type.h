@@ -61,7 +61,7 @@ public:
     virtual bool is_empty() const = 0;
 
     virtual void add_implementation(Impl) const = 0;
-    virtual bool implements(Bound) const = 0;
+    virtual bool implements(Bound, SpecializeMap&) const = 0;
     /// @return The method type or an empty type if no method with this name was found
     virtual Type find_method(Symbol s) const = 0;
 
@@ -101,6 +101,7 @@ protected:
     void set(size_t i, Type n) { elems_[i] = n; }
 
 public:
+    const std::vector<Impl>& impls() const { return impls_; }
     virtual Kind kind() const { return kind_; }
     virtual thorin::ArrayRef<Type> elems() const { return thorin::ArrayRef<Type>(elems_); }
     virtual const Type elem(size_t i) const { return elems_[i]; }
@@ -118,7 +119,7 @@ public:
     virtual bool unify_with(const Unifiable*) const override;
 
     virtual void add_implementation(Impl) const;
-    virtual bool implements(Bound) const;
+    virtual bool implements(Bound, SpecializeMap&) const;
     virtual Type find_method(Symbol s) const;
 
     virtual bool is_generic() const {
@@ -168,7 +169,7 @@ public:
     virtual bool unify_with(const Unifiable*) const override;
 
     virtual void add_implementation(Impl) const { assert(false); }
-    virtual bool implements(Bound bound) const { return is_instantiated() && instance()->implements(bound); }
+    virtual bool implements(Bound bound, SpecializeMap& map) const { return is_instantiated() && instance()->implements(bound, map); }
     virtual Type find_method(Symbol s) const { assert(is_instantiated()); return instance()->find_method(s); }
 
     virtual size_t num_type_vars() const { return is_instantiated() ? instance()->num_type_vars() : 0; }
@@ -338,7 +339,7 @@ public:
     void add_bound(Bound) const;
     virtual bool equal(const Unifiable* other) const;
     std::string to_string() const;
-    virtual bool implements(Bound) const;
+    virtual bool implements(Bound, SpecializeMap&) const;
     virtual Type find_method(Symbol s) const;
 
     /**

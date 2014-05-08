@@ -116,6 +116,14 @@ Type BoundNode::find_method(Symbol name) const {
     return Type();
 }
 
+Bound BoundNode::specialize(SpecializeMap& map) const {
+    thorin::Array<Type> new_args(num_args());
+    for (size_t i = 0, e = num_args(); i != e; ++i)
+        new_args[i] = arg(i)->specialize(map);
+
+    return typetable().bound(trait(), new_args);
+}
+
 //------------------------------------------------------------------------------
 
 }

@@ -12,6 +12,7 @@ class FnTypeNode;
 class ImplItem;
 class TraitDecl;
 typedef Proxy<FnTypeNode> FnType;
+typedef thorin::HashMap<const TypeNode*, const TypeNode*> SpecializeMap;
 
 /**
  * Represents a declared trait.
@@ -74,6 +75,7 @@ public:
     virtual bool is_known() const override;
     virtual bool unify_with(const Unifiable*) const override;
     virtual bool is_closed() const;
+    Bound specialize(SpecializeMap&) const;
 
 private:
     const Trait trait_;

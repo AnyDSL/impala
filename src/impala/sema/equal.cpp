@@ -113,26 +113,21 @@ bool TypeVarNode::equal(const Unifiable* other) const {
 }
 
 bool TraitNode::equal(const Unifiable* other) const {
-    // num_type_vars must be equal because one could be an instance of the other!
     if (auto trait = other->isa<TraitNode>())
-        return (this->trait_decl() == trait->trait_decl()) && (this->num_type_vars() == trait->num_type_vars());
+        return (this->trait_decl() == trait->trait_decl());
     return false;
 }
 
 bool BoundNode::equal(const Unifiable* other) const {
-    if (this == other)
-        return true;
-
-    if (auto instance = other->isa<BoundNode>()) {
-        if (trait() != instance->trait())
-            return false;
-
-        assert(args().size() == instance->args().size());
-        for (size_t i = 0, e = num_args(); i != e; ++i) {
-            if (this->arg(i) != instance->arg(i))
-                return false;
+    if (auto bound = other->isa<BoundNode>()) {
+        if (this->trait() == bound->trait()) {
+            assert(this->num_args() == bound->num_args());
+            for (size_t i = 0, e = num_args(); i != e; ++i) {
+                if (this->arg(i) != bound->arg(i))
+                    return false;
+            }
+            return true;
         }
-        return true;
     }
     return false;
 }

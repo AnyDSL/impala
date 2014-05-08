@@ -98,23 +98,22 @@ bool TypeTable::check_bounds(const ASTNode* loc, const Unifiable* unifiable, tho
     assert(map.size() == type_args.size());
     bool result = true;
 
-#if 0
-    for (size_t i = 0; i < unifiable->num_type_vars(); ++i) {
-        TypeVar v = unifiable->type_var(i);
-        Type instance = type_args[i];
-        assert(map.contains(*v));
-        assert(map.find(*v)->second == *instance);
+    for (size_t i = 0, e = type_args.size(); i != e; ++i) {
+        auto type_var = unifiable->type_var(i);
+        Type arg = type_args[i];
+        assert(map.contains(*type_var));
+        assert(map.find(*type_var)->second == *arg);
 
-        for (auto bound : v->bounds()) {
-            SpecializeMap m(map); // copy the map
-            Trait spec_bound = bound->specialize(m);
+        for (auto bound : type_var->bounds()) {
+            SpecializeMap bound_map(map); // copy the map per type var
+            auto spec_bound = bound->specialize(bound_map);
             unify(spec_bound);
 
-            if (instance != type_error() && spec_bound != trait_error()) {
+            if (arg != type_error() && spec_bound != bound_error()) {
                 check_impls(); // first we need to check all implementations to be up-to-date
-                if (!instance->implements(spec_bound)) {
+                if (!arg->implements(spec_bound, bound_map)) {
                     if (loc) {
-                        error(loc) << "'" << instance << "' (instance for '" << v << "') does not implement bound '" 
+                        error(loc) << "'" << arg << "' (instance for '" << type_var << "') does not implement bound '" 
                             << spec_bound << "'\n";
                     }
                     result = false;
@@ -122,7 +121,6 @@ bool TypeTable::check_bounds(const ASTNode* loc, const Unifiable* unifiable, tho
             }
         }
     }
-#endif
 
     return result;
 }

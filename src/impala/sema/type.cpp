@@ -1,5 +1,7 @@
 #include "impala/sema/type.h"
 
+#include <queue>
+
 #include "impala/ast.h"
 #include "impala/sema/trait.h"
 #include "impala/sema/typetable.h"
@@ -104,22 +106,36 @@ void KnownTypeNode::add_implementation(Impl impl) const {
 #endif
 }
 
-bool KnownTypeNode::implements(Bound bound) const {
-#if 0
-    if (trait_impls_.contains(bound))
-        return true;
+bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
+    std::queue<Bound> queue;
+    UniSet<Bound> done;
 
-    // try to find impl in super traits
-    for (auto trait_impl : trait_impls_) {
-        for (auto super : trait_impl->trait_decl()->super_traits()) {
-            if (auto super_trait_decl = super->decl()->isa<TraitDecl>()) {
-                if (implements(super_trait_decl->trait()))
-                    return true;
+    for (auto impl : impls()) {
+        queue.push(impl->bound());
+        done.insert(impl->bound());
+    }
+
+    while (!queue.empty()) {
+        auto impl_bound = queue.front();
+        queue.pop();
+
+        if (impl_bound == bound)
+            return true;
+
+        for (auto super_bound : impl_bound->trait()->super_bounds()) {
+            thorin::Array<Type> new_args = super_bound->args();
+            new_args[0].clear(); 
+            new_args[0] = impl_bound->arg(0);
+            auto spec_super_bound = typetable().bound(super_bound->trait(), new_args);
+            spec_super_bound->unify();
+            if (!done.contains(spec_super_bound)) {
+                queue.push(spec_super_bound);
+                done.insert(spec_super_bound);
             }
         }
     }
-#endif
 
+    return false;
 #if 0
     // try to instantiate the generic implementations
     for (auto ti : gen_trait_impls_) {
@@ -131,11 +147,9 @@ bool KnownTypeNode::implements(Bound bound) const {
         }
     }
 #endif
-
-    return false;
 }
 
-bool TypeVarNode::implements(Bound bound) const {
+bool TypeVarNode::implements(Bound bound, SpecializeMap&) const {
     // CHECK is this enough?
     return bounds().find(bound) != bounds().end();
 }
