@@ -124,7 +124,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
                     assert(t.representative() != nullptr);
                     expr->add_inferred_arg(Type(t.representative()));
                 }
-                // needed for bound checking
+
                 check_bounds(expr, found_type, expr->inferred_args());
                 return Type(*expected);
             }
