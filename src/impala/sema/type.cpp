@@ -142,15 +142,15 @@ bool TypeVarNode::implements(Bound bound) const {
 
 Type KnownTypeNode::find_method(Symbol name) const {
     for (auto impl : impls_) {
-        if (auto type = impl->bound()->find_method(name))
-            return type;
+        if (auto fn = impl->bound()->find_method(name))
+            return fn;
     }
     return Type();
 }
 
-Type TypeVarNode::find_method(Symbol s) const {
-    for (auto t : bounds()) {
-        if (auto fn = t->find_method(s)) 
+Type TypeVarNode::find_method(Symbol name) const {
+    for (auto bound : bounds()) {
+        if (auto fn = bound->find_method(name)) 
             return fn;
     }
     return Type();
