@@ -59,6 +59,7 @@ public:
     }
     template<class T>
     bool check_bounds(const ASTNode* loc, Proxy<T> proxy, thorin::ArrayRef<Type> types, SpecializeMap& map) {
+        map = specialize_map(*proxy, types);
         return check_bounds(loc, *proxy, types, map);
     }
 

@@ -156,8 +156,7 @@ Bound TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::
         type_args.push_back(self);
         for (auto t : args) 
             type_args.push_back(check(t));
-        auto map = specialize_map(trait, type_args);
-        check_bounds(loc, trait, type_args, map);
+        check_bounds(loc, trait, type_args);
         return trait->instantiate(type_args);
     } else
         error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << (trait->num_type_vars()-1) << "\n";
@@ -170,8 +169,8 @@ Type TypeSema::specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const 
         std::vector<Type> type_args;
         for (auto t : args) 
             type_args.push_back(check(t));
-        auto map = specialize_map(type, type_args);
 
+        SpecializeMap map;
         check_bounds(loc, type, type_args, map);
         return Type(type->vspecialize(map));
     } else
