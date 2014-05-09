@@ -68,9 +68,6 @@ public:
     /// A type is closed if it contains no unbound type variables.
     virtual bool is_closed() const = 0;
 
-    /// @return true if this is a subtype of super_type.
-    virtual bool is_subtype(const Type super_type) const = 0;
-
     /**
      * A type is sane if all type variables are bound correctly,
      * i.e. forall type variables v, v is a subtype of v.bound_at().
@@ -128,7 +125,6 @@ public:
     }
 
     virtual bool is_closed() const;
-    virtual bool is_subtype(const Type super_type) const;
     virtual bool is_sane() const;
 
 private:
@@ -179,7 +175,6 @@ public:
     virtual bool is_generic() const { assert(type_vars_.empty()); return is_instantiated() ? instance()->is_generic() : false; }
 
     virtual bool is_closed() const { return is_instantiated() && instance()->is_closed(); }
-    virtual bool is_subtype(const Type super_type) const { return is_instantiated() && instance()->is_subtype(super_type); }
     virtual bool is_sane() const { return is_instantiated() && instance()->is_sane(); }
 
     bool is_instantiated() const { return !instance_.empty(); }
@@ -347,8 +342,6 @@ public:
      * If a type variable is closed it must not be changed anymore!
      */
     virtual bool is_closed() const;
-
-    // CHECK this->is_subtype(bound_at()); if bound_at is a Type, else it should occur in the method signatures
     virtual bool is_sane() const { return is_closed(); }
 
     /// Create a copy of this \p TypeVar that considers the specialization (the binding is not copied)

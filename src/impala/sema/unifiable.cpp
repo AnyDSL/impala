@@ -33,8 +33,6 @@ void Unifiable::bind(TypeVar v) const {
     assert(!v->is_closed() && "type variables already bound");
     assert(!is_unified() && "type already unified");
     assert(v->bound_at_ == nullptr && "type variables can only be bound once");
-    // CHECK should variables only be bound in this case? does this also hold for traits?
-    //assert(v->is_subtype(this) && "Type variables can only be bound at t if they are a subtype of t!");
     // CHECK should 'forall a, a' be forbidden?
     //assert(type->kind() != Type_var && "Types like 'forall a, a' are forbidden!");
 

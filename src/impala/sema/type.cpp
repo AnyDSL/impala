@@ -54,18 +54,6 @@ bool KnownTypeNode::is_closed() const {
     return true;
 }
 
-// TODO test this
-bool KnownTypeNode::is_subtype(const Type super_type) const {
-    if (this == *super_type)
-        return true;
-
-    for (auto t : super_type->elems()) {
-        if (this->is_subtype(t))
-            return true;
-    }
-    return false;
-}
-
 bool KnownTypeNode::is_sane() const {
     for (auto t : elems_) {
         if (!t->is_sane()) {
