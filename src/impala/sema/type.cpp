@@ -1,6 +1,7 @@
 #include "impala/sema/type.h"
 
 #include <queue>
+#include <iostream>
 
 #include "impala/ast.h"
 #include "impala/sema/trait.h"
@@ -123,10 +124,9 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
             return true;
 
         for (auto super_bound : impl_bound->trait()->super_bounds()) {
-            thorin::Array<Type> new_args = super_bound->args();
-            new_args[0].clear(); 
-            new_args[0] = impl_bound->arg(0);
-            auto spec_super_bound = typetable().bound(super_bound->trait(), new_args);
+            // propagate self type param
+            map[*super_bound->arg(0)] = *impl_bound->arg(0);
+            auto spec_super_bound = super_bound->specialize(map);
             spec_super_bound->unify();
             if (!done.contains(spec_super_bound)) {
                 queue.push(spec_super_bound);
@@ -151,7 +151,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
 
 bool TypeVarNode::implements(Bound bound, SpecializeMap&) const {
     // CHECK is this enough?
-    return bounds().find(bound) != bounds().end();
+    return bounds().contains(bound);
 }
 
 Type KnownTypeNode::find_method(Symbol name) const {
