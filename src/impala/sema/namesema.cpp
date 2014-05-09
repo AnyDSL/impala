@@ -103,7 +103,7 @@ void TypeParam::check(NameSema& sema) const {
 }
 
 /*
- * ASTType::check
+ * AST types
  */
 
 void TypeParamList::check_type_params(NameSema& sema) const {
@@ -156,7 +156,7 @@ void ModContents::check(NameSema& sema) const {
 //------------------------------------------------------------------------------
 
 /*
- * Item::check
+ * items
  */
 
 void TypeDeclItem::check_item(NameSema& sema) const { sema.check(static_cast<const TypeDecl*>(this)); }
@@ -252,7 +252,7 @@ void ImplItem::check_item(NameSema& sema) const {
 //------------------------------------------------------------------------------
 
 /*
- * Expr::check
+ * expressions
  */
 
 void EmptyExpr::check(NameSema& sema) const {}
@@ -357,7 +357,7 @@ void ForExpr::check(NameSema& sema) const {
 //------------------------------------------------------------------------------
 
 /*
- * Stmt::check
+ * statements
  */
 
 void ExprStmt::check(NameSema& sema) const { expr()->check(sema); }

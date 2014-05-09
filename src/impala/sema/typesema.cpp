@@ -40,7 +40,7 @@ public:
 
     bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> types, SpecializeMap& map);
     bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> types) {
-        auto map = specialize_map(unifiable, types);
+        SpecializeMap map;
         return check_bounds(loc, unifiable, types, map);
     }
 
@@ -186,6 +186,7 @@ Type TypeSema::specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const 
 }
 
 bool TypeSema::check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> type_args, SpecializeMap& map) {
+    map = specialize_map(unifiable, type_args);
     assert(map.size() == type_args.size());
     bool result = true;
 
@@ -219,7 +220,7 @@ bool TypeSema::check_bounds(const ASTNode* loc, const Unifiable* unifiable, thor
 //------------------------------------------------------------------------------
 
 /*
- * ASTType::check
+ * AST types
  */
 
 void TypeParamList::check_type_params(TypeSema& sema) const {
@@ -335,7 +336,7 @@ void Fn::check_body(TypeSema& sema, FnType fn_type) const {
 //------------------------------------------------------------------------------
 
 /*
- * Items
+ * items
  */
 
 void TypeDeclItem::check_item(TypeSema& sema) const { sema.check(static_cast<const TypeDecl*>(this)); }
@@ -491,7 +492,7 @@ void ImplItem::check_item(TypeSema& sema) const {
 //------------------------------------------------------------------------------
 
 /*
- * Expr::check
+ * expressions
  */
 
 Type EmptyExpr::check(TypeSema& sema, Type) const { return sema.unit(); }
@@ -769,7 +770,7 @@ Type ForExpr::check(TypeSema& sema, Type expected) const {
 //------------------------------------------------------------------------------
 
 /*
- * Stmt::check
+ * statements
  */
 
 void ExprStmt::check(TypeSema& sema) const {
