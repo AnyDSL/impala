@@ -107,15 +107,7 @@ void KnownTypeNode::add_implementation(Impl impl) const {
 #endif
 }
 
-bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
-    std::queue<Bound> queue;
-    UniSet<Bound> done;
-
-    for (auto impl : impls()) {
-        queue.push(impl->bound());
-        done.insert(impl->bound());
-    }
-
+static bool search_up(std::queue<Bound>& queue, UniSet<Bound>& done, Bound bound, SpecializeMap& map) {
     while (!queue.empty()) {
         auto impl_bound = queue.front();
         queue.pop();
@@ -136,22 +128,29 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     }
 
     return false;
-#if 0
-    // try to instantiate the generic implementations
-    for (auto ti : gen_trait_impls_) {
-        std::vector<Type> inst_types;
-        Impl inst = typetable().instantiate_unknown(ti, inst_types);
-        if (inst->trait()->unify_with(*trait)) { // TODO why do we have to deref here explicitly? It *should* work without deref
-            if (typetable().check_bounds(nullptr, ti, inst_types))
-                return true;
-        }
-    }
-#endif
 }
 
-bool TypeVarNode::implements(Bound bound, SpecializeMap&) const {
-    // CHECK is this enough?
-    return bounds().contains(bound);
+bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
+    std::queue<Bound> queue;
+    UniSet<Bound> done;
+
+    // TODO generic impls
+    for (auto impl : impls()) {
+        queue.push(impl->bound());
+        done.insert(impl->bound());
+    }
+    return search_up(queue, done, bound, map);
+}
+
+bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {
+    std::queue<Bound> queue;
+    UniSet<Bound> done;
+
+    for (auto b : bounds()) {
+        queue.push(b);
+        done.insert(b);
+    }
+    return search_up(queue, done, bound, map);
 }
 
 Type KnownTypeNode::find_method(Symbol name) const {
