@@ -94,35 +94,4 @@ PrimType TypeTable::type(const PrimTypeKind kind) {
     }
 }
 
-bool TypeTable::check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> type_args, SpecializeMap& map) {
-    assert(map.size() == type_args.size());
-    bool result = true;
-
-    for (size_t i = 0, e = type_args.size(); i != e; ++i) {
-        auto type_var = unifiable->type_var(i);
-        Type arg = type_args[i];
-        assert(map.contains(*type_var));
-        assert(map.find(*type_var)->second == *arg);
-
-        for (auto bound : type_var->bounds()) {
-            SpecializeMap bound_map(map); // copy the map per type var
-            auto spec_bound = bound->specialize(bound_map);
-            unify(spec_bound);
-
-            if (arg != type_error() && spec_bound != bound_error()) {
-                check_impls(); // first we need to check all implementations to be up-to-date
-                if (!arg->implements(spec_bound, bound_map)) {
-                    if (loc) {
-                        error(loc) << "'" << arg << "' (instance for '" << type_var << "') does not implement bound '" 
-                            << spec_bound << "'\n";
-                    }
-                    result = false;
-                }
-            }
-        }
-    }
-
-    return result;
-}
-
 }

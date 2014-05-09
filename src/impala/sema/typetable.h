@@ -52,22 +52,11 @@ public:
      * therefore it is important to call \p check_bounds after all unknowns have been resolved!
      */
     Type instantiate_unknown(Type, std::vector<Type>&);
-    template<class T>
-    bool check_bounds(const ASTNode* loc, Proxy<T> proxy, thorin::ArrayRef<Type> types) { 
-        auto map = specialize_map(*proxy, types);
-        return check_bounds(loc, *proxy, types, map);
-    }
-    template<class T>
-    bool check_bounds(const ASTNode* loc, Proxy<T> proxy, thorin::ArrayRef<Type> types, SpecializeMap& map) {
-        map = specialize_map(*proxy, types);
-        return check_bounds(loc, *proxy, types, map);
-    }
 
     virtual void check_impls() = 0;
     void verify() const; ///< Checks if all types in the type tables are sane and correctly unified.
 
 protected:
-    bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> types, SpecializeMap& map);
     static SpecializeMap specialize_map(const Unifiable*, thorin::ArrayRef<Type>);
     template<class T>
     static SpecializeMap specialize_map(Proxy<T> proxy, thorin::ArrayRef<Type> type_args) { return specialize_map(*proxy, type_args); }

@@ -38,6 +38,12 @@ public:
     Type specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> args);
     Type check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Expr*> args, Type expected);
 
+    bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> types, SpecializeMap& map);
+    bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> types) {
+        auto map = specialize_map(unifiable, types);
+        return check_bounds(loc, unifiable, types, map);
+    }
+
     // check wrappers
 
     Type check(const TypeableDecl* decl) {
@@ -125,7 +131,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
                     expr->add_inferred_arg(Type(t.representative()));
                 }
 
-                check_bounds(expr, found_type, expr->inferred_args());
+                check_bounds(expr, *found_type, expr->inferred_args());
                 return Type(*expected);
             }
         }
@@ -156,7 +162,7 @@ Bound TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::
         type_args.push_back(self);
         for (auto t : args) 
             type_args.push_back(check(t));
-        check_bounds(loc, trait, type_args);
+        check_bounds(loc, *trait, type_args);
         return trait->instantiate(type_args);
     } else
         error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << (trait->num_type_vars()-1) << "\n";
@@ -171,12 +177,43 @@ Type TypeSema::specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const 
             type_args.push_back(check(t));
 
         SpecializeMap map;
-        check_bounds(loc, type, type_args, map);
+        check_bounds(loc, *type, type_args, map);
         return Type(type->vspecialize(map));
     } else
         error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << type->num_type_vars() << "\n";
 
     return type_error();
+}
+
+bool TypeSema::check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> type_args, SpecializeMap& map) {
+    assert(map.size() == type_args.size());
+    bool result = true;
+
+    for (size_t i = 0, e = type_args.size(); i != e; ++i) {
+        auto type_var = unifiable->type_var(i);
+        Type arg = type_args[i];
+        assert(map.contains(*type_var));
+        assert(map.find(*type_var)->second == *arg);
+
+        for (auto bound : type_var->bounds()) {
+            SpecializeMap bound_map(map); // copy the map per type var
+            auto spec_bound = bound->specialize(bound_map);
+            unify(spec_bound);
+
+            if (arg != type_error() && spec_bound != bound_error()) {
+                check_impls(); // first we need to check all implementations to be up-to-date
+                if (!arg->implements(spec_bound, bound_map)) {
+                    if (loc) {
+                        error(loc) << "'" << arg << "' (instance for '" << type_var << "') does not implement bound '" 
+                            << spec_bound << "'\n";
+                    }
+                    result = false;
+                }
+            }
+        }
+    }
+
+    return result;
 }
 
 //------------------------------------------------------------------------------
@@ -673,7 +710,7 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
             }
             if (no_error) {
                 // TODO where should be set this new type? should we set it at all?
-                check_bounds(whole, ofn, lhs->inferred_args());
+                check_bounds(whole, *ofn, lhs->inferred_args());
             }
         }
 
