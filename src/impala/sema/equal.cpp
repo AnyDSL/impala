@@ -49,6 +49,7 @@ bool KnownTypeNode::equal(const Unifiable* t) const {
             for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
                 result &= this->type_var(i)->bounds_equal(other->type_var(i));
 
+            // check recursively element types for equivalence
             for (size_t i = 0, e = size(); i != e && result; ++i)
                 result &= this->elem(i)->equal(*other->elem(i));
 
@@ -64,20 +65,19 @@ bool KnownTypeNode::equal(const Unifiable* t) const {
 }
 
 bool TypeVarNode::bounds_equal(const TypeVar other) const {
-    if (this->bounds().size() != other->bounds().size())
-        return false;
+    if (this->bounds().size() == other->bounds().size()) {
+        // FEATURE this works but seems too much effort, at least use a set that uses representatives
+        TypetableSet<const BoundNode> obounds;
+        for (auto r : other->bounds()) {
+            auto p = obounds.insert(*r); // TODO is deref here and below correct?
+            assert(p.second && "hash/equal broken");
+        }
 
-    // FEATURE this works but seems too much effort, at least use a set that uses representatives
-    TypetableSet<const BoundNode> obounds;
-    for (auto r : other->bounds()) {
-        auto p = obounds.insert(*r); // TODO is deref here and below correct?
-        assert(p.second && "hash/equal broken");
-    }
-
-    // this->bounds() subset of trestr
-    for (auto r : this->bounds()) {
-        if (!obounds.contains(*r))
-            return false;
+        // this->bounds() subset of trestr
+        for (auto r : this->bounds()) {
+            if (!obounds.contains(*r))
+                return false;
+        }
     }
 
     return true;
@@ -85,7 +85,7 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
 
 bool TypeVarNode::equal(const Unifiable* other) const {
     if (auto type_var = other->isa<TypeVarNode>())
-        return this == other || (this->equiv_ == nullptr && this->equiv_ == type_var);
+        return this == other || (this->equiv_ != nullptr && this->equiv_ == type_var);
     return false;
 }
 
