@@ -178,22 +178,18 @@ Type FnTypeNode::return_type() const {
 //------------------------------------------------------------------------------
 
 Type TypeNode::specialize(SpecializeMap& map) const {
-    // FEATURE this could be faster if we copy only types where something changed inside
     if (auto result = thorin::find(map, this))
         return Type(result);
 
     for (auto v : type_vars()) {
-        // CHECK is representative really correct or do we need node()? -- see also below!
-        assert(!map.contains(v.representative()));
-        v->clone(map); // CHECK is node() correct here?
+        assert(!map.contains(*v));
+        v->specialize_bounds(map);
     }
 
     auto t = vspecialize(map);
 
-    for (auto v : type_vars()) {
-        assert(map.contains(v.representative()));
-        t->bind(TypeVar(map[v.representative()]->as<TypeVarNode>()));
-    }
+    for (auto v : type_vars())
+        t->bind(TypeVar(map[*v]->as<TypeVarNode>()));
 
     return Type(t);
 }
@@ -212,20 +208,13 @@ const TypeNode* PrimTypeNode::vspecialize(SpecializeMap& map) const { return map
 const TypeNode* FnTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = typetable().fn_type(specialize_elems(map)).node(); }
 const TypeNode* TupleTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = typetable().tuple_type(specialize_elems(map)).node(); }
 const TypeNode* StructTypeNode::vspecialize(SpecializeMap& map) const { assert(false); return nullptr; }
-const TypeNode* TypeVarNode::vspecialize(SpecializeMap& map) const {
-    // was not bound in the specialized type -> return orginal type var
-    // CHECK do we need to create a new copy here? unification lead to segmentation faults in the past...
-    return map[this] = this;
-}
+const TypeNode* TypeVarNode::vspecialize(SpecializeMap& map) const { return map[this] = this; }
 
-TypeVar TypeVarNode::clone(SpecializeMap& map) const {
+TypeVar TypeVarNode::specialize_bounds(SpecializeMap& map) const {
     TypeVar v = typetable().type_var();
     map[this] = v.node();
-
-    // copy bounds
     for (auto b : bounds())
-        //v->add_bound(b->specialize(map));
-        v->add_bound(b);
+        v->add_bound(b->specialize(map));
 
     return v;
 }

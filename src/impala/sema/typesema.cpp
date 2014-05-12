@@ -178,7 +178,9 @@ Type TypeSema::specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const 
 
         SpecializeMap map;
         check_bounds(loc, *type, type_args, map);
-        return Type(type->vspecialize(map));
+        auto spec_type = type->vspecialize(map);
+        spec_type->unify();
+        return Type(spec_type);
     } else
         error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << type->num_type_vars() << "\n";
 

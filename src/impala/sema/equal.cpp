@@ -68,13 +68,12 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
     if (this->bounds().size() == other->bounds().size()) {
         // FEATURE this works but seems too much effort, at least use a set that uses representatives
         TypetableSet<const BoundNode> obounds;
-        for (auto r : other->bounds()) {
+        for (auto r : this->bounds()) {
             auto p = obounds.insert(*r); // TODO is deref here and below correct?
             assert(p.second && "hash/equal broken");
         }
 
-        // this->bounds() subset of trestr
-        for (auto r : this->bounds()) {
+        for (auto r : other->bounds()) {
             if (!obounds.contains(*r))
                 return false;
         }

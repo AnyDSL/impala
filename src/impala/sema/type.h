@@ -343,9 +343,7 @@ public:
      */
     virtual bool is_closed() const;
     virtual bool is_sane() const { return is_closed(); }
-
-    /// Create a copy of this \p TypeVar that considers the specialization (the binding is not copied)
-    TypeVar clone(SpecializeMap&) const;
+    TypeVar specialize_bounds(SpecializeMap&) const;
 
 private:
     virtual thorin::Type convert(CodeGen&) const { assert(false && "TODO"); return thorin::Type(); }
