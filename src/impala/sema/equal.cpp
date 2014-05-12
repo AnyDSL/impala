@@ -84,31 +84,8 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
 }
 
 bool TypeVarNode::equal(const Unifiable* other) const {
-    if (this == other)
-        return true;
-
-    if (const TypeVarNode* t = other->isa<TypeVarNode>()) {
-        if (this->equiv_ == nullptr) {
-            if ((this->bound_at() == nullptr) || (t->bound_at() == nullptr)) { // unbound type vars are by definition unequal
-                return false;
-            } else {
-                // two type vars are equal if the types where they are bound are
-                // equal and they are bound at the same position
-                bool result = bound_at()->num_type_vars() == t->bound_at()->num_type_vars();
-                size_t i;
-                for (i = 0; (i < bound_at()->num_type_vars()) && result; ++i) {
-                    if (bound_at()->type_var(i).node() == this) { // CHECK is node() here and below correct?
-                        result &= t->bound_at()->type_var(i).node() == t;
-                        break;
-                    }
-                }
-
-                assert(i < bound_at()->num_type_vars()); // it should have been found!
-                return result && bound_at()->equal(t->bound_at());
-            }
-        } else
-            return this->equiv_ == t;
-    }
+    if (auto type_var = other->isa<TypeVarNode>())
+        return this == other || (this->equiv_ == nullptr && this->equiv_ == type_var);
     return false;
 }
 
