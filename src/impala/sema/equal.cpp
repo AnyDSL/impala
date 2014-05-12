@@ -100,7 +100,7 @@ bool BoundNode::equal(const Unifiable* other) const {
         if (this->trait() == bound->trait()) {
             assert(this->num_args() == bound->num_args());
             for (size_t i = 0, e = num_args(); i != e; ++i) {
-                if (this->arg(i) != bound->arg(i))
+                if (!this->arg(i)->equal(*bound->arg(i)))
                     return false;
             }
             return true;

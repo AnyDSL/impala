@@ -1,7 +1,5 @@
 #include "impala/sema/typetable.h"
 
-#include <iostream>
-
 namespace impala {
 
 //------------------------------------------------------------------------------
@@ -81,9 +79,6 @@ bool TypeTable::unify(const Unifiable* unifiable) {
             }
         } 
 
-        //unifiable->dump();
-        //unifiable->dump();
-        //std::cout << unifiable->id() << std::endl;
         auto p = unifiables_.insert(unifiable);
         assert(unifiable->representative() == unifiable);
         assert(p.second && "hash/equal broken");
