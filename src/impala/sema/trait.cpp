@@ -42,6 +42,7 @@ BoundNode::BoundNode(const Trait trait, thorin::ArrayRef<Type> args)
     , trait_(trait)
     , args_(args)
 {
+    trait->instances_.push_back(Bound(this));
     assert(trait_->num_type_vars() == num_args());
 }
 
