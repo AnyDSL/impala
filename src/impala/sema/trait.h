@@ -35,7 +35,7 @@ public:
     const TraitDecl* trait_decl() const { return trait_decl_; }
     const UniSet<Bound>& super_bounds() const { return super_bounds_; }
     const thorin::HashSet<const TraitNode*>& sub_traits() const { return sub_traits_; }
-    const std::vector<Impl>& impls() const { return impls_; }
+    const UniMap<Type, std::vector<Impl>>& type2impls() const { return type2impls_; }
     const std::vector<Bound>& instances() const {return instances_; }
     bool is_error_trait() const { return trait_decl_ == nullptr; }
     bool add_super_bound(Bound) const;
@@ -43,7 +43,7 @@ public:
     Type find_method(Symbol name) const;
     bool has_method(Symbol name) const { return !find_method(name).empty(); }
     Bound instantiate(thorin::ArrayRef<Type> args) const;
-    void add_impl(Impl impl) const { impls_.push_back(impl); }
+    void add_impl(Impl impl) const;
 
     virtual void refine() const override {} // all methods should be known, so nothing to do here
     virtual bool equal(const Unifiable* other) const;
@@ -57,7 +57,7 @@ protected:
     const TraitDecl* const trait_decl_;
     mutable UniSet<Bound> super_bounds_;
     mutable thorin::HashSet<const TraitNode*> sub_traits_;
-    mutable std::vector<Impl> impls_;
+    mutable UniMap<Type, std::vector<Impl>> type2impls_;
     mutable std::vector<Bound> instances_;
 
     friend class TypeTable;
@@ -93,10 +93,11 @@ private:
 
 class ImplNode : public Unifiable {
 private:
-    ImplNode(TypeTable& tt, const ImplItem* impl_item, Bound bound)
+    ImplNode(TypeTable& tt, const ImplItem* impl_item, Bound bound, Type type)
         : Unifiable(tt)
         , impl_item_(impl_item)
         , bound_(bound)
+        , type_(type)
     {}
 
 public:
@@ -104,6 +105,7 @@ public:
     virtual size_t hash() const;
     const ImplItem* impl_item() const { return impl_item_; }
     Bound bound() const { return bound_; }
+    Type type() const { return type_; }
     Impl specialize(SpecializeMap& map) const;
 
     // CHECK is this correct?
@@ -118,6 +120,7 @@ protected:
 private:
     const ImplItem* const impl_item_;
     Bound bound_;
+    Type type_;
 
     friend class TypeTable;
 };

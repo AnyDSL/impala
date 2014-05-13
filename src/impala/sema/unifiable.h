@@ -164,6 +164,7 @@ template<class T> struct UniEqual {
     bool operator () (const T t1, const T t2) const { return (t1->is_unified() && t2->is_unified()) ? t1 == t2 : t1->equal(*t2); }
 };
 template<class T> using UniSet = thorin::HashSet<T, UniHash<T>, UniEqual<T>>;
+template<class T, class U> using UniMap = thorin::HashMap<T, U, UniHash<T>, UniEqual<T>>;
 
 //------------------------------------------------------------------------------
 

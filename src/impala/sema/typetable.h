@@ -41,7 +41,7 @@ public:
     UnknownType unknown_type() { return new_unifiable(new UnknownTypeNode(*this)); }
     Bound bound(Trait trait, thorin::ArrayRef<Type> args) { return new_unifiable(new BoundNode(trait, args)); }
     Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
-    Impl impl(const ImplItem* impl, Bound bound) { return new_unifiable(new ImplNode(*this, impl, bound)); }
+    Impl impl(const ImplItem* impl, Bound bound, Type type) { return new_unifiable(new ImplNode(*this, impl, bound, type)); }
 
     /// Unify a type and return \p true if the representative changed.
     template<class T> bool unify(Proxy<T> proxy) { return unify(*proxy); }

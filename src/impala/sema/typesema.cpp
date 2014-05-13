@@ -444,7 +444,7 @@ void ImplItem::check_item(TypeSema& sema) const {
     if (trait() != nullptr) {
         if (auto type_app = trait()->isa<ASTTypeApp>()) {
             bound = type_app->bound(sema, for_type);
-            auto impl = sema.impl(this, bound);
+            auto impl = sema.impl(this, bound, for_type);
             for (auto tp : type_params())
                 impl->bind(tp->type_var(sema));
 

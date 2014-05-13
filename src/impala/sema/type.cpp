@@ -119,6 +119,18 @@ static bool search_up(std::queue<Bound>& queue, UniSet<Bound>& done, Bound bound
 }
 
 bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
+    for (auto impl : bound->trait()->type2impls().find(Type(this))->second) {
+        for (size_t i = 0, e = impl->num_type_vars(); i != e; ++i) {
+            for (size_t j = 0, e = impl->bound()->num_args(); j != e; ++j) {
+                if (impl->type_var(i).as<Type>() == impl->bound()->arg(j)) {
+                    std::cout << "yes" << std::endl;
+                }
+            }
+        }
+
+    }
+    return true;
+
     std::queue<Bound> queue;
     UniSet<Bound> done;
 

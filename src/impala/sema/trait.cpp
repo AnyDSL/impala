@@ -35,6 +35,10 @@ Bound TraitNode::instantiate(thorin::ArrayRef<Type> args) const {
     return typetable().bound(Trait(this), args);
 }
 
+void TraitNode::add_impl(Impl impl) const {
+    type2impls_[impl->type()].push_back(impl);
+}
+
 //------------------------------------------------------------------------------
 
 BoundNode::BoundNode(const Trait trait, thorin::ArrayRef<Type> args)
@@ -129,7 +133,7 @@ Bound BoundNode::specialize(SpecializeMap& map) const {
 //------------------------------------------------------------------------------
 
 Impl ImplNode::specialize(SpecializeMap& map) const { 
-    return typetable().impl(impl_item(), bound()->specialize(map));
+    return typetable().impl(impl_item(), bound()->specialize(map), type());
 }
 
 //------------------------------------------------------------------------------
