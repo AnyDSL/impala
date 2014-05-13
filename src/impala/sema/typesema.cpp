@@ -18,7 +18,7 @@ public:
 
     bool nossa() const { return nossa_; }
     void push_impl(const ImplItem* i) { impls_.push_back(i); }
-    virtual void check_impls() {
+    void check_impls() {
         while (!impls_.empty()) {
             const ImplItem* i = impls_.back();
             impls_.pop_back();

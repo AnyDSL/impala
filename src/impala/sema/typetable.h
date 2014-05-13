@@ -53,7 +53,6 @@ public:
      */
     Type instantiate_unknown(Type, std::vector<Type>&);
 
-    virtual void check_impls() = 0;
     void verify() const; ///< Checks if all types in the type tables are sane and correctly unified.
     static SpecializeMap specialize_map(const Unifiable*, thorin::ArrayRef<Type>);
 
