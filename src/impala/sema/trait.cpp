@@ -126,4 +126,10 @@ Bound BoundNode::specialize(SpecializeMap& map) const {
 
 //------------------------------------------------------------------------------
 
+Impl ImplNode::specialize(SpecializeMap& map) const { 
+    return typetable().impl(impl_item(), bound()->specialize(map));
+}
+
+//------------------------------------------------------------------------------
+
 }

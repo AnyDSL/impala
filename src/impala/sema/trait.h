@@ -97,6 +97,7 @@ public:
     virtual size_t hash() const;
     const ImplItem* impl_item() const { return impl_item_; }
     Bound bound() const { return bound_; }
+    Impl specialize(SpecializeMap& map) const;
 
     // CHECK is this correct?
     virtual void refine() const override {}

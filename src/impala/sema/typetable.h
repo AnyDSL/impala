@@ -55,9 +55,9 @@ public:
 
     virtual void check_impls() = 0;
     void verify() const; ///< Checks if all types in the type tables are sane and correctly unified.
+    static SpecializeMap specialize_map(const Unifiable*, thorin::ArrayRef<Type>);
 
 protected:
-    static SpecializeMap specialize_map(const Unifiable*, thorin::ArrayRef<Type>);
     template<class T>
     static SpecializeMap specialize_map(Proxy<T> proxy, thorin::ArrayRef<Type> type_args) { return specialize_map(*proxy, type_args); }
 

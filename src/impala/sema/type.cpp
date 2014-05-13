@@ -122,10 +122,9 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     std::queue<Bound> queue;
     UniSet<Bound> done;
 
-    // TODO generic impls
     for (auto impl : impls()) {
-        queue.push(impl->bound());
-        done.insert(impl->bound());
+        queue.push(spec_impl->bound());
+        done.insert(spec_impl->bound());
     }
     return search_up(queue, done, bound, map);
 }
