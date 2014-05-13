@@ -77,7 +77,7 @@ bool TypeVarNode::is_closed() const {
 
 //------------------------------------------------------------------------------
 
-void KnownTypeNode::add_implementation(Impl impl) const {
+void KnownTypeNode::add_impl(Impl impl) const {
     impls_.push_back(impl);
 #if 0
     // TODO fail if a method was implemented multiple times!

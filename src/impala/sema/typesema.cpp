@@ -443,15 +443,15 @@ void ImplItem::check_item(TypeSema& sema) const {
     Bound bound;
     if (trait() != nullptr) {
         if (auto type_app = trait()->isa<ASTTypeApp>()) {
-            // create impl
             bound = type_app->bound(sema, for_type);
             auto impl = sema.impl(this, bound);
             for (auto tp : type_params())
                 impl->bind(tp->type_var(sema));
 
-            // add impl to type
-            if ((for_type != sema.type_error()) && (bound != sema.bound_error()))
-                for_type->add_implementation(impl);
+            if ((for_type != sema.type_error()) && (bound != sema.bound_error())) {
+                for_type->add_impl(impl);
+                bound->trait()->add_impl(impl);
+            }
         } else
             sema.error(trait()) << "expected trait instance.\n";
     }

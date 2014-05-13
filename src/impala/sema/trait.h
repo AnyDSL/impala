@@ -41,6 +41,7 @@ public:
     Type find_method(Symbol name) const;
     bool has_method(Symbol name) const { return !find_method(name).empty(); }
     Bound instantiate(thorin::ArrayRef<Type> args) const;
+    void add_impl(Impl impl) const { impls_.push_back(impl); }
 
     virtual void refine() const override {} // all methods should be known, so nothing to do here
     virtual bool equal(const Unifiable* other) const;
@@ -54,6 +55,7 @@ protected:
     const TraitDecl* const trait_decl_;
     mutable UniSet<Bound> super_bounds_;
     mutable thorin::HashSet<const TraitNode*> sub_traits_;
+    mutable std::vector<Impl> impls_;
 
     friend class TypeTable;
     friend class BoundNode;

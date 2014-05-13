@@ -60,7 +60,7 @@ public:
     /// Returns true if this \p TypeNode does not have any \p TypeNode operands (\p elems_).
     virtual bool is_empty() const = 0;
 
-    virtual void add_implementation(Impl) const = 0;
+    virtual void add_impl(Impl) const = 0;
     virtual bool implements(Bound, SpecializeMap&) const = 0;
     /// @return The method type or an empty type if no method with this name was found
     virtual Type find_method(Symbol s) const = 0;
@@ -115,7 +115,7 @@ public:
     virtual size_t hash() const;
     virtual bool unify_with(const Unifiable*) const override;
 
-    virtual void add_implementation(Impl) const;
+    virtual void add_impl(Impl) const;
     virtual bool implements(Bound, SpecializeMap&) const;
     virtual Type find_method(Symbol s) const;
 
@@ -164,7 +164,7 @@ public:
     virtual size_t hash() const;
     virtual bool unify_with(const Unifiable*) const override;
 
-    virtual void add_implementation(Impl) const { assert(false); }
+    virtual void add_impl(Impl) const { assert(false); }
     virtual bool implements(Bound bound, SpecializeMap& map) const { return is_instantiated() && instance()->implements(bound, map); }
     virtual Type find_method(Symbol s) const { assert(is_instantiated()); return instance()->find_method(s); }
 
