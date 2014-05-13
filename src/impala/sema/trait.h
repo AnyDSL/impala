@@ -34,6 +34,7 @@ private:
 public:
     const TraitDecl* trait_decl() const { return trait_decl_; }
     const UniSet<Bound>& super_bounds() const { return super_bounds_; }
+    const thorin::HashSet<const TraitNode*>& sub_traits() const { return sub_traits_; }
     bool is_error_trait() const { return trait_decl_ == nullptr; }
     bool add_super_bound(Bound) const;
     /// return the type of the method with this name if it exists; otherwise return an empty type
@@ -52,6 +53,7 @@ public:
 protected:
     const TraitDecl* const trait_decl_;
     mutable UniSet<Bound> super_bounds_;
+    mutable thorin::HashSet<const TraitNode*> sub_traits_;
 
     friend class TypeTable;
     friend class BoundNode;

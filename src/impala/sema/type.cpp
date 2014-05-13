@@ -123,8 +123,8 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     UniSet<Bound> done;
 
     for (auto impl : impls()) {
-        queue.push(spec_impl->bound());
-        done.insert(spec_impl->bound());
+        queue.push(impl->bound());
+        done.insert(impl->bound());
     }
     return search_up(queue, done, bound, map);
 }

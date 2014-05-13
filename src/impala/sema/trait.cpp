@@ -14,6 +14,7 @@ TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
 bool TraitNode::add_super_bound(Bound bound) const {
     typetable().unify(bound);
     auto p = super_bounds_.insert(bound);
+    bound->trait()->sub_traits_.insert(this);
     return p.second;
 }
 
