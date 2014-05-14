@@ -44,6 +44,8 @@ public:
     bool empty() const { return node_ == nullptr; }
     bool operator == (const Proxy<T>& other) const {
         assert(&node()->typetable() == &other.node()->typetable());
+        if (this->node_ == other.node_) // TODO do we really wanna have this check?
+            return true;
         this->node()->unify();
         other.node()->unify();
         return representative() == other.representative();
