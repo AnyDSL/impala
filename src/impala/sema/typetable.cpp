@@ -2,8 +2,6 @@
 
 namespace impala {
 
-//------------------------------------------------------------------------------
-
 TypeTable::TypeTable()
     : type_error_(unify(join(new TypeErrorNode(*this))))
     , trait_error_(unify(trait(nullptr)))

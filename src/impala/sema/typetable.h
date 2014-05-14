@@ -16,8 +16,6 @@ template<class T> struct TypetableEqual {
 };
 template<class T> using TypetableSet = thorin::HashSet<T*, TypetableHash<T>, TypetableEqual<T>>;
 
-//------------------------------------------------------------------------------
-
 class TypeTable : public ErrorHandler {
 public:
     TypeTable();
