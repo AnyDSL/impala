@@ -1,0 +1,9 @@
+trait T[A, B] {}
+trait U[C, D, E] : T[int, E] {}
+impl[F] U[f32, F, F] for int {}
+fn f[G : T[int, bool]](x:G) -> G {
+    x
+}
+fn main() -> () {
+    f[i32](42);
+}
