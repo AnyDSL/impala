@@ -72,10 +72,9 @@ void Unifiable::set_representative(const Unifiable* repr) const {
 //------------------------------------------------------------------------------
 
 bool KnownTypeNode::is_sane() const {
-    for (auto t : elems_) {
-        if (!t->is_sane()) {
+    for (auto elem : elems_) {
+        if (!elem->is_sane())
             return false;
-        }
     }
     assert(is_closed());
     return true;
@@ -127,9 +126,10 @@ bool TraitNode::add_super_bound(Bound bound) const {
 }
 
 Bound TraitNode::super_bound(Trait trait) const {
-    for (auto super : super_bounds())
+    for (auto super : super_bounds()) {
         if (super->trait() == trait)
             return super;
+    }
     return Bound();
 }
 
@@ -328,9 +328,9 @@ Type TypeNode::specialize(SpecializeMap& map) const {
     if (auto result = thorin::find(map, this))
         return result;
 
-    for (auto v : type_vars()) {
-        assert(!map.contains(*v));
-        v->specialize_bounds(map);
+    for (auto type_var : type_vars()) {
+        assert(!map.contains(*type_var));
+        type_var->specialize_bounds(map);
     }
 
     auto t = vspecialize(map);
@@ -461,7 +461,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
                     if (type_var.as<Type>() == impl->bound()->type_arg(i) 
                             && !bound->type_arg(i)->isa<UnknownTypeNode>()
                             && implements_bounds(bound->type_arg(i), type_var))
-                        map[*type_var] = *bound->type_arg(i); // map this to bound's corresponding type_arg
+                        map[*type_var] = *bound->type_arg(i);
                 }
             }
 

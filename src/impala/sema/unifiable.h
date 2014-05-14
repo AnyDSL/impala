@@ -579,7 +579,7 @@ private:
         , trait_(trait)
         , type_args_(type_args)
     {
-        trait->instances_.push_back(Bound(this));
+        trait->instances_.push_back(this);
         assert(trait_->num_type_vars() == num_type_args());
     }
 
