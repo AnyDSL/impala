@@ -11,7 +11,7 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-bool KnownTypeNode::unify_with(const Unifiable* other) const {
+bool KnownTypeNode::infer(const Unifiable* other) const {
     if (auto ktn = other->isa<KnownTypeNode>()) {
         if (this->kind() == ktn->kind()) { // TODO make this kind handling better
             if (unify_type_vars(other->type_vars())) {
@@ -19,7 +19,7 @@ bool KnownTypeNode::unify_with(const Unifiable* other) const {
                 if (size() == ktn->size()) {
                     bool result = true;
                     for (size_t i = 0, e = size(); i != e && result; ++i)
-                        result &= elem(i)->unify_with(ktn->elem(i));
+                        result &= elem(i)->infer(ktn->elem(i));
                     return result;
                 }
             }
@@ -28,13 +28,13 @@ bool KnownTypeNode::unify_with(const Unifiable* other) const {
     return false;
 }
 
-bool UnknownTypeNode::unify_with(const Unifiable* other) const {
+bool UnknownTypeNode::infer(const Unifiable* other) const {
     if (!is_instantiated()) {
         instantiate(Type(other->as<TypeNode>()));
         typetable().unify(Type(this));
         return true;
     } else
-        return instance()->unify_with(other);
+        return instance()->infer(other);
 }
 
 //------------------------------------------------------------------------------
@@ -115,7 +115,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
                 }
             }
 
-            if (bound->unify_with(*impl->specialize(map)->bound()))
+            if (bound->infer(*impl->specialize(map)->bound()))
                 return true;
         }
 

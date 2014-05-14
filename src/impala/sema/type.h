@@ -113,7 +113,7 @@ public:
 
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
-    virtual bool unify_with(const Unifiable*) const override;
+    virtual bool infer(const Unifiable*) const override;
 
     virtual void add_impl(Impl) const;
     virtual bool implements(Bound, SpecializeMap&) const;
@@ -162,7 +162,7 @@ public:
 
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
-    virtual bool unify_with(const Unifiable*) const override;
+    virtual bool infer(const Unifiable*) const override;
 
     virtual void add_impl(Impl) const { assert(false); }
     virtual bool implements(Bound bound, SpecializeMap& map) const { return is_instantiated() && instance()->implements(bound, map); }

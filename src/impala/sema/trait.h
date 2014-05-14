@@ -50,7 +50,7 @@ public:
     virtual bool equal(const Unifiable* other) const;
     virtual size_t hash() const;
     virtual bool is_known() const override { return true; }
-    virtual bool unify_with(const Unifiable*) const override { assert(false); return false; }
+    virtual bool infer(const Unifiable*) const override { assert(false); return false; }
     virtual bool is_closed() const { return true; } // TODO
     virtual std::string to_string() const;
 
@@ -81,7 +81,7 @@ public:
     virtual std::string to_string() const;
     virtual void refine() const override;
     virtual bool is_known() const override;
-    virtual bool unify_with(const Unifiable*) const override;
+    virtual bool infer(const Unifiable*) const override;
     virtual bool is_closed() const;
     Bound specialize(SpecializeMap&) const;
 
@@ -112,7 +112,7 @@ public:
     // CHECK is this correct?
     virtual void refine() const override {}
     virtual bool is_known() const override { return true; }
-    virtual bool unify_with(const Unifiable*) const override { assert(false); return false; }
+    virtual bool infer(const Unifiable*) const override { assert(false); return false; }
     virtual bool is_closed() const { return true; } // TODO
 
 protected:

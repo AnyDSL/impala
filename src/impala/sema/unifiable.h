@@ -113,11 +113,11 @@ public:
      *         and there were no contradictions during unification (a contradiction
      *         would be fn(?0, ?0) unified with fn(int, bool)).
      */
-    virtual bool unify_with(const Unifiable*) const = 0;
+    virtual bool infer(const Unifiable*) const = 0;
     template<class T>
-    bool unify_with(Proxy<T> other) const {
+    bool infer(Proxy<T> other) const {
         assert(other->is_closed());
-        bool b = unify_with(*other);
+        bool b = infer(*other);
         assert(!b || is_closed());
         return b;
     }

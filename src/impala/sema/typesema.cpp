@@ -125,7 +125,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
             // try to infer instantiations for this generic type
             std::vector<Type> type_args;
             Type inst = instantiate_unknown(found_type, type_args);
-            if (inst->unify_with(expected)) {
+            if (inst->infer(expected)) {
                 for (auto t : type_args) {
                     assert(t.representative() != nullptr);
                     expr->add_inferred_arg(Type(t.representative()));
@@ -314,7 +314,7 @@ Type ValueDecl::check(TypeSema& sema) const { return check(sema, Type()); }
 Type ValueDecl::check(TypeSema& sema, Type expected) const {
     if (ast_type()) {
         Type t = sema.check(ast_type());
-        if (expected.empty() || expected->unify_with(t)) {
+        if (expected.empty() || expected->infer(t)) {
             return t;
         } else {
             sema.error(this) << "could not unify types: expected '" << expected << "' but found '" << t << "'.\n";
@@ -696,7 +696,7 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
             check(args[i], fn->elem(i), "argument");
         }
         if (no_cont && !expected.isa<UnknownType>())
-            create_return_type(whole, fn->elems().back())->unify_with(expected);
+            create_return_type(whole, fn->elems().back())->infer(expected);
 
         // instantiate fn type
         if (ofn->is_generic()) {

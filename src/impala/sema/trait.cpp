@@ -57,11 +57,11 @@ BoundNode::BoundNode(const Trait trait, thorin::ArrayRef<Type> type_args)
     assert(trait_->num_type_vars() == num_type_args());
 }
 
-bool BoundNode::unify_with(const Unifiable* unifiable) const {
+bool BoundNode::infer(const Unifiable* unifiable) const {
     if (auto other = unifiable->isa<BoundNode>()) {
         bool result = this->trait() == other->trait() && this->num_type_args() == other->num_type_args();
         for (size_t i = 0, e = num_type_args(); result && i != e; ++i)
-            result &= this->type_arg(i)->unify_with(other->type_arg(i));
+            result &= this->type_arg(i)->infer(other->type_arg(i));
         return result;
     }
     return false;
