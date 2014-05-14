@@ -1,7 +1,6 @@
 #ifndef IMPALA_SEMA_TYPE_H
 #define IMPALA_SEMA_TYPE_H
 
-#include "thorin/type.h"
 #include "thorin/util/autoptr.h"
 #include "thorin/util/array.h"
 #include "thorin/util/hash.h"
@@ -15,7 +14,6 @@ namespace thorin {
 
 namespace impala {
 
-class CodeGen;
 class StructDecl;
 typedef thorin::HashMap<const TypeNode*, const TypeNode*> SpecializeMap;
 
@@ -78,13 +76,6 @@ public:
     Type specialize() const { SpecializeMap map; return specialize(map); }
     Type specialize(SpecializeMap&) const;
     virtual const TypeNode* vspecialize(SpecializeMap&) const = 0;
-
-private:
-    virtual thorin::Type convert(CodeGen&) const = 0;
-
-    mutable thorin::Type thorin_type_;
-
-    friend class CodeGen;
 };
 
 class KnownTypeNode : public TypeNode {

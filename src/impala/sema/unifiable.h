@@ -3,12 +3,14 @@
 
 #include <vector>
 
+#include "thorin/type.h"
 #include "thorin/util/array.h"
 #include "thorin/util/cast.h"
 #include "thorin/util/hash.h"
 
 namespace impala {
 
+class CodeGen;
 class ImplNode;
 class BoundNode;
 class TraitNode;
@@ -133,14 +135,18 @@ protected:
     bool type_vars_known() const;
 
 private:
+    virtual thorin::Type convert(CodeGen&) const = 0;
+
     TypeTable& typetable_;
     mutable const Unifiable* representative_;
     const int id_;
+    mutable thorin::Type thorin_type_;
     static int counter_;
 
 protected:
     mutable std::vector<TypeVar> type_vars_;
 
+    friend class CodeGen;
     friend class TypeTable;
 };
 

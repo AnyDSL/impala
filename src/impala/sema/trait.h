@@ -45,14 +45,16 @@ public:
     bool has_method(Symbol name) const { return !find_method(name).empty(); }
     Bound instantiate(thorin::ArrayRef<Type> args) const;
     void add_impl(Impl impl) const;
-    virtual bool equal(const Unifiable* other) const;
-    virtual size_t hash() const;
+    virtual bool equal(const Unifiable* other) const override;
+    virtual size_t hash() const override;
     virtual bool is_known() const override { return true; }
     virtual bool infer(const Unifiable*) const override { assert(false); return false; }
     virtual bool is_closed() const { return true; } // TODO
     virtual std::string to_string() const;
 
-protected:
+private:
+    virtual thorin::Type convert(CodeGen&) const override;
+
     const TraitDecl* const trait_decl_;
     mutable UniSet<Bound> super_bounds_;
     mutable thorin::HashSet<const TraitNode*> sub_traits_;
@@ -83,6 +85,8 @@ public:
     Bound specialize(SpecializeMap&) const;
 
 private:
+    virtual thorin::Type convert(CodeGen&) const override;
+
     const Trait trait_;
     thorin::Array<Type> type_args_;
 
@@ -113,6 +117,8 @@ protected:
     virtual std::string to_string() const { return ""; } // TODO
 
 private:
+    virtual thorin::Type convert(CodeGen&) const override;
+
     const ImplItem* const impl_item_;
     Bound bound_;
     Type type_;

@@ -114,7 +114,7 @@ void Fn::emit_body(CodeGen& cg) const {
 
 void TypeNode::convert_elems(CodeGen& cg, std::vector<thorin::Type>& nelems) const {
     for (auto elem : elems())
-        nelems.push_back(elem->convert(cg));
+        nelems.push_back(cg.convert(elem));
 }
 
 thorin::Type PrimTypeNode::convert(CodeGen& cg) const {
@@ -145,6 +145,18 @@ thorin::Type StructTypeNode::convert(CodeGen& cg) const {
     auto struct_type = cg.world().struct_type(size());
 
     return struct_type;
+}
+
+thorin::Type TraitNode::convert(CodeGen& cg) const {
+    return thorin::Type();
+}
+
+thorin::Type BoundNode::convert(CodeGen& cg) const {
+    return thorin::Type();
+}
+
+thorin::Type ImplNode::convert(CodeGen& cg) const {
+    return thorin::Type();
 }
 
 /*
