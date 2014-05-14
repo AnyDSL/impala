@@ -325,7 +325,7 @@ Type instantiate_unknown(Type type, std::vector<Type>& type_args) {
     for (size_t i = 0, e = type->num_type_vars(); i != e;  ++i) 
         type_args.push_back(type->typetable().unknown_type());
     auto map = specialize_map(type, type_args);
-    return type->vspecialize(map);
+    return type->instantiate(map);
 }
 
 Type TypeNode::specialize(SpecializeMap& map) const {
@@ -340,7 +340,7 @@ Type TypeNode::specialize(SpecializeMap& map) const {
             new_type_var->add_bound(bound->specialize(map));
     }
 
-    auto t = vspecialize(map);
+    auto t = instantiate(map);
     for (auto type_var : type_vars())
         t->bind(map[*type_var]->as<TypeVarNode>());
 
@@ -354,14 +354,22 @@ thorin::Array<Type> TypeNode::specialize_elems(SpecializeMap& map) const {
     return nelems;
 }
 
-Type UnknownTypeNode::vspecialize(SpecializeMap& map) const { assert(false); return nullptr; }
-Type TypeErrorNode::vspecialize(SpecializeMap& map) const { return map[this] = *typetable().type_error(); }
-Type NoRetTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = *typetable().type_noret(); }
-Type PrimTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = *typetable().type(primtype_kind()); }
-Type FnTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = *typetable().fn_type(specialize_elems(map)); }
-Type TupleTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = *typetable().tuple_type(specialize_elems(map)); }
-Type StructTypeNode::vspecialize(SpecializeMap& map) const { assert(false); return nullptr; }
-Type TypeVarNode::vspecialize(SpecializeMap& map) const { return map[this] = this; }
+Type TypeNode::instantiate(SpecializeMap& map) const {
+#ifndef NDEBUG
+    for (auto type_var : type_vars())
+        assert(map.contains(*type_var));
+#endif
+    return vinstantiate(map);
+}
+
+Type UnknownTypeNode::vinstantiate(SpecializeMap& map) const { assert(false); return nullptr; }
+Type TypeErrorNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().type_error(); }
+Type NoRetTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().type_noret(); }
+Type PrimTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().type(primtype_kind()); }
+Type FnTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().fn_type(specialize_elems(map)); }
+Type TupleTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().tuple_type(specialize_elems(map)); }
+Type StructTypeNode::vinstantiate(SpecializeMap& map) const { assert(false); return nullptr; }
+Type TypeVarNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 
 Bound TraitNode::instantiate(thorin::ArrayRef<Type> type_args) const {
     return typetable().bound(this, type_args);

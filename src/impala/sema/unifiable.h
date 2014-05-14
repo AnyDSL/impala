@@ -223,19 +223,16 @@ protected:
 
 public:
     virtual Kind kind() const = 0;
-
     virtual thorin::ArrayRef<Type> elems() const = 0;
     virtual const Type elem(size_t i) const = 0;
     /// Returns number of \p TypeNode operands (\p elems_).
     virtual size_t size() const = 0;
     /// Returns true if this \p TypeNode does not have any \p TypeNode operands (\p elems_).
     virtual bool is_empty() const = 0;
-
     virtual void add_impl(Impl) const = 0;
     virtual bool implements(Bound, SpecializeMap&) const = 0;
     /// @return The method type or an empty type if no method with this name was found
     virtual Type find_method(Symbol s) const = 0;
-
     /// A type is closed if it contains no unbound type variables.
     virtual bool is_closed() const = 0;
     virtual bool is_noret() const { return false; }
@@ -247,9 +244,16 @@ public:
      * This also means that a sane type is always closed!
      */
     virtual bool is_sane() const = 0;
-    Type specialize() const { SpecializeMap map; return specialize(map); }
-    Type specialize(SpecializeMap&) const;
-    virtual Type vspecialize(SpecializeMap&) const = 0;
+    /// Specializes recursively this type while obeying \p map.
+    Type specialize(SpecializeMap& map) const;
+    /**
+     * Type variables are removed from this type.
+     * They must be found in \p map in order to specialize the resulting type.
+     */
+    Type instantiate(SpecializeMap& map) const;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const = 0;
 };
 
 class KnownTypeNode : public TypeNode {
@@ -304,9 +308,6 @@ private:
         : TypeNode(typetable)
     {}
 
-protected:
-    virtual Type vspecialize(SpecializeMap&) const;
-
 public:
     virtual Kind kind() const { return is_instantiated() ? instance()->kind() : Type_unknown; }
     virtual std::string to_string() const;
@@ -336,6 +337,7 @@ public:
     void instantiate(Type instance) const { assert(!is_instantiated()); instance_ = instance; }
 
 private:
+    virtual Type vinstantiate(SpecializeMap&) const;
     virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
 
     mutable Type instance_;
@@ -349,14 +351,12 @@ private:
         : KnownTypeNode(typetable, Type_error, 0)
     {}
 
-protected:
-    virtual Type vspecialize(SpecializeMap&) const;
-
 public:
     virtual bool is_error() const override { return true; }
     virtual std::string to_string() const { return "<type error>"; }
 
 private:
+    virtual Type vinstantiate(SpecializeMap&) const;
     virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
 
     friend class TypeTable;
@@ -368,14 +368,12 @@ private:
         : KnownTypeNode(typetable, Type_noret, 0)
     {}
 
-protected:
-    virtual Type vspecialize(SpecializeMap&) const;
-
 public:
     virtual bool is_noret() const override { return true; }
     virtual std::string to_string() const override { return "<no-return>"; }
 
 private:
+    virtual Type vinstantiate(SpecializeMap&) const;
     virtual thorin::Type convert(CodeGen&) const override;
 
     friend class TypeTable;
@@ -389,13 +387,11 @@ private:
 
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
 
-protected:
-    virtual Type vspecialize(SpecializeMap&) const;
-
 public:
     virtual std::string to_string() const;
 
 private:
+    virtual Type vinstantiate(SpecializeMap&) const;
     virtual thorin::Type convert(CodeGen&) const;
 
     friend class TypeTable;
@@ -410,15 +406,13 @@ private:
             set(i, elems[i]);
     }
 
-protected:
-    virtual Type vspecialize(SpecializeMap&) const;
-
 public:
     Type return_type() const;
     FnType peel_first() const;
     virtual std::string to_string() const { return std::string("fn") + type_vars_to_string() + elems_to_string(); }
 
 private:
+    virtual Type vinstantiate(SpecializeMap&) const;
     virtual thorin::Type convert(CodeGen&) const;
 
     friend class TypeTable;
@@ -433,13 +427,11 @@ private:
             set(i, elems[i]);
     }
 
-protected:
-    virtual Type vspecialize(SpecializeMap&) const;
-
 public:
     virtual std::string to_string() const { return type_vars_to_string() + elems_to_string(); }
 
 private:
+    virtual Type vinstantiate(SpecializeMap&) const;
     virtual thorin::Type convert(CodeGen&) const;
 
     friend class TypeTable;
@@ -449,14 +441,12 @@ class StructTypeNode : public KnownTypeNode {
 private:
     StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl);
 
-protected:
-    virtual Type vspecialize(SpecializeMap&) const;
-
 public:
     const StructDecl* struct_decl() const { return struct_decl_; }
     virtual std::string to_string() const { return "TODO"; }
 
 private:
+    virtual Type vinstantiate(SpecializeMap&) const;
     virtual thorin::Type convert(CodeGen&) const;
 
     const StructDecl* struct_decl_;
@@ -503,8 +493,8 @@ private:
     mutable const Unifiable* bound_at_;
     mutable const TypeVarNode* equiv_;///< Used to define equivalence constraints when checking equality of types.
 
-protected:
-    virtual Type vspecialize(SpecializeMap&) const;
+private:
+    virtual Type vinstantiate(SpecializeMap&) const;
 
     friend class TypeTable;
     friend void Unifiable::bind(TypeVar) const;               // maybe we can design things better to avoid this friend
