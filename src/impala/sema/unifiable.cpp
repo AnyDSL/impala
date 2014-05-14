@@ -16,11 +16,6 @@ bool Unifiable::unify_type_vars(thorin::ArrayRef<TypeVar> other_vars) const {
     return false;
 }
 
-void Unifiable::refine_type_vars() const {
-    for (auto v : type_vars())
-        v->refine();
-}
-
 bool Unifiable::type_vars_known() const {
     for (auto v : type_vars()) {
         if (!v->is_known())

@@ -45,8 +45,6 @@ public:
     bool has_method(Symbol name) const { return !find_method(name).empty(); }
     Bound instantiate(thorin::ArrayRef<Type> args) const;
     void add_impl(Impl impl) const;
-
-    virtual void refine() const override {} // all methods should be known, so nothing to do here
     virtual bool equal(const Unifiable* other) const;
     virtual size_t hash() const;
     virtual bool is_known() const override { return true; }
@@ -79,7 +77,6 @@ public:
     virtual bool equal(const Unifiable* other) const override;
     virtual size_t hash() const override;
     virtual std::string to_string() const;
-    virtual void refine() const override;
     virtual bool is_known() const override;
     virtual bool infer(const Unifiable*) const override;
     virtual bool is_closed() const;
@@ -108,9 +105,6 @@ public:
     Bound bound() const { return bound_; }
     Type type() const { return type_; }
     Impl specialize(SpecializeMap& map) const;
-
-    // CHECK is this correct?
-    virtual void refine() const override {}
     virtual bool is_known() const override { return true; }
     virtual bool infer(const Unifiable*) const override { assert(false); return false; }
     virtual bool is_closed() const { return true; } // TODO

@@ -122,11 +122,6 @@ public:
         return b;
     }
 
-    /**
-     * Replace any \p UnknownTypeNode%s within this Unifiable with their instances
-     * and set the representatives of these nodes to their instances
-     */
-    virtual void refine() const = 0;
     /// A \p Unifiable is known if it does not contain any \p UnknownTypeNode%s
     virtual bool is_known() const = 0;
 
@@ -135,7 +130,6 @@ public:
 protected:
     std::string type_vars_to_string() const;
     bool unify_type_vars(thorin::ArrayRef<TypeVar>) const;
-    void refine_type_vars() const;
     bool type_vars_known() const;
 
 private:

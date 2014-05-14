@@ -67,24 +67,6 @@ bool BoundNode::infer(const Unifiable* unifiable) const {
     return false;
 }
 
-void BoundNode::refine() const {
-#if 0
-    // TODO review this code
-    for (size_t i = 1, e = num_type_args(); i != e; ++i) {
-        auto v = trait()->type_var(i);
-        auto t = type_arg(i);
-
-        if (auto utn = t->isa<UnknownTypeNode>()) {
-            assert(utn->is_instantiated());
-            utn->instance()->refine();
-            //var_instances_[v.node()] = utn;
-            type_args_[i] = Type(utn);
-        } else
-            t->refine();
-    }
-#endif
-}
-
 bool BoundNode::is_known() const {
     for (auto type_arg : type_args()) {
         if (!type_arg->is_known())

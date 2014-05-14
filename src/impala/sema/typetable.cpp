@@ -52,8 +52,6 @@ bool TypeTable::unify(const Unifiable* unifiable) {
         return res;
     }
 
-    unifiable->refine();
-
     auto i = unifiables_.find(unifiable);
     if (i != unifiables_.end()) {
         auto repr = *i;

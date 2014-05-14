@@ -108,22 +108,17 @@ public:
         return elems_.empty();
     }
 
-    virtual void refine() const override;
     virtual bool is_known() const override;
-
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
     virtual bool infer(const Unifiable*) const override;
-
     virtual void add_impl(Impl) const;
     virtual bool implements(Bound, SpecializeMap&) const;
     virtual Type find_method(Symbol s) const;
-
     virtual bool is_generic() const {
         assert (!elems_.empty() || type_vars_.empty());
         return Unifiable::is_generic();
     }
-
     virtual bool is_closed() const;
     virtual bool is_sane() const;
 
@@ -156,18 +151,13 @@ public:
     virtual const Type elem(size_t i) const { assert(is_instantiated()); return instance()->elem(i); }
     virtual size_t size() const { return is_instantiated() ? instance()->size() : 0; }
     virtual bool is_empty() const { return !is_instantiated() || instance()->is_empty(); }
-
-    virtual void refine() const override { assert(false); }
     virtual bool is_known() const override { return false; }
-
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
     virtual bool infer(const Unifiable*) const override;
-
     virtual void add_impl(Impl) const { assert(false); }
     virtual bool implements(Bound bound, SpecializeMap& map) const { return is_instantiated() && instance()->implements(bound, map); }
     virtual Type find_method(Symbol s) const { assert(is_instantiated()); return instance()->find_method(s); }
-
     virtual size_t num_type_vars() const { return is_instantiated() ? instance()->num_type_vars() : 0; }
     virtual thorin::ArrayRef<TypeVar> type_vars() const { return is_instantiated() ? instance()->type_vars() : thorin::ArrayRef<TypeVar>(); }
     virtual TypeVar type_var(size_t i) const { assert(is_instantiated()); return instance()->type_var(i); }
@@ -175,7 +165,6 @@ public:
     virtual bool is_generic() const { assert(type_vars_.empty()); return is_instantiated() ? instance()->is_generic() : false; }
     virtual bool is_closed() const { assert(!is_instantiated() || instance()->is_closed()); return true; }
     virtual bool is_sane() const { return is_instantiated() && instance()->is_sane(); }
-
     bool is_instantiated() const { return !instance_.empty(); }
     Type instance() const { return instance_; }
     void instantiate(Type instance) const { assert(!is_instantiated()); instance_ = instance; }

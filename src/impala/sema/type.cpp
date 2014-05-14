@@ -110,7 +110,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
             // find out which of impl's type_vars match to which of impl->bounds' type_args
             for (auto type_var : impl->type_vars()) {
                 for (size_t i = 0, e = impl->bound()->num_type_args(); i != e; ++i) {
-                    if (type_var.as<Type>() == impl->bound()->type_arg(i))
+                    if (type_var.as<Type>() == impl->bound()->type_arg(i) && !bound->type_arg(i)->isa<UnknownTypeNode>())
                         map[*type_var] = *bound->type_arg(i); // map this to bound's corresponding type_arg
                 }
             }
@@ -254,21 +254,6 @@ TypeVar TypeVarNode::specialize_bounds(SpecializeMap& map) const {
 }
 
 //------------------------------------------------------------------------------
-
-void KnownTypeNode::refine() const {
-    refine_type_vars();
-    for (size_t i = 0; i < size(); ++i) {
-        Type e = elem(i);
-        if (auto utn = e.node()->isa<UnknownTypeNode>()) {
-            assert(utn->is_instantiated());
-            utn->instance()->refine();
-            const_cast<KnownTypeNode*>(this)->set(i, utn->instance());
-        } else {
-            e->refine();
-        }
-    }
-
-}
 
 bool KnownTypeNode::is_known() const {
     bool result = type_vars_known();
