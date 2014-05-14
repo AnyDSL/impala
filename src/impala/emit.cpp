@@ -49,11 +49,12 @@ public:
             decl->var_ = decl->emit(*this); 
         return decl->var_;
     }
-    thorin::Type convert(Type type) { 
-        if (!type->thorin_type_)
-            type->thorin_type_ = type->convert(*this);
-        return type->thorin_type_;
+    thorin::Type convert(const Unifiable* unifiable) { 
+        if (!unifiable->thorin_type_)
+            unifiable->thorin_type_ = unifiable->convert(*this);
+        return unifiable->thorin_type_;
     }
+    thorin::Type convert(Type type) { return convert(*type); }
 
     const Fn* cur_fn;
 };
@@ -148,7 +149,15 @@ thorin::Type StructTypeNode::convert(CodeGen& cg) const {
 }
 
 thorin::Type TraitNode::convert(CodeGen& cg) const {
-    return thorin::Type();
+    std::vector<thorin::Type> elems;
+
+    for (auto super_bound : super_bounds())
+        elems.push_back(cg.convert(*super_bound));
+
+    for (auto method : trait_decl()->methods())
+        elems.push_back(cg.convert(method->type()));
+
+    return cg.world().tuple_type(elems);
 }
 
 thorin::Type BoundNode::convert(CodeGen& cg) const {

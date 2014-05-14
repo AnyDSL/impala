@@ -325,7 +325,7 @@ public:
     TypeVar specialize_bounds(SpecializeMap&) const;
 
 private:
-    virtual thorin::Type convert(CodeGen&) const { assert(false && "TODO"); return thorin::Type(); }
+    virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
 
     Symbol name_;
     mutable UniSet<Bound> bounds_;///< All traits that restrict the instantiation of this variable.
