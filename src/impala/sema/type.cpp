@@ -119,26 +119,49 @@ static bool search_up(std::queue<Bound>& queue, UniSet<Bound>& done, Bound bound
 }
 
 bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
-    std::queue<Trait> queue;
-    UniSet<Trait> done;
+    // HINT maybe we need to copy the map for each specialization run
+    std::queue<Bound> queue;
+    UniSet<Bound> done;
+    queue.push(bound);
+    done.insert(bound);
 
-    for (auto impl : bound->trait()->type2impls(Type(this))) {
-        auto tmp_map = map;
-        // find out which of impl's type_vars match to which of impl->bounds' type_args
-        for (size_t i = 0, e = impl->num_type_vars(); i != e; ++i) {
-            for (size_t j = 0, e = impl->bound()->num_type_args(); j != e; ++j) {
-                if (impl->type_var(i).as<Type>() == impl->bound()->type_arg(j))
-                    tmp_map[*impl->type_var(i)] = *bound->type_arg(j); // map this to bound's corresponding type_arg
+    while (!queue.empty()) {
+        auto bound = queue.front();
+        queue.pop();
+
+        for (auto impl : bound->trait()->type2impls(Type(this))) {
+            // find out which of impl's type_vars match to which of impl->bounds' type_args
+            for (auto type_var : impl->type_vars()) {
+                for (size_t i = 0, e = impl->bound()->num_type_args(); i != e; ++i) {
+                    if (type_var.as<Type>() == impl->bound()->type_arg(i))
+                        map[*type_var] = *bound->type_arg(i); // map this to bound's corresponding type_arg
+                }
             }
+
+            if (impl->specialize(map)->bound() == bound)
+                return true;
         }
 
-        if (impl->specialize(tmp_map)->bound() == bound)
-            return true;
-    }
+        // may be one of bound->trait's subtraits implements 'this'
+        for (auto sub_trait : bound->trait()->sub_traits()) {
+            auto super_bound = sub_trait->super_bound(bound->trait());
+            thorin::Array<Type> new_type_args(sub_trait->num_type_vars());
+            for (size_t i = 0, e = sub_trait->num_type_vars(); i != e; ++i) {
+                for (size_t j = 0, e = super_bound->num_type_args(); j != e; ++j) {
+                    if (sub_trait->type_var(i).as<Type>() == super_bound->type_arg(j))
+                        new_type_args[i] = bound->type_arg(i);
+                }
 
-    // may be one of bound->trait's subtraits implements 'this'
-    for (auto sub_trait : bound->trait()->sub_traits()) {
-        // TODO
+                if (new_type_args[i].empty())
+                    new_type_args[i] = typetable().unknown_type();
+            }
+
+            auto sub_bound = sub_trait->instantiate(new_type_args);
+            if (!done.contains(sub_bound)) {
+                queue.push(sub_bound);
+                done.insert(sub_bound);
+            }
+        }
     }
 
     return false;

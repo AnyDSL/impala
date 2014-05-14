@@ -18,6 +18,13 @@ bool TraitNode::add_super_bound(Bound bound) const {
     return p.second;
 }
 
+Bound TraitNode::super_bound(Trait trait) const {
+    for (auto super : super_bounds())
+        if (super->trait() == trait)
+            return super;
+    return Bound();
+}
+
 Type TraitNode::find_method(Symbol name) const {
     auto i = trait_decl()->method_table().find(name);
     if (i != trait_decl()->method_table().end())
