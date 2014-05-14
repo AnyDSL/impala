@@ -317,7 +317,7 @@ SpecializeMap specialize_map(const Unifiable* unifiable, thorin::ArrayRef<Type> 
     return map;
 }
 
-Type specialize_unknown(Type type, std::vector<Type>& type_args) {
+Type instantiate_unknown(Type type, std::vector<Type>& type_args) {
     for (size_t i = 0, e = type->num_type_vars(); i != e;  ++i) 
         type_args.push_back(type->typetable().unknown_type());
     auto map = specialize_map(type, type_args);
@@ -336,34 +336,33 @@ Type TypeNode::specialize(SpecializeMap& map) const {
     auto t = vspecialize(map);
 
     for (auto v : type_vars())
-        t->bind(TypeVar(map[*v]->as<TypeVarNode>()));
+        t->bind(map[*v]->as<TypeVarNode>());
 
     return t;
 }
 
-thorin::Array<Type> CompoundTypeNode::specialize_elems(SpecializeMap& map) const {
+thorin::Array<Type> TypeNode::specialize_elems(SpecializeMap& map) const {
     thorin::Array<Type> nelems(size());
     for (size_t i = 0, e = size(); i != e; ++i)
         nelems[i] = elem(i)->specialize(map);
     return nelems;
 }
 
-const TypeNode* UnknownTypeNode::vspecialize(SpecializeMap& map) const { assert(false); return nullptr; }
-const TypeNode* TypeErrorNode::vspecialize(SpecializeMap& map) const { return map[this] = typetable().type_error().node(); }
-const TypeNode* NoRetTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = typetable().type_noret().node(); }
-const TypeNode* PrimTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = typetable().type(primtype_kind()).node(); }
-const TypeNode* FnTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = typetable().fn_type(specialize_elems(map)).node(); }
-const TypeNode* TupleTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = typetable().tuple_type(specialize_elems(map)).node(); }
-const TypeNode* StructTypeNode::vspecialize(SpecializeMap& map) const { assert(false); return nullptr; }
-const TypeNode* TypeVarNode::vspecialize(SpecializeMap& map) const { return map[this] = this; }
+Type UnknownTypeNode::vspecialize(SpecializeMap& map) const { assert(false); return nullptr; }
+Type TypeErrorNode::vspecialize(SpecializeMap& map) const { return map[this] = *typetable().type_error(); }
+Type NoRetTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = *typetable().type_noret(); }
+Type PrimTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = *typetable().type(primtype_kind()); }
+Type FnTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = *typetable().fn_type(specialize_elems(map)); }
+Type TupleTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = *typetable().tuple_type(specialize_elems(map)); }
+Type StructTypeNode::vspecialize(SpecializeMap& map) const { assert(false); return nullptr; }
+Type TypeVarNode::vspecialize(SpecializeMap& map) const { return map[this] = this; }
 
 TypeVar TypeVarNode::specialize_bounds(SpecializeMap& map) const {
-    TypeVar v = typetable().type_var();
-    map[this] = v.node();
+    auto type_var = typetable().type_var();
+    map[this] = *type_var;
     for (auto b : bounds())
-        v->add_bound(b->specialize(map));
-
-    return v;
+        type_var->add_bound(b->specialize(map));
+    return type_var;
 }
 
 FnType FnTypeNode::specialize_method(Type t) const {
@@ -395,16 +394,15 @@ Impl ImplNode::specialize(SpecializeMap& map) const {
  * infer
  */
 
-bool KnownTypeNode::infer(const Unifiable* other) const {
-    if (auto ktn = other->isa<KnownTypeNode>()) {
-        bool result = this->kind() == ktn->kind() && this->num_type_vars() == other->num_type_vars() 
-            && size() == ktn->size();
-        if (result) {
-            // TODO handle type vars
-            for (size_t i = 0, e = size(); i != e && result; ++i)
-                result &= elem(i)->infer(ktn->elem(i));
-            return result;
-        }
+bool KnownTypeNode::infer(const Unifiable* unifiable) const {
+    if (auto other = unifiable->isa<KnownTypeNode>()) {
+        bool result = this->kind() == other->kind() 
+            && this->num_type_vars() == other->num_type_vars() 
+            && size() == other->size();
+        // TODO handle type vars
+        for (size_t i = 0, e = size(); i != e && result; ++i)
+            result &= elem(i)->infer(other->elem(i));
+        return result;
     }
     return false;
 }
@@ -622,14 +620,14 @@ std::string PrimTypeNode::to_string() const {
     }
 }
 
-std::string CompoundTypeNode::elems_to_string() const {
+std::string TypeNode::elems_to_string() const {
     std::string result;
 
     if (is_empty())
         return "()";
 
     const char* separator = "(";
-    for (auto elem : elems_) {
+    for (auto elem : elems()) {
         result += separator + elem->to_string();
         separator = ", ";
     }

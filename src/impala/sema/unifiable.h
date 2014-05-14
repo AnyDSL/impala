@@ -45,7 +45,7 @@ SpecializeMap specialize_map(Proxy<T> proxy, thorin::ArrayRef<Type> type_args) {
  * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
  * therefore it is important to call \p check_bounds after all unknowns have been resolved!
  */
-Type specialize_unknown(Type, std::vector<Type>&);
+Type instantiate_unknown(Type, std::vector<Type>&);
 
 //------------------------------------------------------------------------------
 
@@ -217,7 +217,9 @@ protected:
         : Unifiable(typetable)
     {}
 
+    thorin::Array<Type> specialize_elems(SpecializeMap&) const;
     void convert_elems(CodeGen& world, std::vector<thorin::Type>& nelems) const;
+    std::string elems_to_string() const;
 
 public:
     virtual Kind kind() const = 0;
@@ -247,7 +249,7 @@ public:
     virtual bool is_sane() const = 0;
     Type specialize() const { SpecializeMap map; return specialize(map); }
     Type specialize(SpecializeMap&) const;
-    virtual const TypeNode* vspecialize(SpecializeMap&) const = 0;
+    virtual Type vspecialize(SpecializeMap&) const = 0;
 };
 
 class KnownTypeNode : public TypeNode {
@@ -293,7 +295,6 @@ protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
 
     friend class BoundNode;
-    friend class CompoundTypeNode;
     friend class TypeTable;
 };
 
@@ -304,7 +305,7 @@ private:
     {}
 
 protected:
-    virtual const TypeNode* vspecialize(SpecializeMap&) const;
+    virtual Type vspecialize(SpecializeMap&) const;
 
 public:
     virtual Kind kind() const { return is_instantiated() ? instance()->kind() : Type_unknown; }
@@ -349,7 +350,7 @@ private:
     {}
 
 protected:
-    virtual const TypeNode* vspecialize(SpecializeMap&) const;
+    virtual Type vspecialize(SpecializeMap&) const;
 
 public:
     virtual bool is_error() const override { return true; }
@@ -368,7 +369,7 @@ private:
     {}
 
 protected:
-    virtual const TypeNode* vspecialize(SpecializeMap&) const;
+    virtual Type vspecialize(SpecializeMap&) const;
 
 public:
     virtual bool is_noret() const override { return true; }
@@ -389,7 +390,7 @@ private:
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
 
 protected:
-    virtual const TypeNode* vspecialize(SpecializeMap&) const;
+    virtual Type vspecialize(SpecializeMap&) const;
 
 public:
     virtual std::string to_string() const;
@@ -400,29 +401,17 @@ private:
     friend class TypeTable;
 };
 
-class CompoundTypeNode : public KnownTypeNode {
-protected:
-    CompoundTypeNode(TypeTable& typetable, Kind kind, thorin::ArrayRef<Type> elems)
-        : KnownTypeNode(typetable, kind, elems.size())
-    {
-        size_t i = 0;
-        for (auto elem : elems)
-            set(i++, elem);
-    }
-
-    std::string elems_to_string() const;
-
-    thorin::Array<Type> specialize_elems(SpecializeMap&) const;
-};
-
-class FnTypeNode : public CompoundTypeNode {
+class FnTypeNode : public KnownTypeNode {
 private:
     FnTypeNode(TypeTable& typetable, thorin::ArrayRef<Type> elems)
-        : CompoundTypeNode(typetable, Type_fn, elems)
-    {}
+        : KnownTypeNode(typetable, Type_fn, elems.size())
+    {
+        for (size_t i = 0, e = elems.size(); i != e; ++i)
+            set(i, elems[i]);
+    }
 
 protected:
-    virtual const TypeNode* vspecialize(SpecializeMap&) const;
+    virtual Type vspecialize(SpecializeMap&) const;
 
 public:
     Type return_type() const;
@@ -435,14 +424,17 @@ private:
     friend class TypeTable;
 };
 
-class TupleTypeNode : public CompoundTypeNode {
+class TupleTypeNode : public KnownTypeNode {
 private:
     TupleTypeNode(TypeTable& typetable, thorin::ArrayRef<Type> elems)
-        : CompoundTypeNode(typetable, Type_tuple, elems)
-    {}
+        : KnownTypeNode(typetable, Type_tuple, elems.size())
+    {
+        for (size_t i = 0, e = elems.size(); i != e; ++i)
+            set(i, elems[i]);
+    }
 
 protected:
-    virtual const TypeNode* vspecialize(SpecializeMap&) const;
+    virtual Type vspecialize(SpecializeMap&) const;
 
 public:
     virtual std::string to_string() const { return type_vars_to_string() + elems_to_string(); }
@@ -458,7 +450,7 @@ private:
     StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl);
 
 protected:
-    virtual const TypeNode* vspecialize(SpecializeMap&) const;
+    virtual Type vspecialize(SpecializeMap&) const;
 
 public:
     const StructDecl* struct_decl() const { return struct_decl_; }
@@ -513,7 +505,7 @@ private:
     mutable const TypeVarNode* equiv_;///< Used to define equivalence constraints when checking equality of types.
 
 protected:
-    virtual const TypeNode* vspecialize(SpecializeMap&) const;
+    virtual Type vspecialize(SpecializeMap&) const;
 
     friend class TypeTable;
     friend void Unifiable::bind(TypeVar) const;               // maybe we can design things better to avoid this friend
