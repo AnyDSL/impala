@@ -428,7 +428,6 @@ bool BoundNode::infer(const Unifiable* unifiable) const {
     return false;
 }
 
-
 //------------------------------------------------------------------------------
 
 /*

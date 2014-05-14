@@ -25,10 +25,10 @@ PrimType TypeTable::type(const PrimTypeKind kind) {
 }
 
 const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
+    assert(unifiable->is_closed() && "only closed unifiables can be unified!");
+
     if (unifiable->is_unified())
         return unifiable->representative();
-
-    assert(unifiable->is_closed() && "only closed unifiables can be unified!");
 
     if (auto utn = unifiable->isa<UnknownTypeNode>())
         return utn->representative_ = *unify(utn->instance());
