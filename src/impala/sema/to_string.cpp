@@ -43,14 +43,14 @@ std::string TraitNode::to_string() const { return is_error_trait() ? "<trait err
 std::string BoundNode::to_string() const {
     std::string result = trait()->to_string();
 
-    assert(!args_.empty());
-    if (args_.size() == 1)
+    assert(!type_args_.empty());
+    if (type_args_.size() == 1)
         return result;
 
-    assert(args_.size() == trait()->num_type_vars());
+    assert(type_args_.size() == trait()->num_type_vars());
     const char* separator = "[";
     for (size_t i = 1; i < trait()->num_type_vars(); ++i) {
-        result += separator + arg(i)->to_string();
+        result += separator + type_arg(i)->to_string();
         separator = ",";
     }
 

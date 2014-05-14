@@ -97,9 +97,9 @@ bool TraitNode::equal(const Unifiable* other) const {
 bool BoundNode::equal(const Unifiable* other) const {
     if (auto bound = other->isa<BoundNode>()) {
         if (this->trait() == bound->trait()) {
-            assert(this->num_args() == bound->num_args());
-            for (size_t i = 0, e = num_args(); i != e; ++i) {
-                if (!this->arg(i)->equal(*bound->arg(i)))
+            assert(this->num_type_args() == bound->num_type_args());
+            for (size_t i = 0, e = num_type_args(); i != e; ++i) {
+                if (!this->type_arg(i)->equal(*bound->type_arg(i)))
                     return false;
             }
             return true;

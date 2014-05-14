@@ -105,7 +105,7 @@ static bool search_up(std::queue<Bound>& queue, UniSet<Bound>& done, Bound bound
 
         for (auto super_bound : impl_bound->trait()->super_bounds()) {
             // propagate self type param
-            map[*super_bound->arg(0)] = *impl_bound->arg(0);
+            map[*super_bound->type_arg(0)] = *impl_bound->type_arg(0);
             auto spec_super_bound = super_bound->specialize(map);
             spec_super_bound->unify();
             if (!done.contains(spec_super_bound)) {
@@ -119,26 +119,29 @@ static bool search_up(std::queue<Bound>& queue, UniSet<Bound>& done, Bound bound
 }
 
 bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
+    std::queue<Trait> queue;
+    UniSet<Trait> done;
+
     for (auto impl : bound->trait()->type2impls().find(Type(this))->second) {
+        auto tmp_map = map;
+        // find out which of impl's type_vars match to which of impl->bounds' type_args
         for (size_t i = 0, e = impl->num_type_vars(); i != e; ++i) {
-            for (size_t j = 0, e = impl->bound()->num_args(); j != e; ++j) {
-                if (impl->type_var(i).as<Type>() == impl->bound()->arg(j)) {
-                    std::cout << "yes" << std::endl;
-                }
+            for (size_t j = 0, e = impl->bound()->num_type_args(); j != e; ++j) {
+                if (impl->type_var(i).as<Type>() == impl->bound()->type_arg(j))
+                    tmp_map[*impl->type_var(i)] = *bound->type_arg(j); // map this to bound's corresponding type_arg
             }
         }
 
+        if (impl->specialize(tmp_map)->bound() == bound)
+            return true;
     }
-    return true;
 
-    std::queue<Bound> queue;
-    UniSet<Bound> done;
-
-    for (auto impl : impls()) {
-        queue.push(impl->bound());
-        done.insert(impl->bound());
+    // may be one of bound->trait's subtraits implements 'this'
+    for (auto sub_trait : bound->trait()->sub_traits()) {
+        // TODO
     }
-    return search_up(queue, done, bound, map);
+
+    return false;
 }
 
 bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {

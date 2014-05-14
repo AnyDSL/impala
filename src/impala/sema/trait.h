@@ -67,13 +67,13 @@ protected:
 /// An instance of a trait is a trait where all type variables are instantiated by concrete types.
 class BoundNode : public Unifiable {
 private:
-    BoundNode(const Trait trait, thorin::ArrayRef<Type> args);
+    BoundNode(const Trait trait, thorin::ArrayRef<Type> type_args);
 
 public:
     const Trait trait() const { return trait_; }
-    const Type arg(size_t i) const { return args_[i]; }
-    thorin::ArrayRef<Type> args() const { return args_; }
-    size_t num_args() const { return args_.size(); }
+    const Type type_arg(size_t i) const { return type_args_[i]; }
+    thorin::ArrayRef<Type> type_args() const { return type_args_; }
+    size_t num_type_args() const { return type_args_.size(); }
     Type find_method(Symbol name) const;
     virtual bool equal(const Unifiable* other) const override;
     virtual size_t hash() const override;
@@ -86,7 +86,7 @@ public:
 
 private:
     const Trait trait_;
-    thorin::Array<Type> args_;
+    thorin::Array<Type> type_args_;
 
     friend class TypeTable;
 };
