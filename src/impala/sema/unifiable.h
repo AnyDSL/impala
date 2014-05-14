@@ -39,6 +39,12 @@ SpecializeMap specialize_map(const Unifiable*, thorin::ArrayRef<Type>);
 template<class T>
 SpecializeMap specialize_map(Proxy<T> proxy, thorin::ArrayRef<Type> type_args) { return specialize_map(*proxy, type_args); }
 
+/**
+ * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
+ * therefore it is important to call \p check_bounds after all unknowns have been resolved!
+ */
+Type specialize_unknown(Type, std::vector<Type>&);
+
 //------------------------------------------------------------------------------
 
 template<class T>

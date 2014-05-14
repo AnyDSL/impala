@@ -110,17 +110,15 @@ Type FnTypeNode::return_type() const {
     return typetable().type_noret();
 }
 
-void TypeVarNode::add_bound(Bound bound) const {
-    assert(!is_closed() && "closed type variables must not be changed!");
-    bounds_.insert(bound);
-}
-
 StructTypeNode::StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl)
     : KnownTypeNode(typetable, Type_tuple, struct_decl->fields().size())
     , struct_decl_(struct_decl)
 {}
 
-//------------------------------------------------------------------------------
+void TypeVarNode::add_bound(Bound bound) const {
+    assert(!is_closed() && "closed type variables must not be changed!");
+    bounds_.insert(bound);
+}
 
 bool TraitNode::add_super_bound(Bound bound) const {
     auto p = super_bounds_.insert(bound);
@@ -135,35 +133,8 @@ Bound TraitNode::super_bound(Trait trait) const {
     return Bound();
 }
 
-Type TraitNode::find_method(Symbol name) const {
-    auto i = trait_decl()->method_table().find(name);
-    if (i != trait_decl()->method_table().end())
-        return i->second->type();
-
-    for (auto super : super_bounds()) {
-        if (auto type = super->find_method(name))
-            return type;
-    }
-
-    return Type();
-}
-
 void TraitNode::add_impl(Impl impl) const {
     type2impls_[impl->type()].push_back(impl);
-}
-
-//------------------------------------------------------------------------------
-
-Type BoundNode::find_method(Symbol name) const {
-    // TODO cache found methods
-    if (auto type = trait()->find_method(name)) {
-        SpecializeMap map;
-        for (size_t i = 0, e = num_type_args(); i != e; ++i)
-            map[*trait()->type_var(i)] = *type_arg(i);
-        return type->specialize(map);
-    }
-
-    return Type();
 }
 
 //------------------------------------------------------------------------------
@@ -344,6 +315,13 @@ SpecializeMap specialize_map(const Unifiable* unifiable, thorin::ArrayRef<Type> 
         map[*v] = *type_args[i++];
     assert(map.size() == type_args.size());
     return map;
+}
+
+Type specialize_unknown(Type type, std::vector<Type>& type_args) {
+    for (size_t i = 0, e = type->num_type_vars(); i != e;  ++i) 
+        type_args.push_back(type->typetable().unknown_type());
+    auto map = specialize_map(type, type_args);
+    return type->vspecialize(map);
 }
 
 Type TypeNode::specialize(SpecializeMap& map) const {
@@ -572,6 +550,31 @@ Type TypeVarNode::find_method(Symbol name) const {
     return Type();
 }
 
+Type TraitNode::find_method(Symbol name) const {
+    auto i = trait_decl()->method_table().find(name);
+    if (i != trait_decl()->method_table().end())
+        return i->second->type();
+
+    for (auto super : super_bounds()) {
+        if (auto type = super->find_method(name))
+            return type;
+    }
+
+    return Type();
+}
+
+Type BoundNode::find_method(Symbol name) const {
+    // TODO cache found methods
+    if (auto type = trait()->find_method(name)) {
+        SpecializeMap map;
+        for (size_t i = 0, e = num_type_args(); i != e; ++i)
+            map[*trait()->type_var(i)] = *type_arg(i);
+        return type->specialize(map);
+    }
+
+    return Type();
+}
+
 //------------------------------------------------------------------------------
 
 /*
@@ -608,25 +611,8 @@ std::string Unifiable::type_vars_to_string() const {
     return result + ']';
 }
 
-//std::string UnknownTypeNode::to_string() const { return is_instantiated() ? std::string("[") + std::to_string(id_) + instance()->to_string() + "]" : (std::string("?") + std::to_string(id_)); }
-std::string UnknownTypeNode::to_string() const { return is_instantiated() ? instance()->to_string() : (std::string("?") + std::to_string(id())); }
-std::string TraitNode::to_string() const { return is_error_trait() ? "<trait error>" : trait_decl()->symbol().str(); }
-
-std::string BoundNode::to_string() const {
-    std::string result = trait()->to_string();
-
-    assert(!type_args_.empty());
-    if (type_args_.size() == 1)
-        return result;
-
-    assert(type_args_.size() == trait()->num_type_vars());
-    const char* separator = "[";
-    for (size_t i = 1; i < trait()->num_type_vars(); ++i) {
-        result += separator + type_arg(i)->to_string();
-        separator = ",";
-    }
-
-    return result + "]";
+std::string UnknownTypeNode::to_string() const { 
+    return is_instantiated() ? instance()->to_string() : (std::string("?") + std::to_string(id())); 
 }
 
 std::string PrimTypeNode::to_string() const {
@@ -657,6 +643,25 @@ std::string TypeVarNode::to_string() const {
     } else {
         return std::string("_") + std::to_string(id()) + std::string("_");
     }
+}
+
+std::string TraitNode::to_string() const { return is_error_trait() ? "<trait error>" : trait_decl()->symbol().str(); }
+
+std::string BoundNode::to_string() const {
+    std::string result = trait()->to_string();
+
+    assert(!type_args_.empty());
+    if (type_args_.size() == 1)
+        return result;
+
+    assert(type_args_.size() == trait()->num_type_vars());
+    const char* separator = "[";
+    for (size_t i = 1; i < trait()->num_type_vars(); ++i) {
+        result += separator + type_arg(i)->to_string();
+        separator = ",";
+    }
+
+    return result + "]";
 }
 
 //------------------------------------------------------------------------------

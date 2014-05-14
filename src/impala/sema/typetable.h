@@ -8,8 +8,6 @@
 
 namespace impala {
 
-class TraitDecl;
-
 template<class T> struct TypetableHash {
     size_t operator () (const T* t) const { return t->hash(); }
 };
@@ -32,31 +30,24 @@ public:
     PrimType type(PrimTypeKind kind);
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
-    FnType fn_type(thorin::ArrayRef<Type> params) { return new_unifiable(new FnTypeNode(*this, params)); }
-    TupleType tuple_type(thorin::ArrayRef<Type> elems) { return new_unifiable(new TupleTypeNode(*this, elems)); }
+    FnType fn_type(thorin::ArrayRef<Type> params) { return join(new FnTypeNode(*this, params)); }
+    TupleType tuple_type(thorin::ArrayRef<Type> elems) { return join(new TupleTypeNode(*this, elems)); }
     TupleType unit() { return tuple_type({}); }
-    StructType struct_type(const StructDecl* struct_decl) { return new_unifiable(new StructTypeNode(*this, struct_decl)); }
-    TypeVar type_var(Symbol name = Symbol()) { return new_unifiable(new TypeVarNode(*this, name)); }
-    UnknownType unknown_type() { return new_unifiable(new UnknownTypeNode(*this)); }
-    Bound bound(Trait trait, thorin::ArrayRef<Type> args) { return new_unifiable(new BoundNode(trait, args)); }
-    Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
-    Impl impl(const ImplItem* impl, Bound bound, Type type) { return new_unifiable(new ImplNode(*this, impl, bound, type)); }
+    StructType struct_type(const StructDecl* struct_decl) { return join(new StructTypeNode(*this, struct_decl)); }
+    TypeVar type_var(Symbol name = Symbol()) { return join(new TypeVarNode(*this, name)); }
+    UnknownType unknown_type() { return join(new UnknownTypeNode(*this)); }
+    Bound bound(Trait trait, thorin::ArrayRef<Type> args) { return join(new BoundNode(trait, args)); }
+    Trait trait(const TraitDecl* trait_decl) { return join(new TraitNode(*this, trait_decl)); }
+    Impl impl(const ImplItem* impl, Bound bound, Type type) { return join(new ImplNode(*this, impl, bound, type)); }
 
     /// Unify a type and return its representative.
     template<class T> Proxy<T> unify(Proxy<T> proxy) { return unify(*proxy)->template as<T>(); }
     const Unifiable* unify(const Unifiable*);
-
-    /**
-     * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
-     * therefore it is important to call \p check_bounds after all unknowns have been resolved!
-     */
-    Type instantiate_unknown(Type, std::vector<Type>&);
-
     void verify() const; ///< Checks if all types in the type tables are sane and correctly unified.
 
 private:
     template<class T> 
-    Proxy<T> new_unifiable(T* tn) {
+    Proxy<T> join(T* tn) {
         garbage_.push_back(tn);
         return Proxy<T>(tn);
     }

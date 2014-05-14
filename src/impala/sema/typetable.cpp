@@ -5,11 +5,11 @@ namespace impala {
 //------------------------------------------------------------------------------
 
 TypeTable::TypeTable()
-    : type_error_(unify(new_unifiable(new TypeErrorNode(*this))))
+    : type_error_(unify(join(new TypeErrorNode(*this))))
     , trait_error_(unify(trait(nullptr)))
     , bound_error_(unify(bound(trait_error(), {})))
-    , type_noret_(unify(new_unifiable(new NoRetTypeNode(*this))))
-#define IMPALA_TYPE(itype, atype) , itype##_(unify(new_unifiable(new PrimTypeNode(*this, PrimType_##itype))))
+    , type_noret_(unify(join(new NoRetTypeNode(*this))))
+#define IMPALA_TYPE(itype, atype) , itype##_(unify(join(new PrimTypeNode(*this, PrimType_##itype))))
 #include "impala/tokenlist.h"
 {}
 
@@ -61,13 +61,6 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
         assert(p.second && "hash/equal broken");
         return unifiable;
     }
-}
-
-Type TypeTable::instantiate_unknown(Type type, std::vector<Type>& type_args) {
-    for (size_t i = 0, e = type->num_type_vars(); i != e;  ++i) 
-        type_args.push_back(unknown_type());
-    auto map = specialize_map(type, type_args);
-    return type->vspecialize(map);
 }
 
 void TypeTable::verify() const {

@@ -124,7 +124,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
         if (found_type->is_generic()) {
             // try to infer instantiations for this generic type
             std::vector<Type> type_args;
-            Type inst = instantiate_unknown(found_type, type_args);
+            Type inst = specialize_unknown(found_type, type_args);
             if (inst->infer(expected)) {
                 for (auto t : type_args)
                     expr->add_inferred_arg(unify(t));
@@ -678,7 +678,7 @@ Type StructExpr::check(TypeSema& sema, Type expected) const {
 Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Expr*> args, Type expected) {
     std::vector<Type> type_args;
     FnType ofn = lhs->type().as<FnType>();
-    FnType fn = ofn->is_generic() ? instantiate_unknown(ofn, type_args).as<FnType>() : ofn;
+    FnType fn = ofn->is_generic() ? specialize_unknown(ofn, type_args).as<FnType>() : ofn;
 
     bool no_cont = fn->size() == (args.size()+1); // true if this is a normal function call (no continuation)
     if (no_cont || (fn->size() == args.size())) {
