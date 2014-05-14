@@ -109,7 +109,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
         for (auto impl : bound->trait()->type2impls(Type(this))) {
             // find out which of impl's type_vars match to which of impl->bounds' type_args
             for (auto type_var : impl->type_vars()) {
-                for (size_t i = 0, e = impl->bound()->num_type_args(); i != e; ++i) {
+                for (size_t i = 0, e = impl->bound()->num_type_args(); i != e; ++i) { // TODO this is currently quadratic
                     if (type_var.as<Type>() == impl->bound()->type_arg(i) && !bound->type_arg(i)->isa<UnknownTypeNode>())
                         map[*type_var] = *bound->type_arg(i); // map this to bound's corresponding type_arg
                 }
@@ -124,7 +124,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
             auto super_bound = sub_trait->super_bound(bound->trait());
             thorin::Array<Type> new_type_args(sub_trait->num_type_vars());
             for (size_t i = 0, e = sub_trait->num_type_vars(); i != e; ++i) {
-                for (size_t j = 0, e = super_bound->num_type_args(); j != e; ++j) {
+                for (size_t j = 0, e = super_bound->num_type_args(); j != e; ++j) { // TODO this is currently quadratic
                     if (sub_trait->type_var(i).as<Type>() == super_bound->type_arg(j))
                         new_type_args[i] = bound->type_arg(j);
                 }
