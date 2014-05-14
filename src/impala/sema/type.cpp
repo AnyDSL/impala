@@ -1,6 +1,6 @@
 #include "impala/sema/type.h"
 
-#include <queue>
+#include "thorin/util/queue.h"
 
 #include "impala/ast.h"
 #include "impala/sema/trait.h"
@@ -103,16 +103,15 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     std::queue<Bound> queue;
     UniSet<Bound> done;
 
-    auto insert = [&] (Bound bound) { 
+    auto enqueue = [&] (Bound bound) { 
         queue.push(bound); 
         done.insert(bound); 
     };
 
-    insert(bound);
+    enqueue(bound);
 
     while (!queue.empty()) {
-        auto bound = queue.front();
-        queue.pop();
+        auto bound = thorin::pop(queue);
 
         for (auto impl : bound->trait()->type2impls(this)) {
             // find out which of impl's type_vars match to which of impl->bounds' type_args
@@ -147,7 +146,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
             auto sub_bound = sub_trait->instantiate(new_type_args);
             if (!done.contains(sub_bound)) {
                 assert(sub_bound->is_closed());
-                insert(sub_bound);
+                enqueue(sub_bound);
             }
         }
     }
