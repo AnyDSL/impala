@@ -337,9 +337,8 @@ Type TypeNode::specialize(SpecializeMap& map) const {
     }
 
     auto t = vspecialize(map);
-
-    for (auto v : type_vars())
-        t->bind(map[*v]->as<TypeVarNode>());
+    for (auto type_var : type_vars())
+        t->bind(map[*type_var]->as<TypeVarNode>());
 
     return t;
 }
