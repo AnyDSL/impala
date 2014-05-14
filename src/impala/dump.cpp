@@ -221,7 +221,7 @@ std::ostream& ImplItem::print(Printer& p) const {
     print_type_params(p) << ' ';
     if (trait())
         trait()->print(p) << " for ";
-    for_type()->print(p);
+    type()->print(p);
     p.stream() << " {";
     p.up();
     p.dump_list([&] (const FnDecl* method) { method->print(p); }, methods(), "", "", "", true);

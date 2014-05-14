@@ -665,7 +665,7 @@ class ImplItem : public Item, public TypeParamList {
 public:
     /// May be nullptr as trait is optional.
     const ASTType* trait() const { return trait_; }
-    const ASTType* for_type() const { return for_type_; }
+    const ASTType* type() const { return type_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
     virtual std::ostream& print(Printer&) const override;
 
@@ -675,7 +675,7 @@ private:
     virtual void emit_item(CodeGen&) const override;
 
     AutoPtr<const ASTType> trait_;
-    AutoPtr<const ASTType> for_type_;
+    AutoPtr<const ASTType> type_;
     AutoVector<const FnDecl*> methods_;
 
     friend class Parser;

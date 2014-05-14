@@ -243,7 +243,7 @@ void ImplItem::check_item(NameSema& sema) const {
     check_type_params(sema);
     if (trait())
         sema.check(trait());
-    sema.check(for_type());
+    sema.check(type());
     for (auto fn : methods())
         fn->check(sema);
     sema.pop_scope();

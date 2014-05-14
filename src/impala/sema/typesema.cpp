@@ -430,7 +430,7 @@ void TraitDecl::check_item(TypeSema& sema) const {
 
 void ImplItem::check_item(TypeSema& sema) const {
     check_type_params(sema);
-    Type for_type = sema.check(this->for_type());
+    Type for_type = sema.check(this->type());
 
     Bound bound;
     if (trait() != nullptr) {

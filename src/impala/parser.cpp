@@ -483,9 +483,9 @@ ImplItem* Parser::parse_impl() {
     auto type = parse_type();
     if (accept(Token::FOR)) {
         impl->trait_ = type;
-        impl->for_type_ = parse_type();
+        impl->type_ = parse_type();
     } else
-        impl->for_type_ = type;
+        impl->type_ = type;
     expect(Token::L_BRACE, "impl");
     while (la() == Token::FN)
         impl->methods_.push_back(parse_fn_decl(false)); 
