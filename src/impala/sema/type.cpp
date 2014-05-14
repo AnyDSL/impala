@@ -115,7 +115,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
                 }
             }
 
-            if (impl->specialize(map)->bound() == bound)
+            if (bound->unify_with(*impl->specialize(map)->bound()))
                 return true;
         }
 
