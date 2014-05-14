@@ -415,8 +415,8 @@ protected:
 
 public:
     Type return_type() const;
+    FnType peel_first() const;
     virtual std::string to_string() const { return std::string("fn") + type_vars_to_string() + elems_to_string(); }
-    FnType specialize_method(Type t) const;
 
 private:
     virtual thorin::Type convert(CodeGen&) const;

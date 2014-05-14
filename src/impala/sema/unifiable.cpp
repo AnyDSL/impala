@@ -109,6 +109,10 @@ Type FnTypeNode::return_type() const {
     return typetable().type_noret();
 }
 
+FnType FnTypeNode::peel_first() const {
+    return typetable().fn_type(elems().slice_from_begin(1));
+}
+
 StructTypeNode::StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl)
     : KnownTypeNode(typetable, Type_tuple, struct_decl->fields().size())
     , struct_decl_(struct_decl)
@@ -358,13 +362,6 @@ Type FnTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = *typ
 Type TupleTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = *typetable().tuple_type(specialize_elems(map)); }
 Type StructTypeNode::vspecialize(SpecializeMap& map) const { assert(false); return nullptr; }
 Type TypeVarNode::vspecialize(SpecializeMap& map) const { return map[this] = this; }
-
-FnType FnTypeNode::specialize_method(Type t) const {
-    assert(elem(0) == t);
-    FnType f = typetable().fn_type(elems().slice_from_begin(1));
-    typetable().unify(f.as<Type>());
-    return f;
-}
 
 Bound TraitNode::instantiate(thorin::ArrayRef<Type> type_args) const {
     return typetable().bound(this, type_args);

@@ -35,7 +35,7 @@ public:
     Type create_return_type(const ASTNode* node, Type ret_func);
 
     Bound instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> args);
-    Type specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> args);
+    Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> args);
     Type check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Expr*> args, Type expected);
 
     bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> types, SpecializeMap& map);
@@ -168,7 +168,7 @@ Bound TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::
     return bound_error();
 }
 
-Type TypeSema::specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> args) {
+Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> args) {
     if (args.size() == type->num_type_vars()) {
         std::vector<Type> type_args;
         for (auto t : args) 
@@ -540,7 +540,7 @@ Type PathExpr::check(TypeSema& sema, Type expected) const {
             return decl_type;
         } else {
             if (!decl_type->is_error())
-                return sema.specialize(last, decl_type, last->type_args());
+                return sema.instantiate(last, decl_type, last->type_args());
         }
     }
     return sema.type_error();
@@ -618,14 +618,14 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
         if (!fn->is_error()) {
             FnType func;
             if (!path_elem()->type_args().empty()) {
-                Type t = sema.specialize(path_elem(), fn, path_elem()->type_args());
+                Type t = sema.instantiate(path_elem(), fn, path_elem()->type_args());
                 func = t.as<FnType>();
             } else
                 func = fn.as<FnType>();
 
             if (func->size() >= 1) {
                 sema.expect_type(lhs(), func->elem(0), "object");
-                return func->specialize_method(lhs()->type());
+                return func->peel_first();
             } else
                 sema.error(this) << "cannot call a method without Self parameter";
         }
