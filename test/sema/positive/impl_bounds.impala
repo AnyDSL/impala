@@ -1,0 +1,3 @@
+trait T[X] {}
+trait U[Y: T[int]] {}
+impl[Z, W: U[Z]] T[bool] for int {}
