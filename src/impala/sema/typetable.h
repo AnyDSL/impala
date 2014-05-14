@@ -4,8 +4,7 @@
 #include "thorin/util/hash.h"
 
 #include "impala/sema/errorhandler.h"
-#include "impala/sema/type.h"
-#include "impala/sema/trait.h"
+#include "impala/sema/unifiable.h"
 
 namespace impala {
 

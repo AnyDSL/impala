@@ -14,7 +14,7 @@
 #include "impala/location.h"
 #include "impala/symbol.h"
 #include "impala/token.h"
-#include "impala/sema/type.h"
+#include "impala/sema/unifiable.h"
 
 namespace thorin {
     class Enter;

@@ -7,7 +7,7 @@
 
 #include "impala/impala.h"
 #include "impala/dump.h"
-#include "impala/sema/type.h"
+#include "impala/sema/unifiable.h"
 
 impala::Type llvm2impala(impala::TypeTable&, llvm::Type*);
 
