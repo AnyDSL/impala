@@ -122,7 +122,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     std::queue<Trait> queue;
     UniSet<Trait> done;
 
-    for (auto impl : bound->trait()->type2impls().find(Type(this))->second) {
+    for (auto impl : bound->trait()->type2impls(Type(this))) {
         auto tmp_map = map;
         // find out which of impl's type_vars match to which of impl->bounds' type_args
         for (size_t i = 0, e = impl->num_type_vars(); i != e; ++i) {

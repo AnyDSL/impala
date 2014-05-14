@@ -35,7 +35,7 @@ public:
     const TraitDecl* trait_decl() const { return trait_decl_; }
     const UniSet<Bound>& super_bounds() const { return super_bounds_; }
     const thorin::HashSet<const TraitNode*>& sub_traits() const { return sub_traits_; }
-    const UniMap<Type, std::vector<Impl>>& type2impls() const { return type2impls_; }
+    const std::vector<Impl>& type2impls(Type type) const { return type2impls_[type]; }
     const std::vector<Bound>& instances() const {return instances_; }
     bool is_error_trait() const { return trait_decl_ == nullptr; }
     bool add_super_bound(Bound) const;
