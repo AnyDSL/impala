@@ -330,7 +330,10 @@ Type TypeNode::specialize(SpecializeMap& map) const {
 
     for (auto type_var : type_vars()) {
         assert(!map.contains(*type_var));
-        type_var->specialize_bounds(map);
+        auto new_type_var = typetable().type_var();
+        map[*type_var] = *new_type_var;
+        for (auto bound : type_var->bounds())
+            new_type_var->add_bound(bound->specialize(map));
     }
 
     auto t = vspecialize(map);
@@ -356,14 +359,6 @@ Type FnTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = *typ
 Type TupleTypeNode::vspecialize(SpecializeMap& map) const { return map[this] = *typetable().tuple_type(specialize_elems(map)); }
 Type StructTypeNode::vspecialize(SpecializeMap& map) const { assert(false); return nullptr; }
 Type TypeVarNode::vspecialize(SpecializeMap& map) const { return map[this] = this; }
-
-TypeVar TypeVarNode::specialize_bounds(SpecializeMap& map) const {
-    auto type_var = typetable().type_var();
-    map[this] = *type_var;
-    for (auto b : bounds())
-        type_var->add_bound(b->specialize(map));
-    return type_var;
-}
 
 FnType FnTypeNode::specialize_method(Type t) const {
     assert(elem(0) == t);

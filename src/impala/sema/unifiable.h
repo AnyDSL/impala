@@ -490,7 +490,6 @@ public:
      */
     virtual bool is_closed() const;
     virtual bool is_sane() const { return is_closed(); }
-    TypeVar specialize_bounds(SpecializeMap&) const;
 
 private:
     virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
