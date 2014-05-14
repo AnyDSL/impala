@@ -127,7 +127,7 @@ thorin::Type PrimTypeNode::convert(CodeGen& cg) const {
     }
 }
 
-thorin::Type NoReturnTypeNode::convert(CodeGen& cg) const { return thorin::Type(); }
+thorin::Type NoRetTypeNode::convert(CodeGen& cg) const { return thorin::Type(); }
 
 thorin::Type FnTypeNode::convert(CodeGen& cg) const { 
     std::vector<thorin::Type> nelems;

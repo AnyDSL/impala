@@ -37,7 +37,7 @@ public:
     Proxy()
         : node_(nullptr)
     {}
-    explicit Proxy(const T* node)
+    Proxy(const T* node)
         : node_(node)
     {}
 
@@ -107,7 +107,7 @@ public:
     virtual std::string to_string() const = 0;
     virtual bool is_error() const { return false; }
     void set_representative(const Unifiable* repr) const;
-    bool unify() const;
+    const Unifiable* unify() const;
 
     /**
      * Try to fill in missing type information by matching this possibly incomplete Unifiable with a complete Unifiable.

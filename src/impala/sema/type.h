@@ -24,7 +24,7 @@ enum Kind {
 #include "impala/tokenlist.h"
     Type_error,
     Type_unknown,
-    Type_noReturn,
+    Type_noret,
     Type_fn,
     Type_tuple,
     Type_struct,
@@ -65,6 +65,7 @@ public:
 
     /// A type is closed if it contains no unbound type variables.
     virtual bool is_closed() const = 0;
+    virtual bool is_noret() const { return false; }
 
     /**
      * A type is sane if all type variables are bound correctly,
@@ -156,6 +157,8 @@ public:
     virtual bool is_generic() const { assert(type_vars_.empty()); return is_instantiated() ? instance()->is_generic() : false; }
     virtual bool is_closed() const { assert(!is_instantiated() || instance()->is_closed()); return true; }
     virtual bool is_sane() const { return is_instantiated() && instance()->is_sane(); }
+    virtual bool is_error() const override { return is_instantiated() ? instance()->is_error() : false; }
+    virtual bool is_noret() const override { return is_instantiated() ? instance()->is_noret() : false; }
     bool is_instantiated() const { return !instance_.empty(); }
     Type instance() const { return instance_; }
     void instantiate(Type instance) const { assert(!is_instantiated()); instance_ = instance; }
@@ -187,17 +190,18 @@ private:
     friend class TypeTable;
 };
 
-class NoReturnTypeNode : public KnownTypeNode {
+class NoRetTypeNode : public KnownTypeNode {
 private:
-    NoReturnTypeNode(TypeTable& typetable)
-        : KnownTypeNode(typetable, Type_noReturn, 0)
+    NoRetTypeNode(TypeTable& typetable)
+        : KnownTypeNode(typetable, Type_noret, 0)
     {}
 
 protected:
     virtual const TypeNode* vspecialize(SpecializeMap&) const;
 
 public:
-    virtual std::string to_string() const { return "<type no-return>"; }
+    virtual bool is_noret() const override { return true; }
+    virtual std::string to_string() const override { return "<no-return>"; }
 
 private:
     virtual thorin::Type convert(CodeGen&) const override;
@@ -347,7 +351,7 @@ protected:
 
 typedef Proxy<TypeErrorNode> TypeError;
 typedef Proxy<PrimTypeNode> PrimType;
-typedef Proxy<NoReturnTypeNode> NoReturnType;
+typedef Proxy<NoRetTypeNode> NoRetType;
 typedef Proxy<FnTypeNode> FnType;
 typedef Proxy<TupleTypeNode> TupleType;
 typedef Proxy<StructTypeNode> StructType;

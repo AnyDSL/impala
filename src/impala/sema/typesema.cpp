@@ -30,8 +30,8 @@ public:
 
     void expect_num(const Expr* exp);
     Type match_types(const ASTNode* pos, Type t1, Type t2);
-    Type expect_type(const Expr* expr, Type found, Type expected, std::string typetype);
-    Type expect_type(const Expr* expr, Type expected, std::string typetype) { return expect_type(expr, expr->type(), expected, typetype); }
+    Type expect_type(const Expr* expr, Type found, Type expected, std::string what);
+    Type expect_type(const Expr* expr, Type expected, std::string what) { return expect_type(expr, expr->type(), expected, what); }
     Type create_return_type(const ASTNode* node, Type ret_func);
 
     Bound instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> args);
@@ -61,11 +61,11 @@ public:
         return decl->type();
     }
     void check_item(const Item* item) { item->check_item(*this); }
-    Type check(const Expr* expr, Type expected, std::string typetype) {
+    Type check(const Expr* expr, Type expected, std::string what) {
         if (!expr->type_.empty())
             return expr->type_;
         Type inferred = expr->check(*this, expected);
-        return expr->type_ = expect_type(expr, inferred, expected, typetype);
+        return expr->type_ = expect_type(expr, inferred, expected, what);
     }
     Type check(const Expr* expr, Type expected) { return check(expr, expected, ""); }
     /// a check that does not expect any type (i.e. any type is allowed)
@@ -102,7 +102,7 @@ Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
     }
 }
 
-Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std::string typetype) {
+Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std::string what) {
     if (auto ut = expected.isa<UnknownType>()) {
         if (!ut->is_instantiated()) {
             if (found_type.isa<UnknownType>()) {
@@ -119,25 +119,23 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
         return found_type;
 
     if (found_type->is_error() || expected->is_error())
-        return Type(*expected);
+        return expected;
     if (found_type != expected) {
         if (found_type->is_generic()) {
             // try to infer instantiations for this generic type
             std::vector<Type> type_args;
             Type inst = instantiate_unknown(found_type, type_args);
             if (inst->infer(expected)) {
-                for (auto t : type_args) {
-                    assert(t.representative() != nullptr);
-                    expr->add_inferred_arg(Type(t.representative()));
-                }
+                for (auto t : type_args)
+                    expr->add_inferred_arg(unify(t));
 
                 check_bounds(expr, *found_type, expr->inferred_args());
-                return Type(*expected);
+                return expected;
             }
         }
-        error(expr) << "wrong " << typetype << " type; expected " << expected << " but found " << found_type << "\n";
+        error(expr) << "wrong " << what << " type; expected " << expected << " but found " << found_type << "\n";
     }
-    return Type(*expected);
+    return expected;
 }
 
 Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
@@ -178,9 +176,7 @@ Type TypeSema::specialize(const ASTNode* loc, Type type, thorin::ArrayRef<const 
 
         SpecializeMap map;
         check_bounds(loc, *type, type_args, map);
-        auto spec_type = type->vspecialize(map);
-        spec_type->unify();
-        return Type(spec_type);
+        return type->vspecialize(map);
     } else
         error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << type->num_type_vars() << "\n";
 
@@ -330,7 +326,7 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
 void Fn::check_body(TypeSema& sema, FnType fn_type) const {
     Type body_type = sema.check(body());
     if (!body_type->is_closed()) return; // FEATURE make this check faster - e.g. store a "potentially not closed" flag
-    if (body_type != sema.type_noreturn() && !body_type->is_error())
+    if (!body_type->is_noret() && !body_type->is_error())
         sema.expect_type(body(), fn_type->return_type(), "return");
 }
 
@@ -398,7 +394,6 @@ Type FnDecl::check(TypeSema& sema) const {
     for (auto tp : type_params())
         fn_type->bind(tp->type_var(sema));
     type_ = fn_type;
-    sema.unify(type_);
 
     if (body() != nullptr)
         check_body(sema, fn_type);
@@ -431,8 +426,6 @@ void TraitDecl::check_item(TypeSema& sema) const {
 
     for (auto m : methods())
         sema.check(m);
-
-    sema.unify(trait());
 }
 
 void ImplItem::check_item(TypeSema& sema) const {
@@ -503,7 +496,7 @@ Type BlockExpr::check(TypeSema& sema, Type expected) const {
         stmt->check(sema);
 
     sema.check(expr(), expected);
-    return expr() ? expr()->type() : Type(sema.unit());
+    return expr() ? expr()->type() : sema.unit().as<Type>();
 }
 
 Type LiteralExpr::check(TypeSema& sema, Type expected) const {
@@ -530,7 +523,6 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
             par_types.push_back(sema.check(param));
 
         fn_type = sema.fn_type(par_types);
-        sema.unify(fn_type);
     }
 
     assert(body() != nullptr);
@@ -627,7 +619,6 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
             FnType func;
             if (!path_elem()->type_args().empty()) {
                 Type t = sema.specialize(path_elem(), fn, path_elem()->type_args());
-                sema.unify(t);
                 func = t.as<FnType>();
             } else
                 func = fn.as<FnType>();
@@ -703,8 +694,7 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
             for (size_t i = 0; i < type_args.size(); ++i) {
                 UnknownType ut = type_args[i].isa<UnknownType>();
                 if (!ut || ut->is_instantiated()) {
-                    unify(type_args[i]);
-                    lhs->add_inferred_arg(Type(type_args[i].representative()));
+                    lhs->add_inferred_arg(unify(type_args[i]));
                 } else {
                     error(whole) << "could not find instance for type variable #" << i << ".\n";
                     no_error = false;
@@ -719,7 +709,7 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
         if (no_cont) // return type
             return create_return_type(whole, fn->elems().back()); 
         else        // same number of args as params -> continuation call
-            return type_noreturn();
+            return type_noret();
     } else
         error(whole) << "wrong number of arguments\n";
     return type_error();
@@ -727,7 +717,6 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
 
 Type MapExpr::check(TypeSema& sema, Type expected) const {
     Type lhst = sema.check(lhs());
-    sema.unify(lhst);
 
     if (auto ofn = lhst.isa<FnType>()) {
         return sema.check_call(lhs(), this, args(), expected);
@@ -743,7 +732,7 @@ Type IfExpr::check(TypeSema& sema, Type expected) const {
     sema.check(cond(), sema.type_bool(), "condition");
     Type then_type = sema.check(then_expr(), sema.unknown_type());
     Type else_type = sema.check(else_expr(), sema.unknown_type());
-    Type type = then_type.isa<NoReturnType>() ? else_type : then_type;
+    Type type = then_type->is_noret() ? else_type : then_type;
     if (!type->is_error())
         return sema.expect_type(this, type, expected, "if expression");
     else
@@ -753,7 +742,6 @@ Type IfExpr::check(TypeSema& sema, Type expected) const {
 Type ForExpr::check(TypeSema& sema, Type expected) const {
     if (auto map = expr()->isa<MapExpr>()) {
         Type lhst = sema.check(map->lhs());
-        sema.unify(lhst);
 
         if (auto ofn = lhst.isa<FnType>()) {
             Array<const Expr*> args(map->args().size()+1);
@@ -775,7 +763,7 @@ Type ForExpr::check(TypeSema& sema, Type expected) const {
  */
 
 void ExprStmt::check(TypeSema& sema) const {
-    if (sema.check(expr()) == sema.type_noreturn())
+    if (sema.check(expr())->is_noret())
         sema.error(expr()) << "expression does not return rendering subsequent statements unreachable\n";
 }
 

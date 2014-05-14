@@ -29,7 +29,7 @@ public:
     TypeError type_error() { return type_error_; }
     Trait trait_error() { return trait_error_; }
     Bound bound_error() { return bound_error_; }
-    NoReturnType type_noreturn() { return type_noreturn_; }
+    NoRetType type_noret() { return type_noret_; }
     PrimType type(PrimTypeKind kind);
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
@@ -43,9 +43,9 @@ public:
     Trait trait(const TraitDecl* trait_decl) { return new_unifiable(new TraitNode(*this, trait_decl)); }
     Impl impl(const ImplItem* impl, Bound bound, Type type) { return new_unifiable(new ImplNode(*this, impl, bound, type)); }
 
-    /// Unify a type and return \p true if the representative changed.
-    template<class T> bool unify(Proxy<T> proxy) { return unify(*proxy); }
-    bool unify(const Unifiable*);
+    /// Unify a type and return its representative.
+    template<class T> Proxy<T> unify(Proxy<T> proxy) { return unify(*proxy)->template as<T>(); }
+    const Unifiable* unify(const Unifiable*);
 
     /**
      * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
@@ -72,7 +72,7 @@ private:
     TypeError type_error_;
     Trait trait_error_;
     Bound bound_error_;
-    NoReturnType type_noreturn_;
+    NoRetType type_noret_;
 #define IMPALA_TYPE(itype, atype) PrimType itype##_;
 #include "impala/tokenlist.h"
 

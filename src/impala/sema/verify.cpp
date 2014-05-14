@@ -10,17 +10,16 @@ void Unifiable::verify_instantiation(SpecializeMap& map) const {
     for (auto v : type_vars()) {
         auto it = map.find(*v);
         assert(it != map.end());
-        Type instance = Type(it->second->as<TypeNode>());
+        Type instance = it->second->as<TypeNode>();
 
         for (auto bound : v->bounds()) {
             SpecializeMap m(map); // copy the map
-            Trait spec_bound = Trait(bound->specialize(m)->as<TraitNode>());
+            Trait spec_bound = bound->specialize(m)->as<TraitNode>();
             spec_bound->typetable().unify(spec_bound);
             assert(instance->implements(spec_bound));
         }
     }
 }
-
 #endif
 
 void TypeTable::verify() const {

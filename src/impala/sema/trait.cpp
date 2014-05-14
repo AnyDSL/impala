@@ -12,7 +12,6 @@ TraitNode::TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
 {}
 
 bool TraitNode::add_super_bound(Bound bound) const {
-    typetable().unify(bound);
     auto p = super_bounds_.insert(bound);
     bound->trait()->sub_traits_.insert(this);
     return p.second;
@@ -39,7 +38,7 @@ Type TraitNode::find_method(Symbol name) const {
 }
 
 Bound TraitNode::instantiate(thorin::ArrayRef<Type> type_args) const {
-    return typetable().bound(Trait(this), type_args);
+    return typetable().bound(this, type_args);
 }
 
 void TraitNode::add_impl(Impl impl) const {
@@ -89,9 +88,7 @@ Type BoundNode::find_method(Symbol name) const {
         SpecializeMap map;
         for (size_t i = 0, e = num_type_args(); i != e; ++i)
             map[*trait()->type_var(i)] = *type_arg(i);
-        Type t = type->specialize(map);
-        typetable().unify(t);
-        return t;
+        return type->specialize(map);
     }
 
     return Type();

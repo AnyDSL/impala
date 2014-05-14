@@ -35,7 +35,7 @@ void Unifiable::bind(TypeVar v) const {
     type_vars_.push_back(v);
 }
 
-bool Unifiable::unify() const { return typetable().unify(this); }
+const Unifiable* Unifiable::unify() const { return typetable().unify(this); }
 
 void Unifiable::set_representative(const Unifiable* repr) const {
     assert(repr == repr->representative_);
