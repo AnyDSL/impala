@@ -134,7 +134,6 @@ public:
 
 protected:
     std::string type_vars_to_string() const;
-    bool unify_type_vars(thorin::ArrayRef<TypeVar>) const;
     bool type_vars_known() const;
 
 private:

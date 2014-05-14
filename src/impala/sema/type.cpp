@@ -1,7 +1,6 @@
 #include "impala/sema/type.h"
 
 #include <queue>
-#include <iostream>
 
 #include "impala/ast.h"
 #include "impala/sema/trait.h"
@@ -13,16 +12,13 @@ namespace impala {
 
 bool KnownTypeNode::infer(const Unifiable* other) const {
     if (auto ktn = other->isa<KnownTypeNode>()) {
-        if (this->kind() == ktn->kind()) { // TODO make this kind handling better
-            if (unify_type_vars(other->type_vars())) {
-                // go through all sub elements
-                if (size() == ktn->size()) {
-                    bool result = true;
-                    for (size_t i = 0, e = size(); i != e && result; ++i)
-                        result &= elem(i)->infer(ktn->elem(i));
-                    return result;
-                }
-            }
+        bool result = this->kind() == ktn->kind() && this->num_type_vars() == other->num_type_vars() 
+            && size() == ktn->size();
+        if (result) {
+            // TODO handle type vars
+            for (size_t i = 0, e = size(); i != e && result; ++i)
+                result &= elem(i)->infer(ktn->elem(i));
+            return result;
         }
     }
     return false;

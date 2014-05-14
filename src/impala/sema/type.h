@@ -115,7 +115,7 @@ public:
     virtual bool is_sane() const;
 
 private:
-    const Kind kind_;
+    const Kind kind_; // TODO move kind_ to Unifiable
     mutable std::vector<Impl> impls_;
 
 protected:
