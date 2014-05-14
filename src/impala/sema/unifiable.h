@@ -33,6 +33,8 @@ class TypeNode;         typedef Proxy<TypeNode> Type;
 class TypeVarNode;      typedef Proxy<TypeVarNode> TypeVar;
 class UnknownTypeNode;  typedef Proxy<UnknownTypeNode> UnknownType;
 
+//------------------------------------------------------------------------------
+
 typedef thorin::HashMap<const TypeNode*, const TypeNode*> SpecializeMap;
 
 SpecializeMap specialize_map(const Unifiable*, thorin::ArrayRef<Type>);
