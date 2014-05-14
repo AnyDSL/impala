@@ -1,0 +1,7 @@
+trait T[A] {}
+trait U[B] {}
+impl[C: U[C]] T[C] for int {}
+fn f[D: T[D]](x: D) -> D { x }
+fn main() -> () {
+    f[int](42);
+}

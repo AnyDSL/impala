@@ -92,11 +92,23 @@ void KnownTypeNode::add_impl(Impl impl) const {
 }
 
 bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
-    // HINT maybe we need to copy the map for each specialization run
+    auto implements_bounds = [&] (Type type, TypeVar type_var) {
+        for (auto b : type_var->bounds()) {
+            if (!type->implements(b, map))
+                return false;
+        }
+        return true;
+    };
+
     std::queue<Bound> queue;
     UniSet<Bound> done;
-    queue.push(bound);
-    done.insert(bound);
+
+    auto insert = [&] (Bound bound) { 
+        queue.push(bound); 
+        done.insert(bound); 
+    };
+
+    insert(bound);
 
     while (!queue.empty()) {
         auto bound = queue.front();
@@ -106,7 +118,9 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
             // find out which of impl's type_vars match to which of impl->bounds' type_args
             for (auto type_var : impl->type_vars()) {
                 for (size_t i = 0, e = impl->bound()->num_type_args(); i != e; ++i) { // TODO this is currently quadratic
-                    if (type_var.as<Type>() == impl->bound()->type_arg(i) && !bound->type_arg(i)->isa<UnknownTypeNode>())
+                    if (type_var.as<Type>() == impl->bound()->type_arg(i) 
+                            && !bound->type_arg(i)->isa<UnknownTypeNode>()
+                            && implements_bounds(bound->type_arg(i), type_var))
                         map[*type_var] = *bound->type_arg(i); // map this to bound's corresponding type_arg
                 }
             }
@@ -121,7 +135,8 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
             thorin::Array<Type> new_type_args(sub_trait->num_type_vars());
             for (size_t i = 0, e = sub_trait->num_type_vars(); i != e; ++i) {
                 for (size_t j = 0, e = super_bound->num_type_args(); j != e; ++j) { // TODO this is currently quadratic
-                    if (sub_trait->type_var(i).as<Type>() == super_bound->type_arg(j))
+                    if (sub_trait->type_var(i).as<Type>() == super_bound->type_arg(j)
+                            && implements_bounds(bound->type_arg(j), sub_trait->type_var(i)))
                         new_type_args[i] = bound->type_arg(j);
                 }
 
@@ -132,8 +147,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
             auto sub_bound = sub_trait->instantiate(new_type_args);
             if (!done.contains(sub_bound)) {
                 assert(sub_bound->is_closed());
-                queue.push(sub_bound);
-                done.insert(sub_bound);
+                insert(sub_bound);
             }
         }
     }
