@@ -95,29 +95,6 @@ void KnownTypeNode::add_impl(Impl impl) const {
 #endif
 }
 
-static bool search_up(std::queue<Bound>& queue, UniSet<Bound>& done, Bound bound, SpecializeMap& map) {
-    while (!queue.empty()) {
-        auto impl_bound = queue.front();
-        queue.pop();
-
-        if (impl_bound == bound)
-            return true;
-
-        for (auto super_bound : impl_bound->trait()->super_bounds()) {
-            // propagate self type param
-            map[*super_bound->type_arg(0)] = *impl_bound->type_arg(0);
-            auto spec_super_bound = super_bound->specialize(map);
-            spec_super_bound->unify();
-            if (!done.contains(spec_super_bound)) {
-                queue.push(spec_super_bound);
-                done.insert(spec_super_bound);
-            }
-        }
-    }
-
-    return false;
-}
-
 bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     // HINT maybe we need to copy the map for each specialization run
     std::queue<Bound> queue;
@@ -175,7 +152,26 @@ bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {
         queue.push(b);
         done.insert(b);
     }
-    return search_up(queue, done, bound, map);
+
+    while (!queue.empty()) {
+        auto cur_bound = queue.front();
+        queue.pop();
+
+        if (cur_bound == bound)
+            return true;
+
+        for (auto super_bound : cur_bound->trait()->super_bounds()) {
+            map[*super_bound->type_arg(0)] = *cur_bound->type_arg(0); // propagate self type param
+            auto spec_super_bound = super_bound->specialize(map);
+            spec_super_bound->unify();
+            if (!done.contains(spec_super_bound)) {
+                queue.push(spec_super_bound);
+                done.insert(spec_super_bound);
+            }
+        }
+    }
+
+    return false;
 }
 
 Type KnownTypeNode::find_method(Symbol name) const {
