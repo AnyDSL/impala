@@ -336,6 +336,16 @@ bool BoundNode::is_closed() const {
  * specialize and instantiate
  */
 
+SpecializeMap specialize_map(const Unifiable* unifiable, thorin::ArrayRef<Type> type_args) {
+    assert(unifiable->num_type_vars() == type_args.size());
+    SpecializeMap map;
+    size_t i = 0;
+    for (TypeVar v : unifiable->type_vars())
+        map[*v] = *type_args[i++];
+    assert(map.size() == type_args.size());
+    return map;
+}
+
 Type TypeNode::specialize(SpecializeMap& map) const {
     if (auto result = thorin::find(map, this))
         return result;

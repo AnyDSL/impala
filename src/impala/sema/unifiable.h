@@ -17,6 +17,7 @@ class ImplItem;
 class StructDecl;
 class TraitDecl;
 class TypeTable;
+class Unifiable;
 
 template<class T> class Proxy;
 class TypeErrorNode;    typedef Proxy<TypeErrorNode> TypeError;
@@ -33,6 +34,10 @@ class TypeVarNode;      typedef Proxy<TypeVarNode> TypeVar;
 class UnknownTypeNode;  typedef Proxy<UnknownTypeNode> UnknownType;
 
 typedef thorin::HashMap<const TypeNode*, const TypeNode*> SpecializeMap;
+
+SpecializeMap specialize_map(const Unifiable*, thorin::ArrayRef<Type>);
+template<class T>
+SpecializeMap specialize_map(Proxy<T> proxy, thorin::ArrayRef<Type> type_args) { return specialize_map(*proxy, type_args); }
 
 //------------------------------------------------------------------------------
 

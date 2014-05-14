@@ -18,21 +18,12 @@ TypeTable::~TypeTable() {
         delete g; 
 }
 
-Type TypeTable::instantiate_unknown(Type type, std::vector<Type>& type_args) {
-    for (size_t i = 0, e = type->num_type_vars(); i != e;  ++i) 
-        type_args.push_back(unknown_type());
-    auto map = specialize_map(type, type_args);
-    return type->vspecialize(map);
-}
-
-SpecializeMap TypeTable::specialize_map(const Unifiable* unifiable, thorin::ArrayRef<Type> type_args) {
-    assert(unifiable->num_type_vars() == type_args.size());
-    SpecializeMap map;
-    size_t i = 0;
-    for (TypeVar v : unifiable->type_vars())
-        map[*v] = *type_args[i++];
-    assert(map.size() == type_args.size());
-    return map;
+PrimType TypeTable::type(const PrimTypeKind kind) {
+    switch (kind) {
+#define IMPALA_TYPE(itype, atype) case PrimType_##itype: return itype##_;
+#include "impala/tokenlist.h"
+        default: THORIN_UNREACHABLE;
+    }
 }
 
 const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
@@ -72,11 +63,44 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
     }
 }
 
-PrimType TypeTable::type(const PrimTypeKind kind) {
-    switch (kind) {
-#define IMPALA_TYPE(itype, atype) case PrimType_##itype: return itype##_;
-#include "impala/tokenlist.h"
-        default: THORIN_UNREACHABLE;
+Type TypeTable::instantiate_unknown(Type type, std::vector<Type>& type_args) {
+    for (size_t i = 0, e = type->num_type_vars(); i != e;  ++i) 
+        type_args.push_back(unknown_type());
+    auto map = specialize_map(type, type_args);
+    return type->vspecialize(map);
+}
+
+void TypeTable::verify() const {
+    for (auto g : unifiables_) {
+        assert(g != nullptr);
+        if (auto type = g->isa<TypeNode>()) {
+            assert(type->is_known());
+            assert(type->is_sane());
+        } else if (auto trait = g->isa<TraitNode>()) {
+            assert(trait->is_closed());
+        } else if (auto impl = g->isa<ImplNode>()) {
+            assert(impl->is_closed());
+        }
+    }
+
+    for (size_t i = 0; i < garbage_.size(); ++i) {
+        auto g = garbage_[i];
+        assert(g != nullptr);
+
+        // no element should be twice in the garbage vector - else deletion will fail!
+        for (size_t j = i+1; j < garbage_.size(); ++j)
+            assert(g != garbage_[j]);
+
+        if (auto type = g->isa<TypeNode>()) {
+            if (type->is_unified())
+                assert(unifiables_.contains(type->representative()));
+        } else if (auto trait = g->isa<TraitNode>()) {
+            if (trait->is_unified())
+                assert(unifiables_.contains(trait->representative()));
+        } else if (auto impl = g->isa<ImplNode>()) {
+            if (impl->is_unified())
+                assert(unifiables_.contains(impl->representative()));
+        }
     }
 }
 
