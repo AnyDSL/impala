@@ -82,7 +82,7 @@ private:
 void TypeSema::expect_num(const Expr* exp) {
     Type t = exp->type();
 
-    if (t == type_error())
+    if (t->is_error())
         return;
 
     if ((t != type_i8()) && (t != type_i16()) && (t != type_i32()) && // TODO factor this test out
@@ -91,7 +91,7 @@ void TypeSema::expect_num(const Expr* exp) {
 }
 
 Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
-    if (t1 == type_error() || t2 == type_error())
+    if (t1->is_error() || t2->is_error())
         return type_error();
 
     if (t1 == t2) {
@@ -118,7 +118,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
     if (!expected->is_closed())
         return found_type;
 
-    if (found_type == type_error() || expected == type_error())
+    if (found_type->is_error() || expected->is_error())
         return Type(*expected);
     if (found_type != expected) {
         if (found_type->is_generic()) {
@@ -199,11 +199,10 @@ bool TypeSema::check_bounds(const ASTNode* loc, const Unifiable* unifiable, thor
         assert(map.find(*type_var)->second == *arg);
 
         for (auto bound : type_var->bounds()) {
+            // TODO do we need this copy?
             SpecializeMap bound_map(map); // copy the map per type var
             auto spec_bound = bound->specialize(bound_map);
-            unify(spec_bound);
-
-            if (arg != type_error() && spec_bound != bound_error()) {
+            if (!arg->is_error() && !spec_bound->is_error()) {
                 check_impls(); // first we need to check all implementations to be up-to-date
                 if (!arg->implements(spec_bound, bound_map)) {
                     if (loc) {
@@ -331,7 +330,7 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
 void Fn::check_body(TypeSema& sema, FnType fn_type) const {
     Type body_type = sema.check(body());
     if (!body_type->is_closed()) return; // FEATURE make this check faster - e.g. store a "potentially not closed" flag
-    if (body_type != sema.type_noreturn() && body_type != sema.type_error())
+    if (body_type != sema.type_noreturn() && !body_type->is_error())
         sema.expect_type(body(), fn_type->return_type(), "return");
 }
 
@@ -448,7 +447,7 @@ void ImplItem::check_item(TypeSema& sema) const {
             for (auto tp : type_params())
                 impl->bind(tp->type_var(sema));
 
-            if ((for_type != sema.type_error()) && (bound != sema.bound_error())) {
+            if (!for_type->is_error() && !bound->is_error()) {
                 for_type->add_impl(impl);
                 bound->trait()->add_impl(impl);
             }
@@ -548,7 +547,7 @@ Type PathExpr::check(TypeSema& sema, Type expected) const {
         if (last->type_args().empty()) {
             return decl_type;
         } else {
-            if (decl_type != sema.type_error())
+            if (!decl_type->is_error())
                 return sema.specialize(last, decl_type, last->type_args());
         }
     }
@@ -624,7 +623,7 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
     sema.check_impls();
     Type fn = lhs()->type()->find_method(path_elem()->symbol());
     if (!fn.empty()) {
-        if (fn != sema.type_error()) {
+        if (!fn->is_error()) {
             FnType func;
             if (!path_elem()->type_args().empty()) {
                 Type t = sema.specialize(path_elem(), fn, path_elem()->type_args());
@@ -732,7 +731,7 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
 
     if (auto ofn = lhst.isa<FnType>()) {
         return sema.check_call(lhs(), this, args(), expected);
-    } else if (!lhs()->type().isa<TypeError>()) {
+    } else if (!lhs()->type()->is_error()) {
         // REMINDER new error message if not only fn-types are allowed
         sema.error(lhs()) << "expected function type but found " << lhs()->type() << "\n";
     }
@@ -745,7 +744,7 @@ Type IfExpr::check(TypeSema& sema, Type expected) const {
     Type then_type = sema.check(then_expr(), sema.unknown_type());
     Type else_type = sema.check(else_expr(), sema.unknown_type());
     Type type = then_type.isa<NoReturnType>() ? else_type : then_type;
-    if (!type.isa<TypeError>())
+    if (!type->is_error())
         return sema.expect_type(this, type, expected, "if expression");
     else
         return expected->is_known() ? expected : else_type;

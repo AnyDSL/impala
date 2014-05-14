@@ -50,6 +50,7 @@ public:
     virtual bool is_known() const override { return true; }
     virtual bool infer(const Unifiable*) const override { assert(false); return false; }
     virtual bool is_closed() const { return true; } // TODO
+    virtual bool is_error() const override { return trait_decl() == nullptr; }
     virtual std::string to_string() const;
 
 private:
@@ -82,6 +83,7 @@ public:
     virtual bool is_known() const override;
     virtual bool infer(const Unifiable*) const override;
     virtual bool is_closed() const;
+    virtual bool is_error() const override { return trait()->is_error(); }
     Bound specialize(SpecializeMap&) const;
 
 private:

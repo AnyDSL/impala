@@ -105,6 +105,7 @@ public:
     virtual bool equal(const Unifiable*) const = 0;
     virtual size_t hash() const = 0;
     virtual std::string to_string() const = 0;
+    virtual bool is_error() const { return false; }
     void set_representative(const Unifiable* repr) const;
     bool unify() const;
 

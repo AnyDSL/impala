@@ -178,6 +178,7 @@ protected:
     virtual const TypeNode* vspecialize(SpecializeMap&) const;
 
 public:
+    virtual bool is_error() const override { return true; }
     virtual std::string to_string() const { return "<type error>"; }
 
 private:
