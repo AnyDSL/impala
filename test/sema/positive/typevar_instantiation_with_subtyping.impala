@@ -1,5 +1,5 @@
 trait T[X] {}
-trait U[Y] : T[x] {}
+trait U[Y] : T[Y] {}
 impl[A] U[A] for i32 {}
 fn f[A : T[bool]](x:A) -> A {
    x
