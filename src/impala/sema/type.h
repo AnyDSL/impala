@@ -173,8 +173,7 @@ public:
     virtual TypeVar type_var(size_t i) const { assert(is_instantiated()); return instance()->type_var(i); }
     virtual void add_type_var(TypeVar v)  { assert(false); }
     virtual bool is_generic() const { assert(type_vars_.empty()); return is_instantiated() ? instance()->is_generic() : false; }
-
-    virtual bool is_closed() const { return is_instantiated() && instance()->is_closed(); }
+    virtual bool is_closed() const { assert(!is_instantiated() || instance()->is_closed()); return true; }
     virtual bool is_sane() const { return is_instantiated() && instance()->is_sane(); }
 
     bool is_instantiated() const { return !instance_.empty(); }

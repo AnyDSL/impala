@@ -126,7 +126,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
             for (size_t i = 0, e = sub_trait->num_type_vars(); i != e; ++i) {
                 for (size_t j = 0, e = super_bound->num_type_args(); j != e; ++j) {
                     if (sub_trait->type_var(i).as<Type>() == super_bound->type_arg(j))
-                        new_type_args[i] = bound->type_arg(i);
+                        new_type_args[i] = bound->type_arg(j);
                 }
 
                 if (new_type_args[i].empty())
@@ -135,6 +135,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
 
             auto sub_bound = sub_trait->instantiate(new_type_args);
             if (!done.contains(sub_bound)) {
+                assert(sub_bound->is_closed());
                 queue.push(sub_bound);
                 done.insert(sub_bound);
             }

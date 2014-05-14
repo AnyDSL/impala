@@ -2,8 +2,8 @@ trait T[X] {}
 trait U[Y] : T[Y] {}
 impl[A] U[A] for i32 {}
 fn f[A : T[bool]](x:A) -> A {
-   x
+    x
 }
 fn main() -> i32 {
-   f[i32](4)
+    f[i32](42)
 }
