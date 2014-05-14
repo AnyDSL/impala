@@ -1,1 +1,1 @@
-type_args3.impala:5 col 14 - 28: error: could not unify types: expected 'fn(bool, fn(bool))' but found 'fn(i32, fn(i32))'.
+type_args3.impala:5 col 14 - 28: error: could not infer types: expected 'fn(bool, fn(bool))' but found 'fn(i32, fn(i32))'.

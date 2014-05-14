@@ -127,7 +127,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
             Type inst = specialize_unknown(found_type, type_args);
             if (inst->infer(expected)) {
                 for (auto t : type_args)
-                    expr->add_inferred_arg(unify(t));
+                    expr->add_inferred_arg(t);
 
                 check_bounds(expr, *found_type, expr->inferred_args());
                 return expected;
@@ -312,7 +312,7 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
         if (expected.empty() || expected->infer(t)) {
             return t;
         } else {
-            sema.error(this) << "could not unify types: expected '" << expected << "' but found '" << t << "'.\n";
+            sema.error(this) << "could not infer types: expected '" << expected << "' but found '" << t << "'.\n";
             return sema.type_error();
         }
     } else if (expected.empty()) {
@@ -694,7 +694,7 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
             for (size_t i = 0; i < type_args.size(); ++i) {
                 UnknownType ut = type_args[i].isa<UnknownType>();
                 if (!ut || ut->is_instantiated()) {
-                    lhs->add_inferred_arg(unify(type_args[i]));
+                    lhs->add_inferred_arg(type_args[i]);
                 } else {
                     error(whole) << "could not find instance for type variable #" << i << ".\n";
                     no_error = false;
