@@ -85,8 +85,8 @@ void TypeSema::expect_num(const Expr* exp) {
     if (t->is_error())
         return;
 
-    if ((t != type_i8()) && (t != type_i16()) && (t != type_i32()) && // TODO factor this test out
-            (t != type_i64()) && (t != type_f32()) && (t != type_f64()))
+    if ((t->is_i8()) && (t->is_i16()) && (t->is_i32()) && // TODO factor this test out
+            (t->is_i64()) && (t->is_f32()) && (t->is_f64()))
         error(exp) << "expected number type but found " << t << "\n";
 }
 
@@ -120,7 +120,9 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
 
     if (found_type->is_error() || expected->is_error())
         return expected;
-    if (found_type != expected) {
+    if (found_type == expected) 
+        return expected;
+    else {
         if (found_type->is_generic()) {
             // try to infer instantiations for this generic type
             std::vector<Type> type_args;

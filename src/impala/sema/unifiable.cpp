@@ -63,6 +63,10 @@ void Unifiable::set_representative(const Unifiable* repr) const {
 
 //------------------------------------------------------------------------------
 
+bool TypeNode::is(PrimTypeKind kind) const { 
+    return isa<PrimTypeNode>() && as<PrimTypeNode>()->primtype_kind() == kind; 
+}
+
 bool KnownTypeNode::is_sane() const {
     for (auto elem : elems_) {
         if (!elem->is_sane())

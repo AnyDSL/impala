@@ -52,6 +52,9 @@ Type instantiate_unknown(Type, std::vector<Type>&);
 
 template<class T>
 class Proxy {
+private:
+    bool operator != (const Proxy<T>& other) const; ///< Always test positively to allow for automagic type inference.
+
 public:
     typedef T BaseType;
 
@@ -69,7 +72,6 @@ public:
             return true;
         return this->node()->unify() == other.node()->unify();
     }
-    bool operator != (const Proxy<T>& other) const { return !(*this == other); }
     const T* representative() const { return node()->representative()->template as<T>(); }
     const T* node() const { assert(node_ != nullptr); return node_; }
     const T* operator  * () const { assert(node_ != nullptr); return node_->is_unified() ? representative() : node_; }
@@ -244,7 +246,10 @@ public:
     virtual Type find_method(Symbol s) const = 0;
     /// A type is closed if it contains no unbound type variables.
     virtual bool is_closed() const = 0;
-    virtual bool is_noret() const { return false; }
+    bool is_noret() const { return isa<NoRetTypeNode>(); }
+    bool is(PrimTypeKind kind) const;
+#define IMPALA_TYPE(itype, atype) bool is_##itype() const { return is(PrimType_##itype); }
+#include "impala/tokenlist.h"
 
     /**
      * A type is sane if all type variables are bound correctly,
@@ -320,7 +325,6 @@ public:
     virtual bool is_closed() const { assert(!is_instantiated() || instance()->is_closed()); return true; }
     virtual bool is_sane() const { return is_instantiated() && instance()->is_sane(); }
     virtual bool is_error() const override { return is_instantiated() ? instance()->is_error() : false; }
-    virtual bool is_noret() const override { return is_instantiated() ? instance()->is_noret() : false; }
     bool is_instantiated() const { return !instance_.empty(); }
     Type instance() const { return instance_; }
     void instantiate(Type instance) const { assert(!is_instantiated()); instance_ = instance; }
@@ -358,7 +362,6 @@ private:
     {}
 
 public:
-    virtual bool is_noret() const override { return true; }
     virtual std::string to_string() const override { return "<no-return>"; }
 
 private:
@@ -374,9 +377,8 @@ private:
         : KnownTypeNode(typetable, (Kind) kind, 0)
     {}
 
-    PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
-
 public:
+    PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
     virtual std::string to_string() const;
 
 private:
