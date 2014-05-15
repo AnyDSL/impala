@@ -31,7 +31,7 @@ public:
  *  Otherwise, everything is put in parenthesis in order to fully debug the internal tree structure.
  * @param o The output stream where the dump is directed to.
  */
-void dump(const ASTNode*, bool fancy = false, std::ostream& o = std::cout);
+void dump(const ASTNode* n, bool fancy = false, std::ostream& o = std::cout);
 std::ostream& operator << (std::ostream& o, const ASTNode* n);
 
 }
