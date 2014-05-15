@@ -3,8 +3,7 @@
 #include <iostream>
 
 #include "thorin/util/assert.h"
-//#include "thorin/util/queue.h"
-#include <queue>
+#include "thorin/util/queue.h"
 
 #include "impala/ast.h"
 #include "impala/sema/typetable.h"
@@ -431,13 +430,6 @@ bool BoundNode::infer(const Unifiable* unifiable) const {
  * implements
  */
 
-template<class T>
-static T pop(std::queue<T>& queue) {
-    auto val = queue.front();
-    queue.pop();
-    return val;
-}
-
 bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     auto implements_bounds = [&] (Type type, TypeVar type_var) {
         for (auto b : type_var->bounds()) {
@@ -458,9 +450,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     enqueue(bound);
 
     while (!queue.empty()) {
-        //auto bound = thorin::pop(queue);
-        auto bound = pop(queue);
-
+        auto bound = thorin::pop(queue);
         for (auto impl : bound->trait()->type2impls(this)) {
             // find out which of impl's type_vars match to which of impl->bounds' type_args
             for (auto type_var : impl->type_vars()) {
