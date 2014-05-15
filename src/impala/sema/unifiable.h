@@ -220,6 +220,14 @@ protected:
     std::string elems_to_string() const;
 
 public:
+    /// Specializes recursively this type while obeying \p map.
+    Type specialize(SpecializeMap& map) const;
+    /**
+     * Type variables are removed from this type.
+     * They must be found in \p map in order to specialize the resulting type.
+     */
+    Type instantiate(SpecializeMap& map) const;
+
     virtual Kind kind() const = 0;
     virtual thorin::ArrayRef<Type> elems() const = 0;
     virtual const Type elem(size_t i) const = 0;
@@ -237,18 +245,11 @@ public:
 
     /**
      * A type is sane if all type variables are bound correctly,
-     * i.e. forall type variables v, v is a subtype of v.bound_at().
+     * i.e. forall type variables v, v is a subtype of v.bound_at(). -- TODO WHAT?
      *
      * This also means that a sane type is always closed!
      */
     virtual bool is_sane() const = 0;
-    /// Specializes recursively this type while obeying \p map.
-    Type specialize(SpecializeMap& map) const;
-    /**
-     * Type variables are removed from this type.
-     * They must be found in \p map in order to specialize the resulting type.
-     */
-    Type instantiate(SpecializeMap& map) const;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const = 0;
@@ -270,11 +271,7 @@ public:
     virtual thorin::ArrayRef<Type> elems() const { return thorin::ArrayRef<Type>(elems_); }
     virtual const Type elem(size_t i) const { return elems_[i]; }
     virtual size_t size() const { return elems_.size(); }
-    virtual bool is_empty() const {
-        assert (!elems_.empty() || type_vars_.empty());
-        return elems_.empty();
-    }
-
+    virtual bool is_empty() const { assert(!elems_.empty() || type_vars_.empty()); return elems_.empty(); }
     virtual bool is_known() const override;
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
@@ -282,10 +279,6 @@ public:
     virtual void add_impl(Impl) const;
     virtual bool implements(Bound, SpecializeMap&) const;
     virtual Type find_method(Symbol s) const;
-    virtual bool is_generic() const {
-        assert (!elems_.empty() || type_vars_.empty());
-        return Unifiable::is_generic();
-    }
     virtual bool is_closed() const;
     virtual bool is_sane() const;
 
@@ -571,6 +564,8 @@ public:
     thorin::ArrayRef<Type> type_args() const { return type_args_; }
     size_t num_type_args() const { return type_args_.size(); }
     Type find_method(Symbol name) const;
+    Bound specialize(SpecializeMap&) const;
+
     virtual bool equal(const Unifiable* other) const override;
     virtual size_t hash() const override;
     virtual std::string to_string() const;
@@ -578,7 +573,6 @@ public:
     virtual bool infer(const Unifiable*) const override;
     virtual bool is_closed() const;
     virtual bool is_error() const override { return trait()->is_error(); }
-    Bound specialize(SpecializeMap&) const;
 
 private:
     virtual thorin::Type convert(CodeGen&) const override;
@@ -601,12 +595,13 @@ private:
     {}
 
 public:
-    virtual bool equal(const Unifiable* other) const { return this->impl_item() == other->as<ImplNode>()->impl_item(); }
-    virtual size_t hash() const;
     const ImplItem* impl_item() const { return impl_item_; }
     Bound bound() const { return bound_; }
     Type type() const { return type_; }
     Impl specialize(SpecializeMap& map) const;
+
+    virtual bool equal(const Unifiable* other) const { return this->impl_item() == other->as<ImplNode>()->impl_item(); }
+    virtual size_t hash() const;
     virtual bool is_known() const override { return true; }
     virtual bool infer(const Unifiable*) const override { assert(false); return false; }
     virtual bool is_closed() const { return true; } // TODO
