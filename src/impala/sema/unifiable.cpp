@@ -559,12 +559,13 @@ Type TraitNode::find_method(Symbol name) const {
 }
 
 Type BoundNode::find_method(Symbol name) const {
-    // TODO cache found methods
+    auto i = method_cache_.find(name);
+    if (i != method_cache_.end())
+        return i->second;
+
     if (auto type = trait()->find_method(name)) {
-        SpecializeMap map;
-        for (size_t i = 0, e = num_type_args(); i != e; ++i)
-            map[*trait()->type_var(i)] = *type_arg(i);
-        return type->specialize(map);
+        auto map = specialize_map(trait(), type_args());
+        return method_cache_[name] = type->specialize(map);
     }
 
     return Type();

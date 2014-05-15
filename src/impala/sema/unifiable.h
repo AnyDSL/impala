@@ -579,6 +579,7 @@ private:
 
     const Trait trait_;
     thorin::Array<Type> type_args_;
+    mutable thorin::HashMap<Symbol, Type> method_cache_;
 
     friend class TypeTable;
 };
