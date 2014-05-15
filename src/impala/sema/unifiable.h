@@ -99,20 +99,42 @@ private:
 
 //------------------------------------------------------------------------------
 
+enum Kind {
+#define IMPALA_TYPE(itype, atype) Kind_##itype,
+#include "impala/tokenlist.h"
+    Kind_error,
+    Kind_unknown,
+    Kind_noret,
+    Kind_fn,
+    Kind_tuple,
+    Kind_struct,
+    Kind_type_var,
+    Kind_trait,
+    Kind_bound,
+    Kind_impl,
+};
+
+enum PrimTypeKind {
+#define IMPALA_TYPE(itype, atype) PrimType_##itype = Kind_##itype,
+#include "impala/tokenlist.h"
+};
+
 class Unifiable : public thorin::MagicCast<Unifiable> {
 private:
     Unifiable& operator = (const Unifiable&); ///< Do not copy-assign a \p Unifiable.
     Unifiable(const Unifiable&);              ///< Do not copy-construct a \p Unifiable.
 
 protected:
-    Unifiable(TypeTable& tt)
+    Unifiable(TypeTable& tt, Kind kind)
         : typetable_(tt)
+        , kind_(kind)
         , representative_(nullptr)
         , id_(counter_++)
     {}
 
 public:
     TypeTable& typetable() const { return typetable_; }
+    Kind kind() const { return kind_; }
     const Unifiable* representative() const { return representative_; }
     const int id() const { return id_; }
     bool is_unified() const { return representative_ != nullptr; }
@@ -156,6 +178,7 @@ private:
     virtual thorin::Type convert(CodeGen&) const = 0;
 
     TypeTable& typetable_;
+    const Kind kind_;
     mutable const Unifiable* representative_;
     const int id_;
     mutable thorin::Type thorin_type_;
@@ -186,31 +209,14 @@ template<class T, class U> using UniMap = thorin::HashMap<T, U, UniHash<T>, UniE
 
 //------------------------------------------------------------------------------
 
-enum Kind {
-#define IMPALA_TYPE(itype, atype) Type_##itype,
-#include "impala/tokenlist.h"
-    Type_error,
-    Type_unknown,
-    Type_noret,
-    Type_fn,
-    Type_tuple,
-    Type_struct,
-    Type_var,
-};
-
-enum PrimTypeKind {
-#define IMPALA_TYPE(itype, atype) PrimType_##itype = Type_##itype,
-#include "impala/tokenlist.h"
-};
-
 class TypeNode : public Unifiable {
 private:
     TypeNode& operator = (const TypeNode&); ///< Do not copy-assign a \p TypeNode.
     TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p TypeNode.
 
 protected:
-    TypeNode(TypeTable& typetable)
-        : Unifiable(typetable)
+    TypeNode(TypeTable& typetable, Kind kind)
+        : Unifiable(typetable, kind)
     {}
 
     thorin::Array<Type> specialize_elems(SpecializeMap&) const;
@@ -226,7 +232,6 @@ public:
      */
     Type instantiate(SpecializeMap& map) const;
 
-    virtual Kind kind() const = 0;
     virtual thorin::ArrayRef<Type> elems() const = 0;
     virtual const Type elem(size_t i) const = 0;
     /// Returns number of \p TypeNode operands (\p elems_).
@@ -256,8 +261,7 @@ private:
 class KnownTypeNode : public TypeNode {
 protected:
     KnownTypeNode(TypeTable& typetable, Kind kind, size_t size)
-        : TypeNode(typetable)
-        , kind_(kind)
+        : TypeNode(typetable, kind)
         , elems_(size)
     {}
 
@@ -265,7 +269,6 @@ protected:
 
 public:
     const std::vector<Impl>& impls() const { return impls_; }
-    virtual Kind kind() const { return kind_; }
     virtual thorin::ArrayRef<Type> elems() const { return thorin::ArrayRef<Type>(elems_); }
     virtual const Type elem(size_t i) const { return elems_[i]; }
     virtual size_t size() const { return elems_.size(); }
@@ -281,7 +284,6 @@ public:
     virtual bool is_sane() const;
 
 private:
-    const Kind kind_; // TODO move kind_ to Unifiable
     mutable std::vector<Impl> impls_;
 
 protected:
@@ -293,11 +295,10 @@ protected:
 class UnknownTypeNode : public TypeNode {
 private:
     UnknownTypeNode(TypeTable& typetable)
-        : TypeNode(typetable)
+        : TypeNode(typetable, Kind_unknown)
     {}
 
 public:
-    virtual Kind kind() const { return is_instantiated() ? instance()->kind() : Type_unknown; }
     virtual std::string to_string() const;
 
     virtual thorin::ArrayRef<Type> elems() const { return is_instantiated() ? instance()->elems() : thorin::ArrayRef<Type>(); }
@@ -336,7 +337,7 @@ private:
 class TypeErrorNode : public KnownTypeNode {
 private:
     TypeErrorNode(TypeTable& typetable)
-        : KnownTypeNode(typetable, Type_error, 0)
+        : KnownTypeNode(typetable, Kind_error, 0)
     {}
 
 public:
@@ -353,7 +354,7 @@ private:
 class NoRetTypeNode : public KnownTypeNode {
 private:
     NoRetTypeNode(TypeTable& typetable)
-        : KnownTypeNode(typetable, Type_noret, 0)
+        : KnownTypeNode(typetable, Kind_noret, 0)
     {}
 
 public:
@@ -388,7 +389,7 @@ private:
 class FnTypeNode : public KnownTypeNode {
 private:
     FnTypeNode(TypeTable& typetable, thorin::ArrayRef<Type> elems)
-        : KnownTypeNode(typetable, Type_fn, elems.size())
+        : KnownTypeNode(typetable, Kind_fn, elems.size())
     {
         for (size_t i = 0, e = elems.size(); i != e; ++i)
             set(i, elems[i]);
@@ -409,7 +410,7 @@ private:
 class TupleTypeNode : public KnownTypeNode {
 private:
     TupleTypeNode(TypeTable& typetable, thorin::ArrayRef<Type> elems)
-        : KnownTypeNode(typetable, Type_tuple, elems.size())
+        : KnownTypeNode(typetable, Kind_tuple, elems.size())
     {
         for (size_t i = 0, e = elems.size(); i != e; ++i)
             set(i, elems[i]);
@@ -445,7 +446,7 @@ private:
 class TypeVarNode : public KnownTypeNode {
 private:
     TypeVarNode(TypeTable& tt, Symbol name)
-        : KnownTypeNode(tt, Type_var, 0)
+        : KnownTypeNode(tt, Kind_type_var, 0)
         , name_(name)
         , bound_at_(nullptr)
         , equiv_(nullptr)
@@ -507,7 +508,7 @@ private:
 class TraitNode : public Unifiable {
 private:
     TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
-        : Unifiable(tt)
+        : Unifiable(tt, Kind_trait)
         , trait_decl_(trait_decl)
     {}
 
@@ -549,7 +550,7 @@ private:
 class BoundNode : public Unifiable {
 private:
     BoundNode(const Trait trait, thorin::ArrayRef<Type> type_args)
-        : Unifiable(trait->typetable())
+        : Unifiable(trait->typetable(), Kind_bound)
         , trait_(trait)
         , type_args_(type_args)
     {
@@ -587,7 +588,7 @@ private:
 class ImplNode : public Unifiable {
 private:
     ImplNode(TypeTable& tt, const ImplItem* impl_item, Bound bound, Type type)
-        : Unifiable(tt)
+        : Unifiable(tt, Kind_impl)
         , impl_item_(impl_item)
         , bound_(bound)
         , type_(type)

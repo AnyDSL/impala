@@ -106,7 +106,7 @@ FnType FnTypeNode::peel_first() const {
 }
 
 StructTypeNode::StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl)
-    : KnownTypeNode(typetable, Type_tuple, struct_decl->fields().size())
+    : KnownTypeNode(typetable, Kind_tuple, struct_decl->fields().size())
     , struct_decl_(struct_decl)
 {}
 
@@ -167,14 +167,16 @@ bool UnknownTypeNode::equal(const Unifiable* other) const {
     return is_instantiated() ? instance()->equal(other) : this == other;
 }
 
-bool KnownTypeNode::equal(const Unifiable* t) const {
-    if (this == t) return true;
-    if (auto utn = t->isa<const UnknownTypeNode>()) return utn->equal(this);
+bool KnownTypeNode::equal(const Unifiable* unifiable) const {
+    if (this == unifiable) 
+        return true;
 
-    if (auto other = t->isa<const KnownTypeNode>()) {
-        bool result = this->kind() == other->kind() && this->size() == other->size() 
-            && this->num_type_vars() == other->num_type_vars();
+    if (auto utn = unifiable->isa<const UnknownTypeNode>()) 
+        return utn->equal(this);
 
+    if (this->kind() == unifiable->kind()) {
+        auto other = unifiable->as<KnownTypeNode>();
+        bool result = this->size() == other->size() && this->num_type_vars() == other->num_type_vars();
         if (result) {
             // set equivalence constraints for type variables
             for (size_t i = 0, e = num_type_vars(); i != e; ++i) {
@@ -393,10 +395,9 @@ Impl ImplNode::specialize(SpecializeMap& map) const {
 
 bool KnownTypeNode::infer(const Unifiable* unifiable) const {
     assert(unifiable->is_closed());
-    if (auto other = unifiable->isa<KnownTypeNode>()) {
-        bool result = this->kind() == other->kind() 
-            && this->num_type_vars() == other->num_type_vars() 
-            && size() == other->size();
+    if (this->kind() == unifiable->kind()) {
+        auto other = unifiable->as<KnownTypeNode>();
+        bool result = this->num_type_vars() == other->num_type_vars() && this->size() == other->size();
         // TODO handle type vars
         for (size_t i = 0, e = size(); i != e && result; ++i)
             result &= elem(i)->infer(other->elem(i));
