@@ -191,6 +191,7 @@ protected:
 
     friend class CodeGen;
     friend class TypeTable;
+    friend class UnknownTypeNode; // TODO
 };
 
 //------------------------------------------------------------------------------
@@ -325,15 +326,12 @@ public:
     virtual bool is_closed() const { assert(!is_instantiated() || instance()->is_closed()); return true; }
     virtual bool is_sane() const { return is_instantiated() && instance()->is_sane(); }
     virtual bool is_error() const override { return is_instantiated() ? instance()->is_error() : false; }
-    bool is_instantiated() const { return !instance_.empty(); }
-    Type instance() const { return instance_; }
-    void instantiate(Type instance) const { assert(!is_instantiated()); instance_ = instance; }
+    bool is_instantiated() const { return representative() != nullptr; }
+    Type instance() const { return representative()->as<TypeNode>(); }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
     virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
-
-    mutable Type instance_;
 
     friend class TypeTable;
 };

@@ -108,7 +108,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
             if (found_type.isa<UnknownType>()) {
                 return found_type;
             } else {
-                ut->instantiate(found_type);
+                ut->infer(*found_type);
                 return found_type;
             }
         }

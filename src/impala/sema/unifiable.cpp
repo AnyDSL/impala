@@ -412,8 +412,9 @@ bool KnownTypeNode::infer(const Unifiable* unifiable) const {
 
 bool UnknownTypeNode::infer(const Unifiable* other) const {
     if (!is_instantiated()) {
-        instantiate(other->as<TypeNode>());
-        typetable().unify(this);
+        representative_ = other->unify();
+        //instantiate(other->as<TypeNode>());
+        //typetable().unify(this);
         return true;
     } else
         return instance()->infer(other);
