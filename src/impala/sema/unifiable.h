@@ -38,8 +38,9 @@ class UnknownTypeNode;  typedef Proxy<UnknownTypeNode> UnknownType;
 typedef thorin::HashMap<const TypeNode*, const TypeNode*> SpecializeMap;
 
 SpecializeMap specialize_map(const Unifiable*, thorin::ArrayRef<Type>);
+/// Creates a \p SpecializeMap by mapping each of \p type's type variable to the corresponding element in \p type_args.
 template<class T>
-SpecializeMap specialize_map(Proxy<T> proxy, thorin::ArrayRef<Type> type_args) { return specialize_map(*proxy, type_args); }
+SpecializeMap specialize_map(Proxy<T> type, thorin::ArrayRef<Type> type_args) { return specialize_map(*type, type_args); }
 
 /**
  * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
@@ -117,6 +118,10 @@ public:
     const Unifiable* representative() const { return representative_; }
     const int id() const { return id_; }
     bool is_unified() const { return representative_ != nullptr; }
+    const Unifiable* unify() const;
+    void set_representative(const Unifiable* repr) const;
+    void dump() const;
+
     virtual size_t num_type_vars() const { return type_vars_.size(); }
     virtual thorin::ArrayRef<TypeVar> type_vars() const { return thorin::ArrayRef<TypeVar>(type_vars_); }
     virtual TypeVar type_var(size_t i) const { return type_vars_[i]; }
@@ -128,8 +133,8 @@ public:
     virtual size_t hash() const = 0;
     virtual std::string to_string() const = 0;
     virtual bool is_error() const { return false; }
-    void set_representative(const Unifiable* repr) const;
-    const Unifiable* unify() const;
+    /// A \p Unifiable is known if it does not contain any \p UnknownTypeNode%s
+    virtual bool is_known() const = 0;
 
     /**
      * Try to fill in missing type information by matching this possibly incomplete Unifiable with a complete Unifiable.
@@ -141,20 +146,13 @@ public:
     virtual bool infer(const Unifiable*) const = 0;
     template<class T>
     bool infer(Proxy<T> other) const {
-        assert(other->is_closed());
         bool b = infer(*other);
         assert(!b || is_closed());
         return b;
     }
 
-    /// A \p Unifiable is known if it does not contain any \p UnknownTypeNode%s
-    virtual bool is_known() const = 0;
-
-    void dump() const;
-
 protected:
     std::string type_vars_to_string() const;
-    bool type_vars_known() const;
 
 private:
     virtual thorin::Type convert(CodeGen&) const = 0;
@@ -298,7 +296,6 @@ private:
 protected:
     std::vector<Type> elems_; ///< The operands of this type constructor.
 
-    friend class BoundNode;
     friend class TypeTable;
 };
 
@@ -497,8 +494,8 @@ private:
     virtual Type vinstantiate(SpecializeMap&) const;
 
     friend class TypeTable;
-    friend void Unifiable::bind(TypeVar) const;               // maybe we can design things better to avoid this friend
-    friend bool KnownTypeNode::equal(const Unifiable*) const; // same here
+    friend void Unifiable::bind(TypeVar) const;
+    friend bool KnownTypeNode::equal(const Unifiable*) const;
 };
 
 //------------------------------------------------------------------------------
@@ -529,7 +526,6 @@ public:
     Bound super_bound(Trait trait) const;
     const thorin::HashSet<const TraitNode*>& sub_traits() const { return sub_traits_; }
     const std::vector<Impl>& type2impls(Type type) const { return type2impls_[type]; }
-    const std::vector<Bound>& instances() const {return instances_; }
     bool is_error_trait() const { return trait_decl_ == nullptr; }
     bool add_super_bound(Bound) const;
     /// return the type of the method with this name if it exists; otherwise return an empty type
@@ -552,10 +548,8 @@ private:
     mutable UniSet<Bound> super_bounds_;
     mutable thorin::HashSet<const TraitNode*> sub_traits_;
     mutable UniMap<Type, std::vector<Impl>> type2impls_;
-    mutable std::vector<Bound> instances_;
 
     friend class TypeTable;
-    friend class BoundNode;
 };
 
 //------------------------------------------------------------------------------
@@ -568,7 +562,6 @@ private:
         , trait_(trait)
         , type_args_(type_args)
     {
-        trait->instances_.push_back(this);
         assert(trait_->num_type_vars() == num_type_args());
     }
 

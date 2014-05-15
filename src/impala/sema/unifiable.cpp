@@ -18,14 +18,6 @@ namespace impala {
 
 int Unifiable::counter_ = 0;
 
-bool Unifiable::type_vars_known() const {
-    for (auto v : type_vars()) {
-        if (!v->is_known())
-            return false;
-    }
-    return true;
-}
-
 void Unifiable::bind(TypeVar v) const {
     assert(!v->is_closed() && "type variables already bound");
     assert(!is_unified() && "type already unified");
@@ -260,10 +252,16 @@ bool BoundNode::equal(const Unifiable* other) const {
  */
 
 bool KnownTypeNode::is_known() const {
-    bool result = type_vars_known();
-    for (auto e : elems())
-        result = result && e->is_known();
-    return result;
+    for (auto v : type_vars()) {
+        if (!v->is_known())
+            return false;
+    }
+
+    for (auto elem : elems()) {
+        if (!elem->is_known())
+            return false;
+    }
+    return true;
 }
 
 bool BoundNode::is_known() const {
@@ -394,6 +392,7 @@ Impl ImplNode::specialize(SpecializeMap& map) const {
  */
 
 bool KnownTypeNode::infer(const Unifiable* unifiable) const {
+    assert(unifiable->is_closed());
     if (auto other = unifiable->isa<KnownTypeNode>()) {
         bool result = this->kind() == other->kind() 
             && this->num_type_vars() == other->num_type_vars() 
