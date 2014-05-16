@@ -31,36 +31,6 @@ void Unifiable::bind(TypeVar v) const {
 
 const Unifiable* Unifiable::unify() const { return typetable().unify(this); }
 
-void Unifiable::set_representative(const Unifiable* repr) const {
-    assert(repr == repr->representative_);
-    assert(num_type_vars() == repr->num_type_vars());
-
-    if (representative_ != repr) {
-        representative_ = repr;
-
-        for (size_t i = 0, e = num_type_vars(); i != e; ++i) {
-            auto& bounds = type_var(i)->bounds();
-            type_var(i).node()->set_representative(repr->type_var(i).representative());
-
-            // change the representative of all bound variables
-            for (auto repr_bound : repr->type_var(i)->bounds()) {
-                assert(repr_bound.node() == repr_bound->representative_);
-                assert(bounds.contains(repr_bound));
-                (*bounds.find(repr_bound)).node()->representative_ = *repr_bound;
-            }
-        }
-
-        if (auto ktn = isa<KnownTypeNode>()) {
-            auto repr_ktn = repr->as<KnownTypeNode>();
-
-            // recursively change representative of all sub elements
-            assert(ktn->size() == repr_ktn->size());
-            for (size_t i = 0, e = ktn->size(); i != e; ++i)
-                ktn->elem(i).node()->set_representative(repr_ktn->elem(i).representative());
-        }
-    }
-}
-
 //------------------------------------------------------------------------------
 
 bool TypeNode::is(PrimTypeKind kind) const { 
@@ -194,7 +164,7 @@ bool KnownTypeNode::equal(const Unifiable* unifiable) const {
 
             // check recursively element types for equivalence
             for (size_t i = 0, e = size(); i != e && result; ++i)
-                result &= this->elem(i)->equal(*other->elem(i));
+                result &= this->elem(i) == other->elem(i);
 
             // unset equivalence constraints for type variables
             for (auto var : type_vars())
@@ -242,7 +212,7 @@ bool BoundNode::equal(const Unifiable* other) const {
         if (this->trait() == bound->trait()) {
             assert(this->num_type_args() == bound->num_type_args());
             for (size_t i = 0, e = num_type_args(); i != e; ++i) {
-                if (!this->type_arg(i)->equal(*bound->type_arg(i)))
+                if (!(this->type_arg(i) == bound->type_arg(i)))
                     return false;
             }
             return true;

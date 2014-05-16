@@ -141,7 +141,6 @@ public:
     const int id() const { return id_; }
     bool is_unified() const { return representative_ != nullptr; }
     const Unifiable* unify() const;
-    void set_representative(const Unifiable* repr) const;
     void dump() const;
 
     virtual size_t num_type_vars() const { return type_vars_.size(); }

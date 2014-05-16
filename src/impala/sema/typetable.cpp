@@ -37,8 +37,7 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
     if (i != unifiables_.end()) {
         auto repr = *i;
         assert(repr != unifiable && "already unified");
-        unifiable->set_representative(repr);
-        assert(unifiable->representative() == repr);
+        unifiable->representative_ = repr;
         return repr;
     } else {
         assert(!unifiable->is_unified());
