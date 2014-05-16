@@ -154,11 +154,11 @@ public:
     const Unifiable* unify() const;
     void dump() const;
 
-    virtual size_t num_type_vars() const { return type_vars_.size(); }
-    virtual thorin::ArrayRef<TypeVar> type_vars() const { return thorin::ArrayRef<TypeVar>(type_vars_); }
-    virtual TypeVar type_var(size_t i) const { return type_vars_[i]; }
+    size_t num_type_vars() const { return type_vars_.size(); }
+    thorin::ArrayRef<TypeVar> type_vars() const { return thorin::ArrayRef<TypeVar>(type_vars_); }
+    TypeVar type_var(size_t i) const { return type_vars_[i]; }
     /// Returns true if this \p Type does have any bound type variabes (\p type_vars_).
-    virtual bool is_generic() const { return !type_vars_.empty(); }
+    bool is_generic() const { return !type_vars_.empty(); }
     virtual bool is_closed() const = 0; // TODO
     virtual void bind(TypeVar v) const;
     virtual bool equal(const Unifiable*) const = 0;
@@ -299,11 +299,6 @@ public:
     virtual size_t hash() const;
     virtual bool implements(Bound bound, SpecializeMap& map) const { return is_instantiated() && instance()->implements(bound, map); }
     virtual Type find_method(Symbol s) const { assert(is_instantiated()); return instance()->find_method(s); }
-    virtual size_t num_type_vars() const { return is_instantiated() ? instance()->num_type_vars() : 0; }
-    virtual thorin::ArrayRef<TypeVar> type_vars() const { return is_instantiated() ? instance()->type_vars() : thorin::ArrayRef<TypeVar>(); }
-    virtual TypeVar type_var(size_t i) const { assert(is_instantiated()); return instance()->type_var(i); }
-    virtual void add_type_var(TypeVar v)  { assert(false); }
-    virtual bool is_generic() const { assert(type_vars_.empty()); return is_instantiated() ? instance()->is_generic() : false; }
     virtual bool is_closed() const { assert(!is_instantiated() || instance()->is_closed()); return true; }
     virtual bool is_sane() const { return is_instantiated() && instance()->is_sane(); }
     virtual bool is_error() const override { return is_instantiated() ? instance()->is_error() : false; }
