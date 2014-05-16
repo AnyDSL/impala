@@ -216,10 +216,6 @@ protected:
         : Unifiable(typetable, kind)
     {}
 
-    thorin::Array<Type> specialize_elems(SpecializeMap&) const;
-    void convert_elems(CodeGen& world, std::vector<thorin::Type>& nelems) const;
-    std::string elems_to_string() const;
-
 public:
     /// Specializes recursively this type while obeying \p map.
     Type specialize(SpecializeMap& map) const;
@@ -229,12 +225,6 @@ public:
      */
     Type instantiate(SpecializeMap& map) const;
 
-    virtual thorin::ArrayRef<Type> elems() const = 0;
-    virtual const Type elem(size_t i) const = 0;
-    /// Returns number of \p TypeNode operands (\p elems_).
-    virtual size_t size() const = 0;
-    /// Returns true if this \p TypeNode does not have any \p TypeNode operands (\p elems_).
-    virtual bool is_empty() const = 0;
     virtual void add_impl(Impl) const = 0;
     virtual bool implements(Bound, SpecializeMap&) const = 0;
     /// @return The method type or an empty type if no method with this name was found
@@ -266,13 +256,16 @@ protected:
     {}
 
     void set(size_t i, Type n) { elems_[i] = n; }
+    thorin::Array<Type> specialize_elems(SpecializeMap&) const;
+    void convert_elems(CodeGen& world, std::vector<thorin::Type>& nelems) const;
+    std::string elems_to_string() const;
 
 public:
+    thorin::ArrayRef<Type> elems() const { return thorin::ArrayRef<Type>(elems_); }
+    const Type elem(size_t i) const { return elems_[i]; }
+    size_t size() const { return elems_.size(); }
+    bool is_empty() const { assert(!elems_.empty() || type_vars_.empty()); return elems_.empty(); }
     const std::vector<Impl>& impls() const { return impls_; }
-    virtual thorin::ArrayRef<Type> elems() const { return thorin::ArrayRef<Type>(elems_); }
-    virtual const Type elem(size_t i) const { return elems_[i]; }
-    virtual size_t size() const { return elems_.size(); }
-    virtual bool is_empty() const { assert(!elems_.empty() || type_vars_.empty()); return elems_.empty(); }
     virtual bool is_known() const override;
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
@@ -300,10 +293,6 @@ private:
 public:
     virtual std::string to_string() const;
 
-    virtual thorin::ArrayRef<Type> elems() const { return is_instantiated() ? instance()->elems() : thorin::ArrayRef<Type>(); }
-    virtual const Type elem(size_t i) const { assert(is_instantiated()); return instance()->elem(i); }
-    virtual size_t size() const { return is_instantiated() ? instance()->size() : 0; }
-    virtual bool is_empty() const { return !is_instantiated() || instance()->is_empty(); }
     virtual bool is_known() const override { return false; }
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;

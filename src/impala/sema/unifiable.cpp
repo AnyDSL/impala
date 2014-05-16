@@ -321,7 +321,7 @@ Type TypeNode::specialize(SpecializeMap& map) const {
     return t;
 }
 
-thorin::Array<Type> TypeNode::specialize_elems(SpecializeMap& map) const {
+thorin::Array<Type> KnownTypeNode::specialize_elems(SpecializeMap& map) const {
     thorin::Array<Type> nelems(size());
     for (size_t i = 0, e = size(); i != e; ++i)
         nelems[i] = elem(i)->specialize(map);
@@ -600,7 +600,7 @@ std::string PrimTypeNode::to_string() const {
     }
 }
 
-std::string TypeNode::elems_to_string() const {
+std::string KnownTypeNode::elems_to_string() const {
     std::string result;
 
     if (is_empty())

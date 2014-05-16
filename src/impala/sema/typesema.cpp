@@ -141,12 +141,13 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
 }
 
 Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
-    if (ret_func.isa<FnType>()) {
-        if (ret_func->size() == 1) {
-            return ret_func->elem(0);
+    // TODO use FnType::return_type()
+    if (auto fn = ret_func.isa<FnType>()) {
+        if (fn->size() == 1) {
+            return fn->elem(0);
         } else {
             std::vector<Type> ret_types;
-            for (auto t : ret_func->elems())
+            for (auto t : fn->elems())
                 ret_types.push_back(t);
             return tuple_type(ret_types);
         }

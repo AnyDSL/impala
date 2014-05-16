@@ -113,7 +113,7 @@ void Fn::emit_body(CodeGen& cg) const {
  * Type
  */
 
-void TypeNode::convert_elems(CodeGen& cg, std::vector<thorin::Type>& nelems) const {
+void KnownTypeNode::convert_elems(CodeGen& cg, std::vector<thorin::Type>& nelems) const {
     for (auto elem : elems())
         nelems.push_back(cg.convert(elem));
 }
