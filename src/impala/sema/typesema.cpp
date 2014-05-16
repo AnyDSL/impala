@@ -444,7 +444,7 @@ void ImplItem::check_item(TypeSema& sema) const {
                 impl->bind(tp->type_var(sema));
 
             if (!for_type->is_error() && !bound->is_error()) {
-                for_type->add_impl(impl);
+                for_type.as<KnownType>()->add_impl(impl);
                 bound->trait()->add_impl(impl);
             }
         } else

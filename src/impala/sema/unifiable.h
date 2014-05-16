@@ -23,6 +23,7 @@ template<class T> class Proxy;
 class BoundNode;        typedef Proxy<BoundNode>        Bound;
 class FnTypeNode;       typedef Proxy<FnTypeNode>       FnType;
 class ImplNode;         typedef Proxy<ImplNode>         Impl;
+class KnownTypeNode;    typedef Proxy<KnownTypeNode>    KnownType;
 class NoRetTypeNode;    typedef Proxy<NoRetTypeNode>    NoRetType;
 class PrimTypeNode;     typedef Proxy<PrimTypeNode>     PrimType;
 class StructTypeNode;   typedef Proxy<StructTypeNode>   StructType;
@@ -225,7 +226,6 @@ public:
      */
     Type instantiate(SpecializeMap& map) const;
 
-    virtual void add_impl(Impl) const = 0;
     virtual bool implements(Bound, SpecializeMap&) const = 0;
     /// @return The method type or an empty type if no method with this name was found
     virtual Type find_method(Symbol s) const = 0;
@@ -266,10 +266,11 @@ public:
     size_t size() const { return elems_.size(); }
     bool is_empty() const { assert(!elems_.empty() || type_vars_.empty()); return elems_.empty(); }
     const std::vector<Impl>& impls() const { return impls_; }
+    void add_impl(Impl) const;
+
     virtual bool is_known() const override;
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
-    virtual void add_impl(Impl) const;
     virtual bool implements(Bound, SpecializeMap&) const;
     virtual Type find_method(Symbol s) const;
     virtual bool is_closed() const;
@@ -296,7 +297,6 @@ public:
     virtual bool is_known() const override { return false; }
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
-    virtual void add_impl(Impl) const { assert(false); }
     virtual bool implements(Bound bound, SpecializeMap& map) const { return is_instantiated() && instance()->implements(bound, map); }
     virtual Type find_method(Symbol s) const { assert(is_instantiated()); return instance()->find_method(s); }
     virtual size_t num_type_vars() const { return is_instantiated() ? instance()->num_type_vars() : 0; }
