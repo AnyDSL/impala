@@ -30,9 +30,10 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
     if (unifiable->is_unified())
         return unifiable->representative();
 
-    if (auto utn = unifiable->isa<UnknownTypeNode>())
-        return utn->representative_ = *unify(utn->instance());
+    if (!unifiable->is_known())
+        return unifiable;
 
+    assert(!unifiable->isa<UnknownTypeNode>());
     auto i = unifiables_.find(unifiable);
     if (i != unifiables_.end()) {
         auto repr = *i;

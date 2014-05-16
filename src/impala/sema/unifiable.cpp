@@ -367,38 +367,44 @@ Impl ImplNode::specialize(SpecializeMap& map) const {
  * infer
  */
 
-bool KnownTypeNode::infer(const Unifiable* unifiable) const {
-    assert(unifiable->is_closed());
-    if (this->kind() == unifiable->kind()) {
-        auto other = unifiable->as<KnownTypeNode>();
-        bool result = this->num_type_vars() == other->num_type_vars() && this->size() == other->size();
-        // TODO handle type vars
-        for (size_t i = 0, e = size(); i != e && result; ++i)
-            result &= elem(i)->infer(other->elem(i));
-        return result;
+bool infer(const Unifiable* u1, const Unifiable* u2) {
+    assert(u1->is_closed() && u2->is_closed());
+
+    if (u2->isa<UnknownTypeNode>())                                 // normalize to have the UnknownType as u1
+        std::swap(u1, u2);
+    if (u2->isa<UnknownTypeNode>())                                 // second one also an UnknownType?
+        return false;                                               // ... cannot infer
+
+    if (u2->unify()->is_unified()) {                                // if u2 is unified we try to infer u1
+        if (u1->isa<UnknownTypeNode>()) {
+            assert(u2->representative()->isa<KnownTypeNode>());
+            u1->representative_ = u2->representative();             // set u1 to u2
+            return true;
+        } else if (u1->unify()->is_unified())
+            return u1->representative() == u2->representative();    // both are unified - are types equal?
+        else if (u1->kind() == u2->kind()) {                        // recursively infer sub elements
+            if (auto ktn1 = u1->isa<KnownTypeNode>()) {
+                auto ktn2 = u2->as<KnownTypeNode>();
+                bool result = ktn1->num_type_vars() == ktn2->num_type_vars() && ktn1->size() == ktn2->size();
+                // TODO handle type vars
+                for (size_t i = 0, e = ktn1->size(); i != e && result; ++i)
+                    result &= infer(ktn1->elem(i), ktn2->elem(i));
+                return result;
+            } else if (auto b1 = u1->isa<BoundNode>()) {
+                auto b2 = u2->as<BoundNode>();
+                bool result = b1->trait() == b2->trait() && b1->num_type_args() == b2->num_type_args();
+                for (size_t i = 0, e = b1->num_type_args(); result && i != e; ++i)
+                    result &= infer(b1->type_arg(i), b2->type_arg(i));
+                return result;
+            } else
+                assert(false);
+        } 
     }
+
     return false;
 }
 
-bool UnknownTypeNode::infer(const Unifiable* other) const {
-    if (!is_instantiated()) {
-        representative_ = other->unify();
-        //instantiate(other->as<TypeNode>());
-        //typetable().unify(this);
-        return true;
-    } else
-        return instance()->infer(other);
-}
-
-bool BoundNode::infer(const Unifiable* unifiable) const {
-    if (auto other = unifiable->isa<BoundNode>()) {
-        bool result = this->trait() == other->trait() && this->num_type_args() == other->num_type_args();
-        for (size_t i = 0, e = num_type_args(); result && i != e; ++i)
-            result &= this->type_arg(i)->infer(other->type_arg(i));
-        return result;
-    }
-    return false;
-}
+bool infer(Uni u1, Uni u2) { return infer(u1->unify(), u2->unify()); }
 
 //------------------------------------------------------------------------------
 
@@ -438,7 +444,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
                 }
             }
 
-            if (bound->infer(*impl->specialize(map)->bound()))
+            if (bound == impl->specialize(map)->bound())
                 return true;
         }
 

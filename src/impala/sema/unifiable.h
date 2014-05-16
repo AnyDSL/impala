@@ -20,18 +20,19 @@ class TypeTable;
 class Unifiable;
 
 template<class T> class Proxy;
-class TypeErrorNode;    typedef Proxy<TypeErrorNode> TypeError;
-class PrimTypeNode;     typedef Proxy<PrimTypeNode> PrimType;
-class NoRetTypeNode;    typedef Proxy<NoRetTypeNode> NoRetType;
-class FnTypeNode;       typedef Proxy<FnTypeNode> FnType;
-class TupleTypeNode;    typedef Proxy<TupleTypeNode> TupleType;
-class StructTypeNode;   typedef Proxy<StructTypeNode> StructType;
-class ImplNode;         typedef Proxy<ImplNode> Impl;
-class BoundNode;        typedef Proxy<BoundNode> Bound;
-class TraitNode;        typedef Proxy<TraitNode> Trait;
-class TypeNode;         typedef Proxy<TypeNode> Type;
-class TypeVarNode;      typedef Proxy<TypeVarNode> TypeVar;
-class UnknownTypeNode;  typedef Proxy<UnknownTypeNode> UnknownType;
+class BoundNode;        typedef Proxy<BoundNode>        Bound;
+class FnTypeNode;       typedef Proxy<FnTypeNode>       FnType;
+class ImplNode;         typedef Proxy<ImplNode>         Impl;
+class NoRetTypeNode;    typedef Proxy<NoRetTypeNode>    NoRetType;
+class PrimTypeNode;     typedef Proxy<PrimTypeNode>     PrimType;
+class StructTypeNode;   typedef Proxy<StructTypeNode>   StructType;
+class TraitNode;        typedef Proxy<TraitNode>        Trait;
+class TupleTypeNode;    typedef Proxy<TupleTypeNode>    TupleType;
+class TypeErrorNode;    typedef Proxy<TypeErrorNode>    TypeError;
+class TypeNode;         typedef Proxy<TypeNode>         Type;
+class TypeVarNode;      typedef Proxy<TypeVarNode>      TypeVar;
+class Unifiable;        typedef Proxy<Unifiable>        Uni;
+class UnknownTypeNode;  typedef Proxy<UnknownTypeNode>  UnknownType;
 
 //------------------------------------------------------------------------------
 
@@ -49,6 +50,15 @@ SpecializeMap specialize_map(Proxy<T> type, thorin::ArrayRef<Type> type_args) { 
 Type instantiate_unknown(Type, std::vector<Type>&);
 
 //------------------------------------------------------------------------------
+
+/**
+ * Try to fill in missing type information by matching this possibly incomplete Unifiable with a complete Unifiable.
+ * Example: fn(?0, ?1) unified_with fn(int, bool)  will set ?0=int and ?1=bool
+ * @return \p true if unification worked, i.e. both generics were structurally equal
+ *         and there were no contradictions during unification (a contradiction
+ *         would be fn(?0, ?0) unified with fn(int, bool)).
+ */
+bool infer(Uni, Uni);
 
 template<class T>
 class Proxy {
@@ -70,14 +80,14 @@ public:
         assert(&node()->typetable() == &other.node()->typetable());
         if (this->node_ == other.node_) // TODO do we really wanna have this check?
             return true;
-        return this->node()->unify() == other.node()->unify();
+        return infer(this->node()->unify(), other.node()->unify());
     }
     const T* representative() const { return node()->representative()->template as<T>(); }
     const T* node() const { assert(node_ != nullptr); return node_; }
     const T* operator  * () const { assert(node_ != nullptr); return node_->is_unified() ? representative() : node_; }
     const T* operator -> () const { return *(*this); }
     /// Automatic up-cast in the class hierarchy.
-    template<class U> operator Proxy<U>() {
+    template<class U> operator Proxy<U>() const {
         static_assert(std::is_base_of<U, T>::value, "U is not a base type of T");
         return Proxy<U>((**this)->template as<T>());
     }
@@ -157,21 +167,6 @@ public:
     /// A \p Unifiable is known if it does not contain any \p UnknownTypeNode%s
     virtual bool is_known() const = 0;
 
-    /**
-     * Try to fill in missing type information by matching this possibly incomplete Unifiable with a complete Unifiable.
-     * Example: fn(?0, ?1) unified_with fn(int, bool)  will set ?0=int and ?1=bool
-     * @return \p true if unification worked, i.e. both generics were structurally equal
-     *         and there were no contradictions during unification (a contradiction
-     *         would be fn(?0, ?0) unified with fn(int, bool)).
-     */
-    virtual bool infer(const Unifiable*) const = 0;
-    template<class T>
-    bool infer(Proxy<T> other) const {
-        bool b = infer(*other);
-        assert(!b || is_closed());
-        return b;
-    }
-
 protected:
     std::string type_vars_to_string() const;
 
@@ -190,7 +185,7 @@ protected:
 
     friend class CodeGen;
     friend class TypeTable;
-    friend class UnknownTypeNode; // TODO
+    friend bool infer(const Unifiable*, const Unifiable*);
 };
 
 //------------------------------------------------------------------------------
@@ -281,7 +276,6 @@ public:
     virtual bool is_known() const override;
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
-    virtual bool infer(const Unifiable*) const override;
     virtual void add_impl(Impl) const;
     virtual bool implements(Bound, SpecializeMap&) const;
     virtual Type find_method(Symbol s) const;
@@ -313,7 +307,6 @@ public:
     virtual bool is_known() const override { return false; }
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
-    virtual bool infer(const Unifiable*) const override;
     virtual void add_impl(Impl) const { assert(false); }
     virtual bool implements(Bound bound, SpecializeMap& map) const { return is_instantiated() && instance()->implements(bound, map); }
     virtual Type find_method(Symbol s) const { assert(is_instantiated()); return instance()->find_method(s); }
@@ -527,7 +520,6 @@ public:
     virtual bool equal(const Unifiable* other) const override;
     virtual size_t hash() const override;
     virtual bool is_known() const override { return true; }
-    virtual bool infer(const Unifiable*) const override { assert(false); return false; }
     virtual bool is_closed() const { return true; } // TODO
     virtual bool is_error() const override { return trait_decl() == nullptr; }
     virtual std::string to_string() const;
@@ -568,7 +560,6 @@ public:
     virtual size_t hash() const override;
     virtual std::string to_string() const;
     virtual bool is_known() const override;
-    virtual bool infer(const Unifiable*) const override;
     virtual bool is_closed() const;
     virtual bool is_error() const override { return trait()->is_error(); }
 
@@ -602,7 +593,6 @@ public:
     virtual bool equal(const Unifiable* other) const { return this->impl_item() == other->as<ImplNode>()->impl_item(); }
     virtual size_t hash() const;
     virtual bool is_known() const override { return true; }
-    virtual bool infer(const Unifiable*) const override { assert(false); return false; }
     virtual bool is_closed() const { return true; } // TODO
 
 protected:
