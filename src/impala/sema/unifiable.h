@@ -297,12 +297,11 @@ public:
     virtual bool is_known() const override { return false; }
     virtual bool equal(const Unifiable*) const;
     virtual size_t hash() const;
-    virtual bool implements(Bound bound, SpecializeMap& map) const { return is_instantiated() && instance()->implements(bound, map); }
-    virtual Type find_method(Symbol s) const { assert(is_instantiated()); return instance()->find_method(s); }
-    virtual bool is_closed() const { assert(!is_instantiated() || instance()->is_closed()); return true; }
-    virtual bool is_sane() const { return is_instantiated() && instance()->is_sane(); }
-    virtual bool is_error() const override { return is_instantiated() ? instance()->is_error() : false; }
-    bool is_instantiated() const { return representative() != nullptr; }
+    virtual bool implements(Bound bound, SpecializeMap& map) const { return is_unified() && instance()->implements(bound, map); }
+    virtual Type find_method(Symbol s) const { assert(is_unified()); return instance()->find_method(s); }
+    virtual bool is_closed() const { assert(!is_unified() || instance()->is_closed()); return true; }
+    virtual bool is_sane() const { return is_unified() && instance()->is_sane(); }
+    virtual bool is_error() const override { return is_unified() ? instance()->is_error() : false; }
     Type instance() const { return representative()->as<TypeNode>(); }
 
 private:

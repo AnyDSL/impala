@@ -114,7 +114,7 @@ void TraitNode::add_impl(Impl impl) const {
  */
 
 size_t UnknownTypeNode::hash() const {
-    return is_instantiated() ? instance()->hash() : hash_begin((int) kind());
+    return is_unified() ? instance()->hash() : hash_begin((int) kind());
 }
 
 size_t KnownTypeNode::hash() const {
@@ -138,7 +138,7 @@ size_t ImplNode::hash() const { return hash_value(impl_item()); }
  */
 
 bool UnknownTypeNode::equal(const Unifiable* other) const {
-    return is_instantiated() ? instance()->equal(other) : this == other;
+    return is_unified() ? instance()->equal(other) : this == other;
 }
 
 bool KnownTypeNode::equal(const Unifiable* unifiable) const {
@@ -589,7 +589,7 @@ std::string Unifiable::type_vars_to_string() const {
 }
 
 std::string UnknownTypeNode::to_string() const { 
-    return is_instantiated() ? instance()->to_string() : (std::string("?") + std::to_string(id())); 
+    return is_unified() ? instance()->to_string() : (std::string("?") + std::to_string(id())); 
 }
 
 std::string PrimTypeNode::to_string() const {

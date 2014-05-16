@@ -104,7 +104,7 @@ Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
 
 Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std::string what) {
     if (auto ut = expected.isa<UnknownType>()) {
-        if (!ut->is_instantiated()) {
+        if (!ut->is_unified()) {
             if (found_type.isa<UnknownType>()) {
                 return found_type;
             } else {
@@ -696,7 +696,7 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
             bool no_error = true;
             for (size_t i = 0; i < type_args.size(); ++i) {
                 UnknownType ut = type_args[i].isa<UnknownType>();
-                if (!ut || ut->is_instantiated()) {
+                if (!ut || ut->is_unified()) {
                     lhs->add_inferred_arg(type_args[i]);
                 } else {
                     error(whole) << "could not find instance for type variable #" << i << ".\n";
