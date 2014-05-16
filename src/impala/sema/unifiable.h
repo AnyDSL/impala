@@ -173,13 +173,15 @@ protected:
 
 private:
     virtual thorin::Type convert(CodeGen&) const = 0;
+    void convert_type_vars(CodeGen&) const;
+
+    static int counter_;
 
     TypeTable& typetable_;
     const Kind kind_;
     mutable const Unifiable* representative_;
     const int id_;
     mutable thorin::Type thorin_type_;
-    static int counter_;
 
 protected:
     mutable std::vector<TypeVar> type_vars_;

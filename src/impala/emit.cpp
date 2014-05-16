@@ -50,8 +50,10 @@ public:
         return decl->var_;
     }
     thorin::Type convert(const Unifiable* unifiable) { 
-        if (!unifiable->thorin_type_)
+        if (!unifiable->thorin_type_) {
+            unifiable->convert_type_vars(*this);
             unifiable->thorin_type_ = unifiable->convert(*this);
+        }
         return unifiable->thorin_type_;
     }
     thorin::Type convert(Type type) { return convert(*type); }
@@ -113,6 +115,12 @@ void Fn::emit_body(CodeGen& cg) const {
  * Type
  */
 
+
+void Unifiable::convert_type_vars(CodeGen& cg) const {
+    for (auto type_var : type_vars())
+        type_var->thorin_type_ = cg.world().type_var();
+}
+
 void KnownTypeNode::convert_elems(CodeGen& cg, std::vector<thorin::Type>& nelems) const {
     for (auto elem : elems())
         nelems.push_back(cg.convert(elem));
@@ -132,6 +140,11 @@ thorin::Type NoRetTypeNode::convert(CodeGen& cg) const { return thorin::Type(); 
 thorin::Type FnTypeNode::convert(CodeGen& cg) const { 
     std::vector<thorin::Type> nelems;
     nelems.push_back(cg.world().mem_type());
+    for (auto type_var : type_vars()) {
+        for (auto bound : type_var->bounds())
+            //nelems.push_back(cg.convert(*bound));
+            nelems.push_back(cg.convert(*bound->trait()));
+    }
     convert_elems(cg, nelems);
     return cg.world().fn_type(nelems); 
 }
@@ -229,6 +242,7 @@ void StructDecl::emit_item(CodeGen& cg) const {
 }
 
 void TraitDecl::emit_item(CodeGen& cg) const {
+    cg.convert(*trait())->dump();
 }
 
 void Typedef::emit_item(CodeGen& cg) const {
