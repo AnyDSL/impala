@@ -85,7 +85,7 @@ public:
     }
     const T* representative() const { return node()->representative()->template as<T>(); }
     const T* node() const { assert(node_ != nullptr); return node_; }
-    const T* operator  * () const { assert(node_ != nullptr); return node_->is_unified() ? representative() : node_; }
+    const T* operator  * () const { return node()->is_unified() ? representative() : node(); }
     const T* operator -> () const { return *(*this); }
     /// Automatic up-cast in the class hierarchy.
     template<class U> operator Proxy<U>() const {
@@ -174,6 +174,7 @@ protected:
 private:
     virtual thorin::Type convert(CodeGen&) const = 0;
     void convert_type_vars(CodeGen&) const;
+    void bind_type_vars(CodeGen&) const;
 
     static int counter_;
 

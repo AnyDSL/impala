@@ -53,6 +53,7 @@ public:
         if (!unifiable->thorin_type_) {
             unifiable->convert_type_vars(*this);
             unifiable->thorin_type_ = unifiable->convert(*this);
+            unifiable->bind_type_vars(*this);
         }
         return unifiable->thorin_type_;
     }
@@ -60,6 +61,76 @@ public:
 
     const Fn* cur_fn;
 };
+
+/*
+ * Type
+ */
+
+
+void Unifiable::convert_type_vars(CodeGen& cg) const {
+    for (auto type_var : type_vars())
+        type_var->thorin_type_ = cg.world().type_var();
+}
+
+void Unifiable::bind_type_vars(CodeGen& cg) const {
+    for (auto type_var : type_vars())
+        thorin_type_->bind(cg.convert(type_var).as<thorin::TypeVar>());
+}
+
+void KnownTypeNode::convert_elems(CodeGen& cg, std::vector<thorin::Type>& nelems) const {
+    for (auto elem : elems())
+        nelems.push_back(cg.convert(elem));
+}
+
+thorin::Type PrimTypeNode::convert(CodeGen& cg) const {
+    switch (primtype_kind()) {
+#define IMPALA_TYPE(itype, ttype) \
+        case PrimType_##itype: return cg.world().type_##ttype();
+#include "impala/tokenlist.h"
+        default: THORIN_UNREACHABLE;
+    }
+}
+
+thorin::Type NoRetTypeNode::convert(CodeGen& cg) const { return thorin::Type(); }
+
+thorin::Type FnTypeNode::convert(CodeGen& cg) const { 
+    std::vector<thorin::Type> nelems;
+    nelems.push_back(cg.world().mem_type());
+    convert_elems(cg, nelems);
+    return cg.world().fn_type(nelems); 
+}
+
+thorin::Type TupleTypeNode::convert(CodeGen& cg) const { 
+    std::vector<thorin::Type> nelems;
+    convert_elems(cg, nelems);
+    return cg.world().tuple_type(nelems);
+}
+
+thorin::Type StructTypeNode::convert(CodeGen& cg) const {
+    auto struct_type = cg.world().struct_type(size());
+
+    return struct_type;
+}
+
+thorin::Type TraitNode::convert(CodeGen& cg) const {
+    std::vector<thorin::Type> elems;
+
+    for (auto super_bound : super_bounds())
+        elems.push_back(cg.convert(*super_bound));
+
+    for (auto method : trait_decl()->methods())
+        elems.push_back(cg.convert(method->type()));
+
+    return cg.world().tuple_type(elems);
+}
+
+thorin::Type BoundNode::convert(CodeGen& cg) const {
+    return thorin::Type();
+}
+
+thorin::Type ImplNode::convert(CodeGen& cg) const {
+    return thorin::Type();
+}
 
 /*
  * Decls and Function
@@ -73,7 +144,10 @@ Var LocalDecl::emit(CodeGen& cg) const {
 }
 
 Lambda* Fn::emit_head(CodeGen& cg, const char* name) const {
-    return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), name);
+    //return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), name);
+    lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), name);
+    lambda_->type()->dump();
+    return lambda_;
 }
 
 void Fn::emit_body(CodeGen& cg) const {
@@ -109,76 +183,6 @@ void Fn::emit_body(CodeGen& cg) const {
         } else
             cg.cur_bb->jump(ret_param_, {mem, def});
     }
-}
-
-/*
- * Type
- */
-
-
-void Unifiable::convert_type_vars(CodeGen& cg) const {
-    for (auto type_var : type_vars())
-        type_var->thorin_type_ = cg.world().type_var();
-}
-
-void KnownTypeNode::convert_elems(CodeGen& cg, std::vector<thorin::Type>& nelems) const {
-    for (auto elem : elems())
-        nelems.push_back(cg.convert(elem));
-}
-
-thorin::Type PrimTypeNode::convert(CodeGen& cg) const {
-    switch (primtype_kind()) {
-#define IMPALA_TYPE(itype, ttype) \
-        case PrimType_##itype: return cg.world().type_##ttype();
-#include "impala/tokenlist.h"
-        default: THORIN_UNREACHABLE;
-    }
-}
-
-thorin::Type NoRetTypeNode::convert(CodeGen& cg) const { return thorin::Type(); }
-
-thorin::Type FnTypeNode::convert(CodeGen& cg) const { 
-    std::vector<thorin::Type> nelems;
-    nelems.push_back(cg.world().mem_type());
-    for (auto type_var : type_vars()) {
-        for (auto bound : type_var->bounds())
-            //nelems.push_back(cg.convert(*bound));
-            nelems.push_back(cg.convert(*bound->trait()));
-    }
-    convert_elems(cg, nelems);
-    return cg.world().fn_type(nelems); 
-}
-
-thorin::Type TupleTypeNode::convert(CodeGen& cg) const { 
-    std::vector<thorin::Type> nelems;
-    convert_elems(cg, nelems);
-    return cg.world().tuple_type(nelems);
-}
-
-thorin::Type StructTypeNode::convert(CodeGen& cg) const {
-    auto struct_type = cg.world().struct_type(size());
-
-    return struct_type;
-}
-
-thorin::Type TraitNode::convert(CodeGen& cg) const {
-    std::vector<thorin::Type> elems;
-
-    for (auto super_bound : super_bounds())
-        elems.push_back(cg.convert(*super_bound));
-
-    for (auto method : trait_decl()->methods())
-        elems.push_back(cg.convert(method->type()));
-
-    return cg.world().tuple_type(elems);
-}
-
-thorin::Type BoundNode::convert(CodeGen& cg) const {
-    return thorin::Type();
-}
-
-thorin::Type ImplNode::convert(CodeGen& cg) const {
-    return thorin::Type();
 }
 
 /*
