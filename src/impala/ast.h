@@ -423,7 +423,6 @@ public:
 
 class Fn : public TypeParamList {
 public:
-    virtual FnType fn_type() const = 0;
     const Param* param(size_t i) const { return params_[i]; }
     ArrayRef<const Param*> params() const { return params_; }
     const Expr* body() const { return body_; }
@@ -433,8 +432,11 @@ public:
     std::ostream& print_params(Printer& p, bool returning) const;
     void fn_check(NameSema&) const;
     void check_body(TypeSema&, FnType) const;
-    thorin::Lambda* emit_head(CodeGen&, const char* name) const;
+    thorin::Lambda* emit_head(CodeGen&) const;
     void emit_body(CodeGen&) const;
+
+    virtual FnType fn_type() const = 0;
+    virtual Symbol fn_symbol() const = 0;
 
 protected:
     mutable thorin::Lambda* lambda_;
@@ -622,6 +624,7 @@ public:
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
+    virtual Symbol fn_symbol() const override { return symbol(); }
 
 private:
     virtual Type check(TypeSema&) const override;
@@ -779,6 +782,7 @@ class FnExpr : public Expr, public Fn {
 public:
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual void check(NameSema&) const override;
+    virtual Symbol fn_symbol() const override { return Symbol("lambda"); }
 
 private:
     virtual std::ostream& print(Printer&) const override;

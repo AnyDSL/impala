@@ -141,8 +141,8 @@ Var LocalDecl::emit(CodeGen& cg) const {
     return var_ = Var(cg, handle(), thorin_type, symbol().str());
 }
 
-Lambda* Fn::emit_head(CodeGen& cg, const char* name) const {
-    return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), name);
+Lambda* Fn::emit_head(CodeGen& cg) const {
+    return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), fn_symbol().str());
 }
 
 void Fn::emit_body(CodeGen& cg) const {
@@ -190,7 +190,7 @@ void Fn::emit_body(CodeGen& cg) const {
 }
 
 /*
- * Item
+ * items
  */
 
 
@@ -203,7 +203,7 @@ void ModContents::emit(CodeGen& cg) const {
 
 Var FnDecl::emit(CodeGen& cg) const {
     // create thorin function
-    var_ = Var(cg, emit_head(cg, symbol().str()));
+    var_ = Var(cg, emit_head(cg));
     if (is_extern())
         lambda_->attribute().set(Lambda::Extern);
 
@@ -238,7 +238,7 @@ void ModDecl::emit_item(CodeGen& cg) const {
 void ImplItem::emit_item(CodeGen& cg) const {
     Array<thorin::Def> elems(num_methods());
     for (size_t i = 0, e = elems.size(); i != e; ++i)
-        elems[i] = method(i)->emit_head(cg, method(i)->symbol().str());
+        elems[i] = method(i)->emit_head(cg);
 
     for (size_t i = 0, e = elems.size(); i != e; ++i) {
         method(i)->emit_body(cg);
@@ -269,7 +269,7 @@ void Typedef::emit_item(CodeGen& cg) const {
 }
 
 /*
- * Expr
+ * expressions
  */
 
 Var Expr::lemit(CodeGen& cg) const { THORIN_UNREACHABLE; }
@@ -441,7 +441,7 @@ Def ForExpr::remit(CodeGen& cg) const {
 }
 
 Def FnExpr::remit(CodeGen& cg) const {
-    auto lambda = emit_head(cg, "lambda");
+    auto lambda = emit_head(cg);
     emit_body(cg);
     return lambda;
 }
@@ -462,7 +462,7 @@ Def IfExpr::remit(CodeGen& cg) const {
 }
 
 /*
- * Stmt
+ * statements
  */
 
 void ExprStmt::emit(CodeGen& cg) const {
