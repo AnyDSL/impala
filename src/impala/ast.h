@@ -666,6 +666,8 @@ public:
     const ASTType* trait() const { return trait_; }
     const ASTType* type() const { return type_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
+    const FnDecl* method(size_t i) const { return methods_[i]; }
+    size_t num_methods() const { return methods_.size(); }
     virtual std::ostream& print(Printer&) const override;
 
 private:

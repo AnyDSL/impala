@@ -128,9 +128,7 @@ thorin::Type BoundNode::convert(CodeGen& cg) const {
     return cg.convert(trait())->instantiate(args);
 }
 
-thorin::Type ImplNode::convert(CodeGen& cg) const {
-    return thorin::Type();
-}
+thorin::Type ImplNode::convert(CodeGen& cg) const { THORIN_UNREACHABLE; }
 
 /*
  * Decls and Function
@@ -144,10 +142,7 @@ Var LocalDecl::emit(CodeGen& cg) const {
 }
 
 Lambda* Fn::emit_head(CodeGen& cg, const char* name) const {
-    //return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), name);
-    lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), name);
-    lambda_->type()->dump();
-    return lambda_;
+    return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), name);
 }
 
 void Fn::emit_body(CodeGen& cg) const {
@@ -241,6 +236,18 @@ void ModDecl::emit_item(CodeGen& cg) const {
 }
 
 void ImplItem::emit_item(CodeGen& cg) const {
+    Array<thorin::Def> elems(num_methods());
+    for (size_t i = 0, e = elems.size(); i != e; ++i)
+        elems[i] = method(i)->emit_head(cg, method(i)->symbol().str());
+
+    for (size_t i = 0, e = elems.size(); i != e; ++i) {
+        method(i)->emit_body(cg);
+        method(i)->lambda()->dump_head();
+        method(i)->lambda()->dump_jump();
+    }
+
+    auto tuple = cg.world().tuple(elems);
+    tuple->dump();
 }
 
 Var StaticItem::emit(CodeGen& cg) const {
