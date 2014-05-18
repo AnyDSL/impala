@@ -122,8 +122,10 @@ thorin::Type TraitNode::convert(CodeGen& cg) const {
 }
 
 thorin::Type BoundNode::convert(CodeGen& cg) const {
-     // TODO instantiate
-    return cg.convert(trait());
+    Array<thorin::Type> args(num_type_args());
+    for (size_t i = 0, e = args.size(); i != e; ++i)
+        args[i] = cg.convert(type_arg(i));
+    return cg.convert(trait())->instantiate(args);
 }
 
 thorin::Type ImplNode::convert(CodeGen& cg) const {
