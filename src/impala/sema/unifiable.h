@@ -263,8 +263,8 @@ public:
     virtual std::string to_string() const;
 
     virtual bool is_known() const override { return false; }
-    virtual bool equal(const Unifiable*) const;
-    virtual size_t hash() const;
+    virtual bool equal(const Unifiable*) const { THORIN_UNREACHABLE; }
+    virtual size_t hash() const { THORIN_UNREACHABLE; }
     virtual bool implements(Bound bound, SpecializeMap& map) const { return is_unified() && instance()->implements(bound, map); }
     virtual Type find_method(Symbol s) const { assert(is_unified()); return instance()->find_method(s); }
     virtual bool is_closed() const { assert(!is_unified() || instance()->is_closed()); return true; }

@@ -113,10 +113,6 @@ void TraitNode::add_impl(Impl impl) const {
  * hash
  */
 
-size_t UnknownTypeNode::hash() const {
-    return is_unified() ? instance()->hash() : hash_begin((int) kind());
-}
-
 size_t KnownTypeNode::hash() const {
     // FEATURE take type variables of generic types better into the equation
     size_t seed = hash_combine(hash_begin((int) kind()), size());
@@ -137,16 +133,17 @@ size_t ImplNode::hash() const { return hash_value(impl_item()); }
  * equal
  */
 
-bool UnknownTypeNode::equal(const Unifiable* other) const {
-    return is_unified() ? instance()->equal(other) : this == other;
-}
-
 bool KnownTypeNode::equal(const Unifiable* unifiable) const {
+    assert(this->is_unified());
+    assert(!unifiable->isa<UnknownTypeNode>());
+
     if (this == unifiable) 
         return true;
 
-    if (auto utn = unifiable->isa<const UnknownTypeNode>()) 
+    if (auto utn = unifiable->isa<const UnknownTypeNode>()) {
+        assert(false && "TODO");
         return utn->equal(this);
+    }
 
     if (this->kind() == unifiable->kind()) {
         auto other = unifiable->as<KnownTypeNode>();
