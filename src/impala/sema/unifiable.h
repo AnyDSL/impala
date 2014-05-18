@@ -256,12 +256,41 @@ private:
     virtual Type vinstantiate(SpecializeMap&) const = 0;
 };
 
+class UnknownTypeNode : public TypeNode {
+private:
+    UnknownTypeNode(TypeTable& typetable)
+        : TypeNode(typetable, Kind_unknown)
+    {}
+
+public:
+    virtual std::string to_string() const;
+
+    virtual bool is_known() const override { return false; }
+    virtual bool equal(const Unifiable*) const;
+    virtual size_t hash() const;
+    virtual bool implements(Bound bound, SpecializeMap& map) const { return is_unified() && instance()->implements(bound, map); }
+    virtual Type find_method(Symbol s) const { assert(is_unified()); return instance()->find_method(s); }
+    virtual bool is_closed() const { assert(!is_unified() || instance()->is_closed()); return true; }
+    virtual bool is_sane() const { return is_unified() && instance()->is_sane(); }
+    virtual bool is_error() const override { return is_unified() ? instance()->is_error() : false; }
+    Type instance() const { return representative()->as<TypeNode>(); }
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const;
+    virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
+
+    friend class TypeTable;
+};
+
 class KnownTypeNode : public TypeNode {
 protected:
-    KnownTypeNode(TypeTable& typetable, Kind kind, size_t size)
+    KnownTypeNode(TypeTable& typetable, Kind kind, ArrayRef<Type> elems)
         : TypeNode(typetable, kind)
-        , elems_(size)
-    {}
+        , elems_(elems.size())
+    {
+        for (size_t i = 0, e = elems.size(); i != e; ++i)
+            set(i, elems[i]);
+    }
 
     void set(size_t i, Type n) { elems_[i] = n; }
     Array<Type> specialize_elems(SpecializeMap&) const;
@@ -293,36 +322,10 @@ protected:
     friend class TypeTable;
 };
 
-class UnknownTypeNode : public TypeNode {
-private:
-    UnknownTypeNode(TypeTable& typetable)
-        : TypeNode(typetable, Kind_unknown)
-    {}
-
-public:
-    virtual std::string to_string() const;
-
-    virtual bool is_known() const override { return false; }
-    virtual bool equal(const Unifiable*) const;
-    virtual size_t hash() const;
-    virtual bool implements(Bound bound, SpecializeMap& map) const { return is_unified() && instance()->implements(bound, map); }
-    virtual Type find_method(Symbol s) const { assert(is_unified()); return instance()->find_method(s); }
-    virtual bool is_closed() const { assert(!is_unified() || instance()->is_closed()); return true; }
-    virtual bool is_sane() const { return is_unified() && instance()->is_sane(); }
-    virtual bool is_error() const override { return is_unified() ? instance()->is_error() : false; }
-    Type instance() const { return representative()->as<TypeNode>(); }
-
-private:
-    virtual Type vinstantiate(SpecializeMap&) const;
-    virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
-
-    friend class TypeTable;
-};
-
 class TypeErrorNode : public KnownTypeNode {
 private:
     TypeErrorNode(TypeTable& typetable)
-        : KnownTypeNode(typetable, Kind_error, 0)
+        : KnownTypeNode(typetable, Kind_error, {})
     {}
 
 public:
@@ -339,7 +342,7 @@ private:
 class NoRetTypeNode : public KnownTypeNode {
 private:
     NoRetTypeNode(TypeTable& typetable)
-        : KnownTypeNode(typetable, Kind_noret, 0)
+        : KnownTypeNode(typetable, Kind_noret, {})
     {}
 
 public:
@@ -355,7 +358,7 @@ private:
 class PrimTypeNode : public KnownTypeNode {
 private:
     PrimTypeNode(TypeTable& typetable, PrimTypeKind kind)
-        : KnownTypeNode(typetable, (Kind) kind, 0)
+        : KnownTypeNode(typetable, (Kind) kind, {})
     {}
 
 public:
@@ -372,11 +375,8 @@ private:
 class FnTypeNode : public KnownTypeNode {
 private:
     FnTypeNode(TypeTable& typetable, ArrayRef<Type> elems)
-        : KnownTypeNode(typetable, Kind_fn, elems.size())
-    {
-        for (size_t i = 0, e = elems.size(); i != e; ++i)
-            set(i, elems[i]);
-    }
+        : KnownTypeNode(typetable, Kind_fn, elems)
+    {}
 
 public:
     Type return_type() const;
@@ -393,11 +393,8 @@ private:
 class TupleTypeNode : public KnownTypeNode {
 private:
     TupleTypeNode(TypeTable& typetable, ArrayRef<Type> elems)
-        : KnownTypeNode(typetable, Kind_tuple, elems.size())
-    {
-        for (size_t i = 0, e = elems.size(); i != e; ++i)
-            set(i, elems[i]);
-    }
+        : KnownTypeNode(typetable, Kind_tuple, elems)
+    {}
 
 public:
     virtual std::string to_string() const { return type_vars_to_string() + elems_to_string(); }
@@ -429,7 +426,7 @@ private:
 class TypeVarNode : public KnownTypeNode {
 private:
     TypeVarNode(TypeTable& tt, Symbol name)
-        : KnownTypeNode(tt, Kind_type_var, 0)
+        : KnownTypeNode(tt, Kind_type_var, {})
         , name_(name)
         , bound_at_(nullptr)
         , equiv_(nullptr)

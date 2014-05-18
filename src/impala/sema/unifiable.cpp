@@ -89,7 +89,7 @@ FnType FnTypeNode::peel_first() const {
 }
 
 StructTypeNode::StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl)
-    : KnownTypeNode(typetable, Kind_tuple, struct_decl->fields().size())
+    : KnownTypeNode(typetable, Kind_tuple, Array<Type>(struct_decl->fields().size()))
     , struct_decl_(struct_decl)
 {}
 
