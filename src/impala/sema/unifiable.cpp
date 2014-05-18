@@ -31,15 +31,6 @@ void Unifiable::bind(TypeVar v) const {
 
 const Unifiable* Unifiable::unify() const { return typetable().unify(this); }
 
-size_t Unifiable::num_bounds() const {
-    if (num_bounds_ == size_t(-1)) {
-        num_bounds_ = 0;
-        for (auto type_var : type_vars())
-            num_bounds_ += type_var->num_bounds();
-    }
-    return num_bounds_;
-}
-
 //------------------------------------------------------------------------------
 
 bool TypeNode::is(PrimTypeKind kind) const { 
