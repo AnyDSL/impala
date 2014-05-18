@@ -439,8 +439,8 @@ public:
 
 protected:
     mutable thorin::Lambda* lambda_;
-    mutable const thorin::Param* ret_param_;
-    mutable const thorin::Enter* frame_;
+    mutable SafePtr<const thorin::Param> ret_param_;
+    mutable SafePtr<const thorin::Enter> frame_;
 
 private:
     AutoVector<const Param*> params_;

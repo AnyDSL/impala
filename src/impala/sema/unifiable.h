@@ -143,6 +143,8 @@ protected:
         , kind_(kind)
         , representative_(nullptr)
         , id_(counter_++)
+        , num_bounds_(-1)
+        , thorin_type_(nullptr)
     {}
 
 public:
@@ -155,6 +157,7 @@ public:
     void dump() const;
 
     size_t num_type_vars() const { return type_vars_.size(); }
+    size_t num_bounds() const;
     thorin::ArrayRef<TypeVar> type_vars() const { return thorin::ArrayRef<TypeVar>(type_vars_); }
     TypeVar type_var(size_t i) const { return type_vars_[i]; }
     /// Returns true if this \p Type does have any bound type variabes (\p type_vars_).
@@ -173,8 +176,6 @@ protected:
 
 private:
     virtual thorin::Type convert(CodeGen&) const = 0;
-    void convert_type_vars(CodeGen&) const;
-    void bind_type_vars(CodeGen&) const;
 
     static int counter_;
 
@@ -182,6 +183,7 @@ private:
     const Kind kind_;
     mutable const Unifiable* representative_;
     const int id_;
+    mutable size_t num_bounds_;
     mutable thorin::Type thorin_type_;
 
 protected:

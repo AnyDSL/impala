@@ -51,13 +51,18 @@ public:
     }
     thorin::Type convert(const Unifiable* unifiable) { 
         if (!unifiable->thorin_type_) {
-            unifiable->convert_type_vars(*this);
+            for (auto type_var : unifiable->type_vars())    // convert type vars
+                type_var->thorin_type_ = world().type_var();
+
             unifiable->thorin_type_ = unifiable->convert(*this);
-            unifiable->bind_type_vars(*this);
+
+            for (auto type_var : unifiable->type_vars())    // bind type vars
+                unifiable->thorin_type_->bind(convert(type_var).as<thorin::TypeVar>());
         }
         return unifiable->thorin_type_;
     }
-    thorin::Type convert(Type type) { return convert(*type); }
+    template<class T>
+    thorin::Type convert(Proxy<T> type) { return convert(*type); }
 
     const Fn* cur_fn;
 };
@@ -65,17 +70,6 @@ public:
 /*
  * Type
  */
-
-
-void Unifiable::convert_type_vars(CodeGen& cg) const {
-    for (auto type_var : type_vars())
-        type_var->thorin_type_ = cg.world().type_var();
-}
-
-void Unifiable::bind_type_vars(CodeGen& cg) const {
-    for (auto type_var : type_vars())
-        thorin_type_->bind(cg.convert(type_var).as<thorin::TypeVar>());
-}
 
 void KnownTypeNode::convert_elems(CodeGen& cg, std::vector<thorin::Type>& nelems) const {
     for (auto elem : elems())
@@ -96,6 +90,10 @@ thorin::Type NoRetTypeNode::convert(CodeGen& cg) const { return thorin::Type(); 
 thorin::Type FnTypeNode::convert(CodeGen& cg) const { 
     std::vector<thorin::Type> nelems;
     nelems.push_back(cg.world().mem_type());
+    for (auto type_var : type_vars()) {
+        for (auto bound : type_var->bounds())
+            nelems.push_back(cg.convert(*bound));
+    }
     convert_elems(cg, nelems);
     return cg.world().fn_type(nelems); 
 }
@@ -125,7 +123,8 @@ thorin::Type TraitNode::convert(CodeGen& cg) const {
 }
 
 thorin::Type BoundNode::convert(CodeGen& cg) const {
-    return thorin::Type();
+     // TODO instantiate
+    return cg.convert(*trait());
 }
 
 thorin::Type ImplNode::convert(CodeGen& cg) const {
@@ -157,31 +156,40 @@ void Fn::emit_body(CodeGen& cg) const {
     THORIN_PUSH(cg.cur_bb, lambda());
 
     // setup memory + frame
-    Def mem = lambda()->param(0);
+    size_t i = 0;
+    Def mem = lambda()->param(i++);
     mem->name = "mem";
     cg.set_mem(mem);
     frame_ = cg.world().enter(mem); 
 
-    // name params and setup store locations
-    for (size_t i = 0, e = params().size(); i != e; ++i) {
-        auto p = lambda()->param(i+1);
-        p->name = param(i)->symbol().str();
-        cg.emit(param(i)).store(p);
+    // name bounds
+    for (auto type_var : fn_type()->type_vars()) {
+        for (auto bound : type_var->bounds())
+            lambda()->param(i++)->name = bound->trait()->trait_decl()->symbol().str();
     }
-    ret_param_ = lambda()->params().back();
+
+    // name params and setup store locations
+    for (auto param : params()) {
+        auto p = lambda()->param(i++);
+        p->name = param->symbol().str();
+        cg.emit(param).store(p);
+    }
+    assert(i == lambda()->num_params());
+    if (lambda()->num_params() != 0 && lambda()->params().back()->type().isa<thorin::FnType>())
+        ret_param_ = lambda()->params().back();
 
     // descent into body
     auto def = cg.remit(body());
     if (def) {
-        mem = cg.world().leave(cg.get_mem(), frame_);
+        mem = cg.world().leave(cg.get_mem(), frame());
         if (auto sigma = def->type().isa<thorin::TupleType>()) {
             std::vector<Def> args;
             args.push_back(mem);
             for (size_t i = 0, e = sigma->size(); i != e; ++i)
                 args.push_back(cg.world().extract(def, i));
-            cg.cur_bb->jump(ret_param_, args);
+            cg.cur_bb->jump(ret_param(), args);
         } else
-            cg.cur_bb->jump(ret_param_, {mem, def});
+            cg.cur_bb->jump(ret_param(), {mem, def});
     }
 }
 
