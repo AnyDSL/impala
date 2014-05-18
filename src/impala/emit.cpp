@@ -61,8 +61,7 @@ public:
         }
         return unifiable->thorin_type_;
     }
-    template<class T>
-    thorin::Type convert(Proxy<T> type) { return convert(*type); }
+    template<class T> thorin::Type convert(Proxy<T> type) { return convert(*type); }
 
     const Fn* cur_fn;
 };
@@ -92,7 +91,7 @@ thorin::Type FnTypeNode::convert(CodeGen& cg) const {
     nelems.push_back(cg.world().mem_type());
     for (auto type_var : type_vars()) {
         for (auto bound : type_var->bounds())
-            nelems.push_back(cg.convert(*bound));
+            nelems.push_back(cg.convert(bound));
     }
     convert_elems(cg, nelems);
     return cg.world().fn_type(nelems); 
@@ -114,7 +113,7 @@ thorin::Type TraitNode::convert(CodeGen& cg) const {
     std::vector<thorin::Type> elems;
 
     for (auto super_bound : super_bounds())
-        elems.push_back(cg.convert(*super_bound));
+        elems.push_back(cg.convert(super_bound));
 
     for (auto method : trait_decl()->methods())
         elems.push_back(cg.convert(method->type()));
@@ -124,7 +123,7 @@ thorin::Type TraitNode::convert(CodeGen& cg) const {
 
 thorin::Type BoundNode::convert(CodeGen& cg) const {
      // TODO instantiate
-    return cg.convert(*trait());
+    return cg.convert(trait());
 }
 
 thorin::Type ImplNode::convert(CodeGen& cg) const {
@@ -254,7 +253,7 @@ void StructDecl::emit_item(CodeGen& cg) const {
 }
 
 void TraitDecl::emit_item(CodeGen& cg) const {
-    cg.convert(*trait())->dump();
+    cg.convert(trait())->dump();
 }
 
 void Typedef::emit_item(CodeGen& cg) const {
