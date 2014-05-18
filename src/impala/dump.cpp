@@ -3,9 +3,6 @@
 #include "impala/ast.h"
 #include "impala/dump.h"
 
-using thorin::ArrayRef;
-using thorin::Type;
-
 namespace impala {
 
 //------------------------------------------------------------------------------

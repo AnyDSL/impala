@@ -12,6 +12,9 @@
 
 namespace impala {
 
+template<class T> using ArrayRef = thorin::ArrayRef<T>;
+template<class T> using Array    = thorin::Array<T>;
+
 class CodeGen;
 class ImplItem;
 class StructDecl;
@@ -39,10 +42,10 @@ class UnknownTypeNode;  typedef Proxy<UnknownTypeNode>  UnknownType;
 
 typedef thorin::HashMap<const TypeNode*, const TypeNode*> SpecializeMap;
 
-SpecializeMap specialize_map(const Unifiable*, thorin::ArrayRef<Type>);
+SpecializeMap specialize_map(const Unifiable*, ArrayRef<Type>);
 /// Creates a \p SpecializeMap by mapping each of \p type's type variable to the corresponding element in \p type_args.
 template<class T>
-SpecializeMap specialize_map(Proxy<T> type, thorin::ArrayRef<Type> type_args) { return specialize_map(*type, type_args); }
+SpecializeMap specialize_map(Proxy<T> type, ArrayRef<Type> type_args) { return specialize_map(*type, type_args); }
 
 /**
  * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
@@ -158,7 +161,7 @@ public:
 
     size_t num_type_vars() const { return type_vars_.size(); }
     size_t num_bounds() const;
-    thorin::ArrayRef<TypeVar> type_vars() const { return thorin::ArrayRef<TypeVar>(type_vars_); }
+    ArrayRef<TypeVar> type_vars() const { return ArrayRef<TypeVar>(type_vars_); }
     TypeVar type_var(size_t i) const { return type_vars_[i]; }
     /// Returns true if this \p Type does have any bound type variabes (\p type_vars_).
     bool is_generic() const { return !type_vars_.empty(); }
@@ -261,12 +264,12 @@ protected:
     {}
 
     void set(size_t i, Type n) { elems_[i] = n; }
-    thorin::Array<Type> specialize_elems(SpecializeMap&) const;
+    Array<Type> specialize_elems(SpecializeMap&) const;
     void convert_elems(CodeGen& world, std::vector<thorin::Type>& nelems) const;
     std::string elems_to_string() const;
 
 public:
-    thorin::ArrayRef<Type> elems() const { return thorin::ArrayRef<Type>(elems_); }
+    ArrayRef<Type> elems() const { return ArrayRef<Type>(elems_); }
     const Type elem(size_t i) const { return elems_[i]; }
     size_t size() const { return elems_.size(); }
     bool is_empty() const { assert(!elems_.empty() || type_vars_.empty()); return elems_.empty(); }
@@ -368,7 +371,7 @@ private:
 
 class FnTypeNode : public KnownTypeNode {
 private:
-    FnTypeNode(TypeTable& typetable, thorin::ArrayRef<Type> elems)
+    FnTypeNode(TypeTable& typetable, ArrayRef<Type> elems)
         : KnownTypeNode(typetable, Kind_fn, elems.size())
     {
         for (size_t i = 0, e = elems.size(); i != e; ++i)
@@ -389,7 +392,7 @@ private:
 
 class TupleTypeNode : public KnownTypeNode {
 private:
-    TupleTypeNode(TypeTable& typetable, thorin::ArrayRef<Type> elems)
+    TupleTypeNode(TypeTable& typetable, ArrayRef<Type> elems)
         : KnownTypeNode(typetable, Kind_tuple, elems.size())
     {
         for (size_t i = 0, e = elems.size(); i != e; ++i)
@@ -503,7 +506,7 @@ public:
     /// return the type of the method with this name if it exists; otherwise return an empty type
     Type find_method(Symbol name) const;
     bool has_method(Symbol name) const { return !find_method(name).empty(); }
-    Bound instantiate(thorin::ArrayRef<Type> args) const;
+    Bound instantiate(ArrayRef<Type> args) const;
     void add_impl(Impl impl) const;
     virtual bool equal(const Unifiable* other) const override;
     virtual size_t hash() const override;
@@ -528,7 +531,7 @@ private:
 /// An instance of a trait is a trait where all type variables are instantiated by concrete types.
 class BoundNode : public Unifiable {
 private:
-    BoundNode(const Trait trait, thorin::ArrayRef<Type> type_args)
+    BoundNode(const Trait trait, ArrayRef<Type> type_args)
         : Unifiable(trait->typetable(), Kind_bound)
         , trait_(trait)
         , type_args_(type_args)
@@ -539,7 +542,7 @@ private:
 public:
     const Trait trait() const { return trait_; }
     const Type type_arg(size_t i) const { return type_args_[i]; }
-    thorin::ArrayRef<Type> type_args() const { return type_args_; }
+    ArrayRef<Type> type_args() const { return type_args_; }
     size_t num_type_args() const { return type_args_.size(); }
     Type find_method(Symbol name) const;
     Bound specialize(SpecializeMap&) const;
@@ -555,7 +558,7 @@ private:
     virtual thorin::Type convert(CodeGen&) const override;
 
     const Trait trait_;
-    thorin::Array<Type> type_args_;
+    Array<Type> type_args_;
     mutable thorin::HashMap<Symbol, Type> method_cache_;
 
     friend class TypeTable;

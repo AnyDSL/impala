@@ -28,13 +28,13 @@ public:
     PrimType type(PrimTypeKind kind);
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
-    FnType fn_type(thorin::ArrayRef<Type> params) { return join(new FnTypeNode(*this, params)); }
-    TupleType tuple_type(thorin::ArrayRef<Type> elems) { return join(new TupleTypeNode(*this, elems)); }
+    FnType fn_type(ArrayRef<Type> params) { return join(new FnTypeNode(*this, params)); }
+    TupleType tuple_type(ArrayRef<Type> elems) { return join(new TupleTypeNode(*this, elems)); }
     TupleType unit() { return tuple_type({}); }
     StructType struct_type(const StructDecl* struct_decl) { return join(new StructTypeNode(*this, struct_decl)); }
     TypeVar type_var(Symbol name = Symbol()) { return join(new TypeVarNode(*this, name)); }
     UnknownType unknown_type() { return join(new UnknownTypeNode(*this)); }
-    Bound bound(Trait trait, thorin::ArrayRef<Type> args) { return join(new BoundNode(trait, args)); }
+    Bound bound(Trait trait, ArrayRef<Type> args) { return join(new BoundNode(trait, args)); }
     Trait trait(const TraitDecl* trait_decl) { return join(new TraitNode(*this, trait_decl)); }
     Impl impl(const ImplItem* impl, Bound bound, Type type) { return join(new ImplNode(*this, impl, bound, type)); }
 

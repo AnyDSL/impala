@@ -41,7 +41,6 @@ class TypeSema;
 template<class T> using SafePtr    = thorin::SafePtr<T>;
 template<class T> using AutoPtr    = thorin::AutoPtr<T>;
 template<class T> using AutoVector = thorin::AutoVector<T>;
-template<class T> using ArrayRef   = thorin::ArrayRef<T>;
 
 typedef AutoVector<const ASTType*> ASTTypes;
 typedef AutoVector<const Expr*> Exprs;
@@ -692,7 +691,7 @@ public:
     virtual void check(NameSema&) const = 0;
 
     void add_inferred_arg(Type t) const { inferred_args_.push_back(t); }
-    const thorin::ArrayRef<Type> inferred_args() const { return inferred_args_; }
+    const ArrayRef<Type> inferred_args() const { return inferred_args_; }
 
 private:
     virtual std::ostream& print(Printer&) const = 0;

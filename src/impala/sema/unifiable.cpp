@@ -294,7 +294,7 @@ bool BoundNode::is_closed() const {
  * specialize and instantiate
  */
 
-SpecializeMap specialize_map(const Unifiable* unifiable, thorin::ArrayRef<Type> type_args) {
+SpecializeMap specialize_map(const Unifiable* unifiable, ArrayRef<Type> type_args) {
     assert(unifiable->num_type_vars() == type_args.size());
     SpecializeMap map;
     size_t i = 0;
@@ -330,8 +330,8 @@ Type TypeNode::specialize(SpecializeMap& map) const {
     return t;
 }
 
-thorin::Array<Type> KnownTypeNode::specialize_elems(SpecializeMap& map) const {
-    thorin::Array<Type> nelems(size());
+Array<Type> KnownTypeNode::specialize_elems(SpecializeMap& map) const {
+    Array<Type> nelems(size());
     for (size_t i = 0, e = size(); i != e; ++i)
         nelems[i] = elem(i)->specialize(map);
     return nelems;
@@ -354,12 +354,12 @@ Type TupleTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = 
 Type StructTypeNode::vinstantiate(SpecializeMap& map) const { assert(false); return nullptr; }
 Type TypeVarNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 
-Bound TraitNode::instantiate(thorin::ArrayRef<Type> type_args) const {
+Bound TraitNode::instantiate(ArrayRef<Type> type_args) const {
     return typetable().bound(this, type_args);
 }
 
 Bound BoundNode::specialize(SpecializeMap& map) const {
-    thorin::Array<Type> new_type_args(num_type_args());
+    Array<Type> new_type_args(num_type_args());
     for (size_t i = 0, e = num_type_args(); i != e; ++i)
         new_type_args[i] = type_arg(i)->specialize(map);
 
@@ -460,7 +460,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
         // may be one of bound->trait's subtraits implements 'this'
         for (auto sub_trait : bound->trait()->sub_traits()) {
             auto super_bound = sub_trait->super_bound(bound->trait());
-            thorin::Array<Type> new_type_args(sub_trait->num_type_vars());
+            Array<Type> new_type_args(sub_trait->num_type_vars());
             for (size_t i = 0, e = sub_trait->num_type_vars(); i != e; ++i) {
                 for (size_t j = 0, e = super_bound->num_type_args(); j != e; ++j) { // TODO this is currently quadratic
                     if (sub_trait->type_var(i).as<Type>() == super_bound->type_arg(j)

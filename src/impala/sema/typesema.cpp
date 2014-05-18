@@ -3,9 +3,6 @@
 #include "impala/impala.h"
 #include "impala/sema/typetable.h"
 
-using thorin::Array;
-using thorin::ArrayRef;
-
 namespace impala {
 
 //------------------------------------------------------------------------------
@@ -34,12 +31,12 @@ public:
     Type expect_type(const Expr* expr, Type expected, std::string what) { return expect_type(expr, expr->type(), expected, what); }
     Type create_return_type(const ASTNode* node, Type ret_func);
 
-    Bound instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> args);
-    Type instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> args);
+    Bound instantiate(const ASTNode* loc, Trait trait, Type self, ArrayRef<const ASTType*> args);
+    Type instantiate(const ASTNode* loc, Type type, ArrayRef<const ASTType*> args);
     Type check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Expr*> args, Type expected);
 
-    bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> types, SpecializeMap& map);
-    bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> types) {
+    bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, ArrayRef<Type> types, SpecializeMap& map);
+    bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, ArrayRef<Type> types) {
         SpecializeMap map;
         return check_bounds(loc, unifiable, types, map);
     }
@@ -157,7 +154,7 @@ Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
     }
 }
 
-Bound TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::ArrayRef<const ASTType*> args) {
+Bound TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, ArrayRef<const ASTType*> args) {
     if ((args.size()+1) == trait->num_type_vars()) {
         std::vector<Type> type_args;
         type_args.push_back(self);
@@ -171,7 +168,7 @@ Bound TypeSema::instantiate(const ASTNode* loc, Trait trait, Type self, thorin::
     return bound_error();
 }
 
-Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const ASTType*> args) {
+Type TypeSema::instantiate(const ASTNode* loc, Type type, ArrayRef<const ASTType*> args) {
     if (args.size() == type->num_type_vars()) {
         std::vector<Type> type_args;
         for (auto t : args) 
@@ -186,7 +183,7 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, thorin::ArrayRef<const
     return type_error();
 }
 
-bool TypeSema::check_bounds(const ASTNode* loc, const Unifiable* unifiable, thorin::ArrayRef<Type> type_args, SpecializeMap& map) {
+bool TypeSema::check_bounds(const ASTNode* loc, const Unifiable* unifiable, ArrayRef<Type> type_args, SpecializeMap& map) {
     map = specialize_map(unifiable, type_args);
     assert(map.size() == type_args.size());
     bool result = true;
