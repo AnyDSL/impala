@@ -671,6 +671,7 @@ public:
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
     const FnDecl* method(size_t i) const { return methods_[i]; }
     size_t num_methods() const { return methods_.size(); }
+    thorin::Def def() const { return def_; }
     virtual std::ostream& print(Printer&) const override;
 
 private:
@@ -681,6 +682,7 @@ private:
     AutoPtr<const ASTType> trait_;
     AutoPtr<const ASTType> type_;
     AutoVector<const FnDecl*> methods_;
+    mutable thorin::Def def_;
 
     friend class Parser;
 };

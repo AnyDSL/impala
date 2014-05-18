@@ -174,7 +174,7 @@ void Fn::emit_body(CodeGen& cg) const {
     if (lambda()->num_params() != 0 && lambda()->params().back()->type().isa<thorin::FnType>())
         ret_param_ = lambda()->params().back();
 
-    // descent into body
+    // descend into body
     auto def = cg.remit(body());
     if (def) {
         mem = cg.world().leave(cg.get_mem(), frame());
@@ -236,18 +236,15 @@ void ModDecl::emit_item(CodeGen& cg) const {
 }
 
 void ImplItem::emit_item(CodeGen& cg) const {
+    assert(!def_);
     Array<thorin::Def> elems(num_methods());
     for (size_t i = 0, e = elems.size(); i != e; ++i)
         elems[i] = method(i)->emit_head(cg);
 
-    for (size_t i = 0, e = elems.size(); i != e; ++i) {
+    for (size_t i = 0, e = elems.size(); i != e; ++i)
         method(i)->emit_body(cg);
-        method(i)->lambda()->dump_head();
-        method(i)->lambda()->dump_jump();
-    }
 
-    auto tuple = cg.world().tuple(elems);
-    tuple->dump();
+    def_ = cg.world().tuple(elems);
 }
 
 Var StaticItem::emit(CodeGen& cg) const {
