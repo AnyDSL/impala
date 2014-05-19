@@ -1,6 +1,7 @@
 #ifndef IMPALA_SEMA_UNIFIABLE_H
 #define IMPALA_SEMA_UNIFIABLE_H
 
+#include <set>
 #include <vector>
 
 #include "thorin/type.h"
@@ -63,6 +64,8 @@ Type instantiate_unknown(Type, std::vector<Type>&);
  *         would be fn(?0, ?0) unified with fn(int, bool)).
  */
 bool infer(Uni, Uni);
+
+struct BoundsLT { bool operator () (Bound b1, Bound b2) const; };
 
 template<class T>
 class Proxy {
@@ -212,14 +215,21 @@ std::ostream& operator << (std::ostream& o, Proxy<T> u) { return o << u->to_stri
 
 //------------------------------------------------------------------------------
 
-template<class T> struct UniHash {
-    size_t operator () (const T t) const { return t->hash(); }
+template<class T> 
+struct IdHash {
+    size_t operator () (const T t) const { assert(t->is_unified() || !t->is_known()); return t->id(); }
 };
-template<class T> struct UniEqual {
-    bool operator () (const T t1, const T t2) const { return (t1->is_unified() && t2->is_unified()) ? t1 == t2 : t1->equal(*t2); }
+
+template<class T> 
+struct IdEqual {
+    bool operator () (const T t1, const T t2) const { 
+        assert((t1->is_unified() || !t1->is_known()) && (t1->is_unified() || !t1->is_known()));
+        return t1->id() == t2->id(); 
+    }
 };
-template<class T> using UniSet = thorin::HashSet<T, UniHash<T>, UniEqual<T>>;
-template<class T, class U> using UniMap = thorin::HashMap<T, U, UniHash<T>, UniEqual<T>>;
+
+template<class T> using IdSet = thorin::HashSet<T, IdHash<T>, IdEqual<T>>;
+template<class T, class U> using IdMap = thorin::HashMap<T, U, IdHash<T>, IdEqual<T>>;
 
 //------------------------------------------------------------------------------
 
@@ -502,8 +512,10 @@ private:
     {}
 
 public:
+    typedef std::set<Bound, BoundsLT> SuperBounds;
+
     const TraitDecl* trait_decl() const { return trait_decl_; }
-    const UniSet<Bound>& super_bounds() const { return super_bounds_; }
+    const SuperBounds& super_bounds() const { return super_bounds_; }
     Bound super_bound(Trait trait) const;
     const thorin::HashSet<const TraitNode*>& sub_traits() const { return sub_traits_; }
     const std::vector<Impl>& type2impls(Type type) const { return type2impls_[type]; }
@@ -525,9 +537,9 @@ private:
     virtual thorin::Type convert(CodeGen&) const override;
 
     const TraitDecl* const trait_decl_;
-    mutable UniSet<Bound> super_bounds_;
+    mutable SuperBounds super_bounds_;
     mutable thorin::HashSet<const TraitNode*> sub_traits_;
-    mutable UniMap<Type, std::vector<Impl>> type2impls_;
+    mutable IdMap<Type, std::vector<Impl>> type2impls_;
 
     friend class TypeTable;
 };

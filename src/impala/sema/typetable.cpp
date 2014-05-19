@@ -52,7 +52,10 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
                 for (auto bound : type_var->bounds())
                     unify(bound);
             }
-        } 
+        } else if (auto bound = unifiable->isa<BoundNode>()) {
+            for (auto type_arg : bound->type_args())
+                type_arg->unify();
+        }
 
         auto p = unifiables_.insert(unifiable);
         assert(unifiable->representative() == unifiable);

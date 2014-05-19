@@ -104,7 +104,7 @@ Bound TraitNode::super_bound(Trait trait) const {
 }
 
 void TraitNode::add_impl(Impl impl) const {
-    type2impls_[impl->type()].push_back(impl);
+    type2impls_[impl->type().unify()].push_back(impl);
 }
 
 //------------------------------------------------------------------------------
@@ -115,16 +115,22 @@ void TraitNode::add_impl(Impl impl) const {
 
 size_t KnownTypeNode::hash() const {
     // FEATURE take type variables of generic types better into the equation
-    size_t seed = hash_combine(hash_begin((int) kind()), size());
-    seed = hash_combine(seed, num_type_vars());
-    for (auto elem : elems_)
+    size_t seed = hash_combine(hash_combine(hash_begin((int) kind()), size()), num_type_vars());
+    for (auto elem : elems())
         seed = hash_combine(seed, elem->hash());
 
     return seed;
 }
 
+size_t BoundNode::hash() const { 
+    size_t seed = hash_combine(hash_begin((int) kind()), num_type_args());
+    for (auto type_arg : type_args())
+        seed = hash_combine(seed, type_arg->hash());
+
+    return seed;
+}
+
 size_t TraitNode::hash() const { return hash_value(trait_decl()); }
-size_t BoundNode::hash() const { return trait()->hash(); } // FEATURE better hash function
 size_t ImplNode::hash() const { return hash_value(impl_item()); }
 
 //------------------------------------------------------------------------------
@@ -174,6 +180,24 @@ bool KnownTypeNode::equal(const Unifiable* unifiable) const {
     return false;
 }
 
+bool BoundsLT::operator () (Bound b1, Bound b2) const {
+    assert(b1->is_unified() && b2->is_unified());
+    if (b1->id() == b2->id()) return false;
+    if (b1->trait()->id() < b2->trait()->id()) return true;
+    if (b1->trait()->id() > b2->trait()->id()) return false;
+    if (b1->num_type_args() < b2->num_type_args()) return true;
+    if (b1->num_type_args() > b2->num_type_args()) return false;
+
+    for (size_t i = 0, e = b1->num_type_args(); i != e; ++i) {
+        assert(b1->type_arg(i)->is_unified() && b2->type_arg(i)->is_unified());
+        if (b1->type_arg(i)->id() < b2->type_arg(i)->id()) return true;
+        if (b1->type_arg(i)->id() > b2->type_arg(i)->id()) return false;
+    }
+
+    THORIN_UNREACHABLE;
+    return false;
+}
+
 bool TypeVarNode::bounds_equal(const TypeVar other) const {
     assert(this->is_unified());
     auto& other_bounds = other->bounds_;
@@ -181,21 +205,7 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
     for (auto bound : other_bounds)
         bound->unify();
 
-    std::stable_sort(other_bounds.begin(), other_bounds.end(), [&] (Bound b1, Bound b2) {
-        if (b1->trait()->id() < b2->trait()->id()) return true;
-        if (b1->trait()->id() > b2->trait()->id()) return false;
-        if (b1->num_type_args() < b2->num_type_args()) return true;
-        if (b1->num_type_args() > b2->num_type_args()) return false;
-
-        for (size_t i = 0, e = b1->num_type_args(); i != e; ++i) {
-            assert(b1->type_arg(i)->is_unified() && b2->type_arg(i)->is_unified());
-            if (b1->type_arg(i)->id() < b2->type_arg(i)->id()) return true;
-            if (b1->type_arg(i)->id() > b2->type_arg(i)->id()) return false;
-        }
-
-        THORIN_UNREACHABLE; // duplicate bound
-        return false;
-    });
+    std::stable_sort(other_bounds.begin(), other_bounds.end(), BoundsLT());
 
     if (this->bounds().size() == other->bounds().size()) {
         for (size_t i = 0, e = other_bounds.size(); i != e; ++i) {
@@ -355,9 +365,9 @@ Type TypeNode::instantiate(SpecializeMap& map) const {
 }
 
 Type UnknownTypeNode::vinstantiate(SpecializeMap& map) const { assert(false); return nullptr; }
-Type TypeErrorNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().type_error(); }
-Type NoRetTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().type_noret(); }
-Type PrimTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().type(primtype_kind()); }
+Type TypeErrorNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
+Type NoRetTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
+Type PrimTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 Type FnTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().fn_type(specialize_elems(map)); }
 Type TupleTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().tuple_type(specialize_elems(map)); }
 Type StructTypeNode::vinstantiate(SpecializeMap& map) const { assert(false); return nullptr; }
@@ -440,14 +450,14 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     };
 
     std::queue<Bound> queue;
-    //UniSet<Bound> done;
+    IdSet<Bound> done;
 
     auto enqueue = [&] (Bound bound) { 
         queue.push(bound); 
-        //done.insert(bound.unify()); 
+        done.insert(bound);
     };
 
-    enqueue(bound);
+    enqueue(bound.unify());
 
     while (!queue.empty()) {
         auto bound = thorin::pop(queue);
@@ -481,11 +491,11 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
                     new_type_args[i] = typetable().unknown_type();
             }
 
-            auto sub_bound = sub_trait->instantiate(new_type_args);
-            //if (!done.contains(sub_bound)) {
+            auto sub_bound = sub_trait->instantiate(new_type_args).unify();
+            if (!done.contains(sub_bound)) {
                 assert(sub_bound->is_closed());
                 enqueue(sub_bound);
-            //}
+            }
         }
     }
 
@@ -494,28 +504,27 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
 
 bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {
     std::queue<Bound> queue;
-    //UniSet<Bound> done;
+    IdSet<Bound> done;
 
-    for (auto b : bounds()) {
-        queue.push(b);
-        //done.insert(b.unify());
-    }
+    auto enqueue = [&] (Bound bound) { 
+        queue.push(bound); 
+        done.insert(bound); 
+    };
+
+    for (auto b : bounds())
+        enqueue(b.unify());
 
     while (!queue.empty()) {
-        auto cur_bound = queue.front();
-        queue.pop();
+        auto cur_bound = thorin::pop(queue);
 
         if (cur_bound == bound)
             return true;
 
         for (auto super_bound : cur_bound->trait()->super_bounds()) {
             map[*super_bound->type_arg(0)] = *cur_bound->type_arg(0); // propagate self type param
-            auto spec_super_bound = super_bound->specialize(map);
-            spec_super_bound->unify();
-            //if (!done.contains(spec_super_bound)) {
-                queue.push(spec_super_bound);
-                //done.insert(spec_super_bound);
-            //}
+            auto spec_super_bound = super_bound->specialize(map).unify();
+            if (!done.contains(spec_super_bound))
+                enqueue(spec_super_bound);
         }
     }
 
