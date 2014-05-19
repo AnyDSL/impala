@@ -94,6 +94,7 @@ public:
             return true;
         return infer(this->node()->unify(), other.node()->unify());
     }
+    Proxy<T> unify() const { return node()->unify()->template as<T>(); }
     const T* representative() const { return node()->representative()->template as<T>(); }
     const T* node() const { assert(node_ != nullptr); return node_; }
     const T* operator  * () const { return node()->is_unified() ? representative() : node(); }
@@ -110,17 +111,13 @@ public:
         return Proxy<typename U::BaseType>((*this)->as <typename U::BaseType>()); 
     }
     operator bool() { return !empty(); }
-    Proxy<T>& operator= (Proxy<T> other) { 
-        assert(node_ == nullptr);
-        node_ = *other; 
-        return *this; 
-    }
     void clear() { assert(node_ != nullptr); node_ = nullptr; }
-    Proxy<T> unify() const { return node()->unify()->template as<T>(); }
-    friend void swap(Proxy<T> p1, Proxy<T> p2) {
-        auto tmp = p1.node();
-        p1.node_ = p2.node_;
-        p2.node_ = tmp;
+    Proxy<T>& operator= (Proxy<T> other) { swap(*this, other); return *this; }
+    friend void swap(Proxy<T>& p1, Proxy<T>& p2) {
+        assert(p1.node_ == nullptr);
+        auto tmp = p2.node();
+        p2.node_ = p1.node_;
+        p1.node_ = tmp;
     }
 
 private:
