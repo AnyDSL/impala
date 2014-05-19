@@ -78,6 +78,14 @@ public:
     Proxy(const T* node)
         : node_(node)
     {}
+    Proxy(Proxy<T>&& other)
+        : node_(std::move(other.node_))
+    {
+        other.node_ = nullptr;
+    }
+    Proxy(const Proxy<T>& other)
+        : node_(other.node_)
+    {}
 
     bool empty() const { return node_ == nullptr; }
     bool operator == (const Proxy<T>& other) const {
@@ -108,6 +116,12 @@ public:
         return *this; 
     }
     void clear() { assert(node_ != nullptr); node_ = nullptr; }
+    Proxy<T> unify() const { return node()->unify()->template as<T>(); }
+    friend void swap(Proxy<T> p1, Proxy<T> p2) {
+        auto tmp = p1.node();
+        p1.node_ = p2.node_;
+        p2.node_ = tmp;
+    }
 
 private:
     const T* node_;
@@ -432,7 +446,8 @@ private:
     bool bounds_equal(const TypeVar) const;
 
 public:
-    const UniSet<Bound>& bounds() const { return bounds_; }
+    const std::vector<Bound>& bounds() const { return bounds_; }
+    Bound bound(size_t i) const { return bounds_[i]; }
     const Unifiable* bound_at() const { return bound_at_; }
     void add_bound(Bound) const;
     virtual bool equal(const Unifiable* other) const;
@@ -451,7 +466,7 @@ private:
     virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
 
     Symbol name_;
-    mutable UniSet<Bound> bounds_;///< All traits that restrict the instantiation of this variable.
+    mutable std::vector<Bound> bounds_;///< All traits that restrict the instantiation of this variable.
     /**
      * The type where this variable is bound.
      * If such a type is set, then the variable must not be changed anymore!

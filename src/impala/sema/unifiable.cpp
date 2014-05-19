@@ -86,11 +86,11 @@ StructTypeNode::StructTypeNode(TypeTable& typetable, const StructDecl* struct_de
 
 void TypeVarNode::add_bound(Bound bound) const {
     assert(!is_closed() && "closed type variables must not be changed!");
-    bounds_.insert(bound);
+    bounds_.push_back(bound);
 }
 
 bool TraitNode::add_super_bound(Bound bound) const {
-    auto p = super_bounds_.insert(bound);
+    auto p = super_bounds_.insert(bound.unify());
     bound->trait()->sub_traits_.insert(this);
     return p.second;
 }
@@ -175,16 +175,31 @@ bool KnownTypeNode::equal(const Unifiable* unifiable) const {
 }
 
 bool TypeVarNode::bounds_equal(const TypeVar other) const {
-    if (this->bounds().size() == other->bounds().size()) {
-        // FEATURE this works but seems too much effort, at least use a set that uses representatives
-        TypetableSet<const BoundNode> obounds;
-        for (auto r : this->bounds()) {
-            auto p = obounds.insert(*r); // TODO is deref here and below correct?
-            assert(p.second && "hash/equal broken");
+    assert(this->is_unified());
+    auto& other_bounds = other->bounds_;
+
+    for (auto bound : other_bounds)
+        bound->unify();
+
+    std::stable_sort(other_bounds.begin(), other_bounds.end(), [&] (Bound b1, Bound b2) {
+        if (b1->trait()->id() < b2->trait()->id()) return true;
+        if (b1->trait()->id() > b2->trait()->id()) return false;
+        if (b1->num_type_args() < b2->num_type_args()) return true;
+        if (b1->num_type_args() > b2->num_type_args()) return false;
+
+        for (size_t i = 0, e = b1->num_type_args(); i != e; ++i) {
+            assert(b1->type_arg(i)->is_unified() && b2->type_arg(i)->is_unified());
+            if (b1->type_arg(i)->id() < b2->type_arg(i)->id()) return true;
+            if (b1->type_arg(i)->id() > b2->type_arg(i)->id()) return false;
         }
 
-        for (auto r : other->bounds()) {
-            if (!obounds.contains(*r))
+        THORIN_UNREACHABLE; // duplicate bound
+        return false;
+    });
+
+    if (this->bounds().size() == other->bounds().size()) {
+        for (size_t i = 0, e = other_bounds.size(); i != e; ++i) {
+            if (this->bound(i)->id() != other_bounds[i]->id()) // since both are unified it suffices to check id here
                 return false;
         }
     }
@@ -193,18 +208,24 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
 }
 
 bool TypeVarNode::equal(const Unifiable* other) const {
+    assert(this->is_unified());
+
     if (auto type_var = other->isa<TypeVarNode>())
         return this == other || (this->equiv_ != nullptr && this->equiv_ == type_var);
     return false;
 }
 
 bool TraitNode::equal(const Unifiable* other) const {
+    assert(this->is_unified());
+
     if (auto trait = other->isa<TraitNode>())
-        return (this->trait_decl() == trait->trait_decl());
+        return this->trait_decl() == trait->trait_decl();
     return false;
 }
 
 bool BoundNode::equal(const Unifiable* other) const {
+    assert(this->is_unified());
+
     if (auto bound = other->isa<BoundNode>()) {
         if (this->trait() == bound->trait()) {
             assert(this->num_type_args() == bound->num_type_args());
@@ -419,11 +440,11 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     };
 
     std::queue<Bound> queue;
-    UniSet<Bound> done;
+    //UniSet<Bound> done;
 
     auto enqueue = [&] (Bound bound) { 
         queue.push(bound); 
-        done.insert(bound); 
+        //done.insert(bound.unify()); 
     };
 
     enqueue(bound);
@@ -461,10 +482,10 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
             }
 
             auto sub_bound = sub_trait->instantiate(new_type_args);
-            if (!done.contains(sub_bound)) {
+            //if (!done.contains(sub_bound)) {
                 assert(sub_bound->is_closed());
                 enqueue(sub_bound);
-            }
+            //}
         }
     }
 
@@ -473,11 +494,11 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
 
 bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {
     std::queue<Bound> queue;
-    UniSet<Bound> done;
+    //UniSet<Bound> done;
 
     for (auto b : bounds()) {
         queue.push(b);
-        done.insert(b);
+        //done.insert(b.unify());
     }
 
     while (!queue.empty()) {
@@ -491,10 +512,10 @@ bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {
             map[*super_bound->type_arg(0)] = *cur_bound->type_arg(0); // propagate self type param
             auto spec_super_bound = super_bound->specialize(map);
             spec_super_bound->unify();
-            if (!done.contains(spec_super_bound)) {
+            //if (!done.contains(spec_super_bound)) {
                 queue.push(spec_super_bound);
-                done.insert(spec_super_bound);
-            }
+                //done.insert(spec_super_bound);
+            //}
         }
     }
 
