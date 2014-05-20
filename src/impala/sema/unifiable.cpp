@@ -642,7 +642,7 @@ std::string KnownTypeNode::elems_to_string() const {
 }
 
 std::string TypeVarNode::to_string() const {
-    if (name_) {
+    if (!name_.empty()) {
         return name_.str();
     } else {
         return std::string("_") + std::to_string(id()) + std::string("_");

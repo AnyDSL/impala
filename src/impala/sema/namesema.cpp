@@ -52,7 +52,7 @@ private:
 //------------------------------------------------------------------------------
 
 const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
-    assert(symbol && "symbol is empty");
+    assert(!symbol.empty() && "symbol is empty");
     auto decl = thorin::find(symbol2decl_, symbol);
     if (decl == nullptr)
         error(n) << '\'' << symbol << "' not found in current scope\n";
@@ -60,7 +60,7 @@ const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
 }
 
 void NameSema::insert(const Decl* decl) {
-    assert(decl->symbol() && "symbol is empty");
+    assert(!decl->symbol().empty() && "symbol is empty");
     if (const Decl* other = clash(decl->symbol())) {
         error(decl) << "symbol '" << decl->symbol() << "' already defined\n";
         error(other) << "previous location here\n";
@@ -78,7 +78,7 @@ void NameSema::insert(const Decl* decl) {
 }
 
 const Decl* NameSema::clash(Symbol symbol) const {
-    assert(symbol && "symbol is empty");
+    assert(!symbol.empty() && "symbol is empty");
     if (auto decl = thorin::find(symbol2decl_, symbol))
         return (decl && decl->depth() == depth()) ? decl : nullptr;
     return nullptr;
@@ -186,7 +186,7 @@ void Fn::fn_check(NameSema& sema) const {
     check_type_params(sema);
     int i = 0;
     for (const Param* param : params()) {
-        if (!param->symbol())  {
+        if (param->symbol().empty())  {
             std::ostringstream oss;
             oss << '<' << i << ">";
             const_cast<Param*>(param)->symbol_ = oss.str().c_str();

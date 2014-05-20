@@ -279,7 +279,7 @@ Token Lexer::lex_suffix(std::string& str, bool floating) {
             }
             tok = lit;
         }
-        str += suffix;
+        str += suffix.str();
     }
     
     return Token(loc_, tok, str);
