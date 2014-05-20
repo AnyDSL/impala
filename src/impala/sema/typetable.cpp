@@ -38,6 +38,8 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
     if (!unifiable->is_known())
         return unifiable;
 
+    //std::cout << unifiable->id() << std::endl;
+
     //std::cout << "find: " << unifiable->id() << '/' << unifiable->hash() << std::endl;
     //unifiable->dump();
     auto i = unifiables_.find(unifiable);
@@ -52,6 +54,9 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
         assert(!unifiable->is_unified());
         unifiable->representative_ = unifiable;
 
+        for (auto type_var : unifiable->type_vars())
+            unify(type_var);
+
         if (auto ktn = unifiable->isa<KnownTypeNode>()) {
             for (auto elem : ktn->elems())
                 unify(elem);
@@ -62,7 +67,7 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
             }
         } else if (auto bound = unifiable->isa<BoundNode>()) {
             for (auto type_arg : bound->type_args())
-                type_arg->unify();
+                unify(type_arg);
         }
 
         //std::cout << "insert: " << unifiable->id() << '/' << unifiable->hash() << std::endl;

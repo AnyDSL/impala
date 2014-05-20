@@ -116,6 +116,14 @@ void TraitNode::add_impl(Impl impl) const {
 size_t KnownTypeNode::hash() const {
     // FEATURE take type variables of generic types better into the equation
     size_t seed = hash_combine(hash_combine(hash_begin((int) kind()), size()), num_type_vars());
+
+    for (auto type_var : type_vars()) {
+        seed = hash_combine(seed, type_var->num_bounds());
+
+        for (auto bound : type_var->bounds())
+            seed = hash_combine(seed, bound->hash());
+    }
+
     for (auto elem : elems())
         seed = hash_combine(seed, elem->hash());
 
@@ -154,6 +162,11 @@ bool KnownTypeNode::equal(const Unifiable* unifiable) const {
     if (this->kind() == unifiable->kind()) {
         auto other = unifiable->as<KnownTypeNode>();
         bool result = this->size() == other->size() && this->num_type_vars() == other->num_type_vars();
+
+        // check arity of type vars (= the number of bounds)
+        for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
+            result &= this->type_var(i)->num_bounds() == other->type_var(i)->num_bounds();
+
         if (result) {
             // set equivalence constraints for type variables
             for (size_t i = 0, e = num_type_vars(); i != e; ++i) {
