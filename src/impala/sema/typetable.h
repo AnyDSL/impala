@@ -52,12 +52,12 @@ private:
 
     TypetableSet<const Unifiable> unifiables_;
     std::vector<const Unifiable*> garbage_;
-    TypeError type_error_;
-    Trait trait_error_;
-    Bound bound_error_;
     NoRetType type_noret_;
 #define IMPALA_TYPE(itype, atype) PrimType itype##_;
 #include "impala/tokenlist.h"
+    TypeError type_error_;
+    Trait trait_error_;
+    Bound bound_error_;
 
     friend class TraitNode;
     friend class BoundNode;

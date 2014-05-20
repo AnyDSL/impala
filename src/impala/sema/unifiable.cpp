@@ -163,7 +163,7 @@ bool KnownTypeNode::equal(const Unifiable* unifiable) const {
 
             // check equality of the restrictions of the type variables
             for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
-                result &= this->type_var(i)->bounds_equal(other->type_var(i));
+                result &= this->type_var(i)->bounds_equal(*other->type_var(i));
 
             // check recursively element types for equivalence
             for (size_t i = 0, e = size(); i != e && result; ++i)
@@ -198,7 +198,7 @@ bool BoundsLT::operator () (Bound b1, Bound b2) const {
     return false;
 }
 
-bool TypeVarNode::bounds_equal(const TypeVar other) const {
+bool TypeVarNode::bounds_equal(const TypeVarNode* other) const {
     assert(this->is_unified());
     auto& other_bounds = other->bounds_;
 
@@ -212,9 +212,9 @@ bool TypeVarNode::bounds_equal(const TypeVar other) const {
             if (this->bound(i)->id() != other_bounds[i]->id()) // since both are unified it suffices to check id here
                 return false;
         }
+        return true;
     }
-
-    return true;
+    return false;
 }
 
 bool TypeVarNode::equal(const Unifiable* other) const {
@@ -649,9 +649,12 @@ std::string TypeVarNode::to_string() const {
     }
 }
 
-std::string TraitNode::to_string() const { return is_error_trait() ? "<trait error>" : trait_decl()->symbol().str(); }
+std::string TraitNode::to_string() const { return is_error() ? "<trait error>" : trait_decl()->symbol().str(); }
 
 std::string BoundNode::to_string() const {
+    if (is_error())
+        return "<bound error>";
+
     std::string result = trait()->to_string();
 
     assert(!type_args_.empty());

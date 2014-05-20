@@ -1,15 +1,20 @@
 #include "impala/sema/typetable.h"
 
+#include <iostream>
+
 namespace impala {
 
 TypeTable::TypeTable()
-    : type_error_(unify(join(new TypeErrorNode(*this))))
-    , trait_error_(unify(trait(nullptr)))
-    , bound_error_(unify(bound(trait_error(), {})))
-    , type_noret_(unify(join(new NoRetTypeNode(*this))))
+    : type_noret_(unify(join(new NoRetTypeNode(*this))))
 #define IMPALA_TYPE(itype, atype) , itype##_(unify(join(new PrimTypeNode(*this, PrimType_##itype))))
 #include "impala/tokenlist.h"
-{}
+    , type_error_(unify(join(new TypeErrorNode(*this))))
+{
+    trait_error_ = trait(nullptr);
+    trait_error_->bind(type_var());
+    unify(trait_error_);
+    bound_error_ = unify(bound(trait_error(), {type_error()}));
+}
 
 TypeTable::~TypeTable() { 
     for (auto g : garbage_) 
@@ -33,8 +38,11 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
     if (!unifiable->is_known())
         return unifiable;
 
-    assert(!unifiable->isa<UnknownTypeNode>());
+    //std::cout << "find: " << unifiable->id() << '/' << unifiable->hash() << std::endl;
+    //unifiable->dump();
     auto i = unifiables_.find(unifiable);
+    assert(!unifiable->is_unified());
+
     if (i != unifiables_.end()) {
         auto repr = *i;
         assert(repr != unifiable && "already unified");
@@ -57,6 +65,8 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
                 type_arg->unify();
         }
 
+        //std::cout << "insert: " << unifiable->id() << '/' << unifiable->hash() << std::endl;
+        //unifiable->dump();
         auto p = unifiables_.insert(unifiable);
         assert(unifiable->representative() == unifiable);
         assert(p.second && "hash/equal broken");

@@ -281,7 +281,7 @@ private:
     {}
 
 public:
-    virtual std::string to_string() const;
+    Type instance() const { return representative()->as<TypeNode>(); }
 
     virtual bool is_known() const override { return false; }
     virtual bool equal(const Unifiable*) const { THORIN_UNREACHABLE; }
@@ -291,7 +291,7 @@ public:
     virtual bool is_closed() const { assert(!is_unified() || instance()->is_closed()); return true; }
     virtual bool is_sane() const { return is_unified() && instance()->is_sane(); }
     virtual bool is_error() const override { return is_unified() ? instance()->is_error() : false; }
-    Type instance() const { return representative()->as<TypeNode>(); }
+    virtual std::string to_string() const;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -450,11 +450,12 @@ private:
         , equiv_(nullptr)
     {}
 
-    bool bounds_equal(const TypeVar) const;
+    bool bounds_equal(const TypeVarNode*) const;
 
 public:
     const std::vector<Bound>& bounds() const { return bounds_; }
     Bound bound(size_t i) const { return bounds_[i]; }
+    size_t num_bounds() const { return bounds_.size(); }
     const Unifiable* bound_at() const { return bound_at_; }
     void add_bound(Bound) const;
     virtual bool equal(const Unifiable* other) const;
@@ -519,7 +520,6 @@ public:
     Bound super_bound(Trait trait) const;
     const thorin::HashSet<const TraitNode*>& sub_traits() const { return sub_traits_; }
     const std::vector<Impl>& type2impls(Type type) const { return type2impls_[type]; }
-    bool is_error_trait() const { return trait_decl_ == nullptr; }
     bool add_super_bound(Bound) const;
     /// return the type of the method with this name if it exists; otherwise return an empty type
     Type find_method(Symbol name) const;

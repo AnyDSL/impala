@@ -49,7 +49,8 @@ public:
             decl->var_ = decl->emit(*this); 
         return decl->var_;
     }
-    thorin::Type convert(const Unifiable* unifiable) { 
+    thorin::Type convert(const Unifiable* uni) { 
+        auto unifiable = uni->unify();
         if (!unifiable->thorin_type_) {
             for (auto type_var : unifiable->type_vars())    // convert type vars
                 type_var->thorin_type_ = world().type_var();
@@ -61,7 +62,7 @@ public:
         }
         return unifiable->thorin_type_;
     }
-    template<class T> thorin::Type convert(Proxy<T> type) { return convert(*type); }
+    template<class T> thorin::Type convert(Proxy<T> type) { return convert(type->unify()); }
 
     const Fn* cur_fn;
 };
@@ -88,11 +89,17 @@ thorin::Type NoRetTypeNode::convert(CodeGen& cg) const { return thorin::Type(); 
 
 thorin::Type FnTypeNode::convert(CodeGen& cg) const { 
     std::vector<thorin::Type> nelems;
+
     nelems.push_back(cg.world().mem_type());
+
     for (auto type_var : type_vars()) {
-        for (auto bound : type_var->bounds())
-            nelems.push_back(cg.convert(bound));
+        Array<thorin::Type> bounds(type_var->num_bounds());
+        for (size_t j = 0, e = bounds.size(); j != e; ++j)
+            bounds[j] = cg.convert(type_var->bound(j));
+
+        nelems.push_back(cg.world().tuple_type(bounds));
     }
+
     convert_elems(cg, nelems);
     return cg.world().fn_type(nelems); 
 }
@@ -159,10 +166,8 @@ void Fn::emit_body(CodeGen& cg) const {
     frame_ = cg.world().enter(mem); 
 
     // name bounds
-    for (auto type_var : fn_type()->type_vars()) {
-        for (auto bound : type_var->bounds())
-            lambda()->param(i++)->name = bound->trait()->trait_decl()->symbol().str();
-    }
+    for (auto type_param : type_params())
+        lambda()->param(i++)->name = type_param->symbol().str();
 
     // name params and setup store locations
     for (auto param : params()) {
@@ -259,7 +264,7 @@ void StructDecl::emit_item(CodeGen& cg) const {
 }
 
 void TraitDecl::emit_item(CodeGen& cg) const {
-    cg.convert(trait())->dump();
+    cg.convert(trait());
 }
 
 void Typedef::emit_item(CodeGen& cg) const {
@@ -405,6 +410,10 @@ Def MapExpr::remit(CodeGen& cg) const {
     if (auto fn = lhs()->type().isa<FnType>()) {
         std::vector<Def> defs;
         defs.push_back(cg.get_mem());
+        //for (auto type_var : type_vars()) {
+            //for (auto bound : type_var->bounds())
+        //}
+
         for (auto arg : args())
             defs.push_back(cg.remit(arg));
         auto ret_type = args().size() == fn->size() ? thorin::Type() : cg.convert(fn->return_type());
