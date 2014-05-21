@@ -117,12 +117,8 @@ size_t KnownTypeNode::hash() const {
     // FEATURE take type variables of generic types better into the equation
     size_t seed = hash_combine(hash_combine(hash_begin((int) kind()), size()), num_type_vars());
 
-    for (auto type_var : type_vars()) {
+    for (auto type_var : type_vars())
         seed = hash_combine(seed, type_var->num_bounds());
-
-        for (auto bound : type_var->bounds())
-            seed = hash_combine(seed, bound->hash());
-    }
 
     for (auto elem : elems())
         seed = hash_combine(seed, elem->hash());

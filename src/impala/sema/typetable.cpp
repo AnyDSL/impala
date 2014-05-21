@@ -49,6 +49,7 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
         auto repr = *i;
         assert(repr != unifiable && "already unified");
         unifiable->representative_ = repr;
+        //std::cout << "reusing: " << unifiable->id() << " --> " << unifiable->representative()->id() << std::endl;
         return repr;
     } else {
         assert(!unifiable->is_unified());
@@ -70,7 +71,7 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
                 unify(type_arg);
         }
 
-        //std::cout << "insert: " << unifiable->id() << '/' << unifiable->hash() << std::endl;
+        //std::cout << "insert: " << unifiable->id() << '/' << unifiable->hash() << " --> " << unifiable->representative_->id() << std::endl;
         //unifiable->dump();
         auto p = unifiables_.insert(unifiable);
         assert(unifiable->representative() == unifiable);
