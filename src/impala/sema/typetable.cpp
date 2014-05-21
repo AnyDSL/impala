@@ -53,18 +53,13 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
         for (auto type_var : unifiable->type_vars())
             unify(type_var);
 
-        if (auto ktn = unifiable->isa<KnownTypeNode>()) {
-            for (auto elem : ktn->elems())
-                unify(elem);
+        for (auto elem : unifiable->elems())
+            unify(elem);
 
-            if (auto type_var = ktn->isa<TypeVarNode>()) {
-                for (auto bound : type_var->bounds())
-                    unify(bound);
-                std::stable_sort(type_var->bounds_.begin(), type_var->bounds_.end(), BoundsLT());
-            }
-        } else if (auto bound = unifiable->isa<BoundNode>()) {
-            for (auto type_arg : bound->type_args())
-                unify(type_arg);
+        if (auto type_var = unifiable->isa<TypeVarNode>()) {
+            for (auto bound : type_var->bounds())
+                unify(bound);
+            std::stable_sort(type_var->bounds_.begin(), type_var->bounds_.end(), BoundsLT());
         }
 
         auto p = unifiables_.insert(unifiable);

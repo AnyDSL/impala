@@ -71,7 +71,7 @@ public:
  * Type
  */
 
-void KnownTypeNode::convert_elems(CodeGen& cg, std::vector<thorin::Type>& nelems) const {
+void Unifiable::convert_elems(CodeGen& cg, std::vector<thorin::Type>& nelems) const {
     for (auto elem : elems())
         nelems.push_back(cg.convert(elem));
 }
@@ -129,10 +129,10 @@ thorin::Type TraitNode::convert(CodeGen& cg) const {
 }
 
 thorin::Type BoundNode::convert(CodeGen& cg) const {
-    Array<thorin::Type> args(num_type_args());
-    for (size_t i = 0, e = args.size(); i != e; ++i)
-        args[i] = cg.convert(type_arg(i));
-    return cg.convert(trait())->instantiate(args);
+    Array<thorin::Type> nelems(num_elems());
+    for (size_t i = 0, e = nelems.size(); i != e; ++i)
+        nelems[i] = cg.convert(elem(i));
+    return cg.convert(trait())->instantiate(nelems);
 }
 
 thorin::Type ImplNode::convert(CodeGen& cg) const { THORIN_UNREACHABLE; }

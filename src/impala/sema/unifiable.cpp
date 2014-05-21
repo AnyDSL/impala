@@ -37,15 +37,6 @@ bool TypeNode::is(PrimTypeKind kind) const {
     return isa<PrimTypeNode>() && as<PrimTypeNode>()->primtype_kind() == kind; 
 }
 
-bool KnownTypeNode::is_sane() const {
-    for (auto elem : elems_) {
-        if (!elem->is_sane())
-            return false;
-    }
-    assert(is_closed());
-    return true;
-}
-
 void KnownTypeNode::add_impl(Impl impl) const {
     impls_.push_back(impl);
 #if 0
@@ -110,11 +101,57 @@ void TraitNode::add_impl(Impl impl) const {
 //------------------------------------------------------------------------------
 
 /*
+ * recursive properties
+ */
+
+bool Unifiable::is_known() const {
+    for (auto type_var : type_vars()) {
+        for (auto bound : type_var->bounds()) {
+            if (!bound->is_known())
+                return false;
+        }
+    }
+
+    for (auto elem : elems()) {
+        if (!elem->is_known())
+            return false;
+    }
+
+    return true;
+}
+
+bool Unifiable::is_closed() const {
+    for (auto type_var : type_vars()) {
+        for (auto bound : type_var->bounds()) {
+            if (!bound->is_closed())
+                return false;
+        }
+    }
+
+    for (auto elem : elems()) {
+        if (!elem->is_closed())
+            return false;
+    }
+
+    return true;
+}
+
+bool KnownTypeNode::is_sane() const {
+    for (auto elem : elems()) {
+        if (!elem->is_sane())
+            return false;
+    }
+    assert(is_closed());
+    return true;
+}
+
+//------------------------------------------------------------------------------
+
+/*
  * hash
  */
 
-size_t KnownTypeNode::hash() const {
-    // FEATURE take type variables of generic types better into the equation
+size_t Unifiable::hash() const {
     size_t seed = hash_combine(hash_combine(hash_begin((int) kind()), num_elems()), num_type_vars());
 
     for (auto type_var : type_vars())
@@ -126,14 +163,7 @@ size_t KnownTypeNode::hash() const {
     return seed;
 }
 
-size_t BoundNode::hash() const { 
-    size_t seed = hash_combine(hash_begin((int) kind()), num_type_args());
-    for (auto type_arg : type_args())
-        seed = hash_combine(seed, type_arg->hash());
-
-    return seed;
-}
-
+size_t BoundNode::hash() const { return hash_combine(Unifiable::hash(), trait()->trait_decl()); } // TODO use id instead of pointer
 size_t TraitNode::hash() const { return hash_value(trait_decl()); }
 size_t ImplNode::hash() const { return hash_value(impl_item()); }
 
@@ -143,20 +173,14 @@ size_t ImplNode::hash() const { return hash_value(impl_item()); }
  * equal
  */
 
-bool KnownTypeNode::equal(const Unifiable* unifiable) const {
+bool Unifiable::equal(const Unifiable* other) const {
     assert(this->is_unified());
-    assert(!unifiable->isa<UnknownTypeNode>());
+    assert(!other->isa<UnknownTypeNode>());
 
-    if (this == unifiable) 
+    if (this == other) 
         return true;
 
-    if (auto utn = unifiable->isa<const UnknownTypeNode>()) {
-        assert(false && "TODO");
-        return utn->equal(this);
-    }
-
-    if (this->kind() == unifiable->kind()) {
-        auto other = unifiable->as<KnownTypeNode>();
+    if (this->kind() == other->kind()) {
         bool result = this->num_elems() == other->num_elems() && this->num_type_vars() == other->num_type_vars();
 
         // check arity of type vars (= the number of bounds)
@@ -194,13 +218,13 @@ bool BoundsLT::operator () (Bound b1, Bound b2) const {
     if (b1->id() == b2->id()) return false;
     if (b1->trait()->id() < b2->trait()->id()) return true;
     if (b1->trait()->id() > b2->trait()->id()) return false;
-    if (b1->num_type_args() < b2->num_type_args()) return true;
-    if (b1->num_type_args() > b2->num_type_args()) return false;
+    if (b1->num_elems() < b2->num_elems()) return true;
+    if (b1->num_elems() > b2->num_elems()) return false;
 
-    for (size_t i = 0, e = b1->num_type_args(); i != e; ++i) {
-        assert(b1->type_arg(i)->is_unified() && b2->type_arg(i)->is_unified());
-        if (b1->type_arg(i)->id() < b2->type_arg(i)->id()) return true;
-        if (b1->type_arg(i)->id() > b2->type_arg(i)->id()) return false;
+    for (size_t i = 0, e = b1->num_elems(); i != e; ++i) {
+        assert(b1->elem(i)->is_unified() && b2->elem(i)->is_unified());
+        if (b1->elem(i)->id() < b2->elem(i)->id()) return true;
+        if (b1->elem(i)->id() > b2->elem(i)->id()) return false;
     }
 
     THORIN_UNREACHABLE;
@@ -243,77 +267,7 @@ bool TraitNode::equal(const Unifiable* other) const {
 }
 
 bool BoundNode::equal(const Unifiable* other) const {
-    assert(this->is_unified());
-
-    if (auto bound = other->isa<BoundNode>()) {
-        if (this->trait() == bound->trait()) {
-            assert(this->num_type_args() == bound->num_type_args());
-            for (size_t i = 0, e = num_type_args(); i != e; ++i) {
-                if (!(this->type_arg(i) == bound->type_arg(i)))
-                    return false;
-            }
-            return true;
-        }
-    }
-    return false;
-}
-
-//------------------------------------------------------------------------------
-
-/*
- * is_known
- */
-
-bool KnownTypeNode::is_known() const {
-    for (auto v : type_vars()) {
-        if (!v->is_known())
-            return false;
-    }
-
-    for (auto elem : elems()) {
-        if (!elem->is_known())
-            return false;
-    }
-    return true;
-}
-
-bool BoundNode::is_known() const {
-    for (auto type_arg : type_args()) {
-        if (!type_arg->is_known())
-            return false;
-    }
-    return true;
-}
-
-//------------------------------------------------------------------------------
-
-/*
- * is_closed
- */
-
-bool KnownTypeNode::is_closed() const {
-    for (auto v : type_vars()) {
-        for (auto r : v->bounds()) {
-            if (!r->is_closed())
-                return false;
-        }
-    }
-
-    for (auto t : elems()) {
-        if (!t->is_closed())
-            return false;
-    }
-    return true;
-}
-
-bool TypeVarNode::is_closed() const { return bound_at_ != nullptr; }
-
-bool BoundNode::is_closed() const {
-    for (auto type_arg : type_args()) {
-        if (!type_arg->is_closed())
-            return false;
-    }
-    return true;
+    return Unifiable::equal(other) && this->trait() == other->as<BoundNode>()->trait();
 }
 
 //------------------------------------------------------------------------------
@@ -358,7 +312,7 @@ Type TypeNode::specialize(SpecializeMap& map) const {
     return t;
 }
 
-Array<Type> KnownTypeNode::specialize_elems(SpecializeMap& map) const {
+Array<Type> Unifiable::specialize_elems(SpecializeMap& map) const {
     Array<Type> nelems(num_elems());
     for (size_t i = 0, e = num_elems(); i != e; ++i)
         nelems[i] = elem(i)->specialize(map);
@@ -387,11 +341,11 @@ Bound TraitNode::instantiate(ArrayRef<Type> type_args) const {
 }
 
 Bound BoundNode::specialize(SpecializeMap& map) const {
-    Array<Type> new_type_args(num_type_args());
-    for (size_t i = 0, e = num_type_args(); i != e; ++i)
-        new_type_args[i] = type_arg(i)->specialize(map);
+    Array<Type> new_elems(num_elems());
+    for (size_t i = 0, e = num_elems(); i != e; ++i)
+        new_elems[i] = elem(i)->specialize(map);
 
-    return typetable().bound(trait(), new_type_args);
+    return typetable().bound(trait(), new_elems);
 }
 
 Impl ImplNode::specialize(SpecializeMap& map) const { 
@@ -420,7 +374,7 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
         } else if (u1->unify()->is_unified())
             return u1->representative() == u2->representative();    // both are unified - are types equal?
         else if (u1->kind() == u2->kind()) {                        // recursively infer sub elements
-            if (auto ktn1 = u1->isa<KnownTypeNode>()) {
+            if (auto ktn1 = u1->isa<KnownTypeNode>()) { // TODO ASDF
                 auto ktn2 = u2->as<KnownTypeNode>();
                 bool result = ktn1->num_type_vars() == ktn2->num_type_vars() && ktn1->num_elems() == ktn2->num_elems();
                 // TODO handle type vars
@@ -429,9 +383,9 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
                 return result;
             } else if (auto b1 = u1->isa<BoundNode>()) {
                 auto b2 = u2->as<BoundNode>();
-                bool result = b1->trait() == b2->trait() && b1->num_type_args() == b2->num_type_args();
-                for (size_t i = 0, e = b1->num_type_args(); result && i != e; ++i)
-                    result &= infer(b1->type_arg(i), b2->type_arg(i));
+                bool result = b1->trait() == b2->trait() && b1->num_elems() == b2->num_elems();
+                for (size_t i = 0, e = b1->num_elems(); result && i != e; ++i)
+                    result &= infer(b1->elem(i), b2->elem(i));
                 return result;
             } else
                 assert(false);
@@ -475,13 +429,13 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     while (!queue.empty()) {
         auto bound = thorin::pop(queue);
         for (auto impl : bound->trait()->type2impls(this)) {
-            // find out which of impl's type_vars match to which of impl->bounds' type_args
+            // find out which of impl's type_vars match to which of impl->bounds' type args
             for (auto type_var : impl->type_vars()) {
-                for (size_t i = 0, e = impl->bound()->num_type_args(); i != e; ++i) { // TODO this is currently quadratic
-                    if (type_var.as<Type>() == impl->bound()->type_arg(i) 
-                            && !bound->type_arg(i)->isa<UnknownTypeNode>()
-                            && implements_bounds(bound->type_arg(i), type_var))
-                        map[*type_var] = *bound->type_arg(i);
+                for (size_t i = 0, e = impl->bound()->num_elems(); i != e; ++i) { // TODO this is currently quadratic
+                    if (type_var.as<Type>() == impl->bound()->elem(i) 
+                            && !bound->elem(i)->isa<UnknownTypeNode>()
+                            && implements_bounds(bound->elem(i), type_var))
+                        map[*type_var] = *bound->elem(i);
                 }
             }
 
@@ -492,19 +446,19 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
         // may be one of bound->trait's subtraits implements 'this'
         for (auto sub_trait : bound->trait()->sub_traits()) {
             auto super_bound = sub_trait->super_bound(bound->trait());
-            Array<Type> new_type_args(sub_trait->num_type_vars());
+            Array<Type> new_elems(sub_trait->num_type_vars());
             for (size_t i = 0, e = sub_trait->num_type_vars(); i != e; ++i) {
-                for (size_t j = 0, e = super_bound->num_type_args(); j != e; ++j) { // TODO this is currently quadratic
-                    if (sub_trait->type_var(i).as<Type>() == super_bound->type_arg(j)
-                            && implements_bounds(bound->type_arg(j), sub_trait->type_var(i)))
-                        new_type_args[i] = bound->type_arg(j);
+                for (size_t j = 0, e = super_bound->num_elems(); j != e; ++j) { // TODO this is currently quadratic
+                    if (sub_trait->type_var(i).as<Type>() == super_bound->elem(j)
+                            && implements_bounds(bound->elem(j), sub_trait->type_var(i)))
+                        new_elems[i] = bound->elem(j);
                 }
 
-                if (new_type_args[i].empty())
-                    new_type_args[i] = typetable().unknown_type();
+                if (new_elems[i].empty())
+                    new_elems[i] = typetable().unknown_type();
             }
 
-            auto sub_bound = sub_trait->instantiate(new_type_args).unify();
+            auto sub_bound = sub_trait->instantiate(new_elems).unify();
             if (!done.contains(sub_bound)) {
                 assert(sub_bound->is_closed());
                 enqueue(sub_bound);
@@ -538,7 +492,7 @@ bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {
             return true;
 
         for (auto super_bound : cur_bound->trait()->super_bounds()) {
-            map[*super_bound->type_arg(0)] = *cur_bound->type_arg(0); // propagate self type param
+            map[*super_bound->elem(0)] = *cur_bound->elem(0); // propagate self type param
             auto spec_super_bound = super_bound->specialize(map).unify();
             if (!done.contains(spec_super_bound))
                 enqueue(spec_super_bound);
@@ -589,7 +543,7 @@ Type BoundNode::find_method(Symbol name) const {
         return i->second;
 
     if (auto type = trait()->find_method(name)) {
-        auto map = specialize_map(trait(), type_args());
+        auto map = specialize_map(trait(), elems());
         return method_cache_[name] = type->specialize(map);
     }
 
@@ -644,7 +598,7 @@ std::string PrimTypeNode::to_string() const {
     }
 }
 
-std::string KnownTypeNode::elems_to_string() const {
+std::string Unifiable::elems_to_string() const {
     std::string result;
 
     if (is_empty())
@@ -674,14 +628,14 @@ std::string BoundNode::to_string() const {
 
     std::string result = trait()->to_string();
 
-    assert(!type_args_.empty());
-    if (type_args_.size() == 1)
+    assert(!is_empty());
+    if (num_elems() == 1)
         return result;
 
-    assert(type_args_.size() == trait()->num_type_vars());
+    assert(num_elems() == trait()->num_type_vars());
     const char* separator = "[";
     for (size_t i = 1; i < trait()->num_type_vars(); ++i) {
-        result += separator + type_arg(i)->to_string();
+        result += separator + elem(i)->to_string();
         separator = ",";
     }
 

@@ -155,17 +155,30 @@ private:
     Unifiable(const Unifiable&);              ///< Do not copy-construct a \p Unifiable.
 
 protected:
-    Unifiable(TypeTable& tt, Kind kind)
+    Unifiable(TypeTable& tt, Kind kind, ArrayRef<Type> elems)
         : typetable_(tt)
         , kind_(kind)
         , representative_(nullptr)
         , id_(counter_++)
         , thorin_type_(nullptr)
-    {}
+        , elems_(elems.size())
+    {
+        for (size_t i = 0, e = elems.size(); i != e; ++i)
+            set(i, elems[i]);
+    }
+
+    void set(size_t i, Type n) { elems_[i] = n; }
+    Array<Type> specialize_elems(SpecializeMap&) const;
+    void convert_elems(CodeGen& world, std::vector<thorin::Type>& nelems) const;
+    std::string elems_to_string() const;
 
 public:
     TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
+    ArrayRef<Type> elems() const { return ArrayRef<Type>(elems_); }
+    const Type elem(size_t i) const { return elems_[i]; }
+    size_t num_elems() const { return elems_.size(); }
+    bool is_empty() const { assert(!elems_.empty() || type_vars_.empty()); return elems_.empty(); }
     const Unifiable* representative() const { return representative_; }
     const int id() const { return id_; }
     bool is_unified() const { return representative_ != nullptr; }
@@ -177,14 +190,14 @@ public:
     TypeVar type_var(size_t i) const { return type_vars_[i]; }
     /// Returns true if this \p Type does have any bound type variabes (\p type_vars_).
     bool is_generic() const { return !type_vars_.empty(); }
-    virtual bool is_closed() const = 0; // TODO
+    virtual bool is_closed() const;
     virtual void bind(TypeVar v) const;
-    virtual bool equal(const Unifiable*) const = 0;
-    virtual size_t hash() const = 0;
+    virtual size_t hash() const;
+    virtual bool equal(const Unifiable*) const;
     virtual std::string to_string() const = 0;
     virtual bool is_error() const { return false; }
     /// A \p Unifiable is known if it does not contain any \p UnknownTypeNode%s
-    virtual bool is_known() const = 0;
+    virtual bool is_known() const;
 
 protected:
     std::string type_vars_to_string() const;
@@ -199,9 +212,8 @@ private:
     mutable const Unifiable* representative_;
     const int id_;
     mutable thorin::Type thorin_type_;
-
-protected:
     mutable std::vector<TypeVar> type_vars_;
+    std::vector<Type> elems_; ///< The operands of this type constructor.
 
     friend class CodeGen;
     friend class TypeTable;
@@ -239,8 +251,8 @@ private:
     TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p TypeNode.
 
 protected:
-    TypeNode(TypeTable& typetable, Kind kind)
-        : Unifiable(typetable, kind)
+    TypeNode(TypeTable& typetable, Kind kind, ArrayRef<Type> elems)
+        : Unifiable(typetable, kind, elems)
     {}
 
 public:
@@ -256,7 +268,6 @@ public:
     /// @return The method type or an empty type if no method with this name was found
     virtual Type find_method(Symbol s) const = 0;
     /// A type is closed if it contains no unbound type variables.
-    virtual bool is_closed() const = 0;
     bool is_noret() const { return isa<NoRetTypeNode>(); }
     bool is(PrimTypeKind kind) const;
 #define IMPALA_TYPE(itype, atype) bool is_##itype() const { return is(PrimType_##itype); }
@@ -277,18 +288,17 @@ private:
 class UnknownTypeNode : public TypeNode {
 private:
     UnknownTypeNode(TypeTable& typetable)
-        : TypeNode(typetable, Kind_unknown)
+        : TypeNode(typetable, Kind_unknown, {})
     {}
 
 public:
     Type instance() const { return representative()->as<TypeNode>(); }
 
     virtual bool is_known() const override { return false; }
-    virtual bool equal(const Unifiable*) const { THORIN_UNREACHABLE; }
     virtual size_t hash() const { THORIN_UNREACHABLE; }
+    virtual bool equal(const Unifiable*) const { THORIN_UNREACHABLE; }
     virtual bool implements(Bound bound, SpecializeMap& map) const { return is_unified() && instance()->implements(bound, map); }
     virtual Type find_method(Symbol s) const { assert(is_unified()); return instance()->find_method(s); }
-    virtual bool is_closed() const { assert(!is_unified() || instance()->is_closed()); return true; }
     virtual bool is_sane() const { return is_unified() && instance()->is_sane(); }
     virtual bool is_error() const override { return is_unified() ? instance()->is_error() : false; }
     virtual std::string to_string() const;
@@ -303,39 +313,19 @@ private:
 class KnownTypeNode : public TypeNode {
 protected:
     KnownTypeNode(TypeTable& typetable, Kind kind, ArrayRef<Type> elems)
-        : TypeNode(typetable, kind)
-        , elems_(elems.size())
-    {
-        for (size_t i = 0, e = elems.size(); i != e; ++i)
-            set(i, elems[i]);
-    }
-
-    void set(size_t i, Type n) { elems_[i] = n; }
-    Array<Type> specialize_elems(SpecializeMap&) const;
-    void convert_elems(CodeGen& world, std::vector<thorin::Type>& nelems) const;
-    std::string elems_to_string() const;
+        : TypeNode(typetable, kind, elems)
+    {}
 
 public:
-    ArrayRef<Type> elems() const { return ArrayRef<Type>(elems_); }
-    const Type elem(size_t i) const { return elems_[i]; }
-    size_t num_elems() const { return elems_.size(); }
-    bool is_empty() const { assert(!elems_.empty() || type_vars_.empty()); return elems_.empty(); }
     const std::vector<Impl>& impls() const { return impls_; }
     void add_impl(Impl) const;
 
-    virtual bool is_known() const override;
-    virtual bool equal(const Unifiable*) const;
-    virtual size_t hash() const;
     virtual bool implements(Bound, SpecializeMap&) const;
     virtual Type find_method(Symbol s) const;
-    virtual bool is_closed() const;
     virtual bool is_sane() const;
 
 private:
     mutable std::vector<Impl> impls_;
-
-protected:
-    std::vector<Type> elems_; ///< The operands of this type constructor.
 
     friend class TypeTable;
 };
@@ -467,7 +457,7 @@ public:
      * A type variable is closed if it is bound and all restrictions are closed.
      * If a type variable is closed it must not be changed anymore!
      */
-    virtual bool is_closed() const;
+    virtual bool is_closed() const { return bound_at_ != nullptr; }
     virtual bool is_sane() const { return is_closed(); }
 
 private:
@@ -487,7 +477,7 @@ private:
 
     friend class TypeTable;
     friend void Unifiable::bind(TypeVar) const;
-    friend bool KnownTypeNode::equal(const Unifiable*) const;
+    friend bool Unifiable::equal(const Unifiable*) const;
 };
 
 //------------------------------------------------------------------------------
@@ -508,7 +498,7 @@ private:
 class TraitNode : public Unifiable {
 private:
     TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
-        : Unifiable(tt, Kind_trait)
+        : Unifiable(tt, Kind_trait, {})
         , trait_decl_(trait_decl)
     {}
 
@@ -526,9 +516,8 @@ public:
     bool has_method(Symbol name) const { return !find_method(name).empty(); }
     Bound instantiate(ArrayRef<Type> args) const;
     void add_impl(Impl impl) const;
-    virtual bool equal(const Unifiable* other) const override;
     virtual size_t hash() const override;
-    virtual bool is_known() const override { return true; }
+    virtual bool equal(const Unifiable* other) const override;
     virtual bool is_closed() const { return true; } // TODO
     virtual bool is_error() const override { return trait_decl() == nullptr; }
     virtual std::string to_string() const;
@@ -549,34 +538,27 @@ private:
 /// An instance of a trait is a trait where all type variables are instantiated by concrete types.
 class BoundNode : public Unifiable {
 private:
-    BoundNode(const Trait trait, ArrayRef<Type> type_args)
-        : Unifiable(trait->typetable(), Kind_bound)
+    BoundNode(const Trait trait, ArrayRef<Type> elems)
+        : Unifiable(trait->typetable(), Kind_bound, elems)
         , trait_(trait)
-        , type_args_(type_args)
     {
-        assert(trait_->num_type_vars() == num_type_args());
+        assert(trait_->num_type_vars() == num_elems());
     }
 
 public:
     const Trait trait() const { return trait_; }
-    const Type type_arg(size_t i) const { return type_args_[i]; }
-    ArrayRef<Type> type_args() const { return type_args_; }
-    size_t num_type_args() const { return type_args_.size(); }
     Type find_method(Symbol name) const;
     Bound specialize(SpecializeMap&) const;
 
-    virtual bool equal(const Unifiable* other) const override;
     virtual size_t hash() const override;
-    virtual std::string to_string() const;
-    virtual bool is_known() const override;
-    virtual bool is_closed() const;
+    virtual bool equal(const Unifiable* other) const override;
     virtual bool is_error() const override { return trait()->is_error(); }
+    virtual std::string to_string() const;
 
 private:
     virtual thorin::Type convert(CodeGen&) const override;
 
     const Trait trait_;
-    Array<Type> type_args_;
     mutable thorin::HashMap<Symbol, Type> method_cache_;
 
     friend class TypeTable;
@@ -587,7 +569,7 @@ private:
 class ImplNode : public Unifiable {
 private:
     ImplNode(TypeTable& tt, const ImplItem* impl_item, Bound bound, Type type)
-        : Unifiable(tt, Kind_impl)
+        : Unifiable(tt, Kind_impl, {})
         , impl_item_(impl_item)
         , bound_(bound)
         , type_(type)
@@ -599,10 +581,8 @@ public:
     Type type() const { return type_; }
     Impl specialize(SpecializeMap& map) const;
 
-    virtual bool equal(const Unifiable* other) const { return this->impl_item() == other->as<ImplNode>()->impl_item(); }
     virtual size_t hash() const;
-    virtual bool is_known() const override { return true; }
-    virtual bool is_closed() const { return true; } // TODO
+    virtual bool equal(const Unifiable* other) const { THORIN_UNREACHABLE; return false; }
 
 protected:
     virtual std::string to_string() const { return ""; } // TODO
