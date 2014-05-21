@@ -30,12 +30,7 @@ void Unifiable::bind(TypeVar v) const {
 }
 
 const Unifiable* Unifiable::unify() const { return typetable().unify(this); }
-
-//------------------------------------------------------------------------------
-
-bool TypeNode::is(PrimTypeKind kind) const { 
-    return isa<PrimTypeNode>() && as<PrimTypeNode>()->primtype_kind() == kind; 
-}
+bool TypeNode::is(PrimTypeKind kind) const { return isa<PrimTypeNode>() && as<PrimTypeNode>()->primtype_kind() == kind; }
 
 void KnownTypeNode::add_impl(Impl impl) const {
     impls_.push_back(impl);
@@ -76,13 +71,13 @@ StructTypeNode::StructTypeNode(TypeTable& typetable, const StructDecl* struct_de
 {}
 
 void TypeVarNode::add_bound(Bound bound) const {
-    assert(!is_closed() && "closed type variables must not be changed!");
+    assert(!is_closed() && "closed type variables must not be changed");
     bounds_.push_back(bound);
 }
 
 bool TraitNode::add_super_bound(Bound bound) const {
     auto p = super_bounds_.insert(bound.unify());
-    bound->trait()->sub_traits_.insert(this);
+    bound->trait()->sub_traits_.insert(this->unify()->as<TraitNode>());
     return p.second;
 }
 
@@ -163,7 +158,7 @@ size_t Unifiable::hash() const {
     return seed;
 }
 
-size_t BoundNode::hash() const { return hash_combine(Unifiable::hash(), trait()->trait_decl()); } // TODO use id instead of pointer
+size_t BoundNode::hash() const { return hash_combine(Unifiable::hash(), trait()->id()); }
 size_t TraitNode::hash() const { return hash_value(trait_decl()); }
 size_t ImplNode::hash() const { return hash_value(impl_item()); }
 

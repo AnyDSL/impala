@@ -70,7 +70,7 @@ struct BoundsLT { bool operator () (Bound b1, Bound b2) const; };
 template<class T>
 class Proxy {
 private:
-    bool operator != (const Proxy<T>& other) const; ///< Always test positively to allow for automagic type inference.
+    bool operator != (const Proxy<T>&) const; ///< Always test positively to allow for automagic type inference.
 
 public:
     typedef T BaseType;
@@ -450,7 +450,7 @@ public:
 
     virtual bool is_closed() const { return bound_at_ != nullptr; }
     virtual bool is_sane() const { return is_closed(); }
-    virtual bool equal(const Unifiable* other) const;
+    virtual bool equal(const Unifiable*) const;
     virtual bool implements(Bound, SpecializeMap&) const;
     virtual Type find_method(Symbol s) const;
     virtual std::string to_string() const;
@@ -497,7 +497,7 @@ public:
     const TraitDecl* trait_decl() const { return trait_decl_; }
     const SuperBounds& super_bounds() const { return super_bounds_; }
     Bound super_bound(Trait trait) const;
-    const thorin::HashSet<const TraitNode*>& sub_traits() const { return sub_traits_; }
+    const IdSet<const TraitNode*>& sub_traits() const { return sub_traits_; }
     const std::vector<Impl>& type2impls(Type type) const { return type2impls_[type]; }
     bool add_super_bound(Bound) const;
     /// return the type of the method with this name if it exists; otherwise return an empty type
@@ -506,10 +506,9 @@ public:
     Bound instantiate(ArrayRef<Type> args) const;
     void add_impl(Impl impl) const;
 
-    virtual bool is_closed() const { return true; } // TODO
     virtual bool is_error() const override { return trait_decl() == nullptr; }
     virtual size_t hash() const override;
-    virtual bool equal(const Unifiable* other) const override;
+    virtual bool equal(const Unifiable*) const override;
     virtual std::string to_string() const;
 
 private:
@@ -517,7 +516,7 @@ private:
 
     const TraitDecl* const trait_decl_;
     mutable SuperBounds super_bounds_;
-    mutable thorin::HashSet<const TraitNode*> sub_traits_;
+    mutable IdSet<const TraitNode*> sub_traits_;
     mutable IdMap<Type, std::vector<Impl>> type2impls_;
 
     friend class TypeTable;
@@ -530,7 +529,7 @@ class BoundNode : public Unifiable {
 private:
     BoundNode(const Trait trait, ArrayRef<Type> elems)
         : Unifiable(trait->typetable(), Kind_bound, elems)
-        , trait_(trait)
+        , trait_(trait.unify())
     {
         assert(trait_->num_type_vars() == num_elems());
     }
@@ -542,7 +541,7 @@ public:
 
     virtual bool is_error() const override { return trait()->is_error(); }
     virtual size_t hash() const override;
-    virtual bool equal(const Unifiable* other) const override;
+    virtual bool equal(const Unifiable*) const override;
     virtual std::string to_string() const;
 
 private:
@@ -571,7 +570,7 @@ public:
     Impl specialize(SpecializeMap& map) const;
 
     virtual size_t hash() const;
-    virtual bool equal(const Unifiable* other) const { THORIN_UNREACHABLE; return false; }
+    virtual bool equal(const Unifiable*) const { THORIN_UNREACHABLE; return false; }
     virtual std::string to_string() const { return ""; } // TODO
 
 private:
