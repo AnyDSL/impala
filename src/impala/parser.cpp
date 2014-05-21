@@ -830,7 +830,7 @@ const Expr* Parser::parse_primary_expr() {
                 auto tuple = new TupleExpr();
                 tuple->set_pos1(pos1);
                 tuple->elems_.push_back(expr);
-                parse_comma_list(Token::R_PAREN, "elements of tuple expression", [&] { tuple->elems_.push_back(parse_expr()); });
+                parse_comma_list(Token::R_PAREN, "elements of a tuple expression", [&] { tuple->elems_.push_back(parse_expr()); });
                 tuple->set_pos2(prev_loc().pos2());
                 return tuple;
             } else {
@@ -860,7 +860,7 @@ const Expr* Parser::parse_primary_expr() {
             auto array = new DefiniteArrayExpr();
             array->set_pos1(pos1);
             array->elems_.push_back(expr);
-            parse_comma_list(Token::R_BRACKET, "elements of array expression", [&] { array->elems_.push_back(parse_expr()); });
+            parse_comma_list(Token::R_BRACKET, "elements of an array expression", [&] { array->elems_.push_back(parse_expr()); });
             array->set_pos2(prev_loc().pos2());
             return array;
         }
