@@ -121,14 +121,12 @@ public:
 class PathElem : public ASTNode {
 public:
     Symbol symbol() const { return symbol_; }
-    const ASTTypes& type_args() const { return type_args_; }
     SafePtr<const Decl> decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const override;
     void check(NameSema&) const;
 
 private:
     Symbol symbol_;
-    ASTTypes type_args_;
     mutable SafePtr<const Decl> decl_;
 
     friend class Parser;
@@ -982,6 +980,17 @@ private:
     friend class Parser;
 };
 
+/// Use as mixin for anything which uses type args: [T1, ..., Tn]
+class TypeArgs {
+public:
+    const ASTTypes& type_args() const { return type_args_; }
+    const ASTType* type_arg(size_t i) const { assert(i < type_args_.size()); return type_args_[i]; }
+    size_t num_type_args() const { return type_args_.size(); }
+
+protected:
+    ASTTypes type_args_;
+};
+
 class StructExpr : public Expr {
 public:
     class Elem {
@@ -1001,6 +1010,9 @@ public:
 
     typedef std::vector<Elem> Elems;
 
+    const ASTTypes& type_args() const { return type_args_; }
+    const ASTType* type_arg(size_t i) const { assert(i < type_args_.size()); return type_args_[i]; }
+    size_t num_type_args() const { return type_args_.size(); }
     const Path* path() const { return path_; }
     const Elems& elems() const { return elems_; }
     virtual void check(NameSema&) const override;
@@ -1010,6 +1022,7 @@ private:
     virtual Type check(TypeSema&, Type) const override;
 
     AutoPtr<const Path> path_;
+    ASTTypes type_args_;
     std::vector<Elem> elems_;
 
     friend class Parser;

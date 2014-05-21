@@ -274,8 +274,6 @@ void FnExpr::check(NameSema& sema) const { fn_check(sema); }
 
 void PathElem::check(NameSema& sema) const {
     decl_ = sema.lookup(this, symbol());
-    for (auto type_arg : type_args())
-        sema.check(type_arg);
 }
 
 void Path::check(NameSema& sema) const {

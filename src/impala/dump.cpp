@@ -16,11 +16,7 @@ void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; 
  */
 
 std::ostream& PathElem::print(Printer& p) const { 
-    p.stream() << symbol();
-    if (!type_args().empty())
-        p.dump_list([&] (const ASTType* type) { type->print(p); }, type_args(), "[", "]");
-
-    return p.stream();
+    return p.stream() << symbol();
 }
 
 std::ostream& Path::print(Printer& p) const {
@@ -363,14 +359,16 @@ std::ostream& CastExpr::print(Printer& p) const {
 }
 
 std::ostream& StructExpr::print(Printer& p) const {
-    path()->print(p) << '{';
-    p.dump_list([&] (const Elem& elem) { p.stream() << elem.symbol() << ": "; p.print(elem.expr()); }, elems());
-
-    return p.stream() << '}';
+    path()->print(p);
+    if (num_type_args() != 0)
+        p.dump_list([&](const ASTType* type) { type->print(p); }, type_args(), "[", "]");
+    return p.dump_list([&] (const Elem& elem) { p.stream() << elem.symbol() << ": "; p.print(elem.expr()); }, elems(), "{", "}");
 }
 
 std::ostream& MapExpr::print(Printer& p) const {
     p.print(lhs());
+    if (num_type_args() != 0)
+        p.dump_list([&](const ASTType* type) { type->print(p); }, type_args(), "[", "]");
     return p.dump_list([&](const Expr* expr) { p.print(expr); }, args(), "(", ")");
 }
 

@@ -533,16 +533,9 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
 
 Type PathExpr::check(TypeSema& sema, Type expected) const {
     // FEATURE consider longer paths
-    auto* last = path()->path_elems().back();
-    if (value_decl()) {
-        Type decl_type = sema.check(value_decl());
-        if (last->type_args().empty()) {
-            return decl_type;
-        } else {
-            if (!decl_type->is_error())
-                return sema.instantiate(last, decl_type, last->type_args());
-        }
-    }
+    //auto* last = path()->path_elems().back();
+    if (value_decl()) 
+        return sema.check(value_decl());
     return sema.type_error();
 }
 

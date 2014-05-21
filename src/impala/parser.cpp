@@ -307,9 +307,6 @@ Visibility Parser::parse_visibility() {
 const PathElem* Parser::parse_path_elem() {
     auto path_elem = loc(new PathElem());
     path_elem->symbol_ = try_id("path");
-    if (accept(Token::L_BRACKET))
-        parse_comma_list(Token::R_BRACKET, "type list", [&] { path_elem->type_args_.push_back(parse_type()); });
-
     return path_elem;
 }
 
@@ -877,6 +874,35 @@ const Expr* Parser::parse_primary_expr() {
         case Token::DOUBLE_COLON:
         case Token::ID:  {
             auto path = parse_path();
+            ASTTypes type_args;
+            if (accept(Token::L_BRACKET)) {     // struct or map expression
+                parse_comma_list(Token::R_BRACKET, "type arguments", [&] { type_args.push_back(parse_type()); });
+
+                if (accept(Token::L_PAREN)) {   // map expression
+                    auto map = new MapExpr();
+                    auto path_expr = new PathExpr();
+                    path_expr->path_ = path;
+                    path_expr->set_loc(path->loc());
+                    map->lhs_ = path_expr;
+                    map->type_args_ = std::move(type_args);
+                    type_args.clear();
+                    parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
+                    map->set_loc(path->pos1(), prev_loc().pos2());
+                    return map;
+                } else if (accept(Token::L_BRACE)) {
+                    auto struct_expr = new StructExpr();
+                    struct_expr->path_ = path;
+                    struct_expr->type_args_ = std::move(type_args);
+                    type_args.clear();
+                    parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
+                        auto symbol = try_id("identifier in struct expression");
+                        expect(Token::COLON, "struct expression");
+                        struct_expr->elems_.emplace_back(symbol, std::unique_ptr<const Expr>(parse_expr()));
+                    });
+                    struct_expr->set_loc(path->pos1(), prev_loc().pos2());
+                    return struct_expr;
+                }
+            }
             if (la(0) == Token::L_BRACE && (la(1) == Token::ID && la(2) == Token::COLON)) {
                 eat(Token::L_BRACE);
                 auto struct_expr = new StructExpr();
