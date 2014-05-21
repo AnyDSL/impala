@@ -112,7 +112,7 @@ thorin::Type TupleTypeNode::convert(CodeGen& cg) const {
 
 thorin::Type StructTypeNode::convert(CodeGen& cg) const {
     auto struct_type = cg.world().struct_type(num_elems());
-
+    // TODO
     return struct_type;
 }
 

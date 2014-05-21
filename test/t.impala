@@ -1,0 +1,36 @@
+trait B {
+    fn a(self: Self) -> f32;
+}
+
+trait A {
+    fn a(self: Self) -> int;
+    fn b(self: Self) -> bool;
+}
+
+impl A for int {
+    fn a(self: int) -> int { 42 }
+    fn b(self: int) -> bool { true }
+}
+
+impl B for int {
+    fn a(self: int) -> f32 { 23.f }
+}
+
+fn f[T: A + B, U: A](a: T, b: U) -> int {
+    42
+}
+
+fn g[T: A + B, U: A](a: T, b: U) -> int {
+    42
+}
+
+fn foo(x: fn[T: A + B, U: A](T, U) -> int) -> int {
+    23
+}
+
+fn main() -> int {
+    foo(f);
+    foo(g);
+    f(23, 42);
+    g(23, 42)
+}
