@@ -318,7 +318,7 @@ protected:
 public:
     ArrayRef<Type> elems() const { return ArrayRef<Type>(elems_); }
     const Type elem(size_t i) const { return elems_[i]; }
-    size_t size() const { return elems_.size(); }
+    size_t num_elems() const { return elems_.size(); }
     bool is_empty() const { assert(!elems_.empty() || type_vars_.empty()); return elems_.empty(); }
     const std::vector<Impl>& impls() const { return impls_; }
     void add_impl(Impl) const;

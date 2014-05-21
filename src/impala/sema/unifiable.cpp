@@ -67,7 +67,7 @@ void KnownTypeNode::add_impl(Impl impl) const {
 Type FnTypeNode::return_type() const {
     if (!is_empty()) {
         if (auto fn = elems().back().isa<FnType>()) {
-            if (fn->size() == 1)
+            if (fn->num_elems() == 1)
                 return fn->elems().front();
             return typetable().tuple_type(fn->elems());
         }
@@ -115,7 +115,7 @@ void TraitNode::add_impl(Impl impl) const {
 
 size_t KnownTypeNode::hash() const {
     // FEATURE take type variables of generic types better into the equation
-    size_t seed = hash_combine(hash_combine(hash_begin((int) kind()), size()), num_type_vars());
+    size_t seed = hash_combine(hash_combine(hash_begin((int) kind()), num_elems()), num_type_vars());
 
     for (auto type_var : type_vars())
         seed = hash_combine(seed, type_var->num_bounds());
@@ -157,7 +157,7 @@ bool KnownTypeNode::equal(const Unifiable* unifiable) const {
 
     if (this->kind() == unifiable->kind()) {
         auto other = unifiable->as<KnownTypeNode>();
-        bool result = this->size() == other->size() && this->num_type_vars() == other->num_type_vars();
+        bool result = this->num_elems() == other->num_elems() && this->num_type_vars() == other->num_type_vars();
 
         // check arity of type vars (= the number of bounds)
         for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
@@ -175,7 +175,7 @@ bool KnownTypeNode::equal(const Unifiable* unifiable) const {
                 result &= this->type_var(i)->bounds_equal(*other->type_var(i));
 
             // check recursively element types for equivalence
-            for (size_t i = 0, e = size(); i != e && result; ++i)
+            for (size_t i = 0, e = this->num_elems(); i != e && result; ++i)
                 result &= this->elem(i) == other->elem(i);
 
             // unset equivalence constraints for type variables
@@ -216,7 +216,7 @@ bool TypeVarNode::bounds_equal(const TypeVarNode* other) const {
 
     std::stable_sort(other_bounds.begin(), other_bounds.end(), BoundsLT());
 
-    if (this->bounds().size() == other->bounds().size()) {
+    if (this->num_bounds() == other->num_bounds()) {
         for (size_t i = 0, e = other_bounds.size(); i != e; ++i) {
             if (this->bound(i)->id() != other_bounds[i]->id()) // since both are unified it suffices to check id here
                 return false;
@@ -359,8 +359,8 @@ Type TypeNode::specialize(SpecializeMap& map) const {
 }
 
 Array<Type> KnownTypeNode::specialize_elems(SpecializeMap& map) const {
-    Array<Type> nelems(size());
-    for (size_t i = 0, e = size(); i != e; ++i)
+    Array<Type> nelems(num_elems());
+    for (size_t i = 0, e = num_elems(); i != e; ++i)
         nelems[i] = elem(i)->specialize(map);
     return nelems;
 }
@@ -422,9 +422,9 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
         else if (u1->kind() == u2->kind()) {                        // recursively infer sub elements
             if (auto ktn1 = u1->isa<KnownTypeNode>()) {
                 auto ktn2 = u2->as<KnownTypeNode>();
-                bool result = ktn1->num_type_vars() == ktn2->num_type_vars() && ktn1->size() == ktn2->size();
+                bool result = ktn1->num_type_vars() == ktn2->num_type_vars() && ktn1->num_elems() == ktn2->num_elems();
                 // TODO handle type vars
-                for (size_t i = 0, e = ktn1->size(); i != e && result; ++i)
+                for (size_t i = 0, e = ktn1->num_elems(); i != e && result; ++i)
                     result &= infer(ktn1->elem(i), ktn2->elem(i));
                 return result;
             } else if (auto b1 = u1->isa<BoundNode>()) {

@@ -140,7 +140,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
 Type TypeSema::create_return_type(const ASTNode* node, Type ret_func) {
     // TODO use FnType::return_type()
     if (auto fn = ret_func.isa<FnType>()) {
-        if (fn->size() == 1) {
+        if (fn->num_elems() == 1) {
             return fn->elem(0);
         } else {
             std::vector<Type> ret_types;
@@ -509,8 +509,8 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
 
     FnType fn_type;
     if (FnType exp_fn = expected.isa<FnType>()) {
-        if (exp_fn->size() != params().size())
-            sema.error(this) << "expected function with " << exp_fn->size() << " parameters, but found lambda expression with " << params().size() << " parameters\n";
+        if (exp_fn->num_elems() != num_params())
+            sema.error(this) << "expected function with " << exp_fn->num_elems() << " parameters, but found lambda expression with " << num_params() << " parameters\n";
 
         size_t i = 0;
         for (auto param : params())
@@ -623,7 +623,7 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
             } else
                 func = fn.as<FnType>();
 
-            if (func->size() >= 1) {
+            if (func->num_elems() >= 1) {
                 sema.expect_type(lhs(), func->elem(0), "object");
                 return func->peel_first();
             } else
@@ -654,8 +654,8 @@ Type IndefiniteArrayExpr::check(TypeSema& sema, Type expected) const {
 Type TupleExpr::check(TypeSema& sema, Type expected) const {
     std::vector<Type> types;
     if (auto exp_tup = expected.isa<TupleType>()) {
-        if (exp_tup->size() != elems().size())
-            sema.error(this) << "expected tuple with " << exp_tup->size() << " elements, but found tuple expression with " << elems().size() << " elements.\n";
+        if (exp_tup->num_elems() != num_elems())
+            sema.error(this) << "expected tuple with " << exp_tup->num_elems() << " elements, but found tuple expression with " << num_elems() << " elements.\n";
 
         size_t i = 0;
         for (auto e : elems()) {
@@ -680,8 +680,8 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
     FnType ofn = lhs->type().as<FnType>();
     FnType fn = ofn->is_generic() ? instantiate_unknown(ofn, type_args).as<FnType>() : ofn;
 
-    bool no_cont = fn->size() == (args.size()+1); // true if this is a normal function call (no continuation)
-    if (no_cont || (fn->size() == args.size())) {
+    bool no_cont = fn->num_elems() == (args.size()+1); // true if this is a normal function call (no continuation)
+    if (no_cont || (fn->num_elems() == args.size())) {
         for (size_t i = 0; i < args.size(); ++i) {
             check(args[i], fn->elem(i), "argument");
         }

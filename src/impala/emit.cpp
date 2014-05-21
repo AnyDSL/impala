@@ -111,7 +111,7 @@ thorin::Type TupleTypeNode::convert(CodeGen& cg) const {
 }
 
 thorin::Type StructTypeNode::convert(CodeGen& cg) const {
-    auto struct_type = cg.world().struct_type(size());
+    auto struct_type = cg.world().struct_type(num_elems());
 
     return struct_type;
 }
@@ -416,7 +416,7 @@ Def MapExpr::remit(CodeGen& cg) const {
 
         for (auto arg : args())
             defs.push_back(cg.remit(arg));
-        auto ret_type = args().size() == fn->size() ? thorin::Type() : cg.convert(fn->return_type());
+        auto ret_type = args().size() == fn->num_elems() ? thorin::Type() : cg.convert(fn->return_type());
         return cg.call(ldef, defs, ret_type);
     } else {
         assert(false && "TODO");

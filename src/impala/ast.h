@@ -425,6 +425,7 @@ class Fn : public TypeParamList {
 public:
     const Param* param(size_t i) const { return params_[i]; }
     ArrayRef<const Param*> params() const { return params_; }
+    size_t num_params() const { return params_.size(); }
     const Expr* body() const { return body_; }
     thorin::Lambda* lambda() const { return lambda_; }
     const thorin::Param* ret_param() const { return ret_param_; }
@@ -969,6 +970,7 @@ private:
 class TupleExpr : public Expr {
 public:
     const Exprs& elems() const { return elems_; }
+    size_t num_elems() const { return elems_.size(); }
     virtual void check(NameSema&) const override;
 
 private:

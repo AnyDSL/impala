@@ -30,7 +30,7 @@ int main() {
             if (auto itype = llvm2impala(*init.typetable, type)) {
                 auto fn = itype.as<impala::FnType>();
                 printer.stream() << "intrinsic " << name;
-                printer.dump_list([&] (impala::Type type) { printer.stream() << type->to_string(); }, fn->elems().slice_to_end(fn->size()-1), "(", ")");
+                printer.dump_list([&] (impala::Type type) { printer.stream() << type->to_string(); }, fn->elems().slice_to_end(fn->num_elems()-1), "(", ")");
                 printer.stream() << " -> ";
                 printer.stream() << fn->return_type()->to_string() << ';';
                 printer.newline();
