@@ -601,7 +601,7 @@ Type PostfixExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type FieldExpr::check(TypeSema& sema, Type expected) const {
-    sema.check(lhs());
+    return sema.check(lhs());
 
     // TODO
 #if 0
@@ -712,27 +712,38 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
 }
 
 Type MapExpr::check(TypeSema& sema, Type expected) const {
-    Type lhst = sema.check(lhs());
+    if (auto field_expr = is_method_call()) {
+        sema.check(field_expr);
+        sema.check_impls();
+        Type fn = field_expr->lhs()->type()->find_method(field_expr->symbol());
+        if (!fn.empty()) {
+            if (!fn->is_error()) {
+                FnType func;
+                if (!type_args().empty()) {
+                    Type t = sema.instantiate(this, fn, type_args());
+                    func = t.as<FnType>();
+                } else
+                    func = fn.as<FnType>();
 
-    if (auto ofn = lhst.isa<FnType>()) {
-        return sema.check_call(lhs(), this, args(), expected);
-    } else if (!lhs()->type()->is_error()) {
-        // REMINDER new error message if not only fn-types are allowed
-        sema.error(lhs()) << "expected function type but found " << lhs()->type() << "\n";
+                if (func->num_elems() >= 1) {
+                    sema.expect_type(lhs(), func->elem(0), "object");
+                    return func->peel_first();
+                } else
+                    sema.error(this) << "cannot call a method without Self parameter";
+            }
+        }
+        sema.error(this) << "no declaration for method '" << field_expr->symbol() << "' found.\n";
+    } else {
+        Type lhst = sema.check(lhs());
+
+        if (auto ofn = lhst.isa<FnType>()) {
+            return sema.check_call(lhs(), this, args(), expected);
+        } else if (!lhs()->type()->is_error()) {
+            sema.error(lhs()) << "expected function type but found " << lhs()->type() << "\n";
+        }
     }
 
     return sema.type_error();
-}
-
-Type IfExpr::check(TypeSema& sema, Type expected) const {
-    sema.check(cond(), sema.type_bool(), "condition");
-    Type then_type = sema.check(then_expr(), sema.unknown_type());
-    Type else_type = sema.check(else_expr(), sema.unknown_type());
-    Type type = then_type->is_noret() ? else_type : then_type;
-    if (!type->is_error())
-        return sema.expect_type(this, type, expected, "if expression");
-    else
-        return expected->is_known() ? expected : else_type;
 }
 
 Type ForExpr::check(TypeSema& sema, Type expected) const {
@@ -750,6 +761,17 @@ Type ForExpr::check(TypeSema& sema, Type expected) const {
 
     sema.error(expr()) << "the looping expression does not support the 'for' protocol\n";
     return sema.unit();
+}
+
+Type IfExpr::check(TypeSema& sema, Type expected) const {
+    sema.check(cond(), sema.type_bool(), "condition");
+    Type then_type = sema.check(then_expr(), sema.unknown_type());
+    Type else_type = sema.check(else_expr(), sema.unknown_type());
+    Type type = then_type->is_noret() ? else_type : then_type;
+    if (!type->is_error())
+        return sema.expect_type(this, type, expected, "if expression");
+    else
+        return expected->is_known() ? expected : else_type;
 }
 
 //------------------------------------------------------------------------------
