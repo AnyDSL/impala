@@ -805,11 +805,11 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
         }
         case Token::DOT: {
             lex();
-            auto expr = new FieldExpr();
-            expr->lhs_ = lhs;
-            expr->symbol_ = try_id("field expression");
-            expr->set_loc(lhs->pos1(), prev_loc().pos2());
-            return expr;
+            auto field = new FieldExpr();
+            field->lhs_ = lhs;
+            field->symbol_ = try_id("field expression");
+            field->set_loc(lhs->pos1(), prev_loc().pos2());
+            return field;
         }
         case Token::AS: {
             lex();
@@ -831,8 +831,8 @@ const Expr* Parser::parse_primary_expr() {
             if (accept(Token::COMMA)) {
                 auto tuple = new TupleExpr();
                 tuple->set_pos1(pos1);
-                tuple->elems_.push_back(expr);
-                parse_comma_list(Token::R_PAREN, "elements of a tuple expression", [&] { tuple->elems_.push_back(parse_expr()); });
+                tuple->args_.push_back(expr);
+                parse_comma_list(Token::R_PAREN, "elements of a tuple expression", [&] { tuple->args_.push_back(parse_expr()); });
                 tuple->set_pos2(prev_loc().pos2());
                 return tuple;
             } else {
@@ -861,8 +861,8 @@ const Expr* Parser::parse_primary_expr() {
             }
             auto array = new DefiniteArrayExpr();
             array->set_pos1(pos1);
-            array->elems_.push_back(expr);
-            parse_comma_list(Token::R_BRACKET, "elements of an array expression", [&] { array->elems_.push_back(parse_expr()); });
+            array->args_.push_back(expr);
+            parse_comma_list(Token::R_BRACKET, "elements of an array expression", [&] { array->args_.push_back(parse_expr()); });
             array->set_pos2(prev_loc().pos2());
             return array;
         }

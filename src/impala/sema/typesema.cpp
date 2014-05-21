@@ -650,18 +650,18 @@ Type IndefiniteArrayExpr::check(TypeSema& sema, Type expected) const {
 Type TupleExpr::check(TypeSema& sema, Type expected) const {
     std::vector<Type> types;
     if (auto exp_tup = expected.isa<TupleType>()) {
-        if (exp_tup->num_elems() != num_elems())
-            sema.error(this) << "expected tuple with " << exp_tup->num_elems() << " elements, but found tuple expression with " << num_elems() << " elements.\n";
+        if (exp_tup->num_elems() != num_args())
+            sema.error(this) << "expected tuple with " << exp_tup->num_elems() << " elements, but found tuple expression with " << num_args() << " elements.\n";
 
         size_t i = 0;
-        for (auto e : elems()) {
-            sema.check(e, exp_tup->elem(i++));
-            types.push_back(e->type());
+        for (auto arg : args()) {
+            sema.check(arg, exp_tup->elem(i++));
+            types.push_back(arg->type());
         }
     } else {
-        for (auto e : elems()) {
-            sema.check(e);
-            types.push_back(e->type());
+        for (auto arg : args()) {
+            sema.check(arg);
+            types.push_back(arg->type());
         }
     }
     return sema.tuple_type(types);

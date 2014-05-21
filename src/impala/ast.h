@@ -29,6 +29,7 @@ class Decl;
 class Expr;
 class FnDecl;
 class Item;
+class MapExpr;
 class NamedItem;
 class Stmt;
 class TypeParam;
@@ -715,6 +716,30 @@ private:
     friend class TypeSema;
 };
 
+/// Use as mixin for anything which uses type args: [T1, ..., Tn]
+class TypeArgs {
+public:
+    const ASTTypes& type_args() const { return type_args_; }
+    const ASTType* type_arg(size_t i) const { assert(i < type_args_.size()); return type_args_[i]; }
+    size_t num_type_args() const { return type_args_.size(); }
+    std::ostream& print_type_args(Printer& p) const;
+
+protected:
+    ASTTypes type_args_;
+};
+
+/// Use as mixin for anything which uses args: (expr_1, ..., expr_n)
+class Args {
+public:
+    const Exprs& args() const { return args_; }
+    const Expr* arg(size_t i) const { assert(i < args_.size()); return args_[i]; }
+    size_t num_args() const { return args_.size(); }
+    std::ostream& print_args(Printer& p) const;
+
+protected:
+    Exprs args_;
+};
+
 class EmptyExpr : public Expr {
 public:
     EmptyExpr(const Location& loc) { loc_ = loc; }
@@ -925,16 +950,13 @@ private:
     friend class Parser;
 };
 
-class DefiniteArrayExpr : public Expr {
+class DefiniteArrayExpr : public Expr, public Args {
 public:
-    const Exprs& elems() const { return elems_; }
     virtual void check(NameSema&) const override;
 
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
-
-    Exprs elems_;
 
     friend class Parser;
 };
@@ -971,31 +993,15 @@ private:
     friend class Parser;
 };
 
-class TupleExpr : public Expr {
+class TupleExpr : public Expr, public Args {
 public:
-    const Exprs& elems() const { return elems_; }
-    size_t num_elems() const { return elems_.size(); }
     virtual void check(NameSema&) const override;
 
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
 
-    Exprs elems_;
-
     friend class Parser;
-};
-
-/// Use as mixin for anything which uses type args: [T1, ..., Tn]
-class TypeArgs {
-public:
-    const ASTTypes& type_args() const { return type_args_; }
-    const ASTType* type_arg(size_t i) const { assert(i < type_args_.size()); return type_args_[i]; }
-    size_t num_type_args() const { return type_args_.size(); }
-    std::ostream& print_type_args(Printer& p) const;
-
-protected:
-    ASTTypes type_args_;
 };
 
 class StructExpr : public Expr, public TypeArgs {
@@ -1031,13 +1037,11 @@ private:
     friend class Parser;
 };
 
-class MapExpr : public Expr, public TypeArgs {
+class MapExpr : public Expr, public Args, public TypeArgs {
 public:
-    const Exprs& args() const { return args_; }
-    const Expr* arg(size_t i) const { assert(i < args_.size()); return args_[i]; }
-    size_t num_args() const { return args_.size(); }
     const Expr* lhs() const { return lhs_; }
     virtual void check(NameSema&) const override;
+    const FieldExpr* is_method_call() const { return lhs()->isa<FieldExpr>(); }
 
 private:
     virtual std::ostream& print(Printer&) const override;
@@ -1045,7 +1049,6 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
-    Exprs args_;
 
     friend class Parser;
 };

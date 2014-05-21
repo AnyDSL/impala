@@ -305,8 +305,8 @@ void CastExpr::check(NameSema& sema) const {
 }
 
 void DefiniteArrayExpr::check(NameSema& sema) const {
-    for (auto elem : elems())
-        elem->check(sema);
+    for (auto arg : args())
+        arg->check(sema);
 }
 
 void RepeatedDefiniteArrayExpr::check(NameSema& sema) const {
@@ -320,8 +320,8 @@ void IndefiniteArrayExpr::check(NameSema& sema) const {
 }
 
 void TupleExpr::check(NameSema& sema) const {
-    for (auto elem : elems())
-        elem->check(sema);
+    for (auto arg : args())
+        arg->check(sema);
 }
 
 void StructExpr::check(NameSema& sema) const {

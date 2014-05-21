@@ -259,10 +259,10 @@ std::ostream& LiteralExpr::print(Printer& p) const {
 
 std::ostream& PathExpr ::print(Printer& p) const { return path()->print(p); }
 std::ostream& EmptyExpr::print(Printer& p) const { return p.stream() << "/*empty*/"; }
-std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { p.print(expr); }, elems(), "(", ")"); }
+std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { p.print(expr); }, args(), "(", ")"); }
 
 std::ostream& DefiniteArrayExpr::print(Printer& p) const {
-    return p.dump_list([&] (const Expr* expr) { p.print(expr); }, elems(), "[", "]"); 
+    return p.dump_list([&] (const Expr* expr) { p.print(expr); }, args(), "[", "]"); 
 }
 
 std::ostream& RepeatedDefiniteArrayExpr::print(Printer& p) const {
