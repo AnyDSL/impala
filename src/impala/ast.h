@@ -82,7 +82,8 @@ class Typeable {
 public:
     Type type() const { return type_; }
 
-protected:
+//protected:
+public: // HACK
     mutable Type type_;
 
     friend class TypeSema;

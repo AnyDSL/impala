@@ -727,7 +727,14 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
 
                 if (func->num_elems() >= 1) {
                     sema.expect_type(lhs(), func->elem(0), "object");
-                    return func->peel_first();
+                    auto peeled = func->peel_first();
+                    lhs_->type_.clear();
+                    lhs_->type_ = peeled;
+                    if (auto ofn = peeled.isa<FnType>()) {
+                        return sema.check_call(lhs(), this, args(), expected);
+                    } else if (!lhs()->type()->is_error()) {
+                        sema.error(lhs()) << "expected function type but found " << lhs()->type() << "\n";
+                    }
                 } else
                     sema.error(this) << "cannot call a method without Self parameter";
             }
