@@ -371,25 +371,20 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
             assert(u2->representative()->isa<KnownTypeNode>());
             u1->representative_ = u2->representative();             // set u1 to u2
             return true;
-        } else if (u1->unify()->is_unified())
+        } else if (u1->unify()->is_unified()) {
             return u1->representative() == u2->representative();    // both are unified - are types equal?
-        else if (u1->kind() == u2->kind()) {                        // recursively infer sub elements
-            if (auto ktn1 = u1->isa<KnownTypeNode>()) { // TODO ASDF
-                auto ktn2 = u2->as<KnownTypeNode>();
-                bool result = ktn1->num_type_vars() == ktn2->num_type_vars() && ktn1->num_elems() == ktn2->num_elems();
-                // TODO handle type vars
-                for (size_t i = 0, e = ktn1->num_elems(); i != e && result; ++i)
-                    result &= infer(ktn1->elem(i), ktn2->elem(i));
-                return result;
-            } else if (auto b1 = u1->isa<BoundNode>()) {
-                auto b2 = u2->as<BoundNode>();
-                bool result = b1->trait() == b2->trait() && b1->num_elems() == b2->num_elems();
-                for (size_t i = 0, e = b1->num_elems(); result && i != e; ++i)
-                    result &= infer(b1->elem(i), b2->elem(i));
-                return result;
-            } else
-                assert(false);
-        } 
+        } else if (bool result = u1->kind() == u2->kind()           // recursively infer sub elements
+                && u1->num_type_vars() == u2->num_type_vars() 
+                && u1->num_elems() == u2->num_elems()) {
+            // TODO handle type vars
+            for (size_t i = 0, e = u1->num_elems(); i != e && result; ++i)
+                result &= infer(u1->elem(i), u2->elem(i));
+
+            if (auto b1 = u1->isa<BoundNode>())
+                result &= b1->trait() == u2->as<BoundNode>()->trait();
+
+            return result;
+        }
     }
 
     return false;
