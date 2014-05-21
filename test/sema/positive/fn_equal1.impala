@@ -1,15 +1,15 @@
 trait A {}
 trait B {}
 
-fn f[T: A + B](a: T) -> int {
+fn f[T: A + B, U: A](a: T, b: U) -> int {
     42
 }
 
-fn g[T: A + B](a: T) -> int {
+fn g[T: A + B, U: A](a: T, b: U) -> int {
     42
 }
 
-fn foo(x: fn[T: A](T) -> int) -> int {
+fn foo(x: fn[T: A + B, U: A](T, U) -> int) -> int {
     23
 }
 

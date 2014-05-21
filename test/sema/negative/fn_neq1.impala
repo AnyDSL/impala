@@ -1,0 +1,19 @@
+trait A {}
+trait B {}
+
+fn f[T: A + B](a: T) -> int {
+    42
+}
+
+fn g[T: A + B](a: T) -> int {
+    42
+}
+
+fn foo(x: fn[T: A](T) -> int) -> int {
+    23
+}
+
+fn main() -> () {
+    foo(f);
+    foo(g);
+}

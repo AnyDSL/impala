@@ -450,6 +450,12 @@ bool infer(Uni u1, Uni u2) { return infer(u1->unify(), u2->unify()); }
  */
 
 bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
+    if (!is_unified())
+        return unify()->as<KnownTypeNode>()->implements(bound, map);
+
+    std::queue<Bound> queue;
+    IdSet<Bound> done;
+
     auto implements_bounds = [&] (Type type, TypeVar type_var) {
         for (auto b : type_var->bounds()) {
             if (!type->implements(b, map))
@@ -458,10 +464,8 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
         return true;
     };
 
-    std::queue<Bound> queue;
-    IdSet<Bound> done;
-
     auto enqueue = [&] (Bound bound) { 
+        assert(bound->is_unified() || !bound->is_known());
         queue.push(bound); 
         done.insert(bound);
     };
@@ -512,16 +516,20 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
 }
 
 bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {
+    if (!is_unified())
+        return unify()->as<TypeVarNode>()->implements(bound, map);
+
     std::queue<Bound> queue;
     IdSet<Bound> done;
 
     auto enqueue = [&] (Bound bound) { 
+        assert(bound->is_unified());
         queue.push(bound); 
         done.insert(bound); 
     };
 
     for (auto b : bounds())
-        enqueue(b.unify());
+        enqueue(b);
 
     while (!queue.empty()) {
         auto cur_bound = thorin::pop(queue);
