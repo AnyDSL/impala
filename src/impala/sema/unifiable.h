@@ -570,7 +570,7 @@ public:
     Impl specialize(SpecializeMap& map) const;
 
     virtual size_t hash() const;
-    virtual bool equal(const Unifiable*) const { THORIN_UNREACHABLE; return false; }
+    virtual bool equal(const Unifiable*) const { THORIN_UNREACHABLE; }
     virtual std::string to_string() const { return ""; } // TODO
 
 private:

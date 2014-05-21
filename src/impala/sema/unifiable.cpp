@@ -223,7 +223,6 @@ bool BoundsLT::operator () (Bound b1, Bound b2) const {
     }
 
     THORIN_UNREACHABLE;
-    return false;
 }
 
 bool TypeVarNode::bounds_equal(const TypeVarNode* other) const {
