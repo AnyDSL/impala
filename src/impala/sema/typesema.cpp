@@ -120,7 +120,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
     if (found_type == expected) 
         return expected;
     else {
-        if (found_type->is_generic()) {
+        if (found_type->is_polymorphic()) {
             // try to infer instantiations for this generic type
             std::vector<Type> type_args;
             Type inst = instantiate_unknown(found_type, type_args);
@@ -678,7 +678,7 @@ Type StructExpr::check(TypeSema& sema, Type expected) const {
 Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Expr*> args, Type expected) {
     std::vector<Type> type_args;
     FnType ofn = lhs->type().as<FnType>();
-    FnType fn = ofn->is_generic() ? instantiate_unknown(ofn, type_args).as<FnType>() : ofn;
+    FnType fn = ofn->is_polymorphic() ? instantiate_unknown(ofn, type_args).as<FnType>() : ofn;
 
     bool no_cont = fn->num_elems() == (args.size()+1); // true if this is a normal function call (no continuation)
     if (no_cont || (fn->num_elems() == args.size())) {
@@ -689,7 +689,7 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
             infer(create_return_type(whole, fn->elems().back()), expected);
 
         // instantiate fn type
-        if (ofn->is_generic()) {
+        if (ofn->is_polymorphic()) {
             bool no_error = true;
             for (size_t i = 0; i < type_args.size(); ++i) {
                 UnknownType ut = type_args[i].isa<UnknownType>();

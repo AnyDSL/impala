@@ -179,18 +179,20 @@ public:
     const Type elem(size_t i) const { return elems_[i]; }
     size_t num_elems() const { return elems_.size(); }
     bool is_empty() const { assert(!elems_.empty() || type_vars_.empty()); return elems_.empty(); }
-    const Unifiable* representative() const { return representative_; }
+    ArrayRef<TypeVar> type_vars() const { return ArrayRef<TypeVar>(type_vars_); }
+    TypeVar type_var(size_t i) const { return type_vars_[i]; }
+    size_t num_type_vars() const { return type_vars_.size(); }
     const int id() const { return id_; }
+    const Unifiable* representative() const { return representative_; }
     bool is_unified() const { return representative_ != nullptr; }
     const Unifiable* unify() const;
     void dump() const;
-
-    size_t num_type_vars() const { return type_vars_.size(); }
-    ArrayRef<TypeVar> type_vars() const { return ArrayRef<TypeVar>(type_vars_); }
-    TypeVar type_var(size_t i) const { return type_vars_[i]; }
     /// Returns true if this \p Type does have any bound type variabes (\p type_vars_).
-    bool is_generic() const { return !type_vars_.empty(); }
-    /// A type is closed if it contains no unbound type variables.
+    bool is_polymorphic() const { return !type_vars_.empty(); }
+    /**
+     * A type is closed if it contains no unbound type variables.
+     * \attention A closed type variable must not be changed anymore.
+     */
     virtual bool is_closed() const;
     virtual void bind(TypeVar v) const;
     virtual size_t hash() const;
@@ -445,32 +447,22 @@ public:
     size_t num_bounds() const { return bounds_.size(); }
     const Unifiable* bound_at() const { return bound_at_; }
     void add_bound(Bound) const;
-    virtual bool equal(const Unifiable* other) const;
-    std::string to_string() const;
-    virtual bool implements(Bound, SpecializeMap&) const;
-    virtual Type find_method(Symbol s) const;
 
-    /**
-     * A type variable is closed if it is bound and all restrictions are closed.
-     * If a type variable is closed it must not be changed anymore!
-     */
     virtual bool is_closed() const { return bound_at_ != nullptr; }
     virtual bool is_sane() const { return is_closed(); }
-
-private:
-    virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
-
-    Symbol name_;
-    mutable std::vector<Bound> bounds_;///< All traits that restrict the instantiation of this variable.
-    /**
-     * The type where this variable is bound.
-     * If such a type is set, then the variable must not be changed anymore!
-     */
-    mutable const Unifiable* bound_at_;
-    mutable const TypeVarNode* equiv_;///< Used to define equivalence constraints when checking equality of types.
+    virtual bool equal(const Unifiable* other) const;
+    virtual bool implements(Bound, SpecializeMap&) const;
+    virtual Type find_method(Symbol s) const;
+    virtual std::string to_string() const;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
+    virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
+
+    Symbol name_;
+    mutable std::vector<Bound> bounds_; ///< All traits that restrict the instantiation of this variable.
+    mutable const Unifiable* bound_at_; ///< The type where this variable is bound.
+    mutable const TypeVarNode* equiv_;  ///< Used to define equivalence constraints when checking equality of types.
 
     friend class TypeTable;
     friend void Unifiable::bind(TypeVar) const;
@@ -513,10 +505,11 @@ public:
     bool has_method(Symbol name) const { return !find_method(name).empty(); }
     Bound instantiate(ArrayRef<Type> args) const;
     void add_impl(Impl impl) const;
-    virtual size_t hash() const override;
-    virtual bool equal(const Unifiable* other) const override;
+
     virtual bool is_closed() const { return true; } // TODO
     virtual bool is_error() const override { return trait_decl() == nullptr; }
+    virtual size_t hash() const override;
+    virtual bool equal(const Unifiable* other) const override;
     virtual std::string to_string() const;
 
 private:
@@ -547,9 +540,9 @@ public:
     Type find_method(Symbol name) const;
     Bound specialize(SpecializeMap&) const;
 
+    virtual bool is_error() const override { return trait()->is_error(); }
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable* other) const override;
-    virtual bool is_error() const override { return trait()->is_error(); }
     virtual std::string to_string() const;
 
 private:
@@ -580,8 +573,6 @@ public:
 
     virtual size_t hash() const;
     virtual bool equal(const Unifiable* other) const { THORIN_UNREACHABLE; return false; }
-
-protected:
     virtual std::string to_string() const { return ""; } // TODO
 
 private:

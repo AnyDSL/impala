@@ -565,7 +565,7 @@ void Unifiable::dump() const { std::cout << to_string() << std::endl; }
 std::string Unifiable::type_vars_to_string() const {
     std::string result;
 
-    if (!is_generic())
+    if (!is_polymorphic())
         return result;
 
     const char* separator = "[";
