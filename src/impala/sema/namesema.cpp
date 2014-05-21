@@ -299,8 +299,6 @@ void PostfixExpr::check(NameSema& sema) const { lhs()->check(sema); }
 void FieldExpr::check(NameSema& sema) const {
     lhs()->check(sema);
     // don't check symbol here as it depends on lhs' type - must be done in TypeSema
-    for (auto type_arg : path_elem()->type_args())
-        sema.check(type_arg);
 }
 
 void CastExpr::check(NameSema& sema) const {
@@ -338,6 +336,8 @@ void StructExpr::check(NameSema& sema) const {
 
 void MapExpr::check(NameSema& sema) const {
     lhs()->check(sema);
+    for (auto type_arg : type_args())
+        sema.check(type_arg);
     for (auto arg : args())
         arg->check(sema);
 }

@@ -610,10 +610,12 @@ Type PostfixExpr::check(TypeSema& sema, Type expected) const {
 Type FieldExpr::check(TypeSema& sema, Type expected) const {
     sema.check(lhs());
 
+    // TODO
+#if 0
     // FEATURE struct types
     // FEATURE maybe store a hash map of methods in the type to make this fast!
     sema.check_impls();
-    Type fn = lhs()->type()->find_method(path_elem()->symbol());
+    Type fn = lhs()->type()->find_method(symbol());
     if (!fn.empty()) {
         if (!fn->is_error()) {
             FnType func;
@@ -632,6 +634,7 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
         return sema.type_error();
     }
     sema.error(this) << "no declaration for method '" << path_elem() << "' found.\n";
+#endif
     return sema.type_error();
 }
 

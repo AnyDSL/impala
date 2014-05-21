@@ -810,7 +810,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
             lex();
             auto expr = new FieldExpr();
             expr->lhs_ = lhs;
-            expr->path_elem_ = parse_path_elem();
+            expr->symbol_ = try_id("field expression");
             expr->set_loc(lhs->pos1(), prev_loc().pos2());
             return expr;
         }

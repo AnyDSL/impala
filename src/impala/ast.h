@@ -892,7 +892,7 @@ private:
 class FieldExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
-    const PathElem* path_elem() const { return path_elem_; }
+    Symbol symbol() const { return symbol_; }
     virtual void check(NameSema&) const override;
 
 private:
@@ -900,7 +900,7 @@ private:
     virtual Type check(TypeSema&, Type) const override;
 
     AutoPtr<const Expr> lhs_;
-    AutoPtr<const PathElem> path_elem_;
+    Symbol symbol_;
 
     friend class Parser;
 };
