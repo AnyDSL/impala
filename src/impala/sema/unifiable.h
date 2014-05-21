@@ -190,6 +190,7 @@ public:
     TypeVar type_var(size_t i) const { return type_vars_[i]; }
     /// Returns true if this \p Type does have any bound type variabes (\p type_vars_).
     bool is_generic() const { return !type_vars_.empty(); }
+    /// A type is closed if it contains no unbound type variables.
     virtual bool is_closed() const;
     virtual void bind(TypeVar v) const;
     virtual size_t hash() const;
@@ -259,7 +260,7 @@ public:
     /// Specializes recursively this type while obeying \p map.
     Type specialize(SpecializeMap& map) const;
     /**
-     * Type variables are removed from this type.
+     * \p TypeVar%s are removed from this type.
      * They must be found in \p map in order to specialize the resulting type.
      */
     Type instantiate(SpecializeMap& map) const;
@@ -267,7 +268,6 @@ public:
     virtual bool implements(Bound, SpecializeMap&) const = 0;
     /// @return The method type or an empty type if no method with this name was found
     virtual Type find_method(Symbol s) const = 0;
-    /// A type is closed if it contains no unbound type variables.
     bool is_noret() const { return isa<NoRetTypeNode>(); }
     bool is(PrimTypeKind kind) const;
 #define IMPALA_TYPE(itype, atype) bool is_##itype() const { return is(PrimType_##itype); }
