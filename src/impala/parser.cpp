@@ -205,11 +205,10 @@ public:
     const LetStmt*  parse_let_stmt();
 
 private:
-    /// Consume next Token in input stream, fill look-ahead buffer, return consumed Token.
-    Token lex();
+    Token lex();        ///< Consume next Token in input stream, fill look-ahead buffer, return consumed Token.
 
-    Lexer lexer;       ///< invoked in order to get next token
-    Token lookahead[3];///< SLL(3) look ahead
+    Lexer lexer;        ///< invoked in order to get next token
+    Token lookahead[3]; ///< SLL(3) look ahead
     size_t cur_var_handle;
     bool no_bars_;
     Location prev_loc_;
@@ -787,11 +786,15 @@ const Expr* Parser::parse_infix_expr(const Expr* lhs) {
 }
 
 const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
-    switch (auto kind = lex().kind()) {
+    switch (la()) {
+        case Token::L_BRACKET:
         case Token::L_PAREN: {
             auto map = new MapExpr();
             map->lhs_ = lhs;
-            parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
+            if (accept(Token::L_BRACKET))
+                parse_comma_list(Token::R_BRACKET, "type arguments of a map expression", [&] { map->type_args_.push_back(parse_type()); });
+            if (accept(Token::L_PAREN))
+                parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
             map->set_loc(lhs->pos1(), prev_loc().pos2());
             return map;
         }
@@ -799,11 +802,12 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
         case Token::INC: {
             auto expr = new PostfixExpr();
             expr->lhs_ = lhs;
-            expr->kind_ = (PostfixExpr::Kind) kind;
+            expr->kind_ = (PostfixExpr::Kind) lex().kind();
             expr->set_loc(lhs->pos1(), prev_loc().pos2());
             return expr;
         }
         case Token::DOT: {
+            lex();
             auto expr = new FieldExpr();
             expr->lhs_ = lhs;
             expr->path_elem_ = parse_path_elem();
@@ -811,6 +815,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
             return expr;
         }
         case Token::AS: {
+            lex();
             auto expr = new CastExpr();
             expr->lhs_ = lhs;
             expr->ast_type_ = parse_type();

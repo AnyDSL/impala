@@ -1017,8 +1017,12 @@ private:
 
 class MapExpr : public Expr {
 public:
+    const ASTTypes& type_args() const { return type_args_; }
+    const ASTType* type_arg(size_t i) const { assert(i < type_args_.size()); return type_args_[i]; }
+    size_t num_type_args() const { return type_args_.size(); }
     const Exprs& args() const { return args_; }
     const Expr* arg(size_t i) const { assert(i < args_.size()); return args_[i]; }
+    size_t num_args() const { return args_.size(); }
     const Expr* lhs() const { return lhs_; }
     virtual void check(NameSema&) const override;
 
@@ -1028,6 +1032,7 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
+    ASTTypes type_args_;
     Exprs args_;
 
     friend class Parser;

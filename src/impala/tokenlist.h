@@ -33,11 +33,12 @@ IMPALA_PREFIX( HALT,   "$", POSTFIX) // stop partial evaluation
 #define IMPALA_POSTFIX(tok, str, prec)
 #endif
 
-IMPALA_POSTFIX(    INC, "++", POSTFIX) // postfix ++
-IMPALA_POSTFIX(    DEC, "--", POSTFIX) // postfix --
-IMPALA_POSTFIX(L_PAREN,  "(", POSTFIX) // map expression (function call, array/tuple index)
-IMPALA_POSTFIX(    DOT,  ".", POSTFIX) // dot expression (struct access)
-IMPALA_POSTFIX(     AS, "as",     MUL) // cast expression (not as strong as mul)
+IMPALA_POSTFIX(      INC, "++", POSTFIX) // postfix ++
+IMPALA_POSTFIX(      DEC, "--", POSTFIX) // postfix --
+IMPALA_POSTFIX(L_BRACKET,  "[", POSTFIX) // map expression with type argument list
+IMPALA_POSTFIX(  L_PAREN,  "(", POSTFIX) // map expression (function call, array/tuple index)
+IMPALA_POSTFIX(      DOT,  ".", POSTFIX) // dot expression (struct access)
+IMPALA_POSTFIX(       AS, "as",     MUL) // cast expression (not as strong as mul)
 
 #undef IMPALA_POSTFIX
 
