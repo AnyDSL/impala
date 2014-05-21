@@ -881,16 +881,14 @@ const Expr* Parser::parse_primary_expr() {
                 if (accept(Token::L_PAREN)) {   // map expression
                     auto map = new MapExpr();
                     map->lhs_ = new PathExpr(path);
-                    map->type_args_ = std::move(type_args);
-                    type_args.clear();
+                    swap(map->type_args_, type_args);
                     parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
                     map->set_loc(path->pos1(), prev_loc().pos2());
                     return map;
                 } else if (accept(Token::L_BRACE)) {
                     auto struct_expr = new StructExpr();
                     struct_expr->path_ = path;
-                    struct_expr->type_args_ = std::move(type_args);
-                    type_args.clear();
+                    swap(struct_expr->type_args_, type_args);
                     parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
                         auto symbol = try_id("identifier in struct expression");
                         expect(Token::COLON, "struct expression");
