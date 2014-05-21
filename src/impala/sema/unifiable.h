@@ -292,20 +292,17 @@ private:
     {}
 
 public:
-    Type instance() const { return representative()->as<TypeNode>(); }
-
     virtual bool is_known() const override { return false; }
     virtual size_t hash() const { THORIN_UNREACHABLE; }
     virtual bool equal(const Unifiable*) const { THORIN_UNREACHABLE; }
-    virtual bool implements(Bound bound, SpecializeMap& map) const { return is_unified() && instance()->implements(bound, map); }
-    virtual Type find_method(Symbol s) const { assert(is_unified()); return instance()->find_method(s); }
-    virtual bool is_sane() const { return is_unified() && instance()->is_sane(); }
-    virtual bool is_error() const override { return is_unified() ? instance()->is_error() : false; }
+    virtual bool implements(Bound bound, SpecializeMap& map) const { THORIN_UNREACHABLE; }
+    virtual Type find_method(Symbol s) const { THORIN_UNREACHABLE; }
+    virtual bool is_sane() const { THORIN_UNREACHABLE; }
     virtual std::string to_string() const;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
-    virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
+    virtual thorin::Type convert(CodeGen&) const { THORIN_UNREACHABLE; }
 
     friend class TypeTable;
 };

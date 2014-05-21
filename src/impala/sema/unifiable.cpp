@@ -587,7 +587,8 @@ std::string Unifiable::type_vars_to_string() const {
 }
 
 std::string UnknownTypeNode::to_string() const { 
-    return is_unified() ? instance()->to_string() : (std::string("?") + std::to_string(id())); 
+    assert(!is_unified());
+    return std::string("?") + std::to_string(id());
 }
 
 std::string PrimTypeNode::to_string() const {
