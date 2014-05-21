@@ -797,6 +797,12 @@ private:
 
 class PathExpr : public Expr {
 public:
+    PathExpr(const Path* path)
+        : path_(path)
+    {
+        set_loc(path->loc());
+    }
+
     const Path* path() const { return path_; }
     SafePtr<const ValueDecl> value_decl() const { return value_decl_; }
     virtual void check(NameSema&) const override;
@@ -986,12 +992,13 @@ public:
     const ASTTypes& type_args() const { return type_args_; }
     const ASTType* type_arg(size_t i) const { assert(i < type_args_.size()); return type_args_[i]; }
     size_t num_type_args() const { return type_args_.size(); }
+    std::ostream& print_type_args(Printer& p) const;
 
 protected:
     ASTTypes type_args_;
 };
 
-class StructExpr : public Expr {
+class StructExpr : public Expr, public TypeArgs {
 public:
     class Elem {
     public:
@@ -1010,9 +1017,6 @@ public:
 
     typedef std::vector<Elem> Elems;
 
-    const ASTTypes& type_args() const { return type_args_; }
-    const ASTType* type_arg(size_t i) const { assert(i < type_args_.size()); return type_args_[i]; }
-    size_t num_type_args() const { return type_args_.size(); }
     const Path* path() const { return path_; }
     const Elems& elems() const { return elems_; }
     virtual void check(NameSema&) const override;
@@ -1022,17 +1026,13 @@ private:
     virtual Type check(TypeSema&, Type) const override;
 
     AutoPtr<const Path> path_;
-    ASTTypes type_args_;
     std::vector<Elem> elems_;
 
     friend class Parser;
 };
 
-class MapExpr : public Expr {
+class MapExpr : public Expr, public TypeArgs {
 public:
-    const ASTTypes& type_args() const { return type_args_; }
-    const ASTType* type_arg(size_t i) const { assert(i < type_args_.size()); return type_args_[i]; }
-    size_t num_type_args() const { return type_args_.size(); }
     const Exprs& args() const { return args_; }
     const Expr* arg(size_t i) const { assert(i < args_.size()); return args_[i]; }
     size_t num_args() const { return args_.size(); }
@@ -1045,7 +1045,6 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
-    ASTTypes type_args_;
     Exprs args_;
 
     friend class Parser;

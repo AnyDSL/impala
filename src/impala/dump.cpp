@@ -358,17 +358,21 @@ std::ostream& CastExpr::print(Printer& p) const {
     return ast_type()->print(p);
 }
 
+std::ostream& TypeArgs::print_type_args(Printer& p) const {
+    if (num_type_args() != 0)
+        return p.dump_list([&](const ASTType* type) { type->print(p); }, type_args(), "[", "]");
+    return p.stream();
+}
+
 std::ostream& StructExpr::print(Printer& p) const {
     path()->print(p);
-    if (num_type_args() != 0)
-        p.dump_list([&](const ASTType* type) { type->print(p); }, type_args(), "[", "]");
+    print_type_args(p);
     return p.dump_list([&] (const Elem& elem) { p.stream() << elem.symbol() << ": "; p.print(elem.expr()); }, elems(), "{", "}");
 }
 
 std::ostream& MapExpr::print(Printer& p) const {
     p.print(lhs());
-    if (num_type_args() != 0)
-        p.dump_list([&](const ASTType* type) { type->print(p); }, type_args(), "[", "]");
+    print_type_args(p);
     return p.dump_list([&](const Expr* expr) { p.print(expr); }, args(), "(", ")");
 }
 

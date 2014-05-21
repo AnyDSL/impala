@@ -880,10 +880,7 @@ const Expr* Parser::parse_primary_expr() {
 
                 if (accept(Token::L_PAREN)) {   // map expression
                     auto map = new MapExpr();
-                    auto path_expr = new PathExpr();
-                    path_expr->path_ = path;
-                    path_expr->set_loc(path->loc());
-                    map->lhs_ = path_expr;
+                    map->lhs_ = new PathExpr(path);
                     map->type_args_ = std::move(type_args);
                     type_args.clear();
                     parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
@@ -915,10 +912,7 @@ const Expr* Parser::parse_primary_expr() {
                 struct_expr->set_loc(path->pos1(), prev_loc().pos2());
                 return struct_expr;
             }
-            auto path_expr = new PathExpr();
-            path_expr->path_ = path;
-            path_expr->set_loc(path->loc());
-            return path_expr;
+            return new PathExpr(path);
         }
         case Token::IF:         return parse_if_expr();
         case Token::FOR:        return parse_for_expr();
