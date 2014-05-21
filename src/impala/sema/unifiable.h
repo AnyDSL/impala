@@ -559,16 +559,15 @@ private:
 class ImplNode : public Unifiable {
 private:
     ImplNode(TypeTable& tt, const ImplItem* impl_item, Bound bound, Type type)
-        : Unifiable(tt, Kind_impl, {})
+        : Unifiable(tt, Kind_impl, {type})
         , impl_item_(impl_item)
         , bound_(bound)
-        , type_(type)
     {}
 
 public:
     const ImplItem* impl_item() const { return impl_item_; }
     Bound bound() const { return bound_; }
-    Type type() const { return type_; }
+    Type type() const { return elem(0); }
     Impl specialize(SpecializeMap& map) const;
 
     virtual size_t hash() const;
