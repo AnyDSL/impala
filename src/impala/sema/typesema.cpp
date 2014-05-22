@@ -712,6 +712,38 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
 }
 
 Type MapExpr::check(TypeSema& sema, Type expected) const {
+    auto ltype = sema.check(lhs());
+    if (auto fn_poly = ltype.isa<FnType>()) {
+        if (num_type_args() <= fn_poly->num_type_vars()) {
+            for (auto type_arg : type_args())
+                inferred_.push_back(sema.check(type_arg));
+
+            for (size_t i = num_type_args(), e = fn_poly->num_type_vars(); i != e; ++i)
+                inferred_.push_back(sema.unknown_type());
+
+            assert(inferred_.size() == fn_poly->num_type_vars());
+            auto fn_mono = fn_poly->instantiate(inferred()).as<FnType>();
+
+            bool is_contuation = num_args() == fn_mono->num_elems();
+            if (is_contuation || num_args()+1 == fn_mono->num_elems()) {
+                for (size_t i = 0, e = num_args(); i != e; ++i)
+                    sema.check(arg(i), fn_mono->elem(i), "argument");
+
+                if (!is_contuation) {
+                    if (fn_mono->return_type() == expected) {
+                        for (auto t : inferred_)
+                            t->dump();
+                    } else
+                        sema.error(this) << "cannot match return type\n";
+                }
+            } else
+                sema.error(this) << "wrong number of arguments\n";
+        } else
+            sema.error(this) << "too many type arguments to function\n";
+    }
+
+    return sema.type_error();
+#if 0
     if (auto field_expr = is_method_call()) {
         sema.check(field_expr);
         sema.check_impls();
@@ -751,6 +783,7 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
     }
 
     return sema.type_error();
+#endif
 }
 
 Type ForExpr::check(TypeSema& sema, Type expected) const {

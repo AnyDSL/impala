@@ -1041,6 +1041,7 @@ private:
 class MapExpr : public Expr, public Args, public TypeArgs {
 public:
     const Expr* lhs() const { return lhs_; }
+    ArrayRef<Type> inferred() const { return inferred_; }
     virtual void check(NameSema&) const override;
     const FieldExpr* is_method_call() const { return lhs()->isa<FieldExpr>(); }
 
@@ -1050,6 +1051,7 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
+    mutable std::vector<Type> inferred_;
 
     friend class Parser;
 };

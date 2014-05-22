@@ -266,6 +266,7 @@ public:
      * They must be found in \p map in order to specialize the resulting type.
      */
     Type instantiate(SpecializeMap& map) const;
+    Type instantiate(ArrayRef<Type>) const;
 
     virtual bool implements(Bound, SpecializeMap&) const = 0;
     /// @return The method type or an empty type if no method with this name was found

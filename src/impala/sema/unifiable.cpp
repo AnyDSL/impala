@@ -321,6 +321,14 @@ Type TypeNode::instantiate(SpecializeMap& map) const {
     return vinstantiate(map);
 }
 
+Type TypeNode::instantiate(ArrayRef<Type> type_args) const {
+    assert(num_type_vars() == type_args.size());
+    SpecializeMap map;
+    for (size_t i = 0, e = num_type_vars(); i != e; ++i)
+        map[*type_var(i)] = *type_args[i];
+    return instantiate(map);
+}
+
 Type UnknownTypeNode::vinstantiate(SpecializeMap& map) const { assert(false); return nullptr; }
 Type TypeErrorNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 Type NoRetTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
