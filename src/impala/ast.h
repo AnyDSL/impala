@@ -938,7 +938,7 @@ private:
 class CastExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
-    const ASTType* ast_type() const { return ast_type(); }
+    const ASTType* ast_type() const { return ast_type_; }
     virtual void check(NameSema&) const override;
 
 private:
@@ -1008,7 +1008,14 @@ private:
 class StructExpr : public Expr, public TypeArgs {
 public:
     class Elem {
+    private:
+        Elem(const Elem&);
     public:
+        Elem(Elem&& other)
+            : symbol_(std::move(other.symbol_))
+            , expr_(std::move(other.expr_))
+        {}
+
         Elem(Symbol symbol, std::unique_ptr<const Expr> expr)
             : symbol_(symbol)
             , expr_(std::move(expr))
