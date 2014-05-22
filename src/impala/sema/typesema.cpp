@@ -35,8 +35,8 @@ public:
     Type instantiate(const ASTNode* loc, Type type, ArrayRef<const ASTType*> args);
     Type check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Expr*> args, Type expected);
 
-    bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, ArrayRef<Type> types, SpecializeMap& map);
-    bool check_bounds(const ASTNode* loc, const Unifiable* unifiable, ArrayRef<Type> types) {
+    bool check_bounds(const ASTNode* loc, Uni unifiable, ArrayRef<Type> types, SpecializeMap& map);
+    bool check_bounds(const ASTNode* loc, Uni unifiable, ArrayRef<Type> types) {
         SpecializeMap map;
         return check_bounds(loc, unifiable, types, map);
     }
@@ -183,7 +183,7 @@ Type TypeSema::instantiate(const ASTNode* loc, Type type, ArrayRef<const ASTType
     return type_error();
 }
 
-bool TypeSema::check_bounds(const ASTNode* loc, const Unifiable* unifiable, ArrayRef<Type> type_args, SpecializeMap& map) {
+bool TypeSema::check_bounds(const ASTNode* loc, Uni unifiable, ArrayRef<Type> type_args, SpecializeMap& map) {
     map = specialize_map(unifiable, type_args);
     assert(map.size() == type_args.size());
     bool result = true;
@@ -698,7 +698,7 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
             }
             if (no_error) {
                 // TODO where should be set this new type? should we set it at all?
-                check_bounds(whole, *ofn, lhs->inferred_args());
+                check_bounds(whole, ofn, lhs->inferred_args());
             }
         }
 
@@ -729,13 +729,14 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
                 for (size_t i = 0, e = num_args(); i != e; ++i)
                     sema.check(arg(i), fn_mono->elem(i), "argument");
 
-                if (!is_contuation) {
+                if (is_contuation) {
                     if (fn_mono->return_type() == expected) {
-                        for (auto t : inferred_)
-                            t->dump();
+                        sema.check_bounds(this, fn_mono, inferred());
+                        return expected;
                     } else
                         sema.error(this) << "cannot match return type\n";
-                }
+                } else
+                    sema.type_noret();
             } else
                 sema.error(this) << "wrong number of arguments\n";
         } else

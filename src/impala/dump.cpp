@@ -226,10 +226,7 @@ std::ostream& ImplItem::print(Printer& p) const {
  */
 
 std::ostream& Printer::print(const Expr* expr) {
-    expr->print(*this);
-    if (!expr->inferred_args().empty())
-        return dump_list([&] (Type t) { stream() << t; }, expr->inferred_args(), "[", "]", ", ", false);
-    return stream();
+    return expr->print(*this);
 }
 
 std::ostream& BlockExpr::print(Printer& p) const {
@@ -372,7 +369,10 @@ std::ostream& StructExpr::print(Printer& p) const {
 
 std::ostream& MapExpr::print(Printer& p) const {
     p.print(lhs());
-    print_type_args(p);
+    if (inferred_.empty())
+        print_type_args(p);
+    else
+        p.dump_list([&] (Type t) { p.stream() << t; }, inferred_, "[", "]", ", ", false);
     return p.dump_list([&](const Expr* expr) { p.print(expr); }, args(), "(", ")");
 }
 
