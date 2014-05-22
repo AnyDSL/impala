@@ -125,6 +125,9 @@ IMPALA_KEY_STMT(LET,        "let")
 #define IMPALA_KEY_MISC(tok, str)
 #endif
 
+// Windows workaround for MSVC18
+#undef IN
+
 IMPALA_KEY_MISC(AS,         "as")
 IMPALA_KEY_MISC(ENUM,       "enum")
 IMPALA_KEY_MISC(EXTERN,     "extern")
