@@ -8,14 +8,6 @@
 
 namespace impala {
 
-template<class T> struct TypetableHash {
-    size_t operator () (const T* t) const { return t->hash(); }
-};
-template<class T> struct TypetableEqual {
-    bool operator () (const T* t1, const T* t2) const { return t1->equal(t2); }
-};
-template<class T> using TypetableSet = thorin::HashSet<T*, TypetableHash<T>, TypetableEqual<T>>;
-
 class TypeTable : public ErrorHandler {
 public:
     TypeTable();
@@ -49,7 +41,14 @@ private:
     template<class T> 
     Proxy<T> join(T* tn) { garbage_.push_back(tn); return Proxy<T>(tn); }
 
-    TypetableSet<const Unifiable> unifiables_;
+    struct UniHash {
+        size_t operator () (const Unifiable* u) const { return u->hash(); }
+    };
+    struct UniEqual {
+        bool operator () (const Unifiable* u1, const Unifiable* u2) const { return u1->equal(u2); }
+    };
+
+    thorin::HashSet<const Unifiable*, UniHash, UniEqual> unifiables_;
     std::vector<const Unifiable*> garbage_;
     NoRetType type_noret_;
 #define IMPALA_TYPE(itype, atype) PrimType itype##_;
