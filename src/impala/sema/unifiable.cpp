@@ -505,46 +505,46 @@ bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {
  * find_method
  */
 
-Type KnownTypeNode::find_method(Symbol name) const {
+FnType KnownTypeNode::find_method(Symbol name) const {
     for (auto impl : impls_) {
         if (auto fn = impl->bound()->find_method(name))
             return fn;
     }
-    return Type();
+    return FnType();
 }
 
-Type TypeVarNode::find_method(Symbol name) const {
+FnType TypeVarNode::find_method(Symbol name) const {
     for (auto bound : bounds()) {
         if (auto fn = bound->find_method(name)) 
             return fn;
     }
-    return Type();
+    return FnType();
 }
 
-Type TraitNode::find_method(Symbol name) const {
+FnType TraitNode::find_method(Symbol name) const {
     auto i = trait_decl()->method_table().find(name);
     if (i != trait_decl()->method_table().end())
-        return i->second->type();
+        return i->second->fn_type();
 
     for (auto super : super_bounds()) {
         if (auto type = super->find_method(name))
             return type;
     }
 
-    return Type();
+    return FnType();
 }
 
-Type BoundNode::find_method(Symbol name) const {
+FnType BoundNode::find_method(Symbol name) const {
     auto i = method_cache_.find(name);
     if (i != method_cache_.end())
         return i->second;
 
     if (auto type = trait()->find_method(name)) {
         auto map = specialize_map(trait(), elems());
-        return method_cache_[name] = type->specialize(map);
+        return method_cache_[name] = type->specialize(map).as<FnType>().unify();
     }
 
-    return Type();
+    return FnType();
 }
 
 //------------------------------------------------------------------------------

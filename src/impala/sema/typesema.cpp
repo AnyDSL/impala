@@ -34,7 +34,7 @@ public:
     Type check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Expr*> args, Type expected);
     Bound instantiate(const Location& loc, Trait trait, Type self, ArrayRef<const ASTType*> args);
     Type instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args);
-    Type check_call_(const Location& loc, FnType fn_poly, ASTTypes type_args, std::vector<Type>& inferred, ArrayRef<const Expr*> args, Type expected);
+    Type check_call_(const Location& loc, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred, ArrayRef<const Expr*> args, Type expected);
 
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types, SpecializeMap& map);
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types) {
@@ -709,7 +709,7 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
     return type_error();
 }
 
-Type TypeSema::check_call_(const Location& loc, FnType fn_poly, ASTTypes type_args, std::vector<Type>& inferred, ArrayRef<const Expr*> args, Type expected) {
+Type TypeSema::check_call_(const Location& loc, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred, ArrayRef<const Expr*> args, Type expected) {
     size_t num_type_args = type_args.size();
     size_t num_args = args.size();
 
@@ -749,77 +749,12 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
         Array<const Expr*> nargs(num_args() + 1);
         nargs[0] = field_expr->lhs();
         std::copy(args().begin(), args().end(), nargs.begin()+1);
-        return sema.type_error();
+        return sema.check_call_(this->loc(), fn_method, type_args(), inferred_, nargs, expected);
     }
-    if (auto fn_poly = ltype.isa<FnType>()) {
-        if (num_type_args() <= fn_poly->num_type_vars()) {
-            for (auto type_arg : type_args())
-                inferred_.push_back(sema.check(type_arg));
-
-            for (size_t i = num_type_args(), e = fn_poly->num_type_vars(); i != e; ++i)
-                inferred_.push_back(sema.unknown_type());
-
-            assert(inferred_.size() == fn_poly->num_type_vars());
-            auto fn_mono = fn_poly->instantiate(inferred()).as<FnType>();
-
-            bool is_contuation = num_args() == fn_mono->num_elems();
-            if (is_contuation || num_args()+1 == fn_mono->num_elems()) {
-                for (size_t i = 0, e = num_args(); i != e; ++i)
-                    sema.check(arg(i), fn_mono->elem(i), "argument");
-
-                if (fn_mono->return_type() == expected) {
-                    sema.check_bounds(this->loc(), fn_poly, inferred());
-                    return expected;
-                } else
-                    sema.error(this) << "cannot match return type\n";
-            } else
-                sema.error(this) << "wrong number of arguments\n";
-        } else
-            sema.error(this) << "too many type arguments to function\n";
-    }
+    if (auto fn_poly = ltype.isa<FnType>())
+        return sema.check_call_(this->loc(), fn_poly, type_args(), inferred_, args(), expected);
 
     return sema.type_error();
-#if 0
-    if (auto field_expr = is_method_call()) {
-        sema.check(field_expr);
-        sema.check_impls();
-        Type fn = field_expr->lhs()->type()->find_method(field_expr->symbol());
-        if (!fn.empty()) {
-            if (!fn->is_error()) {
-                FnType func;
-                if (!type_args().empty()) {
-                    Type t = sema.instantiate(this, fn, type_args());
-                    func = t.as<FnType>();
-                } else
-                    func = fn.as<FnType>();
-
-                if (func->num_elems() >= 1) {
-                    sema.expect_type(lhs(), func->elem(0), "object");
-                    auto peeled = func->peel_first();
-                    lhs_->type_.clear();
-                    lhs_->type_ = peeled;
-                    if (auto ofn = peeled.isa<FnType>()) {
-                        return sema.check_call(lhs(), this, args(), expected);
-                    } else if (!lhs()->type()->is_error()) {
-                        sema.error(lhs()) << "expected function type but found " << lhs()->type() << "\n";
-                    }
-                } else
-                    sema.error(this) << "cannot call a method without Self parameter";
-            }
-        }
-        sema.error(this) << "no declaration for method '" << field_expr->symbol() << "' found.\n";
-    } else {
-        Type lhst = sema.check(lhs());
-
-        if (auto ofn = lhst.isa<FnType>()) {
-            return sema.check_call(lhs(), this, args(), expected);
-        } else if (!lhs()->type()->is_error()) {
-            sema.error(lhs()) << "expected function type but found " << lhs()->type() << "\n";
-        }
-    }
-
-    return sema.type_error();
-#endif
 }
 
 Type ForExpr::check(TypeSema& sema, Type expected) const {

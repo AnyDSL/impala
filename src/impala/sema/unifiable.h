@@ -270,7 +270,7 @@ public:
 
     virtual bool implements(Bound, SpecializeMap&) const = 0;
     /// @return The method type or an empty type if no method with this name was found
-    virtual Type find_method(Symbol s) const = 0;
+    virtual FnType find_method(Symbol s) const = 0;
     bool is_noret() const { return isa<NoRetTypeNode>(); }
     bool is(PrimTypeKind kind) const;
 #define IMPALA_TYPE(itype, atype) bool is_##itype() const { return is(PrimType_##itype); }
@@ -296,16 +296,16 @@ private:
 
 public:
     virtual bool is_known() const override { return false; }
-    virtual size_t hash() const { THORIN_UNREACHABLE; }
-    virtual bool equal(const Unifiable*) const { THORIN_UNREACHABLE; }
-    virtual bool implements(Bound bound, SpecializeMap& map) const { THORIN_UNREACHABLE; }
-    virtual Type find_method(Symbol s) const { THORIN_UNREACHABLE; }
-    virtual bool is_sane() const { THORIN_UNREACHABLE; }
-    virtual std::string to_string() const;
+    virtual size_t hash() const override { THORIN_UNREACHABLE; }
+    virtual bool equal(const Unifiable*) const override { THORIN_UNREACHABLE; }
+    virtual bool implements(Bound bound, SpecializeMap& map) const override { THORIN_UNREACHABLE; }
+    virtual FnType find_method(Symbol s) const override { THORIN_UNREACHABLE; }
+    virtual bool is_sane() const override { THORIN_UNREACHABLE; }
+    virtual std::string to_string() const override;
 
 private:
-    virtual Type vinstantiate(SpecializeMap&) const;
-    virtual thorin::Type convert(CodeGen&) const { THORIN_UNREACHABLE; }
+    virtual Type vinstantiate(SpecializeMap&) const override;
+    virtual thorin::Type convert(CodeGen&) const override { THORIN_UNREACHABLE; }
 
     friend class TypeTable;
 };
@@ -321,7 +321,7 @@ public:
     void add_impl(Impl) const;
 
     virtual bool implements(Bound, SpecializeMap&) const;
-    virtual Type find_method(Symbol s) const;
+    virtual FnType find_method(Symbol s) const;
     virtual bool is_sane() const;
 
 private:
@@ -453,7 +453,7 @@ public:
     virtual bool is_sane() const { return is_closed(); }
     virtual bool equal(const Unifiable*) const;
     virtual bool implements(Bound, SpecializeMap&) const;
-    virtual Type find_method(Symbol s) const;
+    virtual FnType find_method(Symbol s) const;
     virtual std::string to_string() const;
 
 private:
@@ -502,7 +502,7 @@ public:
     const std::vector<Impl>& type2impls(Type type) const { return type2impls_[type]; }
     bool add_super_bound(Bound) const;
     /// return the type of the method with this name if it exists; otherwise return an empty type
-    Type find_method(Symbol name) const;
+    FnType find_method(Symbol name) const;
     bool has_method(Symbol name) const { return !find_method(name).empty(); }
     Bound instantiate(ArrayRef<Type> args) const;
     void add_impl(Impl impl) const;
@@ -537,7 +537,7 @@ private:
 
 public:
     const Trait trait() const { return trait_; }
-    Type find_method(Symbol name) const;
+    FnType find_method(Symbol name) const;
     Bound specialize(SpecializeMap&) const;
 
     virtual bool is_error() const override { return trait()->is_error(); }
@@ -549,7 +549,7 @@ private:
     virtual thorin::Type convert(CodeGen&) const override;
 
     const Trait trait_;
-    mutable thorin::HashMap<Symbol, Type> method_cache_;
+    mutable thorin::HashMap<Symbol, FnType> method_cache_;
 
     friend class TypeTable;
 };
