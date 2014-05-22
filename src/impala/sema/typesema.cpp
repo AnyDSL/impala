@@ -713,6 +713,16 @@ Type TypeSema::check_call(const Expr* lhs, const Expr* whole, ArrayRef<const Exp
 
 Type MapExpr::check(TypeSema& sema, Type expected) const {
     auto ltype = sema.check(lhs());
+    if (auto field_expr = is_method_call()) {
+        sema.check_impls();
+        auto fn_method = sema.check(field_expr->lhs())->find_method(field_expr->symbol());
+        Array<Type> nelems(fn_method->num_elems() + 1);
+        nelems[0] = field_expr->lhs()->type();
+        std::copy(fn_method->elems().begin(), fn_method->elems().end(), nelems.begin()+1);
+        auto fn_poly = sema.fn_type(nelems);
+        fn_poly->dump();
+        return sema.type_error();
+    }
     if (auto fn_poly = ltype.isa<FnType>()) {
         if (num_type_args() <= fn_poly->num_type_vars()) {
             for (auto type_arg : type_args())
@@ -729,14 +739,11 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
                 for (size_t i = 0, e = num_args(); i != e; ++i)
                     sema.check(arg(i), fn_mono->elem(i), "argument");
 
-                if (is_contuation) {
-                    if (fn_mono->return_type() == expected) {
-                        sema.check_bounds(this, fn_mono, inferred());
-                        return expected;
-                    } else
-                        sema.error(this) << "cannot match return type\n";
+                if (fn_mono->return_type() == expected) {
+                    sema.check_bounds(this, fn_poly, inferred());
+                    return expected;
                 } else
-                    sema.type_noret();
+                    sema.error(this) << "cannot match return type\n";
             } else
                 sema.error(this) << "wrong number of arguments\n";
         } else
