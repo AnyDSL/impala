@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include <string>
+#include <algorithm>
 
 #include "thorin/util/hash.h"
 
