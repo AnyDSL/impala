@@ -3,5 +3,5 @@ fn f(g: fn[A](A, fn(A))) -> i32 {
 }
 
 fn main() -> i32 {
-    f(|x: A| -> A x)
+    f(|x: _30_| -> _30_ x)
 }

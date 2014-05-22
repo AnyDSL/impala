@@ -61,10 +61,6 @@ Type FnTypeNode::return_type() const {
     return typetable().type_noret();
 }
 
-FnType FnTypeNode::peel_first() const {
-    return typetable().fn_type(elems().slice_from_begin(1));
-}
-
 StructTypeNode::StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl)
     : KnownTypeNode(typetable, Kind_tuple, Array<Type>(struct_decl->fields().size()))
     , struct_decl_(struct_decl)
