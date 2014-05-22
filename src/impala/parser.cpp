@@ -356,7 +356,7 @@ const Param* Parser::parse_param(bool lambda) {
         symbol = lex().symbol();
     else {
         switch (la()) {
-            case Token::TYPE: type = parse_type(); break;
+            case TYPE: type = parse_type(); break;
             default:    
                 symbol = "<error>";
                 error("identifier", "parameter");
