@@ -225,7 +225,13 @@ Type PrimASTType::check(TypeSema& sema) const {
 }
 
 Type PtrASTType::check(TypeSema& sema) const {
-    return Type(); // FEATURE
+    auto type = sema.check(referenced_type());
+    if (is_owned())
+        return sema.owned_ptr(type);
+    if (is_borrowed())
+        return sema.borrowd_ptr(type);
+    assert(false && "only owned and borrowed ptrs are supported");
+    return Type();
 }
 
 Type IndefiniteArrayASTType::check(TypeSema& sema) const {
@@ -519,7 +525,16 @@ Type PathExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type PrefixExpr::check(TypeSema& sema, Type expected) const {
-    return sema.check(rhs(), expected); // TODO check if operator supports the type
+    // TODO check if operator supports the type
+    auto rht = sema.check(rhs());
+    switch (kind()) {
+        case AND:
+            return sema.borrowd_ptr(rht);
+        case TILDE:
+            return sema.owned_ptr(rht);
+        default:
+            return rht;
+    }
 }
 
 Type InfixExpr::check(TypeSema& sema, Type expected) const {

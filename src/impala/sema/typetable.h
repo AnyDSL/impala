@@ -32,6 +32,8 @@ public:
     TupleType   tuple_type(ArrayRef<Type> elems) { return join(new TupleTypeNode(*this, elems)); }
     TupleType   unit() { return tuple_type({}); }
     StructType  struct_type(const StructDecl* struct_decl) { return join(new StructTypeNode(*this, struct_decl)); }
+    OwnedPtr    owned_ptr(Type referenced_type) { return join(new OwnedPtrNode(*this, referenced_type)); }
+    BorrowedPtr borrowd_ptr(Type referenced_type) { return join(new BorrowedPtrNode(*this, referenced_type)); }
     TypeVar     type_var(Symbol name = Symbol()) { return join(new TypeVarNode(*this, name)); }
     UnknownType unknown_type() { return join(new UnknownTypeNode(*this)); }
     Bound       bound(Trait trait, ArrayRef<Type> args) { return join(new BoundNode(trait, args)); }

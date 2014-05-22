@@ -36,6 +36,8 @@ class TupleTypeNode;    typedef Proxy<TupleTypeNode>    TupleType;
 class TypeErrorNode;    typedef Proxy<TypeErrorNode>    TypeError;
 class TypeNode;         typedef Proxy<TypeNode>         Type;
 class TypeVarNode;      typedef Proxy<TypeVarNode>      TypeVar;
+class OwnedPtrNode;     typedef Proxy<OwnedPtrNode>     OwnedPtr;
+class BorrowedPtrNode;  typedef Proxy<BorrowedPtrNode>  BorrowedPtr;
 class Unifiable;        typedef Proxy<Unifiable>        Uni;
 class UnknownTypeNode;  typedef Proxy<UnknownTypeNode>  UnknownType;
 
@@ -142,6 +144,8 @@ enum Kind {
     Kind_trait,
     Kind_bound,
     Kind_impl,
+    Kind_owned_ptr,
+    Kind_borrowed_ptr,
 };
 
 enum PrimTypeKind {
@@ -467,6 +471,44 @@ private:
     friend class TypeTable;
     friend void Unifiable::bind(TypeVar) const;
     friend bool Unifiable::equal(const Unifiable*) const;
+};
+
+//------------------------------------------------------------------------------
+
+class PtrTypeNode : public KnownTypeNode {
+public:
+    PtrTypeNode(TypeTable& typetable, Kind kind, Type referenced_type)
+        : KnownTypeNode(typetable, kind, { referenced_type })
+    {}
+
+    Type referenced_type() const { return elem(0); }
+
+private:
+    virtual thorin::Type convert(CodeGen&) const override;
+};
+
+class OwnedPtrNode : public PtrTypeNode {
+public:
+    OwnedPtrNode(TypeTable& typetable, Type referenced_type)
+        : PtrTypeNode(typetable, Kind_owned_ptr, referenced_type)
+    {}
+
+    virtual std::string to_string() const override;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const override;
+};
+
+class BorrowedPtrNode : public PtrTypeNode {
+public:
+    BorrowedPtrNode(TypeTable& typetable, Type referenced_type)
+        : PtrTypeNode(typetable, Kind_borrowed_ptr, referenced_type)
+    {}
+
+    virtual std::string to_string() const override;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const override;
 };
 
 //------------------------------------------------------------------------------
