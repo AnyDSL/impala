@@ -369,10 +369,10 @@ std::ostream& StructExpr::print(Printer& p) const {
 
 std::ostream& MapExpr::print(Printer& p) const {
     p.print(lhs());
-    if (inferred_.empty())
+    if (num_inferred_args() == 0)
         print_type_args(p);
     else
-        p.dump_list([&] (Type t) { p.stream() << t; }, inferred_, "[", "]", ", ", false);
+        p.dump_list([&] (Type t) { p.stream() << t; }, inferred_args(), "[", "]", ", ", false);
     return p.dump_list([&](const Expr* expr) { p.print(expr); }, args(), "(", ")");
 }
 

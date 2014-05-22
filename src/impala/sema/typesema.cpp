@@ -32,7 +32,7 @@ public:
 
     Bound instantiate(const Location& loc, Trait trait, Type self, ArrayRef<const ASTType*> args);
     Type instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args);
-    Type check_call(const Location& loc, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred, ArrayRef<const Expr*> args, Type expected);
+    Type check_call(const Location& loc, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected);
 
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types, SpecializeMap& map);
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types) {
@@ -60,8 +60,7 @@ public:
     Type check(const Expr* expr, Type expected, std::string what) {
         if (!expr->type_.empty())
             return expr->type_;
-        Type inferred = expr->check(*this, expected);
-        return expr->type_ = expect_type(expr, inferred, expected, what);
+        return expr->type_ = expect_type(expr, expr->check(*this, expected), expected, what);
     }
     Type check(const Expr* expr, Type expected) { return check(expr, expected, ""); }
     /// a check that does not expect any type (i.e. any type is allowed)
@@ -124,10 +123,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
             std::vector<Type> type_args;
             Type inst = instantiate_unknown(found_type, type_args);
             if (inst == expected) {
-                for (auto t : type_args)
-                    expr->add_inferred_arg(t);
-
-                check_bounds(expr->loc(), *found_type, expr->inferred_args());
+                check_bounds(expr->loc(), *found_type, type_args);
                 return expected;
             }
         }
@@ -637,19 +633,19 @@ Type StructExpr::check(TypeSema& sema, Type expected) const {
     return Type();
 }
 
-Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred, ArrayRef<const Expr*> args, Type expected) {
+Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected) {
     size_t num_type_args = type_args.size();
     size_t num_args = args.size();
 
     if (num_type_args <= fn_poly->num_type_vars()) {
         for (auto type_arg : type_args)
-            inferred.push_back(check(type_arg));
+            inferred_args.push_back(check(type_arg));
 
         for (size_t i = num_type_args, e = fn_poly->num_type_vars(); i != e; ++i)
-            inferred.push_back(unknown_type());
+            inferred_args.push_back(unknown_type());
 
-        assert(inferred.size() == fn_poly->num_type_vars());
-        auto fn_mono = fn_poly->instantiate(inferred).as<FnType>();
+        assert(inferred_args.size() == fn_poly->num_type_vars());
+        auto fn_mono = fn_poly->instantiate(inferred_args).as<FnType>();
 
         bool is_contuation = num_args == fn_mono->num_elems();
         if (is_contuation || num_args+1 == fn_mono->num_elems()) {
@@ -658,15 +654,15 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
 
             if (fn_mono->return_type() == expected) {
                 bool is_known = true;
-                for (size_t i = 0, e = inferred.size(); i != e; ++i) {
-                    if (!inferred[i]->is_known()) {
+                for (size_t i = 0, e = inferred_args.size(); i != e; ++i) {
+                    if (!inferred_args[i]->is_known()) {
                         is_known = false;
                         error(loc) << "could not find instance for type variable #" << i << ".\n";
                     }
                 }
 
                 if (is_known) {
-                    check_bounds(loc, fn_poly, inferred);
+                    check_bounds(loc, fn_poly, inferred_args);
                     return expected;
                 }
             } else
@@ -687,12 +683,12 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
             Array<const Expr*> nargs(num_args() + 1);
             nargs[0] = field_expr->lhs();
             std::copy(args().begin(), args().end(), nargs.begin()+1);
-            return sema.check_call(this->loc(), fn_method, type_args(), inferred_, nargs, expected);
+            return sema.check_call(this->loc(), fn_method, type_args(), inferred_args_, nargs, expected);
         } else
             sema.error(this) << "no declaration for method '" << field_expr->symbol() << "' found.\n";
     }
     if (auto fn_poly = ltype.isa<FnType>())
-        return sema.check_call(this->loc(), fn_poly, type_args(), inferred_, args(), expected);
+        return sema.check_call(this->loc(), fn_poly, type_args(), inferred_args_, args(), expected);
 
     return sema.type_error();
 }
@@ -704,7 +700,7 @@ Type ForExpr::check(TypeSema& sema, Type expected) const {
         if (auto fn_for = lhst.isa<FnType>()) {
             Array<const Expr*> args(map->args().size()+1);
             *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
-            return sema.check_call(map->loc(), fn_for, map->type_args(), map->inferred_, args, expected);
+            return sema.check_call(map->loc(), fn_for, map->type_args(), map->inferred_args_, args, expected);
         }
     } else if (auto field_expr = expr()->isa<FieldExpr>()) {
         assert(false && field_expr && "TODO");

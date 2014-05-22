@@ -419,14 +419,14 @@ Def MapExpr::remit(CodeGen& cg) const {
     Def ldef = cg.remit(lhs());
 
     if (auto fn = lhs()->type().isa<FnType>()) {
-        assert(fn->num_type_vars() == inferred().size());
+        assert(fn->num_type_vars() == num_inferred_args());
         std::vector<Def> defs;
         defs.push_back(cg.get_mem());
         for (size_t i = 0, e = fn->num_type_vars(); i != e; ++i) {
-            if (auto type_var = inferred_[i].isa<TypeVar>())
+            if (auto type_var = inferred_arg(i).isa<TypeVar>())
                 defs.push_back(type_var->defs_.top());
             else {
-                auto known_type = inferred_[i].as<KnownType>();
+                auto known_type = inferred_arg(i).as<KnownType>();
                 std::vector<Def> bounds;
                 for (auto bound : fn->type_var(i)->bounds()) {
                     auto impl = known_type->fimd_impl(bound);

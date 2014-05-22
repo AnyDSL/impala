@@ -320,7 +320,7 @@ private:
     friend class NameSema;
 };
 
-/// Base class for all declarations which must have inferred a \p Type.
+/// Base class for all declarations which must have a \p Type assigned.
 class TypeableDecl : public Decl, public Typeable {
 private:
     virtual void check(NameSema&) const = 0;
@@ -699,9 +699,6 @@ class Expr : public ASTNode, public Typeable {
 public:
     virtual void check(NameSema&) const = 0;
 
-    void add_inferred_arg(Type t) const { inferred_args_.push_back(t); }
-    const ArrayRef<Type> inferred_args() const { return inferred_args_; }
-
 private:
     virtual std::ostream& print(Printer&) const = 0;
     virtual Type check(TypeSema&, Type) const = 0;
@@ -709,8 +706,6 @@ private:
     virtual thorin::Def remit(CodeGen&) const;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
-
-    mutable std::vector<Type> inferred_args_;
 
     friend class CodeGen;
     friend class Parser;
@@ -1049,7 +1044,9 @@ private:
 class MapExpr : public Expr, public Args, public TypeArgs {
 public:
     const Expr* lhs() const { return lhs_; }
-    ArrayRef<Type> inferred() const { return inferred_; }
+    ArrayRef<Type> inferred_args() const { return inferred_args_; }
+    Type inferred_arg(size_t i) const { return inferred_args_[i]; }
+    size_t num_inferred_args() const { return inferred_args_.size(); }
     virtual void check(NameSema&) const override;
     const FieldExpr* is_method_call() const { return lhs()->isa<FieldExpr>(); }
 
@@ -1059,7 +1056,7 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
-    mutable std::vector<Type> inferred_;
+    mutable std::vector<Type> inferred_args_;
 
     friend class Parser;
     friend class ForExpr;
