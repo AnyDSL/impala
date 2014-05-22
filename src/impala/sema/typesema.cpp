@@ -600,33 +600,6 @@ Type PostfixExpr::check(TypeSema& sema, Type expected) const {
 
 Type FieldExpr::check(TypeSema& sema, Type expected) const {
     return sema.check(lhs());
-
-    // TODO
-#if 0
-    // FEATURE struct types
-    // FEATURE maybe store a hash map of methods in the type to make this fast!
-    sema.check_impls();
-    Type fn = lhs()->type()->find_method(symbol());
-    if (!fn.empty()) {
-        if (!fn->is_error()) {
-            FnType func;
-            if (!path_elem()->type_args().empty()) {
-                Type t = sema.instantiate(path_elem(), fn, path_elem()->type_args());
-                func = t.as<FnType>();
-            } else
-                func = fn.as<FnType>();
-
-            if (func->num_elems() >= 1) {
-                sema.expect_type(lhs(), func->elem(0), "object");
-                return func->peel_first();
-            } else
-                sema.error(this) << "cannot call a method without Self parameter";
-        }
-        return sema.type_error();
-    }
-    sema.error(this) << "no declaration for method '" << path_elem() << "' found.\n";
-#endif
-    return sema.type_error();
 }
 
 Type CastExpr::check(TypeSema& sema, Type expected) const {
@@ -745,11 +718,13 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
     auto ltype = sema.check(lhs());
     if (auto field_expr = is_method_call()) {
         sema.check_impls();
-        auto fn_method = sema.check(field_expr->lhs())->find_method(field_expr->symbol());
-        Array<const Expr*> nargs(num_args() + 1);
-        nargs[0] = field_expr->lhs();
-        std::copy(args().begin(), args().end(), nargs.begin()+1);
-        return sema.check_call_(this->loc(), fn_method, type_args(), inferred_, nargs, expected);
+        if (auto fn_method = sema.check(field_expr->lhs())->find_method(field_expr->symbol())) {
+            Array<const Expr*> nargs(num_args() + 1);
+            nargs[0] = field_expr->lhs();
+            std::copy(args().begin(), args().end(), nargs.begin()+1);
+            return sema.check_call_(this->loc(), fn_method, type_args(), inferred_, nargs, expected);
+        } else
+            sema.error(this) << "no declaration for method '" << field_expr->symbol() << "' found.\n";
     }
     if (auto fn_poly = ltype.isa<FnType>())
         return sema.check_call_(this->loc(), fn_poly, type_args(), inferred_, args(), expected);
