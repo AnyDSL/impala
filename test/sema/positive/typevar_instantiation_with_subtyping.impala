@@ -1,6 +1,7 @@
 trait T[X] {}
 trait U[Y] : T[Y] {}
-impl[A] U[A] for i32 {}
+impl[A] T[A] for i32 {}
+impl[B] U[B] for i32 {}
 fn f[A : T[bool]](x:A) -> A {
     x
 }

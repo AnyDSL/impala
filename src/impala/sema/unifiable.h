@@ -545,7 +545,6 @@ public:
     const TraitDecl* trait_decl() const { return trait_decl_; }
     const SuperBounds& super_bounds() const { return super_bounds_; }
     Bound super_bound(Trait trait) const;
-    const IdSet<const TraitNode*>& sub_traits() const { return sub_traits_; }
     const std::vector<Impl>& type2impls(Type type) const { return type2impls_[type]; }
     bool add_super_bound(Bound) const;
     /// return the type of the method with this name if it exists; otherwise return an empty type
@@ -564,7 +563,6 @@ private:
 
     const TraitDecl* const trait_decl_;
     mutable SuperBounds super_bounds_;
-    mutable IdSet<const TraitNode*> sub_traits_;
     mutable IdMap<Type, std::vector<Impl>> type2impls_;
 
     friend class TypeTable;

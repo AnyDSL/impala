@@ -1,6 +1,7 @@
 trait T[A, B] {}
 trait U[C, D, E] : T[int, E] {}
-impl[F] U[f32, F, F] for int {}
+impl[F] T[F, bool] for int {}
+impl[G] U[f32, G, G] for int {}
 fn f[G : T[int, bool]](x:G) -> G {
     x
 }

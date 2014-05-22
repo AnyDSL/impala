@@ -1,6 +1,7 @@
 trait T {}
 trait U : T {}
 
+impl T for i32 {}
 impl U for i32 {}
 
 fn f[A: T](a: A) -> A { a }

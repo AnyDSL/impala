@@ -73,7 +73,6 @@ void TypeVarNode::add_bound(Bound bound) const {
 
 bool TraitNode::add_super_bound(Bound bound) const {
     auto p = super_bounds_.insert(bound.unify());
-    bound->trait()->sub_traits_.insert(this->unify()->as<TraitNode>());
     return p.second;
 }
 
@@ -402,9 +401,6 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     if (!is_unified())
         return unify()->as<KnownTypeNode>()->implements(bound, map);
 
-    std::queue<Bound> queue;
-    IdSet<Bound> done;
-
     auto implements_bounds = [&] (Type type, TypeVar type_var) {
         for (auto b : type_var->bounds()) {
             if (!type->implements(b, map))
@@ -413,52 +409,19 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
         return true;
     };
 
-    auto enqueue = [&] (Bound bound) { 
-        assert(bound->is_unified() || !bound->is_known());
-        queue.push(bound); 
-        done.insert(bound);
-    };
-
-    enqueue(bound.unify());
-
-    while (!queue.empty()) {
-        auto bound = thorin::pop(queue);
-        for (auto impl : bound->trait()->type2impls(this)) {
-            // find out which of impl's type_vars match to which of impl->bounds' type args
-            for (auto type_var : impl->type_vars()) {
-                for (size_t i = 0, e = impl->bound()->num_elems(); i != e; ++i) { // TODO this is currently quadratic
-                    if (type_var.as<Type>() == impl->bound()->elem(i) 
-                            && !bound->elem(i)->isa<UnknownTypeNode>()
-                            && implements_bounds(bound->elem(i), type_var))
-                        map[*type_var] = *bound->elem(i);
-                }
-            }
-
-            if (bound == impl->specialize(map)->bound())
-                return true;
-        }
-
-        // may be one of bound->trait's subtraits implements 'this'
-        for (auto sub_trait : bound->trait()->sub_traits()) {
-            auto super_bound = sub_trait->super_bound(bound->trait());
-            Array<Type> new_elems(sub_trait->num_type_vars());
-            for (size_t i = 0, e = sub_trait->num_type_vars(); i != e; ++i) {
-                for (size_t j = 0, e = super_bound->num_elems(); j != e; ++j) { // TODO this is currently quadratic
-                    if (sub_trait->type_var(i).as<Type>() == super_bound->elem(j)
-                            && implements_bounds(bound->elem(j), sub_trait->type_var(i)))
-                        new_elems[i] = bound->elem(j);
-                }
-
-                if (new_elems[i].empty())
-                    new_elems[i] = typetable().unknown_type();
-            }
-
-            auto sub_bound = sub_trait->instantiate(new_elems).unify();
-            if (!done.contains(sub_bound)) {
-                assert(sub_bound->is_closed());
-                enqueue(sub_bound);
+    for (auto impl : bound->trait()->type2impls(this)) {
+        // find out which of impl's type_vars match to which of impl->bounds' type args
+        for (auto type_var : impl->type_vars()) {
+            for (size_t i = 0, e = impl->bound()->num_elems(); i != e; ++i) { // TODO this is currently quadratic
+                if (type_var.as<Type>() == impl->bound()->elem(i) 
+                        && !bound->elem(i)->isa<UnknownTypeNode>()
+                        && implements_bounds(bound->elem(i), type_var))
+                    map[*type_var] = *bound->elem(i);
             }
         }
+
+        if (bound == impl->specialize(map)->bound())
+            return true;
     }
 
     return false;
