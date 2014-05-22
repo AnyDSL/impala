@@ -1054,6 +1054,7 @@ private:
     mutable std::vector<Type> inferred_;
 
     friend class Parser;
+    friend class ForExpr;
 };
 
 class IfExpr : public Expr {
