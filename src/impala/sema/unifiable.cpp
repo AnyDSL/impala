@@ -464,6 +464,26 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     return false;
 }
 
+Impl KnownTypeNode::fimd_impl(Bound bound) const {
+    SpecializeMap map;
+    for (auto impl : bound->trait()->type2impls(this)) {
+        return impl;
+        // find out which of impl's type_vars match to which of impl->bounds' type args
+        for (auto type_var : impl->type_vars()) {
+            for (size_t i = 0, e = impl->bound()->num_elems(); i != e; ++i) { // TODO this is currently quadratic
+                if (type_var.as<Type>() == impl->bound()->elem(i) 
+                        && !bound->elem(i)->isa<UnknownTypeNode>())
+                    map[*type_var] = *bound->elem(i);
+            }
+        }
+
+        if (bound == impl->specialize(map)->bound())
+            return impl;
+    }
+
+    return Impl();
+}
+
 bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {
     if (!is_unified())
         return unify()->as<TypeVarNode>()->implements(bound, map);

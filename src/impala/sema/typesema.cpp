@@ -212,8 +212,8 @@ void TypeParamList::check_type_params(TypeSema& sema) const {
     }
 }
 
-TypeVar TypeParam::type_var(TypeSema& sema) const { return sema.check(this).as<TypeVar>(); }
 Type TypeParam::check(TypeSema& sema) const { return sema.type_var(symbol()); }
+TypeVar TypeParam::type_var(TypeSema& sema) const { return sema.check(this).as<TypeVar>(); }
 Type ErrorASTType::check(TypeSema& sema) const { return sema.type_error(); }
 
 Type PrimASTType::check(TypeSema& sema) const {

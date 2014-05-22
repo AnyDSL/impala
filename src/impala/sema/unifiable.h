@@ -2,8 +2,10 @@
 #define IMPALA_SEMA_UNIFIABLE_H
 
 #include <set>
+#include <stack>
 #include <vector>
 
+#include "thorin/def.h"
 #include "thorin/type.h"
 #include "thorin/util/array.h"
 #include "thorin/util/cast.h"
@@ -324,6 +326,7 @@ public:
     const std::vector<Impl>& impls() const { return impls_; }
     void add_impl(Impl) const;
 
+    Impl fimd_impl(Bound) const;
     virtual bool implements(Bound, SpecializeMap&) const;
     virtual FnType find_method(Symbol s) const;
     virtual bool is_sane() const;
@@ -467,6 +470,9 @@ private:
     mutable std::vector<Bound> bounds_; ///< All traits that restrict the instantiation of this variable.
     mutable const Unifiable* bound_at_; ///< The type where this variable is bound.
     mutable const TypeVarNode* equiv_;  ///< Used to define equivalence constraints when checking equality of types.
+
+public: // TODO make private
+    mutable std::stack<thorin::Def> defs_;
 
     friend class TypeTable;
     friend void Unifiable::bind(TypeVar) const;

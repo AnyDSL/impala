@@ -392,6 +392,7 @@ protected:
 class TypeParam : public TypeDecl {
 public:
     const ASTTypes& bounds() const { return bounds_; }
+    TypeVar type_var() const { return type().as<TypeVar>(); }
     TypeVar type_var(TypeSema&) const;
     virtual std::ostream& print(Printer&) const override;
 

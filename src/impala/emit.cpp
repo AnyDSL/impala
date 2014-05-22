@@ -167,9 +167,12 @@ void Fn::emit_body(CodeGen& cg) const {
     cg.set_mem(mem);
     frame_ = cg.world().enter(mem); 
 
-    // name bounds
-    for (auto type_param : type_params())
-        lambda()->param(i++)->name = type_param->symbol().str();
+    // name bounds and memoize type params
+    for (auto type_param : type_params()) {
+        auto param = lambda()->param(i++);
+        param->name = type_param->symbol().str();
+        type_param->type_var()->defs_.push(param);
+    }
 
     // name params and setup store locations
     for (auto param : params()) {
@@ -194,6 +197,10 @@ void Fn::emit_body(CodeGen& cg) const {
         } else
             cg.cur_bb->jump(ret_param(), {mem, def});
     }
+
+    // pop type_param stacks
+    for (auto type_param : type_params())
+        type_param->type_var()->defs_.pop();
 }
 
 /*
@@ -243,7 +250,9 @@ void ModDecl::emit_item(CodeGen& cg) const {
 }
 
 void ImplItem::emit_item(CodeGen& cg) const {
-    assert(!def_);
+    if (def_) 
+        return;
+
     Array<thorin::Def> elems(num_methods());
     for (size_t i = 0, e = elems.size(); i != e; ++i)
         elems[i] = method(i)->emit_head(cg);
@@ -410,11 +419,23 @@ Def MapExpr::remit(CodeGen& cg) const {
     Def ldef = cg.remit(lhs());
 
     if (auto fn = lhs()->type().isa<FnType>()) {
+        assert(fn->num_type_vars() == inferred().size());
         std::vector<Def> defs;
         defs.push_back(cg.get_mem());
-        //for (auto type_var : type_vars()) {
-            //for (auto bound : type_var->bounds())
-        //}
+        for (size_t i = 0, e = fn->num_type_vars(); i != e; ++i) {
+            if (auto type_var = inferred_[i].isa<TypeVar>())
+                defs.push_back(type_var->defs_.top());
+            else {
+                auto known_type = inferred_[i].as<KnownType>();
+                std::vector<Def> bounds;
+                for (auto bound : fn->type_var(i)->bounds()) {
+                    auto impl = known_type->fimd_impl(bound);
+                    cg.emit(impl->impl_item());
+                    bounds.push_back(impl->impl_item()->def());
+                }
+                defs.push_back(cg.world().tuple(bounds));
+            }
+        }
 
         for (auto arg : args())
             defs.push_back(cg.remit(arg));

@@ -17,20 +17,9 @@ impl B for int {
 }
 
 fn f[T: A + B, U: A](a: T, b: U) -> int {
-    42
-}
-
-fn g[T: A + B, U: A](a: T, b: U) -> int {
-    42
-}
-
-fn foo(x: fn[T: A + B, U: A](T, U) -> int) -> int {
-    23
+    f(a, b)
 }
 
 fn main() -> int {
-    foo(f);
-    foo(g);
-    f(23, 42);
-    g(23, 42)
+    f(23, 42)
 }
