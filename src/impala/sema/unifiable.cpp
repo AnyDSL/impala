@@ -167,7 +167,7 @@ bool Unifiable::equal(const Unifiable* other) const {
     assert(this->is_unified());
     assert(!other->isa<UnknownTypeNode>());
 
-    if (this == other) 
+    if (other->is_unified() && this == other->representative()) // includes this == other
         return true;
 
     if (this->kind() == other->kind()) {
@@ -190,7 +190,8 @@ bool Unifiable::equal(const Unifiable* other) const {
 
             // check recursively element types for equivalence
             for (size_t i = 0, e = this->num_elems(); i != e && result; ++i)
-                result &= this->elem(i) == other->elem(i);
+                result &= this->elem(i)->equal(*other->elem(i));
+                //result &= this->elem(i) == other->elem(i);
 
             // unset equivalence constraints for type variables
             for (auto var : type_vars())
@@ -222,21 +223,19 @@ bool BoundsLT::operator () (Bound b1, Bound b2) const {
 
 bool TypeVarNode::bounds_equal(const TypeVarNode* other) const {
     assert(this->is_unified());
-    auto& other_bounds = other->bounds_;
 
-    for (auto bound : other_bounds)
-        bound->unify();
+    if (this->num_bounds() != other->num_bounds())
+        return false;
 
-    std::stable_sort(other_bounds.begin(), other_bounds.end(), BoundsLT());
-
-    if (this->num_bounds() == other->num_bounds()) {
-        for (size_t i = 0, e = other_bounds.size(); i != e; ++i) {
-            if (this->bound(i)->id() != other_bounds[i]->id()) // since both are unified it suffices to check id here
-                return false;
+    for (auto this_bound : this->bounds()) { // TODO this loop is quadratic
+        for (auto other_bound : other->bounds()) {
+            if (this_bound->equal(*other_bound))
+                goto found;
         }
-        return true;
+        return false;
+found:;
     }
-    return false;
+    return true;
 }
 
 bool TypeVarNode::equal(const Unifiable* other) const {
@@ -256,7 +255,7 @@ bool TraitNode::equal(const Unifiable* other) const {
 }
 
 bool BoundNode::equal(const Unifiable* other) const {
-    return Unifiable::equal(other) && this->trait() == other->as<BoundNode>()->trait();
+    return Unifiable::equal(other) && this->trait()->equal(*other->as<BoundNode>()->trait());
 }
 
 //------------------------------------------------------------------------------
@@ -324,7 +323,7 @@ Type TypeNode::instantiate(ArrayRef<Type> type_args) const {
     return instantiate(map);
 }
 
-Type UnknownTypeNode::vinstantiate(SpecializeMap& map) const { assert(false); return nullptr; }
+Type UnknownTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().unknown_type(); }
 Type TypeErrorNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 Type NoRetTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 Type PrimTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }

@@ -1,7 +1,5 @@
 #include "impala/sema/typetable.h"
 
-#include <iostream>
-
 namespace impala {
 
 TypeTable::TypeTable()

@@ -99,7 +99,7 @@ public:
         assert(&node()->typetable() == &other.node()->typetable());
         if (this->node_ == other.node_) // TODO do we really wanna have this check?
             return true;
-        return infer(this->node()->unify(), other.node()->unify());
+        return infer(*this, other);
     }
     Proxy<T> unify() const { return node()->unify()->template as<T>(); }
     const T* representative() const { return node()->representative()->template as<T>(); }
