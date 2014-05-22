@@ -1010,12 +1010,12 @@ public:
     class Elem {
     private:
         Elem(const Elem&);
+
     public:
         Elem(Elem&& other)
             : symbol_(std::move(other.symbol_))
             , expr_(std::move(other.expr_))
         {}
-
         Elem(Symbol symbol, std::unique_ptr<const Expr> expr)
             : symbol_(symbol)
             , expr_(std::move(expr))
