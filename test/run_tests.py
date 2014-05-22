@@ -24,7 +24,12 @@ def invoke(executable, directory, pb):
     infrastructure.tests.executeTests(tests, executable, pb)
 
 def main():
-    executable = "../build/bin/impala"
+    executable_unix = "../build/bin/impala"
+    executable_windows = "../build/bin/Debug/impala.exe"
+    if os.path.exists(executable_unix):
+	    executable = executable_unix
+    else:
+	    executable = executable_windows
     pb = True
     
     # get cmd file
