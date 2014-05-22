@@ -35,7 +35,7 @@ const ModContents* parse(bool& result, std::istream&, const std::string&);
 bool name_analysis(const ModContents* mod);
 bool type_analysis(Init&, const ModContents*, bool nossa);
 bool check(Init&, const ModContents* mod, bool nossa);
-bool emit(thorin::World&, const ModContents*);
+void emit(thorin::World&, const ModContents*);
 
 }
 
