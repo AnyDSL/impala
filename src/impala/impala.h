@@ -31,7 +31,7 @@ struct Init {
     thorin::AutoPtr<TypeTable> typetable;
 };
 
-const ModContents* parse(bool& result, std::istream&, const std::string&);
+bool parse(ModContents*, std::istream&, const std::string&);
 bool name_analysis(const ModContents* mod);
 bool type_analysis(Init&, const ModContents*, bool nossa);
 bool check(Init&, const ModContents* mod, bool nossa);

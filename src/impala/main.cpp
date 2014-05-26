@@ -110,14 +110,19 @@ int main(int argc, char** argv) {
         }
 #endif
 
-        bool result;
-        thorin::AutoPtr<const impala::ModContents> prg;
+        bool result = true;
+        thorin::AutoPtr<impala::ModContents> prg = new impala::ModContents();
         for (auto infile : infiles) {
             std::string filename = infile.c_str();
             ifstream file(filename);
-            prg = impala::parse(result, file, filename);
+            result &= impala::parse(prg, file, filename);
             break;
         }
+
+        if (!prg->items().empty())
+            prg->set_loc(impala::Location(prg->items().front()->pos1(), prg->items().back()->pos2()));
+        else
+            prg->set_loc(impala::Location(infiles.front(), 1, 1, 1, 1));
 
         if (emit_ast)
             impala::dump(prg, fancy);

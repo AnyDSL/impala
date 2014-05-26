@@ -182,6 +182,7 @@ public:
 
     // item helpers
     const ModContents* parse_mod_contents();
+    void parse_mod_contents(ModContents*);
     const FieldDecl* parse_field_decl();
 
     // expressions
@@ -230,13 +231,12 @@ Loc<T>::~Loc() { node_->set_pos2(parser_.prev_loc().pos2()); }
 
 //------------------------------------------------------------------------------
 
-const ModContents* parse(bool& result, std::istream& i, const std::string& filename) {
+bool parse(ModContents* mod_contents, std::istream& i, const std::string& filename) {
     Parser parser(i, filename);
-    auto mod = parser.parse_mod_contents();
+    parser.parse_mod_contents(mod_contents);
     if (parser.la() != Token::END_OF_FILE)
         parser.error("module item", "module contents");
-    result = parser.result();
-    return mod;
+    return parser.result();
 }
 
 //------------------------------------------------------------------------------
@@ -503,7 +503,7 @@ ModDecl* Parser::parse_mod_decl() {
     mod_decl->symbol_ = try_id("module declaration");
     parse_type_params(mod_decl->type_params_);
     if (accept(Token::L_BRACE)) {
-        mod_decl->mod_contents_ = parse_mod_contents();
+         mod_decl->mod_contents_ = parse_mod_contents();
         expect(Token::R_BRACE, "module");
     } else
         expect(Token::SEMICOLON, "module declaration");
@@ -574,7 +574,11 @@ Typedef* Parser::parse_typedef() {
 
 const ModContents* Parser::parse_mod_contents() {
     auto mod_contents = loc(new ModContents());
+    parse_mod_contents(mod_contents);
+    return mod_contents;
+}
 
+void Parser::parse_mod_contents(ModContents* mod_contents) {
     while (true) {
         switch (la()) {
             case VISIBILITY:
@@ -585,7 +589,7 @@ const ModContents* Parser::parse_mod_contents() {
                 lex(); 
                 continue;
             default:
-                return mod_contents;
+                return;
         }
     }
 }
