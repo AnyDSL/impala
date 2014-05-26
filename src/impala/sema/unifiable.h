@@ -111,11 +111,11 @@ public:
         static_assert(std::is_base_of<U, T>::value, "U is not a base type of T");
         return Proxy<U>((**this)->template as<T>());
     }
-    template<class U> Proxy<typename U::BaseType> isa() const { 
-        return Proxy<typename U::BaseType>((*this)->template isa<typename U::BaseType>()); 
+    template<class U> Proxy<typename U::BaseType> isa() const {
+        return Proxy<typename U::BaseType>((*this)->template isa<typename U::BaseType>());
     }
-    template<class U> Proxy<typename U::BaseType> as() const { 
-        return Proxy<typename U::BaseType>((*this)->template as <typename U::BaseType>()); 
+    template<class U> Proxy<typename U::BaseType> as() const {
+        return Proxy<typename U::BaseType>((*this)->template as <typename U::BaseType>());
     }
     operator bool() { return !empty(); }
     void clear() { assert(node_ != nullptr); node_ = nullptr; }
@@ -236,16 +236,16 @@ std::ostream& operator << (std::ostream& o, Proxy<T> u) { return o << u->to_stri
 
 //------------------------------------------------------------------------------
 
-template<class T> 
+template<class T>
 struct IdHash {
     size_t operator () (const T t) const { assert(t->is_unified() || !t->is_known()); return t->id(); }
 };
 
-template<class T> 
+template<class T>
 struct IdEqual {
-    bool operator () (const T t1, const T t2) const { 
+    bool operator () (const T t1, const T t2) const {
         assert((t1->is_unified() || !t1->is_known()) && (t1->is_unified() || !t1->is_known()));
-        return t1->id() == t2->id(); 
+        return t1->id() == t2->id();
     }
 };
 
