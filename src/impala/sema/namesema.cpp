@@ -354,8 +354,10 @@ void IfExpr::check(NameSema& sema) const {
 
 void ForExpr::check(NameSema& sema) const {
     expr()->check(sema);
+    sema.push_scope();
     break_decl()->check(sema);
     fn_expr()->check(sema);
+    sema.pop_scope();
 }
 
 //------------------------------------------------------------------------------
