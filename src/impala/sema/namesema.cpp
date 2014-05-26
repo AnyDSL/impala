@@ -38,6 +38,10 @@ public:
     void check_head(const Item* item) {
         if (auto decl = item->isa<Decl>())
             insert(decl);
+        else if (auto extern_block = item->isa<ExternBlock>()) {
+            for (auto fn : extern_block->fns())
+                insert(fn);
+        }
     }
     void check_item(const Item* item) { item->check_item(*this); }
 
