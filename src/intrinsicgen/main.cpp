@@ -62,10 +62,10 @@ impala::Type llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
             valid &= param_types[i];
         }
 
-        auto ret = llvm2impala(tt, fn->getReturnType());
+        auto ret = fn->getReturnType()->isVoidTy() ? tt.type_void() : llvm2impala(tt, fn->getReturnType());
         valid &= ret;
         if (valid) {
-            param_types.back() = tt.fn_type({ret});
+            param_types.back() = ret->is_void() ? tt.fntype({}) : tt.fntype({ret});
             return tt.fn_type(param_types);
         }
     }
