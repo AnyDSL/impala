@@ -185,7 +185,7 @@ Token Lexer::lex() {
                     break;
                 }
             } while (!accept(str, '\'')); 
-            return Token(loc_, str);
+            return Token(loc_, Token::LIT_char, str);
         }
 
         // string literal
@@ -197,7 +197,7 @@ Token Lexer::lex() {
                     break;
                 }
             } while (!accept(str, '"')); 
-            return Token(loc_, str);
+            return Token(loc_, Token::LIT_str, str);
         }
 
         /*

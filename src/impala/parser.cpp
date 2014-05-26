@@ -442,6 +442,8 @@ Item* Parser::parse_extern_block_or_fn_decl() {
         item = fn_decl;
     } else {
         auto extern_block = new ExternBlock();
+        if (la() == Token::LIT_str)
+            extern_block->abi_ = lex().symbol();
         expect(Token::L_BRACE, "opening brace of external block");
         while (la() == Token::FN)
             extern_block->fns_.push_back(parse_fn_decl(BodyMode::None)); 

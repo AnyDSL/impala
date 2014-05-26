@@ -21,17 +21,11 @@ Token::Token(const Location& loc, const std::string& str)
     , symbol_(str)
 {
     assert(!str.empty());
-    if (str.front() == '\'')
-        kind_ = LIT_char;
-    else if (str.front() == '"')
-        kind_ = LIT_str;
-    else {
-        auto i = keywords_.find(str);
-        if (i == keywords_.end())
-            kind_ = Token::ID;
-        else
-            kind_ = i->second;
-    }
+    auto i = keywords_.find(str);
+    if (i == keywords_.end())
+        kind_ = Token::ID;
+    else
+        kind_ = i->second;
 }
 
 Token::Token(const Location& loc, Kind kind, const std::string& str)
@@ -40,6 +34,9 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
     , kind_(kind) 
 {
     using namespace std;
+
+    if (kind_ == LIT_str || kind_ == LIT_char)
+        return;
 
     std::string literal;
     int base = 10;
