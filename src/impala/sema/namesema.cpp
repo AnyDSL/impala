@@ -169,7 +169,9 @@ void ModDecl::check(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void ForeignMod::check(NameSema& sema) const {
+void ExternBlock::check_item(NameSema& sema) const {
+    for (auto fn : fns())
+        sema.check(fn);
 }
 
 void Typedef::check(NameSema& sema) const {
@@ -185,7 +187,7 @@ void Fn::fn_check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
     int i = 0;
-    for (const Param* param : params()) {
+    for (auto param : params()) {
         if (param->symbol().empty())  {
             std::ostringstream oss;
             oss << '<' << i << ">";

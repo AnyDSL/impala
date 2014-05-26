@@ -76,7 +76,6 @@ std::ostream& PrimASTType::print(Printer& p) const {
     }
 }
 
-
 /*
  * parameters
  */
@@ -97,8 +96,15 @@ std::ostream& TypeParamList::print_type_params(Printer& p) const {
  */
 
 std::ostream& Fn::print_params(Printer& p, bool returning) const {
-    return p.dump_list([&] (const Param* param) { param->print(p); }, 
-            returning ? params().slice_num_from_end(1) : params());
+    return p.dump_list([&] (const Param* param) { 
+            if (!param->symbol().empty())
+                p.stream() << param->symbol() << ": ";
+            if (auto type = param->type())
+                p.stream() << type->to_string();
+            else if (auto type = param->ast_type())
+                type->print(p);
+        }, 
+        returning ? params().slice_num_from_end(1) : params());
 }
 
 std::ostream& LocalDecl::print(Printer& p) const {
@@ -135,6 +141,16 @@ std::ostream& ModDecl::print(Printer& p) const {
         return p.down() << " }";
     } else
         return p.stream() << ';';
+}
+
+std::ostream& ExternBlock::print(Printer& p) const {
+    p.stream() << "extern ";
+    if (!abi_.empty())
+        p.stream() << abi_.str() << ' ';
+    p.stream() << '{';
+    p.up();
+    p.dump_list([&] (const FnDecl* fn) { fn->print(p); }, fns(), "", "", "", true);
+    return p.down() << '}';
 }
 
 std::ostream& FnDecl::print(Printer& p) const {

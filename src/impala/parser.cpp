@@ -166,15 +166,16 @@ public:
     const TupleASTType* parse_tuple_type();
     const ASTTypeApp*   parse_type_app();
 
+    enum class BodyMode { None, Optional, Mandatory };
+
     // items
     Item*       parse_item();
     StaticItem* parse_static_item();
     EnumDecl*   parse_enum_decl();
-    FnDecl*     parse_fn_decl(bool maybe_empty);
-    ForeignMod* parse_foreign_mod();
+    FnDecl*     parse_fn_decl(BodyMode);
     ImplItem*   parse_impl();
     ModDecl*    parse_mod_decl();
-    Item*       parse_foreign_mod_or_fn_decl();
+    Item*       parse_extern_block_or_fn_decl();
     StructDecl* parse_struct_decl();
     TraitDecl*  parse_trait_decl();
     Typedef*    parse_typedef();
@@ -410,15 +411,15 @@ Item* Parser::parse_item() {
 
     Item* item = nullptr;
     switch (la()) {
-        case Token::ENUM:    item = parse_enum_decl();              break;
-        case Token::EXTERN:  item = parse_foreign_mod_or_fn_decl(); break;
-        case Token::FN:      item = parse_fn_decl(false);           break;
-        case Token::IMPL:    item = parse_impl();                   break;
-        case Token::MOD:     item = parse_mod_decl();               break;
-        case Token::STATIC:  item = parse_static_item();            break;
-        case Token::STRUCT:  item = parse_struct_decl();            break;
-        case Token::TRAIT:   item = parse_trait_decl();             break;
-        case Token::TYPEDEF: item = parse_typedef();                break;
+        case Token::ENUM:    item = parse_enum_decl();                  break;
+        case Token::EXTERN:  item = parse_extern_block_or_fn_decl();    break;
+        case Token::FN:      item = parse_fn_decl(BodyMode::Mandatory); break;
+        case Token::IMPL:    item = parse_impl();                       break;
+        case Token::MOD:     item = parse_mod_decl();                   break;
+        case Token::STATIC:  item = parse_static_item();                break;
+        case Token::STRUCT:  item = parse_struct_decl();                break;
+        case Token::TRAIT:   item = parse_trait_decl();                 break;
+        case Token::TYPEDEF: item = parse_typedef();                    break;
         default: THORIN_UNREACHABLE;
     }
 
@@ -432,27 +433,28 @@ EnumDecl* Parser::parse_enum_decl() {
     return 0;
 }
 
-Item* Parser::parse_foreign_mod_or_fn_decl() {
+Item* Parser::parse_extern_block_or_fn_decl() {
     Position pos1 = eat(Token::EXTERN).pos1();
     Item* item;
     if (la() == Token::FN) {
-        auto fn_decl = parse_fn_decl(false);
+        auto fn_decl = parse_fn_decl(BodyMode::Mandatory);
         fn_decl->extern_ = true;
         item = fn_decl;
     } else {
-        assert(false && "TODO");
+        auto extern_block = new ExternBlock();
+        expect(Token::L_BRACE, "opening brace of external block");
+        while (la() == Token::FN)
+            extern_block->fns_.push_back(parse_fn_decl(BodyMode::None)); 
+        expect(Token::R_BRACE, "closing brace of external block");
+        extern_block->set_pos2(prev_loc().pos2());
+        item = extern_block;
     }
 
     item->set_pos1(pos1);
     return item;
 }
 
-ForeignMod* Parser::parse_foreign_mod() {
-    assert(false && "TODO");
-    return 0;
-}
-
-FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
+FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
     THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     auto fn_decl = loc(new FnDecl());
@@ -464,10 +466,13 @@ FnDecl* Parser::parse_fn_decl(bool maybe_empty) {
     bool noret_by_default = true;
     parse_return_param(fn_decl->params_, noret_by_default);
 
-    if (maybe_empty && accept(Token::SEMICOLON)) {
-        // do nothing
-    } else
-        fn_decl->body_ = try_block_expr("body of function");
+    switch (body_mode) {
+        case BodyMode::None:      expect(Token::SEMICOLON, "function declaration"); break;
+        case BodyMode::Mandatory: fn_decl->body_ = try_block_expr("body of function"); break;
+        case BodyMode::Optional:
+            if (!accept(Token::SEMICOLON))
+                fn_decl->body_ = try_block_expr("body of function"); break;
+    }
 
     return fn_decl;
 }
@@ -484,7 +489,7 @@ ImplItem* Parser::parse_impl() {
         impl->type_ = type;
     expect(Token::L_BRACE, "impl");
     while (la() == Token::FN)
-        impl->methods_.push_back(parse_fn_decl(false)); 
+        impl->methods_.push_back(parse_fn_decl(BodyMode::Mandatory)); 
     expect(Token::R_BRACE, "closing brace of impl");
 
     return impl;
@@ -543,7 +548,7 @@ TraitDecl* Parser::parse_trait_decl() {
         expect(Token::L_BRACE, "trait declaration");
 
     while (la() == Token::FN)
-        trait_decl->methods_.push_back(parse_fn_decl(true)); 
+        trait_decl->methods_.push_back(parse_fn_decl(BodyMode::Optional)); 
 
     expect(Token::R_BRACE, "closing brace of trait declaration");
     const_cast<SelfParam&>(trait_decl->self_param_).loc_ = trait_decl->loc().pos1();

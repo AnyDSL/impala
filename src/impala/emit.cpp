@@ -243,7 +243,10 @@ Var FnDecl::emit(CodeGen& cg) const {
     return var_;
 }
 
-void ForeignMod::emit_item(CodeGen& cg) const {
+void ExternBlock::emit_item(CodeGen& cg) const {
+    // TODO use abi
+    for (auto fn : fns())
+        fn->emit_head(cg);
 }
 
 void ModDecl::emit_item(CodeGen& cg) const {

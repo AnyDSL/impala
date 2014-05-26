@@ -534,14 +534,21 @@ private:
     friend class Parser;
 };
 
-class ForeignMod : public TypeDeclItem {
+class ExternBlock : public Item {
 public:
+    Symbol abi() const { return abi_; }
+    const AutoVector<const FnDecl*>& fns() const { return fns_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
+    virtual void check_item(NameSema&) const override;
 
 private:
-    virtual Type check(TypeSema&) const override;
+    virtual void check_item(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
+
+    Symbol abi_;
+    AutoVector<const FnDecl*> fns_;
+
+    friend class Parser;
 };
 
 class Typedef : public TypeDeclItem {

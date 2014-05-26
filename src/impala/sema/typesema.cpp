@@ -340,8 +340,9 @@ void ModContents::check(TypeSema& sema) const {
         sema.check_item(item);
 }
 
-Type ForeignMod::check(TypeSema& sema) const {
-    return Type();
+void ExternBlock::check_item(TypeSema& sema) const {
+    for (auto fn : fns())
+        sema.check(fn);
 }
 
 Type Typedef::check(TypeSema& sema) const {
