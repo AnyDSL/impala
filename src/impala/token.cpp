@@ -184,11 +184,13 @@ void Token::init() {
 #define IMPALA_TYPE(itype, atype)         insert_key(TYPE_ ## itype, #itype );
 #include "impala/tokenlist.h"
 
+    // type aliases
     insert_key(TYPE_i32, "int");
     insert_key(TYPE_u32, "uint");
-    tok2str_[ID]         = Symbol("<identifier>").str();
-    insert(END_OF_FILE, "<end of file>");
-    insert_key(MUT, "mut");
+    insert_key(TYPE_f32, "float");
+    insert_key(TYPE_f64, "double");
+
+    // literals
     sym2lit_["i8"]  = LIT_i8;  sym2lit_["u8"]  = LIT_u8;
     sym2lit_["i16"] = LIT_i16; sym2lit_["u16"] = LIT_u16;
     sym2lit_["i32"] = LIT_i32; sym2lit_["u32"] = LIT_u32; 
@@ -196,6 +198,11 @@ void Token::init() {
     sym2lit_["f"]   = LIT_f32; sym2flit_["f"]   = LIT_f32;
     sym2lit_["f32"] = LIT_f32; sym2flit_["f32"] = LIT_f32;
     sym2lit_["f64"] = LIT_f64; sym2flit_["f64"] = LIT_f64;
+
+    // special tokens
+    tok2str_[ID]         = Symbol("<identifier>").str();
+    insert(END_OF_FILE, "<end of file>");
+    insert_key(MUT, "mut");
 }
 
 void Token::insert_key(TokenKind tok, const char* str) {

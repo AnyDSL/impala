@@ -1,0 +1,2 @@
+fn f() -> float  { 23.f }
+fn d() -> double { 42.0 }
