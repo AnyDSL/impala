@@ -15,22 +15,28 @@ public:
 
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
-    TypeError       type_error() { return type_error_; }
-    Trait           trait_error() { return trait_error_; }
-    Bound           bound_error() { return bound_error_; }
-    NoRetType       type_noret() { return type_noret_; }
-    PrimType        type(PrimTypeKind kind);
-    FnType          fn_type(ArrayRef<Type> params) { return join(new FnTypeNode(*this, params)); }
-    TupleType       tuple_type(ArrayRef<Type> elems) { return join(new TupleTypeNode(*this, elems)); }
-    TupleType       unit() { return tuple_type({}); }
-    StructType      struct_type(const StructDecl* struct_decl) { return join(new StructTypeNode(*this, struct_decl)); }
-    OwnedPtrType    owned_ptr_type(Type referenced_type) { return join(new OwnedPtrTypeNode(*this, referenced_type)); }
-    BorrowedPtrType borrowd_ptr_type(Type referenced_type) { return join(new BorrowedPtrTypeNode(*this, referenced_type)); }
-    TypeVar         type_var(Symbol name = Symbol()) { return join(new TypeVarNode(*this, name)); }
-    UnknownType     unknown_type() { return join(new UnknownTypeNode(*this)); }
-    Bound           bound(Trait trait, ArrayRef<Type> args) { return join(new BoundNode(trait, args)); }
-    Trait           trait(const TraitDecl* trait_decl) { return join(new TraitNode(*this, trait_decl)); }
-    Impl            impl(const ImplItem* impl, Bound bound, Type type) { return join(new ImplNode(*this, impl, bound, type)); }
+    BorrowedPtrType     borrowd_ptr_type(Type referenced_type) { return join(new BorrowedPtrTypeNode(*this, referenced_type)); }
+    Bound               bound(Trait trait, ArrayRef<Type> args) { return join(new BoundNode(trait, args)); }
+    Bound               bound_error() { return bound_error_; }
+    FnType              fn_type(ArrayRef<Type> params) { return join(new FnTypeNode(*this, params)); }
+    Impl                impl(const ImplItem* impl, Bound bound, Type type) { return join(new ImplNode(*this, impl, bound, type)); }
+    NoRetType           type_noret() { return type_noret_; }
+    OwnedPtrType        owned_ptr_type(Type referenced_type) { return join(new OwnedPtrTypeNode(*this, referenced_type)); }
+    PrimType            type(PrimTypeKind kind);
+    StructType          struct_type(const StructDecl* struct_decl) { return join(new StructTypeNode(*this, struct_decl)); }
+    Trait               trait(const TraitDecl* trait_decl) { return join(new TraitNode(*this, trait_decl)); }
+    Trait               trait_error() { return trait_error_; }
+    TupleType           tuple_type(ArrayRef<Type> elems) { return join(new TupleTypeNode(*this, elems)); }
+    TupleType           unit() { return tuple_type({}); }
+    TypeError           type_error() { return type_error_; }
+    TypeVar             type_var(Symbol name = Symbol()) { return join(new TypeVarNode(*this, name)); }
+    UnknownType         unknown_type() { return join(new UnknownTypeNode(*this)); }
+    DefiniteArrayType   definite_array_type(Type elem_type, uint64_t dim) { 
+        return join(new DefiniteArrayTypeNode(*this, elem_type, dim)); 
+    }
+    IndefiniteArrayType indefinite_array_type(Type elem_type) { 
+        return join(new IndefiniteArrayTypeNode(*this, elem_type)); 
+    }
 
     /// Unify a type and return its representative.
     template<class T> Proxy<T> unify(Proxy<T> proxy) { return unify(*proxy)->template as<T>(); }

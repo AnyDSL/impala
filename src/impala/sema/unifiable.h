@@ -26,23 +26,25 @@ class TypeTable;
 class Unifiable;
 
 template<class T> class Proxy;
-class BoundNode;            typedef Proxy<BoundNode>            Bound;
-class FnTypeNode;           typedef Proxy<FnTypeNode>           FnType;
-class ImplNode;             typedef Proxy<ImplNode>             Impl;
-class KnownTypeNode;        typedef Proxy<KnownTypeNode>        KnownType;
-class NoRetTypeNode;        typedef Proxy<NoRetTypeNode>        NoRetType;
-class PrimTypeNode;         typedef Proxy<PrimTypeNode>         PrimType;
-class StructTypeNode;       typedef Proxy<StructTypeNode>       StructType;
-class TraitNode;            typedef Proxy<TraitNode>            Trait;
-class TupleTypeNode;        typedef Proxy<TupleTypeNode>        TupleType;
-class TypeErrorNode;        typedef Proxy<TypeErrorNode>        TypeError;
-class TypeNode;             typedef Proxy<TypeNode>             Type;
-class TypeVarNode;          typedef Proxy<TypeVarNode>          TypeVar;
-class PtrTypeNode;          typedef Proxy<PtrTypeNode>          PtrType;
-class OwnedPtrTypeNode;     typedef Proxy<OwnedPtrTypeNode>     OwnedPtrType;
-class BorrowedPtrTypeNode;  typedef Proxy<BorrowedPtrTypeNode>  BorrowedPtrType;
-class Unifiable;            typedef Proxy<Unifiable>            Uni;
-class UnknownTypeNode;      typedef Proxy<UnknownTypeNode>      UnknownType;
+class BorrowedPtrTypeNode;      typedef Proxy<BorrowedPtrTypeNode>      BorrowedPtrType;
+class BoundNode;                typedef Proxy<BoundNode>                Bound;
+class DefiniteArrayTypeNode;    typedef Proxy<DefiniteArrayTypeNode>    DefiniteArrayType;
+class FnTypeNode;               typedef Proxy<FnTypeNode>               FnType;
+class ImplNode;                 typedef Proxy<ImplNode>                 Impl;
+class IndefiniteArrayTypeNode;  typedef Proxy<IndefiniteArrayTypeNode>  IndefiniteArrayType;
+class KnownTypeNode;            typedef Proxy<KnownTypeNode>            KnownType;
+class NoRetTypeNode;            typedef Proxy<NoRetTypeNode>            NoRetType;
+class OwnedPtrTypeNode;         typedef Proxy<OwnedPtrTypeNode>         OwnedPtrType;
+class PrimTypeNode;             typedef Proxy<PrimTypeNode>             PrimType;
+class PtrTypeNode;              typedef Proxy<PtrTypeNode>              PtrType;
+class StructTypeNode;           typedef Proxy<StructTypeNode>           StructType;
+class TraitNode;                typedef Proxy<TraitNode>                Trait;
+class TupleTypeNode;            typedef Proxy<TupleTypeNode>            TupleType;
+class TypeErrorNode;            typedef Proxy<TypeErrorNode>            TypeError;
+class TypeNode;                 typedef Proxy<TypeNode>                 Type;
+class TypeVarNode;              typedef Proxy<TypeVarNode>              TypeVar;
+class Unifiable;                typedef Proxy<Unifiable>                Uni;
+class UnknownTypeNode;          typedef Proxy<UnknownTypeNode>          UnknownType;
 
 //------------------------------------------------------------------------------
 
@@ -137,18 +139,20 @@ private:
 enum Kind {
 #define IMPALA_TYPE(itype, atype) Kind_##itype,
 #include "impala/tokenlist.h"
-    Kind_error,
-    Kind_unknown,
-    Kind_noret,
-    Kind_fn,
-    Kind_tuple,
-    Kind_struct,
-    Kind_type_var,
-    Kind_trait,
-    Kind_bound,
-    Kind_impl,
-    Kind_owned_ptr,
     Kind_borrowed_ptr,
+    Kind_bound,
+    Kind_definite_array,
+    Kind_error,
+    Kind_fn,
+    Kind_impl,
+    Kind_indefinite_array,
+    Kind_noret,
+    Kind_owned_ptr,
+    Kind_struct,
+    Kind_trait,
+    Kind_tuple,
+    Kind_type_var,
+    Kind_unknown,
 };
 
 enum PrimTypeKind {
@@ -516,6 +520,47 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
+};
+
+//------------------------------------------------------------------------------
+
+class ArrayTypeNode : public KnownTypeNode {
+public:
+    ArrayTypeNode(TypeTable& typetable, Kind kind, Type elem_type)
+        : KnownTypeNode(typetable, kind, { elem_type })
+    {}
+
+    Type elem_type() const { return elem(0); }
+};
+
+class DefiniteArrayTypeNode : public ArrayTypeNode {
+public:
+    DefiniteArrayTypeNode(TypeTable& typetable, Type elem_type, uint64_t dim)
+        : ArrayTypeNode(typetable, Kind_owned_ptr, elem_type)
+        , dim_(dim)
+    {}
+
+    uint64_t dim() const { return dim_; }
+    virtual std::string to_string() const override;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const override;
+    virtual thorin::Type convert(CodeGen&) const override;
+
+    const uint64_t dim_;
+};
+
+class IndefiniteArrayTypeNode : public ArrayTypeNode {
+public:
+    IndefiniteArrayTypeNode(TypeTable& typetable, Type elem_type)
+        : ArrayTypeNode(typetable, Kind_borrowed_ptr, elem_type)
+    {}
+
+    virtual std::string to_string() const override;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const override;
+    virtual thorin::Type convert(CodeGen&) const override;
 };
 
 //------------------------------------------------------------------------------

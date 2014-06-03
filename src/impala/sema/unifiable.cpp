@@ -337,6 +337,12 @@ Type OwnedPtrTypeNode::vinstantiate(SpecializeMap& map) const {
 Type BorrowedPtrTypeNode::vinstantiate(SpecializeMap& map) const { 
     return map[this] = *typetable().borrowd_ptr_type(referenced_type()->specialize(map)); 
 }
+Type DefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const { 
+    return map[this] = *typetable().definite_array_type(elem_type()->specialize(map), dim()); 
+}
+Type IndefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const {
+    return map[this] = *typetable().indefinite_array_type(elem_type()->specialize(map)); 
+}
 
 Bound TraitNode::instantiate(ArrayRef<Type> type_args) const {
     return typetable().bound(this, type_args);
@@ -630,6 +636,14 @@ std::string OwnedPtrTypeNode::to_string() const {
 
 std::string BorrowedPtrTypeNode::to_string() const {
     return "&" + referenced_type()->to_string();
+}
+
+std::string DefiniteArrayTypeNode::to_string() const {
+    return '[' + elem_type()->to_string() + " * " + std::to_string(dim()) + ']';
+}
+
+std::string IndefiniteArrayTypeNode::to_string() const {
+    return "[" + elem_type()->to_string() + "]";
 }
 
 //------------------------------------------------------------------------------

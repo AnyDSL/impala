@@ -136,8 +136,9 @@ thorin::Type BoundNode::convert(CodeGen& cg) const {
 }
 
 thorin::Type ImplNode::convert(CodeGen& cg) const { THORIN_UNREACHABLE; }
-
 thorin::Type PtrTypeNode::convert(CodeGen& cg) const { return cg.world().ptr_type(cg.convert(referenced_type())); }
+thorin::Type DefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().definite_array_type(cg.convert(elem_type()), dim()); }
+thorin::Type IndefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().indefinite_array_type(cg.convert(elem_type())); }
 
 /*
  * Decls and Function

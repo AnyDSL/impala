@@ -25,7 +25,8 @@ public:
 
     // error handling
 
-    void expect_num(const Expr* exp);
+    void expect_int(const Expr*);
+    void expect_num(const Expr*);
     Type match_types(const ASTNode* pos, Type t1, Type t2);
     Type expect_type(const Expr* expr, Type found, Type expected, std::string what);
     Type expect_type(const Expr* expr, Type expected, std::string what) { return expect_type(expr, expr->type(), expected, what); }
@@ -74,15 +75,27 @@ private:
 
 //------------------------------------------------------------------------------
 
-void TypeSema::expect_num(const Expr* exp) {
-    Type t = exp->type();
+// TODO factor code with expect_num
+// TODO maybe have variant which also checks expr
+void TypeSema::expect_int(const Expr* expr) {
+    Type t = expr->type();
+
+    if (t->is_error())
+        return;
+
+    if ((t->is_i8()) && (t->is_i16()) && (t->is_i32()) && (t->is_i64())) // TODO factor this test out
+        error(expr) << "expected integer type but found " << t << "\n";
+}
+
+void TypeSema::expect_num(const Expr* expr) {
+    Type t = expr->type();
 
     if (t->is_error())
         return;
 
     if ((t->is_i8()) && (t->is_i16()) && (t->is_i32()) && // TODO factor this test out
             (t->is_i64()) && (t->is_f32()) && (t->is_f64()))
-        error(exp) << "expected number type but found " << t << "\n";
+        error(expr) << "expected number type but found " << t << "\n";
 }
 
 Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
@@ -231,11 +244,11 @@ Type PtrASTType::check(TypeSema& sema) const {
 }
 
 Type IndefiniteArrayASTType::check(TypeSema& sema) const {
-    return Type(); // FEATURE
+    return sema.indefinite_array_type(sema.check(elem_type()));
 }
 
 Type DefiniteArrayASTType::check(TypeSema& sema) const {
-    return Type(); // FEATURE
+    return sema.definite_array_type(sema.check(elem_type()), dim());
 }
 
 Type TupleASTType::check(TypeSema& sema) const {
@@ -602,15 +615,20 @@ Type CastExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type DefiniteArrayExpr::check(TypeSema& sema, Type expected) const {
-    return Type();
+    Type elem_type = sema.unknown_type();
+    for (auto arg : args())
+        sema.expect_type(arg, sema.check(arg), elem_type, "element of definite array expression");
+    return sema.definite_array_type(elem_type, num_args());
 }
 
 Type RepeatedDefiniteArrayExpr::check(TypeSema& sema, Type expected) const {
-    return Type();
+    return Type(); // TODO
 }
 
 Type IndefiniteArrayExpr::check(TypeSema& sema, Type expected) const {
-    return Type();
+    sema.check(size());
+    sema.expect_int(size());
+    return sema.indefinite_array_type(sema.check(elem_type()));
 }
 
 Type TupleExpr::check(TypeSema& sema, Type expected) const {
