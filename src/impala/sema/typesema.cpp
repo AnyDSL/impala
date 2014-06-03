@@ -560,6 +560,10 @@ Type PrefixExpr::check(TypeSema& sema, Type expected) const {
             sema.expect_num(rhs());
             sema.expect_lvalue(rhs());
             return rtype;
+        case ADD:
+        case SUB:
+            sema.expect_num(rhs());
+            return rtype;
         case RUN:
         case HALT:
             return sema.check(rhs());
