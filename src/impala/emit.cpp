@@ -208,7 +208,6 @@ void Fn::emit_body(CodeGen& cg) const {
  * items
  */
 
-
 void ValueItem::emit_item(CodeGen& cg) const { cg.emit(static_cast<const ValueDecl*>(this)); }
 
 void ModContents::emit(CodeGen& cg) const {
@@ -320,6 +319,11 @@ Def LiteralExpr::remit(CodeGen& cg) const {
     }
 
     return cg.world().literal(tkind, box());
+}
+
+Def CastExpr::remit(CodeGen& cg) const {
+    auto def = cg.remit(lhs());
+    return cg.world().cast(def, cg.convert(ast_type()->type()));
 }
 
 Var PathExpr::lemit(CodeGen& cg) const {

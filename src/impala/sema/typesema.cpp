@@ -611,7 +611,9 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type CastExpr::check(TypeSema& sema, Type expected) const {
-    return Type();
+    // TODO check whether cast is possible at all
+    sema.check(lhs());
+    return sema.check(ast_type());
 }
 
 Type DefiniteArrayExpr::check(TypeSema& sema, Type expected) const {
