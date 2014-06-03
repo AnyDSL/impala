@@ -116,7 +116,6 @@ int main(int argc, char** argv) {
             std::string filename = infile.c_str();
             ifstream file(filename);
             result &= impala::parse(prg, file, filename);
-            break;
         }
 
         if (!prg->items().empty())
