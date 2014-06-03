@@ -25,6 +25,13 @@ public:
 
     // error handling
 
+    bool expect_lvalue(const Expr* expr) {
+        if (!expr->is_lvalue()) {
+            error(expr) << "lvalue required in assignment\n";
+            return  false;
+        }
+        return true;
+    }
     bool expect_int(const Expr*);
     void expect_num(const Expr*);
     Type match_types(const ASTNode* pos, Type t1, Type t2);
@@ -548,9 +555,16 @@ Type PrefixExpr::check(TypeSema& sema, Type expected) const {
         case MUL:
             if (auto ptr = rtype.isa<PtrType>())
                 return ptr->referenced_type();
-        default:
+        case INC:
+        case DEC:
+            sema.expect_num(rhs());
+            sema.expect_lvalue(rhs());
             return rtype;
+        default:
+            THORIN_UNREACHABLE;
     }
+
+    return sema.type_error();
 }
 
 Type InfixExpr::check(TypeSema& sema, Type expected) const {
@@ -584,9 +598,9 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
         }
         case ASGN:
             sema.check(rhs(), sema.check(lhs()));
-            if (!lhs()->is_lvalue())
-                sema.error(lhs()) << "lvalue required in assignment\n";
-            return sema.unit();
+            if (sema.expect_lvalue(lhs()))
+                return sema.unit();
+            break;
         case ADD_ASGN:
         case SUB_ASGN:
         case MUL_ASGN:
@@ -599,18 +613,24 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
         case SHR_ASGN: {
             // TODO handle floats etc
             sema.check(rhs(), sema.check(lhs()));
-            if (!lhs()->is_lvalue())
-                sema.error(lhs()) << "lvalue required in assignment\n";
-            sema.expect_num(lhs());
-            sema.expect_num(rhs());
-            return sema.unit();
+            if (sema.expect_lvalue(lhs())) {
+                sema.expect_num(lhs());
+                sema.expect_num(rhs());
+                return sema.unit();
+            }
+            break;
         }
         default: THORIN_UNREACHABLE;
     }
+
+    return sema.type_error();
 }
 
 Type PostfixExpr::check(TypeSema& sema, Type expected) const {
-    return sema.check(lhs(), expected); // TODO check if operator supports the type
+    // TODO check if operator supports the type
+    sema.check(lhs(), expected);
+    sema.expect_lvalue(lhs());
+    return lhs()->type(); 
 }
 
 Type FieldExpr::check(TypeSema& sema, Type expected) const {

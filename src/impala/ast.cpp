@@ -40,12 +40,18 @@ bool IfExpr::has_else() const {
  * is_lvalue
  */
 
+bool PathExpr::is_lvalue() const { 
+    if (value_decl())
+        return value_decl()->is_mut();
+    return false;
+}
+
 bool MapExpr::is_lvalue() const {
     return (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) ?  lhs()->is_lvalue() : false;
 }
 
 bool PrefixExpr::is_lvalue() const {
-    return kind() == MUL;
+    return kind() == MUL && rhs()->is_lvalue();
 }
 
 bool FieldExpr::is_lvalue() const {

@@ -839,7 +839,7 @@ public:
 
     const Path* path() const { return path_; }
     SafePtr<const ValueDecl> value_decl() const { return value_decl_; }
-    virtual bool is_lvalue() const { return true; }
+    virtual bool is_lvalue() const override;
     virtual void check(NameSema&) const override;
 
 private:
