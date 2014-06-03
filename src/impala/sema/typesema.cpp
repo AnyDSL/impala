@@ -132,6 +132,11 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
         }
     }
 
+    // TODO: quick hack
+    if (auto ptr = found_type.isa<OwnedPtrType>()) {
+        if (expected.isa<PtrType>()) return expected;
+    }
+
     // FEATURE make this check faster - e.g. store a "potentially not closed" flag
     if (!expected->is_closed())
         return found_type;
