@@ -189,10 +189,10 @@ void Fn::emit_body(CodeGen& cg) const {
     auto def = cg.remit(body());
     if (def) {
         mem = cg.world().leave(cg.get_mem(), frame());
-        if (auto sigma = def->type().isa<thorin::TupleType>()) {
+        if (auto tuple = def->type().isa<thorin::TupleType>()) {
             std::vector<Def> args;
             args.push_back(mem);
-            for (size_t i = 0, e = sigma->size(); i != e; ++i)
+            for (size_t i = 0, e = tuple->size(); i != e; ++i)
                 args.push_back(cg.world().extract(def, i));
             cg.cur_bb->jump(ret_param(), args);
         } else
