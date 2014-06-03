@@ -560,6 +560,9 @@ Type PrefixExpr::check(TypeSema& sema, Type expected) const {
             sema.expect_num(rhs());
             sema.expect_lvalue(rhs());
             return rtype;
+        case RUN:
+        case HALT:
+            return sema.check(rhs());
         default:
             THORIN_UNREACHABLE;
     }
