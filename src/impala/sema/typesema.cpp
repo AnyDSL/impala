@@ -584,6 +584,8 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
         }
         case ASGN:
             sema.check(rhs(), sema.check(lhs()));
+            if (!lhs()->is_lvalue())
+                sema.error(lhs()) << "lvalue required in assignment\n";
             return sema.unit();
         case ADD_ASGN:
         case SUB_ASGN:
@@ -597,6 +599,8 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
         case SHR_ASGN: {
             // TODO handle floats etc
             sema.check(rhs(), sema.check(lhs()));
+            if (!lhs()->is_lvalue())
+                sema.error(lhs()) << "lvalue required in assignment\n";
             sema.expect_num(lhs());
             sema.expect_num(rhs());
             return sema.unit();

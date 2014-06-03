@@ -34,4 +34,8 @@ bool IfExpr::has_else() const {
     return true;
 }
 
+bool MapExpr::is_lvalue() const {
+    return lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>();
+}
+
 }
