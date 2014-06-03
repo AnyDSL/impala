@@ -482,7 +482,7 @@ Def MapExpr::remit(CodeGen& cg) const {
         auto ret_type = args().size() == fn->num_elems() ? thorin::Type() : cg.convert(fn->return_type());
         return cg.call(ldef, defs, ret_type);
     } else
-        return cg.lemit(this);
+        return cg.lemit(this).load();
 }
 
 Def ForExpr::remit(CodeGen& cg) const {

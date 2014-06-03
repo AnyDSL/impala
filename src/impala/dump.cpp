@@ -293,7 +293,7 @@ std::ostream& IndefiniteArrayExpr::print(Printer& p) const {
 std::ostream& PrefixExpr::print(Printer& p) const {
     Prec r = PrecTable::prefix_r[kind()];
     Prec old = p.prec;
-    bool paren = !p.is_fancy();
+    bool paren = !p.is_fancy() || p.prec <= r;
     if (paren) p.stream() << "(";
 
     const char* op;

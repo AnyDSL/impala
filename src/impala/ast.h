@@ -860,6 +860,8 @@ public:
 #include "impala/tokenlist.h"
     };
 
+    static const PrefixExpr* create_deref(const AutoPtr<const Expr>& dock);
+
     const Expr* rhs() const { return rhs_; }
     Kind kind() const { return kind_; }
     virtual bool is_lvalue() const override;
@@ -876,6 +878,7 @@ private:
     AutoPtr<const Expr> rhs_;
 
     friend class Parser;
+    friend class MapExpr;
 };
 
 class InfixExpr : public Expr {

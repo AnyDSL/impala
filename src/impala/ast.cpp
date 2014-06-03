@@ -2,6 +2,15 @@
 
 namespace impala {
 
+const PrefixExpr* PrefixExpr::create_deref(const AutoPtr<const Expr>& dock) {
+    auto deref = new PrefixExpr();
+    deref->set_loc(dock->loc());
+    deref->kind_ = PrefixExpr::MUL;
+    deref->rhs_ = deref;
+    swap(deref->rhs_, const_cast<AutoPtr<const Expr>&>(dock));
+    return deref;
+}
+
 const char* Visibility::str() {
     if (visibility_ == Pub)  return "pub ";
     if (visibility_ == Priv) return "priv ";
