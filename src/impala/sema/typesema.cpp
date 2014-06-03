@@ -718,7 +718,11 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type ForExpr::check(TypeSema& sema, Type expected) const {
-    if (auto map = expr()->isa<MapExpr>()) {
+    auto forexpr = expr();
+    if (auto prefix = forexpr->isa<PrefixExpr>())
+        if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HALT)
+            forexpr = prefix->rhs();
+    if (auto map = forexpr->isa<MapExpr>()) {
         Type lhst = sema.check(map->lhs());
 
         if (auto fn_for = lhst.isa<FnType>()) {
@@ -726,7 +730,7 @@ Type ForExpr::check(TypeSema& sema, Type expected) const {
             *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
             return sema.check_call(map->loc(), fn_for, map->type_args(), map->inferred_args_, args, expected);
         }
-    } else if (auto field_expr = expr()->isa<FieldExpr>()) {
+    } else if (auto field_expr = forexpr->isa<FieldExpr>()) {
         assert(false && field_expr && "TODO");
     }
 
