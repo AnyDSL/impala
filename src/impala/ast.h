@@ -1074,6 +1074,7 @@ public:
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
+    virtual thorin::Var lemit(CodeGen& cg) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;

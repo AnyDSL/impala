@@ -451,10 +451,14 @@ Def IndefiniteArrayExpr::remit(CodeGen& cg) const {
     return cg.world().indefinite_array(cg.convert(type()).as<thorin::IndefiniteArrayType>()->elem_type(), extra_);
 }
 
-Def MapExpr::remit(CodeGen& cg) const {
-    Def ldef = cg.remit(lhs());
+Var MapExpr::lemit(CodeGen& cg) const {
+    //if (auto 
+    return Var();
+}
 
+Def MapExpr::remit(CodeGen& cg) const {
     if (auto fn = lhs()->type().isa<FnType>()) {
+        Def ldef = cg.remit(lhs());
         assert(fn->num_type_vars() == num_inferred_args());
         std::vector<Def> defs;
         defs.push_back(cg.get_mem());
@@ -477,10 +481,8 @@ Def MapExpr::remit(CodeGen& cg) const {
             defs.push_back(cg.remit(arg));
         auto ret_type = args().size() == fn->num_elems() ? thorin::Type() : cg.convert(fn->return_type());
         return cg.call(ldef, defs, ret_type);
-    } else {
-        assert(false && "TODO");
-        return Def();
-    }
+    } else
+        return cg.lemit(this);
 }
 
 Def ForExpr::remit(CodeGen& cg) const {
