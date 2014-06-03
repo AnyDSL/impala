@@ -728,6 +728,10 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
 
 Type MapExpr::check(TypeSema& sema, Type expected) const {
     auto ltype = sema.check(lhs());
+    if (auto ptr = ltype.isa<PtrType>()) {
+        ltype.clear();
+        ltype = ptr->referenced_type();
+    }
     if (auto field_expr = is_method_call()) {
         sema.check_impls();
         if (auto fn_method = sema.check(field_expr->lhs())->find_method(field_expr->symbol())) {
