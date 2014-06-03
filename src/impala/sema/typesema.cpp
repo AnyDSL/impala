@@ -626,8 +626,8 @@ Type RepeatedDefiniteArrayExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type IndefiniteArrayExpr::check(TypeSema& sema, Type expected) const {
-    sema.check(size());
-    sema.expect_int(size());
+    sema.check(dim());
+    sema.expect_int(dim());
     return sema.indefinite_array_type(sema.check(elem_type()));
 }
 

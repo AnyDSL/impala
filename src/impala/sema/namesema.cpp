@@ -321,7 +321,7 @@ void RepeatedDefiniteArrayExpr::check(NameSema& sema) const {
 }
 
 void IndefiniteArrayExpr::check(NameSema& sema) const {
-    size()->check(sema);
+    dim()->check(sema);
     sema.check(elem_type());
 }
 

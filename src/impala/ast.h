@@ -962,6 +962,7 @@ public:
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
 
     friend class Parser;
 };
@@ -975,6 +976,7 @@ public:
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> value_;
     AutoPtr<const Expr> count_;
@@ -984,15 +986,16 @@ private:
 
 class IndefiniteArrayExpr : public Expr {
 public:
-    const Expr* size() const { return size_; }
+    const Expr* dim() const { return dim_; }
     const ASTType* elem_type() const { return elem_type_; }
     virtual void check(NameSema&) const override;
 
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
 
-    AutoPtr<const Expr> size_;
+    AutoPtr<const Expr> dim_;
     AutoPtr<const ASTType> elem_type_;
 
     friend class Parser;

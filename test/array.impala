@@ -1,6 +1,8 @@
 //extern fn array(int) -> [float];
 
-fn main(i : int) -> int {
+fn main(n: int) -> [int] {
+    [n: int]
+    /*
     let a = [[0, 1, 2], [0, .. 3], [6, 7, 8]];
     let x = [1];
     a(2)(2)++;
@@ -8,4 +10,5 @@ fn main(i : int) -> int {
     b(3) = 42.f;
     b(i) += b(i+1);
     a(0)(2) + a(2)(2)
+    */
 }

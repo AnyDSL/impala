@@ -433,6 +433,22 @@ Def PostfixExpr::remit(CodeGen& cg) const {
     return def;
 }
 
+Def DefiniteArrayExpr::remit(CodeGen& cg) const {
+    Array<Def> thorin_args(num_args());
+    for (size_t i = 0, e = num_args(); i != e; ++i)
+        thorin_args[i] = cg.remit(arg(i));
+    return cg.world().definite_array(cg.convert(type()).as<thorin::DefiniteArrayType>()->elem_type(), thorin_args);
+}
+
+Def RepeatedDefiniteArrayExpr::remit(CodeGen& cg) const {
+    return Def();
+}
+
+Def IndefiniteArrayExpr::remit(CodeGen& cg) const {
+    auto elem = cg.convert(type()).as<thorin::IndefiniteArrayType>()->elem_type();
+    return cg.world().indefinite_array(elem, cg.remit(dim()));
+}
+
 Def MapExpr::remit(CodeGen& cg) const {
     Def ldef = cg.remit(lhs());
 

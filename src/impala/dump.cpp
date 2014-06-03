@@ -286,7 +286,7 @@ std::ostream& RepeatedDefiniteArrayExpr::print(Printer& p) const {
 
 std::ostream& IndefiniteArrayExpr::print(Printer& p) const {
     p.stream() << '[';
-    p.print(size()) << ": ";
+    p.print(dim()) << ": ";
     return elem_type()->print(p) << ']';
 }
 
