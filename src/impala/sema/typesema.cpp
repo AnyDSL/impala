@@ -748,6 +748,18 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
                 sema.error(this) << "require integer as array subscript\n";
         } else
             sema.error(this) << "too many array subscripts\n";
+    } else if (auto exp_tup = ltype.isa<TupleType>()) {
+        if (num_args() == 1) {
+            sema.check(arg(0));
+            if (sema.expect_int(arg(0))) {
+                if (auto lit = arg(0)->isa<LiteralExpr>())
+                    return exp_tup->elem(lit->get_u64());
+                else
+                    sema.error(this) << "require literal as tuple subscript\n";
+            } else
+                sema.error(this) << "require integer as tuple subscript\n";
+        } else
+            sema.error(this) << "too many tuple subscripts\n";
     } else
         sema.error(this) << "incorrect type for map expression\n";
 
