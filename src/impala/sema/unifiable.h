@@ -26,6 +26,7 @@ class TypeTable;
 class Unifiable;
 
 template<class T> class Proxy;
+class ArrayTypeNode;            typedef Proxy<ArrayTypeNode>            ArrayType;
 class BorrowedPtrTypeNode;      typedef Proxy<BorrowedPtrTypeNode>      BorrowedPtrType;
 class BoundNode;                typedef Proxy<BoundNode>                Bound;
 class DefiniteArrayTypeNode;    typedef Proxy<DefiniteArrayTypeNode>    DefiniteArrayType;

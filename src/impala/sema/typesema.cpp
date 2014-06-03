@@ -25,7 +25,7 @@ public:
 
     // error handling
 
-    void expect_int(const Expr*);
+    bool expect_int(const Expr*);
     void expect_num(const Expr*);
     Type match_types(const ASTNode* pos, Type t1, Type t2);
     Type expect_type(const Expr* expr, Type found, Type expected, std::string what);
@@ -77,14 +77,17 @@ private:
 
 // TODO factor code with expect_num
 // TODO maybe have variant which also checks expr
-void TypeSema::expect_int(const Expr* expr) {
+bool TypeSema::expect_int(const Expr* expr) {
     Type t = expr->type();
 
     if (t->is_error())
-        return;
+        return true;
 
-    if ((t->is_i8()) && (t->is_i16()) && (t->is_i32()) && (t->is_i64())) // TODO factor this test out
+    if (!t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64()) { // TODO factor this test out
         error(expr) << "expected integer type but found " << t << "\n";
+        return false;
+    }
+    return true;
 }
 
 void TypeSema::expect_num(const Expr* expr) {
@@ -93,8 +96,8 @@ void TypeSema::expect_num(const Expr* expr) {
     if (t->is_error())
         return;
 
-    if ((t->is_i8()) && (t->is_i16()) && (t->is_i32()) && // TODO factor this test out
-            (t->is_i64()) && (t->is_f32()) && (t->is_f64()))
+     // TODO factor this test out
+    if (!t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() && !t->is_f32() && !t->is_f64())
         error(expr) << "expected number type but found " << t << "\n";
 }
 
@@ -710,9 +713,19 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
             return sema.check_call(this->loc(), fn_method, type_args(), inferred_args_, nargs, expected);
         } else
             sema.error(this) << "no declaration for method '" << field_expr->symbol() << "' found.\n";
-    }
-    if (auto fn_poly = ltype.isa<FnType>())
+    } else if (auto fn_poly = ltype.isa<FnType>()) {
         return sema.check_call(this->loc(), fn_poly, type_args(), inferred_args_, args(), expected);
+    } else if (auto array = ltype.isa<ArrayType>()) {
+        if (num_args() == 1) {
+            sema.check(arg(0));
+            if (sema.expect_int(arg(0)))
+                return array->elem_type();
+            else
+                sema.error(this) << "require integer as array subscript\n";
+        } else
+            sema.error(this) << "too many array subscripts\n";
+    } else
+        sema.error(this) << "incorrect type for map expression\n";
 
     return sema.type_error();
 }
