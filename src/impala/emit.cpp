@@ -339,6 +339,15 @@ Def PrefixExpr::remit(CodeGen& cg) const {
         case ADD: return cg.remit(rhs());
         case SUB: return cg.world().arithop_minus(cg.remit(rhs()));
         case NOT: return cg.world().arithop_not(cg.remit(rhs()));
+        case TILDE: {
+            auto def = cg.remit(rhs());
+            def->dump();
+            auto mem = cg.get_mem();
+            auto ptr = cg.world().alloc(mem, def->type());
+            ptr->dump();
+            cg.set_mem(cg.world().store(mem, ptr, def));
+            return ptr;
+        }
         default: THORIN_UNREACHABLE;
     }
 }
