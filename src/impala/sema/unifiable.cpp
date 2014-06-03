@@ -331,8 +331,12 @@ Type FnTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *ty
 Type TupleTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().tuple_type(specialize_elems(map)); }
 Type StructTypeNode::vinstantiate(SpecializeMap& map) const { assert(false); return nullptr; }
 Type TypeVarNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
-Type OwnedPtrNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().owned_ptr(referenced_type()->specialize(map)); }
-Type BorrowedPtrNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().borrowd_ptr(referenced_type()->specialize(map)); }
+Type OwnedPtrTypeNode::vinstantiate(SpecializeMap& map) const { 
+    return map[this] = *typetable().owned_ptr_type(referenced_type()->specialize(map)); 
+}
+Type BorrowedPtrTypeNode::vinstantiate(SpecializeMap& map) const { 
+    return map[this] = *typetable().borrowd_ptr_type(referenced_type()->specialize(map)); 
+}
 
 Bound TraitNode::instantiate(ArrayRef<Type> type_args) const {
     return typetable().bound(this, type_args);
@@ -620,11 +624,11 @@ std::string BoundNode::to_string() const {
     return result + "]";
 }
 
-std::string OwnedPtrNode::to_string() const {
+std::string OwnedPtrTypeNode::to_string() const {
     return "~" + referenced_type()->to_string();
 }
 
-std::string BorrowedPtrNode::to_string() const {
+std::string BorrowedPtrTypeNode::to_string() const {
     return "&" + referenced_type()->to_string();
 }
 

@@ -348,8 +348,13 @@ Def PrefixExpr::remit(CodeGen& cg) const {
             cg.set_mem(cg.world().store(mem, ptr, def));
             return ptr;
         }
-        default: THORIN_UNREACHABLE;
+        default:  return cg.lemit(this).load();
     }
+}
+
+Var PrefixExpr::lemit(CodeGen& cg) const {
+    assert(kind() == MUL);
+    return Var(cg, cg.remit(rhs()));
 }
 
 void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {

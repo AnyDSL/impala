@@ -26,22 +26,23 @@ class TypeTable;
 class Unifiable;
 
 template<class T> class Proxy;
-class BoundNode;        typedef Proxy<BoundNode>        Bound;
-class FnTypeNode;       typedef Proxy<FnTypeNode>       FnType;
-class ImplNode;         typedef Proxy<ImplNode>         Impl;
-class KnownTypeNode;    typedef Proxy<KnownTypeNode>    KnownType;
-class NoRetTypeNode;    typedef Proxy<NoRetTypeNode>    NoRetType;
-class PrimTypeNode;     typedef Proxy<PrimTypeNode>     PrimType;
-class StructTypeNode;   typedef Proxy<StructTypeNode>   StructType;
-class TraitNode;        typedef Proxy<TraitNode>        Trait;
-class TupleTypeNode;    typedef Proxy<TupleTypeNode>    TupleType;
-class TypeErrorNode;    typedef Proxy<TypeErrorNode>    TypeError;
-class TypeNode;         typedef Proxy<TypeNode>         Type;
-class TypeVarNode;      typedef Proxy<TypeVarNode>      TypeVar;
-class OwnedPtrNode;     typedef Proxy<OwnedPtrNode>     OwnedPtr;
-class BorrowedPtrNode;  typedef Proxy<BorrowedPtrNode>  BorrowedPtr;
-class Unifiable;        typedef Proxy<Unifiable>        Uni;
-class UnknownTypeNode;  typedef Proxy<UnknownTypeNode>  UnknownType;
+class BoundNode;            typedef Proxy<BoundNode>            Bound;
+class FnTypeNode;           typedef Proxy<FnTypeNode>           FnType;
+class ImplNode;             typedef Proxy<ImplNode>             Impl;
+class KnownTypeNode;        typedef Proxy<KnownTypeNode>        KnownType;
+class NoRetTypeNode;        typedef Proxy<NoRetTypeNode>        NoRetType;
+class PrimTypeNode;         typedef Proxy<PrimTypeNode>         PrimType;
+class StructTypeNode;       typedef Proxy<StructTypeNode>       StructType;
+class TraitNode;            typedef Proxy<TraitNode>            Trait;
+class TupleTypeNode;        typedef Proxy<TupleTypeNode>        TupleType;
+class TypeErrorNode;        typedef Proxy<TypeErrorNode>        TypeError;
+class TypeNode;             typedef Proxy<TypeNode>             Type;
+class TypeVarNode;          typedef Proxy<TypeVarNode>          TypeVar;
+class PtrTypeNode;          typedef Proxy<PtrTypeNode>          PtrType;
+class OwnedPtrTypeNode;     typedef Proxy<OwnedPtrTypeNode>     OwnedPtrType;
+class BorrowedPtrTypeNode;  typedef Proxy<BorrowedPtrTypeNode>  BorrowedPtrType;
+class Unifiable;            typedef Proxy<Unifiable>            Uni;
+class UnknownTypeNode;      typedef Proxy<UnknownTypeNode>      UnknownType;
 
 //------------------------------------------------------------------------------
 
@@ -493,9 +494,9 @@ private:
     virtual thorin::Type convert(CodeGen&) const override;
 };
 
-class OwnedPtrNode : public PtrTypeNode {
+class OwnedPtrTypeNode : public PtrTypeNode {
 public:
-    OwnedPtrNode(TypeTable& typetable, Type referenced_type)
+    OwnedPtrTypeNode(TypeTable& typetable, Type referenced_type)
         : PtrTypeNode(typetable, Kind_owned_ptr, referenced_type)
     {}
 
@@ -505,9 +506,9 @@ private:
     virtual Type vinstantiate(SpecializeMap&) const override;
 };
 
-class BorrowedPtrNode : public PtrTypeNode {
+class BorrowedPtrTypeNode : public PtrTypeNode {
 public:
-    BorrowedPtrNode(TypeTable& typetable, Type referenced_type)
+    BorrowedPtrTypeNode(TypeTable& typetable, Type referenced_type)
         : PtrTypeNode(typetable, Kind_borrowed_ptr, referenced_type)
     {}
 

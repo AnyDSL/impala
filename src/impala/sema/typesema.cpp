@@ -223,9 +223,9 @@ Type PrimASTType::check(TypeSema& sema) const {
 Type PtrASTType::check(TypeSema& sema) const {
     auto type = sema.check(referenced_type());
     if (is_owned())
-        return sema.owned_ptr(type);
+        return sema.owned_ptr_type(type);
     if (is_borrowed())
-        return sema.borrowd_ptr(type);
+        return sema.borrowd_ptr_type(type);
     assert(false && "only owned and borrowed ptrs are supported");
     return Type();
 }
@@ -523,14 +523,17 @@ Type PathExpr::check(TypeSema& sema, Type expected) const {
 
 Type PrefixExpr::check(TypeSema& sema, Type expected) const {
     // TODO check if operator supports the type
-    auto rht = sema.check(rhs());
+    auto rtype = sema.check(rhs());
     switch (kind()) {
         case AND:
-            return sema.borrowd_ptr(rht);
+            return sema.borrowd_ptr_type(rtype);
         case TILDE:
-            return sema.owned_ptr(rht);
+            return sema.owned_ptr_type(rtype);
+        case MUL:
+            if (auto ptr = rtype.isa<PtrType>())
+                return ptr->referenced_type();
         default:
-            return rht;
+            return rtype;
     }
 }
 

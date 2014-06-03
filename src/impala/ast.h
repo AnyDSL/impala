@@ -857,6 +857,7 @@ public:
     const Expr* rhs() const { return rhs_; }
     Kind kind() const { return kind_; }
     virtual void check(NameSema&) const override;
+    virtual thorin::Var lemit(CodeGen& cg) const override;
     virtual thorin::Def remit(CodeGen&) const override;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
 
