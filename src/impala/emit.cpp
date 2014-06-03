@@ -452,7 +452,16 @@ Def IndefiniteArrayExpr::remit(CodeGen& cg) const {
 }
 
 Var MapExpr::lemit(CodeGen& cg) const {
-    //if (auto 
+#if 0
+    if (auto array = lhs()->type().isa<ArrayType>()) {
+        auto offset = cg.remit(arg(0));
+        return Var(cg.lemit(lhs()), offset);
+    } else if (auto tuple = lhs()->type().isa<TupleType>()) {
+        auto offset = cg.remit(arg(0));
+        return Var(cg.lemit(lhs()), offset);
+    } else
+        THORIN_UNREACHABLE;
+#endif
     return Var();
 }
 
