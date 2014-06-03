@@ -34,8 +34,24 @@ bool IfExpr::has_else() const {
     return true;
 }
 
+//------------------------------------------------------------------------------
+
+/*
+ * is_lvalue
+ */
+
 bool MapExpr::is_lvalue() const {
-    return lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>();
+    return (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) ?  lhs()->is_lvalue() : false;
 }
+
+bool PrefixExpr::is_lvalue() const {
+    return kind() == MUL;
+}
+
+bool FieldExpr::is_lvalue() const {
+    return true; // TODO
+}
+
+//------------------------------------------------------------------------------
 
 }

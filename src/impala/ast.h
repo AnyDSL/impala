@@ -862,6 +862,7 @@ public:
 
     const Expr* rhs() const { return rhs_; }
     Kind kind() const { return kind_; }
+    virtual bool is_lvalue() const override;
     virtual void check(NameSema&) const override;
     virtual thorin::Var lemit(CodeGen& cg) const override;
     virtual thorin::Def remit(CodeGen&) const override;
@@ -933,6 +934,7 @@ class FieldExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
     Symbol symbol() const { return symbol_; }
+    virtual bool is_lvalue() const override;
     virtual void check(NameSema&) const override;
 
 private:
