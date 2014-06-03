@@ -1,7 +1,7 @@
 //extern fn array(int) -> [float];
 
-fn main(n: int) -> [int] {
-    [n: int]
+fn main(n: int) -> ~[int] {
+    ~[n: int]
     /*
     let a = [[0, 1, 2], [0, .. 3], [6, 7, 8]];
     let x = [1];

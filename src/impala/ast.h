@@ -704,6 +704,7 @@ private:
 
 class Expr : public ASTNode, public Typeable {
 public:
+    thorin::Def extra() const { return extra_; }
     virtual void check(NameSema&) const = 0;
 
 private:
@@ -713,6 +714,9 @@ private:
     virtual thorin::Def remit(CodeGen&) const;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
+
+protected:
+    mutable thorin::Def extra_; ///< Needed to propagate extend of indefinite arrays.
 
     friend class CodeGen;
     friend class Parser;

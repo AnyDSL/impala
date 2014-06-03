@@ -344,7 +344,7 @@ Def PrefixExpr::remit(CodeGen& cg) const {
             auto def = cg.remit(rhs());
             def->dump();
             auto mem = cg.get_mem();
-            auto ptr = cg.world().alloc(mem, def->type());
+            auto ptr = rhs()->extra() ? cg.world().alloc(mem, def->type(), rhs()->extra()) : cg.world().alloc(mem, def->type());
             ptr->dump();
             cg.set_mem(cg.world().store(mem, ptr, def));
             return ptr;
@@ -445,8 +445,8 @@ Def RepeatedDefiniteArrayExpr::remit(CodeGen& cg) const {
 }
 
 Def IndefiniteArrayExpr::remit(CodeGen& cg) const {
-    auto elem = cg.convert(type()).as<thorin::IndefiniteArrayType>()->elem_type();
-    return cg.world().indefinite_array(elem, cg.remit(dim()));
+    extra_ = cg.remit(dim());
+    return cg.world().indefinite_array(cg.convert(type()).as<thorin::IndefiniteArrayType>()->elem_type(), extra_);
 }
 
 Def MapExpr::remit(CodeGen& cg) const {
