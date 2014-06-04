@@ -710,7 +710,7 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
             for (size_t i = 0; i != num_args; ++i)
                 check(args[i], fn_mono->elem(i), "argument");
 
-            if (is_contuation || fn_mono->return_type() == expected) {
+            if (fn_mono->return_type() == expected || is_contuation) {
                 bool is_known = true;
                 for (size_t i = 0, e = inferred_args.size(); i != e; ++i) {
                     if (!inferred_args[i]->is_known()) {
