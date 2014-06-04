@@ -5,7 +5,7 @@ fn f[A](a: fn(fn(A)), g: fn[B](B, A, fn(B))) -> i32 {
 fn main() -> () {
     f[bool](|| -> bool {
         true
-    }, |b: _40_, a: bool| -> _40_ {
+    }, |b: _39_, a: bool| -> _39_ {
         b
     });
 }

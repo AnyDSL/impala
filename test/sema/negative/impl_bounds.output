@@ -1,1 +1,1 @@
-impl_bounds.impala:6 col 5 - 10: error: 'i32' (instance for 'D') does not implement bound 'T[i32]'
+impl_bounds.impala:6 col 5 - 14: error: 'i32' (instance for 'D') does not implement bound 'T[i32]'

@@ -326,9 +326,10 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
 }
 
 void Fn::check_body(TypeSema& sema, FnType fn_type) const {
-    Type body_type = sema.check(body());
+    auto return_type = fn_type->return_type();
+    Type body_type = sema.check(body(), return_type);
     if (!body_type->is_noret() && !body_type->is_error())
-        sema.expect_type(body(), fn_type->return_type(), "return");
+        sema.expect_type(body(), return_type, "return");
 }
 
 //------------------------------------------------------------------------------
@@ -707,7 +708,7 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
             for (size_t i = 0; i != num_args; ++i)
                 check(args[i], fn_mono->elem(i), "argument");
 
-            if (fn_mono->return_type() == expected) {
+            if (is_contuation || fn_mono->return_type() == expected) {
                 bool is_known = true;
                 for (size_t i = 0, e = inferred_args.size(); i != e; ++i) {
                     if (!inferred_args[i]->is_known()) {
