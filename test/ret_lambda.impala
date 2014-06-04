@@ -1,12 +1,7 @@
-fn f(a : int) -> fn(int) -> int {
-    return |i : int| -> int { 
-        if (i == a)
-            return i + a; 
-        else
-            return i + 42;
-    };
+fn f(a: int) -> fn(int) -> int {
+    |i: int| -> int if i == a { i + a } else { i + 42 }
 }
 
-fn main(i : int) -> int {
-    return f(i)(i);
+fn main(i: int) -> int {
+    f(i)(i)
 }
