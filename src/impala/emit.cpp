@@ -351,6 +351,8 @@ Def PrefixExpr::remit(CodeGen& cg) const {
             cg.set_mem(cg.world().store(mem, ptr, def));
             return ptr;
         }
+        case RUN:  return cg.world().run(cg.remit(rhs()));
+        case HALT: return cg.world().hlt(cg.remit(rhs()));
         default:  return cg.lemit(this).load();
     }
 }
@@ -506,13 +508,22 @@ Def ForExpr::remit(CodeGen& cg) const {
     auto next = cg.world().lambda(cg.world().fn_type({cg.world().mem_type()}), "break");
     break_->var_ = Var::create_val(cg, next);
 
+    // peal off run and halt
+    auto forexpr = expr();
+    auto prefix = forexpr->isa<PrefixExpr>();
+    if (prefix && (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HALT))
+        forexpr = prefix->rhs();
+
     // emit call
-    auto map_expr = expr()->as<MapExpr>();
+    auto map_expr = forexpr->as<MapExpr>();
     for (auto arg : map_expr->args())
         defs.push_back(cg.remit(arg));
     defs.push_back(cg.remit(fn_expr()));
     defs.push_back(next);
-    cg.call(cg.remit(map_expr->lhs()), defs, thorin::Type());
+    auto fun = cg.remit(map_expr->lhs());
+    if (prefix && prefix->kind() == PrefixExpr::RUN)  fun = cg.world().run(fun);
+    if (prefix && prefix->kind() == PrefixExpr::HALT) fun = cg.world().hlt(fun);
+    cg.call(fun, defs, thorin::Type());
 
     // go to break continuation
     cg.cur_bb = next;
