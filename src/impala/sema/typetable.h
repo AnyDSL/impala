@@ -18,8 +18,14 @@ public:
     BorrowedPtrType     borrowd_ptr_type(Type referenced_type) { return join(new BorrowedPtrTypeNode(*this, referenced_type)); }
     Bound               bound(Trait trait, ArrayRef<Type> args) { return join(new BoundNode(trait, args)); }
     Bound               bound_error() { return bound_error_; }
+    DefiniteArrayType   definite_array_type(Type elem_type, uint64_t dim) { 
+        return join(new DefiniteArrayTypeNode(*this, elem_type, dim)); 
+    }
     FnType              fn_type(ArrayRef<Type> params) { return join(new FnTypeNode(*this, params)); }
     Impl                impl(const ImplItem* impl, Bound bound, Type type) { return join(new ImplNode(*this, impl, bound, type)); }
+    IndefiniteArrayType indefinite_array_type(Type elem_type) { 
+        return join(new IndefiniteArrayTypeNode(*this, elem_type)); 
+    }
     NoRetType           type_noret() { return type_noret_; }
     OwnedPtrType        owned_ptr_type(Type referenced_type) { return join(new OwnedPtrTypeNode(*this, referenced_type)); }
     PrimType            type(PrimTypeKind kind);
@@ -31,12 +37,6 @@ public:
     TypeError           type_error() { return type_error_; }
     TypeVar             type_var(Symbol name = Symbol()) { return join(new TypeVarNode(*this, name)); }
     UnknownType         unknown_type() { return join(new UnknownTypeNode(*this)); }
-    DefiniteArrayType   definite_array_type(Type elem_type, uint64_t dim) { 
-        return join(new DefiniteArrayTypeNode(*this, elem_type, dim)); 
-    }
-    IndefiniteArrayType indefinite_array_type(Type elem_type) { 
-        return join(new IndefiniteArrayTypeNode(*this, elem_type)); 
-    }
 
     /// Unify a type and return its representative.
     template<class T> Proxy<T> unify(Proxy<T> proxy) { return unify(*proxy)->template as<T>(); }

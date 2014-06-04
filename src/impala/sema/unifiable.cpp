@@ -323,26 +323,42 @@ Type TypeNode::instantiate(ArrayRef<Type> type_args) const {
     return instantiate(map);
 }
 
-Type UnknownTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().unknown_type(); }
-Type TypeErrorNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
-Type NoRetTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
-Type PrimTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
-Type FnTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().fn_type(specialize_elems(map)); }
-Type TupleTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = *typetable().tuple_type(specialize_elems(map)); }
-Type StructTypeNode::vinstantiate(SpecializeMap& map) const { assert(false); return nullptr; }
-Type TypeVarNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
-Type OwnedPtrTypeNode::vinstantiate(SpecializeMap& map) const { 
-    return map[this] = *typetable().owned_ptr_type(referenced_type()->specialize(map)); 
-}
 Type BorrowedPtrTypeNode::vinstantiate(SpecializeMap& map) const { 
     return map[this] = *typetable().borrowd_ptr_type(referenced_type()->specialize(map)); 
 }
+
 Type DefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const { 
     return map[this] = *typetable().definite_array_type(elem_type()->specialize(map), dim()); 
 }
+
+Type FnTypeNode::vinstantiate(SpecializeMap& map) const { 
+    return map[this] = *typetable().fn_type(specialize_elems(map)); 
+}
+
 Type IndefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const {
     return map[this] = *typetable().indefinite_array_type(elem_type()->specialize(map)); 
 }
+
+Type OwnedPtrTypeNode::vinstantiate(SpecializeMap& map) const { 
+    return map[this] = *typetable().owned_ptr_type(referenced_type()->specialize(map)); 
+}
+
+Type StructTypeNode::vinstantiate(SpecializeMap& map) const { 
+    assert(false && "TODO"); return nullptr; 
+}
+
+Type TupleTypeNode::vinstantiate(SpecializeMap& map) const { 
+    return map[this] = *typetable().tuple_type(specialize_elems(map)); 
+}
+
+Type UnknownTypeNode::vinstantiate(SpecializeMap& map) const { 
+    return map[this] = *typetable().unknown_type(); 
+}
+
+Type NoRetTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
+Type PrimTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
+Type TypeErrorNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
+Type TypeVarNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 
 Bound TraitNode::instantiate(ArrayRef<Type> type_args) const {
     return typetable().bound(this, type_args);
