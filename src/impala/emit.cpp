@@ -228,11 +228,6 @@ Var FnDecl::emit(CodeGen& cg) const {
         lambda()->attribute().set(Lambda::Extern);
     }
 
-    lambda()->dump_head();
-    std::cout << lambda()->type()->order() << std::endl;
-    for (auto param : lambda()->params())
-        std::cout << param->unique_name() << "/" << param->type()->order() << std::endl;
-
     // setup builtin functions
     if (lambda()->name == "cuda")
         lambda()->attribute().set(Lambda::CUDA);
