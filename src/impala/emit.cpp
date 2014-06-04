@@ -156,6 +156,7 @@ Lambda* Fn::emit_head(CodeGen& cg) const {
 }
 
 void Fn::emit_body(CodeGen& cg) const {
+    if (body()==nullptr) return;
     // setup function nest
     lambda()->set_parent(cg.cur_bb);
     THORIN_PUSH(cg.cur_fn, this);
