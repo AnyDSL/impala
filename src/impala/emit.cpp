@@ -229,8 +229,12 @@ Var FnDecl::emit(CodeGen& cg) const {
     }
 
     // setup builtin functions
-    if (lambda()->name == "nvvm")
+    if (lambda()->name == "cuda")
+        lambda()->attribute().set(Lambda::CUDA);
+    else if (lambda()->name == "nvvm")
         lambda()->attribute().set(Lambda::NVVM);
+    else if (lambda()->name == "opencl")
+        lambda()->attribute().set(Lambda::OPENCL);
     else if (lambda()->name == "spir")
         lambda()->attribute().set(Lambda::SPIR);
     else if (lambda()->name == "array")
