@@ -154,12 +154,12 @@ public:
     const TypeParam* parse_type_param();
     const Param* parse_param(bool lambda);
     void parse_param_list(AutoVector<const Param*>& params, TokenKind delimiter, bool lambda);
-    Param* parse_return_param(AutoVector<const Param*>&, bool& noret);
+    void parse_return_param(AutoVector<const Param*>&);
 
     // types
     const ASTType*      parse_type();
     const ArrayASTType* parse_array_type();
-    const ASTType*      parse_return_type(bool& noret);
+    const ASTType*      parse_return_type();
     const FnASTType*    parse_fn_type();
     const PrimASTType*  parse_prim_type();
     const PtrASTType*   parse_ptr_type();
@@ -386,19 +386,15 @@ const Param* Parser::parse_param(bool lambda) {
     return param;
 }
 
-Param* Parser::parse_return_param(AutoVector<const Param*>& params, bool& noret) {
-    auto fn_type = parse_return_type(noret);
-    Param* param = nullptr;
-    if (!noret) {
-        param = new Param(cur_var_handle++);
+void Parser::parse_return_param(AutoVector<const Param*>& params) {
+    if (auto fn_type = parse_return_type()) {
+        auto param = new Param(cur_var_handle++);
         param->is_mut_ = false;
         param->symbol_ = "return";
         param->ast_type_ = fn_type;
-        if (fn_type != nullptr)
-            param->set_loc(fn_type->loc());
+        param->set_loc(fn_type->loc());
         params.push_back(param);
     }
-    return param;
 }
 
 /*
@@ -465,8 +461,7 @@ FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
     parse_type_params(fn_decl->type_params_);
     expect(Token::L_PAREN, "function head");
     parse_param_list(fn_decl->params_, Token::R_PAREN, false);
-    bool noret = true;
-    parse_return_param(fn_decl->params_, noret);
+    parse_return_param(fn_decl->params_);
 
     switch (body_mode) {
         case BodyMode::None:      expect(Token::SEMICOLON, "function declaration"); break;
@@ -669,22 +664,16 @@ const FnASTType* Parser::parse_fn_type() {
         fn_type->elems_.push_back(parse_type()); 
     });
 
-    bool noret;
-    const ASTType* ret_type = parse_return_type(noret);
-    if (ret_type != nullptr)
+    if (auto ret_type = parse_return_type())
         fn_type->elems_.push_back(ret_type);
 
     return fn_type;
 }
 
-const ASTType* Parser::parse_return_type(bool& noret) {
+const ASTType* Parser::parse_return_type() {
     if (accept(Token::ARROW)) {
-        if (accept(Token::NOT)) {
-            noret = true; // if "no-return" specified
+        if (accept(Token::NOT))
             return nullptr;
-        }
-
-        noret = false;
 
         auto ret_type = loc(new FnASTType());
         if (accept(Token::L_PAREN)) {                   // in-place tuple
@@ -958,11 +947,7 @@ const FnExpr* Parser::parse_fn_expr() {
     else
         expect(Token::OROR, "parameter list of function expression");
 
-    bool noret = true;
-    Param* retpar = parse_return_param(fn_expr->params_, noret);
-    assert(noret == (retpar == nullptr));
-    if ((retpar != nullptr) && (!retpar->loc().is_set()))
-        retpar->set_loc(fn_expr->loc().pos1());
+    parse_return_param(fn_expr->params_);
     fn_expr->body_ = parse_expr();
     return fn_expr;
 }
