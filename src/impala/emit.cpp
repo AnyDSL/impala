@@ -147,8 +147,8 @@ thorin::Type IndefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.wor
 Var LocalDecl::emit(CodeGen& cg) const {
     auto thorin_type = cg.convert(type());
     if (is_address_taken())
-        return var_ = Var(cg, cg.world().slot(thorin_type, cg.frame(), handle(), symbol().str()));
-    return var_ = Var(cg, handle(), thorin_type, symbol().str());
+        return var_ = Var::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), handle(), symbol().str()));
+    return var_ = Var::create_mut(cg, handle(), thorin_type, symbol().str()); // TODO
 }
 
 Lambda* Fn::emit_head(CodeGen& cg) const {
@@ -217,7 +217,7 @@ void ModContents::emit(CodeGen& cg) const {
 
 Var FnDecl::emit(CodeGen& cg) const {
     // create thorin function
-    var_ = Var(cg, emit_head(cg));
+    var_ = Var::create_val(cg, emit_head(cg));
     if (is_extern())
         lambda_->attribute().set(Lambda::Extern);
 
@@ -357,7 +357,7 @@ Def PrefixExpr::remit(CodeGen& cg) const {
 
 Var PrefixExpr::lemit(CodeGen& cg) const {
     assert(kind() == MUL);
-    return Var(cg, cg.remit(rhs()));
+    return Var::create_ptr(cg, cg.remit(rhs()));
 }
 
 void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
@@ -452,8 +452,11 @@ Def IndefiniteArrayExpr::remit(CodeGen& cg) const {
 }
 
 Var MapExpr::lemit(CodeGen& cg) const {
-    //if (auto 
-    return Var();
+    if (auto array = lhs()->type().isa<ArrayType>()) {
+        auto index = cg.remit(arg(0));
+        return Var::create_agg(cg.lemit(lhs()), index);
+    }
+    THORIN_UNREACHABLE;
 }
 
 Def MapExpr::remit(CodeGen& cg) const {
@@ -491,7 +494,7 @@ Def ForExpr::remit(CodeGen& cg) const {
 
     // prepare break continuation
     auto next = cg.world().lambda(cg.world().fn_type({cg.world().mem_type()}), "break");
-    break_->var_ = Var(cg, next);
+    break_->var_ = Var::create_val(cg, next);
 
     // emit call
     auto map_expr = expr()->as<MapExpr>();
