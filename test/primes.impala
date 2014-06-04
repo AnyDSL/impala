@@ -3,7 +3,7 @@ fn primes[T](n: int, t: T, body: fn(int, T, fn(T)), ret: fn(T)) {
         ret(t)
     }
 
-    body(2, t, |t: T| {
+    body(2, t, |t| {
         fn loop(i: int, t: T) {
             fn inner_loop(j: int) {
                 if j < i {
