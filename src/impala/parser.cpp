@@ -154,7 +154,7 @@ public:
     const TypeParam* parse_type_param();
     const Param* parse_param(bool lambda);
     void parse_param_list(AutoVector<const Param*>& params, TokenKind delimiter, bool lambda);
-    Param* parse_return_param(AutoVector<const Param*>&, bool&);
+    Param* parse_return_param(AutoVector<const Param*>&, bool& noret);
 
     // types
     const ASTType*      parse_type();
@@ -465,8 +465,8 @@ FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
     parse_type_params(fn_decl->type_params_);
     expect(Token::L_PAREN, "function head");
     parse_param_list(fn_decl->params_, Token::R_PAREN, false);
-    bool noret_by_default = true;
-    parse_return_param(fn_decl->params_, noret_by_default);
+    bool noret = true;
+    parse_return_param(fn_decl->params_, noret);
 
     switch (body_mode) {
         case BodyMode::None:      expect(Token::SEMICOLON, "function declaration"); break;
@@ -958,7 +958,7 @@ const FnExpr* Parser::parse_fn_expr() {
     else
         expect(Token::OROR, "parameter list of function expression");
 
-    bool noret = false;
+    bool noret = true;
     Param* retpar = parse_return_param(fn_expr->params_, noret);
     assert(noret == (retpar == nullptr));
     if ((retpar != nullptr) && (!retpar->loc().is_set()))

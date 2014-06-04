@@ -13,7 +13,7 @@ fn primes[T](n: int, t: T, body: fn(int, T, fn(T)), ret: fn(T)) {
                         inner_loop(j + 1)
                     }
                 }
-                body(i, t, |t: T| { loop(i+1, t); });
+                body(i, t, |t| loop(i+1, t))
             }
             if (i < n) {
                 inner_loop(2)
@@ -22,16 +22,11 @@ fn primes[T](n: int, t: T, body: fn(int, T, fn(T)), ret: fn(T)) {
             }
         }
         loop(3, t)
-    });
+    })
 }
 
 fn main(main_ret: fn(int)) {
-    @primes(50, 0,
-        |p: int, result: int, next: fn(int)| {
-            next(result + p);
-        },
-        |result: int| {
-            main_ret(result);
-        }
-    );
+    primes(50, 0, 
+           |p, result, next| next(result + p), 
+           |result| main_ret(result))
 }

@@ -358,6 +358,7 @@ protected:
     friend class TypeSema;
     friend class ForExpr;
     friend class CodeGen;
+    friend class FnExpr;
 };
 
 /// Base class for all Values which may be mutated within a function.
@@ -444,9 +445,9 @@ protected:
     mutable thorin::Lambda* lambda_;
     mutable SafePtr<const thorin::Param> ret_param_;
     mutable SafePtr<const thorin::Enter> frame_;
+    AutoVector<const Param*> params_;
 
 private:
-    AutoVector<const Param*> params_;
     AutoPtr<const Expr> body_;
 
     friend class Parser;

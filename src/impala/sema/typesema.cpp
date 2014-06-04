@@ -512,6 +512,15 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
 
     FnType fn_type;
     if (FnType exp_fn = expected.isa<FnType>()) {
+        if (exp_fn->num_elems() == num_params()+1) { // add return param to infer type
+            auto param = new Param(10000); // TODO
+            param->is_mut_ = false;
+            param->symbol_ = "return";
+            param->ast_type_ = nullptr;
+            param->set_loc(this->loc()); // TODO
+            const_cast<FnExpr*>(this)->params_.push_back(param);
+            const_cast<FnExpr*>(this)->has_return_type_ = true;
+        }
         if (exp_fn->num_elems() != num_params())
             sema.error(this) << "expected function with " << exp_fn->num_elems() << " parameters, but found lambda expression with " << num_params() << " parameters\n";
 
