@@ -1,5 +1,14 @@
-fn range_xy[L](mut l : L, xn : int, yn : int, 
-               body : fn(L, int, int) -> L) -> L
+fn range(a: int, b: int, body: fn(int)->()) -> () {
+    if a < b {
+        body(a);
+        range(a+1, b, body, return)
+    } else {
+        return()
+    }
+}
+
+fn range_xy[L](mut l: L, xn: int, yn: int, 
+               body: fn(L, int, int) -> L) -> L
 {
     for y in range(0, yn) {
         for x in range(0, xn) {
@@ -11,25 +20,24 @@ fn range_xy[L](mut l : L, xn : int, yn : int,
 }
 
 
-fn initially[G,T,R](g : G, xn: int, yn : int, make_strand : fn(G) -> T, write_result : fn(int, int, G, R) -> G, update : fn(G, T, int, int, /*loop*/ fn(T), /*stabilize*/ fn(R), /*die*/ fn())) -> G {
-    range_xy(g, xn, yn, |g : G, x : int, y : int, ret : fn(G)| { 
-        fn loop(strand : T) {
+fn initially[G,T,R](g: G, xn: int, yn: int, make_strand: fn(G) -> T, write_result: fn(int, int, G, R) -> G, update: fn(G, T, int, int, /*loop*/ fn(T), /*stabilize*/ fn(R), /*die*/ fn())) -> G {
+    range_xy(g, xn, yn, |g: G, x: int, y: int, ret: fn(G)| { 
+        fn loop(strand: T) {
             update(g, strand, x, y, 
                 loop, 
                 stab,
-                die); 
+                die)
         }
 
-        fn stab(res : R) { ret(write_result(x, y, g, res)); }
+        fn stab(res: R) { ret(write_result(x, y, g, res)) }
+        fn die() { ret(g) }
 
-        fn die() { ret(g); }
-
-        loop(make_strand(g));
+        loop(make_strand(g))
     })
 }
 
-fn main(j : int) -> i64 {
-    fn update(g : i64, t : i16, xn : int, yn : int, loop : fn(i16), stabilize : fn(i16), die : fn()) {
+fn main(j: int) -> i64 {
+    fn update(g: i64, t: i16, xn: int, yn: int, loop: fn(i16), stabilize: fn(i16), die: fn()) {
         if xn + yn < 42 {
             die()
         }
@@ -40,8 +48,8 @@ fn main(j : int) -> i64 {
         loop(t + 1_i16)
     }
 
-    fn make_strand(g : i64) -> i16 { 24_i16 }
-    fn write_result(x : int, y : int, g : i64, r : i16) -> i64 { 25_i64; }
+    fn make_strand(g: i64) -> i16 { 24_i16 }
+    fn write_result(x: int, y: int, g: i64, r: i16) -> i64 { 25_i64 }
 
     let mut g = 26_i64;
 

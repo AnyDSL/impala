@@ -373,6 +373,8 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
         std::swap(u1, u2);
     if (u2->isa<UnknownTypeNode>())                                 // second one also an UnknownType?
         return false;                                               // ... cannot infer
+    if (u1->is_unified())                                           // normalize to have the unified type as u2
+        std::swap(u1, u2);
 
     if (u2->unify()->is_unified()) {                                // if u2 is unified we try to infer u1
         if (u1->isa<UnknownTypeNode>()) {

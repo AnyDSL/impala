@@ -121,25 +121,14 @@ Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
 }
 
 Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std::string what) {
-    if (auto ut = expected.isa<UnknownType>()) {
-        if (!ut->is_unified()) {
-            if (found_type.isa<UnknownType>()) {
-                return found_type;
-            } else {
-                infer(ut, found_type);
-                return found_type;
-            }
-        }
-    }
+    if (found_type == expected || found_type->is_error() || expected->is_error())
+        return expected;
 
     // TODO: quick hack
     if (auto ptr = found_type.isa<OwnedPtrType>()) {
         if (expected.isa<PtrType>()) 
             return expected;
     }
-
-    if (found_type->is_error() || expected->is_error() || found_type == expected)
-        return expected;
 
     if (found_type->is_polymorphic()) { // try to infer instantiations for this polymorphic type
         std::vector<Type> type_args;
@@ -598,7 +587,7 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
         case MUL:
         case DIV:
         case REM: {
-            auto type = sema.check(rhs(), sema.check(lhs()));
+            auto type = sema.check(lhs(), sema.check(rhs()));
             sema.expect_num(lhs());
             sema.expect_num(rhs());
             return type;
