@@ -134,20 +134,14 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
 
     // TODO: quick hack
     if (auto ptr = found_type.isa<OwnedPtrType>()) {
-        if (expected.isa<PtrType>()) return expected;
+        if (expected.isa<PtrType>()) 
+            return expected;
     }
 
-    // FEATURE make this check faster - e.g. store a "potentially not closed" flag
-    if (!expected->is_closed())
-        return found_type;
-
-    if (found_type->is_error() || expected->is_error())
-        return expected;
-    if (found_type == expected) 
+    if ( found_type->is_error() || expected->is_error() || found_type == expected)
         return expected;
     else {
-        if (found_type->is_polymorphic()) {
-            // try to infer instantiations for this generic type
+        if (found_type->is_polymorphic()) { // try to infer instantiations for this polymorphic type
             std::vector<Type> type_args;
             Type inst = instantiate_unknown(found_type, type_args);
             if (inst == expected) {
@@ -334,7 +328,6 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
 
 void Fn::check_body(TypeSema& sema, FnType fn_type) const {
     Type body_type = sema.check(body());
-    if (!body_type->is_closed()) return; // FEATURE make this check faster - e.g. store a "potentially not closed" flag
     if (!body_type->is_noret() && !body_type->is_error())
         sema.expect_type(body(), fn_type->return_type(), "return");
 }

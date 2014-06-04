@@ -1,5 +1,5 @@
 fn f(a: int) -> fn(int) -> int {
-    |i: int| -> int if i == a { i + a } else { i + 42 }
+    |i| if i == a { i + a } else { i + 42 }
 }
 
 fn main(i: int) -> int {
