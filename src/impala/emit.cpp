@@ -446,15 +446,25 @@ Def RepeatedDefiniteArrayExpr::remit(CodeGen& cg) const {
     return Def();
 }
 
+Def TupleExpr::remit(CodeGen& cg) const {
+    Array<Def> thorin_args(num_args());
+    for (size_t i = 0, e = num_args(); i != e; ++i)
+        thorin_args[i] = cg.remit(arg(i));
+    return cg.world().tuple(thorin_args);
+}
+
 Def IndefiniteArrayExpr::remit(CodeGen& cg) const {
     extra_ = cg.remit(dim());
     return cg.world().indefinite_array(cg.convert(type()).as<thorin::IndefiniteArrayType>()->elem_type(), extra_);
 }
 
 Var MapExpr::lemit(CodeGen& cg) const {
-    if (auto array = lhs()->type().isa<ArrayType>()) {
+    if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) {
         auto index = cg.remit(arg(0));
-        return Var::create_agg(cg.lemit(lhs()), index);
+        if (is_lvalue())
+            return Var::create_agg(cg.lemit(lhs()), index);
+        else
+            return Var::create_agg(Var::create_val(cg, cg.remit(lhs())), index);
     }
     THORIN_UNREACHABLE;
 }

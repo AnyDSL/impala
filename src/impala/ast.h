@@ -866,7 +866,7 @@ public:
     Kind kind() const { return kind_; }
     virtual bool is_lvalue() const override;
     virtual void check(NameSema&) const override;
-    virtual thorin::Var lemit(CodeGen& cg) const override;
+    virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
 
@@ -959,7 +959,7 @@ public:
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
-    virtual thorin::Def remit(CodeGen& cg) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
     AutoPtr<const ASTType> ast_type_;
@@ -1020,6 +1020,7 @@ public:
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
 
     friend class Parser;
 };
@@ -1077,7 +1078,7 @@ public:
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
-    virtual thorin::Var lemit(CodeGen& cg) const override;
+    virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
