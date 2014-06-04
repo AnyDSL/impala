@@ -942,6 +942,7 @@ const FnExpr* Parser::parse_fn_expr() {
         expect(Token::OROR, "parameter list of function expression");
 
     parse_return_param(fn_expr->params_);
+    fn_expr->ret_var_handle_ = cur_var_handle++; // reserve one hanlde - we might later on add another return param
     fn_expr->body_ = parse_expr();
     return fn_expr;
 }
@@ -972,18 +973,8 @@ const ForExpr* Parser::parse_for_expr() {
     auto fn_expr = loc(new FnExpr());
     for_expr->fn_expr_ = fn_expr.get();
     parse_param_list(fn_expr->params_, Token::IN, true);
+    fn_expr->params_.push_back(Param::create(cur_var_handle++, "continue", prev_loc(), new FnASTType(prev_loc())));
 
-    // create continue param
-    auto param = new Param(cur_var_handle++);
-    param->is_mut_ = false;
-    param->symbol_ = "continue";
-    auto cont_type = new FnASTType();
-    cont_type->set_loc(prev_loc_);
-    param->set_loc(prev_loc_);
-    param->ast_type_ = cont_type;
-    fn_expr->params_.push_back(param);
-
-    // create break decl
     auto break_decl = loc(new LocalDecl(cur_var_handle++));
     break_decl->is_mut_ = false;
     break_decl->symbol_ = "break";

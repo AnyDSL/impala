@@ -287,6 +287,10 @@ private:
 
 class FnASTType : public TypeParamList, public CompoundASTType {
 public:
+    FnASTType() {}
+    FnASTType(const Location& loc) {
+        set_loc(loc);
+    }
     const FnASTType* ret_fn_type() const;
     virtual std::ostream& print(Printer&) const override;
 
@@ -417,7 +421,7 @@ public:
         : LocalDecl(handle)
     {}
 
-    static const Param* create(size_t var_handle, Symbol symbol, const Location& loc, const ASTType* fn_type = nullptr);
+    static const Param* create(size_t var_handle, Symbol symbol, const Location& loc, const ASTType* fn_type);
 
     friend class Fn;
     friend class FnDecl;
@@ -825,6 +829,8 @@ private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
+
+    size_t ret_var_handle_;
 
     friend class Parser;
 };
