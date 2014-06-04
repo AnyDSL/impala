@@ -356,9 +356,9 @@ Type UnknownTypeNode::vinstantiate(SpecializeMap& map) const {
 }
 
 Type NoRetTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
-Type PrimTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
+Type PrimTypeNode ::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 Type TypeErrorNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
-Type TypeVarNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
+Type TypeVarNode  ::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 
 Bound TraitNode::instantiate(ArrayRef<Type> type_args) const {
     return typetable().bound(this, type_args);
