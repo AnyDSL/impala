@@ -877,7 +877,6 @@ private:
     AutoPtr<const Expr> rhs_;
 
     friend class Parser;
-    friend class MapExpr;
 };
 
 class InfixExpr : public Expr {
