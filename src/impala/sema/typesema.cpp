@@ -138,19 +138,18 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
             return expected;
     }
 
-    if ( found_type->is_error() || expected->is_error() || found_type == expected)
+    if (found_type->is_error() || expected->is_error() || found_type == expected)
         return expected;
-    else {
-        if (found_type->is_polymorphic()) { // try to infer instantiations for this polymorphic type
-            std::vector<Type> type_args;
-            Type inst = instantiate_unknown(found_type, type_args);
-            if (inst == expected) {
-                check_bounds(expr->loc(), *found_type, type_args);
-                return expected;
-            }
+
+    if (found_type->is_polymorphic()) { // try to infer instantiations for this polymorphic type
+        std::vector<Type> type_args;
+        Type inst = instantiate_unknown(found_type, type_args);
+        if (inst == expected) {
+            check_bounds(expr->loc(), *found_type, type_args);
+            return expected;
         }
-        error(expr) << "wrong " << what << " type; expected " << expected << " but found " << found_type << "\n";
     }
+    error(expr) << "wrong " << what << " type; expected " << expected << " but found " << found_type << "\n";
     return expected;
 }
 
