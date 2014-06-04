@@ -825,8 +825,6 @@ private:
     virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
-    bool has_return_type_;
-
     friend class Parser;
 };
 

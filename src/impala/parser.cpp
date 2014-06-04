@@ -963,7 +963,6 @@ const FnExpr* Parser::parse_fn_expr() {
     assert(noret == (retpar == nullptr));
     if ((retpar != nullptr) && (!retpar->loc().is_set()))
         retpar->set_loc(fn_expr->loc().pos1());
-    fn_expr->has_return_type_ = !noret;
     fn_expr->body_ = parse_expr();
     return fn_expr;
 }

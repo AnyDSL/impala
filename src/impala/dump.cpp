@@ -393,11 +393,12 @@ std::ostream& MapExpr::print(Printer& p) const {
 }
 
 std::ostream& FnExpr::print(Printer& p) const {
+    bool has_return_type = !params().empty() && params().back()->symbol() == "return";
     p.stream() << '|';
-    print_params(p, has_return_type_);
+    print_params(p, has_return_type);
     p.stream() << "| ";
 
-    if (has_return_type_) {
+    if (has_return_type) {
         p.stream() << "-> ";
         auto ret = params().back();
         if (!ret->type().empty()) {
