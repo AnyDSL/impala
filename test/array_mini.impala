@@ -1,5 +1,5 @@
 fn main(i: int) -> int {
-    let a = [0, 1, 2];
+    let mut a = [0, 1, 2];
     ++a(i);
-    a(0);
+    a(0)
 }
