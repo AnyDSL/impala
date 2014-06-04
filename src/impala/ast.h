@@ -348,10 +348,9 @@ private:
     Type check(TypeSema&, Type) const;
     virtual thorin::Var emit(CodeGen&) const = 0;
 
+protected:
     AutoPtr<const ASTType> ast_type_;
     bool is_mut_ = false;
-
-protected:
     mutable thorin::Var var_;
 
     friend class Parser;
@@ -417,6 +416,8 @@ public:
     Param(size_t handle)
         : LocalDecl(handle)
     {}
+
+    static const Param* create(size_t var_handle, Symbol symbol, const Location& loc, const ASTType* fn_type = nullptr);
 
     friend class Fn;
     friend class FnDecl;

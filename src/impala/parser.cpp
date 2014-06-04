@@ -387,14 +387,8 @@ const Param* Parser::parse_param(bool lambda) {
 }
 
 void Parser::parse_return_param(AutoVector<const Param*>& params) {
-    if (auto fn_type = parse_return_type()) {
-        auto param = new Param(cur_var_handle++);
-        param->is_mut_ = false;
-        param->symbol_ = "return";
-        param->ast_type_ = fn_type;
-        param->set_loc(fn_type->loc());
-        params.push_back(param);
-    }
+    if (auto fn_type = parse_return_type())
+        params.push_back(Param::create(cur_var_handle++, "return", fn_type->loc(), fn_type));
 }
 
 /*

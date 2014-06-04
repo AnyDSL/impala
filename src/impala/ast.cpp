@@ -2,6 +2,15 @@
 
 namespace impala {
 
+const Param* Param::create(size_t var_handle, Symbol symbol, const Location& loc, const ASTType* fn_type) {
+    auto param = new Param(var_handle);
+    param->is_mut_ = false;
+    param->symbol_ = symbol;
+    param->ast_type_ = fn_type;
+    param->set_loc(loc);
+    return param;
+}
+
 const PrefixExpr* PrefixExpr::create_deref(const AutoPtr<const Expr>& dock) {
     auto deref = new PrefixExpr();
     deref->set_loc(dock->loc());
