@@ -537,7 +537,7 @@ public:
 class DefiniteArrayTypeNode : public ArrayTypeNode {
 public:
     DefiniteArrayTypeNode(TypeTable& typetable, Type elem_type, uint64_t dim)
-        : ArrayTypeNode(typetable, Kind_owned_ptr, elem_type)
+        : ArrayTypeNode(typetable, Kind_definite_array, elem_type)
         , dim_(dim)
     {}
 
@@ -554,7 +554,7 @@ private:
 class IndefiniteArrayTypeNode : public ArrayTypeNode {
 public:
     IndefiniteArrayTypeNode(TypeTable& typetable, Type elem_type)
-        : ArrayTypeNode(typetable, Kind_borrowed_ptr, elem_type)
+        : ArrayTypeNode(typetable, Kind_indefinite_array, elem_type)
     {}
 
     virtual std::string to_string() const override;
