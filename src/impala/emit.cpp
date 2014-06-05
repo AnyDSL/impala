@@ -243,6 +243,10 @@ Var FnDecl::emit(CodeGen& cg) const {
         lambda()->attribute().set(Lambda::Vectorize);
     else if (lambda()->name == "wfv_get_tid")
         lambda()->attribute().set(Lambda::VectorizeTid | Lambda::Extern);
+    else if (lambda()->name == "map")
+        lambda()->attribute().set(Lambda::Map);
+    else if (lambda()->name == "unmap")
+        lambda()->attribute().set(Lambda::Unmap);
 
     emit_body(cg);
     return var_;
