@@ -254,8 +254,13 @@ Var FnDecl::emit(CodeGen& cg) const {
 
 void ExternBlock::emit_item(CodeGen& cg) const {
     // TODO use abi
-    for (auto fn : fns())
-        fn->emit_head(cg);
+    for (auto fn : fns()) {
+        auto lambda = fn->emit_head(cg);
+        if (abi()==Symbol("\"C\"")) lambda->attribute().set(Lambda::Extern);
+        if (abi()==Symbol("\"llvm\"")) lambda->attribute().set(Lambda::Intrinsic);
+        if (abi()==Symbol("\"raw\"")) lambda->attribute().set(Lambda::Extern);
+        if (abi()==Symbol("\"thorin\"")) continue;
+    }
 }
 
 void ModDecl::emit_item(CodeGen& cg) const {
