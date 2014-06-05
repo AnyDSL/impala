@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
         if (result && emit_annotated)
             impala::dump(prg, fancy);
 
-        if (result && emit_thorin)
+        if (result && (emit_il || emit_llvm || emit_thorin))
             emit(init.world, prg);
 
         if (result) {
