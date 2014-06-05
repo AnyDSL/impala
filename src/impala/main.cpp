@@ -86,6 +86,10 @@ int main(int argc, char** argv) {
             if (infile.substr(i + 1) != "impala")
                 throw logic_error("input file '" + infile + "' does not have '.impala' extension");
             auto rest = infile.substr(0, i);
+            auto f = rest.find_last_of('/');
+            if (f != string::npos) {
+                rest = rest.substr(f+1);
+            }
             if (rest.empty())
                 throw logic_error("input file '" + infile + "' has empty module name");
             module_name = rest;
