@@ -34,9 +34,9 @@ public:
     }
     void emit_jump(bool val, JumpTarget& x) {
         if (is_reachable()) {
-            cur_bb->set_value(1, world().literal(val)); 
-            jump(x); 
-        } 
+            cur_bb->set_value(1, world().literal(val));
+            jump(x);
+        }
     }
     Var lemit(const Expr* expr) { return is_reachable() ? expr->lemit(*this) : Var(); }
     Def remit(const Expr* expr) { return is_reachable() ? expr->remit(*this) : Def(); }
@@ -44,12 +44,12 @@ public:
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
     void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }
     void emit(const Item* item) { item->emit_item(*this); }
-    Var emit(const ValueDecl* decl) { 
+    Var emit(const ValueDecl* decl) {
         if (!decl->var_)
-            decl->var_ = decl->emit(*this); 
+            decl->var_ = decl->emit(*this);
         return decl->var_;
     }
-    thorin::Type convert(const Unifiable* uni) { 
+    thorin::Type convert(const Unifiable* uni) {
         auto unifiable = uni->unify();
         if (!unifiable->thorin_type_) {
             for (auto type_var : unifiable->type_vars())    // convert type vars
@@ -87,7 +87,7 @@ thorin::Type PrimTypeNode::convert(CodeGen& cg) const {
 
 thorin::Type NoRetTypeNode::convert(CodeGen& cg) const { return thorin::Type(); }
 
-thorin::Type FnTypeNode::convert(CodeGen& cg) const { 
+thorin::Type FnTypeNode::convert(CodeGen& cg) const {
     std::vector<thorin::Type> nelems;
 
     nelems.push_back(cg.world().mem_type());
@@ -101,10 +101,10 @@ thorin::Type FnTypeNode::convert(CodeGen& cg) const {
     }
 
     convert_elems(cg, nelems);
-    return cg.world().fn_type(nelems); 
+    return cg.world().fn_type(nelems);
 }
 
-thorin::Type TupleTypeNode::convert(CodeGen& cg) const { 
+thorin::Type TupleTypeNode::convert(CodeGen& cg) const {
     std::vector<thorin::Type> nelems;
     convert_elems(cg, nelems);
     return cg.world().tuple_type(nelems);
@@ -167,7 +167,7 @@ void Fn::emit_body(CodeGen& cg) const {
     Def mem = lambda()->param(i++);
     mem->name = "mem";
     cg.set_mem(mem);
-    frame_ = cg.world().enter(mem); 
+    frame_ = cg.world().enter(mem);
 
     // name bounds and memoize type params
     for (auto type_param : type_params()) {
@@ -262,7 +262,7 @@ void ModDecl::emit_item(CodeGen& cg) const {
 }
 
 void ImplItem::emit_item(CodeGen& cg) const {
-    if (def_) 
+    if (def_)
         return;
 
     Array<thorin::Def> elems(num_methods());
@@ -299,11 +299,11 @@ void Typedef::emit_item(CodeGen& cg) const {
 
 Var Expr::lemit(CodeGen& cg) const { THORIN_UNREACHABLE; }
 Def Expr::remit(CodeGen& cg) const { return lemit(cg).load(); }
-void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const { 
+void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     if (auto def = cg.remit(this)) {
         assert(cg.is_reachable());
-        cg.cur_bb->set_value(1, def); 
-        cg.jump(x); 
+        cg.cur_bb->set_value(1, def);
+        cg.jump(x);
     } else
         assert(!cg.is_reachable());
 }
@@ -394,7 +394,7 @@ void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
                 cg.emit_branch(rhs(), t, f);
             return;
         }
-        default: 
+        default:
             cg.branch(cg.remit(this), t, f);
             return;
     }
@@ -431,7 +431,7 @@ Def InfixExpr::remit(CodeGen& cg) const {
                 lvar.store(rdef);
                 return cg.world().tuple({});
             }
-                
+
             Def ldef = cg.remit(lhs());
             Def rdef = cg.remit(rhs());
             return cg.world().binop(Token::to_binop(op), ldef, rdef);
@@ -556,9 +556,9 @@ void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     cg.jump(x);
 }
 
-Def IfExpr::remit(CodeGen& cg) const { 
+Def IfExpr::remit(CodeGen& cg) const {
     JumpTarget x("next");
-    return cg.converge(this, x); 
+    return cg.converge(this, x);
 }
 
 /*
@@ -570,8 +570,8 @@ void ExprStmt::emit(CodeGen& cg) const {
         cg.remit(expr());
 }
 
-void ItemStmt::emit(CodeGen& cg) const { 
-    cg.emit(item()); 
+void ItemStmt::emit(CodeGen& cg) const {
+    cg.emit(item());
 }
 
 void LetStmt::emit(CodeGen& cg) const {
@@ -587,7 +587,7 @@ void LetStmt::emit(CodeGen& cg) const {
 
 //------------------------------------------------------------------------------
 
-void emit(World& world, const ModContents* mod) { 
+void emit(World& world, const ModContents* mod) {
     CodeGen cg(world);
     mod->emit(cg);
 }
