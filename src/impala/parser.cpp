@@ -435,8 +435,14 @@ Item* Parser::parse_extern_block_or_fn_decl() {
         if (la() == Token::LIT_str)
             extern_block->abi_ = lex().symbol();
         expect(Token::L_BRACE, "opening brace of external block");
-        while (la() == Token::FN)
-            extern_block->fns_.push_back(parse_fn_decl(BodyMode::None)); 
+        while (la() == Token::FN) {
+            auto fn_decl = parse_fn_decl(BodyMode::None); 
+            if (extern_block->abi()==Symbol("\"C\""))      fn_decl->extern_ = true;
+            if (extern_block->abi()==Symbol("\"raw\""))    fn_decl->extern_ = true;
+            if (extern_block->abi()==Symbol("\"llvm\""))   fn_decl->intrinsic_ = true;
+            if (extern_block->abi()==Symbol("\"thorin\"")) { /* TODO */ }
+            extern_block->fns_.push_back(fn_decl);
+        }
         expect(Token::R_BRACE, "closing brace of external block");
         extern_block->set_pos2(prev_loc().pos2());
         item = extern_block;

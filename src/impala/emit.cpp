@@ -221,6 +221,8 @@ Var FnDecl::emit(CodeGen& cg) const {
     var_ = Var::create_val(cg, emit_head(cg));
     if (is_extern())
         lambda_->attribute().set(Lambda::Extern);
+    if (is_intrinsic())
+        lambda_->attribute().set(Lambda::Intrinsic);
 
     // handle main function
     if (symbol() == Symbol("main")) {
@@ -256,10 +258,10 @@ void ExternBlock::emit_item(CodeGen& cg) const {
     // TODO use abi
     for (auto fn : fns()) {
         auto lambda = fn->emit_head(cg);
-        if (abi()==Symbol("\"C\"")) lambda->attribute().set(Lambda::Extern);
-        if (abi()==Symbol("\"llvm\"")) lambda->attribute().set(Lambda::Intrinsic);
-        if (abi()==Symbol("\"raw\"")) lambda->attribute().set(Lambda::Extern);
-        if (abi()==Symbol("\"thorin\"")) continue;
+        if (fn->is_extern())
+            lambda->attribute().set(Lambda::Extern);
+        if (fn->is_intrinsic())
+            lambda->attribute().set(Lambda::Intrinsic);
     }
 }
 
