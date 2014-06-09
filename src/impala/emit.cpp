@@ -223,6 +223,8 @@ Var FnDecl::emit(CodeGen& cg) const {
         lambda_->attribute().set(Lambda::Extern);
     if (is_intrinsic())
         lambda_->attribute().set(Lambda::Intrinsic);
+    if (is_raw())
+        lambda_->attribute().set(Lambda::Raw);
 
     // handle main function
     if (symbol() == Symbol("main")) {
@@ -262,6 +264,8 @@ void ExternBlock::emit_item(CodeGen& cg) const {
             lambda->attribute().set(Lambda::Extern);
         if (fn->is_intrinsic())
             lambda->attribute().set(Lambda::Intrinsic);
+        if (fn->is_raw())
+            lambda->attribute().set(Lambda::Raw);
     }
 }
 

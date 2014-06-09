@@ -438,8 +438,8 @@ Item* Parser::parse_extern_block_or_fn_decl() {
         while (la() == Token::FN) {
             auto fn_decl = parse_fn_decl(BodyMode::None); 
             if (extern_block->abi()==Symbol("\"C\""))      fn_decl->extern_ = true;
-            if (extern_block->abi()==Symbol("\"raw\""))    fn_decl->extern_ = true;
             if (extern_block->abi()==Symbol("\"llvm\""))   fn_decl->intrinsic_ = true;
+            if (extern_block->abi()==Symbol("\"raw\""))    fn_decl->raw_ = true;
             if (extern_block->abi()==Symbol("\"thorin\"")) { /* TODO */ }
             extern_block->fns_.push_back(fn_decl);
         }

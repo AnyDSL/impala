@@ -637,6 +637,7 @@ class FnDecl : public ValueItem, public Fn {
 public:
     bool is_extern() const { return extern_; }
     bool is_intrinsic() const { return intrinsic_; }
+    bool is_raw() const { return raw_; }
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
@@ -648,6 +649,7 @@ private:
 
     bool extern_;
     bool intrinsic_;
+    bool raw_;
 
     friend class Parser;
 };
