@@ -428,7 +428,7 @@ Item* Parser::parse_extern_block_or_fn_decl() {
     Item* item;
     if (la() == Token::FN) {
         auto fn_decl = parse_fn_decl(BodyMode::Mandatory);
-        fn_decl->extern_ = true;
+        fn_decl->is_extern_ = true;
         item = fn_decl;
     } else {
         auto extern_block = new ExternBlock();

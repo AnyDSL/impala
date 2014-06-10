@@ -59,8 +59,10 @@ bool IfExpr::has_else() const {
  */
 
 bool PathExpr::is_lvalue() const { 
-    if (value_decl())
+    if (value_decl()) {
+        value_decl()->is_written_ = true;
         return value_decl()->is_mut();
+    }
     return false;
 }
 

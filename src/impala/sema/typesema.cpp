@@ -1,3 +1,5 @@
+#include "thorin/util/push.h"
+
 #include "impala/ast.h"
 #include "impala/dump.h"
 #include "impala/impala.h"
@@ -78,6 +80,9 @@ public:
 private:
     bool nossa_;
     std::vector<const ImplItem*> impls_;
+
+public: // TODO make private
+    const BlockExpr* cur_block_expr_ = nullptr;
 };
 
 //------------------------------------------------------------------------------
@@ -319,6 +324,11 @@ void Fn::check_body(TypeSema& sema, FnType fn_type) const {
     Type body_type = sema.check(body(), return_type);
     if (!body_type->is_noret() && !body_type->is_error())
         sema.expect_type(body(), return_type, "return");
+
+    for (auto param : params()) {
+        if (param->is_mut() && !param->is_written())
+            sema.warn(param) << "parameter '" << param->symbol() << "' declared mutable but parameter is never written to\n";
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -484,10 +494,17 @@ void ImplItem::check_item(TypeSema& sema) const {
 Type EmptyExpr::check(TypeSema& sema, Type) const { return sema.unit(); }
 
 Type BlockExpr::check(TypeSema& sema, Type expected) const {
+    THORIN_PUSH(sema.cur_block_expr_, this);
     for (auto stmt : stmts())
         stmt->check(sema);
 
     sema.check(expr(), expected);
+
+    for (auto local : locals_) {
+        if (local->is_mut() && !local->is_written())
+            sema.warn(local) << "variable '" << local->symbol() << "' declared mutable but variable is never written to\n";
+    }
+
     return expr() ? expr()->type() : sema.unit().as<Type>();
 }
 
@@ -816,6 +833,7 @@ void ItemStmt::check(TypeSema& sema) const {
 }
 
 void LetStmt::check(TypeSema& sema) const {
+    sema.cur_block_expr_->locals_.push_back(local());
     Type expected = sema.check(local(), sema.unknown_type());
     if (init())
         sema.check(init(), expected);

@@ -345,6 +345,7 @@ class ValueDecl : public TypeableDecl {
 public:
     const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     bool is_mut() const { return is_mut_; }
+    bool is_written() const { return is_written_; }
 
 private:
     virtual void check(NameSema&) const override;
@@ -355,13 +356,15 @@ private:
 protected:
     AutoPtr<const ASTType> ast_type_;
     bool is_mut_ = false;
+    mutable bool is_written_ = false;
     mutable thorin::Var var_;
 
-    friend class Parser;
+    friend class Parser;    // TODO clean up friend list
     friend class TypeSema;
     friend class ForExpr;
     friend class CodeGen;
     friend class FnExpr;
+    friend class PathExpr;
 };
 
 /// Base class for all Values which may be mutated within a function.
@@ -369,11 +372,10 @@ class LocalDecl : public ValueDecl {
 public:
     LocalDecl(size_t handle)
         : handle_(handle)
-        , address_taken_(false)
     {}
 
     size_t handle() const { return handle_; }
-    bool is_address_taken() const { return address_taken_; }
+    bool is_address_taken() const { return is_address_taken_; }
     bool is_anonymous() const { return symbol() == Symbol(); }
     virtual std::ostream& print(Printer&) const override;
 
@@ -382,7 +384,7 @@ private:
 
 protected:
     size_t handle_;
-    mutable bool address_taken_;
+    mutable bool is_address_taken_ = false;
 
     friend class Parser;
 };
@@ -635,11 +637,7 @@ private:
 
 class FnDecl : public ValueItem, public Fn {
 public:
-    FnDecl()
-        : extern_(false)
-    {}
-
-    bool is_extern() const { return extern_; }
+    bool is_extern() const { return is_extern_; }
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
@@ -649,7 +647,7 @@ private:
     virtual Type check(TypeSema&) const override;
     virtual thorin::Var emit(CodeGen&) const override;
 
-    bool extern_;
+    bool is_extern_ = false;
 
     friend class Parser;
 };
@@ -789,8 +787,10 @@ private:
 
     AutoVector<const Stmt*> stmts_;
     AutoPtr<const Expr> expr_;
+    mutable std::vector<const LocalDecl*> locals_; ///< All \p LocalDecl%s in this \p BlockExpr from top to bottom.
 
     friend class Parser;
+    friend class LetStmt;
 };
 
 class LiteralExpr : public Expr {

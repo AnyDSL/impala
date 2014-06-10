@@ -35,8 +35,8 @@ public:
     void reset_col() { col_ = 1; }
     void reset_line() { line_ = 1; }
     std::ostream& line_col(std::ostream& os) const;
+    std::ostream& warn() const;
     std::ostream& error() const;
-    std::ostream& warning() const;
     bool is_set() const { return line_ != -1; }
 
 private:
@@ -69,8 +69,8 @@ public:
     const Position& pos2() const { return pos2_; }
     void set_pos1(const Position& pos1) { pos1_ = pos1; }
     void set_pos2(const Position& pos2) { pos2_ = pos2; }
+    std::ostream& warn() const;
     std::ostream& error() const;
-    std::ostream& warning() const;
 
 protected:
     Position pos1_;
@@ -101,8 +101,8 @@ public:
     void set_pos2(const Position& pos2) { loc_.pos2_ = pos2; }
     void set_loc(const Location& loc) { loc_ = loc; }
     void set_loc(const Position& pos1, const Position& pos2) { loc_.pos1_ = pos1; loc_.pos2_ = pos2; }
+    std::ostream& warn() const;
     std::ostream& error() const;
-    std::ostream& warning() const;
 
 protected:
     Location loc_;
