@@ -525,7 +525,7 @@ Def ForExpr::remit(CodeGen& cg) const {
     auto next = cg.world().lambda(cg.world().fn_type({cg.world().mem_type()}), "break");
     break_->var_ = Var::create_val(cg, next);
 
-    // peal off run and halt
+    // peel off run and halt
     auto forexpr = expr();
     auto prefix = forexpr->isa<PrefixExpr>();
     if (prefix && (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HALT))
