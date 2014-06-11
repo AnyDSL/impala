@@ -82,8 +82,7 @@ class Typeable {
 public:
     Type type() const { return type_; }
 
-//protected:
-public: // HACK
+protected:
     mutable Type type_;
 
     friend class TypeSema;
@@ -409,7 +408,6 @@ private:
     ASTTypes bounds_;
 
     friend class Parser;
-    friend class TypeParamList;
 };
 
 class SelfParam : public TypeParam {
@@ -426,7 +424,6 @@ public:
     static const Param* create(size_t var_handle, Symbol symbol, const Location& loc, const ASTType* fn_type);
 
     friend class Fn;
-    friend class FnDecl;
     friend class Parser;
 };
 
@@ -778,6 +775,8 @@ public:
     const Expr* expr() const { return expr_; }
     const Stmt* stmt(size_t i) const { return stmts_[i]; }
     bool empty() const { return stmts_.empty() && expr_->isa<EmptyExpr>(); }
+    const std::vector<const LocalDecl*>& locals() const { return locals_; }
+    void add_local(const LocalDecl* local) const { locals_.push_back(local); }
     virtual void check(NameSema&) const override;
 
 private:
@@ -790,7 +789,6 @@ private:
     mutable std::vector<const LocalDecl*> locals_; ///< All \p LocalDecl%s in this \p BlockExpr from top to bottom.
 
     friend class Parser;
-    friend class LetStmt;
 };
 
 class LiteralExpr : public Expr {

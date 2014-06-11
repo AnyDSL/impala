@@ -833,7 +833,7 @@ void ItemStmt::check(TypeSema& sema) const {
 }
 
 void LetStmt::check(TypeSema& sema) const {
-    sema.cur_block_expr_->locals_.push_back(local());
+    sema.cur_block_expr_->add_local(local());
     Type expected = sema.check(local(), sema.unknown_type());
     if (init())
         sema.check(init(), expected);
