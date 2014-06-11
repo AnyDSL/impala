@@ -1,13 +1,15 @@
 fn f(i: int) -> bool {
-    if (i == 42)
-        return true;
-    else
-        return false;
+    if i == 42 {
+        true
+    } else {
+        false
+    }
 }
 
 fn main(i: int) -> int {
-    if (f(i))
-        return 42;
-    else
-        return 23;
+    if f(i) {
+        42
+    } else {
+        23
+    }
 }

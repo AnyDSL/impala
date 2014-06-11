@@ -75,7 +75,7 @@ bool PrefixExpr::is_lvalue() const {
 }
 
 bool FieldExpr::is_lvalue() const {
-    return true; // TODO
+    return lhs()->is_lvalue();
 }
 
 //------------------------------------------------------------------------------
