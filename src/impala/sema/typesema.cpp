@@ -92,10 +92,7 @@ public: // TODO make private
 bool TypeSema::expect_int(const Expr* expr) {
     Type t = expr->type();
 
-    if (t->is_error())
-        return true;
-
-    if (!t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64()) { // TODO factor this test out
+    if (!t->is_error() && !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64()) { // TODO factor this test out
         error(expr) << "expected integer type but found " << t << "\n";
         return false;
     }
@@ -105,18 +102,11 @@ bool TypeSema::expect_int(const Expr* expr) {
 void TypeSema::expect_num(const Expr* expr) {
     Type t = expr->type();
 
-    if (t->is_error())
-        return;
-
-     // TODO factor this test out
-    if (!t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() && !t->is_f32() && !t->is_f64())
+    if (!t->is_error() && !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() && !t->is_f32() && !t->is_f64()) // TODO factor this test out
         error(expr) << "expected number type but found " << t << "\n";
 }
 
 Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
-    if (t1->is_error() || t2->is_error())
-        return type_error();
-
     if (t1 == t2) {
         return t1;
     } else {
@@ -126,7 +116,7 @@ Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
 }
 
 Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std::string what) {
-    if (found_type == expected || found_type->is_error() || expected->is_error())
+    if (found_type == expected)
         return expected;
 
     // TODO: quick hack
@@ -716,7 +706,7 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
             for (size_t i = 0; i != num_args; ++i)
                 check(args[i], fn_mono->elem(i), "argument");
 
-            if (fn_mono->return_type() == expected || is_contuation) {
+            if (fn_mono->return_type() == expected || is_contuation) { // TODO this looks overly complicated
                 bool is_known = true;
                 for (size_t i = 0, e = inferred_args.size(); i != e; ++i) {
                     if (!inferred_args[i]->is_known()) {
