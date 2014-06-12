@@ -1,0 +1,4 @@
+fn main() -> ~int {
+    let p = ~~42;
+    *p
+}

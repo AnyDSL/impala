@@ -1,0 +1,54 @@
+extern "C" {
+    fn random_val(int) -> float;
+    fn getMicroTime() -> ();
+//    fn reset_and_start_timer() -> ();
+//    fn print_time() -> ();
+}
+
+fn iterate(a : int, b : int, yield : fn(int, fn())) -> () {
+    if a < b {
+        yield(a);
+        iterate(a+1, b, yield, return)
+    }
+}
+fn range(a : int, b : int, yield : fn(int, fn())) -> () {
+    iterate(a, b, yield)
+}
+
+fn force_unroll(a : int, b : int, yield : fn(int, fn())) -> () {
+    if a < b {
+        yield(a);
+        @force_unroll(a+1, b, yield, return)
+    }
+}
+
+fn iterate_times_two(a : int, b : int, yield : fn(int, fn())) -> () {
+    if a < b {
+        yield(a);
+        iterate_times_two(a*2, b, yield, return)
+    }
+}
+
+fn init_zero(mut arr : &[float], width : int, height : int) -> () {
+    for i in iterate(0, width*height) {
+        arr(i) = 0.0f;
+    }
+}
+fn init_rand(mut arr : &[float], width : int, height : int) -> () {
+    for y in iterate(0, height) {
+        for x in iterate(0, width) {
+            arr(y*width + x) = random_val(1024);
+        }
+    }
+}
+
+// border handling specialization
+fn clamp_lower(idx : int, lower : int) -> int {
+    if idx < lower { lower } else { idx }
+}
+fn clamp_upper(idx : int, upper : int) -> int {
+    if idx >= upper { upper - 1 } else { idx }
+}
+fn clamp_none(idx : int, bound : int) -> int {
+    idx
+}
