@@ -81,7 +81,7 @@ private:
     bool nossa_;
     std::vector<const ImplItem*> impls_;
 
-public: // TODO make private
+public:
     const BlockExpr* cur_block_expr_ = nullptr;
 };
 
