@@ -493,7 +493,7 @@ Def MapExpr::remit(CodeGen& cg) const {
         Def ldef = cg.remit(lhs());
         assert(fn->num_type_vars() == num_inferred_args());
         std::vector<Def> defs;
-        defs.push_back(cg.get_mem());
+        defs.push_back(Def());      // reserve for mem but set later - some other args may update the monad
         for (size_t i = 0, e = fn->num_type_vars(); i != e; ++i) {
             if (auto type_var = inferred_arg(i).isa<TypeVar>())
                 defs.push_back(type_var->defs_.top());
@@ -511,8 +511,15 @@ Def MapExpr::remit(CodeGen& cg) const {
 
         for (auto arg : args())
             defs.push_back(cg.remit(arg));
+        defs.front() = cg.get_mem(); // now get the current memory monad
+
         auto ret_type = args().size() == fn->num_elems() ? thorin::Type() : cg.convert(fn->return_type());
-        return cg.call(ldef, defs, ret_type);
+        auto prev = cg.cur_bb;
+        auto ret = cg.call(ldef, defs, ret_type);
+        if (ret_type) {
+            // TODO
+        }
+        return ret;
     } else
         return cg.lemit(this).load();
 }
