@@ -1,15 +1,24 @@
+fn range(a: int, b: int, body: fn(int, fn())) -> () {
+    if a < b {
+        body(a);
+        range(a+1, b, body, return)
+    }
+}
+
 fn foo(a: int, b: int) -> int {
     let mut res1 = 0;
-    for (let mut i = 0; i < a; ++i)
+    for i in range(0, a) {
         res1 += 666;
+    }
 
     let mut res2 = 0;
-    for (let mut i = 0; i < b; ++i)
+    for i in range(0, b) {
         res2 += 3333;
+    }
 
-    return 17 + res2;
+    17 + res2
 }
 
 fn main(i: int) -> int {
-    return @foo(i, 10);
+    @foo(i, 10)
 }

@@ -9,5 +9,5 @@ fn a(m : int, n : int) -> int {
 }
 
 fn main(i: int) -> int {
-    @a(i, 3) + @a(2, 2)
+    @a(3, 3)
 }

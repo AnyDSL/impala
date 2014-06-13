@@ -517,7 +517,8 @@ Def MapExpr::remit(CodeGen& cg) const {
         auto prev = cg.cur_bb;
         auto ret = cg.call(ldef, defs, ret_type);
         if (ret_type) {
-            // TODO
+            if (auto run = prev->to()->isa<thorin::Run>())
+                prev->update_arg(prev->num_args()-1, cg.world().tagged_hlt(prev->args().back(), run));
         }
         return ret;
     } else
