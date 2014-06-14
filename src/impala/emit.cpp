@@ -156,7 +156,6 @@ Lambda* Fn::emit_head(CodeGen& cg) const {
 }
 
 void Fn::emit_body(CodeGen& cg) const {
-    if (body()==nullptr) return;
     // setup function nest
     lambda()->set_parent(cg.cur_bb);
     THORIN_PUSH(cg.cur_fn, this);
@@ -248,7 +247,8 @@ Var FnDecl::emit(CodeGen& cg) const {
     else if (lambda()->name == "unmap")
         lambda()->attribute().set(Lambda::Unmap);
 
-    emit_body(cg);
+    if (body())
+        emit_body(cg);
     return var_;
 }
 
