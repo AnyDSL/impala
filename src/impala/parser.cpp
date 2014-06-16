@@ -451,7 +451,10 @@ FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
 
     auto fn_decl = loc(new FnDecl());
     eat(Token::FN);
-    fn_decl->symbol_ = try_id("function name");
+    if (la() == Token::LIT_str)
+        fn_decl->symbol_ = lex().symbol();
+    else
+        fn_decl->symbol_ = try_id("function name");
     parse_type_params(fn_decl->type_params_);
     expect(Token::L_PAREN, "function head");
     parse_param_list(fn_decl->params_, Token::R_PAREN, false);

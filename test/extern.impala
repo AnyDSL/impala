@@ -1,5 +1,6 @@
 extern "C" {
     fn random_val(int) -> float;
+    fn "nvvm.grütze"(int, int) -> int;
     fn getMicroTime() -> ();
 //    fn reset_and_start_timer() -> ();
 //    fn print_time() -> ();

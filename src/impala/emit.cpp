@@ -152,12 +152,17 @@ Var LocalDecl::emit(CodeGen& cg) const {
 }
 
 Lambda* Fn::emit_head(CodeGen& cg) const {
-    if (lambda_) return lambda_;
-    return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), fn_symbol().str());
+    assert(lambda_ == nullptr);
+    auto symbol = fn_symbol();
+    std::string str(symbol.str());
+    if (!str.empty() && str.front() == '"') { // remove quotation
+        assert(str.size() >= 2 && str.back() == '"');
+        str = str.substr(1, str.size()-2); 
+    }
+    return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), str);
 }
 
 void Fn::emit_body(CodeGen& cg) const {
-    if (body()==nullptr) return;
     // setup function nest
     lambda()->set_parent(cg.cur_bb);
     THORIN_PUSH(cg.cur_fn, this);
@@ -249,13 +254,15 @@ Var FnDecl::emit(CodeGen& cg) const {
     else if (lambda()->name == "unmap")
         lambda()->attribute().set(Lambda::Unmap);
 
-    emit_body(cg);
+    if (body())
+        emit_body(cg);
     return var_;
 }
 
 void ExternBlock::emit_item(CodeGen& cg) const {
     for (auto fn : fns()) {
-        auto lambda = fn->emit_head(cg);
+        cg.emit(static_cast<const ValueDecl*>(fn));
+        auto lambda = fn->lambda();
         if (abi() == Symbol("\"C\""))
             lambda->attribute().set(Lambda::Extern);
         else if (abi() == Symbol("\"llvm\""))
@@ -275,8 +282,10 @@ void ImplItem::emit_item(CodeGen& cg) const {
         return;
 
     Array<thorin::Def> elems(num_methods());
-    for (size_t i = 0, e = elems.size(); i != e; ++i)
-        elems[i] = method(i)->emit_head(cg);
+    for (size_t i = 0, e = elems.size(); i != e; ++i) {
+        cg.emit(static_cast<const ValueDecl*>(method(i)));
+        elems[i] = method(i)->lambda();
+    }
 
     for (size_t i = 0, e = elems.size(); i != e; ++i)
         method(i)->emit_body(cg);
