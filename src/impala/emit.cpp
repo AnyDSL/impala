@@ -243,8 +243,6 @@ Var FnDecl::emit(CodeGen& cg) const {
         lambda()->attribute().set(Lambda::OPENCL);
     else if (lambda()->name == "spir")
         lambda()->attribute().set(Lambda::SPIR);
-    else if (lambda()->name == "array")
-        lambda()->attribute().set(Lambda::ArrayInit);
     else if (lambda()->name == "vectorized")
         lambda()->attribute().set(Lambda::Vectorize);
     else if (lambda()->name == "wfv_get_tid")
