@@ -263,8 +263,6 @@ void ExternBlock::emit_item(CodeGen& cg) const {
         auto lambda = fn->lambda();
         if (abi() == Symbol("\"C\""))
             lambda->attribute().set(Lambda::Extern);
-        else if (abi() == Symbol("\"llvm\""))
-            lambda->attribute().set(Lambda::Intrinsic);
         else if (abi() == Symbol("\"raw\""))
             lambda->attribute().set(Lambda::Raw);
         else if (abi() == Symbol("\"thorin\""))
