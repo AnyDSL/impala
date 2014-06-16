@@ -638,12 +638,13 @@ public:
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
-    virtual Symbol fn_symbol() const override { return symbol(); }
+    virtual Symbol fn_symbol() const override { return export_name_.empty() ? symbol() : export_name_; }
 
 private:
     virtual Type check(TypeSema&) const override;
     virtual thorin::Var emit(CodeGen&) const override;
 
+    Symbol export_name_;
     bool is_extern_ = false;
 
     friend class Parser;
