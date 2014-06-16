@@ -152,6 +152,7 @@ Var LocalDecl::emit(CodeGen& cg) const {
 }
 
 Lambda* Fn::emit_head(CodeGen& cg) const {
+    if (lambda_) return lambda_;
     return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), fn_symbol().str());
 }
 
