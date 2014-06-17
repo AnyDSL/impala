@@ -234,24 +234,6 @@ Var FnDecl::emit(CodeGen& cg) const {
         lambda()->attribute().set(Lambda::Extern);
     }
 
-    // setup builtin functions
-    if (lambda()->name == "cuda")
-        lambda()->attribute().set(Lambda::CUDA);
-    else if (lambda()->name == "nvvm")
-        lambda()->attribute().set(Lambda::NVVM);
-    else if (lambda()->name == "opencl")
-        lambda()->attribute().set(Lambda::OPENCL);
-    else if (lambda()->name == "spir")
-        lambda()->attribute().set(Lambda::SPIR);
-    else if (lambda()->name == "vectorized")
-        lambda()->attribute().set(Lambda::Vectorize);
-    else if (lambda()->name == "wfv_get_tid")
-        lambda()->attribute().set(Lambda::VectorizeTid | Lambda::Extern);
-    else if (lambda()->name == "map")
-        lambda()->attribute().set(Lambda::Map);
-    else if (lambda()->name == "unmap")
-        lambda()->attribute().set(Lambda::Unmap);
-
     if (body())
         emit_body(cg);
     return var_;
@@ -266,7 +248,7 @@ void ExternBlock::emit_item(CodeGen& cg) const {
         else if (abi() == Symbol("\"device\""))
             lambda->attribute().set(Lambda::Device);
         else if (abi() == Symbol("\"thorin\""))
-            lambda->attribute().set(Lambda::Thorin);
+            lambda->set_intrinsic();
     }
 }
 

@@ -352,6 +352,9 @@ void ModContents::check(TypeSema& sema) const {
 }
 
 void ExternBlock::check_item(TypeSema& sema) const {
+    if (!abi().empty())
+        if (abi() != Symbol("\"C\"") && abi() != Symbol("\"device\"") && abi() != Symbol("\"thorin\""))
+            sema.error(this) << "unknown extern specification.\n";  // TODO: better location
     for (auto fn : fns())
         sema.check(fn);
 }
