@@ -13,7 +13,3 @@ fn main(mut i : int) -> int {
         };
     a + a
 }
-
-extern fn f(i: int) -> bool {
-    i == 0 || i == 1
-}

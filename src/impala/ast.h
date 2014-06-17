@@ -306,7 +306,7 @@ private:
  * declarations
  */
 
-/// Base class for all entities which have a name \p symbol_.
+/// Base class for all entities which have a \p symbol_.
 class Decl : virtual public ASTNode {
 public:
     Symbol symbol() const { return symbol_; }
@@ -366,7 +366,7 @@ protected:
     friend class PathExpr;
 };
 
-/// Base class for all Values which may be mutated within a function.
+/// Base class for all values which may be mutated within a function.
 class LocalDecl : public ValueDecl {
 public:
     LocalDecl(size_t handle)
