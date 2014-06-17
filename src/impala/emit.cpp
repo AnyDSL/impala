@@ -263,10 +263,10 @@ void ExternBlock::emit_item(CodeGen& cg) const {
         auto lambda = fn->lambda();
         if (abi() == Symbol("\"C\""))
             lambda->attribute().set(Lambda::Extern);
-        else if (abi() == Symbol("\"raw\""))
-            lambda->attribute().set(Lambda::Raw);
+        else if (abi() == Symbol("\"device\""))
+            lambda->attribute().set(Lambda::Device);
         else if (abi() == Symbol("\"thorin\""))
-            lambda->attribute().set(Lambda::Intrinsic); // TODO what to do here?
+            lambda->attribute().set(Lambda::Thorin);
     }
 }
 
