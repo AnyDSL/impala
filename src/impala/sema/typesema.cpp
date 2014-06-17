@@ -83,6 +83,7 @@ private:
 
 public:
     const BlockExpr* cur_block_expr_ = nullptr;
+    const Fn* cur_fn_ = nullptr;
 };
 
 //------------------------------------------------------------------------------
@@ -376,6 +377,7 @@ Type FieldDecl::check(TypeSema&) const {
 }
 
 Type FnDecl::check(TypeSema& sema) const {
+    THORIN_PUSH(sema.cur_fn_, this);
     check_type_params(sema);
     std::vector<Type> types;
     for (auto param : params())
@@ -504,6 +506,7 @@ Type LiteralExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type FnExpr::check(TypeSema& sema, Type expected) const {
+    THORIN_PUSH(sema.cur_fn_, this);
     assert(type_params().empty());
 
     FnType fn_type;
