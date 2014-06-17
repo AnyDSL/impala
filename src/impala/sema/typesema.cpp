@@ -800,18 +800,20 @@ Type IfExpr::check(TypeSema& sema, Type expected) const {
     sema.check(cond(), sema.type_bool(), "condition");
     Type then_type = sema.check(then_expr(), sema.unknown_type());
     Type else_type = sema.check(else_expr(), sema.unknown_type());
-    Type type = then_type->is_noret() ? else_type : then_type;
-    if (type == else_type) {
-        if (!type->is_error())
-            return sema.expect_type(this, type, expected, "if expression");
-        else
-            return expected->is_known() ? expected : else_type;
-    } else {
-        sema.error(this) << "different types in arms of an if expression\n";
-        sema.error(then_expr()) << "type of the consequence is '" << then_type << "'\n";
-        sema.error(else_expr()) << "type of the alternative is '" << else_type << "'\n";
-        return sema.type_error();
-    }
+
+    if (then_type->is_noret() && else_type->is_noret())
+        return sema.type_noret();
+    if (then_type->is_noret())
+        return sema.expect_type(else_expr(), else_type, expected, "if expression");
+    if (else_type->is_noret())
+        return sema.expect_type(then_expr(), then_type, expected, "if expression");
+    if (then_type == else_type)
+        return sema.expect_type(this, then_type, expected, "if expression");
+
+    sema.error(this) << "different types in arms of an if expression\n";
+    sema.error(then_expr()) << "type of the consequence is '" << then_type << "'\n";
+    sema.error(else_expr()) << "type of the alternative is '" << else_type << "'\n";
+    return sema.type_error();
 }
 
 //------------------------------------------------------------------------------
