@@ -454,7 +454,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     return false;
 }
 
-Impl KnownTypeNode::fimd_impl(Bound bound) const {
+Impl KnownTypeNode::find_impl(Bound bound) const {
     SpecializeMap map;
     for (auto impl : bound->trait()->type2impls(this)) {
         return impl;

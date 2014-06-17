@@ -507,7 +507,7 @@ Def MapExpr::remit(CodeGen& cg) const {
                 auto known_type = inferred_arg(i).as<KnownType>();
                 std::vector<Def> bounds;
                 for (auto bound : fn->type_var(i)->bounds()) {
-                    auto impl = known_type->fimd_impl(bound);
+                    auto impl = known_type->find_impl(bound);
                     cg.emit(impl->impl_item());
                     bounds.push_back(impl->impl_item()->def());
                 }
