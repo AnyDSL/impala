@@ -543,7 +543,7 @@ Type PathExpr::check(TypeSema& sema, Type expected) const {
     //auto* last = path()->path_elems().back();
     if (value_decl()) {
         if (auto local = value_decl()->isa<LocalDecl>()) {
-            if (local->is_mut())
+            if (local->is_mut() && local->fn_ != sema.cur_fn_)
                 local->is_address_taken_ = true;
         }
         return sema.check(value_decl());

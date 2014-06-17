@@ -486,10 +486,10 @@ Def IndefiniteArrayExpr::remit(CodeGen& cg) const {
 Var MapExpr::lemit(CodeGen& cg) const {
     if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) {
         auto index = cg.remit(arg(0));
-        if (is_lvalue())
+        //if (is_lvalue())
             return Var::create_agg(cg.lemit(lhs()), index);
-        else
-            return Var::create_agg(Var::create_val(cg, cg.remit(lhs())), index);
+        //else
+            //return Var::create_agg(Var::create_val(cg, cg.remit(lhs())), index);
     }
     THORIN_UNREACHABLE;
 }
