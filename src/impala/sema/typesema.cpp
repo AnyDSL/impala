@@ -294,6 +294,9 @@ Bound ASTTypeApp::bound(TypeSema& sema, Type self) const {
 Type ValueDecl::check(TypeSema& sema) const { return check(sema, Type()); }
 
 Type ValueDecl::check(TypeSema& sema, Type expected) const {
+    if (auto local = this->isa<LocalDecl>())
+        local->fn_ = sema.cur_fn_;
+
     if (ast_type()) {
         Type t = sema.check(ast_type());
         if (expected.empty() || expected == t) {
@@ -538,8 +541,13 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
 Type PathExpr::check(TypeSema& sema, Type expected) const {
     // FEATURE consider longer paths
     //auto* last = path()->path_elems().back();
-    if (value_decl()) 
+    if (value_decl()) {
+        if (auto local = value_decl()->isa<LocalDecl>()) {
+            if (local->is_mut())
+                local->is_address_taken_ = true;
+        }
         return sema.check(value_decl());
+    }
     return sema.type_error();
 }
 

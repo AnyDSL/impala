@@ -27,6 +27,7 @@ namespace impala {
 class ASTType;
 class Decl;
 class Expr;
+class Fn;
 class FnDecl;
 class Item;
 class MapExpr;
@@ -383,9 +384,12 @@ private:
 
 protected:
     size_t handle_;
+    mutable const Fn* fn_ = nullptr;
     mutable bool is_address_taken_ = false;
 
     friend class Parser;
+    friend class ValueDecl;
+    friend class PathExpr;
 };
 
 //------------------------------------------------------------------------------
