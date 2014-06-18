@@ -154,7 +154,12 @@ std::ostream& ExternBlock::print(Printer& p) const {
 }
 
 std::ostream& FnDecl::print(Printer& p) const {
-    p.stream() << "fn " << symbol();
+    if (is_extern())
+        p.stream() << "extern ";
+    p.stream() << "fn ";
+    if (!export_name_.empty())
+        p.stream() << export_name_ << ' ';
+    p.stream() << symbol();
     print_type_params(p);
 
     const FnASTType* ret = nullptr;

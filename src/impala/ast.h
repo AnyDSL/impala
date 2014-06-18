@@ -27,6 +27,7 @@ namespace impala {
 class ASTType;
 class Decl;
 class Expr;
+class Fn;
 class FnDecl;
 class Item;
 class MapExpr;
@@ -306,7 +307,7 @@ private:
  * declarations
  */
 
-/// Base class for all entities which have a name \p symbol_.
+/// Base class for all entities which have a \p symbol_.
 class Decl : virtual public ASTNode {
 public:
     Symbol symbol() const { return symbol_; }
@@ -366,7 +367,7 @@ protected:
     friend class PathExpr;
 };
 
-/// Base class for all Values which may be mutated within a function.
+/// Base class for all values which may be mutated within a function.
 class LocalDecl : public ValueDecl {
 public:
     LocalDecl(size_t handle)
@@ -383,9 +384,12 @@ private:
 
 protected:
     size_t handle_;
+    mutable const Fn* fn_ = nullptr;
     mutable bool is_address_taken_ = false;
 
     friend class Parser;
+    friend class ValueDecl;
+    friend class PathExpr;
 };
 
 //------------------------------------------------------------------------------
@@ -638,12 +642,13 @@ public:
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
-    virtual Symbol fn_symbol() const override { return symbol(); }
+    virtual Symbol fn_symbol() const override { return export_name_.empty() ? symbol() : export_name_; }
 
 private:
     virtual Type check(TypeSema&) const override;
     virtual thorin::Var emit(CodeGen&) const override;
 
+    Symbol export_name_;
     bool is_extern_ = false;
 
     friend class Parser;

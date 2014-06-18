@@ -332,7 +332,7 @@ public:
     const std::vector<Impl>& impls() const { return impls_; }
     void add_impl(Impl) const;
 
-    Impl fimd_impl(Bound) const;
+    Impl find_impl(Bound) const;
     virtual bool implements(Bound, SpecializeMap&) const;
     virtual FnType find_method(Symbol s) const;
     virtual bool is_sane() const;

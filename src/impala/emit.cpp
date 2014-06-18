@@ -152,7 +152,14 @@ Var LocalDecl::emit(CodeGen& cg) const {
 }
 
 Lambda* Fn::emit_head(CodeGen& cg) const {
-    return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), fn_symbol().str());
+    assert(lambda_ == nullptr);
+    auto symbol = fn_symbol();
+    std::string str(symbol.str());
+    if (!str.empty() && str.front() == '"') { // remove quotation
+        assert(str.size() >= 2 && str.back() == '"');
+        str = str.substr(1, str.size()-2); 
+    }
+    return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), str);
 }
 
 void Fn::emit_body(CodeGen& cg) const {
@@ -227,26 +234,6 @@ Var FnDecl::emit(CodeGen& cg) const {
         lambda()->attribute().set(Lambda::Extern);
     }
 
-    // setup builtin functions
-    if (lambda()->name == "cuda")
-        lambda()->attribute().set(Lambda::CUDA);
-    else if (lambda()->name == "nvvm")
-        lambda()->attribute().set(Lambda::NVVM);
-    else if (lambda()->name == "opencl")
-        lambda()->attribute().set(Lambda::OPENCL);
-    else if (lambda()->name == "spir")
-        lambda()->attribute().set(Lambda::SPIR);
-    else if (lambda()->name == "array")
-        lambda()->attribute().set(Lambda::ArrayInit);
-    else if (lambda()->name == "vectorized")
-        lambda()->attribute().set(Lambda::Vectorize);
-    else if (lambda()->name == "wfv_get_tid")
-        lambda()->attribute().set(Lambda::VectorizeTid | Lambda::Extern);
-    else if (lambda()->name == "map")
-        lambda()->attribute().set(Lambda::Map);
-    else if (lambda()->name == "unmap")
-        lambda()->attribute().set(Lambda::Unmap);
-
     if (body())
         emit_body(cg);
     return var_;
@@ -254,15 +241,14 @@ Var FnDecl::emit(CodeGen& cg) const {
 
 void ExternBlock::emit_item(CodeGen& cg) const {
     for (auto fn : fns()) {
-        auto lambda = fn->emit_head(cg);
+        cg.emit(static_cast<const ValueDecl*>(fn));
+        auto lambda = fn->lambda();
         if (abi() == Symbol("\"C\""))
             lambda->attribute().set(Lambda::Extern);
-        else if (abi() == Symbol("\"llvm\""))
-            lambda->attribute().set(Lambda::Intrinsic);
-        else if (abi() == Symbol("\"raw\""))
-            lambda->attribute().set(Lambda::Raw);
+        else if (abi() == Symbol("\"device\""))
+            lambda->attribute().set(Lambda::Device);
         else if (abi() == Symbol("\"thorin\""))
-            lambda->attribute().set(Lambda::Intrinsic); // TODO what to do here?
+            lambda->set_intrinsic();
     }
 }
 
@@ -274,8 +260,10 @@ void ImplItem::emit_item(CodeGen& cg) const {
         return;
 
     Array<thorin::Def> elems(num_methods());
-    for (size_t i = 0, e = elems.size(); i != e; ++i)
-        elems[i] = method(i)->emit_head(cg);
+    for (size_t i = 0, e = elems.size(); i != e; ++i) {
+        cg.emit(static_cast<const ValueDecl*>(method(i)));
+        elems[i] = method(i)->lambda();
+    }
 
     for (size_t i = 0, e = elems.size(); i != e; ++i)
         method(i)->emit_body(cg);
@@ -480,10 +468,10 @@ Def IndefiniteArrayExpr::remit(CodeGen& cg) const {
 Var MapExpr::lemit(CodeGen& cg) const {
     if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) {
         auto index = cg.remit(arg(0));
-        if (is_lvalue())
+        //if (is_lvalue())
             return Var::create_agg(cg.lemit(lhs()), index);
-        else
-            return Var::create_agg(Var::create_val(cg, cg.remit(lhs())), index);
+        //else
+            //return Var::create_agg(Var::create_val(cg, cg.remit(lhs())), index);
     }
     THORIN_UNREACHABLE;
 }
@@ -501,7 +489,7 @@ Def MapExpr::remit(CodeGen& cg) const {
                 auto known_type = inferred_arg(i).as<KnownType>();
                 std::vector<Def> bounds;
                 for (auto bound : fn->type_var(i)->bounds()) {
-                    auto impl = known_type->fimd_impl(bound);
+                    auto impl = known_type->find_impl(bound);
                     cg.emit(impl->impl_item());
                     bounds.push_back(impl->impl_item()->def());
                 }

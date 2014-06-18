@@ -83,6 +83,7 @@ private:
 
 public:
     const BlockExpr* cur_block_expr_ = nullptr;
+    const Fn* cur_fn_ = nullptr;
 };
 
 //------------------------------------------------------------------------------
@@ -293,6 +294,9 @@ Bound ASTTypeApp::bound(TypeSema& sema, Type self) const {
 Type ValueDecl::check(TypeSema& sema) const { return check(sema, Type()); }
 
 Type ValueDecl::check(TypeSema& sema, Type expected) const {
+    if (auto local = this->isa<LocalDecl>())
+        local->fn_ = sema.cur_fn_;
+
     if (ast_type()) {
         Type t = sema.check(ast_type());
         if (expected.empty() || expected == t) {
@@ -351,6 +355,9 @@ void ModContents::check(TypeSema& sema) const {
 }
 
 void ExternBlock::check_item(TypeSema& sema) const {
+    if (!abi().empty())
+        if (abi() != Symbol("\"C\"") && abi() != Symbol("\"device\"") && abi() != Symbol("\"thorin\""))
+            sema.error(this) << "unknown extern specification.\n";  // TODO: better location
     for (auto fn : fns())
         sema.check(fn);
 }
@@ -376,6 +383,7 @@ Type FieldDecl::check(TypeSema&) const {
 }
 
 Type FnDecl::check(TypeSema& sema) const {
+    THORIN_PUSH(sema.cur_fn_, this);
     check_type_params(sema);
     std::vector<Type> types;
     for (auto param : params())
@@ -504,6 +512,7 @@ Type LiteralExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type FnExpr::check(TypeSema& sema, Type expected) const {
+    THORIN_PUSH(sema.cur_fn_, this);
     assert(type_params().empty());
 
     FnType fn_type;
@@ -535,8 +544,13 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
 Type PathExpr::check(TypeSema& sema, Type expected) const {
     // FEATURE consider longer paths
     //auto* last = path()->path_elems().back();
-    if (value_decl()) 
+    if (value_decl()) {
+        if (auto local = value_decl()->isa<LocalDecl>()) {
+            if (local->is_mut() && local->fn_ != sema.cur_fn_)
+                local->is_address_taken_ = true;
+        }
         return sema.check(value_decl());
+    }
     return sema.type_error();
 }
 
@@ -800,11 +814,20 @@ Type IfExpr::check(TypeSema& sema, Type expected) const {
     sema.check(cond(), sema.type_bool(), "condition");
     Type then_type = sema.check(then_expr(), sema.unknown_type());
     Type else_type = sema.check(else_expr(), sema.unknown_type());
-    Type type = then_type->is_noret() ? else_type : then_type;
-    if (!type->is_error())
-        return sema.expect_type(this, type, expected, "if expression");
-    else
-        return expected->is_known() ? expected : else_type;
+
+    if (then_type->is_noret() && else_type->is_noret())
+        return sema.type_noret();
+    if (then_type->is_noret())
+        return sema.expect_type(else_expr(), else_type, expected, "if expression");
+    if (else_type->is_noret())
+        return sema.expect_type(then_expr(), then_type, expected, "if expression");
+    if (then_type == else_type)
+        return sema.expect_type(this, then_type, expected, "if expression");
+
+    sema.error(this) << "different types in arms of an if expression\n";
+    sema.error(then_expr()) << "type of the consequence is '" << then_type << "'\n";
+    sema.error(else_expr()) << "type of the alternative is '" << else_type << "'\n";
+    return sema.type_error();
 }
 
 //------------------------------------------------------------------------------

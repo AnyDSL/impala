@@ -191,7 +191,6 @@ bool Unifiable::equal(const Unifiable* other) const {
             // check recursively element types for equivalence
             for (size_t i = 0, e = this->num_elems(); i != e && result; ++i)
                 result &= this->elem(i)->equal(*other->elem(i));
-                //result &= this->elem(i) == other->elem(i);
 
             // unset equivalence constraints for type variables
             for (auto var : type_vars())
@@ -454,7 +453,7 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     return false;
 }
 
-Impl KnownTypeNode::fimd_impl(Bound bound) const {
+Impl KnownTypeNode::find_impl(Bound bound) const {
     SpecializeMap map;
     for (auto impl : bound->trait()->type2impls(this)) {
         return impl;
