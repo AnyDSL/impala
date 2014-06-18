@@ -511,12 +511,8 @@ Def MapExpr::remit(CodeGen& cg) const {
         }
         return ret;
     } else if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) {
-        try {
-            return cg.lemit(this).load();
-        } catch (const char*) {
-            auto index = cg.remit(arg(0));
-            return cg.world().extract(cg.remit(lhs()), index);
-        }
+        auto index = cg.remit(arg(0));
+        return cg.world().extract(cg.remit(lhs()), index);
     }
     THORIN_UNREACHABLE;
 }
