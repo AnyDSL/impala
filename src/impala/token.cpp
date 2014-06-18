@@ -51,7 +51,7 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
             } else if (str[1] == 'o') {
                 base = 8;
                 begin += 2;
-            } else if (str[2] == 'x') {
+            } else if (str[1] == 'x') {
                 base = 16;
                 begin += 2;
             }
