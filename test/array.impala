@@ -1,15 +1,30 @@
 extern "C" {
-    fn foo() -> &[int];
+    fn val_array() -> [int];
+    fn ptr_array() -> &[int];
+    fn take_address(&[int]) -> ();
 }
 
-fn main(n: int) -> int {
-    /*
-    let mut a = [[0, 1, 2], [3, 4, 5], [6, 7, 8]];
-    a(2)(2)++;
-    //let mut b = ~[n: f32];
-    //b(3) = 42.f;
-    //b(n) += b(n+1);
-    a(0)(2) + a(2)(2)
-    */
-    foo()(42)
+extern fn just_value(i: int) -> int {
+    let mut a = val_array();
+    a(i) = a(i+1);
+    a(i+2)
+}
+
+extern fn take_explicit_address(i: int) -> int {
+    let a = val_array();
+    take_address(&a);
+    a(3)
+}
+
+extern fn take_implicit_address(i: int) -> int {
+    let a = val_array();
+    let mut p = &a(3);
+    *p = 42;
+    a(3)
+}
+
+extern fn always_leas(i: int) -> int {
+    let mut a = ptr_array();
+    a(i) = a(i+1);
+    a(i+2)
 }

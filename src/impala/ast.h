@@ -377,6 +377,7 @@ public:
     size_t handle() const { return handle_; }
     bool is_address_taken() const { return is_address_taken_; }
     bool is_anonymous() const { return symbol() == Symbol(); }
+    void take_address() const { is_address_taken_ = true; }
     virtual std::ostream& print(Printer&) const override;
 
 private:
@@ -716,6 +717,7 @@ class Expr : public ASTNode, public Typeable {
 public:
     thorin::Def extra() const { return extra_; }
     virtual bool is_lvalue() const { return false; }
+    virtual void take_address() const {}
     virtual void check(NameSema&) const = 0;
 
 private:
@@ -853,6 +855,7 @@ public:
     const Path* path() const { return path_; }
     SafePtr<const ValueDecl> value_decl() const { return value_decl_; }
     virtual bool is_lvalue() const override;
+    virtual void take_address() const override;
     virtual void check(NameSema&) const override;
 
 private:
@@ -1085,6 +1088,7 @@ public:
     size_t num_inferred_args() const { return inferred_args_.size(); }
     const FieldExpr* is_method_call() const { return lhs()->isa<FieldExpr>(); }
     virtual bool is_lvalue() const override;
+    virtual void take_address() const override;
     virtual void check(NameSema&) const override;
 
 private:

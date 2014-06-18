@@ -52,7 +52,7 @@
     case Token::OROR: \
     case Token::ID: \
     case Token::RUN: \
-    case Token::HALT: \
+    case Token::HLT: \
     case Token::IF: \
     case Token::FOR: \
     case Token::L_PAREN: \

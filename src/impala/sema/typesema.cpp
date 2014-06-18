@@ -547,7 +547,7 @@ Type PathExpr::check(TypeSema& sema, Type expected) const {
     if (value_decl()) {
         if (auto local = value_decl()->isa<LocalDecl>()) {
             if (local->is_mut() && local->fn_ != sema.cur_fn_)
-                local->is_address_taken_ = true;
+                local->take_address();
         }
         return sema.check(value_decl());
     }
@@ -559,6 +559,7 @@ Type PrefixExpr::check(TypeSema& sema, Type expected) const {
     auto rtype = sema.check(rhs());
     switch (kind()) {
         case AND:
+            rhs()->take_address();
             return sema.borrowd_ptr_type(rtype);
         case TILDE:
             return sema.owned_ptr_type(rtype);
@@ -575,7 +576,7 @@ Type PrefixExpr::check(TypeSema& sema, Type expected) const {
             sema.expect_num(rhs());
             return rtype;
         case RUN:
-        case HALT:
+        case HLT:
             return sema.check(rhs());
         default:
             THORIN_UNREACHABLE;
@@ -792,7 +793,7 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
 Type ForExpr::check(TypeSema& sema, Type expected) const {
     auto forexpr = expr();
     if (auto prefix = forexpr->isa<PrefixExpr>())
-        if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HALT)
+        if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HLT)
             forexpr = prefix->rhs();
     if (auto map = forexpr->isa<MapExpr>()) {
         Type lhst = sema.check(map->lhs());
