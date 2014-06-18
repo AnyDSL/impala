@@ -377,6 +377,7 @@ public:
     size_t handle() const { return handle_; }
     bool is_address_taken() const { return is_address_taken_; }
     bool is_anonymous() const { return symbol() == Symbol(); }
+    const Fn* fn() const { return fn_; }
     void take_address() const { is_address_taken_ = true; }
     virtual std::ostream& print(Printer&) const override;
 
@@ -390,7 +391,6 @@ protected:
 
     friend class Parser;
     friend class ValueDecl;
-    friend class PathExpr;
 };
 
 //------------------------------------------------------------------------------

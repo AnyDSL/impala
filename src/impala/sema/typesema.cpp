@@ -546,7 +546,7 @@ Type PathExpr::check(TypeSema& sema, Type expected) const {
     //auto* last = path()->path_elems().back();
     if (value_decl()) {
         if (auto local = value_decl()->isa<LocalDecl>()) {
-            if (local->is_mut() && local->fn_ != sema.cur_fn_)
+            if (local->is_mut() && local->fn() != sema.cur_fn_)
                 local->take_address();
         }
         return sema.check(value_decl());
