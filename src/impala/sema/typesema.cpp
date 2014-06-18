@@ -620,6 +620,16 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
             sema.expect_num(rhs());
             return type;
         }
+        case SHL:
+        case SHR:
+        case OR:
+        case XOR:
+        case AND: {
+            auto type = sema.check(lhs(), sema.check(rhs()));
+            sema.expect_num(lhs());
+            sema.expect_num(rhs());
+            return type;
+        }
         case ASGN:
             sema.check(rhs(), sema.check(lhs()));
             if (sema.expect_lvalue(lhs()))
