@@ -93,7 +93,9 @@ public:
 bool TypeSema::expect_int(const Expr* expr) {
     Type t = expr->type();
 
-    if (!t->is_error() && !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64()) { // TODO factor this test out
+    if (!t->is_error() &&
+        !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
+        !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64()) { // TODO factor this test out
         error(expr) << "expected integer type but found " << t << "\n";
         return false;
     }
@@ -103,7 +105,10 @@ bool TypeSema::expect_int(const Expr* expr) {
 void TypeSema::expect_num(const Expr* expr) {
     Type t = expr->type();
 
-    if (!t->is_error() && !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() && !t->is_f32() && !t->is_f64()) // TODO factor this test out
+    if (!t->is_error() &&
+        !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
+        !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64() &&
+        !t->is_f32() && !t->is_f64()) // TODO factor this test out
         error(expr) << "expected number type but found " << t << "\n";
 }
 
