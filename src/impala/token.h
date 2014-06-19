@@ -99,8 +99,8 @@ private:
     static thorin::HashMap<Kind, const char*, KindHash> tok2str_;
     static thorin::HashMap<Kind, Symbol, KindHash> tok2sym_;
     static thorin::HashMap<Symbol, Kind> keywords_;
-    static thorin::HashMap<Symbol, Kind> sym2lit_;
-    static thorin::HashMap<Symbol, Kind> sym2flit_;
+    static thorin::HashMap<Symbol, Kind> sym2lit_; ///< Table of \em all (including floating) suffixes for literals.
+    static thorin::HashMap<Symbol, Kind> sym2flit_;///< Table of suffixes for \em floating point literals.
 
     friend void init();
     friend std::ostream& operator << (std::ostream& os, const Token& tok);
