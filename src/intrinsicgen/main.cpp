@@ -5,38 +5,54 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
 
+#include "impala/ast.h"
 #include "impala/impala.h"
 #include "impala/dump.h"
+#include "impala/sema/typetable.h"
 #include "impala/sema/unifiable.h"
 
 impala::Type llvm2impala(impala::TypeTable&, llvm::Type*);
 
 int main() {
     impala::Init init("dummy");
+    thorin::AutoPtr<impala::ModContents> prg = new impala::ModContents();
+    prg->set_loc(impala::Location("dummy", 1, 1, 1, 1));
+    check(init, prg, false);
+
     auto& context = llvm::getGlobalContext();
     int num = llvm::Intrinsic::num_intrinsics - 1;
     impala::Printer printer(std::cout, false);
 
+    printer.stream() << "extern \"device\" {";
+    ++printer.indent;
     for (int i = 1; i != num; ++i) {
         auto id = (llvm::Intrinsic::ID) i;
         
         if (!llvm::Intrinsic::isOverloaded(id)) {
+            std::string llvm_name = llvm::Intrinsic::getName(id);
+            // skip "experimental" intrinsics
+            if (llvm_name.find("experimental")!=std::string::npos) continue;
             auto type = llvm::Intrinsic::getType(context, id);
-            std::string name = llvm::Intrinsic::getName(id);
-            assert(name.substr(0, 5) == "llvm.");
-            name = name.substr(5); // remove 'llvm.' prefix
+            assert(llvm_name.substr(0, 5) == "llvm.");
+            std::string name = llvm_name.substr(5); // remove 'llvm.' prefix
             // replace '.' with '_'
             std::transform(name.begin(), name.end(), name.begin(), [] (char c) { return c == '.' ? '_' : c; });
             if (auto itype = llvm2impala(*init.typetable, type)) {
+                printer.newline();
                 auto fn = itype.as<impala::FnType>();
-                printer.stream() << "intrinsic " << name;
+                printer.stream() << "fn \"" << llvm_name << "\" " << name;
                 printer.dump_list([&] (impala::Type type) { printer.stream() << type->to_string(); }, fn->elems().slice_to_end(fn->num_elems()-1), "(", ")");
                 printer.stream() << " -> ";
-                printer.stream() << fn->return_type()->to_string() << ';';
-                printer.newline();
+                if (fn->return_type()->is_noret())
+                    printer.stream() << "();";
+                else
+                    printer.stream() << fn->return_type()->to_string() << ';';
             }
         }
     }
+    --printer.indent;
+    printer.newline() << "}";
+    printer.newline();
 }
 
 impala::Type llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
@@ -58,14 +74,15 @@ impala::Type llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
         std::vector<impala::Type> param_types(fn->getNumParams()+1);
         bool valid = true;
         for (size_t i = 0, e = fn->getNumParams(); i != e; ++i) {
-            param_types[i] = llvm2impala(tt, fn->getParamType(i));
-            valid &= param_types[i];
+            auto t = llvm2impala(tt, fn->getParamType(i));
+            valid &= t;
+            if (valid) param_types[i] = t;
         }
 
-        auto ret = fn->getReturnType()->isVoidTy() ? tt.type_void() : llvm2impala(tt, fn->getReturnType());
+        auto ret = fn->getReturnType()->isVoidTy() ? (impala::Type)tt.tuple_type({}) : llvm2impala(tt, fn->getReturnType());
         valid &= ret;
         if (valid) {
-            param_types.back() = ret->is_void() ? tt.fntype({}) : tt.fntype({ret});
+            param_types.back() = fn->getReturnType()->isVoidTy() ? tt.tuple_type({}) : tt.tuple_type({ret});
             return tt.fn_type(param_types);
         }
     }

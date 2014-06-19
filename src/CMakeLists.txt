@@ -13,4 +13,4 @@ ELSE ()
 ENDIF ()
 
 ADD_SUBDIRECTORY ( impala )
-#ADD_SUBDIRECTORY ( intrinsicgen )
+ADD_SUBDIRECTORY ( intrinsicgen )
