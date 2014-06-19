@@ -1,7 +1,7 @@
 extern fn f(i: int) -> int { i+1 }
 extern fn g(i: int) -> int { i+2 }
 
-extern "intrinsic" {
+extern "C" {
     fn x(int) -> int;
     fn y(float) -> float;
     fn z(i8, i16, i32) -> (i8, i16, i32);
