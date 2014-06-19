@@ -1,4 +1,5 @@
 fn main() -> () {
+    { let u: u32  = 42u; }
     { let i: i8  = 0i8; }
     { let i: i16 = 0i16; }
     { let i: i32 = 0i32; }
