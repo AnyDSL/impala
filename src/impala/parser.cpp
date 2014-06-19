@@ -52,7 +52,7 @@
     case Token::OROR: \
     case Token::ID: \
     case Token::RUN: \
-    case Token::HALT: \
+    case Token::HLT: \
     case Token::IF: \
     case Token::FOR: \
     case Token::L_PAREN: \
@@ -183,7 +183,7 @@ public:
     // item helpers
     const ModContents* parse_mod_contents();
     void parse_mod_contents(ModContents*);
-    const FieldDecl* parse_field_decl();
+    const FieldDecl* parse_field_decl(const int i);
 
     // expressions
     bool is_infix();
@@ -521,8 +521,9 @@ StructDecl* Parser::parse_struct_decl() {
     struct_decl->symbol_ = try_id("struct declaration");
     parse_type_params(struct_decl->type_params_);
     expect(Token::L_BRACE, "struct declaration");
+    int i = 0;
     parse_comma_list(Token::R_BRACE, "closing brace of struct declaration", [&] { 
-        struct_decl->fields_.push_back(parse_field_decl()); 
+        struct_decl->fields_.push_back(parse_field_decl(i++)); 
     });
     return struct_decl;
 }
@@ -585,8 +586,9 @@ void Parser::parse_mod_contents(ModContents* mod_contents) {
     }
 }
 
-const FieldDecl* Parser::parse_field_decl() {
+const FieldDecl* Parser::parse_field_decl(const int i) {
     auto field_decl = loc(new FieldDecl);
+    field_decl->num_ = i;
     field_decl->visibility_ = parse_visibility();
     //field_decl->is_mut_ = accept(Token::MUT); // do mutable struct fields make sense?
     field_decl->symbol_ = try_id("struct field");

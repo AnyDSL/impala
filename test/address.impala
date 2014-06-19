@@ -1,0 +1,8 @@
+extern "C" {
+    fn foo(&int) -> ();
+}
+
+fn main() -> () {
+    let i = 42;
+    foo(&i)
+}

@@ -80,4 +80,15 @@ bool FieldExpr::is_lvalue() const {
 
 //------------------------------------------------------------------------------
 
+void PathExpr::take_address() const {
+    if (value_decl()) {
+        if (auto local = value_decl()->isa<LocalDecl>())
+            local->take_address();
+    }
+}
+
+void MapExpr::take_address() const {
+    lhs()->take_address();
+}
+
 }

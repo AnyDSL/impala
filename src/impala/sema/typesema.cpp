@@ -93,7 +93,9 @@ public:
 bool TypeSema::expect_int(const Expr* expr) {
     Type t = expr->type();
 
-    if (!t->is_error() && !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64()) { // TODO factor this test out
+    if (!t->is_error() &&
+        !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
+        !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64()) { // TODO factor this test out
         error(expr) << "expected integer type but found " << t << "\n";
         return false;
     }
@@ -103,7 +105,10 @@ bool TypeSema::expect_int(const Expr* expr) {
 void TypeSema::expect_num(const Expr* expr) {
     Type t = expr->type();
 
-    if (!t->is_error() && !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() && !t->is_f32() && !t->is_f64()) // TODO factor this test out
+    if (!t->is_error() &&
+        !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
+        !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64() &&
+        !t->is_f32() && !t->is_f64()) // TODO factor this test out
         error(expr) << "expected number type but found " << t << "\n";
 }
 
@@ -546,8 +551,9 @@ Type PathExpr::check(TypeSema& sema, Type expected) const {
     //auto* last = path()->path_elems().back();
     if (value_decl()) {
         if (auto local = value_decl()->isa<LocalDecl>()) {
-            if (local->is_mut() && local->fn_ != sema.cur_fn_)
-                local->is_address_taken_ = true;
+            // if local lies in an outer function go through memory to implement closure
+            if (local->is_mut() && local->fn() != sema.cur_fn_) 
+                local->take_address();
         }
         return sema.check(value_decl());
     }
@@ -559,6 +565,7 @@ Type PrefixExpr::check(TypeSema& sema, Type expected) const {
     auto rtype = sema.check(rhs());
     switch (kind()) {
         case AND:
+            rhs()->take_address();
             return sema.borrowd_ptr_type(rtype);
         case TILDE:
             return sema.owned_ptr_type(rtype);
@@ -575,7 +582,7 @@ Type PrefixExpr::check(TypeSema& sema, Type expected) const {
             sema.expect_num(rhs());
             return rtype;
         case RUN:
-        case HALT:
+        case HLT:
             return sema.check(rhs());
         default:
             THORIN_UNREACHABLE;
@@ -608,6 +615,16 @@ Type InfixExpr::check(TypeSema& sema, Type expected) const {
         case MUL:
         case DIV:
         case REM: {
+            auto type = sema.check(lhs(), sema.check(rhs()));
+            sema.expect_num(lhs());
+            sema.expect_num(rhs());
+            return type;
+        }
+        case SHL:
+        case SHR:
+        case OR:
+        case XOR:
+        case AND: {
             auto type = sema.check(lhs(), sema.check(rhs()));
             sema.expect_num(lhs());
             sema.expect_num(rhs());
@@ -792,7 +809,7 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
 Type ForExpr::check(TypeSema& sema, Type expected) const {
     auto forexpr = expr();
     if (auto prefix = forexpr->isa<PrefixExpr>())
-        if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HALT)
+        if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HLT)
             forexpr = prefix->rhs();
     if (auto map = forexpr->isa<MapExpr>()) {
         Type lhst = sema.check(map->lhs());

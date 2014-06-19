@@ -64,6 +64,11 @@ public:
     }
     template<class T> thorin::Type convert(Proxy<T> type) { return convert(type->unify()); }
 
+    void tag_run(Lambda* prev) {
+        if (auto run = prev->to()->isa<thorin::Run>())
+            prev->update_arg(prev->num_args()-1, world().tagged_hlt(prev->args().back(), run));
+    }
+
     const Fn* cur_fn;
 };
 
@@ -293,7 +298,7 @@ void Typedef::emit_item(CodeGen& cg) const {
  * expressions
  */
 
-Var Expr::lemit(CodeGen& cg) const { THORIN_UNREACHABLE; }
+Var Expr::lemit(CodeGen& cg) const { throw "cannot emit lvalue"; }
 Def Expr::remit(CodeGen& cg) const { return lemit(cg).load(); }
 void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     if (auto def = cg.remit(this)) {
@@ -356,15 +361,21 @@ Def PrefixExpr::remit(CodeGen& cg) const {
             cg.set_mem(cg.world().store(mem, ptr, def));
             return ptr;
         }
-        case RUN:  return cg.world().run(cg.remit(rhs()));
-        case HALT: return cg.world().hlt(cg.remit(rhs()));
+        case AND: {
+            auto var = cg.lemit(rhs());
+            assert(var.kind() == Var::PtrRef);
+            return var.def();
+        }
+        case RUN: return cg.world().run(cg.remit(rhs()));
+        case HLT: return cg.world().hlt(cg.remit(rhs()));
         default:  return cg.lemit(this).load();
     }
 }
 
 Var PrefixExpr::lemit(CodeGen& cg) const {
-    assert(kind() == MUL);
-    return Var::create_ptr(cg, cg.remit(rhs()));
+    if (kind() == MUL)
+        return Var::create_ptr(cg, cg.remit(rhs()));
+    throw "cannot emit lvalue";
 }
 
 void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
@@ -466,14 +477,9 @@ Def IndefiniteArrayExpr::remit(CodeGen& cg) const {
 }
 
 Var MapExpr::lemit(CodeGen& cg) const {
-    if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) {
-        auto index = cg.remit(arg(0));
-        //if (is_lvalue())
-            return Var::create_agg(cg.lemit(lhs()), index);
-        //else
-            //return Var::create_agg(Var::create_val(cg, cg.remit(lhs())), index);
-    }
-    THORIN_UNREACHABLE;
+    if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>())
+        return Var::create_agg(cg.lemit(lhs()), cg.remit(arg(0)));
+    throw "cannot emit lvalue";
 }
 
 Def MapExpr::remit(CodeGen& cg) const {
@@ -504,13 +510,14 @@ Def MapExpr::remit(CodeGen& cg) const {
         auto ret_type = args().size() == fn->num_elems() ? thorin::Type() : cg.convert(fn->return_type());
         auto prev = cg.cur_bb;
         auto ret = cg.call(ldef, defs, ret_type);
-        if (ret_type) {
-            if (auto run = prev->to()->isa<thorin::Run>())
-                prev->update_arg(prev->num_args()-1, cg.world().tagged_hlt(prev->args().back(), run));
-        }
+        if (ret_type)
+            cg.tag_run(prev);
         return ret;
-    } else
-        return cg.lemit(this).load();
+    } else if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) {
+        auto index = cg.remit(arg(0));
+        return cg.world().extract(cg.remit(lhs()), index);
+    }
+    THORIN_UNREACHABLE;
 }
 
 Def ForExpr::remit(CodeGen& cg) const {
@@ -524,7 +531,7 @@ Def ForExpr::remit(CodeGen& cg) const {
     // peel off run and halt
     auto forexpr = expr();
     auto prefix = forexpr->isa<PrefixExpr>();
-    if (prefix && (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HALT))
+    if (prefix && (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HLT))
         forexpr = prefix->rhs();
 
     // emit call
@@ -534,9 +541,12 @@ Def ForExpr::remit(CodeGen& cg) const {
     defs.push_back(cg.remit(fn_expr()));
     defs.push_back(next);
     auto fun = cg.remit(map_expr->lhs());
-    if (prefix && prefix->kind() == PrefixExpr::RUN)  fun = cg.world().run(fun);
-    if (prefix && prefix->kind() == PrefixExpr::HALT) fun = cg.world().hlt(fun);
+    if (prefix && prefix->kind() == PrefixExpr::RUN) fun = cg.world().run(fun);
+    if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun);
+
+    auto prev = cg.cur_bb;
     cg.call(fun, defs, thorin::Type());
+    cg.tag_run(prev);
 
     // go to break continuation
     cg.cur_bb = next;
