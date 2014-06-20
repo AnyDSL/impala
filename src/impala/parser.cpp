@@ -35,6 +35,10 @@
     case Token::LIT_i16: \
     case Token::LIT_i32: \
     case Token::LIT_i64: \
+    case Token::LIT_u8: \
+    case Token::LIT_u16: \
+    case Token::LIT_u32: \
+    case Token::LIT_u64: \
     case Token::LIT_f32: \
     case Token::LIT_f64: \
     case Token::TRUE: \
@@ -76,6 +80,10 @@
     case Token::TYPE_i16: \
     case Token::TYPE_i32: \
     case Token::TYPE_i64: \
+    case Token::TYPE_u8: \
+    case Token::TYPE_u16: \
+    case Token::TYPE_u32: \
+    case Token::TYPE_u64: \
     case Token::TYPE_f32: \
     case Token::TYPE_f64:  \
     case Token::TYPE_bool: \
@@ -633,6 +641,10 @@ const ArrayASTType* Parser::parse_array_type() {
             case Token::LIT_i16:  dim = la().box().get_s16(); break;
             case Token::LIT_i32:  dim = la().box().get_s32(); break;
             case Token::LIT_i64:  dim = la().box().get_s64(); break;
+            case Token::LIT_u8:   dim = la().box().get_u8();  break;
+            case Token::LIT_u16:  dim = la().box().get_u16(); break;
+            case Token::LIT_u32:  dim = la().box().get_u32(); break;
+            case Token::LIT_u64:  dim = la().box().get_u64(); break;
             default:
                 dim = 0;
                 error("integer literal", "definite array type");
