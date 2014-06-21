@@ -4,7 +4,7 @@ Created on 8 Dec 2013
 @author: Alexander Kampmann, David Poetzsch-Heffter
 '''
 
-import sys, os, subprocess, difflib, shutil
+import sys, os, subprocess, difflib, shutil, imp
 from pb import Progressbar
 
 class Test:
@@ -79,6 +79,15 @@ def make_tests(directory, positive=True, options=[]):
             tests.append(InvokeTest(positive, directory, testfile, res, options))
     
     return sorted(tests, key=lambda test: test.getName())
+
+def get_tests_from_dir(directory):
+    testfile = os.path.join(directory, "tests.py")
+    
+    if os.path.exists(testfile):
+        tests = imp.load_source("tests", testfile).allTests()
+    else:
+        tests = make_tests(directory)
+    return tests
 
 def executeTests(tests, gEx, pb = True):
     """Invoke this function with a list of test objects to run the tests. """

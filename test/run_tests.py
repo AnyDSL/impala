@@ -3,7 +3,7 @@
 """
 This script can be used to execute the tests.
 
-Usage: run_tests.py [options] <subdirectory that contains test cases>
+Usage: run_tests.py [options] [subdirectory that contains test cases]
 
 Command line options:
  -e, --executable <Path to executable>
@@ -11,16 +11,10 @@ Command line options:
 """
 
 import infrastructure.tests
-import os, sys, getopt, imp
+import os, sys, getopt
 
 def invoke(executable, directory, pb):
-    testfile = os.path.join(directory, "tests.py")
-    
-    if os.path.exists(testfile):
-        tests = imp.load_source("tests", testfile).allTests()
-    else:
-        tests = infrastructure.tests.make_tests(directory)
-        
+    tests = infrastructure.tests.get_tests_from_dir(directory)
     infrastructure.tests.executeTests(tests, executable, pb)
 
 def main():
@@ -49,14 +43,13 @@ def main():
         if o in ("-d", "--disable-progressbar"):
             pb = False
 
-    if len(args) == 0:
-        print("You did not specify a test directory.")
-        print(__doc__)
-        sys.exit(2)
-    elif len(args) > 1:
+    if len(args) > 1:
         print("You specified too many arguments.")
         print(__doc__)
         sys.exit(2)
+    elif len(args) == 0:
+        print("You did not specify a test directory. Using '.'")
+        directory = "."
     else:
         directory = args[0]
 
