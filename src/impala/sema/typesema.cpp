@@ -752,10 +752,12 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
                 }
             } else
                 error(loc) << "cannot match return type\n";
-        } else
-            error(loc) << "wrong number of arguments\n";
+        } else {
+            std::string rela = (num_args+1 < fn_mono->num_elems()) ? "few" : "many";
+            error(loc) << "too " << rela << " arguments: " << num_args << " for " << fn_mono->num_elems()-1 << "\n";
+        }
     } else
-        error(loc) << "too many type arguments to function\n";
+        error(loc) << "too many type arguments to function: " << num_type_args << " for " << fn_poly->num_type_vars() << "\n";
 
     return type_error();
 }

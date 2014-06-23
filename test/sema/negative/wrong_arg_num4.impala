@@ -1,0 +1,3 @@
+fn f(x:int, g:fn[A](A)->A) -> int {
+   g[int, bool](x)
+}

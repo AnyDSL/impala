@@ -388,6 +388,7 @@ const Param* Parser::parse_param(bool lambda) {
         param->symbol_ = symbol;
     } else {
         if (type == nullptr) {
+            // we assume that the identifier refers to a type
             auto type_app = new ASTTypeApp();
             type_app->set_loc(tok.loc());
             type_app->symbol_ = symbol;
