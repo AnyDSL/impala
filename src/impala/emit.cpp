@@ -510,8 +510,10 @@ Def MapExpr::remit(CodeGen& cg) const {
         auto ret_type = args().size() == fn->num_elems() ? thorin::Type() : cg.convert(fn->return_type());
         auto prev = cg.cur_bb;
         auto ret = cg.call(ldef, defs, ret_type);
-        if (ret_type)
+        if (ret_type) {
+            cg.set_mem(cg.cur_bb->param(0));
             cg.tag_run(prev);
+        }
         return ret;
     } else if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) {
         auto index = cg.remit(arg(0));
