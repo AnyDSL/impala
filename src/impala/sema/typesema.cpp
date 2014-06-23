@@ -751,7 +751,7 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
                     return expected;
                 }
             } else
-                error(loc) << "cannot match return type\n";
+                error(loc) << "Return type '" << fn_mono->return_type() << "' does not match expected type '" << expected << "'\n";
         } else {
             std::string rela = (num_args+1 < fn_mono->num_elems()) ? "few" : "many";
             error(loc) << "too " << rela << " arguments: " << num_args << " for " << fn_mono->num_elems()-1 << "\n";
