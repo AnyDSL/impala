@@ -384,7 +384,7 @@ const Param* Parser::parse_param(bool lambda) {
         param->ast_type_ = parse_type();
     } else if (lambda) {
         if (type)
-            error("identifier", "parameter");
+            error("identifier", "parameter", tok);
         param->symbol_ = symbol;
     } else {
         if (type == nullptr) {
