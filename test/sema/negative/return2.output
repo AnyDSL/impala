@@ -1,1 +1,1 @@
-sema/negative/return2.impala:1 col 15 - 3 col 1: error: wrong return type; expected 'i32' but found 'bool'
+sema/negative/return2.impala:1 col 15 - 3 col 1: error: mismatched types: expected 'i32' but found 'bool' as return type.

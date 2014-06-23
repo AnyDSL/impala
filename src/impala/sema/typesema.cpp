@@ -129,7 +129,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
             return expected;
         }
     }
-    error(expr) << "wrong " << what << " type; expected '" << expected << "' but found '" << found_type << "'\n";
+    error(expr) << "mismatched types: expected '" << expected << "' but found '" << found_type << "' as " << what << " type.\n";
     return expected;
 }
 
