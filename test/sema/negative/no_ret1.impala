@@ -1,0 +1,4 @@
+fn f(r: fn(int)) {
+    let x: int = r(4);
+    x
+}

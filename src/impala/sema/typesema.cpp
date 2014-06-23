@@ -310,7 +310,8 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
 
 void Fn::check_body(TypeSema& sema, FnType fn_type) const {
     auto return_type = fn_type->return_type();
-    Type body_type = sema.check(body(), return_type);
+    // TODO as noret is also valid we cannot use the return type as expected type. However this is bad for type inference...
+    Type body_type = sema.check(body(), sema.unknown_type());
     if (!body_type->is_noret() && !body_type->is_error())
         sema.expect_type(body(), return_type, "return");
 
@@ -728,7 +729,9 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
             for (size_t i = 0; i != num_args; ++i)
                 check(args[i], fn_mono->elem(i), "argument");
 
-            if (fn_mono->return_type() == expected || is_contuation) { // TODO this looks overly complicated
+            // note: the order is important because of the unifying side-effects of ==
+            if (is_contuation || fn_mono->return_type() == expected) { // TODO this looks overly complicated
+                // check if all type variables could be inferred
                 bool is_known = true;
                 for (size_t i = 0, e = inferred_args.size(); i != e; ++i) {
                     if (!inferred_args[i]->is_known()) {
@@ -739,7 +742,11 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
 
                 if (is_known) {
                     check_bounds(loc, fn_poly, inferred_args);
-                    return expected;
+
+                    if (is_contuation) {
+                        return type_noret();
+                    } else
+                        return expected;
                 }
             } else
                 error(loc) << "Return type '" << fn_mono->return_type() << "' does not match expected type '" << expected << "'\n";
