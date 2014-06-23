@@ -5,13 +5,13 @@ literals.impala:15 col 23: error: invalid constant '0o_'
 literals.impala:17 col 22: error: invalid constant '0o'
 literals.impala:17 col 22: error: expected ';', got '8' while parsing the end of an let statement
 literals.impala:18 col 23: error: invalid constant '0x_'
-literals.impala:2 col 20 - 23: error: wrong  type; expected u8 but found u16
-literals.impala:3 col 20 - 23: error: wrong  type; expected u16 but found u32
-literals.impala:4 col 20 - 23: error: wrong  type; expected u32 but found u64
-literals.impala:5 col 20 - 22: error: wrong  type; expected u64 but found u8
-literals.impala:6 col 20 - 23: error: wrong  type; expected i8 but found i16
-literals.impala:7 col 20 - 23: error: wrong  type; expected i16 but found i32
-literals.impala:8 col 20 - 23: error: wrong  type; expected i32 but found i64
-literals.impala:9 col 20 - 22: error: wrong  type; expected i64 but found i8
-literals.impala:10 col 20 - 23: error: wrong  type; expected f32 but found f64
-literals.impala:11 col 20 - 23: error: wrong  type; expected f64 but found f32
+literals.impala:2 col 20 - 23: error: wrong  type; expected 'u8' but found 'u16'
+literals.impala:3 col 20 - 23: error: wrong  type; expected 'u16' but found 'u32'
+literals.impala:4 col 20 - 23: error: wrong  type; expected 'u32' but found 'u64'
+literals.impala:5 col 20 - 22: error: wrong  type; expected 'u64' but found 'u8'
+literals.impala:6 col 20 - 23: error: wrong  type; expected 'i8' but found 'i16'
+literals.impala:7 col 20 - 23: error: wrong  type; expected 'i16' but found 'i32'
+literals.impala:8 col 20 - 23: error: wrong  type; expected 'i32' but found 'i64'
+literals.impala:9 col 20 - 22: error: wrong  type; expected 'i64' but found 'i8'
+literals.impala:10 col 20 - 23: error: wrong  type; expected 'f32' but found 'f64'
+literals.impala:11 col 20 - 23: error: wrong  type; expected 'f64' but found 'f32'
