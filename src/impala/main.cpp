@@ -17,6 +17,7 @@
 #include "impala/ast.h"
 #include "impala/dump.h"
 #include "impala/impala.h"
+#include "impala/location.h"
 
 //------------------------------------------------------------------------------
 
@@ -119,6 +120,7 @@ int main(int argc, char** argv) {
         for (auto infile : infiles) {
             std::string filename = infile.c_str();
             ifstream file(filename);
+            prg->set_loc(impala::Location(filename, 1, 1, 1, 1));
             result &= impala::parse(prg, file, filename);
         }
 
