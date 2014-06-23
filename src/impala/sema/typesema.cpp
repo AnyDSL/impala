@@ -152,7 +152,7 @@ Bound TypeSema::instantiate(const Location& loc, Trait trait, Type self, ArrayRe
         check_bounds(loc, *trait, type_args);
         return trait->instantiate(type_args);
     } else
-        error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << (trait->num_type_vars()-1) << "\n";
+        error(loc) << "wrong number of instances for bound type variables of trait '" << trait << "': " << args.size() << " for " << (trait->num_type_vars()-1) << "\n";
 
     return bound_error();
 }
