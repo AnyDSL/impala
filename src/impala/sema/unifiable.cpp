@@ -617,6 +617,32 @@ std::string Unifiable::elems_to_string() const {
     return result + ')';
 }
 
+std::string FnTypeNode::to_string() const {
+    std::string result("fn");
+    result += type_vars_to_string();
+
+    Type ret_type = return_type();
+
+    if (ret_type == typetable().type_noret()) {
+        result += elems_to_string();
+    } else {
+        // add parameters without return param
+        if (num_elems() == 1) {
+            result += "()";
+        } else {
+            const char* separator = "(";
+            for (size_t i = 0; i < (num_elems()-1); ++i) {
+                result += separator + elem(i)->to_string();
+                separator = ", ";
+            }
+            result += ')';
+        }
+
+        result += " -> " + ret_type->to_string();
+    }
+    return result;
+}
+
 std::string TypeVarNode::to_string() const {
     if (!name_.empty()) {
         return name_.str();

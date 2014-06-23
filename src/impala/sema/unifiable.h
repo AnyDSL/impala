@@ -401,7 +401,7 @@ private:
 
 public:
     Type return_type() const;
-    virtual std::string to_string() const { return std::string("fn") + type_vars_to_string() + elems_to_string(); }
+    virtual std::string to_string() const;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
