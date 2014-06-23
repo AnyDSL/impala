@@ -137,6 +137,7 @@ public:
     bool accept(TokenKind tok);
     bool expect(TokenKind tok, const std::string& context);
     void error(const std::string& what, const std::string& context);
+    void error(const std::string& what, const std::string& context, const Token& tok);
     bool result() const { return result_; }
     template<class T>
     Loc<T> loc(T* node) { return Loc<T>(*this, node); }
@@ -281,12 +282,16 @@ bool Parser::expect(TokenKind tok, const std::string& context) {
     }
 }
 
-void Parser::error(const std::string& what, const std::string& context) {
+void Parser::error(const std::string& what, const std::string& context, const Token& tok) {
     result_ = false;
-    std::ostream& os = la().error() << "expected " << what << ", got '" << la() << "'";
+    std::ostream& os = tok.error() << "expected " << what << ", got '" << tok << "'";
     if (!context.empty())
         os << " while parsing " << context;
     os << "\n";
+}
+
+void Parser::error(const std::string& what, const std::string& context) {
+    error(what, context, la());
 }
 
 Symbol Parser::try_id(const std::string& what) {
@@ -359,12 +364,12 @@ const Param* Parser::parse_param(bool lambda) {
     param->is_mut_ = accept(Token::MUT);
     Symbol symbol;
     const ASTType* type = nullptr;
-    auto location = la().loc();
+    auto tok = la();
 
-    if (la() == Token::ID)
+    if (tok == Token::ID)
         symbol = lex().symbol();
     else {
-        switch (la()) {
+        switch (tok) {
             case TYPE: type = parse_type(); break;
             default:    
                 symbol = "<error>";
@@ -374,7 +379,7 @@ const Param* Parser::parse_param(bool lambda) {
 
     if (accept(Token::COLON)) {
         if (type)
-            error("identifier", "parameter");
+            error("identifier", "parameter", tok);
         param->symbol_ = symbol;
         param->ast_type_ = parse_type();
     } else if (lambda) {
@@ -384,7 +389,7 @@ const Param* Parser::parse_param(bool lambda) {
     } else {
         if (type == nullptr) {
             auto type_app = new ASTTypeApp();
-            type_app->set_loc(location);
+            type_app->set_loc(tok.loc());
             type_app->symbol_ = symbol;
             type = type_app;
         }
