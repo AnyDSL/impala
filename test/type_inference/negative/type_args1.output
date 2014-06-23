@@ -1,1 +1,1 @@
-type_args1.impala:5 col 35 - 38: error: wrong argument type; expected i32 but found bool
+type_args1.impala:5 col 35 - 38: error: wrong argument type; expected 'i32' but found 'bool'

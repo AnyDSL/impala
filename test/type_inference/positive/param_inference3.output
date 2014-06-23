@@ -1,4 +1,4 @@
-fn f(g: fn[A](A, fn(A))) -> i32 {
+fn f(g: fn[A](A) -> A) -> i32 {
     g[i32](5)
 }
 

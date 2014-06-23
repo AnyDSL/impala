@@ -1,4 +1,4 @@
-fn range[T](n: i32, f: fn(T, fn())) -> () {
+fn range[T](n: i32, f: fn(T) -> ()) -> () {
 }
 
 fn main() -> () {

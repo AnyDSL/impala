@@ -1,7 +1,7 @@
-fn f[A](g: fn(fn(A, fn(A)), fn())) -> () {
+fn f[A](g: fn(fn(A) -> A) -> ()) -> () {
 }
 
 fn main() -> () {
-    f[bool](|x: fn(bool, fn(bool))| -> () {
+    f[bool](|x: fn(bool) -> bool| -> () {
     })
 }

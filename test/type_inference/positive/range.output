@@ -12,7 +12,7 @@ impl Iterator for i32 {
     }
 }
 
-fn range[I: Iterator](a: I, b: I, body: fn(I, fn())) -> () {
+fn range[I: Iterator](a: I, b: I, body: fn(I) -> ()) -> () {
     if a.lt(b) {
         body(a);
         range[I](a.inc(), b, body, return)
