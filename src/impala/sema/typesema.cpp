@@ -36,7 +36,6 @@ public:
     }
     bool expect_int(const Expr*);
     void expect_num(const Expr*);
-    Type match_types(const ASTNode* pos, Type t1, Type t2);
     Type expect_type(const Expr* expr, Type found, Type expected, std::string what);
     Type expect_type(const Expr* expr, Type expected, std::string what) { return expect_type(expr, expr->type(), expected, what); }
 
@@ -110,15 +109,6 @@ void TypeSema::expect_num(const Expr* expr) {
         !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64() &&
         !t->is_f32() && !t->is_f64()) // TODO factor this test out
         error(expr) << "expected number type but found " << t << "\n";
-}
-
-Type TypeSema::match_types(const ASTNode* pos, Type t1, Type t2) {
-    if (t1 == t2) {
-        return t1;
-    } else {
-        error(pos) << "types do not match: " << t1 << " != " << t2 << "\n";
-        return type_error();
-    }
 }
 
 Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std::string what) {
@@ -468,7 +458,8 @@ void ImplItem::check_item(TypeSema& sema) const {
                 assert(p.second && "There should be no such name in the set"); // else name analysis failed
 
                 // check that the types match
-                sema.match_types(fn, fn_type, t);
+                if (!(fn_type == t))
+                    sema.error(fn) << "Method '" << trait() << "." << meth_name << "' should have type '" << fn_type << "', but implementation has type '" << t << "'\n";
             }
         }
     }
