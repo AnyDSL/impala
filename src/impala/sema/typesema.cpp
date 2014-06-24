@@ -267,11 +267,9 @@ Type FnASTType::check(TypeSema& sema) const {
 
 Type ASTTypeApp::check(TypeSema& sema) const {
     if (decl()) {
-        if (auto type_decl = decl()->isa<TypeDecl>()) {
+        if (auto type_decl = decl()->isa<TypeDecl>())
             return sema.instantiate(loc(), sema.check(type_decl), args());
-            ////assert(args().empty());
-            //return sema.check(type_decl);
-        } else
+        else
             sema.error(this) << '\'' << symbol() << "' does not name a type\n";
     }
 
@@ -374,10 +372,12 @@ Type EnumDecl::check(TypeSema& sema) const {
 Type StructDecl::check(TypeSema& sema) const {
     check_type_params(sema);
     auto struct_type = sema.struct_abs_type(this);
+    type_ = struct_type;    // break cycle to allow recursive types
     for (auto field : field_decls())
         struct_type->set(field->index(), sema.check(field));
     for (auto type_param : type_params())
         struct_type->bind(type_param->type_var(sema));
+    type_.clear();          // will be set again by TypeSema's wrapper
     return struct_type;
 }
 
@@ -401,7 +401,7 @@ Type FnDecl::check(TypeSema& sema) const {
     if (body() != nullptr)
         check_body(sema, fn_type);
 
-    type_.clear(); // will be set again by TypeSema's wrapper
+    type_.clear();          // will be set again by TypeSema's wrapper
     return fn_type;
 }
 
