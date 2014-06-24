@@ -973,6 +973,7 @@ public:
     uint32_t index() const { return index_; }
     virtual bool is_lvalue() const override;
     virtual void check(NameSema&) const override;
+    Type check_as_struct(TypeSema&, Type) const;
 
 private:
     virtual std::ostream& print(Printer&) const override;
@@ -1111,10 +1112,11 @@ private:
 class MapExpr : public Expr, public Args, public TypeArgs {
 public:
     const Expr* lhs() const { return lhs_; }
-    const FieldExpr* is_method_call() const { return lhs()->isa<FieldExpr>(); }
     virtual bool is_lvalue() const override;
     virtual void take_address() const override;
     virtual void check(NameSema&) const override;
+    Type check_as_map(TypeSema&, Type) const;
+    Type check_as_method_call(TypeSema&, Type) const;
 
 private:
     virtual std::ostream& print(Printer&) const override;

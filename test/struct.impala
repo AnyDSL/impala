@@ -1,6 +1,7 @@
 struct vec2[T] {
     x: T, 
-    y: T
+    y: T,
+    data: ~[T]
 }
 
 //extern fn foo(v: vec2) -> float {
@@ -11,7 +12,8 @@ struct vec2[T] {
     //foo(vec2{ x: 1, y: 2f32})
 //}
     
-fn main() -> () {
-    let mut v = vec2{ x: 1, y: 2 };
+fn main(n: int) -> () {
+    let mut v = vec2{ x: 1, y: 2, data: ~[n: int] };
     v.x = 7;
+    v.data(23) = 42;
 }

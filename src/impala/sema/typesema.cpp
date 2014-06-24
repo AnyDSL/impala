@@ -665,22 +665,6 @@ Type PostfixExpr::check(TypeSema& sema, Type expected) const {
     return lhs()->type(); 
 }
 
-Type FieldExpr::check(TypeSema& sema, Type expected) const {
-    auto type = sema.check(lhs());
-    if (auto struct_app = type.isa<StructAppType>()) {
-        if (auto field_decl = struct_app->struct_abs()->struct_decl()->field_decl(symbol())) {
-            index_ = field_decl->index();
-            sema.expect_type(this, struct_app->elem(index_), expected, "field expression type");
-            return expected;
-        }
-    } 
-
-    if (!type->is_error())
-        sema.error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << type << "', but no field with that name was found\n";
-
-    return sema.type_error();
-}
-
 Type CastExpr::check(TypeSema& sema, Type expected) const {
     // TODO check whether cast is possible at all
     sema.check(lhs());
@@ -819,19 +803,39 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
     return type_error();
 }
 
-Type MapExpr::check(TypeSema& sema, Type expected) const {
-    if (auto field_expr = is_method_call()) {
-        sema.check_impls();
-        if (auto fn_method = sema.check(field_expr->lhs())->find_method(field_expr->symbol())) {
-            Array<const Expr*> nargs(num_args() + 1);
-            nargs[0] = field_expr->lhs();
-            std::copy(args().begin(), args().end(), nargs.begin()+1);
-            return sema.check_call(this->loc(), fn_method, type_args(), inferred_args_, nargs, expected);
-        } else
-            sema.error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
-        return sema.type_error();
+Type FieldExpr::check(TypeSema& sema, Type expected) const {
+    if (auto type = check_as_struct(sema, expected))
+        return type;
+
+    if (!lhs()->type()->is_error())
+        sema.error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << lhs()->type() << "', but no field with that name was found\n";
+    return sema.type_error();
+}
+
+Type FieldExpr::check_as_struct(TypeSema& sema, Type expected) const {
+    auto type = sema.check(lhs());
+    if (auto struct_app = type.isa<StructAppType>()) {
+        if (auto field_decl = struct_app->struct_abs()->struct_decl()->field_decl(symbol())) {
+            index_ = field_decl->index();
+            sema.expect_type(this, struct_app->elem(index_), expected, "field expression type");
+            return expected;
+        }
     } 
 
+    return Type();
+}
+
+Type MapExpr::check(TypeSema& sema, Type expected) const {
+    if (auto field_expr = lhs()->isa<FieldExpr>()) {
+        if (auto type = field_expr->check_as_struct(sema, sema.unknown_type()))
+            return check_as_map(sema, expected);
+        return check_as_method_call(sema, expected);
+    } 
+
+    return check_as_map(sema, expected);
+}
+
+Type MapExpr::check_as_map(TypeSema& sema, Type expected) const {
     auto ltype = sema.check(lhs());
     if (auto ptr = ltype.isa<PtrType>()) {
         ltype.clear();
@@ -865,6 +869,19 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
     } else
         sema.error(this) << "incorrect type for map expression\n";
 
+    return sema.type_error();
+}
+
+Type MapExpr::check_as_method_call(TypeSema& sema, Type expected) const {
+    auto field_expr = lhs()->as<FieldExpr>();
+    sema.check_impls();
+    if (auto fn_method = sema.check(field_expr->lhs())->find_method(field_expr->symbol())) {
+        Array<const Expr*> nargs(num_args() + 1);
+        nargs[0] = field_expr->lhs();
+        std::copy(args().begin(), args().end(), nargs.begin()+1);
+        return sema.check_call(this->loc(), fn_method, type_args(), inferred_args_, nargs, expected);
+    } else
+        sema.error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
     return sema.type_error();
 }
 
