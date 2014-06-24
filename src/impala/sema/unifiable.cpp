@@ -305,32 +305,6 @@ Type instantiate_unknown(Type type, std::vector<Type>& args) {
     return type->instantiate(map);
 }
 
-Type TypeNode::specialize(SpecializeMap& map) const {
-    if (auto result = thorin::find(map, this))
-        return result;
-
-    for (auto type_var : type_vars()) {
-        assert(!map.contains(*type_var));
-        auto new_type_var = typetable().type_var();
-        map[*type_var] = *new_type_var;
-        for (auto bound : type_var->bounds())
-            new_type_var->add_bound(bound->specialize(map));
-    }
-
-    auto t = instantiate(map);
-    for (auto type_var : type_vars())
-        t->bind(map[*type_var]->as<TypeVarNode>());
-
-    return t;
-}
-
-Array<Type> Unifiable::specialize_args(SpecializeMap& map) const {
-    Array<Type> new_args(num_args());
-    for (size_t i = 0, e = num_args(); i != e; ++i)
-        new_args[i] = arg(i)->specialize(map);
-    return new_args;
-}
-
 Type TypeNode::instantiate(SpecializeMap& map) const {
 #ifndef NDEBUG
     for (auto type_var : type_vars())
@@ -349,6 +323,10 @@ Type TypeNode::instantiate(ArrayRef<Type> args) const {
 
 Type StructAbsTypeNode::instantiate(ArrayRef<Type> args) const {
     return typetable().struct_app_type(this, args);
+}
+
+TraitApp TraitAbsNode::instantiate(ArrayRef<Type> args) const {
+    return typetable().trait_app(this, args);
 }
 
 Type BorrowedPtrTypeNode::vinstantiate(SpecializeMap& map) const { 
@@ -388,8 +366,30 @@ Type PrimTypeNode ::vinstantiate(SpecializeMap& map) const { return map[this] = 
 Type TypeErrorNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 Type TypeVarNode  ::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 
-TraitApp TraitAbsNode::instantiate(ArrayRef<Type> args) const {
-    return typetable().trait_app(this, args);
+Array<Type> Unifiable::specialize_args(SpecializeMap& map) const {
+    Array<Type> new_args(num_args());
+    for (size_t i = 0, e = num_args(); i != e; ++i)
+        new_args[i] = arg(i)->specialize(map);
+    return new_args;
+}
+
+Type TypeNode::specialize(SpecializeMap& map) const {
+    if (auto result = thorin::find(map, this))
+        return result;
+
+    for (auto type_var : type_vars()) {
+        assert(!map.contains(*type_var));
+        auto new_type_var = typetable().type_var();
+        map[*type_var] = *new_type_var;
+        for (auto bound : type_var->bounds())
+            new_type_var->add_bound(bound->specialize(map));
+    }
+
+    auto t = instantiate(map);
+    for (auto type_var : type_vars())
+        t->bind(map[*type_var]->as<TypeVarNode>());
+
+    return t;
 }
 
 TraitApp TraitAppNode::specialize(SpecializeMap& map) const {

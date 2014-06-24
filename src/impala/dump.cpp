@@ -25,7 +25,7 @@ std::ostream& Path::print(Printer& p) const {
 }
 
 /*
- * types
+ * AST types
  */
 
 std::ostream& ErrorASTType::print(Printer& p) const { return p.stream() << "<error>"; }
