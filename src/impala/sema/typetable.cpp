@@ -8,10 +8,10 @@ TypeTable::TypeTable()
 #include "impala/tokenlist.h"
     , type_error_(unify(join(new TypeErrorNode(*this))))
 {
-    trait_error_ = trait(nullptr);
-    trait_error_->bind(type_var());
-    unify(trait_error_);
-    bound_error_ = unify(bound(trait_error(), {type_error()}));
+    trait_abs_error_ = trait_abs(nullptr);
+    trait_abs_error_->bind(type_var());
+    unify(trait_abs_error_);
+    trait_app_error_ = unify(trait_app(trait_abs_error(), {type_error()}));
 }
 
 TypeTable::~TypeTable() { 
@@ -57,7 +57,7 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
         if (auto type_var = unifiable->isa<TypeVarNode>()) {
             for (auto bound : type_var->bounds())
                 unify(bound);
-            std::stable_sort(type_var->bounds_.begin(), type_var->bounds_.end(), BoundsLT());
+            std::stable_sort(type_var->bounds_.begin(), type_var->bounds_.end(), TraitAppLT());
         }
 
         auto p = unifiables_.insert(unifiable);
@@ -73,7 +73,7 @@ void TypeTable::verify() const {
         if (auto type = g->isa<TypeNode>()) {
             assert(type->is_known());
             assert(type->is_sane());
-        } else if (auto trait = g->isa<TraitNode>()) {
+        } else if (auto trait = g->isa<TraitAbsNode>()) {
             assert(trait->is_closed());
         } else if (auto impl = g->isa<ImplNode>()) {
             assert(impl->is_closed());
@@ -91,7 +91,7 @@ void TypeTable::verify() const {
         if (auto type = g->isa<TypeNode>()) {
             if (type->is_unified())
                 assert(unifiables_.contains(type->representative()));
-        } else if (auto trait = g->isa<TraitNode>()) {
+        } else if (auto trait = g->isa<TraitAbsNode>()) {
             if (trait->is_unified())
                 assert(unifiables_.contains(trait->representative()));
         } else if (auto impl = g->isa<ImplNode>()) {

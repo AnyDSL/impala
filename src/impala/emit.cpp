@@ -123,11 +123,11 @@ thorin::Type StructTypeNode::convert(CodeGen& cg) const {
     return struct_decl()->thorin_type();
 }
 
-thorin::Type TraitNode::convert(CodeGen& cg) const {
+thorin::Type TraitAbsNode::convert(CodeGen& cg) const {
     std::vector<thorin::Type> elems;
 
-    for (auto super_bound : super_bounds())
-        elems.push_back(cg.convert(super_bound));
+    for (auto super_trait : super_traits())
+        elems.push_back(cg.convert(super_trait));
 
     for (auto method : trait_decl()->methods())
         elems.push_back(cg.convert(method->type()));
@@ -135,7 +135,7 @@ thorin::Type TraitNode::convert(CodeGen& cg) const {
     return cg.world().tuple_type(elems);
 }
 
-thorin::Type BoundNode::convert(CodeGen& cg) const {
+thorin::Type TraitAppNode::convert(CodeGen& cg) const {
     Array<thorin::Type> nelems(num_elems());
     for (size_t i = 0, e = nelems.size(); i != e; ++i)
         nelems[i] = cg.convert(elem(i));
@@ -291,7 +291,7 @@ void StructDecl::emit_item(CodeGen& cg) const {
 }
 
 void TraitDecl::emit_item(CodeGen& cg) const {
-    cg.convert(trait());
+    cg.convert(trait_abs());
 }
 
 void Typedef::emit_item(CodeGen& cg) const {

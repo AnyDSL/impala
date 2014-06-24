@@ -16,13 +16,15 @@ public:
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
     BorrowedPtrType     borrowd_ptr_type(Type referenced_type) { return join(new BorrowedPtrTypeNode(*this, referenced_type)); }
-    Bound               bound(Trait trait, ArrayRef<Type> args) { return join(new BoundNode(trait, args)); }
-    Bound               bound_error() { return bound_error_; }
+    TraitApp            trait_app(TraitAbs trait, ArrayRef<Type> args) { return join(new TraitAppNode(trait, args)); }
+    TraitApp            trait_app_error() { return trait_app_error_; }
     DefiniteArrayType   definite_array_type(Type elem_type, uint64_t dim) { 
         return join(new DefiniteArrayTypeNode(*this, elem_type, dim)); 
     }
     FnType              fn_type(ArrayRef<Type> params) { return join(new FnTypeNode(*this, params)); }
-    Impl                impl(const ImplItem* impl, Bound bound, Type type) { return join(new ImplNode(*this, impl, bound, type)); }
+    Impl                impl(const ImplItem* impl, TraitApp trait_app, Type type) { 
+        return join(new ImplNode(*this, impl, trait_app, type)); 
+    }
     IndefiniteArrayType indefinite_array_type(Type elem_type) { 
         return join(new IndefiniteArrayTypeNode(*this, elem_type)); 
     }
@@ -30,8 +32,8 @@ public:
     OwnedPtrType        owned_ptr_type(Type referenced_type) { return join(new OwnedPtrTypeNode(*this, referenced_type)); }
     PrimType            type(PrimTypeKind kind);
     StructType          struct_type(const StructDecl* struct_decl) { return join(new StructTypeNode(*this, struct_decl)); }
-    Trait               trait(const TraitDecl* trait_decl) { return join(new TraitNode(*this, trait_decl)); }
-    Trait               trait_error() { return trait_error_; }
+    TraitAbs            trait_abs(const TraitDecl* trait_decl) { return join(new TraitAbsNode(*this, trait_decl)); }
+    TraitAbs            trait_abs_error() { return trait_abs_error_; }
     TupleType           tuple_type(ArrayRef<Type> elems) { return join(new TupleTypeNode(*this, elems)); }
     TupleType           unit() { return tuple_type({}); }
     TypeError           type_error() { return type_error_; }
@@ -60,8 +62,8 @@ private:
 #define IMPALA_TYPE(itype, atype) PrimType itype##_;
 #include "impala/tokenlist.h"
     TypeError type_error_;
-    Trait trait_error_;
-    Bound bound_error_;
+    TraitAbs trait_abs_error_;
+    TraitApp trait_app_error_;
 };
 
 }

@@ -272,7 +272,7 @@ public:
     Symbol symbol() const { return symbol_; }
     SafePtr<const Decl> decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const override;
-    Bound bound(TypeSema&, Type) const;
+    TraitApp trait_app(TypeSema&, Type) const;
 
 private:
     virtual void check(NameSema&) const override;
@@ -678,7 +678,7 @@ public:
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
     const MethodTable& method_table() const { return method_table_; }
     const SelfParam* self_param() const { return &self_param_; }
-    Trait trait() const { return trait_; }
+    TraitAbs trait_abs() const { return trait_abs_; }
     virtual Symbol item_symbol() const override { return Decl::symbol(); }
     virtual std::ostream& print(Printer&) const override;
 
@@ -691,7 +691,7 @@ private:
     AutoVector<const FnDecl*> methods_;
     AutoVector<const ASTTypeApp*> super_traits_;
     mutable MethodTable method_table_;
-    mutable Trait trait_;
+    mutable TraitAbs trait_abs_;
 
     friend class Parser;
 };

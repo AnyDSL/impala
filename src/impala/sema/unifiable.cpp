@@ -39,7 +39,7 @@ void KnownTypeNode::add_impl(Impl impl) const {
     if (impl->is_generic()) {
         gen_trait_impls_.push_back(impl);
     } else {
-        Trait trait = impl->trait();
+        TraitAbs trait = impl->trait();
         if (!trait_impls_.insert(trait).second)
             typetable().error(impl->impl_item()) << "duplicated implementation of trait '" << trait << "'\n";
         for (auto super : trait->super_traits()) {
@@ -66,25 +66,17 @@ StructTypeNode::StructTypeNode(TypeTable& typetable, const StructDecl* struct_de
     , struct_decl_(struct_decl)
 {}
 
-void TypeVarNode::add_bound(Bound bound) const {
+void TypeVarNode::add_bound(TraitApp bound) const {
     assert(!is_closed() && "closed type variables must not be changed");
     bounds_.push_back(bound);
 }
 
-bool TraitNode::add_super_bound(Bound bound) const {
-    auto p = super_bounds_.insert(bound.unify());
+bool TraitAbsNode::add_super_trait(TraitApp trait) const {
+    auto p = super_traits_.insert(trait.unify());
     return p.second;
 }
 
-Bound TraitNode::super_bound(Trait trait) const {
-    for (auto super : super_bounds()) {
-        if (super->trait() == trait)
-            return super;
-    }
-    return Bound();
-}
-
-void TraitNode::add_impl(Impl impl) const {
+void TraitAbsNode::add_impl(Impl impl) const {
     type2impls_[impl->type().unify()].push_back(impl);
 }
 
@@ -153,8 +145,8 @@ size_t Unifiable::hash() const {
     return seed;
 }
 
-size_t BoundNode::hash() const { return hash_combine(Unifiable::hash(), trait()->id()); }
-size_t TraitNode::hash() const { return hash_value(trait_decl()); }
+size_t TraitAbsNode::hash() const { return hash_value(trait_decl()); }
+size_t TraitAppNode::hash() const { return hash_combine(Unifiable::hash(), trait()->id()); }
 size_t ImplNode::hash() const { return hash_value(impl_item()); }
 
 //------------------------------------------------------------------------------
@@ -203,18 +195,18 @@ bool Unifiable::equal(const Unifiable* other) const {
     return false;
 }
 
-bool BoundsLT::operator () (Bound b1, Bound b2) const {
-    assert(b1->is_unified() && b2->is_unified());
-    if (b1->id() == b2->id()) return false;
-    if (b1->trait()->id() < b2->trait()->id()) return true;
-    if (b1->trait()->id() > b2->trait()->id()) return false;
-    if (b1->num_elems() < b2->num_elems()) return true;
-    if (b1->num_elems() > b2->num_elems()) return false;
+bool TraitAppLT::operator () (TraitApp t1, TraitApp t2) const {
+    assert(t1->is_unified() && t2->is_unified());
+    if (t1->id() == t2->id()) return false;
+    if (t1->trait()->id() < t2->trait()->id()) return true;
+    if (t1->trait()->id() > t2->trait()->id()) return false;
+    if (t1->num_elems() < t2->num_elems()) return true;
+    if (t1->num_elems() > t2->num_elems()) return false;
 
-    for (size_t i = 0, e = b1->num_elems(); i != e; ++i) {
-        assert(b1->elem(i)->is_unified() && b2->elem(i)->is_unified());
-        if (b1->elem(i)->id() < b2->elem(i)->id()) return true;
-        if (b1->elem(i)->id() > b2->elem(i)->id()) return false;
+    for (size_t i = 0, e = t1->num_elems(); i != e; ++i) {
+        assert(t1->elem(i)->is_unified() && t2->elem(i)->is_unified());
+        if (t1->elem(i)->id() < t2->elem(i)->id()) return true;
+        if (t1->elem(i)->id() > t2->elem(i)->id()) return false;
     }
 
     THORIN_UNREACHABLE;
@@ -245,16 +237,16 @@ bool TypeVarNode::equal(const Unifiable* other) const {
     return false;
 }
 
-bool TraitNode::equal(const Unifiable* other) const {
+bool TraitAbsNode::equal(const Unifiable* other) const {
     assert(this->is_unified());
 
-    if (auto trait = other->isa<TraitNode>())
+    if (auto trait = other->isa<TraitAbsNode>())
         return this->trait_decl() == trait->trait_decl();
     return false;
 }
 
-bool BoundNode::equal(const Unifiable* other) const {
-    return Unifiable::equal(other) && this->trait()->equal(*other->as<BoundNode>()->trait());
+bool TraitAppNode::equal(const Unifiable* other) const {
+    return Unifiable::equal(other) && this->trait()->equal(*other->as<TraitAppNode>()->trait());
 }
 
 //------------------------------------------------------------------------------
@@ -363,20 +355,20 @@ Type PrimTypeNode ::vinstantiate(SpecializeMap& map) const { return map[this] = 
 Type TypeErrorNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 Type TypeVarNode  ::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 
-Bound TraitNode::instantiate(ArrayRef<Type> type_args) const {
-    return typetable().bound(this, type_args);
+TraitApp TraitAbsNode::instantiate(ArrayRef<Type> type_args) const {
+    return typetable().trait_app(this, type_args);
 }
 
-Bound BoundNode::specialize(SpecializeMap& map) const {
+TraitApp TraitAppNode::specialize(SpecializeMap& map) const {
     Array<Type> new_elems(num_elems());
     for (size_t i = 0, e = num_elems(); i != e; ++i)
         new_elems[i] = elem(i)->specialize(map);
 
-    return typetable().bound(trait(), new_elems);
+    return typetable().trait_app(trait(), new_elems);
 }
 
 Impl ImplNode::specialize(SpecializeMap& map) const { 
-    return typetable().impl(impl_item(), bound()->specialize(map), type());
+    return typetable().impl(impl_item(), trait_app()->specialize(map), type());
 }
 
 //------------------------------------------------------------------------------
@@ -409,8 +401,8 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
             for (size_t i = 0, e = u1->num_elems(); i != e && result; ++i)
                 result &= infer(u1->elem(i), u2->elem(i));
 
-            if (auto b1 = u1->isa<BoundNode>())
-                result &= b1->trait() == u2->as<BoundNode>()->trait();
+            if (auto b1 = u1->isa<TraitAppNode>())
+                result &= b1->trait() == u2->as<TraitAppNode>()->trait();
 
             return result;
         }
@@ -427,7 +419,7 @@ bool infer(Uni u1, Uni u2) { return infer(u1->unify(), u2->unify()); }
  * implements
  */
 
-bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
+bool KnownTypeNode::implements(TraitApp bound, SpecializeMap& map) const {
     if (!is_unified())
         return unify()->as<KnownTypeNode>()->implements(bound, map);
 
@@ -442,49 +434,50 @@ bool KnownTypeNode::implements(Bound bound, SpecializeMap& map) const {
     for (auto impl : bound->trait()->type2impls(this)) {
         // find out which of impl's type_vars match to which of impl->bounds' type args
         for (auto type_var : impl->type_vars()) {
-            for (size_t i = 0, e = impl->bound()->num_elems(); i != e; ++i) { // TODO this is currently quadratic
-                if (type_var.as<Type>() == impl->bound()->elem(i) 
+            for (size_t i = 0, e = impl->trait_app()->num_elems(); i != e; ++i) { // TODO this is currently quadratic
+                if (type_var.as<Type>() == impl->trait_app()->elem(i) 
                         && !bound->elem(i)->isa<UnknownTypeNode>()
                         && implements_bounds(bound->elem(i), type_var))
                     map[*type_var] = *bound->elem(i);
             }
         }
 
-        if (bound == impl->specialize(map)->bound())
+        if (bound == impl->specialize(map)->trait_app())
             return true;
     }
 
     return false;
 }
 
-Impl KnownTypeNode::find_impl(Bound bound) const {
+// TODO factor copy&paste code
+Impl KnownTypeNode::find_impl(TraitApp bound) const {
     SpecializeMap map;
     for (auto impl : bound->trait()->type2impls(this)) {
         return impl;
         // find out which of impl's type_vars match to which of impl->bounds' type args
         for (auto type_var : impl->type_vars()) {
-            for (size_t i = 0, e = impl->bound()->num_elems(); i != e; ++i) { // TODO this is currently quadratic
-                if (type_var.as<Type>() == impl->bound()->elem(i) 
+            for (size_t i = 0, e = impl->trait_app()->num_elems(); i != e; ++i) { // TODO this is currently quadratic
+                if (type_var.as<Type>() == impl->trait_app()->elem(i) 
                         && !bound->elem(i)->isa<UnknownTypeNode>())
                     map[*type_var] = *bound->elem(i);
             }
         }
 
-        if (bound == impl->specialize(map)->bound())
+        if (bound == impl->specialize(map)->trait_app())
             return impl;
     }
 
     return Impl();
 }
 
-bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {
+bool TypeVarNode::implements(TraitApp bound, SpecializeMap& map) const {
     if (!is_unified())
         return unify()->as<TypeVarNode>()->implements(bound, map);
 
-    std::queue<Bound> queue;
-    IdSet<Bound> done;
+    std::queue<TraitApp> queue;
+    IdSet<TraitApp> done;
 
-    auto enqueue = [&] (Bound bound) { 
+    auto enqueue = [&] (TraitApp bound) { 
         assert(bound->is_unified());
         queue.push(bound); 
         done.insert(bound); 
@@ -499,11 +492,11 @@ bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {
         if (cur_bound == bound)
             return true;
 
-        for (auto super_bound : cur_bound->trait()->super_bounds()) {
-            map[*super_bound->elem(0)] = *cur_bound->elem(0); // propagate self type param
-            auto spec_super_bound = super_bound->specialize(map).unify();
-            if (!done.contains(spec_super_bound))
-                enqueue(spec_super_bound);
+        for (auto super_trait : cur_bound->trait()->super_traits()) {
+            map[*super_trait->elem(0)] = *cur_bound->elem(0); // propagate self type param
+            auto spec_super_trait = super_trait->specialize(map).unify();
+            if (!done.contains(spec_super_trait))
+                enqueue(spec_super_trait);
         }
     }
 
@@ -518,7 +511,7 @@ bool TypeVarNode::implements(Bound bound, SpecializeMap& map) const {
 
 FnType KnownTypeNode::find_method(Symbol name) const {
     for (auto impl : impls_) {
-        if (auto fn = impl->bound()->find_method(name))
+        if (auto fn = impl->trait_app()->find_method(name))
             return fn;
     }
     return FnType();
@@ -532,12 +525,12 @@ FnType TypeVarNode::find_method(Symbol name) const {
     return FnType();
 }
 
-FnType TraitNode::find_method(Symbol name) const {
+FnType TraitAbsNode::find_method(Symbol name) const {
     auto i = trait_decl()->method_table().find(name);
     if (i != trait_decl()->method_table().end())
         return i->second->fn_type();
 
-    for (auto super : super_bounds()) {
+    for (auto super : super_traits()) {
         if (auto type = super->find_method(name))
             return type;
     }
@@ -545,7 +538,7 @@ FnType TraitNode::find_method(Symbol name) const {
     return FnType();
 }
 
-FnType BoundNode::find_method(Symbol name) const {
+FnType TraitAppNode::find_method(Symbol name) const {
     auto i = method_cache_.find(name);
     if (i != method_cache_.end())
         return i->second;
@@ -655,9 +648,9 @@ std::string TypeVarNode::to_string() const {
     }
 }
 
-std::string TraitNode::to_string() const { return is_error() ? "<trait error>" : trait_decl()->symbol().str(); }
+std::string TraitAbsNode::to_string() const { return is_error() ? "<trait error>" : trait_decl()->symbol().str(); }
 
-std::string BoundNode::to_string() const {
+std::string TraitAppNode::to_string() const {
     if (is_error())
         return "<bound error>";
 

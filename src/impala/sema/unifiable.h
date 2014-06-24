@@ -28,7 +28,6 @@ class Unifiable;
 template<class T> class Proxy;
 class ArrayTypeNode;            typedef Proxy<ArrayTypeNode>            ArrayType;
 class BorrowedPtrTypeNode;      typedef Proxy<BorrowedPtrTypeNode>      BorrowedPtrType;
-class BoundNode;                typedef Proxy<BoundNode>                Bound;
 class DefiniteArrayTypeNode;    typedef Proxy<DefiniteArrayTypeNode>    DefiniteArrayType;
 class FnTypeNode;               typedef Proxy<FnTypeNode>               FnType;
 class ImplNode;                 typedef Proxy<ImplNode>                 Impl;
@@ -39,7 +38,8 @@ class OwnedPtrTypeNode;         typedef Proxy<OwnedPtrTypeNode>         OwnedPtr
 class PrimTypeNode;             typedef Proxy<PrimTypeNode>             PrimType;
 class PtrTypeNode;              typedef Proxy<PtrTypeNode>              PtrType;
 class StructTypeNode;           typedef Proxy<StructTypeNode>           StructType;
-class TraitNode;                typedef Proxy<TraitNode>                Trait;
+class TraitAbsNode;             typedef Proxy<TraitAbsNode>             TraitAbs;
+class TraitAppNode;             typedef Proxy<TraitAppNode>             TraitApp;
 class TupleTypeNode;            typedef Proxy<TupleTypeNode>            TupleType;
 class TypeErrorNode;            typedef Proxy<TypeErrorNode>            TypeError;
 class TypeNode;                 typedef Proxy<TypeNode>                 Type;
@@ -73,7 +73,7 @@ Type instantiate_unknown(Type, std::vector<Type>&);
  */
 bool infer(Uni, Uni);
 
-struct BoundsLT { bool operator () (Bound b1, Bound b2) const; };
+struct TraitAppLT { bool operator () (TraitApp t1, TraitApp t2) const; };
 
 template<class T>
 class Proxy {
@@ -141,7 +141,6 @@ enum Kind {
 #define IMPALA_TYPE(itype, atype) Kind_##itype,
 #include "impala/tokenlist.h"
     Kind_borrowed_ptr,
-    Kind_bound,
     Kind_definite_array,
     Kind_error,
     Kind_fn,
@@ -151,6 +150,7 @@ enum Kind {
     Kind_owned_ptr,
     Kind_struct,
     Kind_trait,
+    Kind_trait_app,
     Kind_tuple,
     Kind_type_var,
     Kind_unknown,
@@ -281,7 +281,7 @@ public:
     Type instantiate(SpecializeMap& map) const;
     Type instantiate(ArrayRef<Type>) const;
 
-    virtual bool implements(Bound, SpecializeMap&) const = 0;
+    virtual bool implements(TraitApp, SpecializeMap&) const = 0;
     /// @return The method type or an empty type if no method with this name was found
     virtual FnType find_method(Symbol s) const = 0;
     bool is_noret() const { return isa<NoRetTypeNode>(); }
@@ -311,8 +311,8 @@ public:
     virtual bool is_known() const override { return false; }
     virtual size_t hash() const override { THORIN_UNREACHABLE; }
     virtual bool equal(const Unifiable*) const override { THORIN_UNREACHABLE; }
-    virtual bool implements(Bound bound, SpecializeMap& map) const override { THORIN_UNREACHABLE; }
-    virtual FnType find_method(Symbol s) const override { THORIN_UNREACHABLE; }
+    virtual bool implements(TraitApp, SpecializeMap&) const override { THORIN_UNREACHABLE; }
+    virtual FnType find_method(Symbol) const override { THORIN_UNREACHABLE; }
     virtual bool is_sane() const override { THORIN_UNREACHABLE; }
     virtual std::string to_string() const override;
 
@@ -333,8 +333,8 @@ public:
     const std::vector<Impl>& impls() const { return impls_; }
     void add_impl(Impl) const;
 
-    Impl find_impl(Bound) const;
-    virtual bool implements(Bound, SpecializeMap&) const;
+    Impl find_impl(TraitApp) const;
+    virtual bool implements(TraitApp, SpecializeMap&) const;
     virtual FnType find_method(Symbol s) const;
     virtual bool is_sane() const;
 
@@ -457,16 +457,16 @@ private:
     bool bounds_equal(const TypeVarNode*) const;
 
 public:
-    const std::vector<Bound>& bounds() const { return bounds_; }
-    Bound bound(size_t i) const { return bounds_[i]; }
+    const std::vector<TraitApp>& bounds() const { return bounds_; }
+    TraitApp bound(size_t i) const { return bounds_[i]; }
     size_t num_bounds() const { return bounds_.size(); }
     const Unifiable* bound_at() const { return bound_at_; }
-    void add_bound(Bound) const;
+    void add_bound(TraitApp) const;
 
     virtual bool is_closed() const override { return bound_at_ != nullptr; }
     virtual bool is_sane() const override { return is_closed(); }
     virtual bool equal(const Unifiable*) const override;
-    virtual bool implements(Bound, SpecializeMap&) const override;
+    virtual bool implements(TraitApp, SpecializeMap&) const override;
     virtual FnType find_method(Symbol s) const override;
     virtual std::string to_string() const override;
 
@@ -475,7 +475,7 @@ private:
     virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
 
     Symbol name_;
-    mutable std::vector<Bound> bounds_; ///< All traits that restrict the instantiation of this variable.
+    mutable std::vector<TraitApp> bounds_; ///< All traits that restrict the instantiation of this variable.
     mutable const Unifiable* bound_at_; ///< The type where this variable is bound.
     mutable const TypeVarNode* equiv_;  ///< Used to define equivalence constraints when checking equality of types.
 
@@ -579,27 +579,26 @@ private:
  * allowed (I guess):
  * @code trait TT<X:TT<Self>> {}; impl TT<int> for int {} @endcode
  *
- * @see BoundNode
+ * @see TraitAppNode
  */
-class TraitNode : public Unifiable {
+class TraitAbsNode : public Unifiable {
 private:
-    TraitNode(TypeTable& tt, const TraitDecl* trait_decl)
+    TraitAbsNode(TypeTable& tt, const TraitDecl* trait_decl)
         : Unifiable(tt, Kind_trait, {})
         , trait_decl_(trait_decl)
     {}
 
 public:
-    typedef std::set<Bound, BoundsLT> SuperBounds;
+    typedef std::set<TraitApp, TraitAppLT> SuperTraits;
 
     const TraitDecl* trait_decl() const { return trait_decl_; }
-    const SuperBounds& super_bounds() const { return super_bounds_; }
-    Bound super_bound(Trait trait) const;
+    const SuperTraits& super_traits() const { return super_traits_; }
     const std::vector<Impl>& type2impls(Type type) const { return type2impls_[type]; }
-    bool add_super_bound(Bound) const;
+    bool add_super_trait(TraitApp) const;
     /// return the type of the method with this name if it exists; otherwise return an empty type
     FnType find_method(Symbol name) const;
     bool has_method(Symbol name) const { return !find_method(name).empty(); }
-    Bound instantiate(ArrayRef<Type> args) const;
+    TraitApp instantiate(ArrayRef<Type> args) const;
     void add_impl(Impl impl) const;
 
     virtual bool is_error() const override { return trait_decl() == nullptr; }
@@ -611,7 +610,7 @@ private:
     virtual thorin::Type convert(CodeGen&) const override;
 
     const TraitDecl* const trait_decl_;
-    mutable SuperBounds super_bounds_;
+    mutable SuperTraits super_traits_;
     mutable IdMap<Type, std::vector<Impl>> type2impls_;
 
     friend class TypeTable;
@@ -620,19 +619,19 @@ private:
 //------------------------------------------------------------------------------
 
 /// An instance of a trait is a trait where all type variables are instantiated by concrete types.
-class BoundNode : public Unifiable {
+class TraitAppNode : public Unifiable {
 private:
-    BoundNode(const Trait trait, ArrayRef<Type> elems)
-        : Unifiable(trait->typetable(), Kind_bound, elems)
+    TraitAppNode(const TraitAbs trait, ArrayRef<Type> elems)
+        : Unifiable(trait->typetable(), Kind_trait_app, elems)
         , trait_(trait.unify())
     {
         assert(trait_->num_type_vars() == num_elems());
     }
 
 public:
-    const Trait trait() const { return trait_; }
+    const TraitAbs trait() const { return trait_; }
     FnType find_method(Symbol name) const;
-    Bound specialize(SpecializeMap&) const;
+    TraitApp specialize(SpecializeMap&) const;
 
     virtual bool is_error() const override { return trait()->is_error(); }
     virtual size_t hash() const override;
@@ -642,7 +641,7 @@ public:
 private:
     virtual thorin::Type convert(CodeGen&) const override;
 
-    const Trait trait_;
+    const TraitAbs trait_;
     mutable thorin::HashMap<Symbol, FnType> method_cache_;
 
     friend class TypeTable;
@@ -652,15 +651,15 @@ private:
 
 class ImplNode : public Unifiable {
 private:
-    ImplNode(TypeTable& tt, const ImplItem* impl_item, Bound bound, Type type)
+    ImplNode(TypeTable& tt, const ImplItem* impl_item, TraitApp trait_app, Type type)
         : Unifiable(tt, Kind_impl, {type})
         , impl_item_(impl_item)
-        , bound_(bound)
+        , trait_app_(trait_app)
     {}
 
 public:
     const ImplItem* impl_item() const { return impl_item_; }
-    Bound bound() const { return bound_; }
+    TraitApp trait_app() const { return trait_app_; }
     Type type() const { return elem(0); }
     Impl specialize(SpecializeMap& map) const;
 
@@ -672,7 +671,7 @@ private:
     virtual thorin::Type convert(CodeGen&) const override;
 
     const ImplItem* const impl_item_;
-    Bound bound_;
+    TraitApp trait_app_;
     Type type_;
 
     friend class TypeTable;
