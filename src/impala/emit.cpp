@@ -43,7 +43,11 @@ public:
     void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
     void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }
-    void emit(const Item* item) { item->emit_item(*this); }
+    void emit(const Item* item) { 
+        assert(!item->done_);
+        item->emit_item(*this); 
+        item->done_ = true;
+    }
     Var emit(const ValueDecl* decl) {
         if (!decl->var_)
             decl->var_ = decl->emit(*this);

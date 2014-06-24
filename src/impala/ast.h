@@ -494,6 +494,9 @@ private:
     virtual void emit_item(CodeGen&) const = 0;
 
     Visibility visibility_;
+#ifndef NDEBUG
+    mutable bool done_ = false;
+#endif
 
     friend class CodeGen;
     friend class Parser;
