@@ -283,7 +283,7 @@ Var StaticItem::emit(CodeGen& cg) const {
 }
 
 void StructDecl::emit_item(CodeGen& cg) const {
-    auto struct_type = cg.world().struct_type(num_field_decls(), symbol().str());
+    auto struct_type = cg.world().tuple_type(num_field_decls(), symbol().str());
     thorin_type_ = struct_type;
     size_t i = 0;
     for (auto field_decl : field_decls())
