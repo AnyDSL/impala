@@ -402,6 +402,7 @@ protected:
 
 class TypeParam : public TypeDecl {
 public:
+    size_t num_bounds() const { return bounds().size(); }
     const ASTTypes& bounds() const { return bounds_; }
     TypeVar type_var() const { return type().as<TypeVar>(); }
     TypeVar type_var(TypeSema&) const;

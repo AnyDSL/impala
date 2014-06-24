@@ -1,2 +1,2 @@
-fn_neq1.impala:17 col 9: error: mismatched types: expected 'fn[T:A](T) -> i32' but found 'fn[T:A+B](T) -> i32' as argument type
-fn_neq1.impala:18 col 9: error: mismatched types: expected 'fn[T:A](T) -> i32' but found 'fn[T:A+B](T) -> i32' as argument type
+fn_neq1.impala:17 col 9: error: mismatched types: expected 'fn[T: A](T) -> i32' but found 'fn[T: A + B](T) -> i32' as argument type
+fn_neq1.impala:18 col 9: error: mismatched types: expected 'fn[T: A](T) -> i32' but found 'fn[T: A + B](T) -> i32' as argument type

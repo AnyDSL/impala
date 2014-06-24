@@ -4,11 +4,13 @@
 #include "thorin/util/printer.h"
 
 #include "impala/prec.h"
+#include "impala/sema/unifiable.h"
 
 #include <iostream>
 
 namespace impala {
 
+class Unifiable;                
 class ASTNode;
 class Expr;
 
@@ -32,7 +34,9 @@ public:
  * @param o The output stream where the dump is directed to.
  */
 void dump(const ASTNode* n, bool fancy = false, std::ostream& o = std::cout);
-std::ostream& operator << (std::ostream& o, const ASTNode* n);
+std::ostream& operator << (std::ostream&, const ASTNode*);
+template<class T> 
+std::ostream& operator << (std::ostream& o, Proxy<T> u) { Printer p(o, true); return u->print(p); }
 
 }
 

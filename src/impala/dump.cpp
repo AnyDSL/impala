@@ -7,10 +7,6 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; }
-
-//------------------------------------------------------------------------------
-
 /*
  * paths
  */
@@ -24,6 +20,108 @@ std::ostream& Path::print(Printer& p) const {
     return p.dump_list([&] (const PathElem* path_elem) { path_elem->print(p); }, path_elems(), "", "", "::");
 }
 
+/*
+ * types
+ */
+
+std::ostream& Unifiable::print_type_vars(Printer& p) const {
+    if (is_polymorphic())
+        return p.dump_list([&] (TypeVar type_var) { 
+                    type_var->print(p); 
+                    if (type_var->num_bounds() != 0) {
+                        p.stream() << ": ";
+                        p.dump_list([&] (TraitApp bound) { bound->print(p); }, type_var->bounds(), "", "", " + ");
+                    }
+                }, type_vars(), "[", "]");
+    return p.stream();
+}
+
+std::ostream& Unifiable::print_args(Printer& p) const {
+    return p.dump_list([&] (Type type) { type->print(p); }, args(), "(", ")");
+}
+
+std::ostream& UnknownTypeNode::print(Printer& p) const { 
+    assert(!is_unified());
+    return p.stream() << '?' << id();
+}
+
+std::ostream& PrimTypeNode::print(Printer& p) const {
+    switch (primtype_kind()) {
+#define IMPALA_TYPE(itype, atype) case PrimType_##itype: return p.stream() << #itype;
+#include "impala/tokenlist.h"
+        default: THORIN_UNREACHABLE;
+    }
+}
+
+std::ostream& TypeErrorNode::print(Printer& p) const { return p.stream() << "<type error>"; }
+std::ostream& NoRetTypeNode::print(Printer& p) const { return p.stream() << "<no-return>"; }
+
+std::ostream& FnTypeNode::print(Printer& p) const {
+    p.stream() << "fn";
+    print_type_vars(p);
+    Type ret_type = return_type();
+    if (ret_type->is_noret())
+        return print_args(p);
+
+    p.dump_list([&] (Type type) { p.stream() << type; }, args().slice_num_from_end(1), "(", ")");
+    p.stream() << " -> ";
+    return ret_type->print(p);
+}
+
+std::ostream& TypeVarNode::print(Printer& p) const {
+    if (!name_.empty())
+        return p.stream() << name_.str();
+    return p.stream() << '_' << id() << '_';
+}
+
+std::ostream& TraitAbsNode::print(Printer& p) const { 
+    return p.stream() << (is_error() ? "<trait error>" : trait_decl()->symbol().str());
+}
+
+std::ostream& TraitAppNode::print(Printer& p) const {
+    if (is_error())
+        return p.stream() << "<bound error>";
+
+    p.stream() << trait();
+    if (num_args() > 1)
+        return p.dump_list([&] (Type type) { type->print(p); }, args().slice_from_begin(1), "[", "]");
+    return p.stream();
+}
+
+std::ostream& OwnedPtrTypeNode::print(Printer& p)    const { p.stream() << '~'; return referenced_type()->print(p); }
+std::ostream& BorrowedPtrTypeNode::print(Printer& p) const { p.stream() << '&'; return referenced_type()->print(p); }
+
+std::ostream& DefiniteArrayTypeNode::print(Printer& p) const {
+    p.stream() << '[';
+    return elem_type()->print(p) << " * " << dim() << ']';
+}
+
+std::ostream& IndefiniteArrayTypeNode::print(Printer& p) const {
+    p.stream() << '[';
+    return elem_type()->print(p) << "]";
+}
+
+std::ostream& StructAbsTypeNode::print(Printer& p) const {
+    return p.stream() << struct_decl_->symbol().str();
+}
+
+std::ostream& StructAppTypeNode::print(Printer& p) const {
+    p.stream() << struct_abs()->struct_decl()->symbol().str();
+    if (num_args() != 0)
+        return p.dump_list([&] (Type type) { type->print(p); }, args(), "[", "]");
+    return p.stream();
+}
+
+std::ostream& TupleTypeNode::print(Printer& p) const {
+    print_type_vars(p);
+    return print_args(p);
+}
+
+std::ostream& ImplNode::print(Printer& p) const {
+    return p.stream() << "TODO";
+}
+
+//------------------------------------------------------------------------------
 /*
  * AST types
  */
@@ -63,7 +161,7 @@ std::ostream& FnASTType::print(Printer& p) const {
 
 std::ostream& ASTTypeApp::print(Printer& p) const {
     p.stream() << symbol();
-    if (num_args() == 0)
+    if (num_args() != 0)
         p.dump_list([&] (const ASTType* arg) { arg->print(p); }, args(), "[", "]");
     return p.stream();
 }
@@ -100,7 +198,7 @@ std::ostream& Fn::print_params(Printer& p, bool returning) const {
             if (!param->symbol().empty())
                 p.stream() << param->symbol() << ": ";
             if (auto type = param->type())
-                p.stream() << type->to_string();
+                p.stream() << type;
             else if (auto type = param->ast_type())
                 type->print(p);
         }, 
@@ -469,8 +567,12 @@ std::ostream& ExprStmt::print(Printer& p) const {
 
 //------------------------------------------------------------------------------
 
+void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; }
+void Unifiable::dump() const { Printer p(std::cout, true); print(p) << std::endl; }
+
 void dump(const ASTNode* n, bool fancy, std::ostream& o) { Printer p(o, fancy); n->print(p); }
 std::ostream& operator << (std::ostream& o, const ASTNode* n) { Printer p(o, true); return n->print(p); }
+std::ostream& operator << (std::ostream& o, const Uni& uni) { Printer p(o, true); return uni->print(p); }
 
 //------------------------------------------------------------------------------
 

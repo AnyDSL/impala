@@ -1,6 +1,7 @@
 #ifndef IMPALA_SEMA_UNIFIABLE_H
 #define IMPALA_SEMA_UNIFIABLE_H
 
+#include <ostream>
 #include <set>
 #include <stack>
 #include <vector>
@@ -20,6 +21,7 @@ template<class T> using Array    = thorin::Array<T>;
 
 class CodeGen;
 class ImplItem;
+class Printer;
 class StructDecl;
 class TraitDecl;
 class TypeTable;
@@ -185,7 +187,7 @@ protected:
     void set(size_t i, Type t) { args_[i] = t; }
     Array<Type> specialize_args(SpecializeMap&) const;
     void convert_args(CodeGen& world, std::vector<thorin::Type>&) const;
-    std::string args_to_string() const;
+    std::ostream& print_args(Printer&) const;
 
 public:
     TypeTable& typetable() const { return typetable_; }
@@ -212,13 +214,13 @@ public:
     virtual void bind(TypeVar v) const;
     virtual size_t hash() const;
     virtual bool equal(const Unifiable*) const;
-    virtual std::string to_string() const = 0;
     virtual bool is_error() const { return false; }
     /// A \p Unifiable is known if it does not contain any \p UnknownTypeNode%s
     virtual bool is_known() const;
+    virtual std::ostream& print(Printer&) const = 0;
 
 protected:
-    std::string type_vars_to_string() const;
+    std::ostream& print_type_vars(Printer& p) const;
 
 private:
     virtual thorin::Type convert(CodeGen&) const = 0;
@@ -237,11 +239,6 @@ private:
     friend class TypeTable;
     friend bool infer(const Unifiable*, const Unifiable*);
 };
-
-//------------------------------------------------------------------------------
-
-template<class T>
-std::ostream& operator << (std::ostream& o, Proxy<T> u) { return o << u->to_string(); }
 
 //------------------------------------------------------------------------------
 
@@ -314,7 +311,7 @@ public:
     virtual bool implements(TraitApp, SpecializeMap&) const override { THORIN_UNREACHABLE; }
     virtual FnType find_method(Symbol) const override { THORIN_UNREACHABLE; }
     virtual bool is_sane() const override { THORIN_UNREACHABLE; }
-    virtual std::string to_string() const override;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -352,7 +349,7 @@ private:
 
 public:
     virtual bool is_error() const override { return true; }
-    virtual std::string to_string() const { return "<type error>"; }
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -368,7 +365,7 @@ private:
     {}
 
 public:
-    virtual std::string to_string() const override { return "<no-return>"; }
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -385,7 +382,7 @@ private:
 
 public:
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
-    virtual std::string to_string() const;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -402,7 +399,7 @@ private:
 
 public:
     Type return_type() const;
-    virtual std::string to_string() const;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -418,7 +415,7 @@ private:
     {}
 
 public:
-    virtual std::string to_string() const { return type_vars_to_string() + args_to_string(); }
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -435,9 +432,9 @@ public:
     void set(size_t i, Type t) const { const_cast<StructAbsTypeNode*>(this)->KnownTypeNode::set(i, t); }
     const StructDecl* struct_decl() const { return struct_decl_; }
     virtual Type instantiate(ArrayRef<Type>) const;
-    virtual std::string to_string() const override;
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const { THORIN_UNREACHABLE; }
@@ -455,9 +452,9 @@ private:
 public:
     Type elem(size_t i) const;
     StructAbsType struct_abs() const { return struct_abs_; }
-    virtual std::string to_string() const override;
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -492,7 +489,7 @@ public:
     virtual bool equal(const Unifiable*) const override;
     virtual bool implements(TraitApp, SpecializeMap&) const override;
     virtual FnType find_method(Symbol s) const override;
-    virtual std::string to_string() const override;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -531,7 +528,7 @@ public:
         : PtrTypeNode(typetable, Kind_owned_ptr, referenced_type)
     {}
 
-    virtual std::string to_string() const override;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -543,7 +540,7 @@ public:
         : PtrTypeNode(typetable, Kind_borrowed_ptr, referenced_type)
     {}
 
-    virtual std::string to_string() const override;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -568,7 +565,7 @@ public:
     {}
 
     uint64_t dim() const { return dim_; }
-    virtual std::string to_string() const override;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -583,7 +580,7 @@ public:
         : ArrayTypeNode(typetable, Kind_indefinite_array, elem_type)
     {}
 
-    virtual std::string to_string() const override;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -628,7 +625,7 @@ public:
     virtual bool is_error() const override { return trait_decl() == nullptr; }
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
-    virtual std::string to_string() const;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual thorin::Type convert(CodeGen&) const override;
@@ -658,12 +655,12 @@ public:
     virtual bool is_error() const override { return trait()->is_error(); }
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
-    virtual std::string to_string() const;
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual thorin::Type convert(CodeGen&) const override;
 
-    const TraitAbs trait_;
+    const TraitAbs trait_; // TODO rename
     mutable thorin::HashMap<Symbol, FnType> method_cache_;
 
     friend class TypeTable;
@@ -685,7 +682,7 @@ public:
 
     virtual size_t hash() const;
     virtual bool equal(const Unifiable*) const { THORIN_UNREACHABLE; }
-    virtual std::string to_string() const { return ""; } // TODO
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual thorin::Type convert(CodeGen&) const override;
