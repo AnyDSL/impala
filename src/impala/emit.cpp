@@ -123,6 +123,10 @@ thorin::Type StructAbsTypeNode::convert(CodeGen& cg) const {
     return struct_decl()->thorin_type();
 }
 
+thorin::Type StructAppTypeNode::convert(CodeGen& cg) const {
+    return thorin::Type();
+}
+
 thorin::Type TraitAbsNode::convert(CodeGen& cg) const {
     std::vector<thorin::Type> args;
 

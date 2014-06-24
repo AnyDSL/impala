@@ -53,9 +53,9 @@ class UnknownTypeNode;          typedef Proxy<UnknownTypeNode>          UnknownT
 typedef thorin::HashMap<const TypeNode*, const TypeNode*> SpecializeMap;
 
 SpecializeMap specialize_map(const Unifiable*, ArrayRef<Type>);
-/// Creates a \p SpecializeMap by mapping each of \p type's type variable to the corresponding element in \p type_args.
+/// Creates a \p SpecializeMap by mapping each of \p type's type variable to the corresponding element in \p args.
 template<class T>
-SpecializeMap specialize_map(Proxy<T> type, ArrayRef<Type> type_args) { return specialize_map(*type, type_args); }
+SpecializeMap specialize_map(Proxy<T> type, ArrayRef<Type> args) { return specialize_map(*type, args); }
 
 /**
  * note: bound checking cannot be done during instantiation of the unknowns because of types like fn[A:T[B], B: T[A]](a: A, b: B)
@@ -149,8 +149,9 @@ enum Kind {
     Kind_indefinite_array,
     Kind_noret,
     Kind_owned_ptr,
-    Kind_struct,
-    Kind_trait,
+    Kind_struct_abs,
+    Kind_struct_app,
+    Kind_trait_abs,
     Kind_trait_app,
     Kind_tuple,
     Kind_type_var,
@@ -275,12 +276,10 @@ protected:
 public:
     /// Specializes recursively this type while obeying \p map.
     Type specialize(SpecializeMap& map) const;
-    /**
-     * \p TypeVar%s are removed from this type.
-     * They must be found in \p map in order to specialize the resulting type.
-     */
-    Type instantiate(SpecializeMap& map) const;
     Type instantiate(ArrayRef<Type>) const;
+    /// * \p TypeVar%s are removed from this type.
+    /// They must be found in \p map in order to specialize the resulting type.
+    Type instantiate(SpecializeMap& map) const;
 
     virtual bool implements(TraitApp, SpecializeMap&) const = 0;
     /// @return The method type or an empty type if no method with this name was found
@@ -435,10 +434,13 @@ private:
 public:
     void set(size_t i, Type t) const { const_cast<StructAbsTypeNode*>(this)->KnownTypeNode::set(i, t); }
     const StructDecl* struct_decl() const { return struct_decl_; }
+    StructAppType instantiate(ArrayRef<Type>) const;
     virtual std::string to_string() const override;
+    virtual size_t hash() const override;
+    virtual bool equal(const Unifiable*) const override;
 
 private:
-    virtual Type vinstantiate(SpecializeMap&) const;
+    virtual Type vinstantiate(SpecializeMap&) const { THORIN_UNREACHABLE; }
     virtual thorin::Type convert(CodeGen&) const;
 
     const StructDecl* struct_decl_;
@@ -446,25 +448,26 @@ private:
     friend class TypeTable;
 };
 
-#if 0
 class StructAppTypeNode : public KnownTypeNode {
 private:
-    StructAppTypeNode(TypeTable& typetable, StructAbsType struct_abs, ArrayRef<Type> type_args);
+    StructAppTypeNode(TypeTable& typetable, StructAbsType struct_abs, ArrayRef<Type> args);
 
 public:
-    void set(size_t i, Type t) const { const_cast<StructTypeNode*>(this)->KnownTypeNode::set(i, t); }
-    const StructDecl* struct_decl() const { return struct_decl_; }
+    Type elem(size_t i) const;
+    StructAbsType struct_abs() const { return struct_abs_; }
     virtual std::string to_string() const override;
+    virtual size_t hash() const override;
+    virtual bool equal(const Unifiable*) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
     virtual thorin::Type convert(CodeGen&) const;
 
-    const StructDecl* struct_decl_;
+    StructAbsType struct_abs_;
+    mutable Array<Type> elem_cache_;
 
     friend class TypeTable;
 };
-#endif
 
 class TypeVarNode : public KnownTypeNode {
 private:
@@ -605,7 +608,7 @@ private:
 class TraitAbsNode : public Unifiable {
 private:
     TraitAbsNode(TypeTable& tt, const TraitDecl* trait_decl)
-        : Unifiable(tt, Kind_trait, {})
+        : Unifiable(tt, Kind_trait_abs, {})
         , trait_decl_(trait_decl)
     {}
 
@@ -637,8 +640,6 @@ private:
     friend class TypeTable;
 };
 
-//------------------------------------------------------------------------------
-
 /// An instance of a trait is a trait where all type variables are instantiated by concrete types.
 class TraitAppNode : public Unifiable {
 private:
@@ -667,8 +668,6 @@ private:
 
     friend class TypeTable;
 };
-
-//------------------------------------------------------------------------------
 
 class ImplNode : public Unifiable {
 private:

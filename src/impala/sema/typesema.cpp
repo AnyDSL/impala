@@ -372,9 +372,11 @@ Type EnumDecl::check(TypeSema& sema) const {
 
 Type StructDecl::check(TypeSema& sema) const {
     check_type_params(sema);
-    auto struct_type = sema.struct_type(this);
+    auto struct_type = sema.struct_abs_type(this);
     for (auto field : field_decls())
         struct_type->set(field->index(), sema.check(field));
+    for (auto type_param : type_params())
+        struct_type->bind(type_param->type_var(sema));
     return struct_type;
 }
 
@@ -725,30 +727,42 @@ Type TupleExpr::check(TypeSema& sema, Type expected) const {
 Type StructExpr::check(TypeSema& sema, Type expected) const {
     if (auto decl = path()->decl()) {
         if (auto struct_decl = decl->isa<StructDecl>()) {
-            thorin::HashSet<const FieldDecl*> done;
-            for (const auto& elem : elems()) {
-                if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
-                    elem.field_decl_ = field_decl;
-                    if (!thorin::visit(done, field_decl)) {
-                        sema.check(elem.expr());
-                        std::ostringstream oss;
-                        oss << "initialization type for field '" << elem.symbol() << '\'';
-                        sema.expect_type(elem.expr(), elem.expr()->type(), field_decl->type(), oss.str());
+            auto struct_abs = struct_decl->type().as<StructAbsType>();
+            if (num_type_args() <= struct_abs->num_type_vars()) {
+                for (auto type_arg : type_args())
+                    inferred_args_.push_back(sema.check(type_arg));
+
+                for (size_t i = num_type_args(), e = struct_abs->num_type_vars(); i != e; ++i)
+                    inferred_args_.push_back(sema.unknown_type());
+
+                assert(inferred_args_.size() == struct_abs->num_type_vars());
+                auto struct_app = struct_abs->instantiate(inferred_args_).as<StructAppType>();
+
+                thorin::HashSet<const FieldDecl*> done;
+                for (const auto& elem : elems()) {
+                    if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
+                        elem.field_decl_ = field_decl;
+                        if (!thorin::visit(done, field_decl)) {
+                            sema.check(elem.expr());
+                            std::ostringstream oss;
+                            oss << "initialization type for field '" << elem.symbol() << '\'';
+                            sema.expect_type(elem.expr(), elem.expr()->type(), struct_app->elem(field_decl->index()), oss.str());
+                        } else
+                            sema.error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
                     } else
-                        sema.error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
-                } else
-                    sema.error(elem.expr()) << "structure '" << struct_decl->symbol() << "' has no field named '" << elem.symbol() << "'\n";
-            }
-
-            if (done.size() != struct_decl->field_table().size()) {
-                for (auto p : struct_decl->field_table()) {
-                    if (!done.contains(p.second))
-                        sema.error(this) << "missing field '" << p.first << "'\n";
+                        sema.error(elem.expr()) << "structure '" << struct_decl->symbol() << "' has no field named '" << elem.symbol() << "'\n";
                 }
-            }
 
-            return struct_decl->type();
+                if (done.size() != struct_decl->field_table().size()) {
+                    for (auto p : struct_decl->field_table()) {
+                        if (!done.contains(p.second))
+                            sema.error(this) << "missing field '" << p.first << "'\n";
+                    }
+                }
 
+                return struct_app;
+            } else
+                sema.error(this) << "too many type arguments to structure: " << num_type_args() << " for " << struct_abs->num_type_vars() << "\n";
         } else
             sema.error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
     }

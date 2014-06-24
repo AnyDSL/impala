@@ -757,10 +757,14 @@ public:
     const ASTTypes& type_args() const { return type_args_; }
     const ASTType* type_arg(size_t i) const { assert(i < type_args_.size()); return type_args_[i]; }
     size_t num_type_args() const { return type_args_.size(); }
+    ArrayRef<Type> inferred_args() const { return inferred_args_; }
+    Type inferred_arg(size_t i) const { return inferred_args_[i]; }
+    size_t num_inferred_args() const { return inferred_args_.size(); }
     std::ostream& print_type_args(Printer& p) const;
 
 protected:
     ASTTypes type_args_;
+    mutable std::vector<Type> inferred_args_;
 };
 
 /// Use as mixin for anything which uses args: (expr_1, ..., expr_n)
@@ -1107,9 +1111,6 @@ private:
 class MapExpr : public Expr, public Args, public TypeArgs {
 public:
     const Expr* lhs() const { return lhs_; }
-    ArrayRef<Type> inferred_args() const { return inferred_args_; }
-    Type inferred_arg(size_t i) const { return inferred_args_[i]; }
-    size_t num_inferred_args() const { return inferred_args_.size(); }
     const FieldExpr* is_method_call() const { return lhs()->isa<FieldExpr>(); }
     virtual bool is_lvalue() const override;
     virtual void take_address() const override;
@@ -1122,7 +1123,6 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
-    mutable std::vector<Type> inferred_args_;
 
     friend class Parser;
     friend class ForExpr;

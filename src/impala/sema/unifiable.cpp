@@ -62,9 +62,27 @@ Type FnTypeNode::return_type() const {
 }
 
 StructAbsTypeNode::StructAbsTypeNode(TypeTable& typetable, const StructDecl* struct_decl)
-    : KnownTypeNode(typetable, Kind_tuple, Array<Type>(struct_decl->num_field_decls()))
+    : KnownTypeNode(typetable, Kind_struct_abs, Array<Type>(struct_decl->num_field_decls()))
     , struct_decl_(struct_decl)
 {}
+
+StructAppTypeNode::StructAppTypeNode(TypeTable& typetable, StructAbsType struct_abs, ArrayRef<Type> args)
+    : KnownTypeNode(typetable, Kind_struct_app, args)
+    , struct_abs_(struct_abs.unify())
+    , elem_cache_(struct_abs->num_args())
+{}
+
+Type StructAppTypeNode::elem(size_t i) const {
+    if (auto type = elem_cache_[i])
+        return type;
+
+    if (i < struct_abs()->num_args()) {
+        auto type = struct_abs()->arg(i);
+        auto map = specialize_map(struct_abs(), args());
+        return elem_cache_[i] = type->specialize(map).unify();
+    }
+    return Type();
+}
 
 void TypeVarNode::add_bound(TraitApp bound) const {
     assert(!is_closed() && "closed type variables must not be changed");
@@ -144,6 +162,9 @@ size_t Unifiable::hash() const {
 
     return seed;
 }
+
+size_t StructAbsTypeNode::hash() const { return hash_value(struct_decl()); }
+size_t StructAppTypeNode::hash() const { return hash_combine(Unifiable::hash(), struct_abs()->hash()); }
 
 size_t TraitAbsNode::hash() const { return hash_value(trait_decl()); }
 size_t TraitAppNode::hash() const { return hash_combine(Unifiable::hash(), trait()->id()); }
@@ -237,6 +258,18 @@ bool TypeVarNode::equal(const Unifiable* other) const {
     return false;
 }
 
+bool StructAbsTypeNode::equal(const Unifiable* unifiable) const {
+    assert(this->is_unified());
+    if (auto other = unifiable->isa<StructAbsTypeNode>())
+        return this->struct_decl() == other->struct_decl();
+    return false;
+}
+
+bool StructAppTypeNode::equal(const Unifiable* other) const {
+    assert(this->is_unified());
+    return Unifiable::equal(other) && this->struct_abs()->equal(*other->as<StructAppTypeNode>()->struct_abs());
+}
+
 bool TraitAbsNode::equal(const Unifiable* other) const {
     assert(this->is_unified());
 
@@ -255,20 +288,20 @@ bool TraitAppNode::equal(const Unifiable* other) const {
  * specialize and instantiate
  */
 
-SpecializeMap specialize_map(const Unifiable* unifiable, ArrayRef<Type> type_args) {
-    assert(unifiable->num_type_vars() == type_args.size());
+SpecializeMap specialize_map(const Unifiable* unifiable, ArrayRef<Type> args) {
+    assert(unifiable->num_type_vars() == args.size());
     SpecializeMap map;
     size_t i = 0;
     for (TypeVar v : unifiable->type_vars())
-        map[*v] = *type_args[i++];
-    assert(map.size() == type_args.size());
+        map[*v] = *args[i++];
+    assert(map.size() == args.size());
     return map;
 }
 
-Type instantiate_unknown(Type type, std::vector<Type>& type_args) {
+Type instantiate_unknown(Type type, std::vector<Type>& args) {
     for (size_t i = 0, e = type->num_type_vars(); i != e;  ++i) 
-        type_args.push_back(type->typetable().unknown_type());
-    auto map = specialize_map(type, type_args);
+        args.push_back(type->typetable().unknown_type());
+    auto map = specialize_map(type, args);
     return type->instantiate(map);
 }
 
@@ -306,16 +339,16 @@ Type TypeNode::instantiate(SpecializeMap& map) const {
     return vinstantiate(map);
 }
 
-Type TypeNode::instantiate(ArrayRef<Type> type_args) const {
-    if (type_args.empty()) {
-        assert(!is_polymorphic());
-        return this;
-    }
-    assert(num_type_vars() == type_args.size());
+Type TypeNode::instantiate(ArrayRef<Type> args) const {
+    assert(num_type_vars() == args.size());
     SpecializeMap map;
     for (size_t i = 0, e = num_type_vars(); i != e; ++i)
-        map[*type_var(i)] = *type_args[i];
+        map[*type_var(i)] = *args[i];
     return instantiate(map);
+}
+
+StructAppType StructAbsTypeNode::instantiate(ArrayRef<Type> args) const {
+    return typetable().struct_app_type(this, args);
 }
 
 Type BorrowedPtrTypeNode::vinstantiate(SpecializeMap& map) const { 
@@ -338,8 +371,11 @@ Type OwnedPtrTypeNode::vinstantiate(SpecializeMap& map) const {
     return map[this] = *typetable().owned_ptr_type(referenced_type()->specialize(map)); 
 }
 
-Type StructAbsTypeNode::vinstantiate(SpecializeMap& map) const { 
-    assert(false && "TODO"); return nullptr; 
+Type StructAppTypeNode::vinstantiate(SpecializeMap& map) const { 
+    Array<Type> new_args(num_args());
+    for (size_t i = 0, e = num_args(); i != e; ++i)
+        new_args[i] = arg(i)->specialize(map);
+    return map[this] = *typetable().struct_app_type(struct_abs(), new_args);
 }
 
 Type TupleTypeNode::vinstantiate(SpecializeMap& map) const { 
@@ -355,8 +391,8 @@ Type PrimTypeNode ::vinstantiate(SpecializeMap& map) const { return map[this] = 
 Type TypeErrorNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 Type TypeVarNode  ::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
 
-TraitApp TraitAbsNode::instantiate(ArrayRef<Type> type_args) const {
-    return typetable().trait_app(this, type_args);
+TraitApp TraitAbsNode::instantiate(ArrayRef<Type> args) const {
+    return typetable().trait_app(this, args);
 }
 
 TraitApp TraitAppNode::specialize(SpecializeMap& map) const {
@@ -559,6 +595,7 @@ FnType TraitAppNode::find_method(Symbol name) const {
 
 /*
  * TODO remove copy & paste code
+ * TODO port this to printer/dump interface
  */
 
 void Unifiable::dump() const { std::cout << to_string() << std::endl; }
@@ -687,7 +724,17 @@ std::string IndefiniteArrayTypeNode::to_string() const {
 }
 
 std::string StructAbsTypeNode::to_string() const {
-    return struct_decl_->symbol().str(); // TODO instances
+    return struct_decl_->symbol().str();
+}
+
+std::string StructAppTypeNode::to_string() const {
+    std::string result;
+    result += struct_abs()->to_string() + "[";
+    for (auto arg : args())
+        result += arg->to_string() + " ";
+    result += "]";
+
+    return result;
 }
 
 //------------------------------------------------------------------------------
