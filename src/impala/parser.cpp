@@ -136,7 +136,7 @@ public:
 
     bool accept(TokenKind tok);
     bool expect(TokenKind tok, const std::string& context);
-    void error(const std::string& what, const std::string& context);
+    void error(const std::string& what, const std::string& context) { error(what, context, la()); }
     void error(const std::string& what, const std::string& context, const Token& tok);
     bool result() const { return result_; }
     template<class T>
@@ -288,10 +288,6 @@ void Parser::error(const std::string& what, const std::string& context, const To
     if (!context.empty())
         os << " while parsing " << context;
     os << "\n";
-}
-
-void Parser::error(const std::string& what, const std::string& context) {
-    error(what, context, la());
 }
 
 Symbol Parser::try_id(const std::string& what) {

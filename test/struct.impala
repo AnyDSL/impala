@@ -4,5 +4,6 @@ struct vec2 {
 }
 
 fn main() -> () {
-    let v = vec2{ x: 1, y: 2.0, x: 3 };
+    let mut v = vec2{ x: 1, y: 2 };
+    v.x = 7;
 }

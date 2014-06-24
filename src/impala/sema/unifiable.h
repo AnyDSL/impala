@@ -435,7 +435,7 @@ private:
 public:
     void set(size_t i, Type t) const { const_cast<StructTypeNode*>(this)->KnownTypeNode::set(i, t); }
     const StructDecl* struct_decl() const { return struct_decl_; }
-    virtual std::string to_string() const { return "TODO"; }
+    virtual std::string to_string() const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -464,12 +464,12 @@ public:
     const Unifiable* bound_at() const { return bound_at_; }
     void add_bound(Bound) const;
 
-    virtual bool is_closed() const { return bound_at_ != nullptr; }
-    virtual bool is_sane() const { return is_closed(); }
-    virtual bool equal(const Unifiable*) const;
-    virtual bool implements(Bound, SpecializeMap&) const;
-    virtual FnType find_method(Symbol s) const;
-    virtual std::string to_string() const;
+    virtual bool is_closed() const override { return bound_at_ != nullptr; }
+    virtual bool is_sane() const override { return is_closed(); }
+    virtual bool equal(const Unifiable*) const override;
+    virtual bool implements(Bound, SpecializeMap&) const override;
+    virtual FnType find_method(Symbol s) const override;
+    virtual std::string to_string() const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;

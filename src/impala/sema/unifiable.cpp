@@ -689,6 +689,10 @@ std::string IndefiniteArrayTypeNode::to_string() const {
     return "[" + elem_type()->to_string() + "]";
 }
 
+std::string StructTypeNode::to_string() const {
+    return struct_decl_->symbol().str(); // TODO instances
+}
+
 //------------------------------------------------------------------------------
 
 }

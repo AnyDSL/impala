@@ -664,7 +664,17 @@ Type PostfixExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type FieldExpr::check(TypeSema& sema, Type expected) const {
-    return sema.check(lhs());
+    auto type = sema.check(lhs());
+    if (auto struct_type = type.isa<StructType>()) {
+        if (auto field_decl = struct_type->struct_decl()->field_decl(symbol())) {
+            sema.expect_type(this, field_decl->type(), expected, "field expression type");
+            return expected;
+        }
+    }
+
+    if (!type->is_error())
+        sema.error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << type << "', but no field with that name was found\n";
+    return sema.type_error();
 }
 
 Type CastExpr::check(TypeSema& sema, Type expected) const {
@@ -723,17 +733,19 @@ Type StructExpr::check(TypeSema& sema, Type expected) const {
                         sema.expect_type(elem.expr(), elem.expr()->type(), field_decl->type(), oss.str());
                     } else
                         sema.error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
-                    if (done.size() != struct_decl->field_table().size()) {
-                        for (auto p : struct_decl->field_table()) {
-                            if (!done.contains(p.second))
-                                sema.error(this) << "missing field '" << p.first << "'\n";
-                        }
-                    }
-                    return struct_decl->type();
-
                 } else
                     sema.error(elem.expr()) << "structure '" << struct_decl->symbol() << "' has no field named '" << elem.symbol() << "'\n";
             }
+
+            if (done.size() != struct_decl->field_table().size()) {
+                for (auto p : struct_decl->field_table()) {
+                    if (!done.contains(p.second))
+                        sema.error(this) << "missing field '" << p.first << "'\n";
+                }
+            }
+
+            return struct_decl->type();
+
         } else
             sema.error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
     }
