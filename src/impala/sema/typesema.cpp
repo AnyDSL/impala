@@ -132,12 +132,8 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, con
         }
     }
 
-    auto& out = error(expr) << "mismatched types: expected '" << expected << "' but found '" << found_type;
-    if (what.empty())
-        out << "'\n";
-    else
-        out << "' as " << what << " type\n";
-
+    error(expr) << "mismatched types: expected '" << expected << "' but found '" << found_type 
+        << (what.empty() ? std::string("'") : std::string("' as ") + what) << "\n";
     return expected;
 }
 
@@ -321,7 +317,7 @@ void Fn::check_body(TypeSema& sema, FnType fn_type) const {
     // TODO as noret is also valid we cannot use the return type as expected type. However this is bad for type inference...
     Type body_type = sema.check(body(), sema.unknown_type());
     if (!body_type->is_noret() && !body_type->is_error())
-        sema.expect_type(body(), return_type, "return");
+        sema.expect_type(body(), return_type, "return type");
 
     for (auto param : params()) {
         if (param->is_mut() && !param->is_written())
@@ -698,7 +694,7 @@ Type TupleExpr::check(TypeSema& sema, Type expected) const {
     std::vector<Type> types;
     if (auto exp_tup = expected.isa<TupleType>()) {
         if (exp_tup->num_elems() != num_args())
-            sema.error(this) << "expected tuple with " << exp_tup->num_elems() << " elements, but found tuple expression with " << num_args() << " elements.\n";
+            sema.error(this) << "expected tuple with " << exp_tup->num_elems() << " elements, but found tuple expression with " << num_args() << " elements\n";
 
         size_t i = 0;
         for (auto arg : args()) {
@@ -753,7 +749,7 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
         bool is_contuation = num_args == fn_mono->num_elems();
         if (is_contuation || num_args+1 == fn_mono->num_elems()) {
             for (size_t i = 0; i != num_args; ++i)
-                check(args[i], fn_mono->elem(i), "argument");
+                check(args[i], fn_mono->elem(i), "argument type");
 
             // note: the order is important because of the unifying side-effects of ==
             if (is_contuation || fn_mono->return_type() == expected) { // TODO this looks overly complicated
@@ -854,18 +850,18 @@ Type ForExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type IfExpr::check(TypeSema& sema, Type expected) const {
-    sema.check(cond(), sema.type_bool(), "condition");
+    sema.check(cond(), sema.type_bool(), "condition type");
     Type then_type = sema.check(then_expr(), sema.unknown_type());
     Type else_type = sema.check(else_expr(), sema.unknown_type());
 
     if (then_type->is_noret() && else_type->is_noret())
         return sema.type_noret();
     if (then_type->is_noret())
-        return sema.expect_type(else_expr(), else_type, expected, "if expression");
+        return sema.expect_type(else_expr(), else_type, expected, "if expression type");
     if (else_type->is_noret())
-        return sema.expect_type(then_expr(), then_type, expected, "if expression");
+        return sema.expect_type(then_expr(), then_type, expected, "if expression type");
     if (then_type == else_type)
-        return sema.expect_type(this, then_type, expected, "if expression");
+        return sema.expect_type(this, then_type, expected, "if expression type");
 
     sema.error(this) << "different types in arms of an if expression\n";
     sema.error(then_expr()) << "type of the consequence is '" << then_type << "'\n";
@@ -892,7 +888,7 @@ void LetStmt::check(TypeSema& sema) const {
     sema.cur_block_expr_->add_local(local());
     Type expected = sema.check(local(), sema.unknown_type());
     if (init())
-        sema.check(init(), expected, "init expression");
+        sema.check(init(), expected, "initialization type");
 }
 
 //------------------------------------------------------------------------------

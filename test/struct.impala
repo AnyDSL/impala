@@ -3,6 +3,6 @@ struct vec2 {
     y: int
 }
 
-//fn main() -> () {
-    //let v = vec2{ x: 1, y: 2 };
-//}
+fn main() -> () {
+    let v = vec2{ x: 1, y: 2.0, x: 3 };
+}
