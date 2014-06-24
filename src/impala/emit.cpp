@@ -290,16 +290,15 @@ Var StaticItem::emit(CodeGen& cg) const {
 }
 
 void StructDecl::emit_item(CodeGen& cg) const {
-#if 0
-    auto struct_type = cg.world().struct_type(num_elems());
-    thorin_type_ = struct_type; // prevent cycles
-    size_t i = 0;
-    for (auto elem : elems())
-        struct_type->set(i++, cg.convert(elem));
+    auto struct_type = cg.world().struct_type(num_field_decls());
+    //thorin_type_ = struct_type; // prevent cycles
+    //size_t i = 0;
+    //for (auto elem : elems())
+        //struct_type->set(i++, cg.convert(elem));
+    //for (auto field_decl : fields())
+        //field-
 
     struct_type->dump();
-    return struct_type;
-#endif
 }
 
 void TraitDecl::emit_item(CodeGen& cg) const {

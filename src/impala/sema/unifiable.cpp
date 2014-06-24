@@ -62,7 +62,7 @@ Type FnTypeNode::return_type() const {
 }
 
 StructTypeNode::StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl)
-    : KnownTypeNode(typetable, Kind_tuple, Array<Type>(struct_decl->fields().size()))
+    : KnownTypeNode(typetable, Kind_tuple, Array<Type>(struct_decl->num_field_decls()))
     , struct_decl_(struct_decl)
 {}
 

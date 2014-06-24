@@ -219,9 +219,9 @@ void FnDecl::check(NameSema& sema) const {
 void StructDecl::check(NameSema& sema) const {
     check_type_params(sema);
     sema.push_scope();
-    for (auto field : fields()) {
-        field->check(sema);
-        field_table_[field->symbol()] = field;
+    for (auto field_decl : field_decls()) {
+        field_decl->check(sema);
+        field_table_[field_decl->symbol()] = field_decl;
     }
     sema.pop_scope();
 }

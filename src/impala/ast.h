@@ -600,7 +600,8 @@ private:
 
 class StructDecl : public TypeDeclItem {
 public:
-    const AutoVector<const FieldDecl*>& fields() const { return fields_; }
+    size_t num_field_decls() const { return field_decls_.size(); }
+    const AutoVector<const FieldDecl*>& field_decls() const { return field_decls_; }
     const thorin::HashMap<Symbol, const FieldDecl*>& field_table() const { return field_table_; }
     const FieldDecl* field_decl(Symbol symbol) const { return thorin::find(field_table_, symbol); }
     virtual std::ostream& print(Printer&) const override;
@@ -610,7 +611,7 @@ private:
     virtual Type check(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 
-    AutoVector<const FieldDecl*> fields_;
+    AutoVector<const FieldDecl*> field_decls_;
     mutable thorin::HashMap<Symbol, const FieldDecl*> field_table_;
 
     friend class Parser;

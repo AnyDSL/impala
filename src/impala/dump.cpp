@@ -204,7 +204,7 @@ std::ostream& StructDecl::print(Printer& p) const {
     p.stream() << visibility().str() << "struct " << symbol();
     print_type_params(p) << " {";
     p.up();
-    p.dump_list([&] (const FieldDecl* field) { field->print(p); }, fields(), "", "", ",", true);
+    p.dump_list([&] (const FieldDecl* field) { field->print(p); }, field_decls(), "", "", ",", true);
     p.down() << "}";
     return p.stream();
 }

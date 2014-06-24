@@ -533,7 +533,7 @@ StructDecl* Parser::parse_struct_decl() {
     expect(Token::L_BRACE, "struct declaration");
     int i = 0;
     parse_comma_list(Token::R_BRACE, "closing brace of struct declaration", [&] { 
-        struct_decl->fields_.push_back(parse_field_decl(i++)); 
+        struct_decl->field_decls_.push_back(parse_field_decl(i++)); 
     });
     return struct_decl;
 }
