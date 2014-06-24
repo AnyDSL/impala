@@ -210,7 +210,7 @@ void Fn::emit_body(CodeGen& cg) const {
         if (auto tuple = def->type().isa<thorin::TupleType>()) {
             std::vector<Def> args;
             args.push_back(mem);
-            for (size_t i = 0, e = tuple->size(); i != e; ++i)
+            for (size_t i = 0, e = tuple->num_args(); i != e; ++i)
                 args.push_back(cg.world().extract(def, i));
             cg.cur_bb->jump(ret_param(), args);
         } else
