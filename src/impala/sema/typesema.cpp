@@ -670,11 +670,12 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
             sema.expect_type(this, field_decl->type(), expected, "field expression type");
             return expected;
         }
-        if (!type->is_error())
-            sema.error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << type << "', but no field with that name was found\n";
-        return sema.type_error();
     } 
-    return type;
+
+    if (!type->is_error())
+        sema.error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << type << "', but no field with that name was found\n";
+
+    return sema.type_error();
 }
 
 Type CastExpr::check(TypeSema& sema, Type expected) const {
@@ -803,13 +804,6 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
 }
 
 Type MapExpr::check(TypeSema& sema, Type expected) const {
-    auto ltype = sema.check(lhs());
-    if (auto ptr = ltype.isa<PtrType>()) {
-        ltype.clear();
-        PrefixExpr::create_deref(lhs_);
-        ltype = sema.check(lhs());
-    }
-
     if (auto field_expr = is_method_call()) {
         sema.check_impls();
         if (auto fn_method = sema.check(field_expr->lhs())->find_method(field_expr->symbol())) {
@@ -819,7 +813,17 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
             return sema.check_call(this->loc(), fn_method, type_args(), inferred_args_, nargs, expected);
         } else
             sema.error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
-    } else if (auto fn_poly = ltype.isa<FnType>()) {
+        return sema.type_error();
+    } 
+
+    auto ltype = sema.check(lhs());
+    if (auto ptr = ltype.isa<PtrType>()) {
+        ltype.clear();
+        PrefixExpr::create_deref(lhs_);
+        ltype = sema.check(lhs());
+    }
+
+    if (auto fn_poly = ltype.isa<FnType>()) {
         return sema.check_call(this->loc(), fn_poly, type_args(), inferred_args_, args(), expected);
     } else if (auto array = ltype.isa<ArrayType>()) {
         if (num_args() == 1) {

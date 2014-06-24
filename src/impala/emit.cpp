@@ -121,7 +121,12 @@ thorin::Type TupleTypeNode::convert(CodeGen& cg) const {
 
 thorin::Type StructTypeNode::convert(CodeGen& cg) const {
     auto struct_type = cg.world().struct_type(num_elems());
-    // TODO
+    thorin_type_ = struct_type; // prevent cycles
+    size_t i = 0;
+    for (auto elem : elems())
+        struct_type->set(i++, cg.convert(elem));
+
+    struct_type->dump();
     return struct_type;
 }
 
@@ -285,6 +290,16 @@ Var StaticItem::emit(CodeGen& cg) const {
 }
 
 void StructDecl::emit_item(CodeGen& cg) const {
+#if 0
+    auto struct_type = cg.world().struct_type(num_elems());
+    thorin_type_ = struct_type; // prevent cycles
+    size_t i = 0;
+    for (auto elem : elems())
+        struct_type->set(i++, cg.convert(elem));
+
+    struct_type->dump();
+    return struct_type;
+#endif
 }
 
 void TraitDecl::emit_item(CodeGen& cg) const {
