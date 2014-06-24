@@ -159,7 +159,7 @@ Type TypeSema::instantiate(const Location& loc, Type type, ArrayRef<const ASTTyp
 
         SpecializeMap map;
         check_bounds(loc, *type, type_args, map);
-        return type->instantiate(map);
+        return type->instantiate(type_args);
     } else
         error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << type->num_type_vars() << "\n";
 
@@ -268,8 +268,9 @@ Type FnASTType::check(TypeSema& sema) const {
 Type ASTTypeApp::check(TypeSema& sema) const {
     if (decl()) {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
-            assert(args().empty());
-            return sema.check(type_decl);
+            return sema.instantiate(loc(), sema.check(type_decl), args());
+            ////assert(args().empty());
+            //return sema.check(type_decl);
         } else
             sema.error(this) << '\'' << symbol() << "' does not name a type\n";
     }

@@ -347,7 +347,7 @@ Type TypeNode::instantiate(ArrayRef<Type> args) const {
     return instantiate(map);
 }
 
-StructAppType StructAbsTypeNode::instantiate(ArrayRef<Type> args) const {
+Type StructAbsTypeNode::instantiate(ArrayRef<Type> args) const {
     return typetable().struct_app_type(this, args);
 }
 

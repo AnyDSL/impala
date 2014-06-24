@@ -217,8 +217,8 @@ void FnDecl::check(NameSema& sema) const {
 }
 
 void StructDecl::check(NameSema& sema) const {
-    check_type_params(sema);
     sema.push_scope();
+    check_type_params(sema);
     for (auto field_decl : field_decls()) {
         field_decl->check(sema);
         field_table_[field_decl->symbol()] = field_decl;

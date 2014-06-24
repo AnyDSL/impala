@@ -276,7 +276,7 @@ protected:
 public:
     /// Specializes recursively this type while obeying \p map.
     Type specialize(SpecializeMap& map) const;
-    Type instantiate(ArrayRef<Type>) const;
+    virtual Type instantiate(ArrayRef<Type>) const;
     /// * \p TypeVar%s are removed from this type.
     /// They must be found in \p map in order to specialize the resulting type.
     Type instantiate(SpecializeMap& map) const;
@@ -434,7 +434,7 @@ private:
 public:
     void set(size_t i, Type t) const { const_cast<StructAbsTypeNode*>(this)->KnownTypeNode::set(i, t); }
     const StructDecl* struct_decl() const { return struct_decl_; }
-    StructAppType instantiate(ArrayRef<Type>) const;
+    virtual Type instantiate(ArrayRef<Type>) const;
     virtual std::string to_string() const override;
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
