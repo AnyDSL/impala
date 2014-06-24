@@ -36,8 +36,8 @@ public:
     }
     bool expect_int(const Expr*);
     void expect_num(const Expr*);
-    Type expect_type(const Expr* expr, Type found, Type expected, std::string what);
-    Type expect_type(const Expr* expr, Type expected, std::string what) { return expect_type(expr, expr->type(), expected, what); }
+    Type expect_type(const Expr* expr, Type found, Type expected, const std::string& what);
+    Type expect_type(const Expr* expr, Type expected, const std::string& what) { return expect_type(expr, expr->type(), expected, what); }
 
     Bound instantiate(const Location& loc, Trait trait, Type self, ArrayRef<const ASTType*> args);
     Type instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args);
@@ -66,7 +66,7 @@ public:
         return decl->type();
     }
     void check_item(const Item* item) { item->check_item(*this); }
-    Type check(const Expr* expr, Type expected, std::string what) {
+    Type check(const Expr* expr, Type expected, const std::string& what) {
         if (!expr->type_.empty())
             return expr->type_;
         return expr->type_ = expect_type(expr, expr->check(*this, expected), expected, what);
@@ -111,7 +111,7 @@ void TypeSema::expect_num(const Expr* expr) {
         error(expr) << "expected number type but found " << t << "\n";
 }
 
-Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std::string what) {
+Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, const std::string& what) {
     if (found_type == expected)
         return expected;
 
@@ -129,7 +129,12 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, std
             return expected;
         }
     }
-    error(expr) << "mismatched types: expected '" << expected << "' but found '" << found_type << "' as " << what << " type.\n";
+
+    if (!what.empty())
+        error(expr) << "mismatched types: expected '" << expected << "' but found '" << found_type << "' as " << what << " type\n";
+    else
+        error(expr) << "mismatched types: expected '" << expected << "' but found '" << found_type << "'\n";
+
     return expected;
 }
 
@@ -456,11 +461,11 @@ void ImplItem::check_item(TypeSema& sema) const {
             if (!t.empty()) {
                 // remember name for check if all methods were implemented
                 auto p = implemented_methods.insert(meth_name);
-                assert(p.second && "There should be no such name in the set"); // else name analysis failed
+                assert(p.second && "there should be no such name in the set"); // else name analysis failed
 
                 // check that the types match
                 if (!(fn_type == t))
-                    sema.error(fn) << "Method '" << trait() << "." << meth_name << "' should have type '" << fn_type << "', but implementation has type '" << t << "'\n";
+                    sema.error(fn) << "method '" << trait() << "." << meth_name << "' should have type '" << fn_type << "', but implementation has type '" << t << "'\n";
             }
         }
     }
@@ -473,7 +478,7 @@ void ImplItem::check_item(TypeSema& sema) const {
             assert(implemented_methods.size() < bound->num_methods());
             for (auto p : bound->all_methods()) {
                 if (!implemented_methods.contains(p.first))
-                    sema.error(this) << "Must implement method '" << p.first << "'\n";
+                    sema.error(this) << "must implement method '" << p.first << "'\n";
             }
         }
     }
@@ -749,7 +754,7 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
                         return expected;
                 }
             } else
-                error(loc) << "Return type '" << fn_mono->return_type() << "' does not match expected type '" << expected << "'\n";
+                error(loc) << "return type '" << fn_mono->return_type() << "' does not match expected type '" << expected << "'\n";
         } else {
             std::string rela = (num_args+1 < fn_mono->num_elems()) ? "few" : "many";
             error(loc) << "too " << rela << " arguments: " << num_args << " for " << fn_mono->num_elems()-1 << "\n";
