@@ -128,21 +128,21 @@ void IndefiniteArrayASTType::check(NameSema& sema) const { sema.check(elem_type(
 void DefiniteArrayASTType::check(NameSema& sema) const { sema.check(elem_type()); }
 
 void TupleASTType::check(NameSema& sema) const {
-    for (auto elem : this->elems())
-        sema.check(elem);
+    for (auto arg : args())
+        sema.check(arg);
 }
 
 void ASTTypeApp::check(NameSema& sema) const {
     decl_ = sema.lookup(this, symbol());
-    for (auto elem : elems())
-        sema.check(elem);
+    for (auto arg : args())
+        sema.check(arg);
 }
 
 void FnASTType::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
-    for (auto elem : elems())
-        sema.check(elem);
+    for (auto arg : args())
+        sema.check(arg);
     sema.pop_scope();
 }
 

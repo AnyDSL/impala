@@ -41,7 +41,7 @@ int main() {
                 printer.newline();
                 auto fn = itype.as<impala::FnType>();
                 printer.stream() << "fn \"" << llvm_name << "\" " << name;
-                printer.dump_list([&] (impala::Type type) { printer.stream() << type->to_string(); }, fn->elems().slice_to_end(fn->num_elems()-1), "(", ")");
+                printer.dump_list([&] (impala::Type type) { printer.stream() << type->to_string(); }, fn->args().slice_to_end(fn->num_args()-1), "(", ")");
                 printer.stream() << " -> ";
                 if (fn->return_type()->is_noret())
                     printer.stream() << "();";

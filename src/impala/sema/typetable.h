@@ -31,10 +31,10 @@ public:
     NoRetType           type_noret() { return type_noret_; }
     OwnedPtrType        owned_ptr_type(Type referenced_type) { return join(new OwnedPtrTypeNode(*this, referenced_type)); }
     PrimType            type(PrimTypeKind kind);
-    StructType          struct_type(const StructDecl* struct_decl) { return join(new StructTypeNode(*this, struct_decl)); }
+    StructAbsType       struct_type(const StructDecl* struct_decl) { return join(new StructAbsTypeNode(*this, struct_decl)); }
     TraitAbs            trait_abs(const TraitDecl* trait_decl) { return join(new TraitAbsNode(*this, trait_decl)); }
     TraitAbs            trait_abs_error() { return trait_abs_error_; }
-    TupleType           tuple_type(ArrayRef<Type> elems) { return join(new TupleTypeNode(*this, elems)); }
+    TupleType           tuple_type(ArrayRef<Type> args) { return join(new TupleTypeNode(*this, args)); }
     TupleType           unit() { return tuple_type({}); }
     TypeError           type_error() { return type_error_; }
     TypeVar             type_var(Symbol name = Symbol()) { return join(new TypeVarNode(*this, name)); }

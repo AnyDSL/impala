@@ -672,11 +672,11 @@ const FnASTType* Parser::parse_fn_type() {
     parse_type_params(fn_type->type_params_);
     expect(Token::L_PAREN, "function type");
     parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&] { 
-        fn_type->elems_.push_back(parse_type()); 
+        fn_type->args_.push_back(parse_type()); 
     });
 
     if (auto ret_type = parse_return_type())
-        fn_type->elems_.push_back(ret_type);
+        fn_type->args_.push_back(ret_type);
 
     return fn_type;
 }
@@ -689,12 +689,12 @@ const ASTType* Parser::parse_return_type() {
         auto ret_type = loc(new FnASTType());
         if (accept(Token::L_PAREN)) {                   // in-place tuple
             parse_comma_list(Token::R_PAREN, "closing parenthesis of return type list", [&] { 
-                ret_type->elems_.push_back(parse_type()); 
+                ret_type->args_.push_back(parse_type()); 
             });
         } else {
             auto type = parse_type();
             assert(!type->isa<TupleASTType>());
-            ret_type->elems_.push_back(type);
+            ret_type->args_.push_back(type);
         }
         return ret_type;
     }
@@ -718,7 +718,7 @@ const TupleASTType* Parser::parse_tuple_type() {
     auto tuple_type = loc(new TupleASTType());
     eat(Token::L_PAREN);
     parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple type", [&] { 
-        tuple_type->elems_.push_back(parse_type()); 
+        tuple_type->args_.push_back(parse_type()); 
     });
     return tuple_type;
 }
@@ -728,7 +728,7 @@ const ASTTypeApp* Parser::parse_type_app() {
     type_app->symbol_ = lex().symbol();
     if (accept(Token::L_BRACKET)) {
         parse_comma_list(Token::R_BRACKET, "type arguments for type application", [&] { 
-            type_app->elems_.push_back(parse_type()); 
+            type_app->args_.push_back(parse_type()); 
         });
     }
     return type_app;

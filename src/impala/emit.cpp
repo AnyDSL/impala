@@ -80,9 +80,9 @@ public:
  * Type
  */
 
-void Unifiable::convert_elems(CodeGen& cg, std::vector<thorin::Type>& nelems) const {
-    for (auto elem : elems())
-        nelems.push_back(cg.convert(elem));
+void Unifiable::convert_args(CodeGen& cg, std::vector<thorin::Type>& nargs) const {
+    for (auto arg : args())
+        nargs.push_back(cg.convert(arg));
 }
 
 thorin::Type PrimTypeNode::convert(CodeGen& cg) const {
@@ -97,49 +97,49 @@ thorin::Type PrimTypeNode::convert(CodeGen& cg) const {
 thorin::Type NoRetTypeNode::convert(CodeGen& cg) const { return thorin::Type(); }
 
 thorin::Type FnTypeNode::convert(CodeGen& cg) const {
-    std::vector<thorin::Type> nelems;
+    std::vector<thorin::Type> nargs;
 
-    nelems.push_back(cg.world().mem_type());
+    nargs.push_back(cg.world().mem_type());
 
     for (auto type_var : type_vars()) {
         Array<thorin::Type> bounds(type_var->num_bounds());
         for (size_t j = 0, e = bounds.size(); j != e; ++j)
             bounds[j] = cg.convert(type_var->bound(j));
 
-        nelems.push_back(cg.world().tuple_type(bounds));
+        nargs.push_back(cg.world().tuple_type(bounds));
     }
 
-    convert_elems(cg, nelems);
-    return cg.world().fn_type(nelems);
+    convert_args(cg, nargs);
+    return cg.world().fn_type(nargs);
 }
 
 thorin::Type TupleTypeNode::convert(CodeGen& cg) const {
-    std::vector<thorin::Type> nelems;
-    convert_elems(cg, nelems);
-    return cg.world().tuple_type(nelems);
+    std::vector<thorin::Type> nargs;
+    convert_args(cg, nargs);
+    return cg.world().tuple_type(nargs);
 }
 
-thorin::Type StructTypeNode::convert(CodeGen& cg) const {
+thorin::Type StructAbsTypeNode::convert(CodeGen& cg) const {
     return struct_decl()->thorin_type();
 }
 
 thorin::Type TraitAbsNode::convert(CodeGen& cg) const {
-    std::vector<thorin::Type> elems;
+    std::vector<thorin::Type> args;
 
     for (auto super_trait : super_traits())
-        elems.push_back(cg.convert(super_trait));
+        args.push_back(cg.convert(super_trait));
 
     for (auto method : trait_decl()->methods())
-        elems.push_back(cg.convert(method->type()));
+        args.push_back(cg.convert(method->type()));
 
-    return cg.world().tuple_type(elems);
+    return cg.world().tuple_type(args);
 }
 
 thorin::Type TraitAppNode::convert(CodeGen& cg) const {
-    Array<thorin::Type> nelems(num_elems());
-    for (size_t i = 0, e = nelems.size(); i != e; ++i)
-        nelems[i] = cg.convert(elem(i));
-    return cg.convert(trait())->instantiate(nelems);
+    Array<thorin::Type> nargs(num_args());
+    for (size_t i = 0, e = nargs.size(); i != e; ++i)
+        nargs[i] = cg.convert(arg(i));
+    return cg.convert(trait())->instantiate(nargs);
 }
 
 thorin::Type ImplNode::convert(CodeGen& cg) const { THORIN_UNREACHABLE; }
@@ -266,16 +266,16 @@ void ImplItem::emit_item(CodeGen& cg) const {
     if (def_)
         return;
 
-    Array<thorin::Def> elems(num_methods());
-    for (size_t i = 0, e = elems.size(); i != e; ++i) {
+    Array<thorin::Def> args(num_methods());
+    for (size_t i = 0, e = args.size(); i != e; ++i) {
         cg.emit(static_cast<const ValueDecl*>(method(i)));
-        elems[i] = method(i)->lambda();
+        args[i] = method(i)->lambda();
     }
 
-    for (size_t i = 0, e = elems.size(); i != e; ++i)
+    for (size_t i = 0, e = args.size(); i != e; ++i)
         method(i)->emit_body(cg);
 
-    def_ = cg.world().tuple(elems);
+    def_ = cg.world().tuple(args);
 }
 
 Var StaticItem::emit(CodeGen& cg) const {
@@ -517,7 +517,7 @@ Def MapExpr::remit(CodeGen& cg) const {
             defs.push_back(cg.remit(arg));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
-        auto ret_type = args().size() == fn->num_elems() ? thorin::Type() : cg.convert(fn->return_type());
+        auto ret_type = args().size() == fn->num_args() ? thorin::Type() : cg.convert(fn->return_type());
         auto prev = cg.cur_bb;
         auto ret = cg.call(ldef, defs, ret_type);
         if (ret_type) {

@@ -37,7 +37,8 @@ class NoRetTypeNode;            typedef Proxy<NoRetTypeNode>            NoRetTyp
 class OwnedPtrTypeNode;         typedef Proxy<OwnedPtrTypeNode>         OwnedPtrType;
 class PrimTypeNode;             typedef Proxy<PrimTypeNode>             PrimType;
 class PtrTypeNode;              typedef Proxy<PtrTypeNode>              PtrType;
-class StructTypeNode;           typedef Proxy<StructTypeNode>           StructType;
+class StructAbsTypeNode;        typedef Proxy<StructAbsTypeNode>        StructAbsType;
+class StructAppTypeNode;        typedef Proxy<StructAppTypeNode>        StructAppType;
 class TraitAbsNode;             typedef Proxy<TraitAbsNode>             TraitAbs;
 class TraitAppNode;             typedef Proxy<TraitAppNode>             TraitApp;
 class TupleTypeNode;            typedef Proxy<TupleTypeNode>            TupleType;
@@ -167,31 +168,31 @@ private:
     Unifiable(const Unifiable&);              ///< Do not copy-construct a \p Unifiable.
 
 protected:
-    Unifiable(TypeTable& tt, Kind kind, ArrayRef<Type> elems)
+    Unifiable(TypeTable& tt, Kind kind, ArrayRef<Type> args)
         : typetable_(tt)
         , kind_(kind)
         , representative_(nullptr)
         , id_(counter_++)
-        , elems_(elems.size())
+        , args_(args.size())
     {
-        for (size_t i = 0, e = elems.size(); i != e; ++i) {
-            if (auto elem = elems[i])
-                set(i, elem);
+        for (size_t i = 0, e = args.size(); i != e; ++i) {
+            if (auto arg = args[i])
+                set(i, arg);
         }
     }
 
-    void set(size_t i, Type t) { elems_[i] = t; }
-    Array<Type> specialize_elems(SpecializeMap&) const;
-    void convert_elems(CodeGen& world, std::vector<thorin::Type>&) const;
-    std::string elems_to_string() const;
+    void set(size_t i, Type t) { args_[i] = t; }
+    Array<Type> specialize_args(SpecializeMap&) const;
+    void convert_args(CodeGen& world, std::vector<thorin::Type>&) const;
+    std::string args_to_string() const;
 
 public:
     TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
-    ArrayRef<Type> elems() const { return ArrayRef<Type>(elems_); }
-    const Type elem(size_t i) const { return elems_[i]; }
-    size_t num_elems() const { return elems_.size(); }
-    bool is_empty() const { assert(!elems_.empty() || type_vars_.empty()); return elems_.empty(); }
+    ArrayRef<Type> args() const { return ArrayRef<Type>(args_); }
+    const Type arg(size_t i) const { return args_[i]; }
+    size_t num_args() const { return args_.size(); }
+    bool is_empty() const { assert(!args_.empty() || type_vars_.empty()); return args_.empty(); }
     ArrayRef<TypeVar> type_vars() const { return ArrayRef<TypeVar>(type_vars_); }
     TypeVar type_var(size_t i) const { return type_vars_[i]; }
     size_t num_type_vars() const { return type_vars_.size(); }
@@ -228,7 +229,7 @@ private:
     mutable const Unifiable* representative_;
     const int id_;
     mutable std::vector<TypeVar> type_vars_;
-    std::vector<Type> elems_; ///< The operands of this type constructor.
+    std::vector<Type> args_; ///< The operands of this type constructor.
     mutable thorin::Type thorin_type_;
 
     friend class CodeGen;
@@ -267,8 +268,8 @@ private:
     TypeNode(const TypeNode& node);         ///< Do not copy-construct a \p TypeNode.
 
 protected:
-    TypeNode(TypeTable& typetable, Kind kind, ArrayRef<Type> elems)
-        : Unifiable(typetable, kind, elems)
+    TypeNode(TypeTable& typetable, Kind kind, ArrayRef<Type> args)
+        : Unifiable(typetable, kind, args)
     {}
 
 public:
@@ -325,8 +326,8 @@ private:
 
 class KnownTypeNode : public TypeNode {
 protected:
-    KnownTypeNode(TypeTable& typetable, Kind kind, ArrayRef<Type> elems)
-        : TypeNode(typetable, kind, elems)
+    KnownTypeNode(TypeTable& typetable, Kind kind, ArrayRef<Type> args)
+        : TypeNode(typetable, kind, args)
     {}
 
 public:
@@ -396,8 +397,8 @@ private:
 
 class FnTypeNode : public KnownTypeNode {
 private:
-    FnTypeNode(TypeTable& typetable, ArrayRef<Type> elems)
-        : KnownTypeNode(typetable, Kind_fn, elems)
+    FnTypeNode(TypeTable& typetable, ArrayRef<Type> args)
+        : KnownTypeNode(typetable, Kind_fn, args)
     {}
 
 public:
@@ -413,12 +414,12 @@ private:
 
 class TupleTypeNode : public KnownTypeNode {
 private:
-    TupleTypeNode(TypeTable& typetable, ArrayRef<Type> elems)
-        : KnownTypeNode(typetable, Kind_tuple, elems)
+    TupleTypeNode(TypeTable& typetable, ArrayRef<Type> args)
+        : KnownTypeNode(typetable, Kind_tuple, args)
     {}
 
 public:
-    virtual std::string to_string() const { return type_vars_to_string() + elems_to_string(); }
+    virtual std::string to_string() const { return type_vars_to_string() + args_to_string(); }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -427,9 +428,28 @@ private:
     friend class TypeTable;
 };
 
-class StructTypeNode : public KnownTypeNode {
+class StructAbsTypeNode : public KnownTypeNode {
 private:
-    StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl);
+    StructAbsTypeNode(TypeTable& typetable, const StructDecl* struct_decl);
+
+public:
+    void set(size_t i, Type t) const { const_cast<StructAbsTypeNode*>(this)->KnownTypeNode::set(i, t); }
+    const StructDecl* struct_decl() const { return struct_decl_; }
+    virtual std::string to_string() const override;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const;
+    virtual thorin::Type convert(CodeGen&) const;
+
+    const StructDecl* struct_decl_;
+
+    friend class TypeTable;
+};
+
+#if 0
+class StructAppTypeNode : public KnownTypeNode {
+private:
+    StructAppTypeNode(TypeTable& typetable, StructAbsType struct_abs, ArrayRef<Type> type_args);
 
 public:
     void set(size_t i, Type t) const { const_cast<StructTypeNode*>(this)->KnownTypeNode::set(i, t); }
@@ -444,6 +464,7 @@ private:
 
     friend class TypeTable;
 };
+#endif
 
 class TypeVarNode : public KnownTypeNode {
 private:
@@ -495,7 +516,7 @@ public:
         : KnownTypeNode(typetable, kind, { referenced_type })
     {}
 
-    Type referenced_type() const { return elem(0); }
+    Type referenced_type() const { return arg(0); }
 
 private:
     virtual thorin::Type convert(CodeGen&) const override;
@@ -533,7 +554,7 @@ public:
         : KnownTypeNode(typetable, kind, { elem_type })
     {}
 
-    Type elem_type() const { return elem(0); }
+    Type elem_type() const { return arg(0); }
 };
 
 class DefiniteArrayTypeNode : public ArrayTypeNode {
@@ -621,11 +642,11 @@ private:
 /// An instance of a trait is a trait where all type variables are instantiated by concrete types.
 class TraitAppNode : public Unifiable {
 private:
-    TraitAppNode(const TraitAbs trait, ArrayRef<Type> elems)
-        : Unifiable(trait->typetable(), Kind_trait_app, elems)
+    TraitAppNode(const TraitAbs trait, ArrayRef<Type> args)
+        : Unifiable(trait->typetable(), Kind_trait_app, args)
         , trait_(trait.unify())
     {
-        assert(trait_->num_type_vars() == num_elems());
+        assert(trait_->num_type_vars() == num_args());
     }
 
 public:
@@ -660,7 +681,7 @@ private:
 public:
     const ImplItem* impl_item() const { return impl_item_; }
     TraitApp trait_app() const { return trait_app_; }
-    Type type() const { return elem(0); }
+    Type type() const { return arg(0); }
     Impl specialize(SpecializeMap& map) const;
 
     virtual size_t hash() const;

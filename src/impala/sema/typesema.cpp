@@ -245,8 +245,8 @@ Type DefiniteArrayASTType::check(TypeSema& sema) const {
 
 Type TupleASTType::check(TypeSema& sema) const {
     std::vector<Type> types;
-    for (auto elem : elems())
-        types.push_back(sema.check(elem));
+    for (auto arg : args())
+        types.push_back(sema.check(arg));
 
     return sema.tuple_type(types);
 }
@@ -255,8 +255,8 @@ Type FnASTType::check(TypeSema& sema) const {
     check_type_params(sema);
 
     std::vector<Type> params;
-    for (auto elem : elems())
-        params.push_back(sema.check(elem));
+    for (auto arg : args())
+        params.push_back(sema.check(arg));
 
     FnType fn_type = sema.fn_type(params);
     for (auto type_param : type_params())
@@ -268,7 +268,7 @@ Type FnASTType::check(TypeSema& sema) const {
 Type ASTTypeApp::check(TypeSema& sema) const {
     if (decl()) {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
-            assert(elems().empty());
+            assert(args().empty());
             return sema.check(type_decl);
         } else
             sema.error(this) << '\'' << symbol() << "' does not name a type\n";
@@ -281,7 +281,7 @@ TraitApp ASTTypeApp::trait_app(TypeSema& sema, Type self) const {
     if (decl()) {
         if (auto trait_decl = decl()->isa<TraitDecl>()) {
             sema.check_item(trait_decl);
-            return sema.instantiate(this->loc(), trait_decl->trait_abs(), self, elems());
+            return sema.instantiate(this->loc(), trait_decl->trait_abs(), self, args());
         } else
             sema.error(this) << '\'' << symbol() << "' does not name a trait\n";
     }
@@ -518,14 +518,14 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
 
     FnType fn_type;
     if (FnType exp_fn = expected.isa<FnType>()) {
-        if (exp_fn->num_elems() == num_params()+1) // add return param to infer type
+        if (exp_fn->num_args() == num_params()+1) // add return param to infer type
             const_cast<FnExpr*>(this)->params_.push_back(Param::create(ret_var_handle_, "return", body()->pos1(), nullptr));
-        else if (exp_fn->num_elems() != num_params())
-            sema.error(this) << "expected function with " << exp_fn->num_elems() << " parameters, but found lambda expression with " << num_params() << " parameters\n";
+        else if (exp_fn->num_args() != num_params())
+            sema.error(this) << "expected function with " << exp_fn->num_args() << " parameters, but found lambda expression with " << num_params() << " parameters\n";
 
         size_t i = 0;
         for (auto param : params())
-            sema.check(param, exp_fn->elem(i++));
+            sema.check(param, exp_fn->arg(i++));
 
         fn_type = exp_fn;
     } else {
@@ -544,7 +544,7 @@ Type FnExpr::check(TypeSema& sema, Type expected) const {
 
 Type PathExpr::check(TypeSema& sema, Type expected) const {
     // FEATURE consider longer paths
-    //auto* last = path()->path_elems().back();
+    //auto* last = path()->path_args().back();
     if (value_decl()) {
         if (auto local = value_decl()->isa<LocalDecl>()) {
             // if local lies in an outer function go through memory to implement closure
@@ -665,7 +665,7 @@ Type PostfixExpr::check(TypeSema& sema, Type expected) const {
 
 Type FieldExpr::check(TypeSema& sema, Type expected) const {
     auto type = sema.check(lhs());
-    if (auto struct_type = type.isa<StructType>()) {
+    if (auto struct_type = type.isa<StructAbsType>()) {
         if (auto field_decl = struct_type->struct_decl()->field_decl(symbol())) {
             index_ = field_decl->index();
             sema.expect_type(this, field_decl->type(), expected, "field expression type");
@@ -705,12 +705,12 @@ Type IndefiniteArrayExpr::check(TypeSema& sema, Type expected) const {
 Type TupleExpr::check(TypeSema& sema, Type expected) const {
     std::vector<Type> types;
     if (auto exp_tup = expected.isa<TupleType>()) {
-        if (exp_tup->num_elems() != num_args())
-            sema.error(this) << "expected tuple with " << exp_tup->num_elems() << " elements, but found tuple expression with " << num_args() << " elements\n";
+        if (exp_tup->num_args() != num_args())
+            sema.error(this) << "expected tuple with " << exp_tup->num_args() << " elements, but found tuple expression with " << num_args() << " elements\n";
 
         size_t i = 0;
         for (auto arg : args()) {
-            sema.check(arg, exp_tup->elem(i++));
+            sema.check(arg, exp_tup->arg(i++));
             types.push_back(arg->type());
         }
     } else {
@@ -769,10 +769,10 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
         assert(inferred_args.size() == fn_poly->num_type_vars());
         auto fn_mono = fn_poly->instantiate(inferred_args).as<FnType>();
 
-        bool is_contuation = num_args == fn_mono->num_elems();
-        if (is_contuation || num_args+1 == fn_mono->num_elems()) {
+        bool is_contuation = num_args == fn_mono->num_args();
+        if (is_contuation || num_args+1 == fn_mono->num_args()) {
             for (size_t i = 0; i != num_args; ++i)
-                check(args[i], fn_mono->elem(i), "argument type");
+                check(args[i], fn_mono->arg(i), "argument type");
 
             // note: the order is important because of the unifying side-effects of ==
             if (is_contuation || fn_mono->return_type() == expected) { // TODO this looks overly complicated
@@ -796,8 +796,8 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
             } else
                 error(loc) << "return type '" << fn_mono->return_type() << "' does not match expected type '" << expected << "'\n";
         } else {
-            std::string rela = (num_args+1 < fn_mono->num_elems()) ? "few" : "many";
-            error(loc) << "too " << rela << " arguments: " << num_args << " for " << fn_mono->num_elems()-1 << "\n";
+            std::string rela = (num_args+1 < fn_mono->num_args()) ? "few" : "many";
+            error(loc) << "too " << rela << " arguments: " << num_args << " for " << fn_mono->num_args()-1 << "\n";
         }
     } else
         error(loc) << "too many type arguments to function: " << num_type_args << " for " << fn_poly->num_type_vars() << "\n";
@@ -841,7 +841,7 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
             sema.check(arg(0));
             if (sema.expect_int(arg(0))) {
                 if (auto lit = arg(0)->isa<LiteralExpr>())
-                    return exp_tup->elem(lit->get_u64());
+                    return exp_tup->arg(lit->get_u64());
                 else
                     sema.error(this) << "require literal as tuple subscript\n";
             } else

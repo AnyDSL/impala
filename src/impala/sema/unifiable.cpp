@@ -52,16 +52,16 @@ void KnownTypeNode::add_impl(Impl impl) const {
 
 Type FnTypeNode::return_type() const {
     if (!is_empty()) {
-        if (auto fn = elems().back().isa<FnType>()) {
-            if (fn->num_elems() == 1)
-                return fn->elems().front();
-            return typetable().tuple_type(fn->elems());
+        if (auto fn = args().back().isa<FnType>()) {
+            if (fn->num_args() == 1)
+                return fn->args().front();
+            return typetable().tuple_type(fn->args());
         }
     }
     return typetable().type_noret();
 }
 
-StructTypeNode::StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl)
+StructAbsTypeNode::StructAbsTypeNode(TypeTable& typetable, const StructDecl* struct_decl)
     : KnownTypeNode(typetable, Kind_tuple, Array<Type>(struct_decl->num_field_decls()))
     , struct_decl_(struct_decl)
 {}
@@ -94,8 +94,8 @@ bool Unifiable::is_known() const {
         }
     }
 
-    for (auto elem : elems()) {
-        if (!elem->is_known())
+    for (auto arg : args()) {
+        if (!arg->is_known())
             return false;
     }
 
@@ -110,8 +110,8 @@ bool Unifiable::is_closed() const {
         }
     }
 
-    for (auto elem : elems()) {
-        if (!elem->is_closed())
+    for (auto arg : args()) {
+        if (!arg->is_closed())
             return false;
     }
 
@@ -119,8 +119,8 @@ bool Unifiable::is_closed() const {
 }
 
 bool KnownTypeNode::is_sane() const {
-    for (auto elem : elems()) {
-        if (!elem->is_sane())
+    for (auto arg : args()) {
+        if (!arg->is_sane())
             return false;
     }
     assert(is_closed());
@@ -134,13 +134,13 @@ bool KnownTypeNode::is_sane() const {
  */
 
 size_t Unifiable::hash() const {
-    size_t seed = hash_combine(hash_combine(hash_begin((int) kind()), num_elems()), num_type_vars());
+    size_t seed = hash_combine(hash_combine(hash_begin((int) kind()), num_args()), num_type_vars());
 
     for (auto type_var : type_vars())
         seed = hash_combine(seed, type_var->num_bounds());
 
-    for (auto elem : elems())
-        seed = hash_combine(seed, elem->hash());
+    for (auto arg : args())
+        seed = hash_combine(seed, arg->hash());
 
     return seed;
 }
@@ -163,7 +163,7 @@ bool Unifiable::equal(const Unifiable* other) const {
         return true;
 
     if (this->kind() == other->kind()) {
-        bool result = this->num_elems() == other->num_elems() && this->num_type_vars() == other->num_type_vars();
+        bool result = this->num_args() == other->num_args() && this->num_type_vars() == other->num_type_vars();
 
         // check arity of type vars (= the number of bounds)
         for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
@@ -180,9 +180,9 @@ bool Unifiable::equal(const Unifiable* other) const {
             for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
                 result &= this->type_var(i)->bounds_equal(*other->type_var(i));
 
-            // check recursively element types for equivalence
-            for (size_t i = 0, e = this->num_elems(); i != e && result; ++i)
-                result &= this->elem(i)->equal(*other->elem(i));
+            // check recursively argent types for equivalence
+            for (size_t i = 0, e = this->num_args(); i != e && result; ++i)
+                result &= this->arg(i)->equal(*other->arg(i));
 
             // unset equivalence constraints for type variables
             for (auto var : type_vars())
@@ -200,13 +200,13 @@ bool TraitAppLT::operator () (TraitApp t1, TraitApp t2) const {
     if (t1->id() == t2->id()) return false;
     if (t1->trait()->id() < t2->trait()->id()) return true;
     if (t1->trait()->id() > t2->trait()->id()) return false;
-    if (t1->num_elems() < t2->num_elems()) return true;
-    if (t1->num_elems() > t2->num_elems()) return false;
+    if (t1->num_args() < t2->num_args()) return true;
+    if (t1->num_args() > t2->num_args()) return false;
 
-    for (size_t i = 0, e = t1->num_elems(); i != e; ++i) {
-        assert(t1->elem(i)->is_unified() && t2->elem(i)->is_unified());
-        if (t1->elem(i)->id() < t2->elem(i)->id()) return true;
-        if (t1->elem(i)->id() > t2->elem(i)->id()) return false;
+    for (size_t i = 0, e = t1->num_args(); i != e; ++i) {
+        assert(t1->arg(i)->is_unified() && t2->arg(i)->is_unified());
+        if (t1->arg(i)->id() < t2->arg(i)->id()) return true;
+        if (t1->arg(i)->id() > t2->arg(i)->id()) return false;
     }
 
     THORIN_UNREACHABLE;
@@ -291,11 +291,11 @@ Type TypeNode::specialize(SpecializeMap& map) const {
     return t;
 }
 
-Array<Type> Unifiable::specialize_elems(SpecializeMap& map) const {
-    Array<Type> nelems(num_elems());
-    for (size_t i = 0, e = num_elems(); i != e; ++i)
-        nelems[i] = elem(i)->specialize(map);
-    return nelems;
+Array<Type> Unifiable::specialize_args(SpecializeMap& map) const {
+    Array<Type> nargs(num_args());
+    for (size_t i = 0, e = num_args(); i != e; ++i)
+        nargs[i] = arg(i)->specialize(map);
+    return nargs;
 }
 
 Type TypeNode::instantiate(SpecializeMap& map) const {
@@ -327,7 +327,7 @@ Type DefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const {
 }
 
 Type FnTypeNode::vinstantiate(SpecializeMap& map) const { 
-    return map[this] = *typetable().fn_type(specialize_elems(map)); 
+    return map[this] = *typetable().fn_type(specialize_args(map)); 
 }
 
 Type IndefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const {
@@ -338,12 +338,12 @@ Type OwnedPtrTypeNode::vinstantiate(SpecializeMap& map) const {
     return map[this] = *typetable().owned_ptr_type(referenced_type()->specialize(map)); 
 }
 
-Type StructTypeNode::vinstantiate(SpecializeMap& map) const { 
+Type StructAbsTypeNode::vinstantiate(SpecializeMap& map) const { 
     assert(false && "TODO"); return nullptr; 
 }
 
 Type TupleTypeNode::vinstantiate(SpecializeMap& map) const { 
-    return map[this] = *typetable().tuple_type(specialize_elems(map)); 
+    return map[this] = *typetable().tuple_type(specialize_args(map)); 
 }
 
 Type UnknownTypeNode::vinstantiate(SpecializeMap& map) const { 
@@ -360,11 +360,11 @@ TraitApp TraitAbsNode::instantiate(ArrayRef<Type> type_args) const {
 }
 
 TraitApp TraitAppNode::specialize(SpecializeMap& map) const {
-    Array<Type> new_elems(num_elems());
-    for (size_t i = 0, e = num_elems(); i != e; ++i)
-        new_elems[i] = elem(i)->specialize(map);
+    Array<Type> new_args(num_args());
+    for (size_t i = 0, e = num_args(); i != e; ++i)
+        new_args[i] = arg(i)->specialize(map);
 
-    return typetable().trait_app(trait(), new_elems);
+    return typetable().trait_app(trait(), new_args);
 }
 
 Impl ImplNode::specialize(SpecializeMap& map) const { 
@@ -396,10 +396,10 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
             return u1->representative() == u2->representative();    // both are unified - are types equal?
         } else if (bool result = u1->kind() == u2->kind()           // recursively infer sub elements
                 && u1->num_type_vars() == u2->num_type_vars() 
-                && u1->num_elems() == u2->num_elems()) {
+                && u1->num_args() == u2->num_args()) {
             // TODO handle type vars
-            for (size_t i = 0, e = u1->num_elems(); i != e && result; ++i)
-                result &= infer(u1->elem(i), u2->elem(i));
+            for (size_t i = 0, e = u1->num_args(); i != e && result; ++i)
+                result &= infer(u1->arg(i), u2->arg(i));
 
             if (auto b1 = u1->isa<TraitAppNode>())
                 result &= b1->trait() == u2->as<TraitAppNode>()->trait();
@@ -434,11 +434,11 @@ bool KnownTypeNode::implements(TraitApp bound, SpecializeMap& map) const {
     for (auto impl : bound->trait()->type2impls(this)) {
         // find out which of impl's type_vars match to which of impl->bounds' type args
         for (auto type_var : impl->type_vars()) {
-            for (size_t i = 0, e = impl->trait_app()->num_elems(); i != e; ++i) { // TODO this is currently quadratic
-                if (type_var.as<Type>() == impl->trait_app()->elem(i) 
-                        && !bound->elem(i)->isa<UnknownTypeNode>()
-                        && implements_bounds(bound->elem(i), type_var))
-                    map[*type_var] = *bound->elem(i);
+            for (size_t i = 0, e = impl->trait_app()->num_args(); i != e; ++i) { // TODO this is currently quadratic
+                if (type_var.as<Type>() == impl->trait_app()->arg(i) 
+                        && !bound->arg(i)->isa<UnknownTypeNode>()
+                        && implements_bounds(bound->arg(i), type_var))
+                    map[*type_var] = *bound->arg(i);
             }
         }
 
@@ -456,10 +456,10 @@ Impl KnownTypeNode::find_impl(TraitApp bound) const {
         return impl;
         // find out which of impl's type_vars match to which of impl->bounds' type args
         for (auto type_var : impl->type_vars()) {
-            for (size_t i = 0, e = impl->trait_app()->num_elems(); i != e; ++i) { // TODO this is currently quadratic
-                if (type_var.as<Type>() == impl->trait_app()->elem(i) 
-                        && !bound->elem(i)->isa<UnknownTypeNode>())
-                    map[*type_var] = *bound->elem(i);
+            for (size_t i = 0, e = impl->trait_app()->num_args(); i != e; ++i) { // TODO this is currently quadratic
+                if (type_var.as<Type>() == impl->trait_app()->arg(i) 
+                        && !bound->arg(i)->isa<UnknownTypeNode>())
+                    map[*type_var] = *bound->arg(i);
             }
         }
 
@@ -493,7 +493,7 @@ bool TypeVarNode::implements(TraitApp bound, SpecializeMap& map) const {
             return true;
 
         for (auto super_trait : cur_bound->trait()->super_traits()) {
-            map[*super_trait->elem(0)] = *cur_bound->elem(0); // propagate self type param
+            map[*super_trait->arg(0)] = *cur_bound->arg(0); // propagate self type param
             auto spec_super_trait = super_trait->specialize(map).unify();
             if (!done.contains(spec_super_trait))
                 enqueue(spec_super_trait);
@@ -544,7 +544,7 @@ FnType TraitAppNode::find_method(Symbol name) const {
         return i->second;
 
     if (auto type = trait()->find_method(name)) {
-        auto map = specialize_map(trait(), elems());
+        auto map = specialize_map(trait(), args());
         return method_cache_[name] = type->specialize(map).as<FnType>().unify();
     }
 
@@ -600,15 +600,15 @@ std::string PrimTypeNode::to_string() const {
     }
 }
 
-std::string Unifiable::elems_to_string() const {
+std::string Unifiable::args_to_string() const {
     std::string result;
 
     if (is_empty())
         return "()";
 
     const char* separator = "(";
-    for (auto elem : elems()) {
-        result += separator + elem->to_string();
+    for (auto arg : args()) {
+        result += separator + arg->to_string();
         separator = ", ";
     }
     return result + ')';
@@ -621,15 +621,15 @@ std::string FnTypeNode::to_string() const {
     Type ret_type = return_type();
 
     if (ret_type == typetable().type_noret()) {
-        result += elems_to_string();
+        result += args_to_string();
     } else {
         // add parameters without return param
-        if (num_elems() == 1) {
+        if (num_args() == 1) {
             result += "()";
         } else {
             const char* separator = "(";
-            for (size_t i = 0; i < (num_elems()-1); ++i) {
-                result += separator + elem(i)->to_string();
+            for (size_t i = 0; i < (num_args()-1); ++i) {
+                result += separator + arg(i)->to_string();
                 separator = ", ";
             }
             result += ')';
@@ -657,13 +657,13 @@ std::string TraitAppNode::to_string() const {
     std::string result = trait()->to_string();
 
     assert(!is_empty());
-    if (num_elems() == 1)
+    if (num_args() == 1)
         return result;
 
-    assert(num_elems() == trait()->num_type_vars());
+    assert(num_args() == trait()->num_type_vars());
     const char* separator = "[";
     for (size_t i = 1; i < trait()->num_type_vars(); ++i) {
-        result += separator + elem(i)->to_string();
+        result += separator + arg(i)->to_string();
         separator = ",";
     }
 
@@ -686,7 +686,7 @@ std::string IndefiniteArrayTypeNode::to_string() const {
     return "[" + elem_type()->to_string() + "]";
 }
 
-std::string StructTypeNode::to_string() const {
+std::string StructAbsTypeNode::to_string() const {
     return struct_decl_->symbol().str(); // TODO instances
 }
 

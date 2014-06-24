@@ -46,14 +46,14 @@ std::ostream& IndefiniteArrayASTType::print(Printer& p) const {
 }
 
 std::ostream& TupleASTType::print(Printer& p) const {
-    return p.dump_list([&] (const ASTType* elem) { elem->print(p); }, elems(), "(", ")");
+    return p.dump_list([&] (const ASTType* elem) { elem->print(p); }, args(), "(", ")");
 }
 
 std::ostream& FnASTType::print(Printer& p) const {
     auto ret = ret_fn_type();
     p.stream() << "fn";
     print_type_params(p);
-    p.dump_list([&] (const ASTType* elem) { elem->print(p); }, ret != nullptr ? elems().slice_num_from_end(1) : elems(), "(", ")");
+    p.dump_list([&] (const ASTType* arg) { arg->print(p); }, ret != nullptr ? args().slice_num_from_end(1) : args(), "(", ")");
     if (ret != nullptr) {
         p.stream() << " -> ";
         ret->print(p);
@@ -63,8 +63,8 @@ std::ostream& FnASTType::print(Printer& p) const {
 
 std::ostream& ASTTypeApp::print(Printer& p) const {
     p.stream() << symbol();
-    if (!elems().empty())
-        p.dump_list([&] (const ASTType* elem) { elem->print(p); }, elems(), "[", "]");
+    if (num_args() == 0)
+        p.dump_list([&] (const ASTType* arg) { arg->print(p); }, args(), "[", "]");
     return p.stream();
 }
 
@@ -174,10 +174,10 @@ std::ostream& FnDecl::print(Printer& p) const {
 
     if (ret) {
         p.stream() << " -> ";
-        if (ret->elems().size() == 1)
-            ret->elem(0)->print(p);
+        if (ret->num_args() == 1)
+            ret->arg(0)->print(p);
         else
-            p.dump_list([&] (const ASTType* type) { type->print(p); }, ret->elems(), "(", ")", ", ");
+            p.dump_list([&] (const ASTType* type) { type->print(p); }, ret->args(), "(", ")", ", ");
     }
 
     if (body()) {
@@ -408,16 +408,16 @@ std::ostream& FnExpr::print(Printer& p) const {
         auto ret = params().back();
         if (!ret->type().empty()) {
             auto rettype = ret->type().as<FnType>();
-            if (rettype->elems().size() == 1)
-                p.stream() << rettype->elem(0);
+            if (rettype->num_args() == 1)
+                p.stream() << rettype->arg(0);
             else
-                p.dump_list([&] (Type type) { p.stream() << type; }, rettype->elems(), "(", ")", ", ");
+                p.dump_list([&] (Type type) { p.stream() << type; }, rettype->args(), "(", ")", ", ");
         } else if (ret->ast_type()) {
             auto rettype = ret->ast_type()->as<FnASTType>();
-            if (rettype->elems().size() == 1)
-                rettype->elem(0)->print(p);
+            if (rettype->num_args() == 1)
+                rettype->arg(0)->print(p);
             else
-                p.dump_list([&] (const ASTType* type) { type->print(p); }, rettype->elems(), "(", ")", ", ");
+                p.dump_list([&] (const ASTType* type) { type->print(p); }, rettype->args(), "(", ")", ", ");
         }
         p.stream() << " ";
     }

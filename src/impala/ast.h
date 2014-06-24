@@ -249,11 +249,12 @@ private:
 
 class CompoundASTType : public ASTType {
 public:
-    ArrayRef<const ASTType*> elems() const { return elems_; }
-    const ASTType* elem(size_t i) const { return elems_[i]; }
+    size_t num_args() const { return args_.size(); }
+    ArrayRef<const ASTType*> args() const { return args_; }
+    const ASTType* arg(size_t i) const { return args_[i]; }
 
 protected:
-    ASTTypes elems_;
+    ASTTypes args_;
 
     friend class Parser;
 };
