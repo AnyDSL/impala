@@ -280,10 +280,6 @@ Var StaticItem::emit(CodeGen& cg) const {
     return Var(); // TODO
 }
 
-Var FieldDecl::emit(CodeGen&) const {
-    return Var(); // TODO
-}
-
 void StructDecl::emit_item(CodeGen& cg) const {
 }
 

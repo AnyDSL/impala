@@ -598,9 +598,8 @@ void Parser::parse_mod_contents(ModContents* mod_contents) {
 
 const FieldDecl* Parser::parse_field_decl(const int i) {
     auto field_decl = loc(new FieldDecl);
-    field_decl->num_ = i;
+    field_decl->index_ = i;
     field_decl->visibility_ = parse_visibility();
-    //field_decl->is_mut_ = accept(Token::MUT); // do mutable struct fields make sense?
     field_decl->symbol_ = try_id("struct field");
     expect(Token::COLON, "struct field");
     field_decl->ast_type_ = parse_type();

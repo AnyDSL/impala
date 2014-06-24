@@ -190,7 +190,7 @@ std::ostream& FnDecl::print(Printer& p) const {
 }
 
 std::ostream& FieldDecl::print(Printer& p) const {
-    p.stream() << (is_mut() ? "mut " : "" ) << visibility().str() << symbol() << ": ";
+    p.stream() << visibility().str() << symbol() << ": ";
     return ast_type()->print(p);
 }
 

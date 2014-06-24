@@ -576,18 +576,20 @@ private:
     friend class Parser;
 };
 
-class FieldDecl : public ValueDecl {
+class FieldDecl : public TypeDecl {
 public:
-    int num() const { return num_; }
+    int index() const { return index_; }
+    const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     Visibility visibility() const { return  visibility_; }
     virtual void check(NameSema&) const override;
     virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual Type check(TypeSema&) const override;
-    virtual thorin::Var emit(CodeGen&) const override;
+    //virtual thorin::Var emit(CodeGen&) const override;
 
-    int num_;
+    int index_;
+    AutoPtr<const ASTType> ast_type_;
     Visibility visibility_;
 
     friend class Parser;

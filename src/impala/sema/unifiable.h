@@ -172,7 +172,6 @@ protected:
         , kind_(kind)
         , representative_(nullptr)
         , id_(counter_++)
-        , thorin_type_(nullptr)
         , elems_(elems.size())
     {
         for (size_t i = 0, e = elems.size(); i != e; ++i) {
@@ -228,9 +227,11 @@ private:
     const Kind kind_;
     mutable const Unifiable* representative_;
     const int id_;
-    mutable thorin::Type thorin_type_;
     mutable std::vector<TypeVar> type_vars_;
     std::vector<Type> elems_; ///< The operands of this type constructor.
+
+protected:
+    mutable thorin::Type thorin_type_;
 
     friend class CodeGen;
     friend class TypeTable;

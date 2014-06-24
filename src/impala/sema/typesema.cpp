@@ -374,7 +374,7 @@ Type StructDecl::check(TypeSema& sema) const {
     check_type_params(sema);
     auto struct_type = sema.struct_type(this);
     for (auto field : fields())
-        struct_type->set(field->num(), sema.check(field));
+        struct_type->set(field->index(), sema.check(field));
     return struct_type;
 }
 
