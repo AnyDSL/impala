@@ -13,5 +13,5 @@ struct vec2[T] {
     
 fn main() -> () {
     let mut v = vec2{ x: 1, y: 2 };
-    //v.x = 7;
+    v.x = 7;
 }
