@@ -175,8 +175,10 @@ protected:
         , thorin_type_(nullptr)
         , elems_(elems.size())
     {
-        for (size_t i = 0, e = elems.size(); i != e; ++i)
-            set(i, elems[i]);
+        for (size_t i = 0, e = elems.size(); i != e; ++i) {
+            if (auto elem = elems[i])
+                set(i, elem);
+        }
     }
 
     void set(size_t i, Type n) { elems_[i] = n; }

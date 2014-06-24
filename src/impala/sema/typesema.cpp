@@ -379,8 +379,8 @@ Type StructDecl::check(TypeSema& sema) const {
     return struct_type;
 }
 
-Type FieldDecl::check(TypeSema&) const {
-    return Type();
+Type FieldDecl::check(TypeSema& sema) const {
+    return sema.check(ast_type());
 }
 
 Type FnDecl::check(TypeSema& sema) const {

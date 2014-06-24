@@ -332,10 +332,8 @@ void TupleExpr::check(NameSema& sema) const {
 
 void StructExpr::check(NameSema& sema) const {
     path()->check(sema);
-    for (const auto& elem : elems()) {
+    for (const auto& elem : elems())
         elem.expr()->check(sema);
-        // TODO lookup elem.symbol()
-    }
 }
 
 void MapExpr::check(NameSema& sema) const {

@@ -1,10 +1,8 @@
-pub struct Vec3 {
-    mut x: f32, 
-    priv y: f32, 
-    pub mut z: f32
+struct vec2 {
+    x: int, 
+    y: int
 }
 
-fn main() -> () {
-    let v : Vec3;
-    v.x;
-}
+//fn main() -> () {
+    //let v = vec2{ x: 1, y: 2 };
+//}

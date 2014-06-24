@@ -580,7 +580,7 @@ class FieldDecl : public ValueDecl {
 public:
     int num() const { return num_; }
     Visibility visibility() const { return  visibility_; }
-    virtual void check(NameSema&) const;
+    virtual void check(NameSema&) const override;
     virtual std::ostream& print(Printer&) const override;
 
 private:
