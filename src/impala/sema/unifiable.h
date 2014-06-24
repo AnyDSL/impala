@@ -181,9 +181,9 @@ protected:
         }
     }
 
-    void set(size_t i, Type n) { elems_[i] = n; }
+    void set(size_t i, Type t) { elems_[i] = t; }
     Array<Type> specialize_elems(SpecializeMap&) const;
-    void convert_elems(CodeGen& world, std::vector<thorin::Type>& nelems) const;
+    void convert_elems(CodeGen& world, std::vector<thorin::Type>&) const;
     std::string elems_to_string() const;
 
 public:
@@ -433,6 +433,7 @@ private:
     StructTypeNode(TypeTable& typetable, const StructDecl* struct_decl);
 
 public:
+    void set(size_t i, Type t) const { const_cast<StructTypeNode*>(this)->KnownTypeNode::set(i, t); }
     const StructDecl* struct_decl() const { return struct_decl_; }
     virtual std::string to_string() const { return "TODO"; }
 

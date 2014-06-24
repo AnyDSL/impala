@@ -597,6 +597,7 @@ class StructDecl : public TypeDeclItem {
 public:
     const AutoVector<const FieldDecl*>& fields() const { return fields_; }
     const thorin::HashMap<Symbol, const FieldDecl*>& field_table() const { return field_table_; }
+    const FieldDecl* field_decl(Symbol symbol) const { return thorin::find(field_table_, symbol); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
 

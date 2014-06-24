@@ -1,5 +1,7 @@
 #include "thorin/util/push.h"
 
+#include <sstream>
+
 #include "impala/ast.h"
 #include "impala/dump.h"
 #include "impala/impala.h"
@@ -376,7 +378,7 @@ Type StructDecl::check(TypeSema& sema) const {
     check_type_params(sema);
     auto struct_type = sema.struct_type(this);
     for (auto field : fields())
-        sema.check(field);
+        struct_type->set(field->num(), sema.check(field));
     return struct_type;
 }
 
@@ -713,7 +715,25 @@ Type TupleExpr::check(TypeSema& sema, Type expected) const {
 }
 
 Type StructExpr::check(TypeSema& sema, Type expected) const {
-    return Type();
+    if (auto decl = path()->decl()) {
+        if (auto struct_decl = decl->isa<StructDecl>()) {
+            thorin::HashSet<const FieldDecl*> done;
+            for (const auto& elem : elems()) {
+                if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
+                    if (!thorin::visit(done, field_decl)) {
+                        sema.check(elem.expr());
+                        std::ostringstream oss;
+                        oss << "field init expression type for field '" << elem.symbol() << '\'';
+                        sema.expect_type(elem.expr(), elem.expr()->type(), field_decl->type(), oss.str());
+                    } else
+                        sema.error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
+                } else
+                    sema.error(elem.expr()) << "structure '" << struct_decl->symbol() << "' has no field named '" << elem.symbol() << "'\n";
+            }
+        } else
+            sema.error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
+    }
+    return sema.type_error();
 }
 
 Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected) {
