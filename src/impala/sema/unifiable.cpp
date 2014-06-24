@@ -325,10 +325,10 @@ Type TypeNode::specialize(SpecializeMap& map) const {
 }
 
 Array<Type> Unifiable::specialize_args(SpecializeMap& map) const {
-    Array<Type> nargs(num_args());
+    Array<Type> new_args(num_args());
     for (size_t i = 0, e = num_args(); i != e; ++i)
-        nargs[i] = arg(i)->specialize(map);
-    return nargs;
+        new_args[i] = arg(i)->specialize(map);
+    return new_args;
 }
 
 Type TypeNode::instantiate(SpecializeMap& map) const {
@@ -372,10 +372,7 @@ Type OwnedPtrTypeNode::vinstantiate(SpecializeMap& map) const {
 }
 
 Type StructAppTypeNode::vinstantiate(SpecializeMap& map) const { 
-    Array<Type> new_args(num_args());
-    for (size_t i = 0, e = num_args(); i != e; ++i)
-        new_args[i] = arg(i)->specialize(map);
-    return map[this] = *typetable().struct_app_type(struct_abs(), new_args);
+    return map[this] = *typetable().struct_app_type(struct_abs(), specialize_args(map));
 }
 
 Type TupleTypeNode::vinstantiate(SpecializeMap& map) const { 
@@ -396,11 +393,7 @@ TraitApp TraitAbsNode::instantiate(ArrayRef<Type> args) const {
 }
 
 TraitApp TraitAppNode::specialize(SpecializeMap& map) const {
-    Array<Type> new_args(num_args());
-    for (size_t i = 0, e = num_args(); i != e; ++i)
-        new_args[i] = arg(i)->specialize(map);
-
-    return typetable().trait_app(trait(), new_args);
+    return typetable().trait_app(trait(), specialize_args(map));
 }
 
 Impl ImplNode::specialize(SpecializeMap& map) const { 
