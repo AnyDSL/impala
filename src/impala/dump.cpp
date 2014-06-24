@@ -8,19 +8,6 @@ namespace impala {
 //------------------------------------------------------------------------------
 
 /*
- * paths
- */
-
-std::ostream& PathElem::print(Printer& p) const { 
-    return p.stream() << symbol();
-}
-
-std::ostream& Path::print(Printer& p) const {
-    p.stream() << (is_global() ? "::" : "");
-    return p.dump_list([&] (const PathElem* path_elem) { path_elem->print(p); }, path_elems(), "", "", "::");
-}
-
-/*
  * types
  */
 
@@ -118,6 +105,7 @@ std::ostream& ImplNode::print(Printer& p) const {
 }
 
 //------------------------------------------------------------------------------
+
 /*
  * AST types
  */
@@ -169,6 +157,20 @@ std::ostream& PrimASTType::print(Printer& p) const {
         default: THORIN_UNREACHABLE;
     }
 }
+
+/*
+ * paths
+ */
+
+std::ostream& PathElem::print(Printer& p) const { 
+    return p.stream() << symbol();
+}
+
+std::ostream& Path::print(Printer& p) const {
+    p.stream() << (is_global() ? "::" : "");
+    return p.dump_list([&] (const PathElem* path_elem) { path_elem->print(p); }, path_elems(), "", "", "::");
+}
+
 
 /*
  * parameters
@@ -337,7 +339,7 @@ std::ostream& ImplItem::print(Printer& p) const {
 }
 
 /*
- * expr
+ * expressions
  */
 
 std::ostream& Printer::print(const Expr* expr) {
@@ -538,7 +540,7 @@ std::ostream& ForExpr::print(Printer& p) const {
 }
 
 /*
- * stmt
+ * statements
  */
 
 std::ostream& ItemStmt::print(Printer& p) const { return item()->print(p); }
