@@ -719,10 +719,18 @@ Type StructExpr::check(TypeSema& sema, Type expected) const {
                     if (!thorin::visit(done, field_decl)) {
                         sema.check(elem.expr());
                         std::ostringstream oss;
-                        oss << "field init expression type for field '" << elem.symbol() << '\'';
+                        oss << "initialization type for field '" << elem.symbol() << '\'';
                         sema.expect_type(elem.expr(), elem.expr()->type(), field_decl->type(), oss.str());
                     } else
                         sema.error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
+                    if (done.size() != struct_decl->field_table().size()) {
+                        for (auto p : struct_decl->field_table()) {
+                            if (!done.contains(p.second))
+                                sema.error(this) << "missing field '" << p.first << "'\n";
+                        }
+                    }
+                    return struct_decl->type();
+
                 } else
                     sema.error(elem.expr()) << "structure '" << struct_decl->symbol() << "' has no field named '" << elem.symbol() << "'\n";
             }
