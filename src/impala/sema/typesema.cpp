@@ -301,11 +301,11 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
         if (expected.empty() || expected == t) {
             return t;
         } else {
-            sema.error(this) << "could not infer types: expected '" << expected << "' but found '" << t << "'.\n";
+            sema.error(this) << "could not infer types: expected '" << expected << "' but found '" << t << "'\n";
             return sema.type_error();
         }
     } else if (expected.empty()) {
-        sema.error(this) << "could not infer parameter type for " << this << ".\n";
+        sema.error(this) << "could not infer parameter type for " << this << "\n";
         return sema.type_error();
     } else {
         return expected;
@@ -357,7 +357,7 @@ void ModContents::check(TypeSema& sema) const {
 void ExternBlock::check_item(TypeSema& sema) const {
     if (!abi().empty())
         if (abi() != Symbol("\"C\"") && abi() != Symbol("\"device\"") && abi() != Symbol("\"thorin\""))
-            sema.error(this) << "unknown extern specification.\n";  // TODO: better location
+            sema.error(this) << "unknown extern specification\n";  // TODO: better location
     for (auto fn : fns())
         sema.check(fn);
 }
@@ -445,7 +445,7 @@ void ImplItem::check_item(TypeSema& sema) const {
                 bound->trait()->add_impl(impl);
             }
         } else
-            sema.error(trait()) << "expected trait instance.\n";
+            sema.error(trait()) << "expected trait instance\n";
     }
 
     thorin::HashSet<Symbol> implemented_methods;
@@ -670,11 +670,11 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
             sema.expect_type(this, field_decl->type(), expected, "field expression type");
             return expected;
         }
-    }
-
-    if (!type->is_error())
-        sema.error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << type << "', but no field with that name was found\n";
-    return sema.type_error();
+        if (!type->is_error())
+            sema.error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << type << "', but no field with that name was found\n";
+        return sema.type_error();
+    } 
+    return type;
 }
 
 Type CastExpr::check(TypeSema& sema, Type expected) const {
@@ -778,7 +778,7 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
                 for (size_t i = 0, e = inferred_args.size(); i != e; ++i) {
                     if (!inferred_args[i]->is_known()) {
                         is_known = false;
-                        error(loc) << "could not find instance for type variable #" << i << ".\n";
+                        error(loc) << "could not find instance for type variable #" << i << "\n";
                     }
                 }
 
@@ -818,7 +818,7 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
             std::copy(args().begin(), args().end(), nargs.begin()+1);
             return sema.check_call(this->loc(), fn_method, type_args(), inferred_args_, nargs, expected);
         } else
-            sema.error(this) << "no declaration for method '" << field_expr->symbol() << "' found.\n";
+            sema.error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
     } else if (auto fn_poly = ltype.isa<FnType>()) {
         return sema.check_call(this->loc(), fn_poly, type_args(), inferred_args_, args(), expected);
     } else if (auto array = ltype.isa<ArrayType>()) {
