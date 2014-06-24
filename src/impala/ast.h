@@ -965,15 +965,19 @@ class FieldExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
     Symbol symbol() const { return symbol_; }
+    uint32_t index() const { return index_; }
     virtual bool is_lvalue() const override;
     virtual void check(NameSema&) const override;
 
 private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, Type) const override;
+    virtual thorin::Var lemit(CodeGen&) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
     Symbol symbol_;
+    mutable uint32_t index_ = uint32_t(-1);
 
     friend class Parser;
 };

@@ -1,8 +1,16 @@
 struct vec2 {
     x: int, 
-    y: int
+    y: float
 }
 
+extern fn foo(v: vec2) -> float {
+    v.y
+}
+
+extern fn bar() -> float {
+    foo(vec2{ x: 1, y: 2f32})
+}
+    
 //fn main() -> () {
     //let mut v = vec2{ x: 1, y: 2 };
     //v.x = 7;

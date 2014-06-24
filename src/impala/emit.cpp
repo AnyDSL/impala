@@ -532,6 +532,14 @@ Def MapExpr::remit(CodeGen& cg) const {
     THORIN_UNREACHABLE;
 }
 
+Var FieldExpr::lemit(CodeGen& cg) const {
+    return Var::create_agg(cg.lemit(lhs()), cg.world().literal_qu32(index()));
+}
+
+Def FieldExpr::remit(CodeGen& cg) const {
+    return cg.world().extract(cg.remit(lhs()), index());
+}
+
 Def ForExpr::remit(CodeGen& cg) const {
     std::vector<Def> defs;
     defs.push_back(cg.get_mem());
