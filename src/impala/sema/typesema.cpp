@@ -130,10 +130,11 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, con
         }
     }
 
-    if (!what.empty())
-        error(expr) << "mismatched types: expected '" << expected << "' but found '" << found_type << "' as " << what << " type\n";
+    auto& out = error(expr) << "mismatched types: expected '" << expected << "' but found '" << found_type;
+    if (what.empty())
+        out << "'\n";
     else
-        error(expr) << "mismatched types: expected '" << expected << "' but found '" << found_type << "'\n";
+        out << "' as " << what << " type\n";
 
     return expected;
 }
