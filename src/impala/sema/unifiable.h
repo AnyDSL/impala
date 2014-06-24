@@ -229,8 +229,6 @@ private:
     const int id_;
     mutable std::vector<TypeVar> type_vars_;
     std::vector<Type> elems_; ///< The operands of this type constructor.
-
-protected:
     mutable thorin::Type thorin_type_;
 
     friend class CodeGen;

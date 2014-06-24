@@ -120,14 +120,7 @@ thorin::Type TupleTypeNode::convert(CodeGen& cg) const {
 }
 
 thorin::Type StructTypeNode::convert(CodeGen& cg) const {
-    auto struct_type = cg.world().struct_type(num_elems());
-    thorin_type_ = struct_type; // prevent cycles
-    size_t i = 0;
-    for (auto elem : elems())
-        struct_type->set(i++, cg.convert(elem));
-
-    struct_type->dump();
-    return struct_type;
+    return struct_decl()->thorin_type();
 }
 
 thorin::Type TraitNode::convert(CodeGen& cg) const {
@@ -290,15 +283,11 @@ Var StaticItem::emit(CodeGen& cg) const {
 }
 
 void StructDecl::emit_item(CodeGen& cg) const {
-    auto struct_type = cg.world().struct_type(num_field_decls());
-    //thorin_type_ = struct_type; // prevent cycles
-    //size_t i = 0;
-    //for (auto elem : elems())
-        //struct_type->set(i++, cg.convert(elem));
-    //for (auto field_decl : fields())
-        //field-
-
-    struct_type->dump();
+    auto struct_type = cg.world().struct_type(num_field_decls(), symbol().str());
+    thorin_type_ = struct_type;
+    size_t i = 0;
+    for (auto field_decl : field_decls())
+        struct_type->set(i++, cg.convert(field_decl->type()));
 }
 
 void TraitDecl::emit_item(CodeGen& cg) const {
@@ -488,6 +477,12 @@ Def TupleExpr::remit(CodeGen& cg) const {
 Def IndefiniteArrayExpr::remit(CodeGen& cg) const {
     extra_ = cg.remit(dim());
     return cg.world().indefinite_array(cg.convert(type()).as<thorin::IndefiniteArrayType>()->elem_type(), extra_);
+}
+
+Def StructExpr::remit(CodeGen& cg) const {
+    for (const auto& elem : elems()) {
+    }
+    //cg.world().tup
 }
 
 Var MapExpr::lemit(CodeGen& cg) const {
