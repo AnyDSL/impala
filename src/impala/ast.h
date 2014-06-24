@@ -1071,15 +1071,20 @@ public:
 
         Symbol symbol() const { return symbol_; }
         const Expr* expr() const { return expr_.get(); }
+        const FieldDecl* field_decl() const { return field_decl_; }
 
     private:
         Symbol symbol_;
         std::unique_ptr<const Expr> expr_;
+        mutable SafePtr<const FieldDecl> field_decl_;
+
+        friend class StructExpr;
     };
 
     typedef std::vector<Elem> Elems;
 
     const Path* path() const { return path_; }
+    size_t num_elems() const { return elems_.size(); }
     const Elems& elems() const { return elems_; }
     virtual void check(NameSema&) const override;
 

@@ -727,6 +727,7 @@ Type StructExpr::check(TypeSema& sema, Type expected) const {
             thorin::HashSet<const FieldDecl*> done;
             for (const auto& elem : elems()) {
                 if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
+                    elem.field_decl_ = field_decl;
                     if (!thorin::visit(done, field_decl)) {
                         sema.check(elem.expr());
                         std::ostringstream oss;

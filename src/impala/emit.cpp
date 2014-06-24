@@ -480,9 +480,10 @@ Def IndefiniteArrayExpr::remit(CodeGen& cg) const {
 }
 
 Def StructExpr::remit(CodeGen& cg) const {
-    for (const auto& elem : elems()) {
-    }
-    //cg.world().tup
+    Array<Def> defs(num_elems());
+    for (const auto& elem : elems())
+        defs[elem.field_decl()->index()] = cg.remit(elem.expr());
+    return cg.world().tuple(defs);
 }
 
 Var MapExpr::lemit(CodeGen& cg) const {
