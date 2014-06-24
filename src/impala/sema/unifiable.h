@@ -187,7 +187,6 @@ protected:
     void set(size_t i, Type t) { args_[i] = t; }
     Array<Type> specialize_args(SpecializeMap&) const;
     void convert_args(CodeGen& world, std::vector<thorin::Type>&) const;
-    std::ostream& print_args(Printer&) const;
 
 public:
     TypeTable& typetable() const { return typetable_; }

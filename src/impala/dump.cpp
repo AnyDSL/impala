@@ -36,10 +36,6 @@ std::ostream& Unifiable::print_type_vars(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& Unifiable::print_args(Printer& p) const {
-    return p.dump_list([&] (Type type) { type->print(p); }, args(), "(", ")");
-}
-
 std::ostream& UnknownTypeNode::print(Printer& p) const { 
     assert(!is_unified());
     return p.stream() << '?' << id();
@@ -61,7 +57,7 @@ std::ostream& FnTypeNode::print(Printer& p) const {
     print_type_vars(p);
     Type ret_type = return_type();
     if (ret_type->is_noret())
-        return print_args(p);
+        return p.dump_list([&] (Type type) { type->print(p); }, args(), "(", ")");
 
     p.dump_list([&] (Type type) { p.stream() << type; }, args().slice_num_from_end(1), "(", ")");
     p.stream() << " -> ";
@@ -114,7 +110,7 @@ std::ostream& StructAppTypeNode::print(Printer& p) const {
 
 std::ostream& TupleTypeNode::print(Printer& p) const {
     print_type_vars(p);
-    return print_args(p);
+    return p.dump_list([&] (Type type) { type->print(p); }, args(), "(", ")");
 }
 
 std::ostream& ImplNode::print(Printer& p) const {
