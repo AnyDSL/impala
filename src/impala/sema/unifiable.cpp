@@ -315,6 +315,10 @@ Type TypeNode::instantiate(SpecializeMap& map) const {
 }
 
 Type TypeNode::instantiate(ArrayRef<Type> type_args) const {
+    if (type_args.empty()) {
+        assert(!is_polymorphic());
+        return this;
+    }
     assert(num_type_vars() == type_args.size());
     SpecializeMap map;
     for (size_t i = 0, e = num_type_vars(); i != e; ++i)
