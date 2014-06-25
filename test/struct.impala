@@ -12,8 +12,9 @@ struct vec2[T] {
     //foo(vec2{ x: 1, y: 2f32})
 //}
     
-fn main(n: int) -> () {
-    let mut v = vec2{ x: 1, y: 2, data: ~[n: int] };
-    v.x = 7;
-    v.data(23) = 42;
+fn main(n: int) -> int {
+    let mut v = ~vec2{ x: 1, y: 2, data: ~[n: int] };
+    (*v).x = 7;
+    (*v).y
+    //v.data(23) = 42;
 }

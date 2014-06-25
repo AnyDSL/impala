@@ -232,6 +232,8 @@ private:
     const int id_;
     mutable std::vector<TypeVar> type_vars_;
     std::vector<Type> args_; ///< The operands of this type constructor.
+
+protected:
     mutable thorin::Type thorin_type_;
 
     friend class CodeGen;
@@ -430,16 +432,18 @@ private:
 public:
     void set(size_t i, Type t) const { const_cast<StructAbsTypeNode*>(this)->KnownTypeNode::set(i, t); }
     const StructDecl* struct_decl() const { return struct_decl_; }
+    thorin::StructAbsType thorin_struct_abs_type() const { return thorin_struct_abs_type_; }
     virtual Type instantiate(ArrayRef<Type>) const;
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual Type vinstantiate(SpecializeMap&) const { THORIN_UNREACHABLE; }
-    virtual thorin::Type convert(CodeGen&) const;
+    virtual Type vinstantiate(SpecializeMap&) const override { THORIN_UNREACHABLE; }
+    virtual thorin::Type convert(CodeGen&) const override;
 
     const StructDecl* struct_decl_;
+    mutable thorin::StructAbsType thorin_struct_abs_type_;
 
     friend class TypeTable;
 };

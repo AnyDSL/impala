@@ -120,11 +120,18 @@ thorin::Type TupleTypeNode::convert(CodeGen& cg) const {
 }
 
 thorin::Type StructAbsTypeNode::convert(CodeGen& cg) const {
-    return struct_decl()->thorin_type();
+    thorin_type_ = thorin_struct_abs_type_ = cg.world().struct_abs_type(num_args(), struct_decl()->symbol().str());
+    size_t i = 0;
+    for (auto arg : args())
+        thorin_struct_abs_type_->set(i++, cg.convert(arg));
+    thorin_type_.clear();               // will be set again by CodeGen's wrapper
+    return thorin_struct_abs_type_;
 }
 
 thorin::Type StructAppTypeNode::convert(CodeGen& cg) const {
-    return thorin::Type();
+    std::vector<thorin::Type> nargs;
+    convert_args(cg, nargs);
+    return cg.world().struct_app_type(struct_abs_type()->thorin_struct_abs_type(), nargs);
 }
 
 thorin::Type TraitAbsNode::convert(CodeGen& cg) const {
@@ -287,11 +294,7 @@ Var StaticItem::emit(CodeGen& cg) const {
 }
 
 void StructDecl::emit_item(CodeGen& cg) const {
-    auto struct_abs_type = cg.world().struct_abs_type(num_field_decls(), symbol().str());
-    thorin_type_ = struct_abs_type;
-    size_t i = 0;
-    for (auto field_decl : field_decls())
-        struct_abs_type->set(i++, cg.convert(field_decl->type()));
+    cg.convert(type());
 }
 
 void TraitDecl::emit_item(CodeGen& cg) const {

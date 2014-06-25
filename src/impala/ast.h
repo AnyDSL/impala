@@ -513,15 +513,11 @@ public:
 
 class TypeDeclItem : public NamedItem, public TypeDecl, public TypeParamList {
 public:
-    thorin::Type thorin_type() const { return thorin_type_; }
     virtual Symbol item_symbol() const override { return TypeDecl::symbol(); }
 
 private:
     virtual void check_item(NameSema&) const override;
     virtual void check_item(TypeSema&) const override;
-
-protected:
-    mutable thorin::Type thorin_type_;
 
     friend class Parser;
 };
