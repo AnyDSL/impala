@@ -27,7 +27,7 @@ const char* Visibility::str() {
 }
 
 const FnASTType* FnASTType::ret_fn_type() const {
-    if (num_args() == 0) {
+    if (num_args() == 0 && !args().empty()) {
         if (auto fn_type = args().back()->isa<FnASTType>())
             return fn_type;
     }
