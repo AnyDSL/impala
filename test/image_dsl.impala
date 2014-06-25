@@ -18,13 +18,13 @@ trait TImage {
 //-------------------------------------------------------------------------
 // A DSL using the DSL interface
 
-mod application[Image: TImage] {
+mod application[Img: TImage] {
 
-    fn redshift(img: &Img, val: int) -> () {
+    /*fn redshift(img: &Img, val: int) -> () {
         img.pixels(|pixel| {
             pixel.red = pixel.red.add(val);
         });
-    }
+    }*/
 
     // nicer with for expression
     fn redshift(img: &Img, val: int) -> () {
