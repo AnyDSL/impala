@@ -1,0 +1,12 @@
+struct S {
+    x: int,
+    y: bool
+}
+
+fn f() -> S {
+   S { x: 5 }
+}
+
+fn f() -> S {
+   S { x: 5, y: true, z: 7 }
+}

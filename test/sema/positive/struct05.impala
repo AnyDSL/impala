@@ -1,0 +1,10 @@
+trait T {}
+impl T for int {}
+
+struct S[A:T] {
+    x: A
+}
+
+fn f() -> S {
+   S[int] { x: 5 }
+}

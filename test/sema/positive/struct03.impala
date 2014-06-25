@@ -1,0 +1,11 @@
+struct S {
+    x: int,
+    y: bool
+}
+
+fn foo() -> S {
+    let s = S { x: 5, y: true };
+    s.x = 6;
+    s.y = false;
+    s
+}

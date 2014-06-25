@@ -1,0 +1,7 @@
+struct S[A] {
+    x: A
+}
+
+fn f() -> S {
+   S[int, bool] { x: 5 }
+}
