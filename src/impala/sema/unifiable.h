@@ -446,11 +446,11 @@ private:
 
 class StructAppTypeNode : public KnownTypeNode {
 private:
-    StructAppTypeNode(TypeTable& typetable, StructAbsType struct_abs, ArrayRef<Type> args);
+    StructAppTypeNode(TypeTable& typetable, StructAbsType struct_abs_type, ArrayRef<Type> args);
 
 public:
     Type elem(size_t i) const;
-    StructAbsType struct_abs() const { return struct_abs_; }
+    StructAbsType struct_abs_type() const { return struct_abs_type_; }
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
@@ -459,7 +459,7 @@ private:
     virtual Type vinstantiate(SpecializeMap&) const;
     virtual thorin::Type convert(CodeGen&) const;
 
-    StructAbsType struct_abs_;
+    StructAbsType struct_abs_type_;
     mutable Array<Type> elem_cache_;
 
     friend class TypeTable;

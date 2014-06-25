@@ -816,7 +816,7 @@ Type FieldExpr::check(TypeSema& sema, Type expected) const {
 Type FieldExpr::check_as_struct(TypeSema& sema, Type expected) const {
     auto type = sema.check(lhs());
     if (auto struct_app = type.isa<StructAppType>()) {
-        if (auto field_decl = struct_app->struct_abs()->struct_decl()->field_decl(symbol())) {
+        if (auto field_decl = struct_app->struct_abs_type()->struct_decl()->field_decl(symbol())) {
             index_ = field_decl->index();
             sema.expect_type(this, struct_app->elem(index_), expected, "field expression type");
             return expected;

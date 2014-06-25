@@ -66,19 +66,19 @@ StructAbsTypeNode::StructAbsTypeNode(TypeTable& typetable, const StructDecl* str
     , struct_decl_(struct_decl)
 {}
 
-StructAppTypeNode::StructAppTypeNode(TypeTable& typetable, StructAbsType struct_abs, ArrayRef<Type> args)
+StructAppTypeNode::StructAppTypeNode(TypeTable& typetable, StructAbsType struct_abs_type, ArrayRef<Type> args)
     : KnownTypeNode(typetable, Kind_struct_app, args)
-    , struct_abs_(struct_abs.unify())
-    , elem_cache_(struct_abs->num_args())
+    , struct_abs_type_(struct_abs_type.unify())
+    , elem_cache_(struct_abs_type->num_args())
 {}
 
 Type StructAppTypeNode::elem(size_t i) const {
     if (auto type = elem_cache_[i])
         return type;
 
-    if (i < struct_abs()->num_args()) {
-        auto type = struct_abs()->arg(i);
-        auto map = specialize_map(struct_abs(), args());
+    if (i < struct_abs_type()->num_args()) {
+        auto type = struct_abs_type()->arg(i);
+        auto map = specialize_map(struct_abs_type(), args());
         return elem_cache_[i] = type->specialize(map).unify();
     }
     return Type();
@@ -164,7 +164,7 @@ size_t Unifiable::hash() const {
 }
 
 size_t StructAbsTypeNode::hash() const { return hash_value(struct_decl()); }
-size_t StructAppTypeNode::hash() const { return hash_combine(Unifiable::hash(), struct_abs()->hash()); }
+size_t StructAppTypeNode::hash() const { return hash_combine(Unifiable::hash(), struct_abs_type()->hash()); }
 
 size_t TraitAbsNode::hash() const { return hash_value(trait_decl()); }
 size_t TraitAppNode::hash() const { return hash_combine(Unifiable::hash(), trait()->id()); }
@@ -267,7 +267,7 @@ bool StructAbsTypeNode::equal(const Unifiable* unifiable) const {
 
 bool StructAppTypeNode::equal(const Unifiable* other) const {
     assert(this->is_unified());
-    return Unifiable::equal(other) && this->struct_abs()->equal(*other->as<StructAppTypeNode>()->struct_abs());
+    return Unifiable::equal(other) && this->struct_abs_type()->equal(*other->as<StructAppTypeNode>()->struct_abs_type());
 }
 
 bool TraitAbsNode::equal(const Unifiable* other) const {
@@ -350,7 +350,7 @@ Type OwnedPtrTypeNode::vinstantiate(SpecializeMap& map) const {
 }
 
 Type StructAppTypeNode::vinstantiate(SpecializeMap& map) const { 
-    return map[this] = *typetable().struct_app_type(struct_abs(), specialize_args(map));
+    return map[this] = *typetable().struct_app_type(struct_abs_type(), specialize_args(map));
 }
 
 Type TupleTypeNode::vinstantiate(SpecializeMap& map) const { 

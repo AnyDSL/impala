@@ -89,7 +89,7 @@ std::ostream& StructAbsTypeNode::print(Printer& p) const {
 }
 
 std::ostream& StructAppTypeNode::print(Printer& p) const {
-    p.stream() << struct_abs()->struct_decl()->symbol().str();
+    p.stream() << struct_abs_type()->struct_decl()->symbol().str();
     if (num_args() != 0)
         return p.dump_list([&] (Type type) { type->print(p); }, args(), "[", "]");
     return p.stream();
