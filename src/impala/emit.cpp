@@ -287,11 +287,11 @@ Var StaticItem::emit(CodeGen& cg) const {
 }
 
 void StructDecl::emit_item(CodeGen& cg) const {
-    auto struct_type = cg.world().struct_type(num_field_decls(), symbol().str());
-    thorin_type_ = struct_type;
+    auto struct_abs_type = cg.world().struct_abs_type(num_field_decls(), symbol().str());
+    thorin_type_ = struct_abs_type;
     size_t i = 0;
     for (auto field_decl : field_decls())
-        struct_type->set(i++, cg.convert(field_decl->type()));
+        struct_abs_type->set(i++, cg.convert(field_decl->type()));
 }
 
 void TraitDecl::emit_item(CodeGen& cg) const {
