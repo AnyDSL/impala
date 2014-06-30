@@ -68,9 +68,11 @@ public:
     }
     template<class T> thorin::Type convert(Proxy<T> type) { return convert(type->unify()); }
 
-    void tag_run(Lambda* prev) {
+    void end_eval(Lambda* prev) {
         if (auto run = prev->to()->isa<thorin::Run>())
-            prev->update_arg(prev->num_args()-1, world().tagged_hlt(prev->args().back(), run));
+            prev->update_arg(prev->num_args()-1, world().end_run(prev->args().back(), run));
+        else if (auto hlt = prev->to()->isa<thorin::Hlt>())
+            prev->update_arg(prev->num_args()-1, world().end_hlt(prev->args().back(), hlt));
     }
 
     const Fn* cur_fn;
@@ -529,7 +531,7 @@ Def MapExpr::remit(CodeGen& cg) const {
         auto ret = cg.call(ldef, defs, ret_type);
         if (ret_type) {
             cg.set_mem(cg.cur_bb->param(0));
-            cg.tag_run(prev);
+            cg.end_eval(prev);
         }
         return ret;
     } else if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) {
@@ -573,7 +575,7 @@ Def ForExpr::remit(CodeGen& cg) const {
 
     auto prev = cg.cur_bb;
     cg.call(fun, defs, thorin::Type());
-    cg.tag_run(prev);
+    cg.end_eval(prev);
 
     // go to break continuation
     cg.cur_bb = next;
