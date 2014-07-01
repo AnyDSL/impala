@@ -7,6 +7,10 @@
 #include "impala/impala.h"
 #include "impala/sema/typetable.h"
 
+#ifndef NDEBUG
+#include <iostream>
+#endif
+
 namespace impala {
 
 //------------------------------------------------------------------------------
@@ -202,9 +206,9 @@ bool TypeSema::check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> t
 
 void TypeParamList::check_type_params(TypeSema& sema) const {
     for (auto type_param : type_params()) {
+        auto type_var = type_param->type_var(sema);
         for (auto bound : type_param->bounds()) {
             if (auto type_app = bound->isa<ASTTypeApp>()) {
-                auto type_var = type_param->type_var(sema);
                 type_var->add_bound(type_app->trait_app(sema, type_var));
             } else {
                 sema.error(type_param) << "bounds must be trait instances, not types\n";
@@ -267,9 +271,9 @@ Type FnASTType::check(TypeSema& sema) const {
 
 Type ASTTypeApp::check(TypeSema& sema) const {
     if (decl()) {
-        if (auto type_decl = decl()->isa<TypeDecl>())
+        if (auto type_decl = decl()->isa<TypeDecl>()) {
             return sema.instantiate(loc(), sema.check(type_decl), args());
-        else
+        } else
             sema.error(this) << '\'' << symbol() << "' does not name a type\n";
     }
 
