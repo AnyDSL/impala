@@ -4,8 +4,9 @@ Created on 8 Dec 2013
 @author: Alexander Kampmann, David Poetzsch-Heffter
 '''
 
-import sys, os, subprocess, difflib, shutil, imp
+import sys, os, difflib, shutil, imp
 from pb import Progressbar
+from timed_process import TimedProcess
 
 class Test:
     """Superclass for all the tests."""
@@ -36,12 +37,10 @@ class InvokeTest(Test):
     def invoke(self, gEx):
         #print("Start test "+str(self.getName()))
         execCmd = [os.path.abspath(gEx)] + self.options + [self.srcfile]
-        try:
-            output = subprocess.check_output(execCmd, cwd=self.basedir, stderr=subprocess.STDOUT)
-            return self.checkOutput(True, output);
-        except subprocess.CalledProcessError as err:
-            return self.checkOutput(False, err.output);
-            
+        p = TimedProcess(execCmd, self.basedir)
+        p.execute()
+        return self.checkOutput(p.success(), p.output)
+
     def checkOutput(self, success, output):
         if success != self.positive:
             print("\n[FAIL] "+os.path.join(self.basedir, self.srcfile))
@@ -133,25 +132,3 @@ def executeTests(tests, gEx, pb = True):
             print("\n* All %i optional tests were successful." % len(opt_tests))
         else:
             print("\n!" + str(failOpt) + " of " + str(len(opt_tests)) + " OPTIONAL tests failed.")
-    
-    
-def concat(outDir, srcFiles):
-    def doConcat():
-        if not os.path.exists(outDir):
-            os.makedirs(outDir)
-        try:
-            res = []
-            for srcs in srcFiles:
-                lastSrc = srcs[-1]
-                out = lastSrc[len(os.path.dirname(lastSrc))+1:]
-                out = os.path.abspath(os.path.join(outDir, out))
-                with open(out, 'w+') as dest:
-                    for s in srcs:
-                        shutil.copyfileobj(open(s, 'rb'), dest)
-                res.append(out)
-            return res
-        except subprocess.CalledProcessError as err:
-            print("Preprocessor failure: ")
-            print(err.output)
-            return []
-    return doConcat
