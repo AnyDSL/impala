@@ -8,9 +8,12 @@ Usage: run_tests.py [options] [subdirectory that contains test cases]
 Command line options:
  -e, --executable <Path to executable>
  -d, --disable-progressbar Disable the fancy progress bar
+ -t, --compiler-timeout <floating point value in seconds>
+                         Default is 1.0
 """
 
 import infrastructure.tests
+from infrastructure.timed_process import CompileProcess
 import os, sys, getopt
 
 def invoke(executable, directory, pb):
@@ -28,7 +31,7 @@ def main():
     
     # get cmd file
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "he:d", ["help", "executable", "disable-progressbar"])
+        opts, args = getopt.getopt(sys.argv[1:], "he:dt:", ["help", "executable", "disable-progressbar", "compiler-timeout"])
     except getopt.error as msg:
         print(msg)
         sys.exit(2)
@@ -42,6 +45,8 @@ def main():
             executable = a
         if o in ("-d", "--disable-progressbar"):
             pb = False
+        if o in ("-t", "--compiler-timeout"):
+            CompileProcess.timeout = float(a)
 
     if len(args) > 1:
         print("You specified too many arguments.")

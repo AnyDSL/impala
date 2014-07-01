@@ -6,7 +6,7 @@ Created on 8 Dec 2013
 
 import sys, os, difflib, shutil, imp
 from pb import Progressbar
-from timed_process import TimedProcess
+from timed_process import CompileProcess
 
 class Test:
     """Superclass for all the tests."""
@@ -37,7 +37,7 @@ class InvokeTest(Test):
     def invoke(self, gEx):
         #print("Start test "+str(self.getName()))
         execCmd = [os.path.abspath(gEx)] + self.options + [self.srcfile]
-        p = TimedProcess(execCmd, self.basedir)
+        p = CompileProcess(execCmd, self.basedir)
         p.execute()
         return self.checkOutput(p.success(), p.output)
 
