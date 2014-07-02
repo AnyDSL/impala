@@ -1,6 +1,8 @@
 #include "impala/sema/unifiable.h"
 
+#ifndef NDEBUG
 #include <iostream>
+#endif
 
 #include "thorin/util/assert.h"
 #include "thorin/util/queue.h"
