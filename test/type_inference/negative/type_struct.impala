@@ -1,0 +1,12 @@
+struct A[T] {
+    data : &[T]
+}
+
+fn test() -> () {
+    let tmp = A { data : ~[23:float] };
+}
+
+fn testt[T]() -> () {
+    let foo = A { data : ~[23:T] };
+    let bar = A[T] { data : ~[23:float] }; // what happens if T != float?
+}
