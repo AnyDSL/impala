@@ -2,6 +2,6 @@ struct S[A] {
     x: A
 }
 
-fn f() -> S {
+fn f() -> S[int] {
    S[int] { x: 5 }
 }
