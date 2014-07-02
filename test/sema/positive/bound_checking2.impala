@@ -1,0 +1,6 @@
+trait U {}
+trait T[A : U] {}
+
+struct S[C: U] { c: C }
+
+fn f[B:U](x:S[B]) -> () {}

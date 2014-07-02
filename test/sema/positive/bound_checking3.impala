@@ -1,0 +1,4 @@
+trait U {}
+trait T[A : U] {}
+
+impl[C: U] T[C] for int {}

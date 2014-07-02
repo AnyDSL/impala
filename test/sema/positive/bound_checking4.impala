@@ -1,0 +1,7 @@
+trait U {}
+trait T[A : U] {}
+
+struct S[B: U] { x: B }
+
+impl[C: U] U for S[C] {}
+fn g[D:T[S[E]], E: U](x: D) -> () {}
