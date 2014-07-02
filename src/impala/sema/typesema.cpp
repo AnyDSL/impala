@@ -15,11 +15,32 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
+class CheckBoundsData {
+public:
+    CheckBoundsData(const Location& l, Uni u, ArrayRef<Type> ts)
+        : loc(l), unifiable(u), types(ts.size())
+    {
+        for (size_t i = 0, e = ts.size(); i != e; ++i) {
+            if (auto t = ts[i])
+                types[i] = t;
+        }
+    }
+
+    const Location& loc;
+    Uni unifiable;
+    std::vector<Type> types;
+};
+
 class TypeSema : public TypeTable {
 public:
     TypeSema(const bool nossa)
         : nossa_(nossa)
     {}
+
+    void verfiy() const {
+        assert(check_bounds_stash_.empty());
+        TypeTable::verify();
+    }
 
     bool nossa() const { return nossa_; }
     void push_impl(const ImplItem* i) { impls_.push_back(i); }
@@ -48,6 +69,17 @@ public:
     TraitApp instantiate(const Location& loc, TraitAbs trait, Type self, ArrayRef<const ASTType*> args);
     Type instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args);
     Type check_call(const Location& loc, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected);
+
+    void stash_bound_check(const Location& loc, Uni unifiable, ArrayRef<Type> types) {
+        CheckBoundsData cbs(loc, unifiable, types);
+        check_bounds_stash_.push_back(cbs);
+    }
+
+    void treat_bound_check_stash() {
+        for (CheckBoundsData cbs : check_bounds_stash_)
+            check_bounds(cbs.loc, cbs.unifiable, cbs.types);
+        check_bounds_stash_.clear();
+    }
 
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
 
@@ -81,6 +113,7 @@ public:
 private:
     bool nossa_;
     std::vector<const ImplItem*> impls_;
+    std::vector<CheckBoundsData> check_bounds_stash_;
 
 public:
     const BlockExpr* cur_block_expr_ = nullptr;
@@ -143,7 +176,7 @@ TraitApp TypeSema::instantiate(const Location& loc, TraitAbs trait_abs, Type sel
         type_args.push_back(self);
         for (auto t : args) 
             type_args.push_back(check(t));
-        check_bounds(loc, *trait_abs, type_args);
+        stash_bound_check(loc, *trait_abs, type_args);
         return trait_abs->instantiate(type_args);
     } else
         error(loc) << "wrong number of instances for bound type variables of trait '" << trait_abs << "': " << args.size() << " for " << (trait_abs->num_type_vars()-1) << "\n";
@@ -156,7 +189,7 @@ Type TypeSema::instantiate(const Location& loc, Type type, ArrayRef<const ASTTyp
         std::vector<Type> type_args;
         for (auto t : args) 
             type_args.push_back(check(t));
-        check_bounds(loc, *type, type_args);
+        stash_bound_check(loc, *type, type_args);
         return type->instantiate(type_args);
     } else
         error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << type->num_type_vars() << "\n";
@@ -375,6 +408,9 @@ Type StructDecl::check(TypeSema& sema) const {
         struct_type->set(field->index(), sema.check(field));
     for (auto type_param : type_params())
         struct_type->bind(type_param->type_var(sema));
+
+    sema.treat_bound_check_stash();
+
     type_.clear();          // will be set again by TypeSema's wrapper
     return struct_type;
 }
@@ -395,6 +431,8 @@ Type FnDecl::check(TypeSema& sema) const {
     for (auto tp : type_params())
         fn_type->bind(tp->type_var(sema));
     type_ = fn_type;
+
+    sema.treat_bound_check_stash();
 
     if (body() != nullptr)
         check_body(sema, fn_type);
@@ -425,6 +463,8 @@ void TraitDecl::check_item(TypeSema& sema) const {
             sema.error(type_app) << "duplicate super trait '" << type_app << "' for trait '" << symbol() << "'\n";
     }
 
+    sema.treat_bound_check_stash();
+
     for (auto m : methods())
         sema.check(m);
 }
@@ -448,6 +488,8 @@ void ImplItem::check_item(TypeSema& sema) const {
         } else
             sema.error(trait()) << "expected trait instance\n";
     }
+
+    sema.treat_bound_check_stash();
 
     thorin::HashSet<Symbol> implemented_methods;
     for (auto fn : methods()) {
