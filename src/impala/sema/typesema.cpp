@@ -49,11 +49,7 @@ public:
     Type instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args);
     Type check_call(const Location& loc, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected);
 
-    bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types, SpecializeMap& map);
-    bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types) {
-        SpecializeMap map;
-        return check_bounds(loc, unifiable, types, map);
-    }
+    bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
 
     // check wrappers
 
@@ -160,9 +156,7 @@ Type TypeSema::instantiate(const Location& loc, Type type, ArrayRef<const ASTTyp
         std::vector<Type> type_args;
         for (auto t : args) 
             type_args.push_back(check(t));
-
-        SpecializeMap map;
-        check_bounds(loc, *type, type_args, map);
+        check_bounds(loc, *type, type_args);
         return type->instantiate(type_args);
     } else
         error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << type->num_type_vars() << "\n";
@@ -170,8 +164,8 @@ Type TypeSema::instantiate(const Location& loc, Type type, ArrayRef<const ASTTyp
     return type_error();
 }
 
-bool TypeSema::check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> type_args, SpecializeMap& map) {
-    map = specialize_map(unifiable, type_args);
+bool TypeSema::check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> type_args) {
+    SpecializeMap map = specialize_map(unifiable, type_args);
     assert(map.size() == type_args.size());
     bool result = true;
 
