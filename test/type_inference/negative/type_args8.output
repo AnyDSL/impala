@@ -1,1 +1,1 @@
-type_args8.impala:6 col 8: error: could not infer parameter type for y.
+type_args8.impala:6 col 8: error: could not infer parameter type for y

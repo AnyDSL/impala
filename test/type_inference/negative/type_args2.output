@@ -1,1 +1,1 @@
-type_args2.impala:5 col 8 - 23: error: could not infer types: expected 'fn(bool) -> bool' but found 'fn(bool) -> i32'.
+type_args2.impala:5 col 8 - 23: error: could not infer types: expected 'fn(bool) -> bool' but found 'fn(bool) -> i32'
