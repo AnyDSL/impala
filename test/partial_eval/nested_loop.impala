@@ -1,23 +1,31 @@
-fn g(n: int, mut sum: int) -> int {
-    if (n == 42) {
-        for (let mut j = 0; j < 10; ++j) {
-            ++sum;
+fn iterate(a: int, b: int, body: fn(int, fn())) -> () {
+    if a < b {
+        body(a);
+        iterate(a+1, b, body, return)
+    }
+}
+
+fn range(a: int, b: int, body: fn(int, fn())) -> () {
+    iterate(a, b, body)
+}
+
+fn iteration_bounds(body: fn(int, int, int) -> ()) -> () {
+    let Bounds2D = [[ 0,  1,  2,  3], 
+                    [ 4,  5,  6,  7], 
+                    [ 8,  9, 10, 11], 
+                    [12, 13, 14, 15]];
+
+    for region in @iterate(0, 9) {
+        let bounds = Bounds2D(region);
+        for y in $iterate(bounds(2), bounds(3)) {
+            for x in @iterate(bounds(0), bounds(1)) {
+                body(x, y, region);
+            }
         }
     }
-    
-    return sum;
 }
 
-fn f(n: int) -> int {
-    let mut sum_xxx = 0;
-    for (let mut i = 0; i < 10; ++i) {
-        ++sum_xxx;
-        sum_xxx = @g(n, sum_xxx);
+fn main(i: int) -> () {
+    for x, y, region in @iteration_bounds() {
     }
-
-    return sum_xxx;
-}
-
-fn main(i: int) -> int {
-    return f(i);
 }
