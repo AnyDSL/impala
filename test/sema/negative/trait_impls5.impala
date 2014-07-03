@@ -1,5 +1,14 @@
-trait T {}
-trait U : T {}
+trait T {
+   fn f(self: Self) -> ();
+}
+trait U {
+   fn f(self: Self) -> ();
+}
 
-impl U for i32 {}
-impl T for i32 {}
+// f implemented two times!
+impl T for bool {
+   fn f(self: bool) -> () {}
+}
+impl U for bool {
+   fn f(self: bool) -> () {}
+}

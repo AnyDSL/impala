@@ -1,0 +1,5 @@
+trait T {}
+trait U : T {}
+
+impl U for i32 {}
+impl T for i32 {}
