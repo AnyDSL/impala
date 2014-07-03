@@ -1,0 +1,10 @@
+trait U {}
+
+struct S[A] { x: A }
+
+impl[B] U for S[B] {}
+fn g[C: U](x: C) -> () {}
+
+fn main() -> () {
+   g[S[int]](S { x: 5 })
+}
