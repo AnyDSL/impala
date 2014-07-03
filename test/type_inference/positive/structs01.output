@@ -1,0 +1,10 @@
+struct S[A] {
+    x: A
+}
+
+fn g[B](x: B) -> () {
+}
+
+fn main() -> () {
+    g[S[i32]](S{x: 5})
+}

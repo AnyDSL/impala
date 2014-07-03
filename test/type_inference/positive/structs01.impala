@@ -1,0 +1,6 @@
+struct S[A] { x: A }
+fn g[B](x: B) -> () {}
+
+fn main() -> () {
+   g(S { x: 5 })
+}
