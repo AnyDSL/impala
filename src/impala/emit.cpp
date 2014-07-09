@@ -492,7 +492,7 @@ Def StructExpr::remit(CodeGen& cg) const {
     Array<Def> defs(num_elems());
     for (const auto& elem : elems())
         defs[elem.field_decl()->index()] = cg.remit(elem.expr());
-    return cg.world().tuple(defs);
+    return cg.world().struct_agg(cg.convert(type()).as<thorin::StructAppType>(), defs);
 }
 
 Var MapExpr::lemit(CodeGen& cg) const {
