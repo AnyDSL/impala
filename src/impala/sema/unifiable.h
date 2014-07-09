@@ -433,7 +433,7 @@ public:
     void set(size_t i, Type t) const { const_cast<StructAbsTypeNode*>(this)->KnownTypeNode::set(i, t); }
     const StructDecl* struct_decl() const { return struct_decl_; }
     thorin::StructAbsType thorin_struct_abs_type() const { return thorin_struct_abs_type_; }
-    virtual Type instantiate(ArrayRef<Type>) const;
+    virtual Type instantiate(ArrayRef<Type>) const override;
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
