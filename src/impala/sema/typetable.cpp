@@ -51,8 +51,10 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
         for (auto type_var : unifiable->type_vars())
             unify(type_var);
 
-        for (auto arg : unifiable->args())
-            unify(arg);
+        for (auto arg : unifiable->args()) {
+            if (arg)
+                unify(arg);
+        }
 
         if (auto type_var = unifiable->isa<TypeVarNode>()) {
             for (auto bound : type_var->bounds())

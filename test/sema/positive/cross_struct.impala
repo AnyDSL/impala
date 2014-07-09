@@ -1,0 +1,12 @@
+struct A {
+    i: int,
+    b: &B
+}
+
+struct B {
+    i: int,
+    a: &A
+}
+
+fn main() -> () {
+}

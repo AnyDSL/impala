@@ -115,7 +115,7 @@ bool Unifiable::is_known() const {
     }
 
     for (auto arg : args()) {
-        if (!arg->is_known())
+        if (arg && !arg->is_known())
             return false;
     }
 
@@ -131,7 +131,7 @@ bool Unifiable::is_closed() const {
     }
 
     for (auto arg : args()) {
-        if (!arg->is_closed())
+        if (arg && !arg->is_closed())
             return false;
     }
 
