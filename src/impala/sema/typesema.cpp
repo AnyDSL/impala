@@ -54,9 +54,9 @@ public:
 
     // error handling
 
-    bool expect_lvalue(const Expr* expr) {
+    bool expect_lvalue(const Expr* expr, const std::string& what = std::string()) {
         if (!expr->is_lvalue()) {
-            error(expr) << "lvalue required in assignment\n";
+            error(expr) << "lvalue required " << (what.empty() ? "in assignment" : what.c_str()) << '\n';
             return  false;
         }
         return true;
@@ -86,8 +86,8 @@ public:
     // check wrappers
 
     Type check(const TypeableDecl* decl) {
-        if (!decl->checked_) { 
-            decl->checked_ = true; 
+        if (!decl->checked_) {
+            decl->checked_ = true;
             decl->type_ = decl->check(*this);
         }
         return decl->type();
@@ -152,7 +152,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, con
 
     // TODO: quick hack
     if (auto ptr = found_type.isa<OwnedPtrType>()) {
-        if (expected.isa<PtrType>()) 
+        if (expected.isa<PtrType>())
             return expected;
     }
 
@@ -165,7 +165,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, con
         }
     }
 
-    error(expr) << "mismatched types: expected '" << expected << "' but found '" << found_type 
+    error(expr) << "mismatched types: expected '" << expected << "' but found '" << found_type
         << (what.empty() ? std::string("'") : std::string("' as ") + what) << "\n";
     return expected;
 }
@@ -174,7 +174,7 @@ TraitApp TypeSema::instantiate(const Location& loc, TraitAbs trait_abs, Type sel
     if ((args.size()+1) == trait_abs->num_type_vars()) {
         std::vector<Type> type_args;
         type_args.push_back(self);
-        for (auto t : args) 
+        for (auto t : args)
             type_args.push_back(check(t));
         stash_bound_check(loc, *trait_abs, type_args);
         return trait_abs->instantiate(type_args);
@@ -187,7 +187,7 @@ TraitApp TypeSema::instantiate(const Location& loc, TraitAbs trait_abs, Type sel
 Type TypeSema::instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args) {
     if (args.size() == type->num_type_vars()) {
         std::vector<Type> type_args;
-        for (auto t : args) 
+        for (auto t : args)
             type_args.push_back(check(t));
         stash_bound_check(loc, *type, type_args);
         return type->instantiate(type_args);
@@ -591,7 +591,7 @@ Type PathExpr::check(TypeSema& sema, Type expected) const {
     if (value_decl()) {
         if (auto local = value_decl()->isa<LocalDecl>()) {
             // if local lies in an outer function go through memory to implement closure
-            if (local->is_mut() && local->fn() != sema.cur_fn_) 
+            if (local->is_mut() && local->fn() != sema.cur_fn_)
                 local->take_address();
         }
         return sema.check(value_decl());
@@ -604,6 +604,7 @@ Type PrefixExpr::check(TypeSema& sema, Type expected) const {
     auto rtype = sema.check(rhs());
     switch (kind()) {
         case AND:
+            sema.expect_lvalue(rhs(), "as unary '&' operand");
             rhs()->take_address();
             return sema.borrowd_ptr_type(rtype);
         case TILDE:
@@ -703,7 +704,7 @@ Type PostfixExpr::check(TypeSema& sema, Type expected) const {
     // TODO check if operator supports the type
     sema.check(lhs(), expected);
     sema.expect_lvalue(lhs());
-    return lhs()->type(); 
+    return lhs()->type();
 }
 
 Type CastExpr::check(TypeSema& sema, Type expected) const {
@@ -861,7 +862,7 @@ Type FieldExpr::check_as_struct(TypeSema& sema, Type expected) const {
             sema.expect_type(this, struct_app->elem(index_), expected, "field expression type");
             return expected;
         }
-    } 
+    }
 
     return Type();
 }
@@ -871,7 +872,7 @@ Type MapExpr::check(TypeSema& sema, Type expected) const {
         if (auto type = field_expr->check_as_struct(sema, sema.unknown_type()))
             return check_as_map(sema, expected);
         return check_as_method_call(sema, expected);
-    } 
+    }
 
     return check_as_map(sema, expected);
 }

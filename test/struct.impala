@@ -1,20 +1,10 @@
-struct vec2[T] {
-    x: T, 
-    y: T,
-    data: ~[T]
+struct vec2 {
+    x: float, 
+    y: int
 }
 
-//extern fn foo(v: vec2) -> float {
-    //v.y
-//}
+fn foo(v: vec2) -> () {}
 
-//extern fn bar() -> float {
-    //foo(vec2{ x: 1, y: 2f32})
-//}
-    
-fn main(n: int) -> int {
-    let mut v = ~vec2{ x: 1, y: 2, data: ~[n: int] };
-    (*v).x = 7;
-    (*v).y
-    //v.data(23) = 42;
+fn main() -> vec2 {
+    vec2{ x: 1.f, y: 2 }
 }
