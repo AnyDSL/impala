@@ -1,7 +1,21 @@
-struct S {
+struct A {
     x: int
 }
 
-fn f() -> S {
-   S { x: 5 }
+struct B {
+    x: int,
+}
+
+struct C {
+    x: int,
+    y: float
+}
+
+struct D {
+    x: int,
+    y: float,
+}
+
+fn f() -> A {
+   A{ x: 5 }
 }

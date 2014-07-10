@@ -62,7 +62,7 @@
     case Token::L_PAREN: \
     case Token::L_BRACE: \
     case Token::L_BRACKET
-    
+
 #define STMT_NOT_EXPR \
          Token::LET: \
     case ITEM
@@ -142,10 +142,10 @@ public:
     template<class T>
     Loc<T> loc(T* node) { return Loc<T>(*this, node); }
 
-    void parse_comma_list(TokenKind delimiter, const char* context, std::function<void()> f) {
+    void parse_comma_list(TokenKind delimiter, const char* context, std::function<void()> f, bool optional_ending_comma = false) {
         if (la() != delimiter) {
             do { f(); }
-            while ( accept(Token::COMMA) );
+            while (accept(Token::COMMA) && (optional_ending_comma ? la() != delimiter : true));
         }
         expect(delimiter, context);
     }
@@ -323,7 +323,7 @@ const PathElem* Parser::parse_path_elem() {
 const Path* Parser::parse_path() {
     auto path = loc(new Path());
     path->is_global_ = accept(Token::DOUBLE_COLON);
-    do { 
+    do {
         path->path_elems_.push_back(parse_path_elem());
     } while (accept(Token::DOUBLE_COLON));
     return path;
@@ -343,7 +343,7 @@ const TypeParam* Parser::parse_type_param() {
     type_param->symbol_ = try_id("type parameter");
 
     if (accept(Token::COLON)) {
-        do 
+        do
             type_param->bounds_.push_back(parse_type());
         while (accept(Token::ADD));
     }
@@ -367,7 +367,7 @@ const Param* Parser::parse_param(bool lambda) {
     else {
         switch (tok) {
             case TYPE: type = parse_type(); break;
-            default:    
+            default:
                 symbol = "<error>";
                 error("identifier", "parameter");
         }
@@ -492,7 +492,7 @@ ImplItem* Parser::parse_impl() {
         impl->type_ = type;
     expect(Token::L_BRACE, "impl");
     while (la() == Token::FN)
-        impl->methods_.push_back(parse_fn_decl(BodyMode::Mandatory)); 
+        impl->methods_.push_back(parse_fn_decl(BodyMode::Mandatory));
     expect(Token::R_BRACE, "closing brace of impl");
 
     return impl;
@@ -532,9 +532,9 @@ StructDecl* Parser::parse_struct_decl() {
     parse_type_params(struct_decl->type_params_);
     expect(Token::L_BRACE, "struct declaration");
     int i = 0;
-    parse_comma_list(Token::R_BRACE, "closing brace of struct declaration", [&] { 
-        struct_decl->field_decls_.push_back(parse_field_decl(i++)); 
-    });
+    parse_comma_list(Token::R_BRACE, "closing brace of struct declaration", [&] {
+        struct_decl->field_decls_.push_back(parse_field_decl(i++));
+    }, true);
     return struct_decl;
 }
 
@@ -545,14 +545,14 @@ TraitDecl* Parser::parse_trait_decl() {
     parse_type_params(trait_decl->type_params_);
 
     if (accept(Token::COLON)) {
-        parse_comma_list(Token::L_BRACE, "trait declaration", [&] { 
+        parse_comma_list(Token::L_BRACE, "trait declaration", [&] {
             trait_decl->super_traits_.push_back(parse_type_app());
         });
     } else
         expect(Token::L_BRACE, "trait declaration");
 
     while (la() == Token::FN)
-        trait_decl->methods_.push_back(parse_fn_decl(BodyMode::Optional)); 
+        trait_decl->methods_.push_back(parse_fn_decl(BodyMode::Optional));
 
     expect(Token::R_BRACE, "closing brace of trait declaration");
     const_cast<SelfParam&>(trait_decl->self_param_).loc_ = trait_decl->loc().pos1();
@@ -587,8 +587,8 @@ void Parser::parse_mod_contents(ModContents* mod_contents) {
             case ITEM:
                 mod_contents->items_.push_back(parse_item());
                 continue;
-            case Token::SEMICOLON:  
-                lex(); 
+            case Token::SEMICOLON:
+                lex();
                 continue;
             default:
                 return;
@@ -623,9 +623,9 @@ const ASTType* Parser::parse_type() {
         case Token::TILDE:
         case Token::AND:        return parse_ptr_type();
         default:  {
-            error("type", ""); 
+            error("type", "");
             auto error_type = new ErrorASTType(prev_loc());
-            lex(); 
+            lex();
             return error_type;
         }
     }
@@ -671,8 +671,8 @@ const FnASTType* Parser::parse_fn_type() {
     eat(Token::FN);
     parse_type_params(fn_type->type_params_);
     expect(Token::L_PAREN, "function type");
-    parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&] { 
-        fn_type->args_.push_back(parse_type()); 
+    parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&] {
+        fn_type->args_.push_back(parse_type());
     });
 
     if (auto ret_type = parse_return_type())
@@ -688,8 +688,8 @@ const ASTType* Parser::parse_return_type() {
 
         auto ret_type = loc(new FnASTType());
         if (accept(Token::L_PAREN)) {                   // in-place tuple
-            parse_comma_list(Token::R_PAREN, "closing parenthesis of return type list", [&] { 
-                ret_type->args_.push_back(parse_type()); 
+            parse_comma_list(Token::R_PAREN, "closing parenthesis of return type list", [&] {
+                ret_type->args_.push_back(parse_type());
             });
         } else {
             auto type = parse_type();
@@ -717,8 +717,8 @@ const PtrASTType* Parser::parse_ptr_type() {
 const TupleASTType* Parser::parse_tuple_type() {
     auto tuple_type = loc(new TupleASTType());
     eat(Token::L_PAREN);
-    parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple type", [&] { 
-        tuple_type->args_.push_back(parse_type()); 
+    parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple type", [&] {
+        tuple_type->args_.push_back(parse_type());
     });
     return tuple_type;
 }
@@ -727,8 +727,8 @@ const ASTTypeApp* Parser::parse_type_app() {
     auto type_app = loc(new ASTTypeApp());
     type_app->symbol_ = lex().symbol();
     if (accept(Token::L_BRACKET)) {
-        parse_comma_list(Token::R_BRACKET, "type arguments for type application", [&] { 
-            type_app->args_.push_back(parse_type()); 
+        parse_comma_list(Token::R_BRACKET, "type arguments for type application", [&] {
+            type_app->args_.push_back(parse_type());
         });
     }
     return type_app;
@@ -977,7 +977,7 @@ const IfExpr* Parser::parse_if_expr() {
                 error("block or if expression", "alternative of an if expression");
         }
     }
-        
+
     if (if_expr->else_expr_ == nullptr)
         if_expr->else_expr_ = new BlockExpr(prev_loc());
     return if_expr;

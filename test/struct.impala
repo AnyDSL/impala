@@ -1,6 +1,8 @@
+struct bar {}
+
 struct vec2 {
     x: float, 
-    y: int
+    y: int,
 }
 
 fn foo(v: vec2) -> () {}
