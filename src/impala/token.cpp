@@ -219,7 +219,7 @@ Symbol Token::insert(TokenKind tok, const char* str) {
     if (!p.second) {
         Kind   oldTok = p.first->first;
         Symbol oldSym = p.first->second;
-        assert(s == oldSym && tok == oldTok && "inserted ambigous duplicate");
+        assert(s == oldSym && tok == oldTok && "inserted ambiguous duplicate");
     }
 #endif
 
