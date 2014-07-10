@@ -1,8 +1,8 @@
 #include "impala/ast.h"
 
 #include <iostream>
+#include <stdexcept>
 #include <vector>
-#include <map>
 
 #include "thorin/irbuilder.h"
 #include "thorin/lambda.h"
@@ -310,7 +310,7 @@ void Typedef::emit_item(CodeGen& cg) const {
  * expressions
  */
 
-Var Expr::lemit(CodeGen& cg) const { throw "cannot emit lvalue"; }
+Var Expr::lemit(CodeGen& cg) const { throw std::logic_error("cannot emit lvalue"); }
 Def Expr::remit(CodeGen& cg) const { return lemit(cg).load(); }
 void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     if (auto def = cg.remit(this)) {
@@ -387,7 +387,7 @@ Def PrefixExpr::remit(CodeGen& cg) const {
 Var PrefixExpr::lemit(CodeGen& cg) const {
     if (kind() == MUL)
         return Var::create_ptr(cg, cg.remit(rhs()));
-    throw "cannot emit lvalue";
+    throw std::logic_error("cannot emit lvalue");
 }
 
 void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
@@ -498,7 +498,7 @@ Def StructExpr::remit(CodeGen& cg) const {
 Var MapExpr::lemit(CodeGen& cg) const {
     if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>())
         return Var::create_agg(cg.lemit(lhs()), cg.remit(arg(0)));
-    throw "cannot emit lvalue";
+    throw std::logic_error("cannot emit lvalue");
 }
 
 Def MapExpr::remit(CodeGen& cg) const {
