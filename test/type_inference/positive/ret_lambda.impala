@@ -1,0 +1,3 @@
+fn f() -> fn(int, int) -> int {
+    |x, y| x+y
+}
