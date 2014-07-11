@@ -11,7 +11,7 @@ fn iteration_bounds(body: fn(int, int, int) -> ()) -> () {
                     [ 8,  9, 10, 11], 
                     [12, 13, 14, 15]];
 
-    for region in @range(0, 9) {
+    for region in @range(0, 4) {
         let bounds = Bounds2D(region);
         for y in $range(bounds(2), bounds(3)) {
             @body(0, y, region);
