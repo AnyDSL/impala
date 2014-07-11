@@ -43,10 +43,12 @@ public:
     void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
     void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }
-    void emit(const Item* item) { 
+    void emit(const Item* item) {
         assert(!item->done_);
-        item->emit_item(*this); 
+        item->emit_item(*this);
+#ifndef NDEBUG
         item->done_ = true;
+#endif
     }
     Var emit(const ValueDecl* decl) {
         if (!decl->var_)
@@ -177,7 +179,7 @@ Lambda* Fn::emit_head(CodeGen& cg) const {
     std::string str(symbol.str());
     if (!str.empty() && str.front() == '"') { // remove quotation
         assert(str.size() >= 2 && str.back() == '"');
-        str = str.substr(1, str.size()-2); 
+        str = str.substr(1, str.size()-2);
     }
     return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), str);
 }
