@@ -1,12 +1,8 @@
-fn iterate(a: int, b: int, body: fn(int, fn())) -> () {
+fn range(a: int, b: int, body: fn(int, fn())) -> () {
     if a < b {
         body(a);
-        iterate(a+1, b, body, return)
+        range(a+1, b, body, return)
     }
-}
-
-fn range(a: int, b: int, body: fn(int, fn())) -> () {
-    iterate(a, b, body)
 }
 
 fn iteration_bounds(body: fn(int, int, int) -> ()) -> () {
@@ -15,12 +11,10 @@ fn iteration_bounds(body: fn(int, int, int) -> ()) -> () {
                     [ 8,  9, 10, 11], 
                     [12, 13, 14, 15]];
 
-    for region in @iterate(0, 9) {
+    for region in @range(0, 9) {
         let bounds = Bounds2D(region);
-        for y in $iterate(bounds(2), bounds(3)) {
-            for x in @iterate(bounds(0), bounds(1)) {
-                body(x, y, region);
-            }
+        for y in $range(bounds(2), bounds(3)) {
+            @body(0, y, region);
         }
     }
 }
