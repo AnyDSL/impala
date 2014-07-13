@@ -1,5 +1,5 @@
 fn main(i : int) -> int {
-    if  !!!(i == !42) {
+    if  !!!(i == !i) {
         23
     } else {
         42

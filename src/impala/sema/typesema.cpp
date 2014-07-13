@@ -633,6 +633,10 @@ Type PrefixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         case SUB:
             sema.expect_num(rhs());
             return rtype;
+        case NOT:
+            if (rtype->is_bool() || sema.expect_int(rhs()))
+                return rtype;
+            return sema.type_error();
         case RUN:
         case HLT:
             return sema.check(rhs());
