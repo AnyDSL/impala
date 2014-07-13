@@ -5,3 +5,11 @@ fn main(i : int) -> int {
         42
     }
 }
+
+extern fn foo(i: bool) -> int {
+    if i == false {
+        23
+    } else {
+        42
+    }
+}
