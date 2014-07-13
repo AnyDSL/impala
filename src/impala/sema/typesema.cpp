@@ -966,19 +966,32 @@ Type ForExpr::check(TypeSema& sema, TypeExpectation expected) const {
 }
 
 Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
-    // TODO check expressiveness of error msgs
     sema.check(cond(), sema.type_bool(), "condition type");
-    Type then_type = sema.check(then_expr(), expected);
-    Type else_type = sema.check(else_expr(), expected);
+    if (expected.type().isa<UnknownType>()) {
+        // TODO can we clean this up?
+        Type then_type = sema.check(then_expr(), sema.unknown_type());
+        Type else_type = sema.check(else_expr(), sema.unknown_type());
 
-    if (then_type->is_noret() && else_type->is_noret())
-        return sema.type_noret();
-    if (then_type->is_noret())
-        return sema.expect_type(else_expr(), else_type, expected.type(), "if expression type");
-    if (else_type->is_noret())
-        return sema.expect_type(then_expr(), then_type, expected.type(), "if expression type");
+        if (then_type->is_noret() && else_type->is_noret())
+            return sema.type_noret();
+        if (then_type->is_noret())
+            return sema.expect_type(else_expr(), else_type, expected, "if expression type");
+        if (else_type->is_noret())
+            return sema.expect_type(then_expr(), then_type, expected, "if expression type");
+        if (then_type == else_type)
+            return sema.expect_type(this, then_type, expected, "if expression type");
 
-    return then_type;
+        sema.error(this) << "different types in arms of an if expression\n";
+        sema.error(then_expr()) << "type of the consequence is '" << then_type << "'\n";
+        sema.error(else_expr()) << "type of the alternative is '" << else_type << "'\n";
+        return sema.type_error();
+    } else {
+        // TODO check expressiveness of error msgs
+        // we always allow noret in one of the branches as long
+        Type then_type = sema.check(then_expr(), TypeExpectation(expected.type(), true));
+        Type else_type = sema.check(else_expr(), TypeExpectation(expected.type(), true));
+        return (then_type->is_noret()) ? else_type : then_type;
+    }
 }
 
 //------------------------------------------------------------------------------
