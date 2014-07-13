@@ -1,0 +1,7 @@
+fn round_up(num : int, multiple : int) -> int {
+    if multiple == 0 { return(num) }
+
+    let rem = num % multiple;
+    if rem == 0 { num } else { num + multiple - rem }
+}
+
