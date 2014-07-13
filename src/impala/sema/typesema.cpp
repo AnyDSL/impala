@@ -357,7 +357,7 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
 void Fn::check_body(TypeSema& sema, FnType fn_type) const {
     auto return_type = fn_type->return_type();
     // TODO as noret is also valid we cannot use the return type as expected type. However this is bad for type inference...
-    sema.check(body(), TypeExpectation(return_type, true));
+    sema.check(body(), TypeExpectation(return_type, true), "return type");
     //if (!body_type->is_noret() && !body_type->is_error())
     //    sema.expect_type(body(), return_type, "return type");
 
