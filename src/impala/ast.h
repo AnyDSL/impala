@@ -103,6 +103,20 @@ protected:
     AutoVector<const TypeParam*> type_params_;
 };
 
+/// a bundle of expected type and a flag whether noret is also allowed
+class TypeExpectation {
+public:
+    TypeExpectation(Type type) : type_(type), noret_(false) {}
+    TypeExpectation(Type type, bool noret) : type_(type), noret_(noret) {}
+    /// The expected type
+    Type type() const { return type_; }
+    /// Indicates whether NoRet is also allowed
+    bool noret() const { return noret_; }
+private:
+    const Type type_;
+    const bool noret_;
+};
+
 //------------------------------------------------------------------------------
 
 class ASTNode : public impala::HasLocation, public thorin::MagicCast<ASTNode> {
@@ -733,7 +747,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const = 0;
-    virtual Type check(TypeSema&, Type) const = 0;
+    virtual Type check(TypeSema&, TypeExpectation) const = 0;
     virtual thorin::Var lemit(CodeGen&) const;
     virtual thorin::Def remit(CodeGen&) const;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
@@ -784,7 +798,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 };
 
@@ -803,7 +817,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoVector<const Stmt*> stmts_;
@@ -837,7 +851,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
 
     Kind kind_;
     thorin::Box box_;
@@ -851,7 +865,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     size_t ret_var_handle_;
@@ -875,7 +889,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
 
     AutoPtr<const Path> path_;
@@ -903,7 +917,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
 
     Kind kind_;
     AutoPtr<const Expr> rhs_;
@@ -928,7 +942,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
 
     Kind kind_;
     AutoPtr<const Expr> lhs_;
@@ -955,7 +969,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
 
     Kind kind_;
     AutoPtr<const Expr> lhs_;
@@ -974,7 +988,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -993,7 +1007,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
@@ -1008,7 +1022,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     friend class Parser;
@@ -1022,7 +1036,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> value_;
@@ -1039,7 +1053,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> dim_;
@@ -1054,7 +1068,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     friend class Parser;
@@ -1097,7 +1111,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Path> path_;
@@ -1112,12 +1126,12 @@ public:
     virtual bool is_lvalue() const override;
     virtual void take_address() const override;
     virtual void check(NameSema&) const override;
-    Type check_as_map(TypeSema&, Type) const;
-    Type check_as_method_call(TypeSema&, Type) const;
+    Type check_as_map(TypeSema&, TypeExpectation) const;
+    Type check_as_method_call(TypeSema&, TypeExpectation) const;
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -1139,7 +1153,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
 
     AutoPtr<const Expr> cond_;
     AutoPtr<const Expr> then_expr_;
@@ -1157,7 +1171,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const FnExpr> fn_expr_;
