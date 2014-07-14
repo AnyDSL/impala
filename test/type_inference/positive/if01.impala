@@ -1,0 +1,7 @@
+fn f() -> () {
+    let x: fn(int) -> int = if (true) {
+        |a| a
+    } else {
+        |a| a+1
+    };
+}
