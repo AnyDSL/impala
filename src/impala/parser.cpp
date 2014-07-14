@@ -989,7 +989,8 @@ const ForExpr* Parser::parse_for_expr() {
     THORIN_PUSH(cur_var_handle, cur_var_handle);
     auto fn_expr = loc(new FnExpr());
     for_expr->fn_expr_ = fn_expr.get();
-    parse_param_list(fn_expr->params_, Token::IN, true);
+    if (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
+        parse_param_list(fn_expr->params_, Token::IN, true);
     fn_expr->params_.push_back(Param::create(cur_var_handle++, "continue", prev_loc(), new FnASTType(prev_loc())));
 
     auto break_decl = loc(new LocalDecl(cur_var_handle++));
