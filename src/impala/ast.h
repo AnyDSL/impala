@@ -484,7 +484,11 @@ private:
 
 class SelfParam : public TypeParam {
 public:
-    SelfParam(const Location& loc) { identifier_ = Identifier("Self", loc); }
+    SelfParam(const Location& loc) {}
+    void set_loc(const Location& loc) { loc_ = loc; set_identifier(loc); }
+
+private:
+    void set_identifier(const Location& loc) { identifier_ = Identifier("Self", loc); }
 };
 
 class Param : public LocalDecl {

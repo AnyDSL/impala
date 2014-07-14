@@ -557,7 +557,7 @@ TraitDecl* Parser::parse_trait_decl() {
         trait_decl->methods_.push_back(parse_fn_decl(BodyMode::Optional));
 
     expect(Token::R_BRACE, "closing brace of trait declaration");
-    const_cast<SelfParam&>(trait_decl->self_param_).loc_ = trait_decl->loc().pos1();
+    const_cast<SelfParam&>(trait_decl->self_param_).set_loc(trait_decl->loc().pos1());
     return trait_decl;
 }
 
