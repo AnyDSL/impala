@@ -1,0 +1,7 @@
+fn f() -> () {
+    let x: int = if (true) {
+        5
+    } else {
+        return()
+    };
+}

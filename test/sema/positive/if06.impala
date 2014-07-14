@@ -1,0 +1,7 @@
+fn f() -> () {
+    if (true) {
+        4
+    } else {
+        return()
+    };
+}
