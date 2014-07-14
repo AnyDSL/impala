@@ -964,7 +964,6 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
     // if there is an expected type, we want to pipe it down to enable type inference
     // otherwise we cannot do so because if then_type is noret, else type still can be anything
     if (expected.type().isa<UnknownType>()) {
-        // TODO can we clean this up?
         Type then_type = sema.check(then_expr(), sema.unknown_type());
         Type else_type = sema.check(else_expr(), sema.unknown_type());
 
@@ -982,7 +981,6 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
         sema.error(else_expr()) << "type of the alternative is '" << else_type << "'\n";
         return sema.type_error();
     } else {
-        // TODO check expressiveness of error msgs
         // we always allow noret in one of the branches as long
         Type then_type = sema.check(then_expr(), TypeExpectation(expected.type(), true, "type of then branch"));
         Type else_type = sema.check(else_expr(), TypeExpectation(expected.type(), true, "type of else branch"));
