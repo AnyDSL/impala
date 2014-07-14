@@ -63,8 +63,8 @@ public:
     }
     bool expect_int(const Expr*);
     void expect_num(const Expr*);
-    Type expect_type(const Expr* expr, Type found, TypeExpectation expected, const std::string& what);
-    Type expect_type(const Expr* expr, TypeExpectation expected, const std::string& what) { return expect_type(expr, expr->type(), expected, what); }
+    Type expect_type(const Expr* expr, Type found, TypeExpectation expected);
+    Type expect_type(const Expr* expr, TypeExpectation expected) { return expect_type(expr, expr->type(), expected); }
 
     TraitApp instantiate(const Location& loc, TraitAbs trait, Type self, ArrayRef<const ASTType*> args);
     Type instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args);
@@ -100,13 +100,12 @@ public:
         return decl->type();
     }
     void check_item(const Item* item) { item->check_item(*this); }
-    Type check(const Expr* expr, TypeExpectation expected, const std::string& what) {
+    Type check(const Expr* expr, TypeExpectation expected) {
         if (!expr->type_.empty())
             return expr->type_;
-        return expr->type_ = expect_type(expr, expr->check(*this, expected), expected, what);
+        return expr->type_ = expect_type(expr, expr->check(*this, expected), expected);
     }
-    Type check(const Expr* expr, Type expected, const std::string& what) { return check(expr, TypeExpectation(expected), what); }
-    Type check(const Expr* expr, TypeExpectation expected) { return check(expr, expected, ""); }
+    Type check(const Expr* expr, Type expected, const std::string& what) { return check(expr, TypeExpectation(expected, what)); }
     Type check(const Expr* expr, Type expected) { return check(expr, expected, ""); }
     /// a check that does not expect any type (i.e. any type is allowed)
     Type check(const Expr* expr) { return check(expr, unknown_type()); }
@@ -148,7 +147,7 @@ void TypeSema::expect_num(const Expr* expr) {
         error(expr) << "expected number type but found " << t << "\n";
 }
 
-Type TypeSema::expect_type(const Expr* expr, Type found_type, TypeExpectation expected, const std::string& what) {
+Type TypeSema::expect_type(const Expr* expr, Type found_type, TypeExpectation expected) {
     if (found_type == expected.type())
         return expected.type();
 
@@ -170,15 +169,8 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, TypeExpectation ex
         }
     }
 
-    // quick hack for better error messages: when NoRet is allowed we assume it is a return type check
-    std::stringstream reason;
-    if (what.empty()) {
-        if (expected.noret())
-            reason << " as return type";
-    } else
-        reason << " as " << what;
-
-    error(expr) << "mismatched types: expected '" << expected.type() << "' but found '" << found_type << "'" << reason.str() << "\n";
+    error(expr) << "mismatched types: expected '" << expected.type() << "' but found '" << found_type
+                << (expected.what().empty() ? "'" :  "' as " + expected.what()) << "\n";
     return expected.type();
 }
 
@@ -357,7 +349,7 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
 void Fn::check_body(TypeSema& sema, FnType fn_type) const {
     auto return_type = fn_type->return_type();
     // TODO as noret is also valid we cannot use the return type as expected type. However this is bad for type inference...
-    sema.check(body(), TypeExpectation(return_type, true), "return type");
+    sema.check(body(), TypeExpectation(return_type, true, "return type"));
     //if (!body_type->is_noret() && !body_type->is_error())
     //    sema.expect_type(body(), return_type, "return type");
 
@@ -732,7 +724,7 @@ Type CastExpr::check(TypeSema& sema, TypeExpectation) const {
 Type DefiniteArrayExpr::check(TypeSema& sema, TypeExpectation) const {
     Type elem_type = sema.unknown_type();
     for (auto arg : args())
-        sema.expect_type(arg, sema.check(arg), elem_type, "element of definite array expression");
+        sema.expect_type(arg, sema.check(arg), TypeExpectation(elem_type, "element of definite array expression"));
     return sema.definite_array_type(elem_type, num_args());
 }
 
@@ -788,7 +780,7 @@ Type StructExpr::check(TypeSema& sema, TypeExpectation) const {
                             sema.check(elem.expr());
                             std::ostringstream oss;
                             oss << "initialization type for field '" << elem.symbol() << '\'';
-                            sema.expect_type(elem.expr(), elem.expr()->type(), struct_app->elem(field_decl->index()), oss.str());
+                            sema.expect_type(elem.expr(), elem.expr()->type(), TypeExpectation(struct_app->elem(field_decl->index()), oss.str()));
                         } else
                             sema.error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
                     } else
@@ -877,7 +869,7 @@ Type FieldExpr::check_as_struct(TypeSema& sema, Type expected) const {
         if (auto field_decl = struct_app->struct_abs_type()->struct_decl()->field_decl(symbol())) {
             index_ = field_decl->index();
             // a struct cannot have fields of type noret, so we can check against expected.type() (noret defaults to false)
-            sema.expect_type(this, struct_app->elem(index_), expected, "field expression type");
+            sema.expect_type(this, struct_app->elem(index_), TypeExpectation(expected, "field expression type"));
             return expected;
         }
     }
@@ -968,6 +960,9 @@ Type ForExpr::check(TypeSema& sema, TypeExpectation expected) const {
 
 Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
     sema.check(cond(), sema.type_bool(), "condition type");
+
+    // if there is an expected type, we want to pipe it down to enable type inference
+    // otherwise we cannot do so because if then_type is noret, else type still can be anything
     if (expected.type().isa<UnknownType>()) {
         // TODO can we clean this up?
         Type then_type = sema.check(then_expr(), sema.unknown_type());
@@ -976,11 +971,11 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
         if (then_type->is_noret() && else_type->is_noret())
             return sema.type_noret();
         if (then_type->is_noret())
-            return sema.expect_type(else_expr(), else_type, expected, "if expression type");
+            return sema.expect_type(else_expr(), else_type, TypeExpectation(expected, "if expression type"));
         if (else_type->is_noret())
-            return sema.expect_type(then_expr(), then_type, expected, "if expression type");
+            return sema.expect_type(then_expr(), then_type, TypeExpectation(expected, "if expression type"));
         if (then_type == else_type)
-            return sema.expect_type(this, then_type, expected, "if expression type");
+            return sema.expect_type(this, then_type, TypeExpectation(expected, "if expression type"));
 
         sema.error(this) << "different types in arms of an if expression\n";
         sema.error(then_expr()) << "type of the consequence is '" << then_type << "'\n";
@@ -989,8 +984,8 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
     } else {
         // TODO check expressiveness of error msgs
         // we always allow noret in one of the branches as long
-        Type then_type = sema.check(then_expr(), TypeExpectation(expected.type(), true));
-        Type else_type = sema.check(else_expr(), TypeExpectation(expected.type(), true));
+        Type then_type = sema.check(then_expr(), TypeExpectation(expected.type(), true, "type of then branch"));
+        Type else_type = sema.check(else_expr(), TypeExpectation(expected.type(), true, "type of else branch"));
         return (then_type->is_noret()) ? else_type : then_type;
     }
 }

@@ -106,15 +106,40 @@ protected:
 /// a bundle of expected type and a flag whether noret is also allowed
 class TypeExpectation {
 public:
-    TypeExpectation(Type type) : type_(type), noret_(false) {}
-    TypeExpectation(Type type, bool noret) : type_(type), noret_(noret) {}
+    TypeExpectation(Type type)
+        : type_(type)
+        , noret_(false)
+        , what_()
+    {}
+    TypeExpectation(Type type, bool noret)
+        : type_(type)
+        , noret_(noret)
+        , what_()
+    {}
+    TypeExpectation(Type type, const std::string& what)
+        : type_(type)
+        , noret_(false)
+        , what_(what)
+    {}
+    TypeExpectation(Type type, bool noret, const std::string& what)
+        : type_(type)
+        , noret_(noret)
+        , what_(what)
+    {}
+    TypeExpectation(TypeExpectation ty_exp, const std::string& what)
+        : type_(ty_exp.type())
+        , noret_(ty_exp.noret())
+        , what_(what)
+    {}
     /// The expected type
     Type type() const { return type_; }
     /// Indicates whether NoRet is also allowed
     bool noret() const { return noret_; }
+    const std::string& what() const { return what_; }
 private:
     const Type type_;
     const bool noret_;
+    const std::string what_;
 };
 
 //------------------------------------------------------------------------------
