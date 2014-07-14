@@ -853,7 +853,8 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
                 error(loc) << "return type '" << fn_mono->return_type() << "' does not match expected type '" << expected.type() << "'\n";
         } else {
             std::string rela = (num_args+1 < fn_mono->num_args()) ? "few" : "many";
-            error(loc) << "too " << rela << " arguments: " << num_args << " for " << fn_mono->num_args()-1 << "\n";
+            size_t exp_args = fn_mono->num_args() > 0 ? fn_mono->num_args()-1 : 0;
+            error(loc) << "too " << rela << " arguments: " << num_args << " for " << exp_args << "\n";
         }
     } else
         error(loc) << "too many type arguments to function: " << num_type_args << " for " << fn_poly->num_type_vars() << "\n";
