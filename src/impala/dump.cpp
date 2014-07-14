@@ -253,8 +253,8 @@ std::ostream& FnDecl::print(Printer& p) const {
     if (is_extern())
         p.stream() << "extern ";
     p.stream() << "fn ";
-    if (!export_name_.empty())
-        p.stream() << export_name_ << ' ';
+    if (!export_name_.symbol().empty())
+        p.stream() << export_name_.symbol() << ' ';
     p.stream() << symbol();
     print_type_params(p);
 

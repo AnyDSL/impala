@@ -155,19 +155,43 @@ public:
 
 //------------------------------------------------------------------------------
 
+class Identifier : public impala::HasLocation {
+public:
+    Identifier()
+        : symbol_()
+    {}
+    Identifier(const char* str, const Location& loc)
+        : symbol_(str)
+    { loc_ = loc; }
+    Identifier(const std::string& str, const Location& loc)
+        : symbol_(str)
+    { loc_ = loc; }
+    //Identifier(Symbol sym) : symbol_(sym) {}
+    Identifier(Token tok)
+        : symbol_(tok.symbol())
+    { loc_ = tok.loc(); }
+
+    Symbol symbol() const { return symbol_; }
+
+private:
+    Symbol symbol_;
+};
+
+
 /*
  * paths
  */
 
 class PathElem : public ASTNode {
 public:
-    Symbol symbol() const { return symbol_; }
+    Identifier identifier() const { return identifier_; }
+    Symbol symbol() const { return identifier().symbol(); }
     SafePtr<const Decl> decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const override;
     void check(NameSema&) const;
 
 private:
-    Symbol symbol_;
+    Identifier identifier_;
     mutable SafePtr<const Decl> decl_;
 
     friend class Parser;
@@ -309,7 +333,8 @@ private:
 
 class ASTTypeApp : public CompoundASTType {
 public:
-    Symbol symbol() const { return symbol_; }
+    Identifier identifier() const { return identifier_; }
+    Symbol symbol() const { return identifier().symbol(); }
     SafePtr<const Decl> decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const override;
     TraitApp trait_app(TypeSema&, Type) const;
@@ -318,7 +343,7 @@ private:
     virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 
-    Symbol symbol_;
+    Identifier identifier_;
     mutable SafePtr<const Decl> decl_;
 
     friend class Parser;
@@ -350,12 +375,13 @@ private:
 /// Base class for all entities which have a \p symbol_.
 class Decl : virtual public ASTNode {
 public:
-    Symbol symbol() const { return symbol_; }
+    Identifier identifier() const { return identifier_; }
+    Symbol symbol() const { return identifier().symbol(); }
     size_t depth() const { return depth_; }
     const Decl* shadows() const { return shadows_; }
 
 protected:
-    Symbol symbol_;
+    Identifier identifier_;
 
 private:
     mutable const Decl* shadows_;
@@ -458,7 +484,7 @@ private:
 
 class SelfParam : public TypeParam {
 public:
-    SelfParam(const Location& loc) { symbol_ = Symbol("Self"); }
+    SelfParam(const Location& loc) { identifier_ = Identifier("Self", loc); }
 };
 
 class Param : public LocalDecl {
@@ -467,7 +493,7 @@ public:
         : LocalDecl(handle)
     {}
 
-    static const Param* create(size_t var_handle, Symbol symbol, const Location& loc, const ASTType* fn_type);
+    static const Param* create(size_t var_handle, Identifier identifier, const Location& loc, const ASTType* fn_type);
 
     friend class Fn;
     friend class Parser;
@@ -489,7 +515,8 @@ public:
     void emit_body(CodeGen&) const;
 
     virtual FnType fn_type() const = 0;
-    virtual Symbol fn_symbol() const = 0;
+    virtual Identifier fn_identifier() const = 0;
+    Symbol fn_symbol() const { return fn_identifier().symbol(); }
 
 protected:
     mutable thorin::Lambda* lambda_;
@@ -547,12 +574,13 @@ private:
 
 class NamedItem : public Item {
 public:
-    virtual Symbol item_symbol() const = 0;
+    virtual Identifier item_identifier() const = 0;
+    Symbol item_symbol() const { return item_identifier().symbol(); }
 };
 
 class TypeDeclItem : public NamedItem, public TypeDecl, public TypeParamList {
 public:
-    virtual Symbol item_symbol() const override { return TypeDecl::symbol(); }
+    virtual Identifier item_identifier() const override { return TypeDecl::identifier(); }
 
 private:
     virtual void check_item(NameSema&) const override;
@@ -563,7 +591,7 @@ private:
 
 class ValueItem : public NamedItem, public ValueDecl {
 public:
-    virtual Symbol item_symbol() const override { return ValueDecl::symbol(); }
+    virtual Identifier item_identifier() const override { return ValueDecl::identifier(); }
 
 private:
     virtual void check_item(NameSema&) const override;
@@ -645,6 +673,7 @@ public:
     const AutoVector<const FieldDecl*>& field_decls() const { return field_decls_; }
     const thorin::HashMap<Symbol, const FieldDecl*>& field_table() const { return field_table_; }
     const FieldDecl* field_decl(Symbol symbol) const { return thorin::find(field_table_, symbol); }
+    const FieldDecl* field_decl(Identifier ident) const { return field_decl(ident.symbol()); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
 
@@ -693,13 +722,13 @@ public:
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
-    virtual Symbol fn_symbol() const override { return export_name_.empty() ? symbol() : export_name_; }
+    virtual Identifier fn_identifier() const override { return export_name_.symbol().empty() ? identifier() : export_name_; }
 
 private:
     virtual Type check(TypeSema&) const override;
     virtual thorin::Var emit(CodeGen&) const override;
 
-    Symbol export_name_;
+    Identifier export_name_;
     bool is_extern_ = false;
 
     friend class Parser;
@@ -716,7 +745,7 @@ public:
     const MethodTable& method_table() const { return method_table_; }
     const SelfParam* self_param() const { return &self_param_; }
     TraitAbs trait_abs() const { return trait_abs_; }
-    virtual Symbol item_symbol() const override { return Decl::symbol(); }
+    virtual Identifier item_identifier() const override { return Decl::identifier(); }
     virtual std::ostream& print(Printer&) const override;
 
 private:
@@ -886,7 +915,7 @@ class FnExpr : public Expr, public Fn {
 public:
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual void check(NameSema&) const override;
-    virtual Symbol fn_symbol() const override { return Symbol("lambda"); }
+    virtual Identifier fn_identifier() const override { return Identifier("lambda", loc()); }
 
 private:
     virtual std::ostream& print(Printer&) const override;
@@ -1005,7 +1034,8 @@ private:
 class FieldExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
-    Symbol symbol() const { return symbol_; }
+    Identifier identifier() const { return identifier_; }
+    Symbol symbol() const { return identifier().symbol(); }
     uint32_t index() const { return index_; }
     virtual bool is_lvalue() const override;
     virtual void check(NameSema&) const override;
@@ -1018,7 +1048,7 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
-    Symbol symbol_;
+    Identifier identifier_;
     mutable uint32_t index_ = uint32_t(-1);
 
     friend class Parser;
@@ -1107,20 +1137,21 @@ public:
 
     public:
         Elem(Elem&& other)
-            : symbol_(std::move(other.symbol_))
+            : identifier_(std::move(other.identifier_))
             , expr_(std::move(other.expr_))
         {}
-        Elem(Symbol symbol, std::unique_ptr<const Expr> expr)
-            : symbol_(symbol)
+        Elem(Identifier ident, std::unique_ptr<const Expr> expr)
+            : identifier_(ident)
             , expr_(std::move(expr))
         {}
 
-        Symbol symbol() const { return symbol_; }
+        Identifier identifier() const { return identifier_; }
+        Symbol symbol() const { return identifier().symbol(); }
         const Expr* expr() const { return expr_.get(); }
         const FieldDecl* field_decl() const { return field_decl_; }
 
     private:
-        Symbol symbol_;
+        Identifier identifier_;
         std::unique_ptr<const Expr> expr_;
         mutable SafePtr<const FieldDecl> field_decl_;
 

@@ -195,7 +195,7 @@ void Fn::fn_check(NameSema& sema) const {
         if (param->symbol().empty())  {
             std::ostringstream oss;
             oss << '<' << i << ">";
-            const_cast<Param*>(param)->symbol_ = oss.str().c_str();
+            const_cast<Param*>(param)->identifier_ = Identifier(oss.str().c_str(), param->identifier().loc());
         }
 
         sema.insert(param);

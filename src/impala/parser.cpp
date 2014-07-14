@@ -151,7 +151,7 @@ public:
     }
 
     // misc
-    Symbol try_id(const std::string& what);
+    Identifier try_id(const std::string& what);
     Visibility parse_visibility();
 
     // paths
@@ -290,7 +290,7 @@ void Parser::error(const std::string& what, const std::string& context, const To
     os << "\n";
 }
 
-Symbol Parser::try_id(const std::string& what) {
+Identifier Parser::try_id(const std::string& what) {
     Token name;
     if (la() == Token::ID)
         name = lex();
@@ -299,7 +299,7 @@ Symbol Parser::try_id(const std::string& what) {
         name = Token(la().loc(), "<error>");
     }
 
-    return name.symbol();
+    return Identifier(name);
 }
 
 Visibility Parser::parse_visibility() {
@@ -316,7 +316,7 @@ Visibility Parser::parse_visibility() {
 
 const PathElem* Parser::parse_path_elem() {
     auto path_elem = loc(new PathElem());
-    path_elem->symbol_ = try_id("path");
+    path_elem->identifier_ = try_id("path");
     return path_elem;
 }
 
@@ -340,7 +340,7 @@ void Parser::parse_type_params(AutoVector<const TypeParam*>& type_params) {
 
 const TypeParam* Parser::parse_type_param() {
     auto type_param = loc(new TypeParam());
-    type_param->symbol_ = try_id("type parameter");
+    type_param->identifier_ = try_id("type parameter");
 
     if (accept(Token::COLON)) {
         do
@@ -358,17 +358,17 @@ void Parser::parse_param_list(AutoVector<const Param*>& params, TokenKind delimi
 const Param* Parser::parse_param(bool lambda) {
     auto param = loc(new Param(cur_var_handle++));
     param->is_mut_ = accept(Token::MUT);
-    Symbol symbol;
+    Identifier ident;
     const ASTType* type = nullptr;
-    auto tok = la();
+    Token tok = la();
 
     if (tok == Token::ID)
-        symbol = lex().symbol();
+        ident = Identifier(lex());
     else {
         switch (tok) {
             case TYPE: type = parse_type(); break;
             default:
-                symbol = "<error>";
+                ident = Identifier("<error>", tok.loc());
                 error("identifier", "parameter");
         }
     }
@@ -376,18 +376,18 @@ const Param* Parser::parse_param(bool lambda) {
     if (accept(Token::COLON)) {
         if (type)
             error("identifier", "parameter", tok);
-        param->symbol_ = symbol;
+        param->identifier_ = ident;
         param->ast_type_ = parse_type();
     } else if (lambda) {
         if (type)
             error("identifier", "parameter", tok);
-        param->symbol_ = symbol;
+        param->identifier_ = ident;
     } else {
         if (type == nullptr) {
             // we assume that the identifier refers to a type
             auto type_app = new ASTTypeApp();
             type_app->set_loc(tok.loc());
-            type_app->symbol_ = symbol;
+            type_app->identifier_ = ident;
             type = type_app;
         }
         param->ast_type_ = type;
@@ -397,8 +397,10 @@ const Param* Parser::parse_param(bool lambda) {
 }
 
 void Parser::parse_return_param(AutoVector<const Param*>& params) {
-    if (auto fn_type = parse_return_type())
-        params.push_back(Param::create(cur_var_handle++, "return", fn_type->loc(), fn_type));
+    if (auto fn_type = parse_return_type()) {
+        const Location& loc = fn_type->loc();
+        params.push_back(Param::create(cur_var_handle++, Identifier("return", loc), loc, fn_type));
+    }
 }
 
 /*
@@ -462,8 +464,8 @@ FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
     auto fn_decl = loc(new FnDecl());
     eat(Token::FN);
     if (la() == Token::LIT_str)
-        fn_decl->export_name_ = lex().symbol();
-    fn_decl->symbol_ = try_id("function name");
+        fn_decl->export_name_ = Identifier(lex());
+    fn_decl->identifier_ = try_id("function name");
     parse_type_params(fn_decl->type_params_);
     expect(Token::L_PAREN, "function head");
     parse_param_list(fn_decl->params_, Token::R_PAREN, false);
@@ -501,7 +503,7 @@ ImplItem* Parser::parse_impl() {
 ModDecl* Parser::parse_mod_decl() {
     auto mod_decl = loc(new ModDecl());
     eat(Token::MOD);
-    mod_decl->symbol_ = try_id("module declaration");
+    mod_decl->identifier_ = try_id("module declaration");
     parse_type_params(mod_decl->type_params_);
     if (accept(Token::L_BRACE)) {
          mod_decl->mod_contents_ = parse_mod_contents();
@@ -516,7 +518,7 @@ StaticItem* Parser::parse_static_item() {
     auto static_item = loc(new StaticItem());
     eat(Token::STATIC);
     static_item->is_mut_ = accept(Token::MUT);
-    static_item->symbol_ = try_id("static item");
+    static_item->identifier_ = try_id("static item");
     expect(Token::COLON, "static item");
     static_item->ast_type_ = parse_type();
     expect(Token::ASGN, "static item");
@@ -528,7 +530,7 @@ StaticItem* Parser::parse_static_item() {
 StructDecl* Parser::parse_struct_decl() {
     auto struct_decl = loc(new StructDecl());
     eat(Token::STRUCT);
-    struct_decl->symbol_ = try_id("struct declaration");
+    struct_decl->identifier_ = try_id("struct declaration");
     parse_type_params(struct_decl->type_params_);
     expect(Token::L_BRACE, "struct declaration");
     int i = 0;
@@ -541,7 +543,7 @@ StructDecl* Parser::parse_struct_decl() {
 TraitDecl* Parser::parse_trait_decl() {
     auto trait_decl = loc(new TraitDecl);
     eat(Token::TRAIT);
-    trait_decl->symbol_ = try_id("trait declaration");
+    trait_decl->identifier_ = try_id("trait declaration");
     parse_type_params(trait_decl->type_params_);
 
     if (accept(Token::COLON)) {
@@ -562,7 +564,7 @@ TraitDecl* Parser::parse_trait_decl() {
 Typedef* Parser::parse_typedef() {
     auto type_def = loc(new Typedef());
     eat(Token::TYPEDEF);
-    type_def->symbol_ = try_id("type definition");
+    type_def->identifier_ = try_id("type definition");
     parse_type_params(type_def->type_params_);
     eat(Token::ASGN);
     type_def->type_ = parse_type();
@@ -600,7 +602,7 @@ const FieldDecl* Parser::parse_field_decl(const int i) {
     auto field_decl = loc(new FieldDecl);
     field_decl->index_ = i;
     field_decl->visibility_ = parse_visibility();
-    field_decl->symbol_ = try_id("struct field");
+    field_decl->identifier_ = try_id("struct field");
     expect(Token::COLON, "struct field");
     field_decl->ast_type_ = parse_type();
     return field_decl;
@@ -725,7 +727,7 @@ const TupleASTType* Parser::parse_tuple_type() {
 
 const ASTTypeApp* Parser::parse_type_app() {
     auto type_app = loc(new ASTTypeApp());
-    type_app->symbol_ = lex().symbol();
+    type_app->identifier_ = Identifier(lex());
     if (accept(Token::L_BRACKET)) {
         parse_comma_list(Token::R_BRACKET, "type arguments for type application", [&] {
             type_app->args_.push_back(parse_type());
@@ -818,7 +820,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
             lex();
             auto field = new FieldExpr();
             field->lhs_ = lhs;
-            field->symbol_ = try_id("field expression");
+            field->identifier_ = try_id("field expression");
             field->set_loc(lhs->pos1(), prev_loc().pos2());
             return field;
         }
@@ -991,11 +993,11 @@ const ForExpr* Parser::parse_for_expr() {
     for_expr->fn_expr_ = fn_expr.get();
     if (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
         parse_param_list(fn_expr->params_, Token::IN, true);
-    fn_expr->params_.push_back(Param::create(cur_var_handle++, "continue", prev_loc(), new FnASTType(prev_loc())));
+    fn_expr->params_.push_back(Param::create(cur_var_handle++, Identifier("continue", prev_loc()), prev_loc(), new FnASTType(prev_loc())));
 
     auto break_decl = loc(new LocalDecl(cur_var_handle++));
     break_decl->is_mut_ = false;
-    break_decl->symbol_ = "break";
+    break_decl->identifier_ = Identifier("break", prev_loc_);
     auto break_type = new FnASTType();
     break_type->set_loc(prev_loc_);
     break_decl->set_loc(prev_loc_);
@@ -1065,7 +1067,7 @@ const LetStmt* Parser::parse_let_stmt() {
     eat(Token::LET);
     auto local = loc(new LocalDecl(cur_var_handle++));
     local->is_mut_ = accept(Token::MUT);
-    local->symbol_ = try_id("local variable in let binding");
+    local->identifier_ = try_id("local variable in let binding");
     if (accept(Token::COLON))
         local->ast_type_ = parse_type();
     if (accept(Token::ASGN))
