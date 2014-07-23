@@ -1,0 +1,17 @@
+extern "C" {
+    fn take_address(&int) -> ();
+}
+
+fn range(a: int, b: int, body: fn(int, fn())) -> () {
+    if a < b {
+        body(a);
+        range(a+1, b, body, return)
+    }
+}
+
+fn main() -> () {
+    for i in range(23, 42) {
+        let mut foo = i;
+        take_address(&foo);
+    }
+}
