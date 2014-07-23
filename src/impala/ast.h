@@ -511,7 +511,6 @@ public:
     const Expr* body() const { return body_; }
     thorin::Lambda* lambda() const { return lambda_; }
     const thorin::Param* ret_param() const { return ret_param_; }
-    const thorin::Enter* frame() const { return frame_; }
     std::ostream& print_params(Printer& p, bool returning) const;
     void fn_check(NameSema&) const;
     void check_body(TypeSema&, FnType) const;
@@ -525,7 +524,6 @@ public:
 protected:
     mutable thorin::Lambda* lambda_;
     mutable SafePtr<const thorin::Param> ret_param_;
-    mutable SafePtr<const thorin::Enter> frame_;
     AutoVector<const Param*> params_;
 
 private:
