@@ -58,8 +58,8 @@ typedef thorin::HashMap<Symbol, const FnDecl*> MethodTable;
 class Visibility {
 public:
     enum {
-        None, 
-        Pub = Token::PUB, 
+        None,
+        Pub = Token::PUB,
         Priv = Token::PRIV
     };
 

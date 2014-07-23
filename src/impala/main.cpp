@@ -6,6 +6,7 @@
 #include "thorin/analyses/looptree.h"
 #include "thorin/analyses/scope.h"
 #include "thorin/analyses/verify.h"
+#include "thorin/analyses/top_level_scopes.h"
 #include "thorin/transform/import.h"
 #include "thorin/transform/vectorize.h"
 #include "thorin/transform/partial_evaluation.h"
@@ -170,13 +171,12 @@ int main(int argc, char** argv) {
                 thorin::emit_thorin(init.world, fancy, !nocolor);
             if (emit_il)
                 thorin::emit_il(init.world, fancy);
-            //if (emit_looptree) {
-                //for (auto top : top_level_lambdas(init.world)) {
-                    //Scope scope(top);
-                    //const LoopTree looptree(scope);
-                    //std::cout << looptree.root() << std::endl; // TODO
-                //}
-            //}
+            if (emit_looptree) {
+                for (auto scope : top_level_scopes(init.world)) {
+                    const LoopTree looptree(*scope);
+                    looptree.dump();
+                }
+            }
 
             if (emit_llvm)
                 thorin::emit_llvm(init.world, opt);
