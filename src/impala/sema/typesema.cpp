@@ -63,7 +63,8 @@ public:
     }
     bool expect_int(const Expr*);
     void expect_num(const Expr*);
-    Type expect_type(const Expr* expr, Type found, TypeExpectation expected);
+    Type expect_type(const Location& loc, Type found, TypeExpectation expected);
+    Type expect_type(const Expr* expr, Type found, TypeExpectation expected) { return expect_type(expr->loc(), found, expected); }
     Type expect_type(const Expr* expr, TypeExpectation expected) { return expect_type(expr, expr->type(), expected); }
 
     TraitApp instantiate(const Location& loc, TraitAbs trait, Type self, ArrayRef<const ASTType*> args);
@@ -147,7 +148,7 @@ void TypeSema::expect_num(const Expr* expr) {
         error(expr) << "expected number type but found " << t << "\n";
 }
 
-Type TypeSema::expect_type(const Expr* expr, Type found_type, TypeExpectation expected) {
+Type TypeSema::expect_type(const Location& loc, Type found_type, TypeExpectation expected) {
     if (found_type == expected.type())
         return expected.type();
 
@@ -164,13 +165,13 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, TypeExpectation ex
         std::vector<Type> type_args;
         Type inst = instantiate_unknown(found_type, type_args);
         if (inst == expected.type()) {
-            check_bounds(expr->loc(), *found_type, type_args);
+            check_bounds(loc, *found_type, type_args);
             return expected.type();
         }
     }
 
-    error(expr) << "mismatched types: expected '" << expected.type() << "' but found '" << found_type
-                << (expected.what().empty() ? "'" :  "' as " + expected.what()) << "\n";
+    error(loc) << "mismatched types: expected '" << expected.type() << "' but found '" << found_type
+               << (expected.what().empty() ? "'" :  "' as " + expected.what()) << "\n";
     return expected.type();
 }
 
