@@ -841,7 +841,7 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
                         return type_noret();
                     if (!fn_mono->return_type()->is_noret())
                         return expect_type(loc, fn_mono->return_type(), expected);
-                    error(loc) << "cannot use function as returning function\n";
+                    error(loc) << "missing last argument to call continuation\n";
                 }
             } else
                 error(loc) << "return type '" << fn_mono->return_type() << "' does not match expected type '" << expected.type() << "'\n";
