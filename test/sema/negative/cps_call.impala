@@ -1,0 +1,6 @@
+fn main() -> int {
+    fn f(a: int, b: int, c: int) {
+        f(1, 2)
+    }
+    42
+}

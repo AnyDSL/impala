@@ -837,11 +837,11 @@ Type TypeSema::check_call(const Location& loc, FnType fn_poly, const ASTTypes& t
 
                 if (is_known) {
                     check_bounds(loc, fn_poly, inferred_args);
-
-                    if (is_contuation) {
+                    if (is_contuation)
                         return type_noret();
-                    } else
-                        return expected.type();
+                    if (!fn_mono->return_type()->is_noret())
+                        return expect_type(loc, fn_mono->return_type(), expected);
+                    error(loc) << "cannot use function as returning function\n";
                 }
             } else
                 error(loc) << "return type '" << fn_mono->return_type() << "' does not match expected type '" << expected.type() << "'\n";
