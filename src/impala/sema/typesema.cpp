@@ -947,9 +947,18 @@ Type ForExpr::check(TypeSema& sema, TypeExpectation expected) const {
         Type lhst = sema.check(map->lhs());
 
         if (auto fn_for = lhst.isa<FnType>()) {
-            Array<const Expr*> args(map->args().size()+1);
-            *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
-            return sema.check_call(map->loc(), fn_for, map->type_args(), map->inferred_args_, args, expected);
+            if (fn_for->num_args() != 0) {
+                if (auto fn_ret = fn_for->args().back().isa<FnType>()) {
+                    // inherit the type for break and mark it as checked
+                    break_decl_->type_ = fn_ret;
+                    break_decl_->checked_ = true;
+
+                    // copy over args and check call
+                    Array<const Expr*> args(map->args().size()+1);
+                    *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
+                    return sema.check_call(map->loc(), fn_for, map->type_args(), map->inferred_args_, args, expected);
+                }
+            }
         }
     } else if (auto field_expr = forexpr->isa<FieldExpr>()) {
         assert(false && field_expr && "TODO");

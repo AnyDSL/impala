@@ -998,11 +998,9 @@ const ForExpr* Parser::parse_for_expr() {
     auto break_decl = loc(new LocalDecl(cur_var_handle++));
     break_decl->is_mut_ = false;
     break_decl->identifier_ = Identifier("break", prev_loc_);
-    auto break_type = new FnASTType();
-    break_type->set_loc(prev_loc_);
     break_decl->set_loc(prev_loc_);
-    break_decl->ast_type_ = break_type;
-    for_expr->break_ = break_decl.get();
+    break_decl->ast_type_ = nullptr; // set during TypeSema
+    for_expr->break_decl_ = break_decl.get();
 
     for_expr->expr_ = parse_expr();
     fn_expr->body_ = try_block_expr("body of function");

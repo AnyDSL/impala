@@ -566,8 +566,9 @@ Def ForExpr::remit(CodeGen& cg) const {
     defs.push_back(cg.get_mem());
 
     // prepare break continuation
-    auto next = cg.world().lambda(cg.world().fn_type({cg.world().mem_type()}), "break");
-    break_->var_ = Var::create_val(cg, next);
+    //auto next = cg.world().lambda(cg.world().fn_type({cg.world().mem_type()}), "break");
+    auto next = cg.world().lambda(cg.convert(break_decl_->type().as<FnType>()).as<thorin::FnType>(), "break");
+    break_decl_->var_ = Var::create_val(cg, next);
 
     // peel off run and halt
     auto forexpr = expr();
@@ -592,7 +593,14 @@ Def ForExpr::remit(CodeGen& cg) const {
     // go to break continuation
     cg.cur_bb = next;
     cg.set_mem(next->param(0));
-    return cg.world().tuple({});
+    if (next->num_params() == 2)
+        return next->param(1);
+    else {
+        Array<Def> defs(next->num_params()-1);
+        for (size_t i = 0, e = defs.size(); i != e; ++i)
+            defs[i] = next->param(i+1);
+        return cg.world().tuple(defs);
+    }
 }
 
 Def FnExpr::remit(CodeGen& cg) const {

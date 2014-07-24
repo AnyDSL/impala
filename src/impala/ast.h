@@ -400,6 +400,7 @@ private:
 
     friend class NameSema;
     friend class TypeSema;
+    friend class ForExpr;
 };
 
 /// Base class for all declarations which represent a type definition.
@@ -1224,7 +1225,7 @@ class ForExpr : public Expr {
 public:
     const FnExpr* fn_expr() const { return fn_expr_; }
     const Expr* expr() const { return expr_; }
-    const LocalDecl* break_decl() const { return break_; }
+    const LocalDecl* break_decl() const { return break_decl_; }
     virtual void check(NameSema&) const override;
 
 private:
@@ -1234,7 +1235,7 @@ private:
 
     AutoPtr<const FnExpr> fn_expr_;
     AutoPtr<const Expr> expr_;
-    AutoPtr<const LocalDecl> break_;
+    AutoPtr<const LocalDecl> break_decl_;
 
     friend class Parser;
 };
