@@ -993,7 +993,7 @@ const ForExpr* Parser::parse_for_expr() {
     for_expr->fn_expr_ = fn_expr.get();
     if (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
         parse_param_list(fn_expr->params_, Token::IN, true);
-    fn_expr->params_.push_back(Param::create(cur_var_handle++, Identifier("continue", prev_loc()), prev_loc(), new FnASTType(prev_loc())));
+    fn_expr->params_.push_back(Param::create(cur_var_handle++, Identifier("continue", prev_loc()), prev_loc(), nullptr));
 
     auto break_decl = loc(new LocalDecl(cur_var_handle++));
     break_decl->is_mut_ = false;
