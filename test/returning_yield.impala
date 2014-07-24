@@ -1,0 +1,19 @@
+fn sum(a: int, b: int, mut acc: &int, body: fn(int) -> int) -> int {
+    if a < b {
+        let x = body(a);
+        *acc = *acc + x;
+        sum(a+1, b, acc, body, return)
+    }
+    23 + *acc
+}
+
+fn main() -> int {
+    let mut acc = 0;
+    for i in sum(0, 13, &acc) {
+        if i == 19 {
+            break(77)
+        } else {
+            i
+        }
+    }
+}
