@@ -194,12 +194,12 @@ void Fn::emit_body(CodeGen& cg) const {
 
     // setup memory + frame
     size_t i = 0;
-    Def mem = lambda()->param(i++);
-    mem->name = "mem";
-    cg.set_mem(mem);
+    Def mem_param = lambda()->param(i++);
+    mem_param->name = "mem";
+    cg.set_mem(mem_param);
     bool setup_frame = cg.frame_ == nullptr;
     if (setup_frame)
-        cg.frame_ = cg.world().enter(mem);
+        cg.frame_ = cg.world().enter(mem_param);
 
     // name bounds and memoize type params
     for (auto type_param : type_params()) {
@@ -222,7 +222,8 @@ void Fn::emit_body(CodeGen& cg) const {
     auto def = cg.remit(body());
     if (def) {
         if (setup_frame)
-            mem = cg.world().leave(cg.get_mem(), cg.frame());
+            cg.set_mem(cg.world().leave(cg.get_mem(), cg.frame()));
+        Def mem = cg.get_mem();
 
         if (auto tuple = def->type().isa<thorin::TupleType>()) {
             std::vector<Def> args;
