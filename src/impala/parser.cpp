@@ -750,6 +750,9 @@ bool Parser::is_infix() {
 const Expr* Parser::parse_expr(Prec prec) {
     auto lhs = la().is_prefix() ? parse_prefix_expr() : parse_primary_expr();
 
+    if (lhs->isa<IfExpr>() || lhs->isa<ForExpr>() || lhs->isa<BlockExpr>())
+        return lhs; // break for stmt-like expressions
+
     while (true) {
         /*
          * (lhs  op  LA) op ...  on break  (current prec > lhs prec of LA)  -->  reduce

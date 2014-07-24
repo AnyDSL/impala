@@ -4,7 +4,7 @@ fn sum(a: int, b: int, mut acc: &int, body: fn(int) -> int) -> int {
         *acc = *acc + x;
         sum(a+1, b, acc, body, return)
     }
-    23 + *acc
+    *acc + 23
 }
 
 fn main() -> int {
