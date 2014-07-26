@@ -568,7 +568,7 @@ Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
     if (FnType exp_fn = expected.type().isa<FnType>()) {
         if (exp_fn->num_args() == num_params()+1) { // add return param to infer type
             const Location& loc = body()->pos1();
-            const_cast<FnExpr*>(this)->params_.push_back(Param::create(ret_var_handle_, Identifier("return", body()->pos1()), loc, nullptr));
+            const_cast<FnExpr*>(this)->params_.push_back(Param::create(ret_var_handle_, new Identifier("return", body()->pos1()), loc, nullptr));
         } else if (exp_fn->num_args() != num_params())
             sema.error(this) << "expected function with " << exp_fn->num_args() << " parameters, but found lambda expression with " << num_params() << " parameters\n";
 

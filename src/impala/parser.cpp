@@ -151,7 +151,7 @@ public:
     }
 
     // misc
-    Identifier try_id(const std::string& what);
+    SafePtr<const Identifier> try_id(const std::string& what);
     Visibility parse_visibility();
 
     // paths
@@ -290,7 +290,7 @@ void Parser::error(const std::string& what, const std::string& context, const To
     os << "\n";
 }
 
-Identifier Parser::try_id(const std::string& what) {
+SafePtr<const Identifier> Parser::try_id(const std::string& what) {
     Token name;
     if (la() == Token::ID)
         name = lex();
@@ -299,7 +299,7 @@ Identifier Parser::try_id(const std::string& what) {
         name = Token(la().loc(), "<error>");
     }
 
-    return Identifier(name);
+    return new Identifier(name);
 }
 
 Visibility Parser::parse_visibility() {
@@ -358,17 +358,17 @@ void Parser::parse_param_list(AutoVector<const Param*>& params, TokenKind delimi
 const Param* Parser::parse_param(bool lambda) {
     auto param = loc(new Param(cur_var_handle++));
     param->is_mut_ = accept(Token::MUT);
-    Identifier ident;
+    SafePtr<const Identifier> ident;
     const ASTType* type = nullptr;
     Token tok = la();
 
     if (tok == Token::ID)
-        ident = Identifier(lex());
+        ident = new Identifier(lex());
     else {
         switch (tok) {
             case TYPE: type = parse_type(); break;
             default:
-                ident = Identifier("<error>", tok.loc());
+                ident = new Identifier("<error>", tok.loc());
                 error("identifier", "parameter");
         }
     }
@@ -399,7 +399,7 @@ const Param* Parser::parse_param(bool lambda) {
 void Parser::parse_return_param(AutoVector<const Param*>& params) {
     if (auto fn_type = parse_return_type()) {
         const Location& loc = fn_type->loc();
-        params.push_back(Param::create(cur_var_handle++, Identifier("return", loc), loc, fn_type));
+        params.push_back(Param::create(cur_var_handle++, new Identifier("return", loc), loc, fn_type));
     }
 }
 
@@ -464,7 +464,7 @@ FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
     auto fn_decl = loc(new FnDecl());
     eat(Token::FN);
     if (la() == Token::LIT_str)
-        fn_decl->export_name_ = Identifier(lex());
+        fn_decl->export_name_ = new Identifier(lex());
     fn_decl->identifier_ = try_id("function name");
     parse_type_params(fn_decl->type_params_);
     expect(Token::L_PAREN, "function head");
@@ -727,7 +727,7 @@ const TupleASTType* Parser::parse_tuple_type() {
 
 const ASTTypeApp* Parser::parse_type_app() {
     auto type_app = loc(new ASTTypeApp());
-    type_app->identifier_ = Identifier(lex());
+    type_app->identifier_ = new Identifier(lex());
     if (accept(Token::L_BRACKET)) {
         parse_comma_list(Token::R_BRACKET, "type arguments for type application", [&] {
             type_app->args_.push_back(parse_type());
@@ -996,11 +996,11 @@ const ForExpr* Parser::parse_for_expr() {
     for_expr->fn_expr_ = fn_expr.get();
     if (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
         parse_param_list(fn_expr->params_, Token::IN, true);
-    fn_expr->params_.push_back(Param::create(cur_var_handle++, Identifier("continue", prev_loc()), prev_loc(), nullptr));
+    fn_expr->params_.push_back(Param::create(cur_var_handle++, new Identifier("continue", prev_loc()), prev_loc(), nullptr));
 
     auto break_decl = loc(new LocalDecl(cur_var_handle++));
     break_decl->is_mut_ = false;
-    break_decl->identifier_ = Identifier("break", prev_loc_);
+    break_decl->identifier_ = new Identifier("break", prev_loc_);
     break_decl->set_loc(prev_loc_);
     break_decl->ast_type_ = nullptr; // set during TypeSema
     for_expr->break_decl_ = break_decl.get();

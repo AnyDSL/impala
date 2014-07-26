@@ -2,7 +2,7 @@
 
 namespace impala {
 
-const Param* Param::create(size_t var_handle, Identifier ident, const Location& loc, const ASTType* fn_type) {
+const Param* Param::create(size_t var_handle, SafePtr<const Identifier> ident, const Location& loc, const ASTType* fn_type) {
     auto param = new Param(var_handle);
     param->is_mut_ = false;
     param->identifier_ = ident;
