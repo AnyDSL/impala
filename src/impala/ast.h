@@ -157,28 +157,24 @@ public:
 
 class Identifier : public ASTNode {
 public:
-    Identifier()
-        : symbol_()
-    {}
+    Identifier() {}
     Identifier(const char* str, const Location& loc)
         : symbol_(str)
-    { loc_ = loc; }
-    Identifier(const std::string& str, const Location& loc)
-        : symbol_(str)
-    { loc_ = loc; }
-    //Identifier(Symbol sym) : symbol_(sym) {}
+    {
+        loc_ = loc;
+    }
     Identifier(Token tok)
         : symbol_(tok.symbol())
-    { loc_ = tok.loc(); }
+    {
+        loc_ = tok.loc();
+    }
 
     Symbol symbol() const { return symbol_; }
-
     virtual std::ostream& print(Printer&) const;
 
 private:
     Symbol symbol_;
 };
-
 
 /*
  * paths
@@ -521,8 +517,7 @@ public:
     void emit_body(CodeGen&) const;
 
     virtual FnType fn_type() const = 0;
-    virtual SafePtr<const Identifier> fn_identifier() const = 0;
-    Symbol fn_symbol() const { return fn_identifier()->symbol(); }
+    virtual Symbol fn_symbol() const = 0;
 
 protected:
     mutable thorin::Lambda* lambda_;
@@ -727,7 +722,7 @@ public:
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
-    virtual SafePtr<const Identifier> fn_identifier() const override { return export_name_->symbol().empty() ? identifier() : export_name_; }
+    virtual Symbol fn_symbol() const override { return export_name_ ? export_name_->symbol() : identifier()->symbol(); }
 
 private:
     virtual Type check(TypeSema&) const override;
@@ -920,7 +915,7 @@ class FnExpr : public Expr, public Fn {
 public:
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual void check(NameSema&) const override;
-    virtual SafePtr<const Identifier> fn_identifier() const override { return new Identifier("lambda", loc()); }
+    virtual Symbol fn_symbol() const override { return Symbol("lambda"); }
 
 private:
     virtual std::ostream& print(Printer&) const override;
