@@ -416,7 +416,7 @@ private:
     virtual void check(NameSema&) const override;
     virtual Type check(TypeSema& sema) const override;
     Type check(TypeSema&, Type) const;
-    virtual thorin::Var emit(CodeGen&) const = 0;
+    virtual thorin::Var emit(CodeGen&, thorin::Def init) const = 0;
 
 protected:
     AutoPtr<const ASTType> ast_type_;
@@ -447,7 +447,7 @@ public:
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual thorin::Var emit(CodeGen&) const override;
+    virtual thorin::Var emit(CodeGen&, thorin::Def init) const override;
 
 protected:
     size_t handle_;
@@ -707,7 +707,7 @@ public:
 
 private:
     virtual Type check(TypeSema&) const override;
-    virtual thorin::Var emit(CodeGen&) const override;
+    virtual thorin::Var emit(CodeGen&, thorin::Def init) const override;
 
     bool is_mut_;
     AutoPtr<const ASTType> type_;
@@ -726,7 +726,7 @@ public:
 
 private:
     virtual Type check(TypeSema&) const override;
-    virtual thorin::Var emit(CodeGen&) const override;
+    virtual thorin::Var emit(CodeGen&, thorin::Def init) const override;
 
     SafePtr<const Identifier> export_name_;
     bool is_extern_ = false;
