@@ -59,6 +59,7 @@
     case Token::HLT: \
     case Token::IF: \
     case Token::FOR: \
+    case Token::WHILE: \
     case Token::L_PAREN: \
     case Token::L_BRACE: \
     case Token::L_BRACKET
@@ -207,6 +208,7 @@ public:
     const FnExpr*      parse_fn_expr();
     const IfExpr*      parse_if_expr();
     const ForExpr*     parse_for_expr();
+    const WhileExpr*   parse_while_expr();
     const BlockExpr*   parse_block_expr();
     const BlockExpr*   try_block_expr(const std::string& context);
 
@@ -750,8 +752,8 @@ bool Parser::is_infix() {
 const Expr* Parser::parse_expr(Prec prec) {
     auto lhs = la().is_prefix() ? parse_prefix_expr() : parse_primary_expr();
 
-    if (lhs->isa<IfExpr>() || lhs->isa<ForExpr>() || lhs->isa<BlockExpr>())
-        return lhs; // break for stmt-like expressions
+    if (lhs->isa<StmtLikeExpr>())
+        return lhs; // bail out for stmt-like expressions
 
     while (true) {
         /*
@@ -930,6 +932,7 @@ const Expr* Parser::parse_primary_expr() {
         }
         case Token::IF:         return parse_if_expr();
         case Token::FOR:        return parse_for_expr();
+        case Token::WHILE:      return parse_while_expr();
         case Token::L_BRACE:    return parse_block_expr();
         default:                error("expression", ""); return new EmptyExpr(lex().loc());
     }
@@ -998,16 +1001,42 @@ const ForExpr* Parser::parse_for_expr() {
         parse_param_list(fn_expr->params_, Token::IN, true);
     fn_expr->params_.push_back(Param::create(cur_var_handle++, new Identifier("continue", prev_loc()), prev_loc(), nullptr));
 
-    auto break_decl = loc(new LocalDecl(cur_var_handle++));
-    break_decl->is_mut_ = false;
-    break_decl->identifier_ = new Identifier("break", prev_loc_);
-    break_decl->set_loc(prev_loc_);
-    break_decl->ast_type_ = nullptr; // set during TypeSema
-    for_expr->break_decl_ = break_decl.get();
+    {
+        auto break_decl = loc(new LocalDecl(cur_var_handle++));
+        break_decl->is_mut_ = false;
+        break_decl->identifier_ = new Identifier("break", prev_loc_);
+        break_decl->set_loc(prev_loc_);
+        break_decl->ast_type_ = nullptr; // set during TypeSema
+        for_expr->break_decl_ = break_decl.get();
+    }
 
     for_expr->expr_ = parse_expr();
     fn_expr->body_ = try_block_expr("body of function");
     return for_expr;
+}
+
+const WhileExpr* Parser::parse_while_expr() {
+    auto while_expr = loc(new WhileExpr());
+    eat(Token::WHILE);
+    while_expr->cond_ = parse_expr();
+    {
+        auto break_decl = loc(new LocalDecl(cur_var_handle++));
+        break_decl->is_mut_ = false;
+        break_decl->identifier_ = new Identifier("break", prev_loc_);
+        break_decl->set_loc(prev_loc_);
+        break_decl->ast_type_ = new FnASTType(prev_loc());
+        while_expr->break_decl_ = break_decl.get();
+    }
+    {
+        auto continue_decl = loc(new LocalDecl(cur_var_handle++));
+        continue_decl->is_mut_ = false;
+        continue_decl->identifier_ = new Identifier("break", prev_loc_);
+        continue_decl->set_loc(prev_loc_);
+        continue_decl->ast_type_ = new FnASTType(prev_loc());
+        while_expr->continue_decl_ = continue_decl.get();
+    }
+    while_expr->body_ = try_block_expr("body of while loop");
+    return while_expr;
 }
 
 const BlockExpr* Parser::parse_block_expr() {
@@ -1019,7 +1048,7 @@ const BlockExpr* Parser::parse_block_expr() {
             case Token::SEMICOLON:  lex(); continue; // ignore semicolon
             case STMT_NOT_EXPR:     stmts.push_back(parse_stmt_not_expr()); continue;
             case EXPR: {
-                bool stmt_like = la() == Token::IF || la() == Token::FOR || la() == Token::L_BRACE;
+                bool stmt_like = la().is_stmt_like();
                 auto expr = parse_expr();
                 if (accept(Token::SEMICOLON) || (stmt_like && la() != Token::R_BRACE)) {
                     auto expr_stmt = new ExprStmt();

@@ -10,21 +10,21 @@ namespace impala {
 
 class NameSema : public ErrorHandler {
 public:
-    /** 
+    /**
      * @brief Looks up the current definition of \p symbol.
      * Reports an error at location of \p n if was \p symbol was not found.
      * @return Returns nullptr on failure.
      */
     const Decl* lookup(const ASTNode* n, Symbol);
 
-    /** 
+    /**
      * @brief Maps \p decl's symbol to \p decl.
-     * 
+     *
      * If \p decl's symbol already has a definition in the current scope, an error will be emitted.
      */
     void insert(const Decl* decl);
 
-    /** 
+    /**
      * @brief Checks whether there already exists a \p Symbol \p symbol in the \em current scope.
      * @param symbol The \p Symbol to check.
      * @return The current mapping if the lookup succeeds, nullptr otherwise.
@@ -208,8 +208,8 @@ void Fn::fn_check(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void FnDecl::check(NameSema& sema) const { 
-    fn_check(sema); 
+void FnDecl::check(NameSema& sema) const {
+    fn_check(sema);
 #ifndef NDEBUG
     for (auto param : params())
         assert(param->ast_type());
@@ -275,7 +275,7 @@ void BlockExpr::check(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void LiteralExpr::check(NameSema& sema) const {} 
+void LiteralExpr::check(NameSema& sema) const {}
 void FnExpr::check(NameSema& sema) const { fn_check(sema); }
 
 void PathElem::check(NameSema& sema) const {
@@ -348,6 +348,11 @@ void IfExpr::check(NameSema& sema) const {
     cond()->check(sema);
     then_expr()->check(sema);
     else_expr()->check(sema);
+}
+
+void WhileExpr::check(NameSema& sema) const {
+    cond()->check(sema);
+    body()->check(sema);
 }
 
 void ForExpr::check(NameSema& sema) const {

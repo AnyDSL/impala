@@ -64,11 +64,12 @@ public:
         ASGN_OP = 8
     };
 
-    bool is_prefix()  const { return is_prefix(kind_); }
-    bool is_infix()   const { return is_infix(kind_); }
-    bool is_postfix() const { return is_postfix(kind_); }
-    bool is_assign()  const { return is_assign(kind_); }
-    bool is_op()      const { return is_op(kind_); }
+    bool is_stmt_like() const { return kind() == L_BRACE || kind() == IF || kind() == FOR || kind() == WHILE; }
+    bool is_prefix()    const { return is_prefix(kind_); }
+    bool is_infix()     const { return is_infix(kind_); }
+    bool is_postfix()   const { return is_postfix(kind_); }
+    bool is_assign()    const { return is_assign(kind_); }
+    bool is_op()        const { return is_op(kind_); }
 
     static Kind sym2lit(Symbol sym);
     static Kind sym2flit(Symbol sym);

@@ -856,31 +856,6 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 };
 
-class BlockExpr : public Expr {
-public:
-    BlockExpr() {}
-    BlockExpr(Location loc) { loc_ = loc; expr_ = new EmptyExpr(loc); }
-
-    const AutoVector<const Stmt*>& stmts() const { return stmts_; }
-    const Expr* expr() const { return expr_; }
-    const Stmt* stmt(size_t i) const { return stmts_[i]; }
-    bool empty() const { return stmts_.empty() && expr_->isa<EmptyExpr>(); }
-    const std::vector<const LocalDecl*>& locals() const { return locals_; }
-    void add_local(const LocalDecl* local) const { locals_.push_back(local); }
-    virtual void check(NameSema&) const override;
-
-private:
-    virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
-    virtual thorin::Def remit(CodeGen&) const override;
-
-    AutoVector<const Stmt*> stmts_;
-    AutoPtr<const Expr> expr_;
-    mutable std::vector<const LocalDecl*> locals_; ///< All \p LocalDecl%s in this \p BlockExpr from top to bottom.
-
-    friend class Parser;
-};
-
 class LiteralExpr : public Expr {
 public:
     enum Kind {
@@ -1197,7 +1172,34 @@ private:
     friend class ForExpr;
 };
 
-class IfExpr : public Expr {
+class StmtLikeExpr : public Expr {};
+
+class BlockExpr : public StmtLikeExpr {
+public:
+    BlockExpr() {}
+    BlockExpr(Location loc) { loc_ = loc; expr_ = new EmptyExpr(loc); }
+
+    const AutoVector<const Stmt*>& stmts() const { return stmts_; }
+    const Expr* expr() const { return expr_; }
+    const Stmt* stmt(size_t i) const { return stmts_[i]; }
+    bool empty() const { return stmts_.empty() && expr_->isa<EmptyExpr>(); }
+    const std::vector<const LocalDecl*>& locals() const { return locals_; }
+    void add_local(const LocalDecl* local) const { locals_.push_back(local); }
+    virtual void check(NameSema&) const override;
+
+private:
+    virtual std::ostream& print(Printer&) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
+
+    AutoVector<const Stmt*> stmts_;
+    AutoPtr<const Expr> expr_;
+    mutable std::vector<const LocalDecl*> locals_; ///< All \p LocalDecl%s in this \p BlockExpr from top to bottom.
+
+    friend class Parser;
+};
+
+class IfExpr : public StmtLikeExpr {
 public:
     const Expr* cond() const { return cond_; }
     const Expr* then_expr() const { return then_expr_; }
@@ -1218,7 +1220,27 @@ private:
     friend class Parser;
 };
 
-class ForExpr : public Expr {
+class WhileExpr : public StmtLikeExpr {
+public:
+    const Expr* cond() const { return cond_; }
+    const BlockExpr* body() const { return body_; }
+    virtual void check(NameSema&) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
+    virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
+
+private:
+    virtual std::ostream& print(Printer&) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
+
+    AutoPtr<const Expr> cond_;
+    AutoPtr<const BlockExpr> body_;
+    AutoPtr<const LocalDecl> break_decl_;
+    AutoPtr<const LocalDecl> continue_decl_;
+
+    friend class Parser;
+};
+
+class ForExpr : public StmtLikeExpr {
 public:
     const FnExpr* fn_expr() const { return fn_expr_; }
     const Expr* expr() const { return expr_; }

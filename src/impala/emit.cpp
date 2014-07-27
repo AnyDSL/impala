@@ -335,12 +335,6 @@ void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
 void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.branch(cg.remit(this), t, f); }
 Def EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}); }
 
-Def BlockExpr::remit(CodeGen& cg) const {
-    for (auto stmt : stmts())
-        cg.emit(stmt);
-    return cg.remit(expr());
-}
-
 Def LiteralExpr::remit(CodeGen& cg) const {
     thorin::PrimTypeKind tkind;
 
@@ -561,6 +555,47 @@ Def FieldExpr::remit(CodeGen& cg) const {
     return cg.world().extract(cg.remit(lhs()), index());
 }
 
+Def BlockExpr::remit(CodeGen& cg) const {
+    for (auto stmt : stmts())
+        cg.emit(stmt);
+    return cg.remit(expr());
+}
+
+void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
+    JumpTarget t("if_then"), f("if_else");
+    cg.emit_branch(cond(), t, f);
+    if (cg.enter(t))
+        cg.emit_jump(then_expr(), x);
+    if (cg.enter(f))
+        cg.emit_jump(else_expr(), x);
+    cg.jump(x);
+}
+
+Def IfExpr::remit(CodeGen& cg) const {
+    JumpTarget x("next");
+    return cg.converge(this, x);
+}
+
+void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
+    JumpTarget head_bb("while_head"), body_bb("while_body");
+    cg.jump(head_bb);
+    cg.enter_unsealed(head_bb);
+    cg.emit_branch(cond(), body_bb, exit_bb);
+    cg.enter(body_bb);
+    cg.remit(body());
+    cg.jump(head_bb);
+    head_bb.seal();
+}
+
+Def WhileExpr::remit(CodeGen& cg) const {
+    JumpTarget x("next");
+    //return cg.converge(this, x);
+    cg.emit_jump(this, x);
+    if (cg.enter(x))
+        return cg.world().tuple({});
+    return Def();
+}
+
 Def ForExpr::remit(CodeGen& cg) const {
     std::vector<Def> defs;
     defs.push_back(cg.get_mem());
@@ -607,21 +642,6 @@ Def FnExpr::remit(CodeGen& cg) const {
     auto lambda = emit_head(cg);
     emit_body(cg);
     return lambda;
-}
-
-void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
-    JumpTarget t("if_then"), f("if_else");
-    cg.emit_branch(cond(), t, f);
-    if (cg.enter(t))
-        cg.emit_jump(then_expr(), x);
-    if (cg.enter(f))
-        cg.emit_jump(else_expr(), x);
-    cg.jump(x);
-}
-
-Def IfExpr::remit(CodeGen& cg) const {
-    JumpTarget x("next");
-    return cg.converge(this, x);
 }
 
 /*

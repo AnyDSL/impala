@@ -533,21 +533,6 @@ void ImplItem::check_item(TypeSema& sema) const {
 
 Type EmptyExpr::check(TypeSema& sema, TypeExpectation) const { return sema.unit(); }
 
-Type BlockExpr::check(TypeSema& sema, TypeExpectation expected) const {
-    THORIN_PUSH(sema.cur_block_expr_, this);
-    for (auto stmt : stmts())
-        stmt->check(sema);
-
-    sema.check(expr(), expected);
-
-    for (auto local : locals_) {
-        if (local->is_mut() && !local->is_written())
-            sema.warn(local) << "variable '" << local->symbol() << "' declared mutable but variable is never written to\n";
-    }
-
-    return expr() ? expr()->type() : sema.unit().as<Type>();
-}
-
 Type LiteralExpr::check(TypeSema& sema, TypeExpectation expected) const {
     // FEATURE we could enhance this using the expected type (e.g. 4 could be interpreted as int8 if needed)
     return sema.type(literal2type());
@@ -947,34 +932,19 @@ Type MapExpr::check_as_method_call(TypeSema& sema, TypeExpectation expected) con
     return sema.type_error();
 }
 
-Type ForExpr::check(TypeSema& sema, TypeExpectation expected) const {
-    auto forexpr = expr();
-    if (auto prefix = forexpr->isa<PrefixExpr>())
-        if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HLT)
-            forexpr = prefix->rhs();
-    if (auto map = forexpr->isa<MapExpr>()) {
-        Type lhst = sema.check(map->lhs());
+Type BlockExpr::check(TypeSema& sema, TypeExpectation expected) const {
+    THORIN_PUSH(sema.cur_block_expr_, this);
+    for (auto stmt : stmts())
+        stmt->check(sema);
 
-        if (auto fn_for = lhst.isa<FnType>()) {
-            if (fn_for->num_args() != 0) {
-                if (auto fn_ret = fn_for->args().back().isa<FnType>()) {
-                    // inherit the type for break and mark it as checked
-                    break_decl_->type_ = fn_ret;
-                    break_decl_->checked_ = true;
+    sema.check(expr(), expected);
 
-                    // copy over args and check call
-                    Array<const Expr*> args(map->args().size()+1);
-                    *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
-                    return sema.check_call(map, fn_for, map->type_args(), map->inferred_args_, args, expected);
-                }
-            }
-        }
-    } else if (auto field_expr = forexpr->isa<FieldExpr>()) {
-        assert(false && field_expr && "TODO");
+    for (auto local : locals_) {
+        if (local->is_mut() && !local->is_written())
+            sema.warn(local) << "variable '" << local->symbol() << "' declared mutable but variable is never written to\n";
     }
 
-    sema.error(expr()) << "the looping expression does not support the 'for' protocol\n";
-    return sema.unit();
+    return expr() ? expr()->type() : sema.unit().as<Type>();
 }
 
 Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
@@ -1007,6 +977,42 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
         Type else_type = sema.check(else_expr(), TypeExpectation(expected.type(), true, "type of else branch"));
         return (then_type->is_noret()) ? else_type : then_type;
     }
+}
+
+Type WhileExpr::check(TypeSema& sema, TypeExpectation expected) const {
+    sema.check(cond(), sema.type_bool(), "condition type");
+    sema.check(body(), sema.unit(), "body type of while loop");
+    return sema.unit();
+}
+
+Type ForExpr::check(TypeSema& sema, TypeExpectation expected) const {
+    auto forexpr = expr();
+    if (auto prefix = forexpr->isa<PrefixExpr>())
+        if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HLT)
+            forexpr = prefix->rhs();
+    if (auto map = forexpr->isa<MapExpr>()) {
+        Type lhst = sema.check(map->lhs());
+
+        if (auto fn_for = lhst.isa<FnType>()) {
+            if (fn_for->num_args() != 0) {
+                if (auto fn_ret = fn_for->args().back().isa<FnType>()) {
+                    // inherit the type for break and mark it as checked
+                    break_decl_->type_ = fn_ret;
+                    break_decl_->checked_ = true;
+
+                    // copy over args and check call
+                    Array<const Expr*> args(map->args().size()+1);
+                    *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
+                    return sema.check_call(map, fn_for, map->type_args(), map->inferred_args_, args, expected);
+                }
+            }
+        }
+    } else if (auto field_expr = forexpr->isa<FieldExpr>()) {
+        assert(false && field_expr && "TODO");
+    }
+
+    sema.error(expr()) << "the looping expression does not support the 'for' protocol\n";
+    return sema.unit();
 }
 
 //------------------------------------------------------------------------------
