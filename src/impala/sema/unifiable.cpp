@@ -444,6 +444,20 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
 
 bool infer(Uni u1, Uni u2) { return infer(u1->unify(), u2->unify()); }
 
+bool is_subtype(Uni u1, Uni u2) {
+    assert(u1->is_unified());
+    assert(u2->is_unified());
+
+    const Unifiable* up1 = *u1;
+    const Unifiable* up2 = *u2;
+
+    if (up1->isa<KnownTypeNode>() && up2->isa<KnownTypeNode>()) {
+        return up1->as<KnownTypeNode>()->is_subtype(up2->as<KnownTypeNode>());
+    } else {
+        return false;
+    }
+}
+
 //------------------------------------------------------------------------------
 
 /*

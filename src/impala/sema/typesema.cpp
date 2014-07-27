@@ -149,17 +149,11 @@ void TypeSema::expect_num(const Expr* expr) {
 }
 
 Type TypeSema::expect_type(const Location& loc, Type found_type, TypeExpectation expected) {
-    if (found_type == expected.type())
+    if (found_type <= expected.type())
         return expected.type();
 
     if (expected.noret() && (found_type == type_noret()))
         return found_type;
-
-    // TODO: quick hack
-    if (auto ptr = found_type.isa<OwnedPtrType>()) {
-        if (expected.type().isa<PtrType>())
-            return expected.type();
-    }
 
     if (found_type->is_polymorphic()) { // try to infer instantiations for this polymorphic type
         std::vector<Type> type_args;

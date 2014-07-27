@@ -76,6 +76,9 @@ Type instantiate_unknown(Type, std::vector<Type>&);
  */
 bool infer(Uni, Uni);
 
+/// Return if u1 is a subtype of u2. If either u1 oder u2 are not types this returns \p false.
+bool is_subtype(Uni u1, Uni u2);
+
 struct TraitAppLT { bool operator () (TraitApp t1, TraitApp t2) const; };
 
 template<class T>
@@ -107,6 +110,9 @@ public:
         if (this->node_ == other.node_) // TODO do we really wanna have this check?
             return true;
         return infer(*this, other) || (*this)->is_error() || other->is_error();
+    }
+    bool operator <= (const Proxy<T>& other) const {
+        return (*this == other) || is_subtype(*this, other);
     }
     Proxy<T> unify() const { return node()->unify()->template as<T>(); }
     const T* representative() const { return node()->representative()->template as<T>(); }
@@ -336,6 +342,8 @@ public:
     virtual FnType find_method(Symbol s) const;
     virtual bool is_sane() const;
 
+    virtual bool is_subtype(const KnownTypeNode*) const { return false; }
+
 private:
     mutable std::vector<Impl> impls_;
 
@@ -532,6 +540,8 @@ public:
     {}
 
     virtual std::ostream& print(Printer&) const override;
+
+    virtual bool is_subtype(const KnownTypeNode* other) const override { return other->isa<PtrTypeNode>(); }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
