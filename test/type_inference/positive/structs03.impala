@@ -1,0 +1,5 @@
+struct S[X] { x: X }
+
+fn main() -> () {
+   let s : S[fn(int)->int] = S { x: |a| a };
+}

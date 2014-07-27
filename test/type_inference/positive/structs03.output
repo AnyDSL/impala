@@ -1,0 +1,7 @@
+struct S[X] {
+    x: X
+}
+
+fn main() -> () {
+    let s: S[fn(i32) -> i32] = S[fn(i32) -> fn(i32)]{x: |a: i32| -> i32 a};
+}

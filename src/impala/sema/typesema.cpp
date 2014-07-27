@@ -753,19 +753,35 @@ Type TupleExpr::check(TypeSema& sema, TypeExpectation expected) const {
     return sema.tuple_type(types);
 }
 
-Type StructExpr::check(TypeSema& sema, TypeExpectation) const {
+Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {
     if (auto decl = path()->decl()) {
         if (auto struct_decl = decl->isa<StructDecl>()) {
             auto struct_abs = struct_decl->type().as<StructAbsType>();
             if (num_type_args() <= struct_abs->num_type_vars()) {
-                for (auto type_arg : type_args())
-                    inferred_args_.push_back(sema.check(type_arg));
+                StructAppType exp_type = expected.type().isa<StructAppType>();
 
-                for (size_t i = num_type_args(), e = struct_abs->num_type_vars(); i != e; ++i)
-                    inferred_args_.push_back(sema.unknown_type());
+                StructAppType struct_app;
+                if (exp_type && (exp_type->struct_abs_type() == struct_abs)) {
+                    for (size_t i = 0; i < exp_type->num_args(); ++i) {
+                        if ((i < num_type_args()) && (!(exp_type->arg(i) == sema.check(type_arg(i))))) {
+                            sema.error(type_arg(i)) << "expected different argument for type parameter '" << struct_abs->type_var(i) << "': expected '" << exp_type->arg(i) << "' but found '" << type_arg(i)->type() << "'\n";
+                        }
+                        inferred_args_.push_back(exp_type->arg(i));
+                    }
 
-                assert(inferred_args_.size() == struct_abs->num_type_vars());
-                auto struct_app = struct_abs->instantiate(inferred_args_).as<StructAppType>();
+                    assert(inferred_args_.size() == struct_abs->num_type_vars());
+                    struct_app = exp_type;
+                } else {
+                    for (auto type_arg : type_args()) {
+                        inferred_args_.push_back(sema.check(type_arg));
+                    }
+
+                    for (size_t i = num_type_args(), e = struct_abs->num_type_vars(); i != e; ++i)
+                        inferred_args_.push_back(sema.unknown_type());
+
+                    assert(inferred_args_.size() == struct_abs->num_type_vars());
+                    struct_app = struct_abs->instantiate(inferred_args_).as<StructAppType>();
+                }
 
                 thorin::HashSet<const FieldDecl*> done;
                 for (const auto& elem : elems()) {
