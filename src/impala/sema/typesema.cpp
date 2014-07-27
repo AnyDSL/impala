@@ -772,10 +772,9 @@ Type StructExpr::check(TypeSema& sema, TypeExpectation) const {
                     if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
                         elem.field_decl_ = field_decl;
                         if (!thorin::visit(done, field_decl)) {
-                            sema.check(elem.expr());
                             std::ostringstream oss;
                             oss << "initialization type for field '" << elem.symbol() << '\'';
-                            sema.expect_type(elem.expr(), TypeExpectation(struct_app->elem(field_decl->index()), oss.str()));
+                            sema.check(elem.expr(), TypeExpectation(struct_app->elem(field_decl->index()), oss.str()));
                         } else
                             sema.error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
                     } else
