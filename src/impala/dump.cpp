@@ -488,7 +488,10 @@ std::ostream& TypeArgs::print_type_args(Printer& p) const {
 
 std::ostream& StructExpr::print(Printer& p) const {
     path()->print(p);
-    print_type_args(p);
+    if (num_inferred_args() == 0)
+        print_type_args(p);
+    else
+        p.dump_list([&] (Type t) { p.stream() << t; }, inferred_args(), "[", "]", ", ", false);
     return p.dump_list([&] (const Elem& elem) { p.stream() << elem.symbol() << ": "; p.print(elem.expr()); }, elems(), "{", "}");
 }
 
