@@ -450,7 +450,7 @@ public:
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
 
-    virtual bool is_subtype(const TypeNode* other) const { THORIN_UNREACHABLE; } // TODO check this
+    virtual bool is_subtype(const TypeNode* other) const { THORIN_UNREACHABLE; }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override { THORIN_UNREACHABLE; }
@@ -473,7 +473,7 @@ public:
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
 
-    virtual bool is_subtype(const TypeNode* other) const { return this == other; } // TODO check this
+    virtual bool is_subtype(const TypeNode* other) const { return this == other; }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
