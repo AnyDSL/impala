@@ -975,10 +975,12 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
         if (then_type->is_noret() && else_type->is_noret())
             return sema.type_noret();
         if (then_type->is_noret())
-            return sema.expect_type(else_expr(), else_type, TypeExpectation(expected, "if expression type"));
+            return sema.expect_type(else_expr(), TypeExpectation(expected, "if expression type"));
         if (else_type->is_noret())
-            return sema.expect_type(then_expr(), then_type, TypeExpectation(expected, "if expression type"));
-        if (then_type == else_type)
+            return sema.expect_type(then_expr(), TypeExpectation(expected, "if expression type"));
+        if (then_type <= else_type)
+            return sema.expect_type(this, else_type, TypeExpectation(expected, "if expression type"));
+        if (else_type <= then_type)
             return sema.expect_type(this, then_type, TypeExpectation(expected, "if expression type"));
 
         sema.error(this) << "different types in arms of an if expression\n";
