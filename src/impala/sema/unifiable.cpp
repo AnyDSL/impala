@@ -287,6 +287,16 @@ bool TraitAppNode::equal(const Unifiable* other) const {
 //------------------------------------------------------------------------------
 
 /*
+ * subtyping
+ */
+
+bool TypeNode::is_subtype(const TypeNode* other) const {
+    return (this == other); // TODO recurse
+}
+
+//------------------------------------------------------------------------------
+
+/*
  * specialize and instantiate
  */
 
@@ -451,8 +461,8 @@ bool is_subtype(Uni u1, Uni u2) {
     const Unifiable* up1 = *u1;
     const Unifiable* up2 = *u2;
 
-    if (up1->isa<KnownTypeNode>() && up2->isa<KnownTypeNode>()) {
-        return up1->as<KnownTypeNode>()->is_subtype(up2->as<KnownTypeNode>());
+    if (up1->isa<TypeNode>() && up2->isa<TypeNode>()) {
+        return up1->as<TypeNode>()->is_subtype(up2->as<TypeNode>());
     } else {
         return false;
     }

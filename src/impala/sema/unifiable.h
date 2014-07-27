@@ -293,6 +293,9 @@ public:
 #define IMPALA_TYPE(itype, atype) bool is_##itype() const { return is(PrimType_##itype); }
 #include "impala/tokenlist.h"
 
+    /// return if this type is a subtype of \p other
+    virtual bool is_subtype(const TypeNode* other) const;
+
     /**
      * A type is sane if all type variables are bound correctly,
      * i.e. forall type variables v, v is a subtype of v.bound_at(). -- TODO WHAT?
@@ -300,6 +303,7 @@ public:
      * This also means that a sane type is always closed!
      */
     virtual bool is_sane() const = 0;
+
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const = 0;
@@ -319,6 +323,8 @@ public:
     virtual FnType find_method(Symbol) const override { THORIN_UNREACHABLE; }
     virtual bool is_sane() const override { THORIN_UNREACHABLE; }
     virtual std::ostream& print(Printer&) const override;
+
+    virtual bool is_subtype(const TypeNode* other) const override { THORIN_UNREACHABLE; }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -341,8 +347,6 @@ public:
     virtual bool implements(TraitApp, SpecializeMap&) const;
     virtual FnType find_method(Symbol s) const;
     virtual bool is_sane() const;
-
-    virtual bool is_subtype(const KnownTypeNode*) const { return false; }
 
 private:
     mutable std::vector<Impl> impls_;
@@ -541,7 +545,7 @@ public:
 
     virtual std::ostream& print(Printer&) const override;
 
-    virtual bool is_subtype(const KnownTypeNode* other) const override { return other->isa<PtrTypeNode>(); }
+    virtual bool is_subtype(const TypeNode* other) const override { return other->isa<PtrTypeNode>() && referenced_type()->is_subtype(*other->as<PtrTypeNode>()->referenced_type()); }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -580,7 +584,7 @@ public:
     uint64_t dim() const { return dim_; }
     virtual std::ostream& print(Printer&) const override;
 
-    virtual bool is_subtype(const KnownTypeNode* other) const override { return other->isa<ArrayTypeNode>(); }
+    virtual bool is_subtype(const TypeNode* other) const override { return other->isa<ArrayTypeNode>() && elem_type()->is_subtype(*other->as<ArrayTypeNode>()->elem_type()); }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;

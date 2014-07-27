@@ -1,0 +1,1 @@
+subtyping4_array.impala:2 col 22: error: mismatched types: expected '[bool]' but found '[i32 * 2]' as initialization type
