@@ -450,6 +450,8 @@ public:
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
 
+    virtual bool is_subtype(const TypeNode* other) const { THORIN_UNREACHABLE; } // TODO check this
+
 private:
     virtual Type vinstantiate(SpecializeMap&) const override { THORIN_UNREACHABLE; }
     virtual thorin::Type convert(CodeGen&) const override;
@@ -470,6 +472,8 @@ public:
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
+
+    virtual bool is_subtype(const TypeNode* other) const { return this == other; } // TODO check this
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -506,6 +510,8 @@ public:
     virtual FnType find_method(Symbol s) const override;
     virtual std::ostream& print(Printer&) const override;
 
+    virtual bool is_subtype(const TypeNode* other) const { return this->equal(other); }
+
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
     virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
@@ -521,6 +527,7 @@ public: // TODO make private
     friend class TypeTable;
     friend void Unifiable::bind(TypeVar) const;
     friend bool Unifiable::equal(const Unifiable*) const;
+    friend bool TypeNode::is_subtype(const TypeNode*) const;
 };
 
 //------------------------------------------------------------------------------
