@@ -286,6 +286,26 @@ bool TraitAppNode::equal(const Unifiable* other) const {
  * subtyping
  */
 
+bool TypeVarNode::bounds_subtype(const TypeVarNode* other) const {
+    assert(this->is_unified());
+
+    // removing bounds is okay
+    if (this->num_bounds() > other->num_bounds())
+        return false;
+
+    // this->bounds() must be a subset of other->bounds()
+    for (auto this_bound : this->bounds()) { // TODO this loop is quadratic
+        for (auto other_bound : other->bounds()) {
+            // FEATURE we could not only allow equal bounds, but use the sub-trait relation
+            if (this_bound == other_bound)
+                goto found;
+        }
+        return false;
+found:;
+    }
+    return true;
+}
+
 bool TypeNode::is_subtype(const TypeNode* other) const {
     if (this == other)
         return true;
@@ -301,9 +321,8 @@ bool TypeNode::is_subtype(const TypeNode* other) const {
             }
 
             // check equality of the restrictions of the type variables
-            // FEATURE we could not only allow equal bounds, but also allow subsets + use the sub-trait relation
             for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
-                result &= this->type_var(i)->bounds_equal(*other->type_var(i));
+                result &= this->type_var(i)->bounds_subtype(*other->type_var(i));
 
             // check recursively argument types for equivalence
             for (size_t i = 0, e = this->num_args(); i != e && result; ++i)

@@ -495,6 +495,7 @@ private:
     {}
 
     bool bounds_equal(const TypeVarNode*) const;
+    bool bounds_subtype(const TypeVarNode*) const;
 
 public:
     const std::vector<TraitApp>& bounds() const { return bounds_; }
