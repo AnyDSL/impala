@@ -138,7 +138,11 @@ std::ostream& FnASTType::print(Printer& p) const {
     p.dump_list([&] (const ASTType* arg) { arg->print(p); }, ret != nullptr ? args().slice_num_from_end(1) : args(), "(", ")");
     if (ret != nullptr) {
         p.stream() << " -> ";
-        ret->print(p);
+        if (ret->num_args() == 1) {
+            ret->args().front()->print(p);
+        } else {
+            p.dump_list([&] (const ASTType* arg) { arg->print(p); }, ret->args(), "(", ")");
+        }
     }
     return p.stream();
 }
