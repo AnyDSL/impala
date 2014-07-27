@@ -580,6 +580,8 @@ public:
     uint64_t dim() const { return dim_; }
     virtual std::ostream& print(Printer&) const override;
 
+    virtual bool is_subtype(const KnownTypeNode* other) const override { return other->isa<ArrayTypeNode>(); }
+
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
     virtual thorin::Type convert(CodeGen&) const override;
