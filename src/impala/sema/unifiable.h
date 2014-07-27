@@ -298,7 +298,7 @@ public:
 
     /**
      * A type is sane if all type variables are bound correctly,
-     * i.e. forall type variables v, v is a subtype of v.bound_at(). -- TODO WHAT?
+     * i.e. forall type variables v, v is a child of v.bound_at().
      *
      * This also means that a sane type is always closed!
      */
