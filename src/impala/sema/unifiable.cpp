@@ -188,10 +188,6 @@ bool Unifiable::equal(const Unifiable* other) const {
     if (this->kind() == other->kind()) {
         bool result = this->num_args() == other->num_args() && this->num_type_vars() == other->num_type_vars();
 
-        // check arity of type vars (= the number of bounds)
-        for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
-            result &= this->type_var(i)->num_bounds() == other->type_var(i)->num_bounds();
-
         if (result) {
             // set equivalence constraints for type variables
             for (size_t i = 0, e = num_type_vars(); i != e; ++i) {
@@ -296,10 +292,6 @@ bool TypeNode::is_subtype(const TypeNode* other) const {
 
     if (this->kind() == other->kind()) {
         bool result = this->num_args() == other->num_args() && this->num_type_vars() == other->num_type_vars();
-
-        // check arity of type vars (= the number of bounds)
-        for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
-            result &= this->type_var(i)->num_bounds() == other->type_var(i)->num_bounds();
 
         if (result) {
             // set equality constraints for type variables
