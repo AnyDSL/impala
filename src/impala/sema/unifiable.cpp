@@ -309,6 +309,7 @@ bool TypeNode::is_subtype(const TypeNode* other) const {
             }
 
             // check equality of the restrictions of the type variables
+            // FEATURE we could not only allow equal bounds, but also allow subsets + use the sub-trait relation
             for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
                 result &= this->type_var(i)->bounds_equal(*other->type_var(i));
 
