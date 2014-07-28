@@ -1,0 +1,30 @@
+extern "thorin" {
+    fn nvvm(int, (int, int, int), (int, int, int), fn() -> ()) -> ();
+}
+extern "device" {
+    fn "llvm.nvvm.read.ptx.sreg.tid.x" nvvm_read_ptx_sreg_tid_x() -> i32;
+}
+
+fn iteration_broken(body : fn(int) -> ()) -> () {
+    let block = (32, 4, 1);
+    let dim = (1024, 1024, 1);
+    nvvm(0, dim, block, || {
+        if (nvvm_read_ptx_sreg_tid_x() < 1) {
+            body(0);
+            return()
+        }
+    });
+}
+
+
+fn main() -> int {
+    let size    = 1024;
+    let arr     = ~[size:float];
+    let mut out = ~[size:float];
+
+    for x in @iteration_broken() {
+        out(x) = arr(x);
+    }
+
+    0
+}
