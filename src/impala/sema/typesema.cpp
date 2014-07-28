@@ -704,7 +704,7 @@ Type CastExpr::check(TypeSema& sema, TypeExpectation) const {
 Type DefiniteArrayExpr::check(TypeSema& sema, TypeExpectation) const {
     Type elem_type = sema.unknown_type();
     for (auto arg : args())
-        sema.expect_type(arg, sema.check(arg), TypeExpectation(elem_type, "element of definite array expression"));
+        sema.check(arg, TypeExpectation(elem_type, "element of definite array expression"));
     return sema.definite_array_type(elem_type, num_args());
 }
 
