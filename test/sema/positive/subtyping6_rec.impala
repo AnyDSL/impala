@@ -1,0 +1,5 @@
+fn main() -> () {
+    let x : int = 5;
+    let mut y : ~int = ~x;
+    let z : &~int = &y;
+}

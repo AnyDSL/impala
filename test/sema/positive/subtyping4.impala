@@ -1,0 +1,3 @@
+fn main(x: fn[A]([int*2], A)) -> () {
+    let y : fn[A]([int], A) = x;
+}

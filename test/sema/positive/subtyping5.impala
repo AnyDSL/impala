@@ -1,0 +1,6 @@
+trait T {}
+trait U: T {}
+
+fn main(x: fn[A: T]([int*2], A)) -> () {
+    let y : fn[A: U]([int], A) = x;
+}

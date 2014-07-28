@@ -188,10 +188,6 @@ bool Unifiable::equal(const Unifiable* other) const {
     if (this->kind() == other->kind()) {
         bool result = this->num_args() == other->num_args() && this->num_type_vars() == other->num_type_vars();
 
-        // check arity of type vars (= the number of bounds)
-        for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
-            result &= this->type_var(i)->num_bounds() == other->type_var(i)->num_bounds();
-
         if (result) {
             // set equivalence constraints for type variables
             for (size_t i = 0, e = num_type_vars(); i != e; ++i) {
@@ -203,7 +199,7 @@ bool Unifiable::equal(const Unifiable* other) const {
             for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
                 result &= this->type_var(i)->bounds_equal(*other->type_var(i));
 
-            // check recursively argent types for equivalence
+            // check recursively argument types for equivalence
             for (size_t i = 0, e = this->num_args(); i != e && result; ++i)
                 result &= this->arg(i)->equal(*other->arg(i));
 
@@ -282,6 +278,65 @@ bool TraitAbsNode::equal(const Unifiable* other) const {
 
 bool TraitAppNode::equal(const Unifiable* other) const {
     return Unifiable::equal(other) && this->trait()->equal(*other->as<TraitAppNode>()->trait());
+}
+
+//------------------------------------------------------------------------------
+
+/*
+ * subtyping
+ */
+
+bool TypeVarNode::bounds_subtype(const TypeVarNode* other) const {
+    assert(this->is_unified());
+
+    // removing bounds is okay
+    if (this->num_bounds() > other->num_bounds())
+        return false;
+
+    // this->bounds() must be a subset of other->bounds()
+    for (auto this_bound : this->bounds()) { // TODO this loop is quadratic
+        for (auto other_bound : other->bounds()) {
+            // FEATURE we could not only allow equal bounds, but use the sub-trait relation
+            if (this_bound == other_bound)
+                goto found;
+        }
+        return false;
+found:;
+    }
+    return true;
+}
+
+bool TypeNode::is_subtype(const TypeNode* other) const {
+    if (this == other)
+        return true;
+
+    if (this->kind() == other->kind()) {
+        bool result = this->num_args() == other->num_args() && this->num_type_vars() == other->num_type_vars();
+
+        if (result) {
+            // set equality constraints for type variables
+            for (size_t i = 0, e = num_type_vars(); i != e; ++i) {
+                assert(this->type_var(i)->equiv_ == nullptr);
+                this->type_var(i)->equiv_ = *other->type_var(i);
+            }
+
+            // check equality of the restrictions of the type variables
+            for (size_t i = 0, e = num_type_vars(); i != e && result; ++i)
+                result &= this->type_var(i)->bounds_subtype(*other->type_var(i));
+
+            // check recursively argument types for equivalence
+            for (size_t i = 0, e = this->num_args(); i != e && result; ++i)
+                result &= this->arg(i)->is_subtype(*other->arg(i));
+
+            // unset equality constraints for type variables
+            for (auto var : type_vars())
+                var->equiv_ = nullptr;
+        }
+
+        return result;
+    }
+
+    return false;
 }
 
 //------------------------------------------------------------------------------
@@ -443,6 +498,20 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
 }
 
 bool infer(Uni u1, Uni u2) { return infer(u1->unify(), u2->unify()); }
+
+bool is_subtype(Uni u1, Uni u2) {
+    assert(u1->is_unified());
+    assert(u2->is_unified());
+
+    const Unifiable* up1 = *u1;
+    const Unifiable* up2 = *u2;
+
+    if (up1->isa<TypeNode>() && up2->isa<TypeNode>()) {
+        return up1->as<TypeNode>()->is_subtype(up2->as<TypeNode>());
+    } else {
+        return false;
+    }
+}
 
 //------------------------------------------------------------------------------
 

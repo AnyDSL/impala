@@ -1,0 +1,6 @@
+struct S[X] { x: X }
+struct T[X] { x: X }
+
+fn main() -> () {
+   let s: T[bool] = S[int] { x: 5 };
+}

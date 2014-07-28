@@ -59,6 +59,7 @@
     case Token::HLT: \
     case Token::IF: \
     case Token::FOR: \
+    case Token::WHILE: \
     case Token::L_PAREN: \
     case Token::L_BRACE: \
     case Token::L_BRACKET
@@ -151,7 +152,7 @@ public:
     }
 
     // misc
-    Identifier try_id(const std::string& what);
+    SafePtr<const Identifier> try_id(const std::string& what);
     Visibility parse_visibility();
 
     // paths
@@ -207,6 +208,7 @@ public:
     const FnExpr*      parse_fn_expr();
     const IfExpr*      parse_if_expr();
     const ForExpr*     parse_for_expr();
+    const WhileExpr*   parse_while_expr();
     const BlockExpr*   parse_block_expr();
     const BlockExpr*   try_block_expr(const std::string& context);
 
@@ -290,7 +292,7 @@ void Parser::error(const std::string& what, const std::string& context, const To
     os << "\n";
 }
 
-Identifier Parser::try_id(const std::string& what) {
+SafePtr<const Identifier> Parser::try_id(const std::string& what) {
     Token name;
     if (la() == Token::ID)
         name = lex();
@@ -299,7 +301,7 @@ Identifier Parser::try_id(const std::string& what) {
         name = Token(la().loc(), "<error>");
     }
 
-    return Identifier(name);
+    return new Identifier(name);
 }
 
 Visibility Parser::parse_visibility() {
@@ -358,17 +360,17 @@ void Parser::parse_param_list(AutoVector<const Param*>& params, TokenKind delimi
 const Param* Parser::parse_param(bool lambda) {
     auto param = loc(new Param(cur_var_handle++));
     param->is_mut_ = accept(Token::MUT);
-    Identifier ident;
+    SafePtr<const Identifier> ident;
     const ASTType* type = nullptr;
     Token tok = la();
 
     if (tok == Token::ID)
-        ident = Identifier(lex());
+        ident = new Identifier(lex());
     else {
         switch (tok) {
             case TYPE: type = parse_type(); break;
             default:
-                ident = Identifier("<error>", tok.loc());
+                ident = new Identifier("<error>", tok.loc());
                 error("identifier", "parameter");
         }
     }
@@ -399,7 +401,7 @@ const Param* Parser::parse_param(bool lambda) {
 void Parser::parse_return_param(AutoVector<const Param*>& params) {
     if (auto fn_type = parse_return_type()) {
         const Location& loc = fn_type->loc();
-        params.push_back(Param::create(cur_var_handle++, Identifier("return", loc), loc, fn_type));
+        params.push_back(Param::create(cur_var_handle++, new Identifier("return", loc), loc, fn_type));
     }
 }
 
@@ -464,7 +466,7 @@ FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
     auto fn_decl = loc(new FnDecl());
     eat(Token::FN);
     if (la() == Token::LIT_str)
-        fn_decl->export_name_ = Identifier(lex());
+        fn_decl->export_name_ = new Identifier(lex());
     fn_decl->identifier_ = try_id("function name");
     parse_type_params(fn_decl->type_params_);
     expect(Token::L_PAREN, "function head");
@@ -727,7 +729,7 @@ const TupleASTType* Parser::parse_tuple_type() {
 
 const ASTTypeApp* Parser::parse_type_app() {
     auto type_app = loc(new ASTTypeApp());
-    type_app->identifier_ = Identifier(lex());
+    type_app->identifier_ = new Identifier(lex());
     if (accept(Token::L_BRACKET)) {
         parse_comma_list(Token::R_BRACKET, "type arguments for type application", [&] {
             type_app->args_.push_back(parse_type());
@@ -750,8 +752,8 @@ bool Parser::is_infix() {
 const Expr* Parser::parse_expr(Prec prec) {
     auto lhs = la().is_prefix() ? parse_prefix_expr() : parse_primary_expr();
 
-    if (lhs->isa<IfExpr>() || lhs->isa<ForExpr>() || lhs->isa<BlockExpr>())
-        return lhs; // break for stmt-like expressions
+    if (lhs->isa<StmtLikeExpr>())
+        return lhs; // bail out for stmt-like expressions
 
     while (true) {
         /*
@@ -930,6 +932,7 @@ const Expr* Parser::parse_primary_expr() {
         }
         case Token::IF:         return parse_if_expr();
         case Token::FOR:        return parse_for_expr();
+        case Token::WHILE:      return parse_while_expr();
         case Token::L_BRACE:    return parse_block_expr();
         default:                error("expression", ""); return new EmptyExpr(lex().loc());
     }
@@ -996,18 +999,44 @@ const ForExpr* Parser::parse_for_expr() {
     for_expr->fn_expr_ = fn_expr.get();
     if (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
         parse_param_list(fn_expr->params_, Token::IN, true);
-    fn_expr->params_.push_back(Param::create(cur_var_handle++, Identifier("continue", prev_loc()), prev_loc(), nullptr));
+    fn_expr->params_.push_back(Param::create(cur_var_handle++, new Identifier("continue", prev_loc()), prev_loc(), nullptr));
 
-    auto break_decl = loc(new LocalDecl(cur_var_handle++));
-    break_decl->is_mut_ = false;
-    break_decl->identifier_ = Identifier("break", prev_loc_);
-    break_decl->set_loc(prev_loc_);
-    break_decl->ast_type_ = nullptr; // set during TypeSema
-    for_expr->break_decl_ = break_decl.get();
+    {
+        auto break_decl = loc(new LocalDecl(cur_var_handle++));
+        break_decl->is_mut_ = false;
+        break_decl->identifier_ = new Identifier("break", prev_loc_);
+        break_decl->set_loc(prev_loc_);
+        break_decl->ast_type_ = nullptr; // set during TypeSema
+        for_expr->break_decl_ = break_decl.get();
+    }
 
     for_expr->expr_ = parse_expr();
     fn_expr->body_ = try_block_expr("body of function");
     return for_expr;
+}
+
+const WhileExpr* Parser::parse_while_expr() {
+    auto while_expr = loc(new WhileExpr());
+    eat(Token::WHILE);
+    while_expr->cond_ = parse_expr();
+    {
+        auto break_decl = loc(new LocalDecl(cur_var_handle++));
+        break_decl->is_mut_ = false;
+        break_decl->identifier_ = new Identifier("break", prev_loc_);
+        break_decl->set_loc(prev_loc_);
+        break_decl->ast_type_ = new FnASTType(prev_loc());
+        while_expr->break_decl_ = break_decl.get();
+    }
+    {
+        auto continue_decl = loc(new LocalDecl(cur_var_handle++));
+        continue_decl->is_mut_ = false;
+        continue_decl->identifier_ = new Identifier("break", prev_loc_);
+        continue_decl->set_loc(prev_loc_);
+        continue_decl->ast_type_ = new FnASTType(prev_loc());
+        while_expr->continue_decl_ = continue_decl.get();
+    }
+    while_expr->body_ = try_block_expr("body of while loop");
+    return while_expr;
 }
 
 const BlockExpr* Parser::parse_block_expr() {
@@ -1019,7 +1048,7 @@ const BlockExpr* Parser::parse_block_expr() {
             case Token::SEMICOLON:  lex(); continue; // ignore semicolon
             case STMT_NOT_EXPR:     stmts.push_back(parse_stmt_not_expr()); continue;
             case EXPR: {
-                bool stmt_like = la() == Token::IF || la() == Token::FOR || la() == Token::L_BRACE;
+                bool stmt_like = la().is_stmt_like();
                 auto expr = parse_expr();
                 if (accept(Token::SEMICOLON) || (stmt_like && la() != Token::R_BRACE)) {
                     auto expr_stmt = new ExprStmt();

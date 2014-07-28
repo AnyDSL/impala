@@ -13,8 +13,8 @@ namespace impala {
 
 std::ostream& Unifiable::print_type_vars(Printer& p) const {
     if (is_polymorphic())
-        return p.dump_list([&] (TypeVar type_var) { 
-                    type_var->print(p); 
+        return p.dump_list([&] (TypeVar type_var) {
+                    type_var->print(p);
                     if (type_var->num_bounds() != 0) {
                         p.stream() << ": ";
                         p.dump_list([&] (TraitApp bound) { bound->print(p); }, type_var->bounds(), "", "", " + ");
@@ -23,7 +23,7 @@ std::ostream& Unifiable::print_type_vars(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& UnknownTypeNode::print(Printer& p) const { 
+std::ostream& UnknownTypeNode::print(Printer& p) const {
     assert(!is_unified());
     return p.stream() << '?' << id();
 }
@@ -57,7 +57,7 @@ std::ostream& TypeVarNode::print(Printer& p) const {
     return p.stream() << '_' << id() << '_';
 }
 
-std::ostream& TraitAbsNode::print(Printer& p) const { 
+std::ostream& TraitAbsNode::print(Printer& p) const {
     return p.stream() << (is_error() ? "<trait error>" : trait_decl()->symbol().str());
 }
 
@@ -138,7 +138,11 @@ std::ostream& FnASTType::print(Printer& p) const {
     p.dump_list([&] (const ASTType* arg) { arg->print(p); }, ret != nullptr ? args().slice_num_from_end(1) : args(), "(", ")");
     if (ret != nullptr) {
         p.stream() << " -> ";
-        ret->print(p);
+        if (ret->num_args() == 1) {
+            ret->args().front()->print(p);
+        } else {
+            p.dump_list([&] (const ASTType* arg) { arg->print(p); }, ret->args(), "(", ")");
+        }
     }
     return p.stream();
 }
@@ -158,11 +162,15 @@ std::ostream& PrimASTType::print(Printer& p) const {
     }
 }
 
+std::ostream& Identifier::print(Printer& p) const {
+    return p.stream() << symbol();
+}
+
 /*
  * paths
  */
 
-std::ostream& PathElem::print(Printer& p) const { 
+std::ostream& PathElem::print(Printer& p) const {
     return p.stream() << symbol();
 }
 
@@ -192,14 +200,14 @@ std::ostream& TypeParamList::print_type_params(Printer& p) const {
  */
 
 std::ostream& Fn::print_params(Printer& p, bool returning) const {
-    return p.dump_list([&] (const Param* param) { 
+    return p.dump_list([&] (const Param* param) {
             if (!param->symbol().empty())
                 p.stream() << param->symbol() << ": ";
             if (auto type = param->type())
                 p.stream() << type;
             else if (auto type = param->ast_type())
                 type->print(p);
-        }, 
+        },
         returning ? params().slice_num_from_end(1) : params());
 }
 
@@ -253,8 +261,8 @@ std::ostream& FnDecl::print(Printer& p) const {
     if (is_extern())
         p.stream() << "extern ";
     p.stream() << "fn ";
-    if (!export_name_.symbol().empty())
-        p.stream() << export_name_.symbol() << ' ';
+    if (export_name_)
+        p.stream() << export_name_->symbol() << ' ';
     p.stream() << symbol();
     print_type_params(p);
 
@@ -319,7 +327,7 @@ std::ostream& TraitDecl::print(Printer& p) const {
         p.stream() << " : ";
         p.dump_list([&] (const ASTTypeApp* type_app) { type_app->print(p); }, super_traits());
     }
-        
+
     p.stream() << " {";
     p.up();
     p.dump_list([&] (const FnDecl* method) { method->print(p); }, methods(), "", "", "", true);
@@ -352,7 +360,7 @@ std::ostream& BlockExpr::print(Printer& p) const {
         return p.newline() << '}';
     p.up();
     p.dump_list([&] (const Stmt* stmt) { stmt->print(p); }, stmts(), "", "", "", true);
-    if (!expr()->isa<EmptyExpr>()) { 
+    if (!expr()->isa<EmptyExpr>()) {
         if (!stmts().empty())
             p.newline();
         p.print(expr());
@@ -376,7 +384,7 @@ std::ostream& EmptyExpr::print(Printer& p) const { return p.stream() << "/*empty
 std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { p.print(expr); }, args(), "(", ")"); }
 
 std::ostream& DefiniteArrayExpr::print(Printer& p) const {
-    return p.dump_list([&] (const Expr* expr) { p.print(expr); }, args(), "[", "]"); 
+    return p.dump_list([&] (const Expr* expr) { p.print(expr); }, args(), "[", "]");
 }
 
 std::ostream& RepeatedDefiniteArrayExpr::print(Printer& p) const {
@@ -480,7 +488,10 @@ std::ostream& TypeArgs::print_type_args(Printer& p) const {
 
 std::ostream& StructExpr::print(Printer& p) const {
     path()->print(p);
-    print_type_args(p);
+    if (num_inferred_args() == 0)
+        print_type_args(p);
+    else
+        p.dump_list([&] (Type t) { p.stream() << t; }, inferred_args(), "[", "]", ", ", false);
     return p.dump_list([&] (const Elem& elem) { p.stream() << elem.symbol() << ": "; p.print(elem.expr()); }, elems(), "{", "}");
 }
 
@@ -532,6 +543,12 @@ std::ostream& IfExpr::print(Printer& p) const {
     return p.stream();
 }
 
+std::ostream& WhileExpr::print(Printer& p) const {
+    p.stream() << "while ";
+    p.print(cond()) << ' ';
+    return p.print(body());
+}
+
 std::ostream& ForExpr::print(Printer& p) const {
     p.stream() << "for ";
     p.dump_list([&](const Param* param) { param->print(p); }, fn_expr()->params().slice_num_from_end(1)) << " in ";
@@ -555,7 +572,7 @@ std::ostream& LetStmt::print(Printer& p) const {
     return p.stream() << ';';
 }
 
-std::ostream& ExprStmt::print(Printer& p) const { 
+std::ostream& ExprStmt::print(Printer& p) const {
     bool no_semi = expr()->isa<IfExpr>() || expr()->isa<ForExpr>();
     p.print(expr());
     if (!no_semi)

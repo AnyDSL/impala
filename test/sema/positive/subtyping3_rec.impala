@@ -1,0 +1,3 @@
+fn main(x: ([int*2], int)) -> () {
+    let y : ([int], int) = x;
+}
