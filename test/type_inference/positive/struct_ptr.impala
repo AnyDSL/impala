@@ -1,0 +1,7 @@
+struct S[T] {
+    t: T
+}
+
+fn main() -> () {
+    let s = S{ t: ~42 };
+}
