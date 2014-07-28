@@ -283,27 +283,25 @@ bool TraitAppNode::equal(const Unifiable* other) const {
 //------------------------------------------------------------------------------
 
 /*
- * subtyping
+ * is_subtype
  */
 
-bool TypeVarNode::bounds_subtype(const TypeVarNode* other) const {
-    assert(this->is_unified());
+/*
+ * TODO merge this code with equal
+ */
 
-    // removing bounds is okay
-    if (this->num_bounds() > other->num_bounds())
-        return false;
+bool is_subtype(Uni u1, Uni u2) {
+    assert(u1->is_unified());
+    assert(u2->is_unified());
 
-    // this->bounds() must be a subset of other->bounds()
-    for (auto this_bound : this->bounds()) { // TODO this loop is quadratic
-        for (auto other_bound : other->bounds()) {
-            // FEATURE we could not only allow equal bounds, but use the sub-trait relation
-            if (this_bound == other_bound)
-                goto found;
-        }
+    const Unifiable* up1 = *u1;
+    const Unifiable* up2 = *u2;
+
+    if (up1->isa<TypeNode>() && up2->isa<TypeNode>()) {
+        return up1->as<TypeNode>()->is_subtype(up2->as<TypeNode>());
+    } else {
         return false;
-found:;
     }
-    return true;
 }
 
 bool TypeNode::is_subtype(const TypeNode* other) const {
@@ -339,6 +337,26 @@ bool TypeNode::is_subtype(const TypeNode* other) const {
     return false;
 }
 
+bool TypeVarNode::bounds_subtype(const TypeVarNode* other) const {
+    assert(this->is_unified());
+
+    // removing bounds is okay
+    if (this->num_bounds() > other->num_bounds())
+        return false;
+
+    // this->bounds() must be a subset of other->bounds()
+    for (auto this_bound : this->bounds()) { // TODO this loop is quadratic
+        for (auto other_bound : other->bounds()) {
+            // FEATURE we could not only allow equal bounds, but use the sub-trait relation
+            if (this_bound == other_bound)
+                goto found;
+        }
+        return false;
+found:;
+    }
+    return true;
+}
+
 //------------------------------------------------------------------------------
 
 /*
@@ -356,7 +374,7 @@ SpecializeMap specialize_map(const Unifiable* unifiable, ArrayRef<Type> args) {
 }
 
 Type instantiate_unknown(Type type, std::vector<Type>& args) {
-    for (size_t i = 0, e = type->num_type_vars(); i != e;  ++i) 
+    for (size_t i = 0, e = type->num_type_vars(); i != e; ++i)
         args.push_back(type->typetable().unknown_type());
     auto map = specialize_map(type, args);
     return type->instantiate(map);
@@ -386,36 +404,36 @@ TraitApp TraitAbsNode::instantiate(ArrayRef<Type> args) const {
     return typetable().trait_app(this, args);
 }
 
-Type BorrowedPtrTypeNode::vinstantiate(SpecializeMap& map) const { 
-    return map[this] = *typetable().borrowd_ptr_type(referenced_type()->specialize(map)); 
+Type BorrowedPtrTypeNode::vinstantiate(SpecializeMap& map) const {
+    return map[this] = *typetable().borrowd_ptr_type(referenced_type()->specialize(map));
 }
 
-Type DefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const { 
-    return map[this] = *typetable().definite_array_type(elem_type()->specialize(map), dim()); 
+Type DefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const {
+    return map[this] = *typetable().definite_array_type(elem_type()->specialize(map), dim());
 }
 
-Type FnTypeNode::vinstantiate(SpecializeMap& map) const { 
-    return map[this] = *typetable().fn_type(specialize_args(map)); 
+Type FnTypeNode::vinstantiate(SpecializeMap& map) const {
+    return map[this] = *typetable().fn_type(specialize_args(map));
 }
 
 Type IndefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const {
-    return map[this] = *typetable().indefinite_array_type(elem_type()->specialize(map)); 
+    return map[this] = *typetable().indefinite_array_type(elem_type()->specialize(map));
 }
 
-Type OwnedPtrTypeNode::vinstantiate(SpecializeMap& map) const { 
-    return map[this] = *typetable().owned_ptr_type(referenced_type()->specialize(map)); 
+Type OwnedPtrTypeNode::vinstantiate(SpecializeMap& map) const {
+    return map[this] = *typetable().owned_ptr_type(referenced_type()->specialize(map));
 }
 
-Type StructAppTypeNode::vinstantiate(SpecializeMap& map) const { 
+Type StructAppTypeNode::vinstantiate(SpecializeMap& map) const {
     return map[this] = *typetable().struct_app_type(struct_abs_type(), specialize_args(map));
 }
 
-Type TupleTypeNode::vinstantiate(SpecializeMap& map) const { 
-    return map[this] = *typetable().tuple_type(specialize_args(map)); 
+Type TupleTypeNode::vinstantiate(SpecializeMap& map) const {
+    return map[this] = *typetable().tuple_type(specialize_args(map));
 }
 
-Type UnknownTypeNode::vinstantiate(SpecializeMap& map) const { 
-    return map[this] = *typetable().unknown_type(); 
+Type UnknownTypeNode::vinstantiate(SpecializeMap& map) const {
+    return map[this] = *typetable().unknown_type();
 }
 
 Type NoRetTypeNode::vinstantiate(SpecializeMap& map) const { return map[this] = this; }
@@ -453,7 +471,7 @@ TraitApp TraitAppNode::specialize(SpecializeMap& map) const {
     return typetable().trait_app(trait(), specialize_args(map));
 }
 
-Impl ImplNode::specialize(SpecializeMap& map) const { 
+Impl ImplNode::specialize(SpecializeMap& map) const {
     return typetable().impl(impl_item(), trait_app()->specialize(map), type());
 }
 
@@ -481,7 +499,7 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
         } else if (u1->unify()->is_unified()) {
             return u1->representative() == u2->representative();    // both are unified - are types equal?
         } else if (bool result = u1->kind() == u2->kind()           // recursively infer sub elements
-                && u1->num_type_vars() == u2->num_type_vars() 
+                && u1->num_type_vars() == u2->num_type_vars()
                 && u1->num_args() == u2->num_args()) {
             // TODO handle type vars
             for (size_t i = 0, e = u1->num_args(); i != e && result; ++i)
@@ -498,20 +516,6 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
 }
 
 bool infer(Uni u1, Uni u2) { return infer(u1->unify(), u2->unify()); }
-
-bool is_subtype(Uni u1, Uni u2) {
-    assert(u1->is_unified());
-    assert(u2->is_unified());
-
-    const Unifiable* up1 = *u1;
-    const Unifiable* up2 = *u2;
-
-    if (up1->isa<TypeNode>() && up2->isa<TypeNode>()) {
-        return up1->as<TypeNode>()->is_subtype(up2->as<TypeNode>());
-    } else {
-        return false;
-    }
-}
 
 //------------------------------------------------------------------------------
 
@@ -535,7 +539,7 @@ bool KnownTypeNode::implements(TraitApp bound, SpecializeMap& map) const {
         // find out which of impl's type_vars match to which of impl->bounds' type args
         for (auto type_var : impl->type_vars()) {
             for (size_t i = 0, e = impl->trait_app()->num_args(); i != e; ++i) { // TODO this is currently quadratic
-                if (type_var.as<Type>() == impl->trait_app()->arg(i) 
+                if (type_var.as<Type>() == impl->trait_app()->arg(i)
                         && !bound->arg(i)->isa<UnknownTypeNode>()
                         && implements_bounds(bound->arg(i), type_var))
                     map[*type_var] = *bound->arg(i);
@@ -557,7 +561,7 @@ Impl KnownTypeNode::find_impl(TraitApp bound) const {
         // find out which of impl's type_vars match to which of impl->bounds' type args
         for (auto type_var : impl->type_vars()) {
             for (size_t i = 0, e = impl->trait_app()->num_args(); i != e; ++i) { // TODO this is currently quadratic
-                if (type_var.as<Type>() == impl->trait_app()->arg(i) 
+                if (type_var.as<Type>() == impl->trait_app()->arg(i)
                         && !bound->arg(i)->isa<UnknownTypeNode>())
                     map[*type_var] = *bound->arg(i);
             }
@@ -577,10 +581,10 @@ bool TypeVarNode::implements(TraitApp bound, SpecializeMap& map) const {
     std::queue<TraitApp> queue;
     IdSet<TraitApp> done;
 
-    auto enqueue = [&] (TraitApp bound) { 
+    auto enqueue = [&] (TraitApp bound) {
         assert(bound->is_unified());
-        queue.push(bound); 
-        done.insert(bound); 
+        queue.push(bound);
+        done.insert(bound);
     };
 
     for (auto b : bounds())
@@ -619,7 +623,7 @@ FnType KnownTypeNode::find_method(Symbol name) const {
 
 FnType TypeVarNode::find_method(Symbol name) const {
     for (auto bound : bounds()) {
-        if (auto fn = bound->find_method(name)) 
+        if (auto fn = bound->find_method(name))
             return fn;
     }
     return FnType();
