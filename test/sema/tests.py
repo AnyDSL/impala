@@ -9,7 +9,10 @@ import os
 optionals = ["sema/positive/int_is_int32.impala",
     "sema/positive/subtyping1.impala",
     "sema/positive/subtyping5.impala",
-    "sema/positive/map.impala"]
+    "sema/positive/map.impala",
+    "sema/positive/methods7.impala",
+    "sema/positive/methods8.impala"
+]
 
 def allTests():
     """

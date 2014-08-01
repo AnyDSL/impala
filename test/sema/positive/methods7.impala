@@ -1,0 +1,16 @@
+trait T[A] {
+    fn m(Self, A) -> A;
+}
+
+impl T[bool] for int {
+    fn m(x: int, a: bool) -> bool { a }
+}
+
+impl T[int] for int {
+    fn m(x: int, a: int) -> int { a }
+}
+
+fn main() -> () {
+    let b: bool = (5).m(true)
+    let b: int = (5).m(5);
+}

@@ -1,0 +1,6 @@
+trait T {}
+impl T for i32 {}
+
+fn main() -> () {
+    let b: bool = (5).m();
+}

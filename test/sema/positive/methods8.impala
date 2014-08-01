@@ -1,0 +1,8 @@
+trait T[A] {
+    fn m(Self, A) -> A;
+}
+
+fn main[B:T[int]+T[bool]](b: B) -> () {
+    let b: bool = b.m(true);
+    bet b: int = b.m(5);
+}

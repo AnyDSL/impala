@@ -1,0 +1,11 @@
+trait T[A] {
+    fn m(Self, A) -> A;
+}
+
+impl T[bool] for i32 {
+    fn m(x: i32, a: bool) -> bool { a }
+}
+
+fn main() -> () {
+    let b: int = (5).m(5);
+}
