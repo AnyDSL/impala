@@ -1,0 +1,7 @@
+struct S[T] {
+    t: T
+}
+
+fn main() -> () {
+    let s: S[~i32] = S[~i32]{t: (~42)};
+}
