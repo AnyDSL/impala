@@ -505,7 +505,7 @@ void ImplItem::check_item(TypeSema& sema) const {
 
                 // check that the types match
                 if (!(fn_type == t))
-                    sema.error(fn) << "method '" << trait() << "." << meth_name << "' should have type '" << fn_type << "', but implementation has type '" << t << "'\n";
+                    sema.error(fn) << "method '" << trait() << "." << meth_name << "' should have type '" << t << "', but implementation has type '" << fn_type << "'\n";
             }
         }
     }
