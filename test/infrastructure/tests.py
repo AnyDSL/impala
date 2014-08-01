@@ -4,13 +4,20 @@ Created on 8 Dec 2013
 @author: Alexander Kampmann, David Poetzsch-Heffter
 '''
 
-import sys, os, difflib, shutil, imp
+import sys, os, difflib, shutil, imp, tempfile
 from pb import Progressbar
 from timed_process import CompileProcess
+from valgrindxml import ValgrindXML
 
-class Test:
+class Test(object):
     """Superclass for all the tests."""
     optional = False
+    
+    def __init__(self, base, src, options, optional=False):
+        self.basedir = base
+        self.srcfile = src
+        self.options = options
+        self.optional = optional
     
     def opt(self):
         self.optional = True
@@ -18,6 +25,37 @@ class Test:
         
     def isOptional(self):
         return self.optional
+    
+    def getName(self):
+        return os.path.join(self.basedir, self.srcfile)
+    
+class ValgrindTest(Test):
+    VALGRIND_XML_FILE = os.path.join(tempfile.gettempdir(), "impala_valgrind.xml")
+    
+    def __init__(self, test):
+        super(ValgrindTest, self).__init__(test.basedir, test.srcfile, test.options, test.isOptional())
+    
+    def invoke(self, gEx):
+        execCmd = ["valgrind", "--xml=yes", "--xml-file="+ValgrindTest.VALGRIND_XML_FILE]
+        execCmd += [os.path.abspath(gEx)] + self.options + [self.srcfile]
+        p = CompileProcess(execCmd, self.basedir, CompileProcess.timeout*5)
+        p.execute()
+        return self.check()
+    
+    def check(self):
+        try:
+            vgout = ValgrindXML(ValgrindTest.VALGRIND_XML_FILE)
+
+            success = len(vgout.leaks) == 0
+
+            if not success:
+                print("\n[FAIL] " + os.path.join(self.basedir, self.srcfile))
+                print(vgout)
+            
+            return success
+        except Exception as e:
+            print "Parsing valgrind output FAILED: %s" % e
+            return False
     
 class InvokeTest(Test):
     """Superclass tests which work on a single file and compare the output."""
@@ -28,14 +66,11 @@ class InvokeTest(Test):
     result = ""
     
     def __init__(self, positive, base, src, res, options=[]):
+        super(InvokeTest, self).__init__(base, src, options)
         self.positive = positive
-        self.basedir = base
-        self.srcfile = src
         self.result = res
-        self.options = options
     
     def invoke(self, gEx):
-        #print("Start test "+str(self.getName()))
         execCmd = [os.path.abspath(gEx)] + self.options + [self.srcfile]
         p = CompileProcess(execCmd, self.basedir)
         p.execute()
@@ -60,9 +95,6 @@ class InvokeTest(Test):
                     fails=fails+1
             
             return True if fails == 0 else False
-        
-    def getName(self):
-        return os.path.join(self.basedir, self.srcfile)
 
 def make_tests(directory, positive=True, options=[]):
     """Create a list of tests based on the .impala files in directory

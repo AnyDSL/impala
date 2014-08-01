@@ -46,5 +46,5 @@ class TimedProcess(object):
 class CompileProcess(TimedProcess):
     timeout = 1.0
     
-    def __init__(self, cmd, cwd):
-        super(CompileProcess, self).__init__(cmd, cwd, CompileProcess.timeout)
+    def __init__(self, cmd, cwd, timeout=timeout):
+        super(CompileProcess, self).__init__(cmd, cwd, timeout)
