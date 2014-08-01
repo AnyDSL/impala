@@ -31,6 +31,7 @@ class Test(object):
     
 class ValgrindTest(Test):
     VALGRIND_XML_FILE = os.path.join(tempfile.gettempdir(), "impala_valgrind.xml")
+    VALGRIND_TIMEOUT_FACTOR = 5
     
     def __init__(self, test):
         super(ValgrindTest, self).__init__(test.basedir, test.srcfile, test.options, test.isOptional())
@@ -38,11 +39,21 @@ class ValgrindTest(Test):
     def invoke(self, gEx):
         execCmd = ["valgrind", "--xml=yes", "--xml-file="+ValgrindTest.VALGRIND_XML_FILE]
         execCmd += [os.path.abspath(gEx)] + self.options + [self.srcfile]
-        p = CompileProcess(execCmd, self.basedir, CompileProcess.timeout*5)
+        
+        timeout = CompileProcess.timeout
+        if timeout == CompileProcess.DEFAULT_TIMEOUT:
+            timeout *= ValgrindTest.VALGRIND_TIMEOUT_FACTOR
+        
+        p = CompileProcess(execCmd, self.basedir, timeout)
         p.execute()
-        return self.check()
+        return self.check(p.killed)
     
-    def check(self):
+    def check(self, killed):
+        if killed:
+            print("\n[FAIL] " + os.path.join(self.basedir, self.srcfile))
+            print("Process timed out.")
+            return False
+        
         try:
             vgout = ValgrindXML(ValgrindTest.VALGRIND_XML_FILE)
 
@@ -74,9 +85,14 @@ class InvokeTest(Test):
         execCmd = [os.path.abspath(gEx)] + self.options + [self.srcfile]
         p = CompileProcess(execCmd, self.basedir)
         p.execute()
-        return self.checkOutput(p.success(), p.output)
+        return self.checkOutput(p.killed, p.success(), p.output)
 
-    def checkOutput(self, success, output):
+    def checkOutput(self, killed, success, output):
+        if killed:
+            print("\n[FAIL] " + os.path.join(self.basedir, self.srcfile))
+            print("Process timed out.")
+            return False
+        
         if success != self.positive:
             print("\n[FAIL] "+os.path.join(self.basedir, self.srcfile))
             print("Output: "+output)

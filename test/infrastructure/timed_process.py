@@ -14,6 +14,7 @@ class TimedProcess(object):
         self.process = None
         self.output = ""
         self.returncode = None
+        self.killed = False
 
     def execute(self):
         def target():
@@ -25,6 +26,7 @@ class TimedProcess(object):
 
         thread.join(self.timeout)
         if thread.is_alive():
+            self.killed = True
             try:
                 self.process.terminate()
                 thread.join(self.timeout / 10.0)
@@ -44,7 +46,8 @@ class TimedProcess(object):
         return self.returncode == 0
 
 class CompileProcess(TimedProcess):
-    timeout = 1.0
+    DEFAULT_TIMEOUT = 1.0
+    timeout = DEFAULT_TIMEOUT
     
     def __init__(self, cmd, cwd, timeout=timeout):
         super(CompileProcess, self).__init__(cmd, cwd, timeout)
