@@ -1,0 +1,30 @@
+extern fn f(a : int) -> int {
+    let mut i : int = 22;
+    let j : int = 22;
+
+    let g : fn(int) -> int = |k : int| -> int {
+        fn z(x : int) -> int { x }
+        i + j + a + z(k)
+    };
+
+    i = 23;
+
+    if a == 0 {
+        g(23)
+    } else {
+        g(g(42))
+    }
+}
+
+extern fn g(i : int) -> int {
+    |j : int| -> int { j + 42 + i }(23)
+}
+
+fn foo(h : fn(int, fn(int))) -> int {
+    h(24)
+}
+
+extern fn bar(a : int) -> int {
+    let k : fn(int) -> int = |b : int| -> int a + b;
+    foo(k)
+}

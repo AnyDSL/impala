@@ -1,0 +1,5 @@
+fn main(i: int) -> int {
+    let mut a: [int*3] = [0, 1, 2];
+    a(i+1) = 5;
+    a(i)
+}

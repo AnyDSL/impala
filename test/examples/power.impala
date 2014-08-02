@@ -1,0 +1,15 @@
+fn power(a: int, mut b: int) -> int {
+    let mut result = 1;
+    while (b != 0) {
+        result *= a;
+        --b;
+    }
+
+    result
+}
+
+fn main(i: int) -> int {
+    //let power4 = |a: int| -> int { @power(4, a) };
+    //power4(i) + power(3, 4)
+    @power(3, 4)
+}

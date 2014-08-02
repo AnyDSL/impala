@@ -1,0 +1,24 @@
+fn seq(a: int, b: int) -> (int, fn(int, fn(int, fn()), fn())) {
+    fn stream(i: int, yield: fn(int, fn()), out: fn()) {
+        if (i <= b) {
+            yield(i, || { stream(i+1, yield, out) })
+        } else {
+            out()
+        }
+    }
+    (a, stream)
+}
+
+fn fold(f: fn(int, int) -> int, z: int, stream: (int, fn(int, fn(int, fn()), fn())), ret: fn(int)) {
+    let mut res = z;
+    let a = stream(0);
+    let s = stream(1);
+    s(a, |i: int, next: fn()| {
+            res = f(res, i);
+            next()
+        }, || { ret(res) })
+}
+
+fn main() -> int {
+    fold(|a: int, b: int| -> int { a + b }, 0, seq(0, 100))
+}

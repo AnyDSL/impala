@@ -1,0 +1,19 @@
+fn range(a: double, z: double, body: fn(double)->()) -> () {
+    if a < z {
+        body(a);
+        range(a+1.0, z, body, return)
+    }
+}
+
+extern fn fac(n : double) -> double {
+    if (n <= 1.0) {
+        return(1.0)
+    }
+
+    let mut r : double = 1.0;
+    for i in range(2.0, n+1.0) {
+        r *= i;
+    }
+
+    r
+}

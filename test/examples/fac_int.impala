@@ -1,0 +1,24 @@
+fn range(a: int, z: int, body: fn(int)->()) -> () {
+    if a < z {
+        body(a);
+        range(a+1, z, body, return)
+    }
+}
+
+fn fac(n : int) -> int {
+    if n <= 1 {
+        return(1)
+    }
+
+    let mut r = 1;
+    for i in range(2, n + 1) {
+        r *= i
+    }
+
+    r
+}
+
+
+fn main(i: int) -> int {
+    fac(5)
+}

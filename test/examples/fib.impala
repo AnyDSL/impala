@@ -1,0 +1,28 @@
+fn range(a: int, z: int, body: fn(int)->()) -> () {
+    if a > z {
+        body(a);
+        range(a+1, z, body, return)
+    }
+}
+
+fn fib(n : int, yield : fn(int)->(), ret : fn()) {
+    fn loop(n : int, cur : int, prev : int) {
+        if (n != 0) {
+            yield(cur, || { loop(n-1, cur + prev, cur) })
+        } else {
+            ret()
+        }
+    }
+    loop(n, 1, 0)
+}
+
+fn main() -> int {
+    let mut result : int = 0;
+    for i in range(15000000, 0) {
+        fib(40,
+            |f : int| -> () { result = result % 4 + f; },
+            continue
+        )
+    }
+    result
+}

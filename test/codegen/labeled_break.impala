@@ -1,0 +1,22 @@
+fn range(a: int, z: int, body: fn(int)->()) -> () {
+    if a < z {
+        body(a);
+        range(a+1, z, body, return)
+    }
+}
+
+fn main() -> int {
+    let mut r = 0;
+    for i in range(0, 10) {
+        let outer = break;
+
+        for j in range(0, 10) {
+            if (i == j) {
+                outer()
+            }
+            r++;
+        }
+    }
+
+    r  // should be 0
+}

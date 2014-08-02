@@ -1,0 +1,19 @@
+fn range(a: float, z: float, body: fn(float)->()) -> () {
+    if a < z {
+        body(a);
+        range(a+1.f, z, body, return)
+    }
+}
+
+extern fn fac(n : float) -> float {
+    if (n <= 1.f) {
+        return(1.f)
+    }
+
+    let mut r : float = 1.f;
+    for i in range(2.f, n+1.f) {
+        r *= i;
+    }
+
+    r
+}

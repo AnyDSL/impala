@@ -1,8 +1,8 @@
-fn get<T>() -> T {
+fn get[T]() -> T {
     let tuple: (T, T);
-    return tuple[0];
+    tuple(0)
 }
 
 fn main() -> int {
-    return get();
+    get()
 }

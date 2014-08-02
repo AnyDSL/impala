@@ -1,0 +1,30 @@
+extern "C" {
+    fn val_array() -> [int];
+    fn ptr_array() -> &[int];
+    fn take_address(&[int]) -> ();
+}
+
+extern fn just_value(i: int) -> int {
+    let mut a = val_array();
+    a(i) = a(i+1);
+    a(i+2)
+}
+
+extern fn take_explicit_address(i: int) -> int {
+    let mut a = val_array();
+    take_address(&a);
+    a(3)
+}
+
+extern fn take_implicit_address(i: int) -> int {
+    let mut a = val_array();
+    let mut p = &a(3);
+    *p = 42;
+    a(3)
+}
+
+extern fn always_leas(i: int) -> int {
+    let mut a = ptr_array();
+    a(i) = a(i+1);
+    a(i+2)
+}

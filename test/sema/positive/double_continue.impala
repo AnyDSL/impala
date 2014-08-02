@@ -1,0 +1,16 @@
+fn range(a: int, z: int, body: fn(int)->()) -> () {
+    if a < z {
+        body(a);
+        range(a+1, z, body, return)
+    }
+}
+
+fn main(n : int) -> () {
+    for i in range(0, n) {
+        if i == 42 {
+            continue()
+        } else {
+            continue()
+        }
+    }
+}

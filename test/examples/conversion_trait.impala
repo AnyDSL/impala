@@ -1,0 +1,63 @@
+trait Conv[T] {
+    fn conv(self: &Self) -> T;
+}
+
+trait Add {
+    fn add(self: Self, x:Self) -> Self;
+}
+
+trait Eq {
+    fn eq(self: &Self, o: &Self) -> bool;
+}
+
+/////////////////////////////////////////////////
+
+struct S { x : int }
+
+impl Conv[int] for S {
+    fn conv(self: &S) -> int { (*self).x }
+}
+
+impl Add for S {
+    fn add(self: S, s: S) -> S { S { x:(self.x + s.x) } }
+}
+
+impl Eq for S {
+    fn eq(self: &S, o : &S) -> bool { (*self).x == (*o).x }
+}
+
+//////////////////////////////////////////////////
+
+impl Conv[S] for int {
+    fn conv(self: &int) -> S { S { x : *self } }
+}
+
+impl Add for int {
+    fn add(self: int, x: int) -> int { self + x }
+}
+
+impl Eq for int {
+    fn eq(self: &int, o: &int) -> bool { *self == *o }
+}
+
+//////////////////////////////////////////////////
+
+fn assertAddEqual[T:Eq+Add+Conv[U], U:Eq+Add+Conv[T]](t : T, u : U) -> bool {
+    let a : T = t.add(u.conv());
+    let b : U = u.add(t.conv());
+    
+    if ((a.conv() == b) && (b.conv() == a)) {
+    	true
+    } else {
+    	false
+    }
+}
+
+//////////////////////////////////////////////////
+
+fn main() -> int {
+    let s = S { x:5 };
+    let t = 7;
+    
+    if assertAddEqual(s, t) { 0 } else { 1 }
+}
