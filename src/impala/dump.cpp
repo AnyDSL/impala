@@ -370,6 +370,7 @@ std::ostream& BlockExpr::print(Printer& p) const {
 }
 
 std::ostream& LiteralExpr::print(Printer& p) const {
+    // TODO dump float/double with floating point (else it would be interpreted as int)
     switch (kind()) {
 #define IMPALA_LIT(itype, atype) \
         case LIT_##itype: return p.stream() << box().get_##atype();
