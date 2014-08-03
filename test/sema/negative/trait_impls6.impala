@@ -1,0 +1,7 @@
+trait T[A] {
+    fn f(self: Self) -> ();
+}
+
+impl T for int {
+    fn f(self: int) -> () {}
+}
