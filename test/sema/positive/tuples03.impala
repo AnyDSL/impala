@@ -1,0 +1,4 @@
+fn main() -> int {
+    let x: (int, int) = (1,2);
+    x(0) + x(1)
+}

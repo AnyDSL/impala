@@ -5,7 +5,7 @@ fn power(a: int, mut b: int) -> int {
         --b;
     }
 
-    return result;
+    result
 }
 
 fn main(i: int) -> int {
