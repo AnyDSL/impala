@@ -29,6 +29,19 @@ class Test(object):
     def getName(self):
         return os.path.join(self.basedir, self.srcfile)
     
+    def checkBasics(self, proc):
+        if proc.killed:
+            print("\n[FAIL] " + os.path.join(self.basedir, self.srcfile))
+            print("Process timed out.")
+            return False
+        
+        if proc.crash():
+            print("\n[FAIL] " + os.path.join(self.basedir, self.srcfile))
+            print("Impala crashed. Return code was: %d" % proc.returncode)
+            return False
+        
+        return True
+    
 class ValgrindTest(Test):
     VALGRIND_XML_FILE = os.path.join(tempfile.gettempdir(), "impala_valgrind.xml")
     VALGRIND_TIMEOUT_FACTOR = 5
@@ -46,14 +59,9 @@ class ValgrindTest(Test):
         
         p = CompileProcess(execCmd, self.basedir, timeout)
         p.execute()
-        return self.check(p.killed)
+        return self.checkBasics(p) and self.checkValgrind(p)
     
-    def check(self, killed):
-        if killed:
-            print("\n[FAIL] " + os.path.join(self.basedir, self.srcfile))
-            print("Process timed out.")
-            return False
-        
+    def checkValgrind(self, p):
         try:
             vgout = ValgrindXML(ValgrindTest.VALGRIND_XML_FILE)
 
@@ -85,23 +93,18 @@ class InvokeTest(Test):
         execCmd = [os.path.abspath(gEx)] + self.options + [self.srcfile]
         p = CompileProcess(execCmd, self.basedir)
         p.execute()
-        return self.checkOutput(p.killed, p.success(), p.output)
+        return self.checkBasics(p) and self.checkOutput(p)
 
-    def checkOutput(self, killed, success, output):
-        if killed:
-            print("\n[FAIL] " + os.path.join(self.basedir, self.srcfile))
-            print("Process timed out.")
-            return False
-        
-        if success != self.positive:
+    def checkOutput(self, p):
+        if p.success() != self.positive:
             print("\n[FAIL] "+os.path.join(self.basedir, self.srcfile))
-            print("Output: "+output)
+            print("Output: "+p.output)
             return False
         if "" == self.result:
             return True
     
         with open(os.path.join(self.basedir, self.result), 'r') as f:
-            output = output.splitlines(1)
+            output = p.output.splitlines(1)
             expected = f.read().splitlines(1)
             diff = difflib.Differ()
             fails = 0

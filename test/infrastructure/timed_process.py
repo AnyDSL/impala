@@ -44,6 +44,10 @@ class TimedProcess(object):
     def success(self):
         assert self.returncode is not None
         return self.returncode == 0
+    
+    def crash(self):
+        assert self.returncode is not None
+        return self.returncode < 0
 
 class CompileProcess(TimedProcess):
     DEFAULT_TIMEOUT = 1.0
