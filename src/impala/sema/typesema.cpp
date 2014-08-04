@@ -652,7 +652,7 @@ Type InfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         case MUL:
         case DIV:
         case REM: {
-            auto type = sema.check(lhs(), sema.check(rhs()));
+            auto type = sema.check(lhs(), sema.check(rhs(), expected));
             sema.expect_num(lhs());
             sema.expect_num(rhs());
             return type;
@@ -662,7 +662,7 @@ Type InfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         case OR:
         case XOR:
         case AND: {
-            auto type = sema.check(lhs(), sema.check(rhs()));
+            auto type = sema.check(lhs(), sema.check(rhs(), expected));
             sema.expect_num(lhs());
             sema.expect_num(rhs());
             return type;

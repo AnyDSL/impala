@@ -1,0 +1,6 @@
+fn range[T,U](f: fn(T, U) -> ()) -> () {
+}
+
+fn main() -> () {
+    range(|x, y| { let a:int = x+y; })
+}

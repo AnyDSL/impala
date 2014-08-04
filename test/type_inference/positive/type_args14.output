@@ -1,0 +1,8 @@
+fn range[T, U](f: fn(T, U) -> ()) -> () {
+}
+
+fn main() -> () {
+    range[i32, i32](|x: i32, y: i32| -> () {
+        let a: i32 = (x + y);
+    })
+}
