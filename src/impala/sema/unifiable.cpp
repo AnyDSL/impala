@@ -291,8 +291,8 @@ bool TraitAppNode::equal(const Unifiable* other) const {
  */
 
 bool is_subtype(Uni u1, Uni u2) {
-    assert(u1->is_unified());
-    assert(u2->is_unified());
+    if (!u1->is_unified() || !u2->is_unified())
+        return false;
 
     const Unifiable* up1 = *u1;
     const Unifiable* up2 = *u2;
