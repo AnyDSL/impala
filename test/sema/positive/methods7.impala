@@ -11,6 +11,6 @@ impl T[int] for int {
 }
 
 fn main() -> () {
-    let b: bool = (5).m(true)
-    let b: int = (5).m(5);
+    let b: bool = (5).m(true);
+    let c: int = (5).m(5);
 }

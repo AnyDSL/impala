@@ -3,6 +3,6 @@ trait T[A] {
 }
 
 fn main[B:T[int]+T[bool]](b: B) -> () {
-    let b: bool = b.m(true);
-    bet b: int = b.m(5);
+    let c: bool = b.m(true);
+    let d: int = b.m(5);
 }
