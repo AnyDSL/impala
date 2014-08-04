@@ -16,7 +16,8 @@ optionals = ["type_inference/positive/map.impala",
     "type_inference/positive/type_args9.impala",
     "type_inference/positive/type_args10.impala",
     "type_inference/positive/type_args11.impala",
-    "type_inference/positive/type_args12.impala"
+    "type_inference/positive/type_args12.impala",
+    "type_inference/positive/type_args13.impala"
 ]
 
 def allTests():

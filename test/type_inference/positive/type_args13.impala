@@ -1,0 +1,3 @@
+fn main() -> () {
+    let f = |x| -> () { let a:int = x; };
+}
