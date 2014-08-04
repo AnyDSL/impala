@@ -388,12 +388,16 @@ Type TypeNode::instantiate(SpecializeMap& map) const {
     return vinstantiate(map);
 }
 
-Type TypeNode::instantiate(ArrayRef<Type> args) const {
+std::unique_ptr<SpecializeMap> TypeNode::createSpecializationMap(ArrayRef<Type> args) const {
     assert(num_type_vars() == args.size());
-    SpecializeMap map;
+    std::unique_ptr<SpecializeMap> map(new SpecializeMap());
     for (size_t i = 0, e = num_type_vars(); i != e; ++i)
-        map[*type_var(i)] = *args[i];
-    return instantiate(map);
+        (*map)[*type_var(i)] = *args[i];
+    return map;
+}
+
+Type TypeNode::instantiate(ArrayRef<Type> args) const {
+    return instantiate(*createSpecializationMap(args));
 }
 
 Type StructAbsTypeNode::instantiate(ArrayRef<Type> args) const {

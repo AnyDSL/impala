@@ -5,6 +5,7 @@
 #include <set>
 #include <stack>
 #include <vector>
+#include <memory>
 
 #include "thorin/def.h"
 #include "thorin/type.h"
@@ -276,6 +277,7 @@ protected:
     TypeNode(TypeTable& typetable, Kind kind, ArrayRef<Type> args)
         : Unifiable(typetable, kind, args)
     {}
+    std::unique_ptr<SpecializeMap> createSpecializationMap(ArrayRef<Type>) const;
 
 public:
     /// Specializes recursively this type while obeying \p map.
