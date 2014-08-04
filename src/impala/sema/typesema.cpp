@@ -594,33 +594,51 @@ Type PathExpr::check(TypeSema& sema, TypeExpectation expected) const {
 
 Type PrefixExpr::check(TypeSema& sema, TypeExpectation expected) const {
     // TODO check if operator supports the type
-    auto rtype = sema.check(rhs());
     switch (kind()) {
-        case AND:
+        case AND: {
+            Type rtype;
+            if (auto pty = expected.type().isa<BorrowedPtrType>()) {
+                rtype = sema.check(rhs(), pty->referenced_type());
+            } else {
+                rtype = sema.check(rhs());
+            }
             sema.expect_lvalue(rhs(), "as unary '&' operand");
             rhs()->take_address();
             return sema.borrowd_ptr_type(rtype);
+        }
         case TILDE:
-            return sema.owned_ptr_type(rtype);
-        case MUL:
-            if (auto ptr = rtype.isa<PtrType>())
+            if (auto pty = expected.type().isa<PtrType>()) {
+                return sema.owned_ptr_type(sema.check(rhs(), pty->referenced_type()));
+            } else {
+                return sema.owned_ptr_type(sema.check(rhs()));
+            }
+        case MUL: {
+            Type exp_ty = sema.borrowd_ptr_type(expected.type()); // this works because owned ptr is a subtype of borrowed ptr
+            if (auto ptr = sema.check(rhs(), TypeExpectation(expected, exp_ty)).isa<PtrType>())
                 return ptr->referenced_type();
+        }
         case INC:
-        case DEC:
+        case DEC: {
+            auto rtype = sema.check(rhs(), expected);
             sema.expect_num(rhs());
             sema.expect_lvalue(rhs());
             return rtype;
+        }
         case ADD:
-        case SUB:
+        case SUB: {
+            auto rtype = sema.check(rhs(), expected);
             sema.expect_num(rhs());
             return rtype;
-        case NOT:
+        }
+        case NOT: {
+            auto rtype = sema.check(rhs(), expected);
             if (rtype->is_bool() || sema.expect_int(rhs()))
                 return rtype;
             return sema.type_error();
+        }
         case RUN:
         case HLT:
-            return sema.check(rhs());
+            return sema.check(rhs()); // TODO can we propagate expected here?
         default:
             THORIN_UNREACHABLE;
     }

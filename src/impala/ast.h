@@ -131,6 +131,11 @@ public:
         , noret_(ty_exp.noret())
         , what_(what)
     {}
+    TypeExpectation(TypeExpectation ty_exp, Type type)
+        : type_(type)
+        , noret_(ty_exp.noret())
+        , what_(ty_exp.what())
+    {}
     /// The expected type
     Type type() const { return type_; }
     /// Indicates whether NoRet is also allowed

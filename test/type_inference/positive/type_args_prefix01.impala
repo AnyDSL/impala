@@ -1,0 +1,6 @@
+fn range[T](f: fn(T) -> ()) -> () {
+}
+
+fn main() -> () {
+    range(|x| { let a:~int = ~x; })
+}
