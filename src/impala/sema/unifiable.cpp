@@ -404,6 +404,10 @@ Type StructAbsTypeNode::instantiate(ArrayRef<Type> args) const {
     return typetable().struct_app_type(this, args);
 }
 
+Type TypedefAbsNode::instantiate(ArrayRef<Type> args) const {
+    return type()->specialize(*createSpecializationMap(args));
+}
+
 TraitApp TraitAbsNode::instantiate(ArrayRef<Type> args) const {
     return typetable().trait_app(this, args);
 }

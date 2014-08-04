@@ -95,6 +95,14 @@ std::ostream& StructAppTypeNode::print(Printer& p) const {
     return p.stream();
 }
 
+std::ostream& TypedefAbsNode::print(Printer& p) const {
+    assert(num_type_vars() > 0); // otherwise no TypedefAbsNode should have been used in the first place
+    p.stream() << "type";
+    print_type_vars(p);
+    p.stream() << " = ";
+    return type()->print(p);
+}
+
 std::ostream& TupleTypeNode::print(Printer& p) const {
     print_type_vars(p);
     return p.dump_list([&] (Type type) { type->print(p); }, args(), "(", ")");

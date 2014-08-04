@@ -35,6 +35,7 @@ public:
     StructAppType       struct_app_type(StructAbsType struct_abs, ArrayRef<Type> args) { 
         return join(new StructAppTypeNode(*this, struct_abs, args)); 
     }
+    TypedefAbs          typedef_abs(Type t) { return join(new TypedefAbsNode(*this, t)); }
     TraitAbs            trait_abs(const TraitDecl* trait_decl) { return join(new TraitAbsNode(*this, trait_decl)); }
     TraitAbs            trait_abs_error() { return trait_abs_error_; }
     TupleType           tuple_type(ArrayRef<Type> args) { return join(new TupleTypeNode(*this, args)); }

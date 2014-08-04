@@ -42,6 +42,7 @@ class PrimTypeNode;             typedef Proxy<PrimTypeNode>             PrimType
 class PtrTypeNode;              typedef Proxy<PtrTypeNode>              PtrType;
 class StructAbsTypeNode;        typedef Proxy<StructAbsTypeNode>        StructAbsType;
 class StructAppTypeNode;        typedef Proxy<StructAppTypeNode>        StructAppType;
+class TypedefAbsNode;           typedef Proxy<TypedefAbsNode>           TypedefAbs;
 class TraitAbsNode;             typedef Proxy<TraitAbsNode>             TraitAbs;
 class TraitAppNode;             typedef Proxy<TraitAppNode>             TraitApp;
 class TupleTypeNode;            typedef Proxy<TupleTypeNode>            TupleType;
@@ -160,6 +161,7 @@ enum Kind {
     Kind_owned_ptr,
     Kind_struct_abs,
     Kind_struct_app,
+    Kind_typedef_abs,
     Kind_trait_abs,
     Kind_trait_app,
     Kind_tuple,
@@ -483,6 +485,26 @@ private:
 
     StructAbsType struct_abs_type_;
     mutable Array<Type> elem_cache_;
+
+    friend class TypeTable;
+};
+
+class TypedefAbsNode : public KnownTypeNode {
+private:
+    TypedefAbsNode(TypeTable& typetable, Type type)
+        : KnownTypeNode(typetable, Kind_typedef_abs, {type})
+    {}
+
+public:
+    Type type() const { return arg(0); }
+    virtual Type instantiate(ArrayRef<Type>) const override;
+    virtual std::ostream& print(Printer&) const override;
+
+    virtual bool is_subtype(const TypeNode* other) const { THORIN_UNREACHABLE; }
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const override { THORIN_UNREACHABLE; }
+    virtual thorin::Type convert(CodeGen&) const override;
 
     friend class TypeTable;
 };

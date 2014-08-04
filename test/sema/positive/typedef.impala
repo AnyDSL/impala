@@ -1,0 +1,7 @@
+type i = i32;
+type F[X, Y] = (X, Y);
+type Fi[Y] = F[i, Y];
+
+fn main(a: Fi[bool]) -> (i32, bool) {
+    a
+}

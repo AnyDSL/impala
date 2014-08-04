@@ -391,7 +391,16 @@ void ExternBlock::check_item(TypeSema& sema) const {
 }
 
 Type Typedef::check(TypeSema& sema) const {
-    return Type();
+    check_type_params(sema);
+    Type t = sema.check(type());
+    if (type_params().size() > 0) {
+        Type abs = sema.typedef_abs(t);
+        for (auto type_param : type_params())
+            abs->bind(type_param->type_var(sema));
+        return abs;
+    } else {
+        return t;
+    }
 }
 
 Type EnumDecl::check(TypeSema& sema) const {
