@@ -1,8 +1,8 @@
-fn range[T](n: i32, f: fn(T) -> ()) -> () {
+fn range[T](f: fn(T) -> ()) -> () {
 }
 
 fn main() -> () {
-    range[i32](23, |x: i32| -> () {
+    range[i32](|x: i32| -> () {
         (x + 1);
     })
 }
