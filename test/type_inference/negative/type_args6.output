@@ -1,1 +1,1 @@
-type_args6.impala:8 col 5 - 8: error: could not find instance for type variable #0
+type_args6.impala:8 col 5 - 8: error: could not find instance for type variable 'A' of function 'f'

@@ -68,7 +68,7 @@ public:
 
     TraitApp instantiate(const Location& loc, TraitAbs trait, Type self, ArrayRef<const ASTType*> args);
     Type instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args);
-    Type check_call(const Expr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, TypeExpectation expected);
+    Type check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, TypeExpectation expected);
 
     void stash_bound_check(const Location& loc, Uni unifiable, ArrayRef<Type> types) {
         CheckBoundsData cbs(loc, unifiable, types);
@@ -825,7 +825,7 @@ Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {
     return sema.type_error();
 }
 
-Type TypeSema::check_call(const Expr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, TypeExpectation expected) {
+Type TypeSema::check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, TypeExpectation expected) {
     size_t num_type_args = type_args.size();
     size_t num_args = args.size();
 
@@ -851,7 +851,7 @@ Type TypeSema::check_call(const Expr* expr, FnType fn_poly, const ASTTypes& type
                 for (size_t i = 0, e = inferred_args.size(); i != e; ++i) {
                     if (!inferred_args[i]->is_known()) {
                         is_known = false;
-                        error(expr->loc()) << "could not find instance for type variable #" << i << "\n";
+                        error(expr->loc()) << "could not find instance for type variable '" << fn_poly->type_var(i) << "' of function '" << expr->lhs() << "'\n";
                     }
                 }
 

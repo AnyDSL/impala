@@ -1,1 +1,1 @@
-unused_typevar1.impala:6 col 5 - 12: error: could not find instance for type variable #0
+unused_typevar1.impala:6 col 5 - 12: error: could not find instance for type variable 'A' of function 'f'
