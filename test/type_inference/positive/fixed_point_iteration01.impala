@@ -1,0 +1,9 @@
+fn f[X](x: X) -> () {}
+
+fn range1[A](n: A, f: fn(A) -> ()) -> () {}
+fn range2[A](f: fn(A) -> (), n: A) -> () {}
+
+fn main() -> () {
+    range1(4, |x| { f(x) });
+    range2(|x| { f(x) }, 4);
+}

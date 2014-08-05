@@ -1,0 +1,13 @@
+// if we do the fixed-point iteration we must be very careful
+// to recheck everything in the end:
+
+trait T {}
+fn f[X: T](x: X) -> () {}
+
+fn range1[A](n: A, f: fn(A) -> ()) -> () {}
+fn range2[A](f: fn(A) -> (), n: A) -> () {}
+
+fn main[B](b: B) -> () {
+    range1(b, |x| { f(x) });
+    range2(|x| { f(x) }, b);
+}

@@ -1,0 +1,17 @@
+fn f[X](x: X) -> () {
+}
+
+fn range1[A](n: A, f: fn(A) -> ()) -> () {
+}
+
+fn range2[A](f: fn(A) -> (), n: A) -> () {
+}
+
+fn main() -> () {
+    range1[i32](4, |x: i32| -> () {
+        f[i32](x)
+    });
+    range2[i32](|x: i32| -> () {
+        f[i32](x)
+    }, 4);
+}
