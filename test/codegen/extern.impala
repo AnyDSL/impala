@@ -1,0 +1,6 @@
+extern fn foo(i: int) -> int { i }
+
+extern "raw" {
+    fn bar(float) -> float;
+    fn sun(float) -> bool;
+}

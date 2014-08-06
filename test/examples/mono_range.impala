@@ -1,0 +1,14 @@
+fn range(a: int, b: int, body: fn(int, fn())) -> () {
+    if a < b {
+        body(a);
+        range(a+1, b, body, return)
+    }
+}
+
+fn main() -> int {
+    let mut sum = 0;
+    for i in range(23, 42) {
+        sum++;
+    }
+    sum
+}
