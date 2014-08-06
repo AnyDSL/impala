@@ -504,7 +504,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override { THORIN_UNREACHABLE; }
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual thorin::Type convert(CodeGen&) const override { THORIN_UNREACHABLE; }
 
     friend class TypeTable;
 };

@@ -144,11 +144,6 @@ thorin::Type StructAppTypeNode::convert(CodeGen& cg) const {
     return cg.world().struct_app_type(cg.convert(struct_abs_type()).as<thorin::StructAbsType>(), nargs);
 }
 
-thorin::Type TypedefAbsNode::convert(CodeGen& cg) const {
-    // TODO
-    return thorin::Type();
-}
-
 thorin::Type TraitAbsNode::convert(CodeGen& cg) const {
     std::vector<thorin::Type> args;
 
