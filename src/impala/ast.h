@@ -187,14 +187,14 @@ private:
 
 class PathElem : public ASTNode {
 public:
-    SafePtr<const Identifier> identifier() const { return identifier_; }
+    const Identifier* identifier() const { return identifier_; }
     Symbol symbol() const { return identifier()->symbol(); }
     SafePtr<const Decl> decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const override;
     void check(NameSema&) const;
 
 private:
-    SafePtr<const Identifier> identifier_;
+    AutoPtr<const Identifier> identifier_;
     mutable SafePtr<const Decl> decl_;
 
     friend class Parser;
@@ -336,7 +336,7 @@ private:
 
 class ASTTypeApp : public CompoundASTType {
 public:
-    SafePtr<const Identifier> identifier() const { return identifier_; }
+    const Identifier* identifier() const { return identifier_; }
     Symbol symbol() const { return identifier()->symbol(); }
     SafePtr<const Decl> decl() const { return decl_; }
     virtual std::ostream& print(Printer&) const override;
@@ -346,7 +346,7 @@ private:
     virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 
-    SafePtr<const Identifier> identifier_;
+    AutoPtr<const Identifier> identifier_;
     mutable SafePtr<const Decl> decl_;
 
     friend class Parser;
@@ -378,13 +378,13 @@ private:
 /// Base class for all entities which have a \p symbol_.
 class Decl : virtual public ASTNode {
 public:
-    SafePtr<const Identifier> identifier() const { return identifier_; }
+    const Identifier* identifier() const { return identifier_; }
     Symbol symbol() const { return identifier()->symbol(); }
     size_t depth() const { return depth_; }
     const Decl* shadows() const { return shadows_; }
 
 protected:
-    SafePtr<const Identifier> identifier_;
+    AutoPtr<const Identifier> identifier_;
 
 private:
     mutable const Decl* shadows_;
@@ -501,7 +501,7 @@ public:
         : LocalDecl(handle)
     {}
 
-    static const Param* create(size_t var_handle, SafePtr<const Identifier> identifier, const Location& loc, const ASTType* fn_type);
+    static const Param* create(size_t var_handle, const Identifier*, const Location&, const ASTType* fn_type);
 
     friend class Fn;
     friend class Parser;
@@ -579,13 +579,13 @@ private:
 
 class NamedItem : public Item {
 public:
-    virtual SafePtr<const Identifier> item_identifier() const = 0;
+    virtual const Identifier* item_identifier() const = 0;
     Symbol item_symbol() const { return item_identifier()->symbol(); }
 };
 
 class TypeDeclItem : public NamedItem, public TypeDecl, public TypeParamList {
 public:
-    virtual SafePtr<const Identifier> item_identifier() const override { return TypeDecl::identifier(); }
+    virtual const Identifier* item_identifier() const override { return TypeDecl::identifier(); }
 
 private:
     virtual void check_item(NameSema&) const override;
@@ -596,7 +596,7 @@ private:
 
 class ValueItem : public NamedItem, public ValueDecl {
 public:
-    virtual SafePtr<const Identifier> item_identifier() const override { return ValueDecl::identifier(); }
+    virtual const Identifier* item_identifier() const override { return ValueDecl::identifier(); }
 
 private:
     virtual void check_item(NameSema&) const override;
@@ -678,7 +678,7 @@ public:
     const AutoVector<const FieldDecl*>& field_decls() const { return field_decls_; }
     const thorin::HashMap<Symbol, const FieldDecl*>& field_table() const { return field_table_; }
     const FieldDecl* field_decl(Symbol symbol) const { return thorin::find(field_table_, symbol); }
-    const FieldDecl* field_decl(SafePtr<const Identifier> ident) const { return field_decl(ident->symbol()); }
+    const FieldDecl* field_decl(const Identifier* ident) const { return field_decl(ident->symbol()); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
 
@@ -733,7 +733,7 @@ private:
     virtual Type check(TypeSema&) const override;
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const override;
 
-    SafePtr<const Identifier> export_name_;
+    AutoPtr<const Identifier> export_name_;
     bool is_extern_ = false;
 
     friend class Parser;
@@ -750,7 +750,7 @@ public:
     const MethodTable& method_table() const { return method_table_; }
     const SelfParam* self_param() const { return &self_param_; }
     TraitAbs trait_abs() const { return trait_abs_; }
-    virtual SafePtr<const Identifier> item_identifier() const override { return Decl::identifier(); }
+    virtual const Identifier* item_identifier() const override { return Decl::identifier(); }
     virtual std::ostream& print(Printer&) const override;
 
 private:
@@ -1014,7 +1014,7 @@ private:
 class FieldExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
-    SafePtr<const Identifier> identifier() const { return identifier_; }
+    const Identifier* identifier() const { return identifier_; }
     Symbol symbol() const { return identifier()->symbol(); }
     uint32_t index() const { return index_; }
     virtual bool is_lvalue() const override;
@@ -1028,7 +1028,7 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
-    SafePtr<const Identifier> identifier_;
+    AutoPtr<const Identifier> identifier_;
     mutable uint32_t index_ = uint32_t(-1);
 
     friend class Parser;
@@ -1120,18 +1120,18 @@ public:
             : identifier_(std::move(other.identifier_))
             , expr_(std::move(other.expr_))
         {}
-        Elem(SafePtr<const Identifier> ident, std::unique_ptr<const Expr> expr)
+        Elem(const Identifier* ident, std::unique_ptr<const Expr> expr)
             : identifier_(ident)
             , expr_(std::move(expr))
         {}
 
-        SafePtr<const Identifier> identifier() const { return identifier_; }
+        const Identifier* identifier() const { return identifier_; }
         Symbol symbol() const { return identifier()->symbol(); }
         const Expr* expr() const { return expr_.get(); }
         const FieldDecl* field_decl() const { return field_decl_; }
 
     private:
-        SafePtr<const Identifier> identifier_;
+        AutoPtr<const Identifier> identifier_;
         std::unique_ptr<const Expr> expr_;
         mutable SafePtr<const FieldDecl> field_decl_;
 

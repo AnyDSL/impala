@@ -2,7 +2,7 @@
 
 namespace impala {
 
-const Param* Param::create(size_t var_handle, SafePtr<const Identifier> ident, const Location& loc, const ASTType* fn_type) {
+const Param* Param::create(size_t var_handle, const Identifier* ident, const Location& loc, const ASTType* fn_type) {
     auto param = new Param(var_handle);
     param->is_mut_ = false;
     param->identifier_ = ident;
@@ -58,7 +58,7 @@ bool IfExpr::has_else() const {
  * is_lvalue
  */
 
-bool PathExpr::is_lvalue() const { 
+bool PathExpr::is_lvalue() const {
     if (value_decl()) {
         value_decl()->is_written_ = true;
         return value_decl()->is_mut();

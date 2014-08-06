@@ -152,7 +152,7 @@ public:
     }
 
     // misc
-    SafePtr<const Identifier> try_id(const std::string& what);
+    const Identifier* try_id(const std::string& what);
     Visibility parse_visibility();
 
     // paths
@@ -292,7 +292,7 @@ void Parser::error(const std::string& what, const std::string& context, const To
     os << "\n";
 }
 
-SafePtr<const Identifier> Parser::try_id(const std::string& what) {
+const Identifier* Parser::try_id(const std::string& what) {
     Token name;
     if (la() == Token::ID)
         name = lex();
@@ -360,7 +360,7 @@ void Parser::parse_param_list(AutoVector<const Param*>& params, TokenKind delimi
 const Param* Parser::parse_param(bool lambda) {
     auto param = loc(new Param(cur_var_handle++));
     param->is_mut_ = accept(Token::MUT);
-    SafePtr<const Identifier> ident;
+    const Identifier* ident = nullptr;
     const ASTType* type = nullptr;
     Token tok = la();
 
