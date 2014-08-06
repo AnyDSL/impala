@@ -1,0 +1,15 @@
+fn range(a : int, b : int, yield : fn(int, fn())) -> () {
+    if a < b {
+        yield(a);
+        range(a+1, b, yield, return)
+    }
+}
+
+fn main(mut arr: &[int]) -> int {
+    //let mut sum_xxx = 42;
+    for i in @range(0, 3) {
+        //sum_xxx += arr(i);
+        arr(i+1) = i;
+    }
+    arr(42)
+}

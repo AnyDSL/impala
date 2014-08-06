@@ -1,0 +1,22 @@
+fn range(a: int, b: int, body: fn(int)->()) -> () {
+    if a < b {
+        body(a);
+        range(a+1, b, body, return)
+    }
+}
+
+fn clamp(a: int, b: int) -> int {
+    if a < b { a } else { b}
+}
+
+fn foo(i: int, f: fn(int, int) -> int, g: fn(int, int) -> int) -> int {
+    g(f(i, i+1), 42)
+}
+
+fn main() -> i32 {
+    let mut sum = 0;
+    for i in range(0, 10) {
+        sum += foo(i, clamp, clamp)
+    }
+    sum
+}

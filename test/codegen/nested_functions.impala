@@ -1,0 +1,7 @@
+fn main(mut i: int) -> int {
+    fn f(j: int) -> int {
+        i + j
+    }
+    ++i;
+    f(i)
+}
