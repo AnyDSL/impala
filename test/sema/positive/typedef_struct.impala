@@ -1,0 +1,23 @@
+type T = S;
+
+struct S {
+    i: int,
+    f: float,
+}
+
+struct U {
+    t: T,
+}
+
+struct V[T] {
+    a: [T * 3],
+}
+
+type Vint = V[int];
+
+extern fn f(t: T) -> S {
+    U{t: t};
+    U{t: S{i: 23, f: 42.f}};
+    Vint{a: [1, 2, 3]};
+    T[]{i: 23, f: 42.f}
+}

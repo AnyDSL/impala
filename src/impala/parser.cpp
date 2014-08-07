@@ -569,7 +569,7 @@ Typedef* Parser::parse_typedef() {
     type_def->identifier_ = try_id("type definition");
     parse_type_params(type_def->type_params_);
     eat(Token::ASGN);
-    type_def->type_ = parse_type();
+    type_def->ast_type_ = parse_type();
     expect(Token::SEMICOLON, "type definition");
     return type_def;
 }

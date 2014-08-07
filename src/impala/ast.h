@@ -640,7 +640,7 @@ private:
 
 class Typedef : public TypeDeclItem {
 public:
-    const ASTType* type() const { return type_; }
+    const ASTType* ast_type() const { return ast_type_; }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
 
@@ -648,7 +648,7 @@ private:
     virtual Type check(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 
-    AutoPtr<const ASTType> type_;
+    AutoPtr<const ASTType> ast_type_;
 
     friend class Parser;
 };

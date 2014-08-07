@@ -181,7 +181,7 @@ void ExternBlock::check_item(NameSema& sema) const {
 void Typedef::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
-    sema.check(type());
+    sema.check(ast_type());
     sema.pop_scope();
 }
 

@@ -392,14 +392,14 @@ void ExternBlock::check_item(TypeSema& sema) const {
 
 Type Typedef::check(TypeSema& sema) const {
     check_type_params(sema);
-    Type t = sema.check(type());
+    Type type = sema.check(ast_type());
     if (type_params().size() > 0) {
-        Type abs = sema.typedef_abs(t);
+        Type abs = sema.typedef_abs(type);
         for (auto type_param : type_params())
             abs->bind(type_param->type_var(sema));
         return abs;
     } else {
-        return t;
+        return type;
     }
 }
 
@@ -767,12 +767,15 @@ Type TupleExpr::check(TypeSema& sema, TypeExpectation expected) const {
 
 Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {
     if (auto decl = path()->decl()) {
-        if (auto struct_decl = decl->isa<StructDecl>()) {
+        StructAppType struct_app;
+        if (auto type_def = decl->isa<Typedef>()) {
+            assert(type_def->type()->num_type_vars() == num_type_args() && "not yet supported: make sure that number of typedef's type vars and given type args match");
+            struct_app = sema.instantiate(path()->loc(), sema.check(type_def), type_args()).isa<StructAppType>();
+        } else if (auto struct_decl = decl->isa<StructDecl>()) {
             auto struct_abs = struct_decl->type().as<StructAbsType>();
             if (num_type_args() <= struct_abs->num_type_vars()) {
                 StructAppType exp_type = expected.type().isa<StructAppType>();
 
-                StructAppType struct_app;
                 if (exp_type && (exp_type->struct_abs_type() == struct_abs)) {
                     for (size_t i = 0; i < exp_type->num_args(); ++i) {
                         if ((i < num_type_args()) && (!(exp_type->arg(i) == sema.check(type_arg(i))))) {
@@ -794,33 +797,39 @@ Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {
                     assert(inferred_args_.size() == struct_abs->num_type_vars());
                     struct_app = struct_abs->instantiate(inferred_args_).as<StructAppType>();
                 }
-
-                thorin::HashSet<const FieldDecl*> done;
-                for (const auto& elem : elems()) {
-                    if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
-                        elem.field_decl_ = field_decl;
-                        if (!thorin::visit(done, field_decl)) {
-                            std::ostringstream oss;
-                            oss << "initialization type for field '" << elem.symbol() << '\'';
-                            sema.check(elem.expr(), TypeExpectation(struct_app->elem(field_decl->index()), oss.str()));
-                        } else
-                            sema.error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
-                    } else
-                        sema.error(elem.expr()) << "structure '" << struct_decl->symbol() << "' has no field named '" << elem.symbol() << "'\n";
-                }
-
-                if (done.size() != struct_decl->field_table().size()) {
-                    for (auto p : struct_decl->field_table()) {
-                        if (!done.contains(p.second))
-                            sema.error(this) << "missing field '" << p.first << "'\n";
-                    }
-                }
-
-                return struct_app;
             } else
                 sema.error(this) << "too many type arguments to structure: " << num_type_args() << " for " << struct_abs->num_type_vars() << "\n";
-        } else
+        } else {
             sema.error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
+            return sema.type_error();
+        }
+
+        if (struct_app) {
+            auto struct_abs  = struct_app->struct_abs_type();
+            auto struct_decl = struct_abs->struct_decl();
+            thorin::HashSet<const FieldDecl*> done;
+            for (const auto& elem : elems()) {
+                if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
+                    elem.field_decl_ = field_decl;
+                    if (!thorin::visit(done, field_decl)) {
+                        std::ostringstream oss;
+                        oss << "initialization type for field '" << elem.symbol() << '\'';
+                        sema.check(elem.expr(), TypeExpectation(struct_app->elem(field_decl->index()), oss.str()));
+                    } else
+                        sema.error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
+                } else
+                    sema.error(elem.expr()) << "structure '" << struct_decl->symbol() << "' has no field named '" << elem.symbol() << "'\n";
+            }
+
+            if (done.size() != struct_decl->field_table().size()) {
+                for (auto p : struct_decl->field_table()) {
+                    if (!done.contains(p.second))
+                        sema.error(this) << "missing field '" << p.first << "'\n";
+                }
+            }
+
+            return struct_app;
+        }
     }
     return sema.type_error();
 }
