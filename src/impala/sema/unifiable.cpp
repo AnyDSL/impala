@@ -286,6 +286,15 @@ bool TraitAppNode::equal(const Unifiable* other) const {
  * is_subtype
  */
 
+bool StructAppTypeNode::is_subtype(const TypeNode* other) const { return this == other; }
+bool TypeVarNode::is_subtype(const TypeNode* other) const { return this->equal(other); }
+bool OwnedPtrTypeNode::is_subtype(const TypeNode* other) const {
+    return other->isa<PtrTypeNode>() && referenced_type()->is_subtype(*other->as<PtrTypeNode>()->referenced_type());
+}
+bool DefiniteArrayTypeNode::is_subtype(const TypeNode* other) const {
+    return other->isa<ArrayTypeNode>() && elem_type()->is_subtype(*other->as<ArrayTypeNode>()->elem_type());
+}
+
 /*
  * TODO merge this code with equal
  */

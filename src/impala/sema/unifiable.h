@@ -327,7 +327,6 @@ public:
     virtual FnType find_method(Symbol) const override { THORIN_UNREACHABLE; }
     virtual bool is_sane() const override { THORIN_UNREACHABLE; }
     virtual std::ostream& print(Printer&) const override;
-
     virtual bool is_subtype(const TypeNode* other) const override { THORIN_UNREACHABLE; }
 
 private:
@@ -453,7 +452,6 @@ public:
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
-
     virtual bool is_subtype(const TypeNode* other) const { THORIN_UNREACHABLE; }
 
 private:
@@ -476,8 +474,7 @@ public:
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
-
-    virtual bool is_subtype(const TypeNode* other) const { return this == other; }
+    virtual bool is_subtype(const TypeNode* other) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -499,7 +496,6 @@ public:
     Type type() const { return arg(0); }
     virtual Type instantiate(ArrayRef<Type>) const override;
     virtual std::ostream& print(Printer&) const override;
-
     virtual bool is_subtype(const TypeNode* other) const { THORIN_UNREACHABLE; }
 
 private:
@@ -534,8 +530,7 @@ public:
     virtual bool implements(TraitApp, SpecializeMap&) const override;
     virtual FnType find_method(Symbol s) const override;
     virtual std::ostream& print(Printer&) const override;
-
-    virtual bool is_subtype(const TypeNode* other) const { return this->equal(other); }
+    virtual bool is_subtype(const TypeNode* other) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -576,8 +571,7 @@ public:
     {}
 
     virtual std::ostream& print(Printer&) const override;
-
-    virtual bool is_subtype(const TypeNode* other) const override { return other->isa<PtrTypeNode>() && referenced_type()->is_subtype(*other->as<PtrTypeNode>()->referenced_type()); }
+    virtual bool is_subtype(const TypeNode* other) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -615,8 +609,7 @@ public:
 
     uint64_t dim() const { return dim_; }
     virtual std::ostream& print(Printer&) const override;
-
-    virtual bool is_subtype(const TypeNode* other) const override { return other->isa<ArrayTypeNode>() && elem_type()->is_subtype(*other->as<ArrayTypeNode>()->elem_type()); }
+    virtual bool is_subtype(const TypeNode* other) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
