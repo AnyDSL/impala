@@ -153,7 +153,7 @@ def executeTests(tests, gEx, pb = True):
         res[tests[i]] = s = tests[i].invoke(gEx)
     bar.done()
 
-    print("\n* Test summary")
+    print("\n* Test summary\n")
     failOpt = 0
     failReq = 0
     
@@ -164,12 +164,12 @@ def executeTests(tests, gEx, pb = True):
     
     for t in req_tests:
         if not res[t]:
-            print("\n - REQUIRED test failed: "+t.getName())
+            print("- REQUIRED test failed: "+t.getName())
             failReq += 1
             
     for t in opt_tests:
         if not res[t]:
-            print("\n - OPTIONAL test failed: "+t.getName())
+            print("- OPTIONAL test failed: "+t.getName())
             failOpt += 1
     
     if failOpt == 0 and failReq == 0:
