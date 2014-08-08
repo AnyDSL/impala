@@ -5,7 +5,6 @@ fn blocked_loop(length : int, get_block_size : fn(int) -> int, bodyfn : fn(int, 
             bodyfn(i)
         }
         let mut res : int = 0;
-        //for (let mut ii : int = i; ii < N; ii += block_size)
         for ii in range_step(i, N, block_size) {
             res += blocked_iter(cur_level + 1, ii, block_size);
         }
