@@ -1,0 +1,3 @@
+extern fn f(b: bool) -> int {
+    b as int
+}
