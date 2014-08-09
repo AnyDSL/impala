@@ -416,14 +416,17 @@ public:
     const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     bool is_mut() const { return is_mut_; }
     bool is_written() const { return is_written_; }
+    bool is_anonymous() const { return symbol() == Symbol(); }
+    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual void check(NameSema&) const override;
     virtual Type check(TypeSema& sema) const override;
-    Type check(TypeSema&, Type) const;
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const = 0;
 
 protected:
+    Type check(TypeSema&, Type) const;
+
     AutoPtr<const ASTType> ast_type_;
     bool is_mut_ = false;
     mutable bool is_written_ = false;
@@ -446,10 +449,8 @@ public:
 
     size_t handle() const { return handle_; }
     bool is_address_taken() const { return is_address_taken_; }
-    bool is_anonymous() const { return symbol() == Symbol(); }
     const Fn* fn() const { return fn_; }
     void take_address() const { is_address_taken_ = true; }
-    virtual std::ostream& print(Printer&) const override;
 
 private:
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const override;
@@ -704,8 +705,6 @@ private:
 
 class StaticItem : public ValueItem {
 public:
-    bool is_mut() const { return is_mut_; }
-    const ASTType* type() const { return type_; }
     const Expr* init() const { return init_; }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
@@ -714,9 +713,7 @@ private:
     virtual Type check(TypeSema&) const override;
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const override;
 
-    bool is_mut_;
-    AutoPtr<const ASTType> type_;
-    AutoPtr<const Expr> init_;;
+    AutoPtr<const Expr> init_;
 
     friend class Parser;
 };
@@ -771,7 +768,7 @@ class ImplItem : public Item, public TypeParamList {
 public:
     /// May be nullptr as trait is optional.
     const ASTType* trait() const { return trait_; }
-    const ASTType* type() const { return type_; }
+    const ASTType* ast_type() const { return ast_type_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
     const FnDecl* method(size_t i) const { return methods_[i]; }
     size_t num_methods() const { return methods_.size(); }
@@ -784,7 +781,7 @@ private:
     virtual void emit_item(CodeGen&) const override;
 
     AutoPtr<const ASTType> trait_;
-    AutoPtr<const ASTType> type_;
+    AutoPtr<const ASTType> ast_type_;
     AutoVector<const FnDecl*> methods_;
     mutable thorin::Def def_;
 

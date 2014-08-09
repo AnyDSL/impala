@@ -449,7 +449,7 @@ Type FnDecl::check(TypeSema& sema) const {
 }
 
 Type StaticItem::check(TypeSema& sema) const {
-    return Type();
+    return ValueDecl::check(sema, sema.check(init()));
 }
 
 void TraitDecl::check_item(TypeSema& sema) const {
@@ -478,7 +478,7 @@ void TraitDecl::check_item(TypeSema& sema) const {
 
 void ImplItem::check_item(TypeSema& sema) const {
     check_type_params(sema);
-    Type for_type = sema.check(this->type());
+    Type for_type = sema.check(this->ast_type());
 
     TraitApp trait_app;
     if (trait() != nullptr) {

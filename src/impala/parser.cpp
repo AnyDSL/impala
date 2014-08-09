@@ -491,9 +491,9 @@ ImplItem* Parser::parse_impl() {
     auto type = parse_type();
     if (accept(Token::FOR)) {
         impl->trait_ = type;
-        impl->type_ = parse_type();
+        impl->ast_type_ = parse_type();
     } else
-        impl->type_ = type;
+        impl->ast_type_ = type;
     expect(Token::L_BRACE, "impl");
     while (la() == Token::FN)
         impl->methods_.push_back(parse_fn_decl(BodyMode::Mandatory));
@@ -521,8 +521,8 @@ StaticItem* Parser::parse_static_item() {
     eat(Token::STATIC);
     static_item->is_mut_ = accept(Token::MUT);
     static_item->identifier_ = try_id("static item");
-    expect(Token::COLON, "static item");
-    static_item->ast_type_ = parse_type();
+    if (accept(Token::COLON))
+        static_item->ast_type_ = parse_type();
     expect(Token::ASGN, "static item");
     static_item->init_ = parse_expr();
     expect(Token::SEMICOLON, "static item");

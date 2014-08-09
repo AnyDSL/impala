@@ -65,7 +65,7 @@ const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
 
 void NameSema::insert(const Decl* decl) {
     assert(!decl->symbol().empty() && "symbol is empty");
-    if (const Decl* other = clash(decl->symbol())) {
+    if (auto other = clash(decl->symbol())) {
         error(decl) << "symbol '" << decl->symbol() << "' already defined\n";
         error(other) << "previous location here\n";
         return;
@@ -188,8 +188,7 @@ void Typedef::check(NameSema& sema) const {
 void EnumDecl::check(NameSema& sema) const {
 }
 
-void StaticItem::check(NameSema& sema) const {
-}
+void StaticItem::check(NameSema& sema) const { /*nothing to do*/ }
 
 void Fn::fn_check(NameSema& sema) const {
     sema.push_scope();
@@ -253,7 +252,7 @@ void ImplItem::check_item(NameSema& sema) const {
     check_type_params(sema);
     if (trait())
         sema.check(trait());
-    sema.check(type());
+    sema.check(ast_type());
     for (auto fn : methods())
         fn->check(sema);
     sema.pop_scope();

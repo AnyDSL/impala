@@ -219,7 +219,7 @@ std::ostream& Fn::print_params(Printer& p, bool returning) const {
         returning ? params().slice_num_from_end(1) : params());
 }
 
-std::ostream& LocalDecl::print(Printer& p) const {
+std::ostream& ValueDecl::print(Printer& p) const {
     p.stream() << (is_mut() ? "mut " : "" );;
     if (!is_anonymous()) {
         p.stream() << symbol();
@@ -307,8 +307,8 @@ std::ostream& FieldDecl::print(Printer& p) const {
 }
 
 std::ostream& StaticItem::print(Printer& p) const {
-    p.stream() << "static " << (is_mut() ? "mut " : "") << symbol() << ": ";
-    type()->print(p) << " = ";
+    p.stream() << "static ";
+    ValueDecl::print(p) << " = ";
     return p.print(init()) << ";";
 }
 
@@ -347,7 +347,7 @@ std::ostream& ImplItem::print(Printer& p) const {
     print_type_params(p) << ' ';
     if (trait())
         trait()->print(p) << " for ";
-    type()->print(p);
+    ast_type()->print(p);
     p.stream() << " {";
     p.up();
     p.dump_list([&] (const FnDecl* method) { method->print(p); }, methods(), "", "", "", true);

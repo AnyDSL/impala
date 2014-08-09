@@ -39,8 +39,8 @@ public:
             jump(x);
         }
     }
-    Var lemit(const Expr* expr) { return is_reachable() ? expr->lemit(*this) : Var(); }
-    Def remit(const Expr* expr) { return is_reachable() ? expr->remit(*this) : Def(); }
+    Var lemit(const Expr* expr) { return expr->lemit(*this); }
+    Def remit(const Expr* expr) { return expr->remit(*this); }
     void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
     void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }
@@ -260,7 +260,9 @@ void Fn::emit_body(CodeGen& cg) const {
  * items
  */
 
-void ValueItem::emit_item(CodeGen& cg) const { cg.emit(static_cast<const ValueDecl*>(this), Def()); /*TODO use init*/ }
+void ValueItem::emit_item(CodeGen& cg) const {
+    cg.emit(static_cast<const ValueDecl*>(this), Def());
+}
 
 void ModContents::emit(CodeGen& cg) const {
     for (auto item : items())
@@ -316,8 +318,8 @@ void ImplItem::emit_item(CodeGen& cg) const {
     def_ = cg.world().tuple(args);
 }
 
-Var StaticItem::emit(CodeGen&, Def) const {
-    return Var(); // TODO
+Var StaticItem::emit(CodeGen& cg, Def init) const {
+    return Var::create_ptr(cg, cg.world().global(cg.remit(this->init()), is_mut(), symbol().str()));
 }
 
 void StructDecl::emit_item(CodeGen& cg) const {

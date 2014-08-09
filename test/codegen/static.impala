@@ -1,0 +1,11 @@
+extern "C" {
+    fn take_address(&int) -> ();
+}
+
+fn main() -> int {
+    take_address(&foo);
+    foo + bar
+}
+
+static mut foo = 42;
+static bar = 23;
