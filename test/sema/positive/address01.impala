@@ -2,5 +2,5 @@ fn f(&int) -> () {}
 
 fn main() -> () {
     let mut i: int = 42;
-    foo(&i)
+    f(&i)
 }
