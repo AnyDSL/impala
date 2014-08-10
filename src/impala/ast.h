@@ -399,8 +399,6 @@ private:
     virtual void check(NameSema&) const = 0;
     virtual Type check(TypeSema&) const = 0;
 
-    mutable bool checked_ = false;
-
     friend class NameSema;
     friend class TypeSema;
     friend class ForExpr;

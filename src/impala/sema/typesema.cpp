@@ -86,17 +86,13 @@ public:
     // check wrappers
 
     Type check(const TypeableDecl* decl) {
-        if (!decl->checked_) {
-            decl->checked_ = true;
+        if (!decl->type_)
             decl->type_ = decl->check(*this);
-        }
         return decl->type();
     }
     Type check(const ValueDecl* decl, Type expected) {
-        if (!decl->checked_) {
-            decl->checked_ = true;
+        if (!decl->type_)
             decl->type_ = decl->check(*this, expected);
-        }
         return decl->type();
     }
     void check_item(const Item* item) { item->check_item(*this); }
@@ -1032,9 +1028,7 @@ Type ForExpr::check(TypeSema& sema, TypeExpectation expected) const {
         if (auto fn_for = lhst.isa<FnType>()) {
             if (fn_for->num_args() != 0) {
                 if (auto fn_ret = fn_for->args().back().isa<FnType>()) {
-                    // inherit the type for break and mark it as checked
-                    break_decl_->type_ = fn_ret;
-                    break_decl_->checked_ = true;
+                    break_decl_->type_ = fn_ret; // inherit the type for break
 
                     // copy over args and check call
                     Array<const Expr*> args(map->args().size()+1);
