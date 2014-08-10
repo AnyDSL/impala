@@ -902,8 +902,14 @@ Type FieldExpr::check(TypeSema& sema, TypeExpectation expected) const {
 }
 
 Type FieldExpr::check_as_struct(TypeSema& sema, Type expected) const {
-    auto type = sema.check(lhs());
-    if (auto struct_app = type.isa<StructAppType>()) {
+    auto ltype = sema.check(lhs());
+    if (auto ptr = ltype.isa<PtrType>()) {
+        ltype.clear();
+        PrefixExpr::create_deref(lhs_);
+        ltype = sema.check(lhs());
+    }
+
+    if (auto struct_app = ltype.isa<StructAppType>()) {
         if (auto field_decl = struct_app->struct_abs_type()->struct_decl()->field_decl(symbol())) {
             index_ = field_decl->index();
             // a struct cannot have fields of type noret, so we can check against expected.type() (noret defaults to false)
