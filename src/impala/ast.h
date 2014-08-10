@@ -420,10 +420,10 @@ public:
 private:
     virtual void check(NameSema&) const override;
     virtual Type check(TypeSema& sema) const override;
+    Type check(TypeSema&, Type) const;
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const = 0;
 
 protected:
-    Type check(TypeSema&, Type) const;
 
     AutoPtr<const ASTType> ast_type_;
     bool is_mut_ = false;
@@ -599,7 +599,6 @@ public:
 
 private:
     virtual void check_item(NameSema&) const override;
-    virtual void check_item(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 
     friend class Parser;
@@ -709,6 +708,7 @@ public:
 
 private:
     virtual Type check(TypeSema&) const override;
+    virtual void check_item(TypeSema&) const override;
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const override;
 
     AutoPtr<const Expr> init_;
@@ -726,6 +726,7 @@ public:
 
 private:
     virtual Type check(TypeSema&) const override;
+    virtual void check_item(TypeSema&) const override;
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const override;
 
     AutoPtr<const Identifier> export_name_;

@@ -356,7 +356,6 @@ void Fn::check_body(TypeSema& sema, FnType fn_type) const {
  */
 
 void TypeDeclItem::check_item(TypeSema& sema) const { sema.check(static_cast<const TypeDecl*>(this)); }
-void ValueItem::check_item(TypeSema& sema) const { sema.check(static_cast<const ValueDecl*>(this)); }
 
 Type ModDecl::check(TypeSema& sema) const {
     if (mod_contents())
@@ -422,6 +421,10 @@ Type FieldDecl::check(TypeSema& sema) const {
     return sema.check(ast_type());
 }
 
+void FnDecl::check_item(TypeSema& sema) const {
+    sema.check(static_cast<const ValueDecl*>(this));
+}
+
 Type FnDecl::check(TypeSema& sema) const {
     THORIN_PUSH(sema.cur_fn_, this);
     check_type_params(sema);
@@ -444,8 +447,18 @@ Type FnDecl::check(TypeSema& sema) const {
     return fn_type;
 }
 
+void StaticItem::check_item(TypeSema& sema) const {
+    auto init_type = sema.check(init());
+    sema.check(static_cast<const ValueDecl*>(this), init_type);
+}
+
 Type StaticItem::check(TypeSema& sema) const {
-    return ValueDecl::check(sema, sema.check(init()));
+    auto init_type = sema.check(init());
+    if (type_)
+        type_.clear();
+    auto ret_type = sema.check(static_cast<const ValueDecl*>(this), init_type);
+    type_.clear();
+    return ret_type;
 }
 
 void TraitDecl::check_item(TypeSema& sema) const {

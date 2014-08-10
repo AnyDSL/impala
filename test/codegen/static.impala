@@ -1,11 +1,8 @@
-extern "C" {
-    fn take_address(&int) -> ();
-}
-
 fn main() -> int {
-    take_address(&foo);
-    foo + bar
+    foo += 17;
+    foo + bar + foobar
 }
 
 static mut foo = 42;
 static bar = 23;
+static foobar = foo + bar;
