@@ -319,7 +319,11 @@ void ImplItem::emit_item(CodeGen& cg) const {
 }
 
 Var StaticItem::emit(CodeGen& cg, Def init) const {
-    return Var::create_ptr(cg, cg.world().global(cg.remit(this->init()), is_mut(), symbol().str()));
+    assert(!init);
+    init = cg.remit(this->init());
+    if (!is_mut())
+        return Var::create_val(cg, init);
+    return Var::create_ptr(cg, cg.world().global(init, true, symbol().str()));
 }
 
 void StructDecl::emit_item(CodeGen& cg) const {
