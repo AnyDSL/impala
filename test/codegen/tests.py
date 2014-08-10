@@ -1,20 +1,15 @@
 """
-tests.py that runs code generation tests and executes the programs to check against expected output  (TODO currently code generation is disabled)
+tests.py for codegen
 """
 
 # import the test infrastructure
-from infrastructure.tests import make_tests
+from infrastructure.tests import InvokeTest, make_tests
 import os
 
-optionals = []
-
 def allTests():
-    """This functions returns all the tests in this directory"""
-    tests = make_tests("codegen", True)
-    
-    # mark optionals
-    for test in tests:
-        if test.getName() in optionals:
-            test.opt()
+    """
+    This function returns a list of tests.
+    """
+    tests = make_tests("codegen", True, ["--emit-llvm"])
     
     return tests

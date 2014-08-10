@@ -5,4 +5,4 @@ fn main() -> int {
 
 static mut foo = 42;
 static bar = 23;
-static foobar = foo + bar;
+static foobar = foo + 42;

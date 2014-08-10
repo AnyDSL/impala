@@ -443,7 +443,7 @@ Type FnDecl::check(TypeSema& sema) const {
     if (body() != nullptr)
         check_body(sema, fn_type);
 
-    type_.clear();          // will be set again by TypeSema's wrapper
+    type_.clear(); // will be set again by TypeSema's wrapper
     return fn_type;
 }
 
@@ -454,10 +454,8 @@ void StaticItem::check_item(TypeSema& sema) const {
 
 Type StaticItem::check(TypeSema& sema) const {
     auto init_type = sema.check(init());
-    if (type_)
-        type_.clear();
     auto ret_type = sema.check(static_cast<const ValueDecl*>(this), init_type);
-    type_.clear();
+    type_.clear(); // will be set again by TypeSema's wrapper
     return ret_type;
 }
 
