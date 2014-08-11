@@ -379,7 +379,7 @@ private:
 class Decl : virtual public ASTNode {
 public:
     const Identifier* identifier() const { return identifier_; }
-    Symbol symbol() const { return identifier()->symbol(); }
+    Symbol symbol() const { return identifier_ ? identifier()->symbol() : Symbol(); }
     size_t depth() const { return depth_; }
     const Decl* shadows() const { return shadows_; }
 
