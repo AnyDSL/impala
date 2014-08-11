@@ -1,15 +1,9 @@
-fn main(mut i : int) -> int {
-    let mut a: int = 0;
-    let mut b: int =
-        if (i == 0 || i == 1) && i == 3 {
-            a++;
-            a = 23;
-            1
-        } else if i == 4 {
-            a = 42;
-            2
-        } else {
-            3
-        };
-    a + a
+fn main(i : int) -> int {
+    let mut a = 0;
+    if i == 1 {
+        a = 23
+    } else {
+        a = 42
+    }
+    a
 }
