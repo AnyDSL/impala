@@ -324,7 +324,7 @@ std::ostream& StructDecl::print(Printer& p) const {
 std::ostream& Typedef::print(Printer& p) const {
     p.stream() << visibility().str() << "type " << symbol();
     print_type_params(p) << " = ";
-    return type()->print(p) << ';';
+    return ast_type()->print(p) << ';';
 }
 
 std::ostream& TraitDecl::print(Printer& p) const {
