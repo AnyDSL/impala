@@ -1,0 +1,107 @@
+fn iteration_sep_advanced(mask: MaskSep, arr: Img, out: Img, body: fn(i32, i32, MaskSep, Acc, Acc, bool) -> ()) -> () {
+    let bhy = mask.size / 2;
+    let bhx = 42;
+    let Bounds2DCol = [(0, bhy), (bhy, out.height - bhy), (out.height - bhy, out.height)];
+    let Bounds2DRow = [(0, bhx), (bhx, out.width - bhx), (out.width - bhx, out.width)];
+    let tmp = Img{data: (~[out.width: f32]), width: out.width, height: 1, stride: out.width};
+    init_zero(tmp.data, ($tmp).stride, ($tmp).height);
+    for region_col in (@range)(0, 3) {
+        let bounds_col = Bounds2DCol(region_col);
+        for y in ($range)(bounds_col(0), bounds_col(1)) {
+            for x in ($range)(0, tmp.width) {
+                let is_row = false;
+                let arr_acc = Acc{img: arr, o_x: 0, o_y: y, width: arr.width, height: arr.height, region: region_col};
+                let tmp_acc = Acc{img: tmp, o_x: 0, o_y: 0, width: tmp.width, height: tmp.height, region: region_col};
+                (@body)(x, 0, mask, arr_acc, tmp_acc, is_row);
+            }
+            for region_row in (@range)(0, 3) {
+                let bounds_row = Bounds2DRow(region_row);
+                for x in ($range)(bounds_row(0), bounds_row(1)) {
+                    let is_row = true;
+                    let tmp_acc = Acc{img: tmp, o_x: 0, o_y: 0, width: tmp.width, height: tmp.height, region: region_row};
+                    let out_acc = Acc{img: out, o_x: 0, o_y: y, width: out.width, height: out.height, region: region_row};
+                    (@body)(x, 0, mask, tmp_acc, out_acc, is_row);
+                }
+            }
+        }
+    }
+}
+
+fn range(a: i32, b: i32, body: fn(i32) -> ()) -> () {
+    if a < b {
+        body(a);
+        range(a + 1, b, body, return)
+    }
+}
+
+fn init_zero(mut arr: &[f32], width: i32, height: i32) -> () {
+    for i in range(0, (width * height)) {
+        arr(i) = 0f;
+    }
+}
+
+struct Img {
+    data: &[f32],
+    width: i32,
+    height: i32,
+    stride: i32
+}
+
+struct Acc {
+    img: Img,
+    o_x: i32,
+    o_y: i32,
+    width: i32,
+    height: i32,
+    region: i32
+}
+
+struct Mask3 {
+    data: [[f32 * 3] * 3],
+    size_x: i32,
+    size_y: i32
+}
+
+struct Mask3Sep {
+    data: [f32 * 3],
+    size: i32
+}
+
+struct Mask5 {
+    data: [[f32 * 5] * 5],
+    size_x: i32,
+    size_y: i32
+}
+
+struct Mask5Sep {
+    data: [f32 * 5],
+    size: i32
+}
+
+type Mask = Mask3;
+
+type MaskSep = Mask3Sep;
+
+fn get_pixel(acc: Acc, x: i32, y: i32) -> f32 {
+    acc.img.data((acc.o_y + y + 1 * acc.img.stride + 8 + acc.o_x + x))
+}
+
+fn set_pixel(mut acc: Acc, x: i32, y: i32, val: f32) -> () {
+    acc.img.data((acc.o_y + y + 1 * acc.img.stride + 8 + acc.o_x + x)) = val;
+}
+
+extern fn thorin_vcycle(img_data: &[f32], out_data: &[f32], c_width: i32, c_height: i32) -> () {
+    let width = 512;
+    let height = 512;
+    let levels = 6;
+    let mut RHS: [Img * 6];
+    let mut Sol: [Img * 6];
+    let mut Tmp: [Img * 6];
+    let mut Res: [Img * 6];
+    let pad_x = 2 * 8;
+    let pad_y = 2;
+    for level in (@range)(0, levels) {
+        ($init_zero)(Tmp(level).data, Tmp(level).stride, (Tmp(level).height + pad_y));
+    }
+    let mut img = Img{data: (~[(width + pad_x * (height + pad_y)): f32]), width: width, height: height, stride: width + pad_x};
+}
