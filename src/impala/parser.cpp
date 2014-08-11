@@ -162,7 +162,7 @@ public:
     // parameters
     void parse_type_params(AutoVector<const TypeParam*>&);
     const TypeParam* parse_type_param();
-    const Param* parse_param(bool lambda);
+    const Param* parse_param(int i, bool lambda);
     void parse_param_list(AutoVector<const Param*>& params, TokenKind delimiter, bool lambda);
     void parse_return_param(AutoVector<const Param*>&);
 
@@ -354,10 +354,11 @@ const TypeParam* Parser::parse_type_param() {
 }
 
 void Parser::parse_param_list(AutoVector<const Param*>& params, TokenKind delimiter, bool lambda) {
-    parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param(lambda)); });
+    int i = 0;
+    parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param(i++, lambda)); });
 }
 
-const Param* Parser::parse_param(bool lambda) {
+const Param* Parser::parse_param(int i, bool lambda) {
     auto param = loc(new Param(cur_var_handle++));
     param->is_mut_ = accept(Token::MUT);
     const Identifier* ident = nullptr;
@@ -368,7 +369,12 @@ const Param* Parser::parse_param(bool lambda) {
         ident = new Identifier(lex());
     else {
         switch (tok) {
-            case TYPE: type = parse_type(); break;
+            case TYPE: {
+                std::ostringstream oss;
+                oss << '<' << i << ">";
+                ident = new Identifier(oss.str().c_str(), tok.loc());
+                type = parse_type(); break;
+            }
             default:
                 ident = new Identifier("<error>", tok.loc());
                 error("identifier", "parameter");
@@ -391,10 +397,12 @@ const Param* Parser::parse_param(bool lambda) {
             type_app->set_loc(tok.loc());
             type_app->identifier_ = ident;
             type = type_app;
-        }
+        } else
+            param->identifier_ = ident;
         param->ast_type_ = type;
     }
 
+    assert(param->identifier_ != nullptr);
     return param;
 }
 

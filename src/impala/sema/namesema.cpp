@@ -195,12 +195,6 @@ void Fn::fn_check(NameSema& sema) const {
     check_type_params(sema);
     int i = 0;
     for (auto param : params()) {
-        if (!param->identifier())  {
-            std::ostringstream oss;
-            oss << '<' << i << ">";
-            const_cast<Param*>(param)->identifier_ = new Identifier(oss.str().c_str(), param->ast_type()->loc());
-        }
-
         sema.insert(param);
         if (param->ast_type())
             sema.check(param->ast_type());
