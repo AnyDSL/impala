@@ -209,8 +209,8 @@ std::ostream& TypeParamList::print_type_params(Printer& p) const {
 
 std::ostream& Fn::print_params(Printer& p, bool returning) const {
     return p.dump_list([&] (const Param* param) {
-            if (!param->symbol().empty())
-                p.stream() << param->symbol() << ": ";
+            if (!param->is_anonymous())
+                p.stream() << (param->is_mut() ? "mut " : "") << param->symbol() << ": ";
             if (auto type = param->type())
                 p.stream() << type;
             else if (auto type = param->ast_type())
@@ -378,11 +378,17 @@ std::ostream& BlockExpr::print(Printer& p) const {
 }
 
 std::ostream& LiteralExpr::print(Printer& p) const {
-    // TODO dump float/double with floating point (else it would be interpreted as int)
     switch (kind()) {
-#define IMPALA_LIT(itype, atype) \
-        case LIT_##itype: return p.stream() << box().get_##atype();
-#include "impala/tokenlist.h"
+        case LIT_i8:  return p.stream() << box().get_s8()  << "i8";
+        case LIT_i16: return p.stream() << box().get_s16() << "i16";
+        case LIT_i32: return p.stream() << box().get_s32();
+        case LIT_i64: return p.stream() << box().get_s64() << "i64";
+        case LIT_u8:  return p.stream() << box().get_s8()  << "u8";
+        case LIT_u16: return p.stream() << box().get_s16() << "u16";
+        case LIT_u32: return p.stream() << box().get_s32() << "u";
+        case LIT_u64: return p.stream() << box().get_s64() << "u64";
+        case LIT_f32: return p.stream() << box().get_f32() << "f";
+        case LIT_f64: return p.stream() << box().get_f64() << "f64";
         case LIT_bool: return p.stream() << (box().get_bool() ? "true" : "false");
         default: THORIN_UNREACHABLE;
     }
@@ -430,14 +436,26 @@ std::ostream& PrefixExpr::print(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& InfixExpr::print(Printer& p) const {
-    Prec l = PrecTable::infix_l[kind()];
-    Prec r = PrecTable::infix_r[kind()];
-    Prec old = p.prec;
-    bool paren = !p.is_fancy() || p.prec > l;
-    if (paren) p.stream() << "(";
-
+static std::pair<Prec, bool> open(Printer& p, int kind) {
+    std::pair<Prec, bool> result;
+    Prec l = PrecTable::postfix_l[kind];
+    result.first = p.prec;
+    result.second = !p.is_fancy() || p.prec > l;
+    if (result.second)
+        p.stream() << "(";
     p.prec = l;
+    return result;
+}
+
+static std::ostream& close(Printer& p, std::pair<Prec, bool> pair) {
+    p.prec = pair.first;
+    if (pair.second)
+        p.stream() << ")";
+    return p.stream();
+}
+
+std::ostream& InfixExpr::print(Printer& p) const {
+    auto open_state = open(p, kind());
     p.print(lhs());
 
     const char* op;
@@ -449,21 +467,13 @@ std::ostream& InfixExpr::print(Printer& p) const {
 
     p.stream() << " " << op << " ";
 
-    p.prec = r;
+    p.prec = PrecTable::infix_r[kind()];
     p.print(rhs());
-    p.prec = old;
-
-    if (paren) p.stream() << ")";
-    return p.stream();
+    return close(p, open_state);
 }
 
 std::ostream& PostfixExpr::print(Printer& p) const {
-    Prec l = PrecTable::postfix_l[kind()];
-    Prec old = p.prec;
-    bool paren = !p.is_fancy() || p.prec > l;
-    if (paren) p.stream() << "(";
-
-    p.prec = l;
+    auto open_state = open(p, kind());
     p.print(lhs());
 
     const char* op;
@@ -474,19 +484,20 @@ std::ostream& PostfixExpr::print(Printer& p) const {
     }
 
     p.stream() << op;
-    p.prec = old;
-
-    if (paren) p.stream() << ")";
-    return p.stream();
+    return close(p, open_state);
 }
 
 std::ostream& FieldExpr::print(Printer& p) const {
-    return p.print(lhs()) << '.' << symbol();
+    auto open_state = open(p, Token::DOT);
+    p.print(lhs()) << '.' << symbol();
+    return close(p, open_state);
 }
 
 std::ostream& CastExpr::print(Printer& p) const {
+    auto open_state = open(p, Token::AS);
     p.print(lhs()) << " as ";
-    return ast_type()->print(p);
+    ast_type()->print(p);
+    return close(p, open_state);
 }
 
 std::ostream& TypeArgs::print_type_args(Printer& p) const {
@@ -505,12 +516,21 @@ std::ostream& StructExpr::print(Printer& p) const {
 }
 
 std::ostream& MapExpr::print(Printer& p) const {
+    Prec l = PrecTable::postfix_l[Token::L_PAREN];
+    Prec old = p.prec;
+    bool paren = !p.is_fancy() || p.prec > l;
+    if (paren) p.stream() << "(";
+
+    p.prec = l;
     p.print(lhs());
     if (num_inferred_args() == 0)
         print_type_args(p);
     else
         p.dump_list([&] (Type t) { p.stream() << t; }, inferred_args(), "[", "]", ", ", false);
-    return p.dump_list([&](const Expr* expr) { p.print(expr); }, args(), "(", ")");
+    p.dump_list([&](const Expr* expr) { p.print(expr); }, args(), "(", ")");
+    p.prec = old;
+    if (paren) p.stream() << ")";
+    return p.stream();
 }
 
 std::ostream& FnExpr::print(Printer& p) const {

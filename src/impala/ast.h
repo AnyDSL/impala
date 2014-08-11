@@ -414,7 +414,7 @@ public:
     const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     bool is_mut() const { return is_mut_; }
     bool is_written() const { return is_written_; }
-    bool is_anonymous() const { return symbol() == Symbol(); }
+    bool is_anonymous() const { return symbol() == Symbol() || symbol().str()[0] == '<'; }
     virtual std::ostream& print(Printer&) const override;
 
 private:

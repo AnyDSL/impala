@@ -369,12 +369,8 @@ const Param* Parser::parse_param(int i, bool lambda) {
         ident = new Identifier(lex());
     else {
         switch (tok) {
-            case TYPE: {
-                std::ostringstream oss;
-                oss << '<' << i << ">";
-                ident = new Identifier(oss.str().c_str(), tok.loc());
+            case TYPE:
                 type = parse_type(); break;
-            }
             default:
                 ident = new Identifier("<error>", tok.loc());
                 error("identifier", "parameter");
@@ -397,12 +393,17 @@ const Param* Parser::parse_param(int i, bool lambda) {
             type_app->set_loc(tok.loc());
             type_app->identifier_ = ident;
             type = type_app;
-        } else
-            param->identifier_ = ident;
+        }
         param->ast_type_ = type;
     }
 
-    assert(param->identifier_ != nullptr);
+
+    if (param->identifier_ == nullptr) {
+        std::ostringstream oss;
+        oss << '<' << i << ">";
+        param->identifier_ = new Identifier(oss.str().c_str(), prev_loc());
+    }
+
     return param;
 }
 
