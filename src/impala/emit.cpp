@@ -22,10 +22,9 @@ public:
     CodeGen(World& world)
         : IRBuilder(world)
         , cur_fn(nullptr)
-        , frame_(nullptr)
     {}
 
-    const thorin::Enter* frame() const { assert(frame_ != nullptr); return frame_; }
+    const thorin::Enter* frame() const { assert(cur_fn); return cur_fn->frame(); }
     /// Enter \p x and perform \p get_value to collect return value.
     Def converge(const Expr* expr, JumpTarget& x) {
         emit_jump(expr, x);
@@ -83,7 +82,6 @@ public:
     }
 
     const Fn* cur_fn;
-    const thorin::Enter* frame_;
 };
 
 /*
@@ -210,9 +208,7 @@ void Fn::emit_body(CodeGen& cg) const {
     Def mem_param = lambda()->param(i++);
     mem_param->name = "mem";
     cg.set_mem(mem_param);
-    bool setup_frame = cg.frame_ == nullptr;
-    if (setup_frame)
-        cg.frame_ = cg.world().enter(mem_param);
+    frame_ = cg.world().enter(mem_param);
 
     // name bounds and memoize type params
     for (auto type_param : type_params()) {
@@ -234,9 +230,8 @@ void Fn::emit_body(CodeGen& cg) const {
     // descend into body
     auto def = cg.remit(body());
     if (def) {
-        if (setup_frame)
-            cg.set_mem(cg.world().leave(cg.get_mem(), cg.frame()));
-        Def mem = cg.get_mem();
+        Def mem = cg.world().leave(cg.get_mem(), frame());
+        cg.set_mem(mem);
 
         if (auto tuple = def->type().isa<thorin::TupleType>()) {
             std::vector<Def> args;
@@ -247,9 +242,6 @@ void Fn::emit_body(CodeGen& cg) const {
         } else
             cg.cur_bb->jump(ret_param(), {mem, def});
     }
-
-    if (setup_frame)
-        cg.frame_ = nullptr;
 
     // pop type_param stacks
     for (auto type_param : type_params())
