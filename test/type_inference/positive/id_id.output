@@ -3,5 +3,5 @@ fn id[X](x: X) -> X {
 }
 
 fn main() -> () {
-    id[fn[X](X) -> X](id);
+    (id[fn[X](X) -> X](id));
 }

@@ -7,5 +7,5 @@ fn f(a: i32) -> fn(i32) -> i32 {
 }
 
 fn main(i: i32) -> i32 {
-    f(i)(i)
+    ((f(i))(i))
 }

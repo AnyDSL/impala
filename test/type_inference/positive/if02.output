@@ -1,6 +1,6 @@
 fn f() -> () {
     let x: fn(i32) -> i32 = if true {
-        return()
+        (return())
     } else {
         |a: i32| -> i32 (a + 1)
     };

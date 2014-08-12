@@ -3,5 +3,5 @@ fn id[A](a: A) -> A {
 }
 
 fn main() -> i32 {
-    id[i32](4)
+    (id[i32](4))
 }

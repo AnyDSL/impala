@@ -2,7 +2,7 @@ fn range[T](f: fn(T) -> ()) -> () {
 }
 
 fn main() -> () {
-    range[bool](|x: bool| -> () {
+    (range[bool](|x: bool| -> () {
         let a: bool = (!x);
-    })
+    }))
 }

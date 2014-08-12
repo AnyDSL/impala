@@ -13,15 +13,15 @@ impl Iterator for i32 {
 }
 
 fn range[I: Iterator](a: I, b: I, body: fn(I) -> ()) -> () {
-    if a.lt(b) {
-        body(a);
-        range[I](a.inc(), b, body, return)
+    if ((a.lt)(b)) {
+        (body(a));
+        (range[I](((a.inc)()), b, body, return))
     } else {
-        return()
+        (return())
     }
 }
 
 fn main() -> () {
-    range[i32](0, 10, |i: i32| -> () {
-    });
+    (range[i32](0, 10, |i: i32| -> () {
+    }));
 }
