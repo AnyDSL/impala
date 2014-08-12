@@ -1,6 +1,9 @@
 fn main() -> int {
+    static mut x = 3;
+    static y = 4;
     foo += 17;
-    foo + bar + foobar
+    ++x;
+    foo + bar + foobar + x + y
 }
 
 static mut foo = 42;
