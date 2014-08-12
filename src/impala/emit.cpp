@@ -174,6 +174,8 @@ thorin::Type IndefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.wor
 
 Var LocalDecl::emit(CodeGen& cg, Def init) const {
     auto thorin_type = cg.convert(type());
+    if (!init)
+        init = cg.world().bottom(thorin_type);
     if (!is_mut())
         return var_ = Var::create_val(cg, init);
 
@@ -182,9 +184,7 @@ Var LocalDecl::emit(CodeGen& cg, Def init) const {
     else
         var_ = Var::create_mut(cg, handle(), thorin_type, symbol().str()); // TODO
 
-    if (init)
-        var_.store(init);
-
+    var_.store(init);
     return var_;
 }
 
