@@ -2,12 +2,15 @@ fn iteration_sep_advanced() -> () {
     init_zero(~[23: f32]);
 }
 
-fn range(body: fn(i32) -> ()) -> () {
-    range(body, return)
+fn range(a: int, b: int, body: fn(i32) -> ()) -> () {
+    if a < b {
+        body(a);
+        range(a+1, b, body, return)
+    }
 }
 
 fn init_zero(mut arr: &[f32]) -> () {
-    for i in range() {
+    for i in range(7, 17) {
         arr(i) = 1337f;
     }
 }
