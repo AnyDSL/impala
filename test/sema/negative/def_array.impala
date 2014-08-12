@@ -1,0 +1,3 @@
+fn main() -> () {
+    let todo:[int*1] = [0, 0];
+}
