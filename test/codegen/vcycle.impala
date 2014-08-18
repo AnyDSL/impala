@@ -35,8 +35,9 @@ fn iteration(arr : &[float], out : &[float],
 }
 
 
-// V-Cycle DSL: solver, etc. can be provided by the user
-fn vcycle_dsl(levels : int) -> () {
+extern
+fn thorin_vcycle(img_data : &[float], out_data : &[float], width : int, height : int) -> () {
+    let levels = 4;
     let mut Sol = ~[levels:&[float]];
     let mut Tmp = ~[levels:&[float]];
 
@@ -50,11 +51,6 @@ fn vcycle_dsl(levels : int) -> () {
             Sol(level)(0) = Tmp(level)(0);
         }
     }
-    vcycle_dsl_intern(0);
-}
-
-extern
-fn thorin_vcycle(img_data : &[float], out_data : &[float], width : int, height : int) -> () {
-    let result = @vcycle_dsl(4);
+    @vcycle_dsl_intern(0);
 }
 
