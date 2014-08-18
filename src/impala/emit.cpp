@@ -615,8 +615,7 @@ Def ForExpr::remit(CodeGen& cg) const {
     defs.push_back(cg.get_mem());
 
     // prepare break continuation
-    //auto next = cg.world().lambda(cg.world().fn_type({cg.world().mem_type()}), "break");
-    auto next = cg.world().lambda(cg.convert(break_decl_->type().as<FnType>()).as<thorin::FnType>(), "break");
+    auto next = cg.world().lambda(cg.convert(break_decl_->type()).as<thorin::FnType>(), "break");
     break_decl_->var_ = Var::create_val(cg, next);
 
     // peel off run and halt
