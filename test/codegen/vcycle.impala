@@ -1,5 +1,4 @@
 extern "C" {
-    fn thorin_get_micro_time() -> i64;
     fn thorin_print_micro_time(i64) -> ();
 }
 fn range(a : int, b : int, yield : fn(int, fn())) -> () {
@@ -22,18 +21,16 @@ fn sort(num : int, mut arr : &[i64]) -> () {
 }
 
 fn main() -> () {
-    let levels = 4;
-    let mut Sol = ~[levels:&[float]];
-    let Tmp = ~[levels:&[float]];
+    let levels = 2;
+    let mut times = ~[2:i64];
 
     fn vcycle_dsl_intern(level : int) -> () {
+        sort(2, times);
         if level == levels-1 {
-            let mut times = ~[7:i64];
-            sort(7, times);
-            thorin_print_micro_time(times(3));
+            thorin_print_micro_time(times(1));
         } else {
             vcycle_dsl_intern(level+1);
-            Sol(level)(0) = Tmp(level)(0);
+            times(level) = 0i64;
         }
     }
     @vcycle_dsl_intern(0);
