@@ -1,0 +1,73 @@
+extern "C" {
+    fn thorin_get_micro_time() -> i64;
+    fn thorin_print_micro_time(i64) -> ();
+}
+fn range(a : int, b : int, yield : fn(int, fn())) -> () {
+    if a < b {
+        yield(a);
+        range(a+1, b, yield, return)
+    }
+}
+fn sort(num : int, mut arr : &[i64]) -> () {
+    // insertion sort
+    for i in range(1, num) {
+        let x = arr(i);
+        let mut j = i;
+        while j > 0 && arr(j-1) > x {
+            arr(j) = arr(j-1);
+            j = j - 1;
+        }
+        arr(j) = x;
+    }
+}
+
+struct Img {
+    data : &[float],
+    width : int,
+    height : int,
+    stride : int,
+}
+
+fn iteration(arr : Img, out : Img,
+             body : fn(int, int, Img, Img) -> ()
+            ) -> () {
+    let mut times = ~[7:i64];
+    for i in @range(0, 7) {
+        let start = thorin_get_micro_time();
+        body(0, 0, arr, out);
+        times(i) = thorin_get_micro_time()-start;
+    }
+    sort(7, times);
+    thorin_print_micro_time(times(3));
+}
+
+
+// Jacobi
+fn jacobi_solver(x : int, y : int, Tmp : Img, mut Sol : Img) -> () {
+    Sol.data(x + y) = Tmp.data(x + y);
+}
+
+
+// V-Cycle DSL: solver, etc. can be provided by the user
+fn vcycle_dsl(levels : int) -> () {
+    let mut Sol = ~[levels:Img];
+    let mut Tmp = ~[levels:Img];
+
+    fn vcycle_dsl_intern(level : int) -> () {
+        if level == levels-1 {
+            for x, y, tmp_acc, sol_acc in iteration(Tmp(level), Sol(level)) {
+                jacobi_solver(x, y, tmp_acc, sol_acc);
+            }
+        } else {
+            vcycle_dsl_intern(level+1);
+            jacobi_solver(0, 0, Tmp(level), Sol(level));
+        }
+    }
+    vcycle_dsl_intern(0);
+}
+
+extern
+fn thorin_vcycle(img_data : &[float], out_data : &[float], width : int, height : int) -> () {
+    let result = @vcycle_dsl(4);
+}
+
