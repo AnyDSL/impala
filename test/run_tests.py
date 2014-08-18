@@ -15,9 +15,11 @@ Command line options:
 
 import infrastructure.tests
 from infrastructure.timed_process import CompileProcess
-import os, sys, getopt
+import os, sys, getopt, subprocess
 
 def invoke(executable, directory, pb, valgrind):
+    print("Using '%s' as executable." % executable)
+    
     tests = infrastructure.tests.get_tests_from_dir(directory)
     
     if valgrind:
@@ -25,13 +27,23 @@ def invoke(executable, directory, pb, valgrind):
     
     infrastructure.tests.executeTests(tests, executable, pb)
 
-def main():
-    executable_unix = "../build/bin/impala"
-    executable_windows = "../build/bin/Debug/impala.exe"
-    if os.path.exists(executable_unix):
-	    executable = executable_unix
+def get_executable():
+    # first check if impala is in $PATH
+    if sys.platform == "win32":
+        executable = "impala.exe"
     else:
-	    executable = executable_windows
+        executable = "impala"
+    
+    try:
+        subprocess.call([executable])
+    except OSError as e:
+        if e.errno == os.errno.ENOENT: # file not found => try local path
+            return os.path.join("..", "build", "bin", executable)
+    
+    return executable
+
+def main():
+    executable = get_executable()
     pb = True
     valgrind = False
     
