@@ -779,33 +779,35 @@ Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {
             assert(type_def->type()->num_type_vars() == num_type_args() && "not yet supported: make sure that number of typedef's type vars and given type args match");
             struct_app = sema.instantiate(path()->loc(), sema.check(type_def), type_args()).isa<StructAppType>();
         } else if (auto struct_decl = decl->isa<StructDecl>()) {
-            auto struct_abs = struct_decl->type().as<StructAbsType>();
-            if (num_type_args() <= struct_abs->num_type_vars()) {
-                StructAppType exp_type = expected.type().isa<StructAppType>();
+            auto struct_abs = sema.check(struct_decl).isa<StructAbsType>();
+            if (struct_abs) {
+                if (num_type_args() <= struct_abs->num_type_vars()) {
+                    StructAppType exp_type = expected.type().isa<StructAppType>();
 
-                if (exp_type && (exp_type->struct_abs_type() == struct_abs)) {
-                    for (size_t i = 0; i < exp_type->num_args(); ++i) {
-                        if ((i < num_type_args()) && (!(exp_type->arg(i) == sema.check(type_arg(i))))) {
-                            sema.error(type_arg(i)) << "expected different argument for type parameter '" << struct_abs->type_var(i) << "': expected '" << exp_type->arg(i) << "' but found '" << type_arg(i)->type() << "'\n";
+                    if (exp_type && (exp_type->struct_abs_type() == struct_abs)) {
+                        for (size_t i = 0; i < exp_type->num_args(); ++i) {
+                            if ((i < num_type_args()) && (!(exp_type->arg(i) == sema.check(type_arg(i))))) {
+                                sema.error(type_arg(i)) << "expected different argument for type parameter '" << struct_abs->type_var(i) << "': expected '" << exp_type->arg(i) << "' but found '" << type_arg(i)->type() << "'\n";
+                            }
+                            inferred_args_.push_back(exp_type->arg(i));
                         }
-                        inferred_args_.push_back(exp_type->arg(i));
+
+                        assert(inferred_args_.size() == struct_abs->num_type_vars());
+                        struct_app = exp_type;
+                    } else {
+                        for (auto type_arg : type_args()) {
+                            inferred_args_.push_back(sema.check(type_arg));
+                        }
+
+                        for (size_t i = num_type_args(), e = struct_abs->num_type_vars(); i != e; ++i)
+                            inferred_args_.push_back(sema.unknown_type());
+
+                        assert(inferred_args_.size() == struct_abs->num_type_vars());
+                        struct_app = struct_abs->instantiate(inferred_args_).as<StructAppType>();
                     }
-
-                    assert(inferred_args_.size() == struct_abs->num_type_vars());
-                    struct_app = exp_type;
-                } else {
-                    for (auto type_arg : type_args()) {
-                        inferred_args_.push_back(sema.check(type_arg));
-                    }
-
-                    for (size_t i = num_type_args(), e = struct_abs->num_type_vars(); i != e; ++i)
-                        inferred_args_.push_back(sema.unknown_type());
-
-                    assert(inferred_args_.size() == struct_abs->num_type_vars());
-                    struct_app = struct_abs->instantiate(inferred_args_).as<StructAppType>();
-                }
-            } else
-                sema.error(this) << "too many type arguments to structure: " << num_type_args() << " for " << struct_abs->num_type_vars() << "\n";
+                } else
+                    sema.error(this) << "too many type arguments to structure: " << num_type_args() << " for " << struct_abs->num_type_vars() << "\n";
+            }
         } else {
             sema.error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
             return sema.type_error();
