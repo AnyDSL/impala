@@ -113,9 +113,7 @@ public:
             return true;
         return infer(*this, other) || (*this)->is_error() || other->is_error();
     }
-    bool operator <= (const Proxy<T>& other) const {
-        return (*this == other) || is_subtype(*this, other);
-    }
+    bool operator <= (const Proxy<T>& other) const { return is_subtype(*this, other); }
     Proxy<T> unify() const { return node()->unify()->template as<T>(); }
     const T* representative() const { return node()->representative()->template as<T>(); }
     const T* node() const { assert(node_ != nullptr); return node_; }

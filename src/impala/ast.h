@@ -797,6 +797,8 @@ private:
 
 class Expr : public ASTNode, public Typeable {
 public:
+    /// return the type before implicit casting (for example ~4 always has the actual_type ~int but its type could be &int due to subtyping)
+    Type actual_type() const { return actual_type_.empty() ? type() : actual_type_; }
     thorin::Def extra() const { return extra_; }
     virtual bool is_lvalue() const { return false; }
     virtual void take_address() const {}
@@ -809,6 +811,8 @@ private:
     virtual thorin::Def remit(CodeGen&) const;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
+
+    mutable Type actual_type_;
 
 protected:
     mutable thorin::Def extra_; ///< Needed to propagate extend of indefinite arrays.

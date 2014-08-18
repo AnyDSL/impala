@@ -144,8 +144,12 @@ void TypeSema::expect_num(const Expr* expr) {
 }
 
 Type TypeSema::expect_type(const Expr* expr, Type found_type, TypeExpectation expected) {
-    if (found_type <= expected.type())
+    if (found_type == expected.type())
         return expected.type();
+    if (found_type <= expected.type()) {
+        expr->actual_type_ = found_type;
+        return expected.type();
+    }
 
     if (expected.noret() && (found_type == type_noret()))
         return found_type;
@@ -1008,10 +1012,20 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
             return sema.expect_type(else_expr(), TypeExpectation(expected, "if expression type"));
         if (else_type->is_noret())
             return sema.expect_type(then_expr(), TypeExpectation(expected, "if expression type"));
-        if (then_type <= else_type)
+        if ((then_type == else_type) || (then_type <= else_type)) {
+            // TODO we need to enable casting during codegen by doing something like below. However this won't work because type_ cannot be reset..
+            //      maybe we should simply insert a CastExpr here?
+            //then_expr()->actual_type_ = then_type;
+            //then_expr()->type_ = else_type;
             return sema.expect_type(this, else_type, TypeExpectation(expected, "if expression type"));
-        if (else_type <= then_type)
+        }
+        if (else_type <= then_type) {
+            // TODO we need to enable casting during codegen by doing something like below. However this won't work because type_ cannot be reset..
+            //      maybe we should simply insert a CastExpr here?
+            //else_expr()->actual_type_ = else_type;
+            //else_expr()->type_ = then_type;
             return sema.expect_type(this, then_type, TypeExpectation(expected, "if expression type"));
+        }
 
         sema.error(this) << "different types in arms of an if expression\n";
         sema.error(then_expr()) << "type of the consequence is '" << then_type << "'\n";
