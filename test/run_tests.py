@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
-"""
-This script can be used to execute the tests.
+"""Usage: run_tests.py [options] [subdirectory that contains test cases]
 
-Usage: run_tests.py [options] [subdirectory that contains test cases]
+If no subdirectory is given '.' is assumed.
 
 Command line options:
  -e, --executable <Path to executable>
+     Default is 'impala' (if possible) or '../build/bin/impala' otherwise;
+     on Windows '.exe' is appended
  -d, --disable-progressbar   Disable the fancy progress bar
  -t, --compiler-timeout <floating point value in seconds>
                          Default is 1.0
@@ -35,7 +36,8 @@ def get_executable():
         executable = "impala"
     
     try:
-        subprocess.call([executable])
+        devnull = open(os.devnull)
+        subprocess.call([executable], stdout=devnull, stderr=devnull)
     except OSError as e:
         if e.errno == os.errno.ENOENT: # file not found => try local path
             return os.path.join("..", "build", "bin", executable)
