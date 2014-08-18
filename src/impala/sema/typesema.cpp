@@ -568,7 +568,7 @@ Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
             sema.error(this) << "expected function with " << exp_fn->num_args() << " parameters, but found lambda expression with " << num_params() << " parameters\n";
 
         for (size_t i = 0; i < num_params() && i < exp_fn->num_args(); ++i)
-            sema.check(param(i), exp_fn->arg(i++));
+            sema.check(param(i), exp_fn->arg(i));
 
         fn_type = exp_fn;
     } else {
