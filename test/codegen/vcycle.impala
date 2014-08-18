@@ -21,26 +21,16 @@ fn sort(num : int, mut arr : &[i64]) -> () {
     }
 }
 
-fn iteration() -> () {
-    let mut times = ~[7:i64];
-    for i in @range(0, 7) {
-        let start = thorin_get_micro_time();
-        times(i) = thorin_get_micro_time()-start;
-    }
-    sort(7, times);
-    thorin_print_micro_time(times(3));
-}
-
-
-extern
-fn thorin_vcycle(img_data : &[float], out_data : &[float], width : int, height : int) -> () {
+fn main() -> () {
     let levels = 4;
     let mut Sol = ~[levels:&[float]];
     let Tmp = ~[levels:&[float]];
 
     fn vcycle_dsl_intern(level : int) -> () {
         if level == levels-1 {
-            iteration();
+            let mut times = ~[7:i64];
+            sort(7, times);
+            thorin_print_micro_time(times(3));
         } else {
             vcycle_dsl_intern(level+1);
             Sol(level)(0) = Tmp(level)(0);
