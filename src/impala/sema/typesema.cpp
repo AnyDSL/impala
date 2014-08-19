@@ -1042,6 +1042,8 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
 
 Type WhileExpr::check(TypeSema& sema, TypeExpectation expected) const {
     sema.check(cond(), sema.type_bool(), "condition type");
+    sema.check(break_decl());
+    sema.check(continue_decl());
     sema.check(body(), sema.unit(), "body type of while loop");
     return sema.unit();
 }

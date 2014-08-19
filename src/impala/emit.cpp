@@ -592,6 +592,10 @@ Def IfExpr::remit(CodeGen& cg) const {
 
 void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
     JumpTarget head_bb("while_head"), body_bb("while_body");
+
+    //auto next = cg.world().lambda(cg.convert(break_decl_->type()).as<thorin::FnType>(), "break");
+    //break_decl_->var_ = Var::create_val(cg, next);
+
     cg.jump(head_bb);
     cg.enter_unsealed(head_bb);
     cg.emit_branch(cond(), body_bb, exit_bb);
