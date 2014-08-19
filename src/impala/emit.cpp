@@ -605,6 +605,15 @@ Def IfExpr::remit(CodeGen& cg) const {
     return cg.converge(this, x);
 }
 
+Def WhileExpr::remit(CodeGen& cg) const {
+    JumpTarget x("next");
+    auto break_lambda = cg.create_continuation(break_decl());
+
+    cg.emit_jump(this, x);
+    cg.jump_to_continuation(break_lambda);
+    return cg.world().tuple({});
+}
+
 void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
     JumpTarget head_bb("while_head"), body_bb("while_body");
     auto continue_lambda = cg.create_continuation(continue_decl());
@@ -617,15 +626,7 @@ void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
     cg.jump_to_continuation(continue_lambda);
     cg.jump(head_bb);
     head_bb.seal();
-}
-
-Def WhileExpr::remit(CodeGen& cg) const {
-    JumpTarget x("next");
-    auto break_lambda = cg.create_continuation(break_decl());
-
-    cg.emit_jump(this, x);
-    cg.jump_to_continuation(break_lambda);
-    return cg.world().tuple({});
+    cg.enter(exit_bb);
 }
 
 Def ForExpr::remit(CodeGen& cg) const {
