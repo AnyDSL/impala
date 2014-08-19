@@ -3,8 +3,11 @@ fn main(i: int) -> int {
     while i < 42 {
         ++sum;
         if sum == 1 {
+            continue()
+        } else if sum == 2 {
             break()
-        } 
+        }
+        sum += 3
     }
     sum
 }

@@ -431,6 +431,7 @@ protected:
 
     friend class Parser;    // TODO clean up friend list
     friend class TypeSema;
+    friend class WhileExpr;
     friend class ForExpr;
     friend class CodeGen;
     friend class FnExpr;

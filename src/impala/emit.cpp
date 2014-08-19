@@ -593,24 +593,36 @@ Def IfExpr::remit(CodeGen& cg) const {
 void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
     JumpTarget head_bb("while_head"), body_bb("while_body");
 
-    //auto next = cg.world().lambda(cg.convert(break_decl_->type()).as<thorin::FnType>(), "break");
-    //break_decl_->var_ = Var::create_val(cg, next);
+    auto next = cg.world().lambda(cg.convert(continue_decl_->type()).as<thorin::FnType>(), "continue");
+    continue_decl_->var_ = Var::create_val(cg, next);
+    auto continue_lambda = continue_decl()->var_.load()->as_lambda();
 
     cg.jump(head_bb);
     cg.enter_unsealed(head_bb);
     cg.emit_branch(cond(), body_bb, exit_bb);
     cg.enter(body_bb);
     cg.remit(body());
+    cg.cur_bb->jump(continue_lambda, {cg.get_mem()});
+    cg.cur_bb = continue_lambda;
+    cg.set_mem(continue_lambda->param(0));
     cg.jump(head_bb);
     head_bb.seal();
 }
 
 Def WhileExpr::remit(CodeGen& cg) const {
     JumpTarget x("next");
-    //return cg.converge(this, x);
+
+    auto next = cg.world().lambda(cg.convert(break_decl_->type()).as<thorin::FnType>(), "break");
+    break_decl_->var_ = Var::create_val(cg, next);
+    auto break_lambda = break_decl()->var_.load()->as_lambda();
+
     cg.emit_jump(this, x);
-    if (cg.enter(x))
+    if (cg.enter(x)) {
+        cg.cur_bb->jump(break_lambda, {cg.get_mem()});
+        cg.cur_bb = break_lambda;
+        cg.set_mem(break_lambda->param(0));
         return cg.world().tuple({});
+    }
     return Def();
 }
 
