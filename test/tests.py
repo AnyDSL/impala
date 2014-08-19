@@ -3,7 +3,7 @@ tests.py that globally runs all tests
 """
 
 # import the test infrastructure
-from infrastructure.tests import InvokeTest, make_tests, get_tests_from_dir
+from infrastructure.tests import make_tests, get_tests_from_dir
 import os
 
 optionals = []

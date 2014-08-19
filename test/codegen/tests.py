@@ -3,7 +3,7 @@ tests.py for codegen
 """
 
 # import the test infrastructure
-from infrastructure.tests import InvokeTest, make_tests
+from infrastructure.tests import make_tests
 import os
 
 def allTests():

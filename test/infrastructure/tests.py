@@ -76,7 +76,7 @@ class ValgrindTest(Test):
             print "Parsing valgrind output FAILED: %s" % e
             return False
     
-class InvokeTest(Test):
+class CompilerOutputTest(Test):
     """Superclass tests which work on a single file and compare the output."""
     positive = True
     basedir = "."
@@ -85,7 +85,7 @@ class InvokeTest(Test):
     result = ""
     
     def __init__(self, positive, base, src, res, options=[]):
-        super(InvokeTest, self).__init__(base, src, options)
+        super(CompilerOutputTest, self).__init__(base, src, options)
         self.positive = positive
         self.result = res
     
@@ -126,7 +126,7 @@ def make_tests(directory, positive=True, options=[]):
         if os.path.splitext(testfile)[1] == ".impala":
             of = os.path.splitext(testfile)[0] + ".output"
             res = of if os.path.exists(os.path.join(directory, of)) else ""
-            tests.append(InvokeTest(positive, directory, testfile, res, options))
+            tests.append(CompilerOutputTest(positive, directory, testfile, res, options))
     
     return sorted(tests, key=lambda test: test.getName())
 

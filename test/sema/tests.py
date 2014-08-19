@@ -3,7 +3,7 @@ tests.py for semantic analysis tests
 """
 
 # import the test infrastructure
-from infrastructure.tests import InvokeTest, make_tests
+from infrastructure.tests import make_tests
 import os
 
 optionals = ["sema/positive/int_is_int32.impala",
