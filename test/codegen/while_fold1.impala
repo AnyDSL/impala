@@ -1,0 +1,13 @@
+fn main(i: int) -> int {
+    let mut sum = 0;
+    while true {
+        ++sum;
+        if sum == 1 {
+            continue()
+        } else if sum == 2 {
+            break()
+        }
+        sum += 3
+    }
+    sum
+}

@@ -414,6 +414,7 @@ public:
     const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     bool is_mut() const { return is_mut_; }
     bool is_written() const { return is_written_; }
+    void write() const { is_written_ = true; }
     bool is_anonymous() const { return symbol() == Symbol() || symbol().str()[0] == '<'; }
     virtual std::ostream& print(Printer&) const override;
 
@@ -429,13 +430,9 @@ protected:
     mutable bool is_written_ = false;
     mutable thorin::Var var_;
 
-    friend class Parser;    // TODO clean up friend list
+    friend class Parser;
     friend class TypeSema;
-    friend class WhileExpr;
-    friend class ForExpr;
     friend class CodeGen;
-    friend class FnExpr;
-    friend class PathExpr;
 };
 
 /// Base class for all values which may be mutated within a function.

@@ -32,12 +32,27 @@ public:
             return cur_bb->get_value(1, convert(expr->type()));
         return Def();
     }
+
     void emit_jump(bool val, JumpTarget& x) {
         if (is_reachable()) {
             cur_bb->set_value(1, world().literal(val));
             jump(x);
         }
     }
+
+    Lambda* create_continuation(const LocalDecl* decl) {
+        auto result = world().lambda(convert(decl->type()).as<thorin::FnType>(), decl->symbol().str());
+        decl->var_ = Var::create_val(*this, result);
+        return result;
+    }
+
+    void jump_to_continuation(Lambda* lambda) {
+        if (is_reachable())
+            cur_bb->jump(lambda, {get_mem()});
+        cur_bb = lambda;
+        set_mem(lambda->param(0));
+    }
+
     Var lemit(const Expr* expr) { return expr->lemit(*this); }
     Def remit(const Expr* expr) { return expr->remit(*this); }
     void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
@@ -592,47 +607,32 @@ Def IfExpr::remit(CodeGen& cg) const {
 
 void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
     JumpTarget head_bb("while_head"), body_bb("while_body");
-
-    auto next = cg.world().lambda(cg.convert(continue_decl_->type()).as<thorin::FnType>(), "continue");
-    continue_decl_->var_ = Var::create_val(cg, next);
-    auto continue_lambda = continue_decl()->var_.load()->as_lambda();
+    auto continue_lambda = cg.create_continuation(continue_decl());
 
     cg.jump(head_bb);
     cg.enter_unsealed(head_bb);
     cg.emit_branch(cond(), body_bb, exit_bb);
-    cg.enter(body_bb);
-    cg.remit(body());
-    cg.cur_bb->jump(continue_lambda, {cg.get_mem()});
-    cg.cur_bb = continue_lambda;
-    cg.set_mem(continue_lambda->param(0));
+    if (cg.enter(body_bb))
+        cg.remit(body());
+    cg.jump_to_continuation(continue_lambda);
     cg.jump(head_bb);
     head_bb.seal();
 }
 
 Def WhileExpr::remit(CodeGen& cg) const {
     JumpTarget x("next");
-
-    auto next = cg.world().lambda(cg.convert(break_decl_->type()).as<thorin::FnType>(), "break");
-    break_decl_->var_ = Var::create_val(cg, next);
-    auto break_lambda = break_decl()->var_.load()->as_lambda();
+    auto break_lambda = cg.create_continuation(break_decl());
 
     cg.emit_jump(this, x);
-    if (cg.enter(x)) {
-        cg.cur_bb->jump(break_lambda, {cg.get_mem()});
-        cg.cur_bb = break_lambda;
-        cg.set_mem(break_lambda->param(0));
-        return cg.world().tuple({});
-    }
-    return Def();
+    cg.jump_to_continuation(break_lambda);
+    return cg.world().tuple({});
 }
 
 Def ForExpr::remit(CodeGen& cg) const {
     std::vector<Def> defs;
     defs.push_back(cg.get_mem());
 
-    // prepare break continuation
-    auto next = cg.world().lambda(cg.convert(break_decl_->type()).as<thorin::FnType>(), "break");
-    break_decl_->var_ = Var::create_val(cg, next);
+    auto break_lambda = cg.create_continuation(break_decl());
 
     // peel off run and halt
     auto forexpr = expr();
@@ -645,7 +645,7 @@ Def ForExpr::remit(CodeGen& cg) const {
     for (auto arg : map_expr->args())
         defs.push_back(cg.remit(arg));
     defs.push_back(cg.remit(fn_expr()));
-    defs.push_back(next);
+    defs.push_back(break_lambda);
     auto fun = cg.remit(map_expr->lhs());
     if (prefix && prefix->kind() == PrefixExpr::RUN) fun = cg.world().run(fun);
     if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun);
@@ -655,14 +655,14 @@ Def ForExpr::remit(CodeGen& cg) const {
     cg.end_eval(prev);
 
     // go to break continuation
-    cg.cur_bb = next;
-    cg.set_mem(next->param(0));
-    if (next->num_params() == 2)
-        return next->param(1);
+    cg.cur_bb = break_lambda;
+    cg.set_mem(break_lambda->param(0));
+    if (break_lambda->num_params() == 2)
+        return break_lambda->param(1);
     else {
-        Array<Def> defs(next->num_params()-1);
+        Array<Def> defs(break_lambda->num_params()-1);
         for (size_t i = 0, e = defs.size(); i != e; ++i)
-            defs[i] = next->param(i+1);
+            defs[i] = break_lambda->param(i+1);
         return cg.world().tuple(defs);
     }
 }
