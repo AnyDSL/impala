@@ -6,7 +6,7 @@ Created on 8 Dec 2013
 
 import sys, os, difflib, shutil, imp, tempfile
 from pb import Progressbar
-from timed_process import CompileProcess
+from timed_process import CompileProcess, RuntimeProcess
 from valgrindxml import ValgrindXML
 
 class Test(object):
@@ -82,7 +82,7 @@ class CompilerOutputTest(Test):
     basedir = "."
     srcfile = ""
     options = ""
-    result = ""
+    result = None
     
     def __init__(self, positive, base, src, res, options=[]):
         super(CompilerOutputTest, self).__init__(base, src, options)
@@ -100,7 +100,8 @@ class CompilerOutputTest(Test):
             print("\n[FAIL] "+os.path.join(self.basedir, self.srcfile))
             print("Output: "+p.output)
             return False
-        if "" == self.result:
+        
+        if self.result is None:
             return True
     
         with open(os.path.join(self.basedir, self.result), 'r') as f:
@@ -115,19 +116,112 @@ class CompilerOutputTest(Test):
             
             return True if fails == 0 else False
 
-def make_tests(directory, positive=True, options=[]):
-    """Create a list of tests based on the .impala files in directory
+class InvokeTest(Test):
+    """Superclass tests which work on a single file and compare the output."""
+    positive = True
+    basedir = "."
+    srcfile = ""
+    options = ""
+    result_file = None
+    CALL_IMPALA_MAIN_C = os.path.join(os.path.dirname(__file__), "call_impala_main.c")
+    
+    def __init__(self, base, src, res_file, options=[]):
+        super(InvokeTest, self).__init__(base, src, options+["-emit-llvm"])
+        self.result_file = res_file
+        
+        basename = os.path.splitext(self.srcfile)[0]
+        self.ll_file = basename + ".ll"
+        self.bc_file = basename + ".bc"
+        self.s_file = basename + ".s"
+        self.exe_file = basename
+        self.tmp_files = [self.ll_file, self.bc_file, self.s_file, self.exe_file]
+    
+    def compilePhases(self, gEx):
+        yield [os.path.abspath(gEx)] + self.options + [os.path.join(self.basedir, self.srcfile)]
+        yield ["llc", "-o", self.s_file, self.bc_file]
+        yield ["gcc", "-o", self.exe_file, self.s_file, InvokeTest.CALL_IMPALA_MAIN_C]
+    
+    def invoke(self, gEx):
+        # if any tmp file already exists do not touch it and fail
+        for tmp in self.tmp_files:
+            if os.path.exists(tmp):
+                print("\n[FAIL] "+os.path.join(self.basedir, self.srcfile))
+                print("  Will not overwrite existing file '%s'; please clean up before running tests" % tmp)
+                return False
+
+        try:
+            for phase in self.compilePhases(gEx):
+                p = CompileProcess(phase, ".")
+                p.execute()
+                if not (self.checkBasics(p) and self.compilationSuccess(p)):
+                    return False
+            
+            # run executable
+            p = RuntimeProcess([os.path.join(".", self.exe_file)], ".")
+            p.execute()
+            return self.checkBasics(p) and self.checkOutput(p)
+        finally:
+            # cleanup
+            for tmp in self.tmp_files:
+                self.cleanup(tmp)
+                pass
+    
+    def checkOutput(self, proc):
+        # currently only return code communication
+        expected = "0"
+        
+        if self.result_file is not None:
+            with open(os.path.join(self.basedir, self.result_file), 'r') as f:
+                expected = f.read().strip()
+                
+        if str(proc.returncode) != expected:
+            print("\n[FAIL] "+os.path.join(self.basedir, self.srcfile))
+            print("  Expected return code '%s', but got '%d'" % (expected, proc.returncode))
+            return False
+        
+        return True
+            
+    def cleanup(self, file):
+        if os.path.exists(file):
+            os.remove(file)
+
+    def compilationSuccess(self, p):
+        if not p.success():
+            print("\n[FAIL] "+os.path.join(self.basedir, self.srcfile))
+            print("Output: "+p.output)
+            return False
+        return True
+
+def get_tests(directory):
+    """A generator for test files based on the .impala files in directory
     
     Output files are expected to have the same name but with .output extension.
-    If no output file is found for a test no output is assumed."""
+    If no output file is found for a test no output is assumed.
+    
+    This yields (test_file, output_file) for each .impala file in the directory"""
     tests = []
 
     for testfile in os.listdir(directory):
         if os.path.splitext(testfile)[1] == ".impala":
             of = os.path.splitext(testfile)[0] + ".output"
-            res = of if os.path.exists(os.path.join(directory, of)) else ""
-            tests.append(CompilerOutputTest(positive, directory, testfile, res, options))
-    
+            res = of if os.path.exists(os.path.join(directory, of)) else None
+            yield (testfile, res)
+
+def make_compiler_output_tests(directory, positive=True, options=[]):
+    """Creates a list of CompilerOutputTests using get_tests(directory)"""
+    tests = []
+    for testfile, res in get_tests(directory):
+        tests.append(CompilerOutputTest(positive, directory, testfile, res, options))
+    return sorted(tests, key=lambda test: test.getName())
+
+def make_tests(directory, positive=True, options=[]):
+    return make_compiler_output_tests(directory, positive, options)
+
+def make_invoke_tests(directory, options=[]):
+    """Creates a list of InvokeTests using get_tests(directory)"""
+    tests = []
+    for testfile, res in get_tests(directory):
+        tests.append(InvokeTest(directory, testfile, res, options))
     return sorted(tests, key=lambda test: test.getName())
 
 def get_tests_from_dir(directory):

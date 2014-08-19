@@ -55,3 +55,10 @@ class CompileProcess(TimedProcess):
     
     def __init__(self, cmd, cwd, timeout=timeout):
         super(CompileProcess, self).__init__(cmd, cwd, timeout)
+
+class RuntimeProcess(TimedProcess):
+    DEFAULT_TIMEOUT = 2.0
+    timeout = DEFAULT_TIMEOUT
+    
+    def __init__(self, cmd, cwd, timeout=timeout):
+        super(RuntimeProcess, self).__init__(cmd, cwd, timeout)
