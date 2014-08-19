@@ -621,9 +621,10 @@ void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
     cg.jump(head_bb);
     cg.enter_unsealed(head_bb);
     cg.emit_branch(cond(), body_bb, exit_bb);
-    if (cg.enter(body_bb))
+    if (cg.enter(body_bb)) {
         cg.remit(body());
-    cg.jump_to_continuation(continue_lambda);
+        cg.jump_to_continuation(continue_lambda);
+    }
     cg.jump(head_bb);
     head_bb.seal();
     cg.enter(exit_bb);
