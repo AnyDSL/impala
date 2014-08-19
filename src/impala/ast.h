@@ -424,7 +424,6 @@ private:
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const = 0;
 
 protected:
-
     AutoPtr<const ASTType> ast_type_;
     bool is_mut_ = false;
     mutable bool is_written_ = false;
@@ -1231,6 +1230,8 @@ class WhileExpr : public StmtLikeExpr {
 public:
     const Expr* cond() const { return cond_; }
     const BlockExpr* body() const { return body_; }
+    const LocalDecl* break_decl() const { return break_decl_; }
+    const LocalDecl* continue_decl() const { return continue_decl_; }
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;

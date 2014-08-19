@@ -220,6 +220,15 @@ public:
 private:
     Token lex();        ///< Consume next Token in input stream, fill look-ahead buffer, return consumed Token.
 
+    const LocalDecl* create_continuation_decl(const char* name, bool set_type) {
+        auto decl = loc(new LocalDecl(cur_var_handle++));
+        decl->is_mut_ = false;
+        decl->identifier_ = new Identifier(name, prev_loc_);
+        decl->set_loc(prev_loc_);
+        decl->ast_type_ = set_type ? new FnASTType(prev_loc()) : nullptr;
+        return decl;
+    }
+
     Lexer lexer;        ///< invoked in order to get next token
     Token lookahead[3]; ///< SLL(3) look ahead
     size_t cur_var_handle;
@@ -1009,16 +1018,7 @@ const ForExpr* Parser::parse_for_expr() {
     if (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
         parse_param_list(fn_expr->params_, Token::IN, true);
     fn_expr->params_.push_back(Param::create(cur_var_handle++, new Identifier("continue", prev_loc()), prev_loc(), nullptr));
-
-    {
-        auto break_decl = loc(new LocalDecl(cur_var_handle++));
-        break_decl->is_mut_ = false;
-        break_decl->identifier_ = new Identifier("break", prev_loc_);
-        break_decl->set_loc(prev_loc_);
-        break_decl->ast_type_ = nullptr; // set during TypeSema
-        for_expr->break_decl_ = break_decl.get();
-    }
-
+    for_expr->break_decl_ = create_continuation_decl("break", /*set type during TypeSema*/ false);
     for_expr->expr_ = parse_expr();
     fn_expr->body_ = try_block_expr("body of function");
     return for_expr;
@@ -1028,22 +1028,8 @@ const WhileExpr* Parser::parse_while_expr() {
     auto while_expr = loc(new WhileExpr());
     eat(Token::WHILE);
     while_expr->cond_ = parse_expr();
-    {
-        auto break_decl = loc(new LocalDecl(cur_var_handle++));
-        break_decl->is_mut_ = false;
-        break_decl->identifier_ = new Identifier("break", prev_loc_);
-        break_decl->set_loc(prev_loc_);
-        break_decl->ast_type_ = new FnASTType(prev_loc());
-        while_expr->break_decl_ = break_decl.get();
-    }
-    {
-        auto continue_decl = loc(new LocalDecl(cur_var_handle++));
-        continue_decl->is_mut_ = false;
-        continue_decl->identifier_ = new Identifier("break", prev_loc_);
-        continue_decl->set_loc(prev_loc_);
-        continue_decl->ast_type_ = new FnASTType(prev_loc());
-        while_expr->continue_decl_ = continue_decl.get();
-    }
+    while_expr->break_decl_ = create_continuation_decl("break", true);
+    while_expr->continue_decl_ = create_continuation_decl("continue", true);
     while_expr->body_ = try_block_expr("body of while loop");
     return while_expr;
 }
