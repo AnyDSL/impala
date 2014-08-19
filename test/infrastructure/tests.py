@@ -30,14 +30,16 @@ class Test(object):
         return os.path.join(self.basedir, self.srcfile)
     
     def checkBasics(self, proc):
+        cmd = os.path.basename(proc.cmd[0])
+        
         if proc.killed:
             print("\n[FAIL] " + os.path.join(self.basedir, self.srcfile))
-            print("Process timed out.")
+            print("  Process '%s' timed out." % cmd)
             return False
         
         if proc.crash():
             print("\n[FAIL] " + os.path.join(self.basedir, self.srcfile))
-            print("Impala crashed. Return code was: %d" % proc.returncode)
+            print("  '%s' crashed. Return code was: %d" % (cmd, proc.returncode))
             return False
         
         return True
