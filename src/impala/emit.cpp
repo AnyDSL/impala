@@ -46,11 +46,15 @@ public:
         return result;
     }
 
+    void set_continuation(Lambda* lambda) {
+        cur_bb = lambda;
+        set_mem(lambda->param(0));
+    }
+
     void jump_to_continuation(Lambda* lambda) {
         if (is_reachable())
             cur_bb->jump(lambda, {get_mem()});
-        cur_bb = lambda;
-        set_mem(lambda->param(0));
+        set_continuation(lambda);
     }
 
     Var lemit(const Expr* expr) { return expr->lemit(*this); }
@@ -656,9 +660,7 @@ Def ForExpr::remit(CodeGen& cg) const {
     cg.call(fun, defs, thorin::Type());
     cg.end_eval(prev);
 
-    // go to break continuation
-    cg.cur_bb = break_lambda;
-    cg.set_mem(break_lambda->param(0));
+    cg.set_continuation(break_lambda);
     if (break_lambda->num_params() == 2)
         return break_lambda->param(1);
     else {
