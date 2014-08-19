@@ -5,13 +5,13 @@ fn range(a: int, z: int, body: fn(int)->()) -> () {
     }
 }
 
-fn main(n : int) -> int {
+fn main() -> int {
     let mut res : int = 0;
-    for i in range(0, n) {
+    for i in range(0, 15) {
         if i*i > 42 {
             break()
         }
-        res += i;
+        res += 1;
     }
     res
 }

@@ -6,12 +6,11 @@ fn range(a: int, z: int, body: fn(int)->()) -> () {
 }
 
 fn main() -> int {
-    let n : int = 100;
     let mut a : int = 0;
     for i in range(0, 100) {
         if (i % 2 == 0) {
             continue()
-	}
+        }
         ++a;
     }
     a

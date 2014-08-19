@@ -1,3 +1,7 @@
-extern fn f(b: bool) -> int {
+fn f(b: bool) -> int {
     b as int
+}
+
+fn main() -> int {
+	4*f(true) + f(false)
 }

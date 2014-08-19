@@ -1,7 +1,11 @@
-fn main(mut i: int) -> int {
+extern fn g(mut i: int) -> int {
     fn f(j: int) -> int {
         i + j
     }
     ++i;
     f(i)
+}
+
+fn main() -> int {
+    g(1)
 }

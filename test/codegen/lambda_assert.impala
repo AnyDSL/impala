@@ -15,6 +15,7 @@ fn init_zero(mut arr: &[f32]) -> () {
     }
 }
 
-fn main() -> () {
+fn main() -> int {
     init_zero(~[42: f32]);
+    0
 }
