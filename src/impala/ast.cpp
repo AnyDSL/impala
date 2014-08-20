@@ -91,4 +91,8 @@ void MapExpr::take_address() const {
     lhs()->take_address();
 }
 
+void FieldExpr::take_address() const {
+    lhs()->take_address();
+}
+
 }

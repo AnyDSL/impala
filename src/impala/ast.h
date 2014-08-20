@@ -1017,6 +1017,7 @@ public:
     Symbol symbol() const { return identifier()->symbol(); }
     uint32_t index() const { return index_; }
     virtual bool is_lvalue() const override;
+    virtual void take_address() const override;
     virtual void check(NameSema&) const override;
     Type check_as_struct(TypeSema&, Type) const;
 
