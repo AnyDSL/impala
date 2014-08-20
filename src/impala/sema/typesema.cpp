@@ -775,43 +775,44 @@ Type TupleExpr::check(TypeSema& sema, TypeExpectation expected) const {
 Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {
     if (auto decl = path()->decl()) {
         StructAppType struct_app;
-        if (auto type_def = decl->isa<Typedef>()) {
-            assert(type_def->type()->num_type_vars() == num_type_args() && "not yet supported: make sure that number of typedef's type vars and given type args match");
-            struct_app = sema.instantiate(path()->loc(), sema.check(type_def), type_args()).isa<StructAppType>();
-        } else if (auto struct_decl = decl->isa<StructDecl>()) {
-            auto struct_abs = sema.check(struct_decl).isa<StructAbsType>();
-            if (struct_abs) {
-                if (num_type_args() <= struct_abs->num_type_vars()) {
-                    StructAppType exp_type = expected.type().isa<StructAppType>();
 
-                    if (exp_type && (exp_type->struct_abs_type() == struct_abs)) {
-                        for (size_t i = 0; i < exp_type->num_args(); ++i) {
-                            if ((i < num_type_args()) && (!(exp_type->arg(i) == sema.check(type_arg(i))))) {
-                                sema.error(type_arg(i)) << "expected different argument for type parameter '" << struct_abs->type_var(i) << "': expected '" << exp_type->arg(i) << "' but found '" << type_arg(i)->type() << "'\n";
-                            }
-                            inferred_args_.push_back(exp_type->arg(i));
-                        }
+        auto td = decl->isa<TypeableDecl>();
+        assert(td);
+        Type decl_type = sema.check(td);
 
-                        assert(inferred_args_.size() == struct_abs->num_type_vars());
-                        struct_app = exp_type;
-                    } else {
-                        for (auto type_arg : type_args()) {
-                            inferred_args_.push_back(sema.check(type_arg));
-                        }
+        if (num_type_args() <= decl_type->num_type_vars()) {
+            StructAppType exp_type = expected.type().isa<StructAppType>();
 
-                        for (size_t i = num_type_args(), e = struct_abs->num_type_vars(); i != e; ++i)
-                            inferred_args_.push_back(sema.unknown_type());
-
-                        assert(inferred_args_.size() == struct_abs->num_type_vars());
-                        struct_app = struct_abs->instantiate(inferred_args_).as<StructAppType>();
+            // use the expected type if there is any
+            if (exp_type && (decl_type == exp_type->struct_abs_type())) {
+                for (size_t i = 0; i < exp_type->num_args(); ++i) {
+                    if ((i < num_type_args()) && (!(exp_type->arg(i) == sema.check(type_arg(i))))) {
+                        sema.error(type_arg(i)) << "expected different argument for type parameter '" << decl_type->type_var(i) << "': expected '" << exp_type->arg(i) << "' but found '" << type_arg(i)->type() << "'\n";
                     }
-                } else
-                    sema.error(this) << "too many type arguments to structure: " << num_type_args() << " for " << struct_abs->num_type_vars() << "\n";
+                    inferred_args_.push_back(exp_type->arg(i));
+                }
+
+                assert(inferred_args_.size() == decl_type->num_type_vars());
+                struct_app = exp_type;
+            } else { // if no expected type was given fill type arguments with unknowns
+                for (auto type_arg : type_args()) {
+                    inferred_args_.push_back(sema.check(type_arg));
+                }
+
+                for (size_t i = num_type_args(), e = decl_type->num_type_vars(); i != e; ++i)
+                    inferred_args_.push_back(sema.unknown_type());
+
+                assert(inferred_args_.size() == decl_type->num_type_vars());
+                auto instantiated_decl_type = decl_type->instantiate(inferred_args_);
+
+                if (instantiated_decl_type.isa<StructAppType>()) {
+                    struct_app = instantiated_decl_type.as<StructAppType>();
+                } else {
+                    sema.error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
+                }
             }
-        } else {
-            sema.error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
-            return sema.type_error();
-        }
+        } else
+            sema.error(this) << "too many type arguments to structure: " << num_type_args() << " for " << decl_type->num_type_vars() << "\n";
 
         if (struct_app) {
             auto struct_abs  = struct_app->struct_abs_type();

@@ -1,0 +1,9 @@
+struct S[X] { x: X }
+
+type T[Y] = S[Y];
+
+fn main() -> int {
+   let s: T[int] = T { x: 4 };
+   let t = T { x: 4 };
+   s.x
+}

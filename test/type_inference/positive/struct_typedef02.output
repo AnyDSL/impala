@@ -1,0 +1,11 @@
+struct S[X] {
+    x: X
+}
+
+type T[Y] = S[Y];
+
+fn main() -> i32 {
+    let s: S[i32] = T[i32]{x: 4};
+    let t: S[i32] = T[i32]{x: 4};
+    (s.x)
+}

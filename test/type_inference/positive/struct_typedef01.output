@@ -1,0 +1,11 @@
+struct S {
+    x: i32
+}
+
+type T = S;
+
+fn main() -> i32 {
+    let s: S = T{x: 4};
+    let t: S = T{x: 4};
+    (s.x)
+}

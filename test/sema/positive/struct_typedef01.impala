@@ -1,0 +1,8 @@
+struct S { x: int }
+
+type T = S;
+
+fn main() -> int {
+   let s: T = T { x: 4 };
+   s.x
+}
