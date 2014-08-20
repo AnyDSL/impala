@@ -608,6 +608,7 @@ public:
     uint64_t dim() const { return dim_; }
     virtual std::ostream& print(Printer&) const override;
     virtual bool is_subtype(const TypeNode* other) const override;
+    virtual bool equal(const Unifiable*) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;

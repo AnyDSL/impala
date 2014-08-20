@@ -256,6 +256,11 @@ bool TypeVarNode::equal(const Unifiable* other) const {
     return false;
 }
 
+bool DefiniteArrayTypeNode::equal(const Unifiable* other) const {
+    assert(this->is_unified());
+    return Unifiable::equal(other) && (this->dim() == other->as<DefiniteArrayTypeNode>()->dim());
+}
+
 bool StructAbsTypeNode::equal(const Unifiable* unifiable) const {
     assert(this->is_unified());
     if (auto other = unifiable->isa<StructAbsTypeNode>())
@@ -292,7 +297,12 @@ bool OwnedPtrTypeNode::is_subtype(const TypeNode* other) const {
     return other->isa<PtrTypeNode>() && referenced_type()->is_subtype(*other->as<PtrTypeNode>()->referenced_type());
 }
 bool DefiniteArrayTypeNode::is_subtype(const TypeNode* other) const {
-    return other->isa<ArrayTypeNode>() && elem_type()->is_subtype(*other->as<ArrayTypeNode>()->elem_type());
+    bool dim_eq = true;
+    if (auto da_other = other->isa<DefiniteArrayTypeNode>()) {
+        dim_eq = dim() == da_other->dim();
+    }
+
+    return dim_eq && other->isa<ArrayTypeNode>() && elem_type()->is_subtype(*other->as<ArrayTypeNode>()->elem_type());
 }
 
 /*
