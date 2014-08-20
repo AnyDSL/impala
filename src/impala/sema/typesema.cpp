@@ -1014,17 +1014,17 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
         if (else_type->is_noret())
             return sema.expect_type(then_expr(), TypeExpectation(expected, "if expression type"));
         if ((then_type == else_type) || (then_type <= else_type)) {
-            // TODO we need to enable casting during codegen by doing something like below. However this won't work because type_ cannot be reset..
-            //      maybe we should simply insert a CastExpr here?
-            //then_expr()->actual_type_ = then_type;
-            //then_expr()->type_ = else_type;
+            assert(then_expr()->actual_type_.empty());
+            then_expr()->actual_type_ = then_type;
+            then_expr()->type_.clear();
+            then_expr()->type_ = else_type;
             return sema.expect_type(this, else_type, TypeExpectation(expected, "if expression type"));
         }
         if (else_type <= then_type) {
-            // TODO we need to enable casting during codegen by doing something like below. However this won't work because type_ cannot be reset..
-            //      maybe we should simply insert a CastExpr here?
-            //else_expr()->actual_type_ = else_type;
-            //else_expr()->type_ = then_type;
+            assert(else_expr()->actual_type_.empty());
+            else_expr()->actual_type_ = else_type;
+            else_expr()->type_.clear();
+            else_expr()->type_ = then_type;
             return sema.expect_type(this, then_type, TypeExpectation(expected, "if expression type"));
         }
 

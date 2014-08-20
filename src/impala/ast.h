@@ -818,6 +818,7 @@ protected:
     friend class Parser;
     friend class Printer;
     friend class TypeSema;
+    friend class IfExpr;
 };
 
 /// Use as mixin for anything which uses type args: [T1, ..., Tn]
