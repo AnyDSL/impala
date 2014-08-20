@@ -1,0 +1,13 @@
+fn main(mut i: int) -> int {
+    let mut sum = 0;
+    while true {
+        while i < 23 {
+            ++i;
+            ++sum;
+        }
+        if i == 42 {
+            break()
+        }
+    }
+    sum
+}

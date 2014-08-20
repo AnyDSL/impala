@@ -1,0 +1,10 @@
+fn main(n: int) -> int {
+    let mut sum = 0;
+    while sum < n {
+        ++sum;
+    }
+    while sum < n {
+        ++sum;
+    }
+    sum
+}
