@@ -4,14 +4,13 @@ tests.py runs code generation tests for those examples (TODO currently codegen i
 """
 
 # import the test infrastructure
-from infrastructure.tests import make_tests
-import os
+from infrastructure.tests import make_invoke_tests
 
 optionals = []
 
 def allTests():
     """This functions returns all the tests in this directory"""
-    tests = make_tests("examples", True)
+    tests = make_invoke_tests("examples")
     
     # mark optionals
     for test in tests:

@@ -23,7 +23,7 @@ fn intRange(start : int,
     iter, count, next)
 }
 
-fn main(p : fn(int)){
+fn main(p : fn(int)) {
   // use int range
   // for each(int e in range(2, 10)) { ... }
   intRange(2, 10,

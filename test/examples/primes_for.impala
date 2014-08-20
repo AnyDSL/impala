@@ -1,6 +1,6 @@
 /*
-foreach that adds all primes smaller than 100
-expected result: 1060
+foreach that adds all primes smaller than 40
+expected result: 197
 */
 fn primes(n: int, body: fn(int, fn()), ret: fn()) {
     if n < 2 {
@@ -32,7 +32,7 @@ fn primes(n: int, body: fn(int, fn()), ret: fn()) {
 
 fn main() -> int {
     let mut result = 0;
-    for p in primes(100) {
+    for p in primes(40) {
         result += p;
     }
     result

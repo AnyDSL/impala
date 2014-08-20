@@ -28,3 +28,5 @@ extern fn always_leas(i: int) -> int {
     a(i) = a(i+1);
     a(i+2)
 }
+
+fn main() -> int { 0 }

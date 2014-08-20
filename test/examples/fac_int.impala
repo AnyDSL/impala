@@ -18,7 +18,6 @@ fn fac(n : int) -> int {
     r
 }
 
-
-fn main(i: int) -> int {
+fn main() -> int {
     fac(5)
 }

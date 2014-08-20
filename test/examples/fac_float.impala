@@ -17,3 +17,7 @@ extern fn fac(n : float) -> float {
 
     r
 }
+
+fn main() -> int {
+    fac(4.0f) as int
+}

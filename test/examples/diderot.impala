@@ -34,7 +34,7 @@ fn initially[G,T,R](g: G, xn: int, yn: int, make_strand: fn(G) -> T, write_resul
     })
 }
 
-fn main(j: int) -> i64 {
+fn main() -> i64 {
     fn update(g: i64, t: i16, xn: int, yn: int, loop: fn(i16), stabilize: fn(i16), die: fn()) {
         if xn + yn < 42 {
             die()

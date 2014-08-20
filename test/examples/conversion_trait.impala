@@ -57,7 +57,7 @@ fn assertAddEqual[T:Eq+Add+Conv[U], U:Eq+Add+Conv[T]](t : T, u : U) -> bool {
 
 fn main() -> int {
     let s = S { x:5 };
-    let t = 7;
+    let t = 5;
     
     if assertAddEqual(s, t) { 0 } else { 1 }
 }

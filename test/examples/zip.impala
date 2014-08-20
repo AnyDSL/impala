@@ -30,7 +30,7 @@ fn zip(zipper : fn(int, int) -> int, generate1 : fn(int, fn(int)), generate2 : f
     loop(0)
 }
 
-fn main(n : int, ret : fn(int)) {
+fn main(ret : fn(int)) {
     fn zipper(a : int, b : int) -> int { a + b }
     zip(zipper, primes, count, |i : int, next : fn()| {
         if (i > 24) {

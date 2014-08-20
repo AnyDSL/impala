@@ -13,3 +13,7 @@ extern fn fac(n: int) -> int {
         helper(1, 2)
     }
 }
+
+fn main() -> int {
+    fac(4)
+}

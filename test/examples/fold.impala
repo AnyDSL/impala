@@ -20,5 +20,5 @@ fn fold(f: fn(int, int) -> int, z: int, stream: (int, fn(int, fn(int, fn()), fn(
 }
 
 fn main() -> int {
-    fold(|a: int, b: int| -> int { a + b }, 0, seq(0, 100))
+    fold(|a: int, b: int| -> int { a + b }, 0, seq(0, 10))
 }
