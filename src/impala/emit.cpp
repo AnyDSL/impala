@@ -42,6 +42,7 @@ public:
 
     Lambda* create_continuation(const LocalDecl* decl) {
         auto result = world().lambda(convert(decl->type()).as<thorin::FnType>(), decl->symbol().str());
+        result->param(0)->name = "mem";
         decl->var_ = Var::create_val(*this, result);
         return result;
     }
