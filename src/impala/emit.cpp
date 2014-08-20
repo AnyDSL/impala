@@ -546,7 +546,7 @@ Def MapExpr::remit(CodeGen& cg) const {
         Def ldef = cg.remit(lhs());
         assert(fn->num_type_vars() == num_inferred_args());
         std::vector<Def> defs;
-        defs.push_back(Def());      // reserve for mem but set later - some other args may update the monad
+        defs.push_back(Def()); // reserve for mem but set later - some other args may update the monad
         for (size_t i = 0, e = fn->num_type_vars(); i != e; ++i) {
             if (auto type_var = inferred_arg(i).isa<TypeVar>())
                 defs.push_back(type_var->defs_.top());
@@ -637,7 +637,7 @@ void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
 
 Def ForExpr::remit(CodeGen& cg) const {
     std::vector<Def> defs;
-    defs.push_back(Def()); // make room for mem
+    defs.push_back(Def()); // reserve for mem but set later - some other args may update the monad
 
     auto break_lambda = cg.create_continuation(break_decl());
 
@@ -658,7 +658,7 @@ Def ForExpr::remit(CodeGen& cg) const {
     if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun);
 
     auto prev = cg.cur_bb;
-    defs.front() = cg.get_mem();
+    defs.front() = cg.get_mem(); // now get the current memory monad
     cg.call(fun, defs, thorin::Type());
     cg.end_eval(prev);
 
