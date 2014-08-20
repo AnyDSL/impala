@@ -8,7 +8,7 @@ Command line options:
  -e, --executable <Path to executable>
      Default is 'impala' (if possible) or '../build/bin/impala' otherwise;
      on Windows '.exe' is appended
- -d, --disable-progressbar   Disable the fancy progress bar
+ -p --enable-progressbar   Enable the fancy progress bar
  -t, --compiler-timeout <floating point value in seconds>
                          Default is 1.0
  -L, --valgrind   Use valgrind to check for memory leaks during testing
@@ -46,12 +46,12 @@ def get_executable():
 
 def main():
     executable = get_executable()
-    pb = True
+    pb = False
     valgrind = False
     
     # get cmd file
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "he:dt:L", ["help", "executable", "disable-progressbar", "compiler-timeout", "valgrind"])
+        opts, args = getopt.getopt(sys.argv[1:], "he:pt:L", ["help", "executable", "enable-progressbar", "compiler-timeout", "valgrind"])
     except getopt.error as msg:
         print(msg)
         sys.exit(2)
@@ -63,8 +63,8 @@ def main():
             sys.exit(0)
         if o in ("-e", "--executable"):
             executable = a
-        if o in ("-d", "--disable-progressbar"):
-            pb = False
+        if o in ("-p", "--enable-progressbar"):
+            pb = True
         if o in ("-t", "--compiler-timeout"):
             CompileProcess.timeout = float(a)
         if o in ("-L", "--valgrind"):
