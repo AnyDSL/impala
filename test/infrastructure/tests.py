@@ -33,13 +33,15 @@ class Test(object):
         cmd = os.path.basename(proc.cmd[0])
         
         if proc.killed:
-            print("\n[FAIL] " + os.path.join(self.basedir, self.srcfile))
+            print("[FAIL] " + os.path.join(self.basedir, self.srcfile))
             print("  Process '%s' timed out." % cmd)
+            print
             return False
         
         if proc.crash():
-            print("\n[FAIL] " + os.path.join(self.basedir, self.srcfile))
+            print("[FAIL] " + os.path.join(self.basedir, self.srcfile))
             print("  '%s' crashed. Return code was: %d" % (cmd, proc.returncode))
+            print
             return False
         
         return True
@@ -70,7 +72,8 @@ class ValgrindTest(Test):
             success = len(vgout.leaks) == 0
 
             if not success:
-                print("\n[FAIL] " + os.path.join(self.basedir, self.srcfile))
+                print("[FAIL] " + os.path.join(self.basedir, self.srcfile))
+                print
                 print(vgout)
             
             return success
@@ -99,8 +102,9 @@ class CompilerOutputTest(Test):
 
     def checkOutput(self, p):
         if p.success() != self.positive:
-            print("\n[FAIL] "+os.path.join(self.basedir, self.srcfile))
+            print("[FAIL] "+os.path.join(self.basedir, self.srcfile))
             print("Output: "+p.output)
+            print
             return False
         
         if self.result is None:
@@ -147,8 +151,9 @@ class InvokeTest(Test):
         # if any tmp file already exists do not touch it and fail
         for tmp in self.tmp_files:
             if os.path.exists(tmp):
-                print("\n[FAIL] "+os.path.join(self.basedir, self.srcfile))
+                print("[FAIL] "+os.path.join(self.basedir, self.srcfile))
                 print("  Will not overwrite existing file '%s'; please clean up before running tests" % tmp)
+                print
                 return False
 
         try:
@@ -177,8 +182,9 @@ class InvokeTest(Test):
                 expected = f.read().strip()
                 
         if str(proc.returncode) != expected:
-            print("\n[FAIL] "+os.path.join(self.basedir, self.srcfile))
+            print("[FAIL] "+os.path.join(self.basedir, self.srcfile))
             print("  Expected return code '%s', but got '%d'" % (expected, proc.returncode))
+            print
             return False
         
         return True
