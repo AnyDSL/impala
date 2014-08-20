@@ -5,7 +5,6 @@ Created on 8 Dec 2013
 '''
 
 import sys, os, difflib, shutil, imp, tempfile
-from pb import Progressbar
 from timed_process import CompileProcess, RuntimeProcess
 from valgrindxml import ValgrindXML
 
@@ -241,19 +240,14 @@ def get_tests_from_dir(directory):
         tests = make_tests(directory)
     return tests
 
-def executeTests(tests, gEx, pb = True):
+def executeTests(tests, gEx):
     """Invoke this function with a list of test objects to run the tests. """
     
     res = {}
-    bar = Progressbar(50)
     s   = True
     for i in range(len(tests)):
-        if pb:
-            bar.update(float(i)/float(len(tests)),tests[i].getName(),success=s)
-        else:
-            print ("["+str(i+1)+"/"+str(len(tests))+"] " + tests[i].getName())
+        print ("["+str(i+1)+"/"+str(len(tests))+"] " + tests[i].getName())
         res[tests[i]] = s = tests[i].invoke(gEx)
-    bar.done()
 
     print("\n* Test summary\n")
     failOpt = 0
