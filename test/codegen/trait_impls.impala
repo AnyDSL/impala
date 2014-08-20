@@ -1,3 +1,5 @@
+// TODO this example is not semantically correct because method overloading is prohibited! (=>int cannot implement A and B together)
+
 trait B {
     fn a(self: Self) -> f32;
 }

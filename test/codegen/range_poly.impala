@@ -21,14 +21,16 @@ fn main() -> int {
     let mut sum = 0;
     for i in range(0, 10) {
         let j: int =
-            if i == 7 {
+            if i == 5 {
                 42
-            } else if i == 8 {
+            } else if i == 6 {
                 continue()
-            } else if i == 9 {
+            } else if i == 8 {
                 break()
+            } else {
+                i
             };
-        sum += j + j
+        sum += j + j;
     }
     sum
 }

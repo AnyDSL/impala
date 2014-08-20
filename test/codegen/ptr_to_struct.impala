@@ -7,3 +7,5 @@ extern fn f(mut s: &S) -> () {
     s.i = 23;
     s.a(1) = 2.f
 }
+
+fn main() -> int { 0 }

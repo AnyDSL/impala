@@ -1,11 +1,13 @@
-fn main(mut i: int) -> int {
+fn main() -> int {
+    let mut i = 0;
     let mut sum = 0;
     while true {
         while i < 23 {
             ++i;
             ++sum;
         }
-        if i == 42 {
+        i = 0;
+        if sum >= 42 {
             break()
         }
     }

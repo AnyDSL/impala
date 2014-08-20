@@ -1,5 +1,9 @@
-fn main(i: int) -> int {
+extern fn g(i: int) -> int {
     let f = |x: int| -> int return(x+i);
 
     f(i)
+}
+
+fn main() -> int {
+    g(5)
 }

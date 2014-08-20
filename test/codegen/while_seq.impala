@@ -1,4 +1,4 @@
-fn main(n: int) -> int {
+extern fn f(n: int) -> int {
     let mut sum = 0;
     while sum < n {
         ++sum;
@@ -7,4 +7,8 @@ fn main(n: int) -> int {
         ++sum;
     }
     sum
+}
+
+fn main() -> int {
+    f(5)
 }

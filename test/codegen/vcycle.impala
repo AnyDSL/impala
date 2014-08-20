@@ -20,7 +20,7 @@ fn sort(num : int, mut arr : &[i64]) -> () {
     }
 }
 
-fn main() -> () {
+fn main() -> int {
     let levels = 2;
     let mut times = ~[2:i64];
 
@@ -34,5 +34,6 @@ fn main() -> () {
         }
     }
     @vcycle_dsl_intern(0);
+    0
 }
 

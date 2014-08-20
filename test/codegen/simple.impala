@@ -1,4 +1,4 @@
-fn main(i : int) -> int {
+extern fn f(i: int) -> int {
     let mut a = 0;
     if i == 1 {
         a = 23
@@ -6,4 +6,8 @@ fn main(i : int) -> int {
         a = 42
     }
     a
+}
+
+fn main() -> int {
+    f(0) + f(1)
 }
