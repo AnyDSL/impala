@@ -637,7 +637,7 @@ void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
 
 Def ForExpr::remit(CodeGen& cg) const {
     std::vector<Def> defs;
-    defs.push_back(cg.get_mem());
+    defs.push_back(Def()); // make room for mem
 
     auto break_lambda = cg.create_continuation(break_decl());
 
@@ -658,6 +658,7 @@ Def ForExpr::remit(CodeGen& cg) const {
     if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun);
 
     auto prev = cg.cur_bb;
+    defs.front() = cg.get_mem();
     cg.call(fun, defs, thorin::Type());
     cg.end_eval(prev);
 
