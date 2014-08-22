@@ -58,8 +58,19 @@ public:
         set_continuation(lambda);
     }
 
-    Var lemit(const Expr* expr) { return expr->lemit(*this); }
-    Def remit(const Expr* expr) { return expr->remit(*this); }
+    Var lemit(const Expr* expr) {
+        auto var = expr->lemit(*this);
+        if (expr->needs_cast()) {
+            // TODO
+        }
+        return var;
+    }
+    Def remit(const Expr* expr) {
+        auto def = expr->remit(*this);
+        if (expr->needs_cast())
+            return world().convert(def, convert(expr->type()));
+        return def;
+    }
     void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
     void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }

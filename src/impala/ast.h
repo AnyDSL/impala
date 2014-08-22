@@ -796,6 +796,7 @@ class Expr : public ASTNode, public Typeable {
 public:
     /// return the type before implicit casting (for example ~4 always has the actual_type ~int but its type could be &int due to subtyping)
     Type actual_type() const { return actual_type_.empty() ? type() : actual_type_; }
+    bool needs_cast() const { return !actual_type_.empty(); }
     thorin::Def extra() const { return extra_; }
     virtual bool is_lvalue() const { return false; }
     virtual void take_address() const {}
