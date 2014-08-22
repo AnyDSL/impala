@@ -67,7 +67,7 @@ bool PathExpr::is_lvalue() const {
 }
 
 bool MapExpr::is_lvalue() const {
-    return (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) ?  lhs()->is_lvalue() : false;
+    return (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) ? lhs()->is_lvalue() : false;
 }
 
 bool PrefixExpr::is_lvalue() const {
