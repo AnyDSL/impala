@@ -394,9 +394,7 @@ Def LiteralExpr::remit(CodeGen& cg) const {
 Def CastExpr::remit(CodeGen& cg) const {
     auto def = cg.remit(lhs());
     auto thorin_type = cg.convert(ast_type()->type());
-    if (this->type().isa<PtrType>() && lhs()->type().isa<PtrType>())
-        return cg.world().bitcast(def, thorin_type);
-    return cg.world().cast(def, thorin_type);
+    return cg.world().convert(def, thorin_type);
 }
 
 Var PathExpr::lemit(CodeGen& cg) const {
