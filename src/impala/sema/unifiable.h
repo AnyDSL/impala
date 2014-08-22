@@ -128,7 +128,7 @@ public:
     template<class U> Proxy<typename U::BaseType> as() const {
         return Proxy<typename U::BaseType>((*this)->template as <typename U::BaseType>());
     }
-    operator bool() { return !empty(); }
+    operator bool() const { return !empty(); }
     void clear() { assert(node_ != nullptr); node_ = nullptr; }
     Proxy<T>& operator= (Proxy<T> other) { swap(*this, other); return *this; }
     friend void swap(Proxy<T>& p1, Proxy<T>& p2) {
