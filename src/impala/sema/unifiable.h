@@ -85,9 +85,6 @@ struct TraitAppLT { bool operator () (TraitApp t1, TraitApp t2) const; };
 
 template<class T>
 class Proxy {
-private:
-    bool operator != (const Proxy<T>&) const; ///< Always test positively to allow for automagic type inference.
-
 public:
     typedef T BaseType;
 
@@ -113,6 +110,7 @@ public:
             return true;
         return infer(*this, other) || (*this)->is_error() || other->is_error();
     }
+    bool operator != (const Proxy<T>& other) const { return !(*this == other); }
     bool operator <= (const Proxy<T>& other) const { return is_subtype(*this, other); }
     Proxy<T> unify() const { return node()->unify()->template as<T>(); }
     const T* representative() const { return node()->representative()->template as<T>(); }

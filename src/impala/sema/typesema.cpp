@@ -521,7 +521,7 @@ void ImplItem::check_item(TypeSema& sema) const {
                 assert(p.second && "there should be no such name in the set"); // else name analysis failed
 
                 // check that the types match
-                if (!(fn_type == t))
+                if (fn_type != t)
                     sema.error(fn) << "method '" << trait() << "." << meth_name << "' should have type '" << t << "', but implementation has type '" << fn_type << "'\n";
             }
         }
@@ -786,9 +786,8 @@ Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {
             // use the expected type if there is any
             if (exp_type && (decl_type == exp_type->struct_abs_type())) {
                 for (size_t i = 0; i < exp_type->num_args(); ++i) {
-                    if ((i < num_type_args()) && (!(exp_type->arg(i) == sema.check(type_arg(i))))) {
+                    if ((i < num_type_args()) && (exp_type->arg(i) != sema.check(type_arg(i))))
                         sema.error(type_arg(i)) << "expected different argument for type parameter '" << decl_type->type_var(i) << "': expected '" << exp_type->arg(i) << "' but found '" << type_arg(i)->type() << "'\n";
-                    }
                     inferred_args_.push_back(exp_type->arg(i));
                 }
 
