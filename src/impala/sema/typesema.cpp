@@ -743,17 +743,7 @@ Type DefiniteArrayExpr::check(TypeSema& sema, TypeExpectation) const {
 }
 
 Type RepeatedDefiniteArrayExpr::check(TypeSema& sema, TypeExpectation) const {
-    Type val_type = sema.check(value());
-
-    auto lit = count()->isa<LiteralExpr>();
-    if (lit && (lit->kind() == LiteralExpr::LIT_i32)) {
-        // the literal cannot be negative because literal expression are always positive
-        // (the expression -4 is parsed as UnOp(Literal))
-        return sema.definite_array_type(val_type, lit->get_u64());
-    } else
-        sema.error(count()) << "expected a positive i32 literal here\n";
-
-    return sema.type_error();
+    return sema.definite_array_type(sema.check(value()), count());
 }
 
 Type IndefiniteArrayExpr::check(TypeSema& sema, TypeExpectation) const {

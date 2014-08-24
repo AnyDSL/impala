@@ -1068,7 +1068,7 @@ private:
 class RepeatedDefiniteArrayExpr : public Expr {
 public:
     const Expr* value() const { return value_; }
-    const Expr* count() const { return count_; }
+    thorin::u64 count() const { return count_; }
     virtual void check(NameSema&) const override;
 
 private:
@@ -1077,7 +1077,7 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> value_;
-    AutoPtr<const Expr> count_;
+    thorin::u64 count_;
 
     friend class Parser;
 };

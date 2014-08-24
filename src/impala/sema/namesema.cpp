@@ -314,7 +314,6 @@ void DefiniteArrayExpr::check(NameSema& sema) const {
 
 void RepeatedDefiniteArrayExpr::check(NameSema& sema) const {
     value()->check(sema);
-    count()->check(sema);
 }
 
 void IndefiniteArrayExpr::check(NameSema& sema) const {

@@ -511,7 +511,9 @@ Def DefiniteArrayExpr::remit(CodeGen& cg) const {
 }
 
 Def RepeatedDefiniteArrayExpr::remit(CodeGen& cg) const {
-    return Def();
+    Array<Def> args(count());
+    std::fill_n(args.begin(), count(), cg.remit(value()));
+    return cg.world().definite_array(args);
 }
 
 Def TupleExpr::remit(CodeGen& cg) const {

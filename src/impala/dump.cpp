@@ -404,8 +404,7 @@ std::ostream& DefiniteArrayExpr::print(Printer& p) const {
 
 std::ostream& RepeatedDefiniteArrayExpr::print(Printer& p) const {
     p.stream() << '[';
-    p.print(value()) << ", .. ";
-    return p.print(count()) << ']';
+    return p.print(value()) << ", .. " << count() << ']';
 }
 
 std::ostream& IndefiniteArrayExpr::print(Printer& p) const {

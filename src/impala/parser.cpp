@@ -154,6 +154,7 @@ public:
     // misc
     const Identifier* try_id(const std::string& what);
     Visibility parse_visibility();
+    u64 parse_integer(const char* what);
 
     // paths
     const Path* parse_path();
@@ -319,6 +320,25 @@ Visibility Parser::parse_visibility() {
         case VISIBILITY: return Visibility(lex().kind());
         default:         return Visibility(Visibility::None);
     }
+}
+
+u64 Parser::parse_integer(const char* what) {
+    u64 dim;
+    switch (la()) {
+        case Token::LIT_i8:   dim = la().box().get_s8();  break;
+        case Token::LIT_i16:  dim = la().box().get_s16(); break;
+        case Token::LIT_i32:  dim = la().box().get_s32(); break;
+        case Token::LIT_i64:  dim = la().box().get_s64(); break;
+        case Token::LIT_u8:   dim = la().box().get_u8();  break;
+        case Token::LIT_u16:  dim = la().box().get_u16(); break;
+        case Token::LIT_u32:  dim = la().box().get_u32(); break;
+        case Token::LIT_u64:  dim = la().box().get_u64(); break;
+        default:
+            dim = 0;
+            error("integer literal", what);
+    }
+    lex();
+    return dim;
 }
 
 /*
@@ -658,24 +678,9 @@ const ArrayASTType* Parser::parse_array_type() {
     eat(Token::L_BRACKET);
     const ASTType* elem_type = parse_type();
     if (accept(Token::MUL)) {
-        u64 dim;
-        switch (la()) {
-            case Token::LIT_i8:   dim = la().box().get_s8();  break;
-            case Token::LIT_i16:  dim = la().box().get_s16(); break;
-            case Token::LIT_i32:  dim = la().box().get_s32(); break;
-            case Token::LIT_i64:  dim = la().box().get_s64(); break;
-            case Token::LIT_u8:   dim = la().box().get_u8();  break;
-            case Token::LIT_u16:  dim = la().box().get_u16(); break;
-            case Token::LIT_u32:  dim = la().box().get_u32(); break;
-            case Token::LIT_u64:  dim = la().box().get_u64(); break;
-            default:
-                dim = 0;
-                error("integer literal", "definite array type");
-        }
-        lex();
         auto definite_array = new DefiniteArrayASTType();
         definite_array->elem_type_ = elem_type;
-        definite_array->dim_ = dim;
+        definite_array->dim_ = parse_integer("definite array type");
         expect(Token::R_BRACKET, "definite array type");
         definite_array->set_loc(pos1, prev_loc().pos2());
         return definite_array;
@@ -888,12 +893,12 @@ const Expr* Parser::parse_primary_expr() {
                 return indefinite_array_expr;
             }
             if (accept(Token::COMMA) && accept(Token::DOTDOT)) {
-                auto repeat_array_expr = new RepeatedDefiniteArrayExpr();
-                repeat_array_expr->set_pos1(pos1);
-                repeat_array_expr->value_ = expr;
-                repeat_array_expr->count_ = parse_expr();
-                repeat_array_expr->set_pos2(eat(Token::R_BRACKET).pos2());
-                return repeat_array_expr;
+                auto repeated_array_expr = loc(new RepeatedDefiniteArrayExpr());
+                repeated_array_expr->set_pos1(pos1);
+                repeated_array_expr->value_ = expr;
+                repeated_array_expr->count_ = parse_integer("repeated array expression");
+                expect(Token::R_BRACKET, "repeated array expression");
+                return repeated_array_expr;
             }
             auto array = new DefiniteArrayExpr();
             array->set_pos1(pos1);
