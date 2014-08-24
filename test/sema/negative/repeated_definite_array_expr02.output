@@ -1,0 +1,1 @@
+repeated_definite_array_expr02.impala:2 col 28 - 29: error: expected a positive i32 literal here
