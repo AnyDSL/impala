@@ -1,7 +1,6 @@
 #ifndef IMPALA_AST_H
 #define IMPALA_AST_H
 
-#include <memory>
 #include <vector>
 
 #include "thorin/irbuilder.h"
@@ -1114,33 +1113,37 @@ private:
 class StructExpr : public Expr, public TypeArgs {
 public:
     class Elem {
-    private:
-        Elem(const Elem&);
-
     public:
-        Elem(Elem&& other)
-            : identifier_(std::move(other.identifier_))
-            , expr_(std::move(other.expr_))
+        Elem(const Elem& elem)
+            : identifier_(elem.identifier())
+            , expr_(elem.expr())
         {}
-        Elem(const Identifier* ident, std::unique_ptr<const Expr> expr)
-            : identifier_(ident)
-            , expr_(std::move(expr))
+        Elem(const Identifier* identifier, const Expr* expr)
+            : identifier_(identifier)
+            , expr_(expr)
         {}
 
         const Identifier* identifier() const { return identifier_; }
         Symbol symbol() const { return identifier()->symbol(); }
-        const Expr* expr() const { return expr_.get(); }
+        const Expr* expr() const { return expr_; }
         const FieldDecl* field_decl() const { return field_decl_; }
 
     private:
-        AutoPtr<const Identifier> identifier_;
-        std::unique_ptr<const Expr> expr_;
+        const Identifier* identifier_;
+        const Expr* expr_;
         mutable SafePtr<const FieldDecl> field_decl_;
 
         friend class StructExpr;
     };
 
     typedef std::vector<Elem> Elems;
+
+    virtual ~StructExpr() {
+        for (auto elem : elems()) {
+            delete elem.identifier_;
+            delete elem.expr_;
+        }
+    }
 
     const Path* path() const { return path_; }
     size_t num_elems() const { return elems_.size(); }

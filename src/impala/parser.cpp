@@ -933,7 +933,7 @@ const Expr* Parser::parse_primary_expr() {
                     parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
                         auto symbol = try_id("identifier in struct expression");
                         expect(Token::COLON, "struct expression");
-                        struct_expr->elems_.emplace_back(symbol, std::unique_ptr<const Expr>(parse_expr()));
+                        struct_expr->elems_.emplace_back(symbol, parse_expr());
                     });
                     struct_expr->set_loc(path->pos1(), prev_loc().pos2());
                     return struct_expr;
@@ -946,7 +946,7 @@ const Expr* Parser::parse_primary_expr() {
                 parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
                     auto symbol = try_id("identifier in struct expression");
                     expect(Token::COLON, "struct expression");
-                    struct_expr->elems_.emplace_back(symbol, std::unique_ptr<const Expr>(parse_expr()));
+                    struct_expr->elems_.emplace_back(symbol, parse_expr());
                 });
                 struct_expr->set_loc(path->pos1(), prev_loc().pos2());
                 return struct_expr;
