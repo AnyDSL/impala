@@ -1,0 +1,11 @@
+fn foo(mut p: &int, mut q: &int) -> int {
+    let x = *p;
+    *p = 1;
+    *q = 2;
+    x
+}
+
+fn main() -> int {
+    let mut i = 23;
+    foo(&i, &i)
+}
