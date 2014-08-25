@@ -474,7 +474,7 @@ Def InfixExpr::remit(CodeGen& cg) const {
         case ANDAND: {
             JumpTarget t("and_true"), f("and_false"), x("and_exit");
             cg.emit_branch(lhs(), t, f);
-            if (cg.enter(t)) cg.emit_jump(lhs(), x);
+            if (cg.enter(t)) cg.emit_jump(rhs(), x);
             if (cg.enter(f)) cg.emit_jump(false, x);
             return cg.converge(this, x);
         }
