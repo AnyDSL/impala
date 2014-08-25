@@ -1,15 +1,12 @@
-#include "thorin/util/push.h"
-
+#include <iostream>
 #include <sstream>
+
+#include "thorin/util/push.h"
 
 #include "impala/ast.h"
 #include "impala/dump.h"
 #include "impala/impala.h"
 #include "impala/sema/typetable.h"
-
-#ifndef NDEBUG
-#include <iostream>
-#endif
 
 namespace impala {
 
@@ -106,6 +103,14 @@ public:
     /// a check that does not expect any type (i.e. any type is allowed)
     Type check(const Expr* expr) { return check(expr, unknown_type()); }
     Type check(const ASTType* ast_type) { return ast_type->type_ = ast_type->check(*this); }
+
+    static Type turn_cast_inside_out(const Expr* expr) {
+        assert(expr->needs_cast());
+        expr->type_.clear();
+        expr->type_ = expr->actual_type_;
+        expr->actual_type_.clear();
+        return expr->type();
+    }
 
 private:
     bool nossa_;
@@ -599,17 +604,19 @@ Type PathExpr::check(TypeSema& sema, TypeExpectation expected) const {
 }
 
 Type PrefixExpr::check(TypeSema& sema, TypeExpectation expected) const {
-    // TODO check if operator supports the type
     switch (kind()) {
         case AND: {
             Type rtype;
-            if (auto pty = expected.type().isa<BorrowedPtrType>()) {
-                rtype = sema.check(rhs(), pty->referenced_type());
-            } else {
+            if (auto ptr = expected.type().isa<PtrType>()) {
+                rtype = sema.check(rhs(), ptr->referenced_type());
+            } else
                 rtype = sema.check(rhs());
-            }
             sema.expect_lvalue(rhs(), "as unary '&' operand");
             rhs()->take_address();
+            if (rhs()->needs_cast()) {
+                rtype.clear();
+                rtype = TypeSema::turn_cast_inside_out(rhs());
+            }
             return sema.borrowd_ptr_type(rtype);
         }
         case TILDE:
