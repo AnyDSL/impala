@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 int main_impala();
 
 void println(const char* s) {

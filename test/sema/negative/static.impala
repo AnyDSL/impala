@@ -1,2 +1,3 @@
 static mut foo = 42;
 static bar = foo;
+static mut foobar = foo;

@@ -8,4 +8,4 @@ fn main() -> int {
 
 static mut foo = 42;
 static bar = 23;
-static foobar = foo + 42;
+static mut foobar =  42;
