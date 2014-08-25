@@ -1031,15 +1031,20 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
             return sema.expect_type(else_expr(), TypeExpectation(expected, "if expression type"));
         if (else_type->is_noret())
             return sema.expect_type(then_expr(), TypeExpectation(expected, "if expression type"));
-        if ((then_type == else_type) || (then_type <= else_type)) {
-            assert(then_expr()->actual_type_.empty());
+        if (then_type == else_type) {
+            assert(!then_expr()->needs_cast());
+            assert(!else_expr()->needs_cast());
+            return sema.expect_type(this, then_type, TypeExpectation(expected, "if expression type"));
+        }
+        if (then_type <= else_type) {
+            assert(!then_expr()->needs_cast());
             then_expr()->actual_type_ = then_type;
             then_expr()->type_.clear();
             then_expr()->type_ = else_type;
             return sema.expect_type(this, else_type, TypeExpectation(expected, "if expression type"));
         }
         if (else_type <= then_type) {
-            assert(else_expr()->actual_type_.empty());
+            assert(!else_expr()->needs_cast());
             else_expr()->actual_type_ = else_type;
             else_expr()->type_.clear();
             else_expr()->type_ = then_type;
