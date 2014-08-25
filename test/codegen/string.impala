@@ -1,0 +1,12 @@
+extern "C" {
+    fn println(&[u8]) -> ();
+}
+
+fn main() -> int {
+    let mut s =
+        "hallox"
+        "welt";
+    s(5) = ' ';
+    println(&s);
+    0
+}
