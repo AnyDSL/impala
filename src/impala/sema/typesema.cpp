@@ -559,6 +559,14 @@ Type LiteralExpr::check(TypeSema& sema, TypeExpectation expected) const {
     return sema.type(literal2type());
 }
 
+Type CharExpr::check(TypeSema& sema, TypeExpectation expected) const {
+    return sema.type_u8();
+}
+
+Type StrExpr::check(TypeSema& sema, TypeExpectation expected) const {
+    return sema.type_u8();
+}
+
 Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
     THORIN_PUSH(sema.cur_fn_, this);
     assert(type_params().empty());

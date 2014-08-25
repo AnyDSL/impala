@@ -41,6 +41,8 @@
     case Token::LIT_u64: \
     case Token::LIT_f32: \
     case Token::LIT_f64: \
+    case Token::LIT_char: \
+    case Token::LIT_str: \
     case Token::TRUE: \
     case Token::FALSE: \
     case Token::DOUBLE_COLON: \
@@ -205,7 +207,7 @@ public:
     const Expr*        parse_infix_expr(const Expr* lhs);
     const Expr*        parse_postfix_expr(const Expr* lhs);
     const Expr*        parse_primary_expr();
-    const LiteralExpr* parse_literal_expr();
+    const Expr*        parse_literal_expr();
     const FnExpr*      parse_fn_expr();
     const IfExpr*      parse_if_expr();
     const ForExpr*     parse_for_expr();
@@ -910,8 +912,11 @@ const Expr* Parser::parse_primary_expr() {
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype:
 #include "impala/tokenlist.h"
+        case Token::LIT_char:
+        case Token::LIT_str:
         case Token::TRUE:
-        case Token::FALSE:      return parse_literal_expr();
+        case Token::FALSE:
+            return parse_literal_expr();
         case Token::DOUBLE_COLON:
         case Token::ID:  {
             auto path = parse_path();
@@ -961,13 +966,15 @@ const Expr* Parser::parse_primary_expr() {
     }
 }
 
-const LiteralExpr* Parser::parse_literal_expr() {
+const Expr* Parser::parse_literal_expr() {
     LiteralExpr::Kind kind;
     Box box;
 
     switch (la()) {
-        case Token::TRUE:  return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, Box(true));
-        case Token::FALSE: return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, Box(false));
+        case Token::TRUE:       return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, Box(true));
+        case Token::FALSE:      return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, Box(false));
+        case Token::LIT_char:   { auto symbol = la().symbol(); return new CharExpr(lex().loc(), symbol); }
+        case Token::LIT_str:    { auto symbol = la().symbol(); return new StrExpr(lex().loc(), symbol); }
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype: { \
             kind = LiteralExpr::LIT_##itype; \

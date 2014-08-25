@@ -34,4 +34,13 @@ void Symbol::destroy() {
         free((void*) const_cast<char*>(s));
 }
 
+std::string Symbol::remove_quotation() const {
+    std::string str = str_;
+    if (!str.empty() && str.front() == '"') {
+        assert(str.size() >= 2 && str.back() == '"');
+        str = str.substr(1, str.size()-2);
+    }
+    return str;
+}
+
 }

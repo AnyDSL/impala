@@ -273,6 +273,8 @@ void BlockExpr::check(NameSema& sema) const {
 }
 
 void LiteralExpr::check(NameSema& sema) const {}
+void CharExpr::check(NameSema& sema) const {}
+void StrExpr::check(NameSema& sema) const {}
 void FnExpr::check(NameSema& sema) const { fn_check(sema); }
 
 void PathElem::check(NameSema& sema) const {

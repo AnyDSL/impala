@@ -394,6 +394,14 @@ std::ostream& LiteralExpr::print(Printer& p) const {
     }
 }
 
+std::ostream& CharExpr::print(Printer& p) const {
+    return p.stream() << '\'' << symbol().remove_quotation() << '\'';
+}
+
+std::ostream& StrExpr::print(Printer& p) const {
+    return p.stream() << '\'' << symbol().remove_quotation() << '\'';
+}
+
 std::ostream& PathExpr ::print(Printer& p) const { return path()->print(p); }
 std::ostream& EmptyExpr::print(Printer& p) const { return p.stream() << "/*empty*/"; }
 std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { p.print(expr); }, args(), "(", ")"); }

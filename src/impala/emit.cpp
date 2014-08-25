@@ -215,14 +215,7 @@ Var LocalDecl::emit(CodeGen& cg, Def init) const {
 }
 
 Lambda* Fn::emit_head(CodeGen& cg) const {
-    assert(lambda_ == nullptr);
-    auto symbol = fn_symbol();
-    std::string str(symbol.str());
-    if (!str.empty() && str.front() == '"') { // remove quotation
-        assert(str.size() >= 2 && str.back() == '"');
-        str = str.substr(1, str.size()-2);
-    }
-    return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), str);
+    return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), fn_symbol().remove_quotation());
 }
 
 void Fn::emit_body(CodeGen& cg) const {
@@ -386,6 +379,14 @@ Def LiteralExpr::remit(CodeGen& cg) const {
     }
 
     return cg.world().literal(tkind, box());
+}
+
+Def CharExpr::remit(CodeGen& cg) const {
+    cg.world().literal_pu8(symbol_.str()[0]);
+}
+
+Def StrExpr::remit(CodeGen& cg) const {
+    return Def(); // TODO
 }
 
 Def CastExpr::remit(CodeGen& cg) const {

@@ -866,7 +866,7 @@ public:
     enum Kind {
 #define IMPALA_LIT(itype, atype) LIT_##itype = Token::LIT_##itype,
 #include "impala/tokenlist.h"
-        LIT_bool
+        LIT_bool,
     };
 
     LiteralExpr(const Location& loc, Kind kind, thorin::Box box)
@@ -889,6 +889,44 @@ private:
 
     Kind kind_;
     thorin::Box box_;
+};
+
+class CharExpr : public Expr {
+public:
+    CharExpr(const Location& loc, Symbol symbol)
+        : symbol_(symbol)
+    {
+        loc_ = loc;
+    }
+
+    Symbol symbol() const { return symbol_; }
+    virtual void check(NameSema&) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
+
+private:
+    virtual std::ostream& print(Printer&) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
+
+    Symbol symbol_;
+};
+
+class StrExpr : public Expr {
+public:
+    StrExpr(const Location& loc, Symbol symbol)
+        : symbol_(symbol)
+    {
+        loc_ = loc;
+    }
+
+    Symbol symbol() const { return symbol_; }
+    virtual void check(NameSema&) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
+
+private:
+    virtual std::ostream& print(Printer&) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
+
+    Symbol symbol_;
 };
 
 class FnExpr : public Expr, public Fn {
