@@ -588,7 +588,7 @@ Def MapExpr::remit(CodeGen& cg) const {
         return ret;
     } else if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) {
         auto index = cg.remit(arg(0));
-        return cg.world().extract(cg.remit(lhs()), index);
+        return cg.world().extract(cg.remit(lhs()), index, "", cg.get_mem());
     }
     THORIN_UNREACHABLE;
 }
@@ -598,7 +598,7 @@ Var FieldExpr::lemit(CodeGen& cg) const {
 }
 
 Def FieldExpr::remit(CodeGen& cg) const {
-    return cg.world().extract(cg.remit(lhs()), index());
+    return cg.world().extract(cg.remit(lhs()), index(), "", cg.get_mem());
 }
 
 Def BlockExpr::remit(CodeGen& cg) const {
