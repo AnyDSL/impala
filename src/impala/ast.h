@@ -1136,8 +1136,6 @@ public:
         friend class StructExpr;
     };
 
-    typedef std::vector<Elem> Elems;
-
     virtual ~StructExpr() {
         for (auto elem : elems()) {
             delete elem.identifier_;
@@ -1147,7 +1145,7 @@ public:
 
     const Path* path() const { return path_; }
     size_t num_elems() const { return elems_.size(); }
-    const Elems& elems() const { return elems_; }
+    const std::vector<Elem>& elems() const { return elems_; }
     virtual void check(NameSema&) const override;
 
 private:
