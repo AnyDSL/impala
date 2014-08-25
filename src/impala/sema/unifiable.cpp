@@ -657,13 +657,15 @@ FnType TypeVarNode::find_method(Symbol name) const {
 }
 
 FnType TraitAbsNode::find_method(Symbol name) const {
-    auto i = trait_decl()->method_table().find(name);
-    if (i != trait_decl()->method_table().end())
-        return i->second->fn_type();
+    if (trait_decl()) {
+        auto i = trait_decl()->method_table().find(name);
+        if (i != trait_decl()->method_table().end())
+            return i->second->fn_type();
 
-    for (auto super : super_traits()) {
-        if (auto type = super->find_method(name))
-            return type;
+        for (auto super : super_traits()) {
+            if (auto type = super->find_method(name))
+                return type;
+        }
     }
 
     return FnType();

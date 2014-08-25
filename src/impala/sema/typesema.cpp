@@ -514,15 +514,14 @@ void ImplItem::check_item(TypeSema& sema) const {
             assert(!trait_app.empty());
 
             Symbol meth_name = fn->symbol();
-            Type t = trait_app->find_method(meth_name);
-            if (!t.empty()) {
+            if (auto method_type = trait_app->find_method(meth_name)) {
                 // remember name for check if all methods were implemented
                 auto p = implemented_methods.insert(meth_name);
                 assert(p.second && "there should be no such name in the set"); // else name analysis failed
 
                 // check that the types match
-                if (fn_type != t)
-                    sema.error(fn) << "method '" << trait() << "." << meth_name << "' should have type '" << t << "', but implementation has type '" << fn_type << "'\n";
+                if (fn_type != method_type)
+                    sema.error(fn) << "method '" << trait() << "." << meth_name << "' should have type '" << method_type << "', but implementation has type '" << fn_type << "'\n";
             }
         }
     }
