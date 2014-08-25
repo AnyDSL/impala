@@ -386,7 +386,10 @@ Def CharExpr::remit(CodeGen& cg) const {
 }
 
 Def StrExpr::remit(CodeGen& cg) const {
-    return Def(); // TODO
+    Array<Def> args(decomposed_.size());
+    for (size_t i = 0, e = args.size(); i != e; ++i)
+        args[i] = cg.world().literal_pu8(decomposed_[i]);
+    return cg.world().definite_array(args);
 }
 
 Def CastExpr::remit(CodeGen& cg) const {

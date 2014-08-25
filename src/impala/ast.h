@@ -919,6 +919,7 @@ public:
     }
 
     Symbol symbol() const { return symbol_; }
+    const std::vector<thorin::u8>& decomposed() const { return decomposed_; }
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -927,6 +928,7 @@ private:
     virtual Type check(TypeSema&, TypeExpectation) const override;
 
     Symbol symbol_;
+    mutable std::vector<thorin::u8> decomposed_;
 };
 
 class FnExpr : public Expr, public Fn {
