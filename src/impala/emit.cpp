@@ -382,7 +382,7 @@ Def LiteralExpr::remit(CodeGen& cg) const {
 }
 
 Def CharExpr::remit(CodeGen& cg) const {
-    return cg.world().literal_pu8(symbol_.str()[0]);
+    return cg.world().literal_pu8(symbol_.str()[1]);
 }
 
 Def StrExpr::remit(CodeGen& cg) const {
