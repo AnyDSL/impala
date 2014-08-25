@@ -333,7 +333,7 @@ void ImplItem::emit_item(CodeGen& cg) const {
 
 Var StaticItem::emit(CodeGen& cg, Def init) const {
     assert(!init);
-    init = cg.remit(this->init());
+    init = !this->init() ?  init = cg.world().bottom(cg.convert(type())) : cg.remit(this->init());
     if (!is_mut())
         return Var::create_val(cg, init);
     return Var::create_ptr(cg, cg.world().global(init, true, symbol().str()));

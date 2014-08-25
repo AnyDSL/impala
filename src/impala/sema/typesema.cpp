@@ -454,7 +454,9 @@ Type FnDecl::check(TypeSema& sema) const {
 }
 
 void StaticItem::check_item(TypeSema& sema) const {
-    auto init_type = sema.check(init());
+    Type init_type;
+    if (init())
+        init_type = sema.check(init());
     sema.check(static_cast<const ValueDecl*>(this), init_type);
 }
 

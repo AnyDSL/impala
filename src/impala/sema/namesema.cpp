@@ -188,7 +188,10 @@ void Typedef::check(NameSema& sema) const {
 void EnumDecl::check(NameSema& sema) const {
 }
 
-void StaticItem::check(NameSema& sema) const { init()->check(sema); }
+void StaticItem::check(NameSema& sema) const {
+    if (init())
+        init()->check(sema);
+}
 
 void Fn::fn_check(NameSema& sema) const {
     sema.push_scope();
