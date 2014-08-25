@@ -912,13 +912,7 @@ private:
 
 class StrExpr : public Expr {
 public:
-    StrExpr(const Location& loc, Symbol symbol)
-        : symbol_(symbol)
-    {
-        loc_ = loc;
-    }
-
-    Symbol symbol() const { return symbol_; }
+    const std::vector<Symbol>& symbols() const { return symbols_; }
     const std::vector<thorin::u8>& decomposed() const { return decomposed_; }
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
@@ -927,8 +921,10 @@ private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, TypeExpectation) const override;
 
-    Symbol symbol_;
+    std::vector<Symbol> symbols_;
     mutable std::vector<thorin::u8> decomposed_;
+
+    friend class Parser;
 };
 
 class FnExpr : public Expr, public Fn {

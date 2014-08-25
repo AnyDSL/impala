@@ -395,11 +395,15 @@ std::ostream& LiteralExpr::print(Printer& p) const {
 }
 
 std::ostream& CharExpr::print(Printer& p) const {
-    return p.stream() << '\'' << symbol().remove_quotation() << '\'';
+    return p.stream() << symbol();
 }
 
 std::ostream& StrExpr::print(Printer& p) const {
-    return p.stream() << '\'' << symbol().remove_quotation() << '\'';
+    if (symbols().size() == 1)
+        return p.stream() << '\'' << symbols().front().remove_quotation() << '\'';
+    p.up();
+    p.dump_list([&] (Symbol symbol) { p.stream() << symbol; }, symbols() , "", "", "", true);
+    return p.down();
 }
 
 std::ostream& PathExpr ::print(Printer& p) const { return path()->print(p); }

@@ -566,9 +566,11 @@ Type CharExpr::check(TypeSema& sema, TypeExpectation expected) const {
 }
 
 Type StrExpr::check(TypeSema& sema, TypeExpectation expected) const {
-    auto str = symbol().remove_quotation();
-    for (auto c : str)
-        decomposed_.push_back(c);
+    for (auto symbol : symbols()) {
+        auto str = symbol.remove_quotation();
+        for (auto c : str)
+            decomposed_.push_back(c);
+    }
     decomposed_.push_back('\0');
     return sema.definite_array_type(sema.type_u8(), decomposed_.size());
 }
