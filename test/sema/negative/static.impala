@@ -1,3 +1,7 @@
 static mut foo = 42;
 static bar = foo;
 static mut foobar = foo;
+
+extern fn f(i: int) -> () {
+    static mut j = i;
+}
