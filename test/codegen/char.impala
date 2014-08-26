@@ -4,9 +4,5 @@ fn main() -> int {
     let c = '\t';
     let d = '\'';
     let e = '\\';
-    if (a + b + c + d + e) == 150_u8 {
-        0
-    } else {
-        1
-    }
+    a + b + c + d + e) == 150_u8
 }
