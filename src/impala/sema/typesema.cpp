@@ -48,6 +48,8 @@ public:
         }
     }
 
+    thorin::u8 char_value(const Location& loc, const char*& p);
+
     // error handling
 
     bool expect_lvalue(const Expr* expr, const std::string& what = std::string()) {
@@ -559,23 +561,30 @@ Type LiteralExpr::check(TypeSema& sema, TypeExpectation expected) const {
     return sema.type(literal2type());
 }
 
+thorin::u8 TypeSema::char_value(const Location& loc, const char*& p) {
+    thorin::u8 value = 0;
+    if (*p++ == '\\') {
+        switch (*p++) {
+            case '0':  value = '\0'; break;
+            case 'n':  value = '\n'; break;
+            case 't':  value = '\t'; break;
+            case '\'': value = '\''; break;
+            case '\"': value = '\"'; break;
+            case '\\': value = '\\'; break;
+            default:
+                error(loc) << "unknown escape sequence '\\" << *(p-1) << "'\n";
+        }
+    } else
+        value = thorin::u8(*(p-1));
+
+    return value;
+}
+
 Type CharExpr::check(TypeSema& sema, TypeExpectation expected) const {
     const char* p = symbol().str();
     assert(*p == '\'');
     ++p;
-    if (*p++ == '\\') {
-        switch (*p++) {
-            case '0':  value_ = '\0'; break;
-            case 'n':  value_ = '\n'; break;
-            case 't':  value_ = '\t'; break;
-            case '\'': value_ = '\''; break;
-            case '\"': value_ = '\"'; break;
-            case '\\': value_ = '\\'; break;
-            default:
-                sema.error(this) << "unknown escape sequence '\\" << *(p-1) << "'\n";
-        }
-    } else
-        value_ = thorin::u8(*(p-1));
+    value_ = sema.char_value(loc(), p);
 
     if (*p++ != '\'')
         sema.error(this) << "multi-character character constant\n";
@@ -590,23 +599,9 @@ Type StrExpr::check(TypeSema& sema, TypeExpectation expected) const {
         const char* p = symbol.str();
         assert(*p == '"');
         ++p;
-        while (*p != '"') {
-            thorin::u8 value = 0;
-            if (*p++ == '\\') {
-                switch (*p++) {
-                    case '0':  value = '\0'; break;
-                    case 'n':  value = '\n'; break;
-                    case 't':  value = '\t'; break;
-                    case '\'': value = '\''; break;
-                    case '\"': value = '\"'; break;
-                    case '\\': value = '\\'; break;
-                    default:
-                        sema.error(this) << "unknown escape sequence '\\" << *(p-1) << "'\n";
-                }
-            } else
-                value = thorin::u8(*(p-1));
-            values_.push_back(value);
-        }
+        while (*p != '"')
+            values_.push_back(sema.char_value(loc(), p));
+        assert(p[1] == '\0');
     }
     values_.push_back('\0');
     return sema.definite_array_type(sema.type_u8(), values_.size());
