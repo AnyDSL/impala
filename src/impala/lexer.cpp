@@ -192,6 +192,7 @@ Token Lexer::lex() {
         // string literal
         if (accept(str , '"')) {
             do {
+                accept(str, '\\');
                 str += next();
                 if (peek() == std::istream::traits_type::eof()) {
                     error(pos_) << "missing terminating \" character\n";

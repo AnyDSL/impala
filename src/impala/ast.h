@@ -915,7 +915,7 @@ private:
 class StrExpr : public Expr {
 public:
     const std::vector<Symbol>& symbols() const { return symbols_; }
-    const std::vector<thorin::u8>& decomposed() const { return decomposed_; }
+    const std::vector<thorin::u8>& values() const { return values_; }
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -924,7 +924,7 @@ private:
     virtual Type check(TypeSema&, TypeExpectation) const override;
 
     std::vector<Symbol> symbols_;
-    mutable std::vector<thorin::u8> decomposed_;
+    mutable std::vector<thorin::u8> values_;
 
     friend class Parser;
 };

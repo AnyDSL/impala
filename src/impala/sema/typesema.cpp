@@ -569,12 +569,13 @@ Type CharExpr::check(TypeSema& sema, TypeExpectation expected) const {
             case 'n':  value_ = '\n'; break;
             case 't':  value_ = '\t'; break;
             case '\'': value_ = '\''; break;
+            case '\"': value_ = '\"'; break;
             case '\\': value_ = '\\'; break;
             default:
                 sema.error(this) << "unknown escape sequence '\\" << *(p-1) << "'\n";
         }
     } else
-        value_ = thorin::u8(p[1]);
+        value_ = thorin::u8(*(p-1));
 
     if (*p++ != '\'')
         sema.error(this) << "multi-character character constant\n";
@@ -586,12 +587,29 @@ Type CharExpr::check(TypeSema& sema, TypeExpectation expected) const {
 
 Type StrExpr::check(TypeSema& sema, TypeExpectation expected) const {
     for (auto symbol : symbols()) {
-        auto str = symbol.remove_quotation();
-        for (auto c : str)
-            decomposed_.push_back(c);
+        const char* p = symbol.str();
+        assert(*p == '"');
+        ++p;
+        while (*p != '"') {
+            thorin::u8 value = 0;
+            if (*p++ == '\\') {
+                switch (*p++) {
+                    case '0':  value = '\0'; break;
+                    case 'n':  value = '\n'; break;
+                    case 't':  value = '\t'; break;
+                    case '\'': value = '\''; break;
+                    case '\"': value = '\"'; break;
+                    case '\\': value = '\\'; break;
+                    default:
+                        sema.error(this) << "unknown escape sequence '\\" << *(p-1) << "'\n";
+                }
+            } else
+                value = thorin::u8(*(p-1));
+            values_.push_back(value);
+        }
     }
-    decomposed_.push_back('\0');
-    return sema.definite_array_type(sema.type_u8(), decomposed_.size());
+    values_.push_back('\0');
+    return sema.definite_array_type(sema.type_u8(), values_.size());
 }
 
 Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
