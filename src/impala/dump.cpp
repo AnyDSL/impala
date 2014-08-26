@@ -308,8 +308,12 @@ std::ostream& FieldDecl::print(Printer& p) const {
 
 std::ostream& StaticItem::print(Printer& p) const {
     p.stream() << "static ";
-    ValueDecl::print(p) << " = ";
-    return p.print(init()) << ";";
+    ValueDecl::print(p);
+    if (init()) {
+        p.stream() << " = ";
+        p.print(init());
+    }
+    return p.stream() << ";";
 }
 
 std::ostream& StructDecl::print(Printer& p) const {
