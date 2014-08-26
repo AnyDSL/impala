@@ -7,5 +7,6 @@ void println(const char* s) {
 }
 
 int main() {
-    return main_impala();
+    // main_impala returns bool => 1 if everything ok, 0 if not
+    return !main_impala();
 }

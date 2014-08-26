@@ -14,6 +14,6 @@ fn helper(r : int, i : int, n : int) -> int {
     }
 }
 
-fn main() -> int {
+fn main() -> bool {
     fac(4)
 }

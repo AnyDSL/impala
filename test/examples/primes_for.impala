@@ -30,7 +30,7 @@ fn primes(n: int, body: fn(int, fn()), ret: fn()) {
     })
 }
 
-fn main() -> int {
+fn main() -> bool {
     let mut result = 0;
     for p in primes(40) {
         result += p;

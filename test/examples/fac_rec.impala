@@ -6,6 +6,6 @@ fn fac_rec(n : int) -> int {
     }
 }
 
-fn main() -> int {
+fn main() -> bool {
     @fac_rec(5)
 }

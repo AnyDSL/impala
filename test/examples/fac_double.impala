@@ -18,6 +18,6 @@ extern fn fac(n : double) -> double {
     r
 }
 
-fn main() -> int {
+fn main() -> bool {
     fac(4.0) as int
 }

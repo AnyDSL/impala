@@ -14,6 +14,6 @@ extern fn fac(n: int) -> int {
     }
 }
 
-fn main() -> int {
+fn main() -> bool {
     fac(4)
 }

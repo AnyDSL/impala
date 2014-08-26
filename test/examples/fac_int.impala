@@ -18,6 +18,6 @@ fn fac(n : int) -> int {
     r
 }
 
-fn main() -> int {
+fn main() -> bool {
     fac(5)
 }
