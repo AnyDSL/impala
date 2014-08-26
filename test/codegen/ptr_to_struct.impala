@@ -8,4 +8,4 @@ extern fn f(mut s: &S) -> () {
     s.a(1) = 2.f
 }
 
-fn main() -> int { 0 }
+fn main() -> bool { true }

@@ -6,6 +6,6 @@ extern fn g(mut i: int) -> int {
     f(i)
 }
 
-fn main() -> int {
-    g(1)
+fn main() -> bool {
+    g(1) == 4
 }

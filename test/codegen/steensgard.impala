@@ -27,6 +27,6 @@ extern fn myfun(i : int, ret : fn(int)) {
     branch(i == 0, b, c)
 }
 
-fn main() -> int {
-    myfun(2)
+fn main() -> bool {
+    myfun(2) == 23
 }

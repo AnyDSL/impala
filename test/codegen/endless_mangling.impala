@@ -10,4 +10,4 @@ extern fn g(i: int, ret: fn(int)) {
     f(i, ret, |i: int| ret(i))
 }
 
-fn main() -> int { 0 }
+fn main() -> bool { 0 }

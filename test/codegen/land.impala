@@ -2,6 +2,6 @@ extern fn g(i: int) -> bool {
     !(i == 0 && i == 23) || i == 42
 }
 
-fn main() -> int {
-    if g(0) { 0 } else { 1 }
+fn main() -> bool {
+    g(0)
 }

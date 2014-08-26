@@ -1,4 +1,4 @@
-fn main() -> int {
+fn main() -> bool {
     let mut sum = 0;
     while false {
         ++sum;
@@ -9,5 +9,5 @@ fn main() -> int {
         }
         sum += 3
     }
-    sum
+    sum == 0
 }

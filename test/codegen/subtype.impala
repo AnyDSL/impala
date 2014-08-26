@@ -2,7 +2,7 @@ fn foo(a: &[int]) -> int {
     a(2)
 }
 
-fn main() -> int {
+fn main() -> bool {
     let mut a = [0, 1, 2, 3];
-    foo(&a)
+    foo(&a) == 2
 }

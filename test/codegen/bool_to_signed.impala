@@ -2,6 +2,6 @@ fn f(b: bool) -> int {
     b as int
 }
 
-fn main() -> int {
-	4*f(true) + f(false)
+fn main() -> bool {
+	(4*f(true) + f(false)) == 4
 }

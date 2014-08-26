@@ -2,11 +2,11 @@ extern "C" {
     fn println(&[u8]) -> ();
 }
 
-fn main() -> int {
+fn main() -> bool {
     let mut s =
         "hallox"
         "welt";
     s(5) = ' ';
     println(&s);
-    0
+    true
 }

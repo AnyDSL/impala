@@ -9,6 +9,6 @@ extern fn f(n: int) -> int {
     sum
 }
 
-fn main() -> int {
-    f(5)
+fn main() -> bool {
+    f(5) == 5
 }

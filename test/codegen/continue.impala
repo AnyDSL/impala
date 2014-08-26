@@ -5,7 +5,7 @@ fn range(a: int, z: int, body: fn(int)->()) -> () {
     }
 }
 
-fn main() -> int {
+fn main() -> bool {
     let mut a : int = 0;
     for i in range(0, 100) {
         if (i % 2 == 0) {
@@ -13,5 +13,5 @@ fn main() -> int {
         }
         ++a;
     }
-    a
+    a == 50
 }

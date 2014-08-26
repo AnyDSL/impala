@@ -5,7 +5,7 @@ fn foo(mut p: &int, mut q: &int) -> int {
     x
 }
 
-fn main() -> int {
+fn main() -> bool {
     let mut i = 23;
-    foo(&i, &i)
+    foo(&i, &i) == 23
 }

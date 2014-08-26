@@ -2,4 +2,4 @@ extern fn f(mut buf: &[uint], width: int, x: int, v: int) -> () {
     buf(24*width + x) = ((v<<24) | v) as u32;
 }
 
-fn main() -> int { 0 }
+fn main() -> bool { true }
