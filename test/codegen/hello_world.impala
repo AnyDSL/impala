@@ -1,0 +1,8 @@
+extern "C" {
+    fn println(&[u8]) -> ();
+}
+
+fn main() -> bool {
+    println("hello world");
+    true
+}
