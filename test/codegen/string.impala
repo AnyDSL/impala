@@ -4,8 +4,8 @@ extern "C" {
 
 fn main() -> bool {
     let mut s =
-        "hallox"
-        "welt";
+        "hellox"
+        "world";
     s(5) = ' ';
     println(&s);
     true

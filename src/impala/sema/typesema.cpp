@@ -604,7 +604,17 @@ Type StrExpr::check(TypeSema& sema, TypeExpectation expected) const {
         assert(p[1] == '\0');
     }
     values_.push_back('\0');
-    return sema.definite_array_type(sema.type_u8(), values_.size());
+
+    auto result = sema.definite_array_type(sema.type_u8(), values_.size());
+    if (auto ptr = expected.type().isa<BorrowedPtrType>()) {
+        if (auto array = ptr->referenced_type().isa<ArrayType>()) {
+            if (array->elem_type()->is_u8()) {
+                is_used_as_global_ = true;
+                return sema.borrowd_ptr_type(result);
+            }
+        }
+    }
+    return result;
 }
 
 Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {

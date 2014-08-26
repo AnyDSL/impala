@@ -916,6 +916,7 @@ class StrExpr : public Expr {
 public:
     const std::vector<Symbol>& symbols() const { return symbols_; }
     const std::vector<thorin::u8>& values() const { return values_; }
+    bool is_used_as_global() const { return is_used_as_global_; }
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -925,6 +926,7 @@ private:
 
     std::vector<Symbol> symbols_;
     mutable std::vector<thorin::u8> values_;
+    mutable bool is_used_as_global_ = false;
 
     friend class Parser;
 };
