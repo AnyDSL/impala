@@ -1,0 +1,6 @@
+fn main() -> () {
+    let a = 'ab';
+    let b = '\g';
+    let c = '\hx';
+    let d = '\nx';
+}

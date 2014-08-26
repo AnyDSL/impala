@@ -21,7 +21,7 @@ static inline bool sgn(int c){ return c == '+' || c == '-'; }
 Lexer::Lexer(std::istream& stream, const std::string& filename)
     : stream_(stream)
     , pos_(filename, 1, 1)
-    , loc_(pos_) 
+    , loc_(pos_)
     , result_(true)
 {
     if (!stream_)
@@ -126,7 +126,7 @@ Token Lexer::lex() {
             if (accept('*')) { // arbitrary comment
                 IMPALA_WITHIN_COMMENT(accept('*') && accept('/'));
                 continue;
-            } 
+            }
             if (accept('/')) { // end of line comment
                 IMPALA_WITHIN_COMMENT(accept('\n'));
                 continue;
@@ -179,12 +179,13 @@ Token Lexer::lex() {
         // char literal
         if (accept(str , '\'')) {
             do {
+                accept(str, '\\');
                 str += next();
                 if (peek() == std::istream::traits_type::eof()) {
                     error(pos_) << "missing terminating ' character\n";
                     break;
                 }
-            } while (!accept(str, '\'')); 
+            } while (!accept(str, '\''));
             return Token(loc_, Token::LIT_char, str);
         }
 
@@ -196,7 +197,7 @@ Token Lexer::lex() {
                     error(pos_) << "missing terminating \" character\n";
                     break;
                 }
-            } while (!accept(str, '"')); 
+            } while (!accept(str, '"'));
             return Token(loc_, Token::LIT_str, str);
         }
 
@@ -214,7 +215,7 @@ Token Lexer::lex() {
                     return lex_suffix(str, false); \
                 } \
                 return literal_error(str, false); \
-            }  
+            }
 
             IMPALA_LEX_BASE_NUM('b', bin)
             IMPALA_LEX_BASE_NUM('o', oct)
@@ -281,7 +282,7 @@ Token Lexer::lex_suffix(std::string& str, bool floating) {
         }
         str += suffix.str();
     }
-    
+
     return Token(loc_, tok, str);
 }
 

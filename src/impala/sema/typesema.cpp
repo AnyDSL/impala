@@ -560,6 +560,27 @@ Type LiteralExpr::check(TypeSema& sema, TypeExpectation expected) const {
 }
 
 Type CharExpr::check(TypeSema& sema, TypeExpectation expected) const {
+    const char* p = symbol().str();
+    assert(*p == '\'');
+    ++p;
+    if (*p++ == '\\') {
+        switch (*p++) {
+            case '0':  value_ = '\0'; break;
+            case 'n':  value_ = '\n'; break;
+            case 't':  value_ = '\t'; break;
+            case '\'': value_ = '\''; break;
+            case '\\': value_ = '\\'; break;
+            default:
+                sema.error(this) << "unknown escape sequence '\\" << *(p-1) << "'\n";
+        }
+    } else
+        value_ = thorin::u8(p[1]);
+
+    if (*p++ != '\'')
+        sema.error(this) << "multi-character character constant\n";
+    else
+        assert(*p == '\0');
+
     return sema.type_u8();
 }
 
