@@ -154,7 +154,8 @@ void ModContents::check(NameSema& sema) const {
         if (auto named_item = item->isa<NamedItem>())
             item_table_[named_item->item_symbol()] = named_item;
     }
-    for (auto item : items()) sema.check_item(item);
+    for (auto item : items())
+        sema.check_item(item);
 }
 
 //------------------------------------------------------------------------------
@@ -189,6 +190,8 @@ void EnumDecl::check(NameSema& sema) const {
 }
 
 void StaticItem::check(NameSema& sema) const {
+    if (ast_type())
+        sema.check(ast_type());
     if (init())
         init()->check(sema);
 }
