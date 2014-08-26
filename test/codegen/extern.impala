@@ -1,6 +1,0 @@
-extern fn foo(i: int) -> int { i }
-
-extern "C" {
-    fn bar(float) -> float;
-    fn sun(float) -> bool;
-}
