@@ -35,5 +35,5 @@ fn main() -> bool {
     for p in primes(40) {
         result += p;
     }
-    result
+    result == 197
 }

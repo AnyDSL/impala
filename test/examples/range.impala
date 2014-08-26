@@ -22,5 +22,5 @@ fn main() -> bool {
     for i in range(0, 10) {
         sum += i
     }
-    sum
+    sum == 45
 }

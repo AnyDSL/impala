@@ -19,5 +19,5 @@ extern fn fac(n : double) -> double {
 }
 
 fn main() -> bool {
-    fac(4.0) as int
+    fac(4.0) == 24.0
 }

@@ -24,5 +24,5 @@ fn main() -> bool {
             continue
         )
     }
-    result
+    result == 236
 }

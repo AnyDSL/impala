@@ -10,5 +10,5 @@ fn main() -> bool {
     for i in range(23, 42) {
         sum++;
     }
-    sum
+    sum == 19
 }

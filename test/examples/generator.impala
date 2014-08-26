@@ -23,12 +23,12 @@ fn intRange(start : int,
     iter, count, next)
 }
 
-fn main(p : fn(int)) {
+fn main(p : fn(bool)) {
   // use int range
   // for each(int e in range(2, 10)) { ... }
   intRange(2, 10,
     |e : int| {
       // body
     },
-    || { p(42) } )
+    || { p(true) } )
 }

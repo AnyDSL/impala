@@ -9,5 +9,5 @@ fn a(m: int, n: int) -> int {
 }
 
 fn main() -> bool {
-    a(3, 4, return)
+    a(3, 4) == 125
 }

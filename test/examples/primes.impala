@@ -25,7 +25,7 @@ fn primes[T](n: int, t: T, body: fn(int, T, fn(T)), ret: fn(T)) {
     })
 }
 
-fn main(main_ret: fn(int)) {
+fn main(main_ret: fn(bool)) {
     let x:int = primes(50, 0, 
            |p, result, next| next(result + p));
     
@@ -34,7 +34,7 @@ fn main(main_ret: fn(int)) {
             next(result)
         },
         |result : (int, int)| {
-            main_ret(result(0))
+            main_ret(result(0) == 0)
         }
     )
 }

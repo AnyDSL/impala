@@ -19,5 +19,5 @@ extern fn fac(n : float) -> float {
 }
 
 fn main() -> bool {
-    fac(4.0f) as int
+    fac(4.0f) == 24.0f
 }
