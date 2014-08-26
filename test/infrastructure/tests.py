@@ -177,7 +177,7 @@ class InvokeTest(Test):
                 pass
     
     def checkOutput(self, proc):
-        if proc.returncode != 0:
+        if not proc.success():
             print("[FAIL] "+os.path.join(self.basedir, self.srcfile))
             print("  Return code was '%d'" % proc.returncode)
             print
