@@ -301,12 +301,11 @@ Type FnASTType::check(TypeSema& sema) const {
 
 Type ASTTypeApp::check(TypeSema& sema) const {
     if (decl()) {
-        if (auto type_decl = decl()->isa<TypeDecl>()) {
+        if (auto type_decl = decl()->isa<TypeDecl>())
             return sema.instantiate(loc(), sema.check(type_decl), args());
-        } else
-            sema.error(this) << '\'' << symbol() << "' does not name a type\n";
     }
 
+    sema.error(identifier()) << '\'' << symbol() << "' does not name a type\n";
     return sema.type_error();
 }
 
