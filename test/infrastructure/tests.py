@@ -79,7 +79,20 @@ class ValgrindTest(Test):
         except Exception as e:
             print "Parsing valgrind output FAILED: %s" % e
             return False
+
+def diff_output(output, expected):
+    olines = output.splitlines(1)
+    elines = expected.splitlines(1)
     
+    diff = difflib.Differ()
+    fails = 0
+    for cp in diff.compare(elines, olines):
+        if cp.startswith('-') or cp.startswith('+'):
+            print(cp.rstrip())
+            fails=fails+1
+    
+    return True if fails == 0 else False
+
 class CompilerOutputTest(Test):
     """Superclass tests which work on a single file and compare the output."""
     positive = True
@@ -110,16 +123,7 @@ class CompilerOutputTest(Test):
             return True
     
         with open(os.path.join(self.basedir, self.result), 'r') as f:
-            output = p.output.splitlines(1)
-            expected = f.read().splitlines(1)
-            diff = difflib.Differ()
-            fails = 0
-            for cp in diff.compare(expected, output):
-                if cp.startswith('-') or cp.startswith('+'):
-                    print(cp.rstrip())
-                    fails=fails+1
-            
-            return True if fails == 0 else False
+            return diff_output(p.output, f.read())
 
 class InvokeTest(Test):
     """Superclass tests which work on a single file and compare the output."""
@@ -127,12 +131,12 @@ class InvokeTest(Test):
     basedir = "."
     srcfile = ""
     options = ""
-    result_file = None
+    output_file = None
     CALL_IMPALA_MAIN_C = os.path.join(os.path.dirname(__file__), "call_impala_main.c")
     
-    def __init__(self, base, src, res_file, options=[]):
+    def __init__(self, base, src, output_file, options=[]):
         super(InvokeTest, self).__init__(base, src, options+["-emit-llvm"])
-        self.result_file = res_file
+        self.output_file = output_file
         
         basename = os.path.splitext(self.srcfile)[0]
         self.ll_file = basename + ".ll"
@@ -173,19 +177,15 @@ class InvokeTest(Test):
                 pass
     
     def checkOutput(self, proc):
-        # currently only return code communication
-        expected = "0"
-        
-        if self.result_file is not None:
-            with open(os.path.join(self.basedir, self.result_file), 'r') as f:
-                expected = f.read().strip()
-                
-        if str(proc.returncode) != expected:
+        if proc.returncode != 0:
             print("[FAIL] "+os.path.join(self.basedir, self.srcfile))
-            print("  Expected return code '%s', but got '%d'" % (expected, proc.returncode))
+            print("  Return code was '%d'" % proc.returncode)
             print
             return False
         
+        if self.output_file is not None:
+            with open(os.path.join(self.basedir, self.output_file), 'r') as f:
+                return diff_output(proc.output, f.read())
         return True
             
     def cleanup(self, file):
