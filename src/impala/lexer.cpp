@@ -178,27 +178,27 @@ Token Lexer::lex() {
 
         // char literal
         if (accept(str , '\'')) {
-            do {
+            while (!accept(str, '\'')) {
                 accept(str, '\\');
                 str += next();
                 if (peek() == std::istream::traits_type::eof()) {
                     error(pos_) << "missing terminating ' character\n";
                     break;
                 }
-            } while (!accept(str, '\''));
+            }
             return Token(loc_, Token::LIT_char, str);
         }
 
         // string literal
         if (accept(str , '"')) {
-            do {
+             while (!accept(str, '"')) {
                 accept(str, '\\');
                 str += next();
                 if (peek() == std::istream::traits_type::eof()) {
                     error(pos_) << "missing terminating \" character\n";
                     break;
                 }
-            } while (!accept(str, '"'));
+            }
             return Token(loc_, Token::LIT_str, str);
         }
 
