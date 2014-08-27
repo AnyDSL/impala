@@ -3,3 +3,4 @@ char.impala:3 col 13 - 16: error: unknown escape sequence '\g'
 char.impala:4 col 13 - 17: error: unknown escape sequence '\h'
 char.impala:4 col 13 - 17: error: multi-character character constant
 char.impala:5 col 13 - 17: error: multi-character character constant
+char.impala:6 col 13 - 14: error: empty character constant

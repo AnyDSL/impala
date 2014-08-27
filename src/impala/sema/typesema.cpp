@@ -584,12 +584,15 @@ Type CharExpr::check(TypeSema& sema, TypeExpectation expected) const {
     const char* p = symbol().str();
     assert(*p == '\'');
     ++p;
-    value_ = sema.char_value(loc(), p);
+    if (*p != '\'') {
+        value_ = sema.char_value(loc(), p);
 
-    if (*p++ != '\'')
-        sema.error(this) << "multi-character character constant\n";
-    else
-        assert(*p == '\0');
+        if (*p++ != '\'')
+            sema.error(this) << "multi-character character constant\n";
+        else
+            assert(*p == '\0');
+    } else
+        sema.error(this) << "empty character constant\n";
 
     return sema.type_u8();
 }

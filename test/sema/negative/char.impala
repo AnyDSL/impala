@@ -3,4 +3,5 @@ fn main() -> () {
     let b = '\g';
     let c = '\hx';
     let d = '\nx';
+    let e = '';
 }
