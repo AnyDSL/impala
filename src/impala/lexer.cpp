@@ -183,6 +183,7 @@ Token Lexer::lex() {
                 str += next();
                 if (peek() == std::istream::traits_type::eof()) {
                     error(pos_) << "missing terminating ' character\n";
+                    str += '\''; // artificially append closing '
                     break;
                 }
             }
@@ -196,6 +197,7 @@ Token Lexer::lex() {
                 str += next();
                 if (peek() == std::istream::traits_type::eof()) {
                     error(pos_) << "missing terminating \" character\n";
+                    str += '\''; // artificially append closing "
                     break;
                 }
             }
