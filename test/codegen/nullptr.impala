@@ -1,0 +1,21 @@
+extern "C" {
+    fn println(&[u8]) -> ();
+}
+
+static int_nullptr = 0 as &int;
+
+fn check(p: &int) -> () {
+    if p == int_nullptr {
+        println("null");
+    } else {
+        println("not null");
+    }
+}
+
+fn main() -> bool {
+    let mut p = int_nullptr;
+    check(p);
+    p = ~42;
+    check(p);
+    true
+}
