@@ -91,7 +91,8 @@
     case Token::TYPE_f64:  \
     case Token::TYPE_bool: \
     case Token::TILDE: \
-    case Token::AND
+    case Token::AND: \
+    case Token::ANDAND
 
 using namespace thorin;
 
@@ -667,7 +668,8 @@ const ASTType* Parser::parse_type() {
         case Token::ID:         return parse_type_app();
         case Token::L_BRACKET:  return parse_array_type();
         case Token::TILDE:
-        case Token::AND:        return parse_ptr_type();
+        case Token::AND:
+        case Token::ANDAND:     return parse_ptr_type();
         default:  {
             error("type", "");
             auto error_type = new ErrorASTType(prev_loc());
@@ -739,6 +741,19 @@ const PrimASTType* Parser::parse_prim_type() {
 }
 
 const PtrASTType* Parser::parse_ptr_type() {
+    if (la() == Token::ANDAND) {
+        auto pos1 = la().pos1();
+        auto inner = new PtrASTType();
+        inner->kind_ = '&';
+        lex();
+        inner->referenced_type_ = parse_type();
+        auto outer = new PtrASTType();
+        outer->kind_ = '&';
+        outer->referenced_type_ = inner;
+        inner->set_loc(pos1, prev_loc().pos2());
+        outer->loc_ = inner->loc();
+        return outer;
+    }
     auto ptr_type = loc(new PtrASTType());
     ptr_type->kind_ = lex().symbol().str()[0];
     ptr_type->referenced_type_ = parse_type();
