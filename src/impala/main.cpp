@@ -169,25 +169,11 @@ int main(int argc, char** argv) {
                 //thorin::vectorize(scope, vectorlength);
                 //init.world.cleanup();
             //}
-            if (emit_thorin)
-                thorin::emit_thorin(init.world, fancy, !nocolor);
-            if (emit_il)
-                thorin::emit_il(init.world, fancy);
-            if (emit_domtree) {
-                for (auto scope : top_level_scopes(init.world)) {
-                    const DomTree domtree(*scope);
-                    domtree.dump();
-                }
-            }
-            if (emit_looptree) {
-                for (auto scope : top_level_scopes(init.world)) {
-                    const LoopTree looptree(*scope);
-                    looptree.dump();
-                }
-            }
-
-            if (emit_llvm)
-                thorin::emit_llvm(init.world, opt);
+            if (emit_thorin)    thorin::emit_thorin(init.world, fancy, !nocolor);
+            if (emit_il)        thorin::emit_il(init.world, fancy);
+            if (emit_domtree)   top_level_scopes(init.world, [] (Scope& scope) { DomTree(scope).dump(); });
+            if (emit_looptree)  top_level_scopes(init.world, [] (Scope& scope) { LoopTree(scope).dump(); });
+            if (emit_llvm)      thorin::emit_llvm(init.world, opt);
         } else
             return EXIT_FAILURE;
 
