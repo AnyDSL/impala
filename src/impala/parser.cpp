@@ -146,10 +146,10 @@ public:
     template<class T>
     Loc<T> loc(T* node) { return Loc<T>(*this, node); }
 
-    void parse_comma_list(TokenKind delimiter, const char* context, std::function<void()> f, bool optional_ending_comma = false) {
+    void parse_comma_list(TokenKind delimiter, const char* context, std::function<void()> f) {
         if (la() != delimiter) {
             do { f(); }
-            while (accept(Token::COMMA) && (optional_ending_comma ? la() != delimiter : true));
+            while (accept(Token::COMMA) && la() != delimiter);
         }
         expect(delimiter, context);
     }
@@ -581,7 +581,7 @@ StructDecl* Parser::parse_struct_decl() {
     int i = 0;
     parse_comma_list(Token::R_BRACE, "closing brace of struct declaration", [&] {
         struct_decl->field_decls_.push_back(parse_field_decl(i++));
-    }, true);
+    });
     return struct_decl;
 }
 
