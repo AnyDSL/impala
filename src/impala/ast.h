@@ -19,6 +19,7 @@ namespace thorin {
     class Enter;
     class JumpTarget;
     class Lambda;
+    class Param;
 }
 
 namespace impala {
