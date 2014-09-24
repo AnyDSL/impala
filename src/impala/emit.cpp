@@ -251,9 +251,7 @@ void Fn::emit_body(CodeGen& cg) const {
     // descend into body
     auto def = cg.remit(body());
     if (def) {
-        Def mem = cg.world().leave(cg.get_mem(), frame());
-        cg.set_mem(mem);
-
+        Def mem = cg.get_mem();
         if (auto tuple = def->type().isa<thorin::TupleType>()) {
             std::vector<Def> args;
             args.push_back(mem);
