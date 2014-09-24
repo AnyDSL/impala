@@ -64,7 +64,7 @@ public:
     Def remit(const Expr* expr) {
         auto def = expr->remit(*this);
         if (expr->needs_cast())
-            def = world().convert(def, convert(expr->type()));
+            def = world().convert(convert(expr->type()), def);
         return  def;
     }
     void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
@@ -397,7 +397,7 @@ Def StrExpr::remit(CodeGen& cg) const {
 Def CastExpr::remit(CodeGen& cg) const {
     auto def = cg.remit(lhs());
     auto thorin_type = cg.convert(ast_type()->type());
-    return cg.world().convert(def, thorin_type);
+    return cg.world().convert(thorin_type, def);
 }
 
 Var PathExpr::lemit(CodeGen& cg) const {
@@ -421,7 +421,7 @@ Def PrefixExpr::remit(CodeGen& cg) const {
         case TILDE: {
             auto def = cg.remit(rhs());
             auto mem = cg.get_mem();
-            auto ptr = rhs()->extra() ? cg.world().alloc(mem, def->type(), rhs()->extra()) : cg.world().alloc(mem, def->type());
+            auto ptr = rhs()->extra() ? cg.world().alloc(def->type(), mem, rhs()->extra()) : cg.world().alloc(def->type(), mem);
             cg.set_mem(cg.world().store(mem, ptr, def));
             return ptr;
         }
