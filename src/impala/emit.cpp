@@ -6,8 +6,7 @@
 
 #include "thorin/irbuilder.h"
 #include "thorin/lambda.h"
-#include "thorin/literal.h"
-#include "thorin/memop.h"
+#include "thorin/primop.h"
 #include "thorin/type.h"
 #include "thorin/util/array.h"
 #include "thorin/util/push.h"
