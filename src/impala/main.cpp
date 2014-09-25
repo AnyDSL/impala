@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
         Names breakpoints;
 #endif
         string outfile;
-        bool help, emit_all, emit_thorin, emit_il, emit_ast, emit_annotated, emit_llvm, emit_domtree, emit_looptree, fancy, nocolor, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, nocleanup, nossa = false;
+        bool help, emit_thorin, emit_il, emit_ast, emit_annotated, emit_llvm, emit_domtree, emit_postdomtree, emit_looptree, fancy, nocolor, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, nocleanup, nossa = false;
         int vectorlength = 0;
         auto cmd_parser = ArgParser()
             .implicit_option("infiles", "input files", infiles)
@@ -51,31 +51,28 @@ int main(int argc, char** argv) {
 #ifndef NDEBUG
             .add_option<vector<string>>("break", "breakpoint at definition generation of number arg", breakpoints)
 #endif
-            .add_option<bool>("nocleanup",      "no clean-up phase", nocleanup, false)
-            .add_option<bool>("nossa",          "use slots + load/store instead of SSA construction", nossa, false)
-            .add_option< int>("vectorize",      "run vectorizer on main with given vector length (experimantal!!!), arg=<vector length>", vectorlength, false)
-            .add_option<bool>("emit-thorin",    "emit textual THORIN representation of impala program", emit_thorin, false)
-            .add_option<bool>("emit-il",        "emit textual IL representation of impala program", emit_il, false)
-            .add_option<bool>("emit-all",       "emit AST, THORIN, LLVM and loop tree", emit_all, false)
-            .add_option<bool>("emit-ast",       "emit AST of impala program", emit_ast, false)
-            .add_option<bool>("emit-annotated", "emit AST of impala program after semantical analysis", emit_annotated, false)
-            .add_option<bool>("emit-domtree",   "emit dom tree", emit_domtree, false)
-            .add_option<bool>("emit-looptree",  "emit loop tree", emit_looptree, false)
-            .add_option<bool>("emit-llvm",      "emit llvm from THORIN representation (implies -Othorin)", emit_llvm, false)
-            .add_option<bool>("f",              "use fancy output", fancy, false)
-            .add_option<bool>("nc",             "use uncolored output", nocolor, false)
-            .add_option<bool>("Othorin",        "optimize at THORIN level", opt_thorin, false)
-            .add_option<bool>("Os",             "optimize for size", opt_s, false)
-            .add_option<bool>("O0",             "reduce compilation time and make debugging produce the expected results (default)", opt_0, false)
-            .add_option<bool>("O1",             "optimize", opt_1, false)
-            .add_option<bool>("O2",             "optimize even more", opt_2, false)
-            .add_option<bool>("O3",             "optimize yet more", opt_3, false);
+            .add_option<bool>("O0",                 "reduce compilation time and make debugging produce the expected results (default)", opt_0, false)
+            .add_option<bool>("O1",                 "optimize", opt_1, false)
+            .add_option<bool>("O2",                 "optimize even more", opt_2, false)
+            .add_option<bool>("O3",                 "optimize yet more", opt_3, false)
+            .add_option<bool>("Os",                 "optimize for size", opt_s, false)
+            .add_option<bool>("Othorin",            "optimize at THORIN level", opt_thorin, false)
+            .add_option<bool>("emit-annotated",     "emit AST of impala program after semantical analysis", emit_annotated, false)
+            .add_option<bool>("emit-ast",           "emit AST of impala program", emit_ast, false)
+            .add_option<bool>("emit-domtree",       "emit dom tree", emit_domtree, false)
+            .add_option<bool>("emit-il",            "emit textual IL representation of impala program", emit_il, false)
+            .add_option<bool>("emit-llvm",          "emit llvm from THORIN representation (implies -Othorin)", emit_llvm, false)
+            .add_option<bool>("emit-looptree",      "emit loop tree", emit_looptree, false)
+            .add_option<bool>("emit-postdomtree",   "emit dom tree", emit_postdomtree, false)
+            .add_option<bool>("emit-thorin",        "emit textual THORIN representation of impala program", emit_thorin, false)
+            .add_option<bool>("f",                  "use fancy output", fancy, false)
+            .add_option<bool>("nc",                 "use uncolored output", nocolor, false)
+            .add_option<bool>("nocleanup",          "no clean-up phase", nocleanup, false)
+            .add_option<bool>("nossa",              "use slots + load/store instead of SSA construction", nossa, false)
+            .add_option< int>("vectorize",          "run vectorizer on main with given vector length (experimantal!!!), arg=<vector length>", vectorlength, false);
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
-
-        if (emit_all)
-            emit_thorin = emit_domtree = emit_looptree = emit_ast = emit_annotated = emit_llvm = true;
         opt_thorin |= emit_llvm;
 
         // check optimization levels
@@ -169,11 +166,12 @@ int main(int argc, char** argv) {
                 //thorin::vectorize(scope, vectorlength);
                 //init.world.cleanup();
             //}
-            if (emit_thorin)    thorin::emit_thorin(init.world, fancy, !nocolor);
-            if (emit_il)        thorin::emit_il(init.world, fancy);
-            if (emit_domtree)   top_level_scopes(init.world, [] (Scope& scope) { DomTree(scope).dump(); });
-            if (emit_looptree)  top_level_scopes(init.world, [] (Scope& scope) { LoopTree(scope).dump(); });
-            if (emit_llvm)      thorin::emit_llvm(init.world, opt);
+            if (emit_thorin)        thorin::emit_thorin(init.world, fancy, !nocolor);
+            if (emit_il)            thorin::emit_il(init.world, fancy);
+            if (emit_domtree)       top_level_scopes(init.world, [] (const Scope& scope) { DomTree(scope).dump(); });
+            if (emit_postdomtree)   top_level_scopes(init.world, [] (const Scope& scope) { DomTree(scope, false).dump(); });
+            if (emit_looptree)      top_level_scopes(init.world, [] (const Scope& scope) { LoopTree(scope).dump(); });
+            if (emit_llvm)          thorin::emit_llvm(init.world, opt);
         } else
             return EXIT_FAILURE;
 
