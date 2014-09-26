@@ -7,7 +7,6 @@
 #include "thorin/analyses/looptree.h"
 #include "thorin/analyses/scope.h"
 #include "thorin/analyses/verify.h"
-#include "thorin/analyses/top_level_scopes.h"
 #include "thorin/transform/import.h"
 #include "thorin/transform/vectorize.h"
 #include "thorin/transform/partial_evaluation.h"
@@ -168,9 +167,9 @@ int main(int argc, char** argv) {
             //}
             if (emit_thorin)        thorin::emit_thorin(init.world, fancy, !nocolor);
             if (emit_il)            thorin::emit_il(init.world, fancy);
-            if (emit_domtree)       top_level_scopes(init.world, [] (const Scope& scope) { scope.domtree().dump(); });
-            if (emit_postdomtree)   top_level_scopes(init.world, [] (const Scope& scope) { scope.postdomtree().dump(); });
-            if (emit_looptree)      top_level_scopes(init.world, [] (const Scope& scope) { scope.looptree().dump(); });
+            if (emit_domtree)       Scope::for_each(init.world, [] (const Scope& scope) { scope.domtree()->dump(); });
+            if (emit_postdomtree)   Scope::for_each(init.world, [] (const Scope& scope) { scope.postdomtree()->dump(); });
+            if (emit_looptree)      Scope::for_each(init.world, [] (const Scope& scope) { scope.looptree()->dump(); });
             if (emit_llvm)          thorin::emit_llvm(init.world, opt);
         } else
             return EXIT_FAILURE;
