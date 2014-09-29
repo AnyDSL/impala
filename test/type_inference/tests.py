@@ -6,18 +6,22 @@ tests.py for semantic analysis tests
 from infrastructure.tests import make_tests
 import os
 
-optionals = ["type_inference/positive/map.impala",
+optionals = [
     "type_inference/negative/map1.impala",
     "type_inference/negative/map2.impala",
+    "type_inference/negative/type_args10.impala",
+    "type_inference/positive/fixed_point_iteration01.impala",
     "type_inference/positive/hard2.impala",
+    "type_inference/positive/map.impala",
+    "type_inference/positive/type_args10.impala",
+    "type_inference/positive/type_args11.impala",
+    "type_inference/positive/type_args12.impala",
+    "type_inference/positive/type_args13.impala",
+    "type_inference/positive/type_args14.impala",
     "type_inference/positive/type_args4.impala",
     "type_inference/positive/type_args5.impala",
     "type_inference/positive/type_args6.impala",
     "type_inference/positive/type_args9.impala",
-    "type_inference/positive/type_args10.impala",
-    "type_inference/positive/type_args11.impala",
-    "type_inference/positive/type_args12.impala",
-    "type_inference/positive/type_args13.impala"
 ]
 
 def allTests():
