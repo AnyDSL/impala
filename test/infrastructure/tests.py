@@ -54,7 +54,7 @@ class ValgrindTest(Test):
     
     def invoke(self, gEx):
         execCmd = ["valgrind", "--xml=yes", "--xml-file="+ValgrindTest.VALGRIND_XML_FILE]
-        execCmd += [os.path.abspath(gEx)] + self.options + [self.srcfile]
+        execCmd += [gEx] + self.options + [self.srcfile]
         
         timeout = CompileProcess.timeout
         if timeout == CompileProcess.DEFAULT_TIMEOUT:
@@ -107,7 +107,7 @@ class CompilerOutputTest(Test):
         self.result = res
     
     def invoke(self, gEx):
-        execCmd = [os.path.abspath(gEx)] + self.options + [self.srcfile]
+        execCmd = [gEx] + self.options + [self.srcfile]
         p = CompileProcess(execCmd, self.basedir)
         p.execute()
         return self.checkBasics(p) and self.checkOutput(p)
@@ -146,7 +146,7 @@ class InvokeTest(Test):
         self.tmp_files = [self.ll_file, self.bc_file, self.s_file, self.exe_file]
     
     def compilePhases(self, gEx):
-        yield [os.path.abspath(gEx)] + self.options + [os.path.join(self.basedir, self.srcfile)]
+        yield [gEx] + self.options + [os.path.join(self.basedir, self.srcfile)]
         yield ["llc", "-o", self.s_file, self.bc_file]
         yield ["gcc", "-o", self.exe_file, self.s_file, InvokeTest.CALL_IMPALA_MAIN_C]
     

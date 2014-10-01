@@ -28,20 +28,27 @@ def invoke(executable, directory, valgrind):
     infrastructure.tests.executeTests(tests, executable)
 
 def get_executable():
-    # first check if impala is in $PATH
     if sys.platform == "win32":
         executable = "impala.exe"
     else:
         executable = "impala"
-    
-    try:
-        devnull = open(os.devnull)
-        subprocess.call([executable], stdout=devnull, stderr=devnull)
-    except OSError as e:
-        if e.errno == os.errno.ENOENT: # file not found => try local path
-            return os.path.join("..", "build", "bin", executable)
-    
-    return executable
+
+    # first check if impala is in $PATH
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(executable)
+    if fpath:
+        if is_exe(executable):
+            return executable
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, executable)
+            if is_exe(exe_file):
+                return os.path.abspath(exe_file)
+
+    return os.path.abspath(os.path.join("..", "build", "bin", executable))
 
 def main():
     executable = get_executable()
