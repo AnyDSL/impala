@@ -1,0 +1,11 @@
+struct S {
+    roots: &[u32],
+    arr:   &[i32],
+}
+
+fn main() -> bool {
+    let mut s : S;
+    s.roots = ~[0u];
+
+    true
+}
