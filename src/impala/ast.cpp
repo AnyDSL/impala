@@ -2,6 +2,52 @@
 
 namespace impala {
 
+//------------------------------------------------------------------------------
+
+/*
+ * is_lvalue
+ */
+
+bool PathExpr::is_lvalue() const {
+    if (value_decl()) {
+        value_decl()->write();
+        return value_decl()->is_mut();
+    }
+    return false;
+}
+
+bool MapExpr::is_lvalue() const {
+    if (!lhs()->type())
+        return true; // prevent further errors
+    return (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) ? lhs()->is_lvalue() : false;
+}
+
+bool PrefixExpr::is_lvalue() const {
+    return kind() == MUL && rhs()->is_lvalue();
+}
+
+bool FieldExpr::is_lvalue() const {
+    return lhs()->is_lvalue();
+}
+
+//------------------------------------------------------------------------------
+
+/*
+ * take_address
+ */
+
+void PathExpr::take_address() const {
+    if (value_decl()) {
+        if (auto local = value_decl()->isa<LocalDecl>())
+            local->take_address();
+    }
+}
+
+void MapExpr::take_address() const { lhs()->take_address(); }
+void FieldExpr::take_address() const { lhs()->take_address(); }
+
+//------------------------------------------------------------------------------
+
 const Param* Param::create(size_t var_handle, const Identifier* ident, const Location& loc, const ASTType* fn_type) {
     auto param = new Param(var_handle);
     param->is_mut_ = false;
@@ -53,48 +99,5 @@ bool IfExpr::has_else() const {
 }
 
 //------------------------------------------------------------------------------
-
-/*
- * is_lvalue
- */
-
-bool PathExpr::is_lvalue() const {
-    if (value_decl()) {
-        value_decl()->write();
-        return value_decl()->is_mut();
-    }
-    return false;
-}
-
-bool MapExpr::is_lvalue() const {
-    if (!lhs()->type())
-        return true; // prevent further errors
-    return (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) ? lhs()->is_lvalue() : false;
-}
-
-bool PrefixExpr::is_lvalue() const {
-    return kind() == MUL && rhs()->is_lvalue();
-}
-
-bool FieldExpr::is_lvalue() const {
-    return lhs()->is_lvalue();
-}
-
-//------------------------------------------------------------------------------
-
-void PathExpr::take_address() const {
-    if (value_decl()) {
-        if (auto local = value_decl()->isa<LocalDecl>())
-            local->take_address();
-    }
-}
-
-void MapExpr::take_address() const {
-    lhs()->take_address();
-}
-
-void FieldExpr::take_address() const {
-    lhs()->take_address();
-}
 
 }
