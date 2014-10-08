@@ -560,6 +560,11 @@ void ImplItem::check_item(TypeSema& sema) const {
 
 Type EmptyExpr::check(TypeSema& sema, TypeExpectation) const { return sema.unit(); }
 
+Type SizeofExpr::check(TypeSema& sema, TypeExpectation) const {
+    sema.check(ast_type());
+    return sema.type_u32();
+}
+
 Type LiteralExpr::check(TypeSema& sema, TypeExpectation expected) const {
     // FEATURE we could enhance this using the expected type (e.g. 4 could be interpreted as int8 if needed)
     return sema.type(literal2type());

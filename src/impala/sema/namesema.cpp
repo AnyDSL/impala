@@ -270,6 +270,10 @@ void ImplItem::check_item(NameSema& sema) const {
 
 void EmptyExpr::check(NameSema& sema) const {}
 
+void SizeofExpr::check(NameSema& sema) const {
+    sema.check(ast_type());
+}
+
 void BlockExpr::check(NameSema& sema) const {
     sema.push_scope();
     for (auto stmt : stmts()) {

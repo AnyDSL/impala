@@ -112,11 +112,6 @@ std::ostream& ImplNode::print(Printer& p) const {
     return p.stream() << "TODO";
 }
 
-std::ostream& Typeof::print(Printer& p) const {
-    p.stream() << "typeof(";
-    return p.print(expr()) << ')';
-}
-
 //------------------------------------------------------------------------------
 
 /*
@@ -175,13 +170,18 @@ std::ostream& PrimASTType::print(Printer& p) const {
     }
 }
 
-std::ostream& Identifier::print(Printer& p) const {
-    return p.stream() << symbol();
+std::ostream& Typeof::print(Printer& p) const {
+    p.stream() << "typeof(";
+    return p.print(expr()) << ')';
 }
 
 /*
  * paths
  */
+
+std::ostream& Identifier::print(Printer& p) const {
+    return p.stream() << symbol();
+}
 
 std::ostream& PathElem::print(Printer& p) const {
     return p.stream() << symbol();
@@ -191,7 +191,6 @@ std::ostream& Path::print(Printer& p) const {
     p.stream() << (is_global() ? "::" : "");
     return p.dump_list([&] (const PathElem* path_elem) { path_elem->print(p); }, path_elems(), "", "", "::");
 }
-
 
 /*
  * parameters
@@ -369,6 +368,11 @@ std::ostream& ImplItem::print(Printer& p) const {
 
 std::ostream& Printer::print(const Expr* expr) {
     return expr->print(*this);
+}
+
+std::ostream& SizeofExpr::print(Printer& p) const {
+    p.stream() << "sizeof(";
+    return ast_type()->print(p) << ')';
 }
 
 std::ostream& BlockExpr::print(Printer& p) const {

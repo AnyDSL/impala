@@ -105,6 +105,7 @@ IMPALA_INFIX(   REM,  "%",    MUL,  UNARY)
 
 IMPALA_KEY_EXPR(TRUE,   "true")
 IMPALA_KEY_EXPR(FALSE,  "false")
+IMPALA_KEY_EXPR(SIZEOF, "sizeof")
 
 #undef IMPALA_KEY_EXPR
 

@@ -364,6 +364,10 @@ void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
 void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.branch(cg.remit(this), t, f); }
 Def EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}); }
 
+thorin::Def SizeofExpr::remit(CodeGen& cg) const {
+    assert(false && "TODO");
+}
+
 Def LiteralExpr::remit(CodeGen& cg) const {
     thorin::PrimTypeKind tkind;
 
