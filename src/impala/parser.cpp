@@ -90,6 +90,7 @@
     case Token::TYPE_f32: \
     case Token::TYPE_f64:  \
     case Token::TYPE_bool: \
+    case Token::TYPEOF: \
     case Token::TILDE: \
     case Token::AND: \
     case Token::ANDAND
@@ -173,6 +174,7 @@ public:
     // types
     const ASTType*      parse_type();
     const ArrayASTType* parse_array_type();
+    const Typeof*       parse_typeof();
     const ASTType*      parse_return_type();
     const FnASTType*    parse_fn_type();
     const PrimASTType*  parse_prim_type();
@@ -667,6 +669,7 @@ const ASTType* Parser::parse_type() {
         case Token::L_PAREN:    return parse_tuple_type();
         case Token::ID:         return parse_type_app();
         case Token::L_BRACKET:  return parse_array_type();
+        case Token::TYPEOF:     return parse_typeof();
         case Token::TILDE:
         case Token::AND:
         case Token::ANDAND:     return parse_ptr_type();
@@ -778,6 +781,15 @@ const ASTTypeApp* Parser::parse_type_app() {
         });
     }
     return type_app;
+}
+
+const Typeof* Parser::parse_typeof() {
+    auto typeof = loc(new Typeof());
+    eat(Token::TYPEOF);
+    expect(Token::L_PAREN, "typeof");
+    typeof->expr_ = parse_expr();
+    expect(Token::R_PAREN, "typeof");
+    return typeof;
 }
 
 /*

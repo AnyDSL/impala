@@ -146,6 +146,10 @@ void FnASTType::check(NameSema& sema) const {
     sema.pop_scope();
 }
 
+void Typeof::check(NameSema& sema) const {
+    expr()->check(sema);
+}
+
 //------------------------------------------------------------------------------
 
 void ModContents::check(NameSema& sema) const {

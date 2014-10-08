@@ -142,6 +142,7 @@ IMPALA_KEY_MISC(STATIC,     "static")
 IMPALA_KEY_MISC(STRUCT,     "struct")
 IMPALA_KEY_MISC(TRAIT,      "trait")
 IMPALA_KEY_MISC(TYPEDEF,    "type")
+IMPALA_KEY_MISC(TYPEOF,     "typeof")
 
 #undef IMPALA_KEY_MISC
 

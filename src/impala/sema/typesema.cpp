@@ -310,6 +310,10 @@ Type ASTTypeApp::check(TypeSema& sema) const {
     return sema.type_error();
 }
 
+Type Typeof::check(TypeSema& sema) const {
+    return sema.check(expr());
+}
+
 TraitApp ASTTypeApp::trait_app(TypeSema& sema, Type self) const {
     if (decl()) {
         if (auto trait_decl = decl()->isa<TraitDecl>()) {

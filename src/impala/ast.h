@@ -369,6 +369,21 @@ private:
     friend class Parser;
 };
 
+class Typeof : public ASTType {
+public:
+    const Expr* expr() const { return expr_; }
+
+    virtual std::ostream& print(Printer&) const override;
+
+private:
+    virtual void check(NameSema&) const override;
+    virtual Type check(TypeSema&) const override;
+
+    AutoPtr<const Expr> expr_;
+
+    friend class Parser;
+};
+
 //------------------------------------------------------------------------------
 
 /*

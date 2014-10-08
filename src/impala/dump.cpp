@@ -112,6 +112,11 @@ std::ostream& ImplNode::print(Printer& p) const {
     return p.stream() << "TODO";
 }
 
+std::ostream& Typeof::print(Printer& p) const {
+    p.stream() << "typeof(";
+    return p.print(expr()) << ')';
+}
+
 //------------------------------------------------------------------------------
 
 /*
