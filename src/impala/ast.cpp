@@ -100,4 +100,78 @@ bool IfExpr::has_else() const {
 
 //------------------------------------------------------------------------------
 
+/*
+ * is_lvalue
+ */
+
+bool PathExpr::is_lvalue() const {
+    if (value_decl()) {
+        value_decl()->write();
+        return value_decl()->is_mut();
+    }
+    return false;
+}
+
+bool MapExpr::is_lvalue() const {
+    if (!lhs()->type())
+        return true; // prevent further errors
+    return (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) ? lhs()->is_lvalue() : false;
+}
+
+bool PrefixExpr::is_lvalue() const {
+    return kind() == MUL && rhs()->is_lvalue();
+}
+
+bool FieldExpr::is_lvalue() const {
+    return lhs()->is_lvalue();
+}
+
+//------------------------------------------------------------------------------
+
+/*
+ * has_side_effect
+ */
+
+bool PrefixExpr::has_side_effect() const {
+    return kind() == INC || kind() == DEC || kind() == TILDE || kind() == RUN || kind() == HLT;
+}
+
+bool InfixExpr::has_side_effect() const {
+    return Token::is_assign((TokenKind) kind());
+}
+
+bool PostfixExpr::has_side_effect() const { return true; }
+bool MapExpr::has_side_effect() const { return lhs()->type().isa<FnType>(); }
+bool BlockExpr::has_side_effect() const { return !stmts().empty() || expr()->has_side_effect(); }
+
+bool IfExpr::has_side_effect() const {
+    return cond()->has_side_effect() || then_expr()->has_side_effect() || else_expr()->has_side_effect();
+}
+
+bool WhileExpr::has_side_effect() const { return true; }
+bool ForExpr::has_side_effect() const { return true; }
+
+//------------------------------------------------------------------------------
+
+/*
+ * take_address
+ */
+
+void PathExpr::take_address() const {
+    if (value_decl()) {
+        if (auto local = value_decl()->isa<LocalDecl>())
+            local->take_address();
+    }
+}
+
+void MapExpr::take_address() const {
+    lhs()->take_address();
+}
+
+void FieldExpr::take_address() const {
+    lhs()->take_address();
+}
+
+//------------------------------------------------------------------------------
+
 }

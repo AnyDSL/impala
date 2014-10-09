@@ -1,6 +1,10 @@
+extern "C" {
+    fn use(int) -> ();
+}
+
 fn range[T](f: fn(T) -> ()) -> () {
 }
 
 fn main() -> () {
-    range(|x| { x+1; })
+    range(|x| { use(x) })
 }

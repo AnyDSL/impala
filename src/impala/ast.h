@@ -814,6 +814,7 @@ public:
     bool needs_cast() const { return !actual_type_.empty(); }
     thorin::Def extra() const { return extra_; }
     virtual bool is_lvalue() const { return false; }
+    virtual bool has_side_effect() const { return false; }
     virtual void take_address() const {}
     virtual void check(NameSema&) const = 0;
 
@@ -1016,6 +1017,7 @@ public:
     const Expr* rhs() const { return rhs_; }
     Kind kind() const { return kind_; }
     virtual bool is_lvalue() const override;
+    virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
@@ -1042,6 +1044,7 @@ public:
     Kind kind() const { return kind_; }
     const Expr* lhs() const { return lhs_; }
     const Expr* rhs() const { return rhs_; }
+    virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
@@ -1070,6 +1073,7 @@ public:
 
     Kind kind() const { return kind_; }
     const Expr* lhs() const { return lhs_; }
+    virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -1105,6 +1109,7 @@ private:
     mutable uint32_t index_ = uint32_t(-1);
 
     friend class Parser;
+    friend class MapExpr; // remove this
 };
 
 class CastExpr : public Expr {
@@ -1235,6 +1240,7 @@ class MapExpr : public Expr, public Args, public TypeArgs {
 public:
     const Expr* lhs() const { return lhs_; }
     virtual bool is_lvalue() const override;
+    virtual bool has_side_effect() const override;
     virtual void take_address() const override;
     virtual void check(NameSema&) const override;
     Type check_as_map(TypeSema&, TypeExpectation) const;
@@ -1265,6 +1271,7 @@ public:
     bool empty() const { return stmts_.empty() && expr_->isa<EmptyExpr>(); }
     const std::vector<const LocalDecl*>& locals() const { return locals_; }
     void add_local(const LocalDecl* local) const { locals_.push_back(local); }
+    virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
 
 private:
@@ -1285,6 +1292,7 @@ public:
     const Expr* then_expr() const { return then_expr_; }
     const Expr* else_expr() const { return else_expr_; }
     bool has_else() const;
+    virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
@@ -1306,6 +1314,7 @@ public:
     const BlockExpr* body() const { return body_; }
     const LocalDecl* break_decl() const { return break_decl_; }
     const LocalDecl* continue_decl() const { return continue_decl_; }
+    virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
@@ -1327,6 +1336,7 @@ public:
     const FnExpr* fn_expr() const { return fn_expr_; }
     const Expr* expr() const { return expr_; }
     const LocalDecl* break_decl() const { return break_decl_; }
+    virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
 
 private:

@@ -1052,7 +1052,7 @@ Type MapExpr::check_as_method_call(TypeSema& sema, TypeExpectation expected) con
         Array<const Expr*> nargs(num_args() + 1);
         nargs[0] = field_expr->lhs();
         std::copy(args().begin(), args().end(), nargs.begin()+1);
-        return sema.check_call(this, fn_method, type_args(), inferred_args_, nargs, expected);
+        return field_expr->type_ = sema.check_call(this, fn_method, type_args(), inferred_args_, nargs, expected);
     } else
         sema.error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
     return sema.type_error();
@@ -1165,6 +1165,8 @@ Type ForExpr::check(TypeSema& sema, TypeExpectation expected) const {
 void ExprStmt::check(TypeSema& sema) const {
     if (sema.check(expr())->is_noret())
         sema.error(expr()) << "expression does not return; subsequent statements are unreachable\n";
+    if (!expr()->has_side_effect())
+        sema.warn(expr()) << "statement with no effect\n";
 }
 
 void ItemStmt::check(TypeSema& sema) const {
