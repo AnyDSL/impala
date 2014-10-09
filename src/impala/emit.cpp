@@ -20,7 +20,6 @@ class CodeGen : public IRBuilder {
 public:
     CodeGen(World& world)
         : IRBuilder(world)
-        , cur_fn(nullptr)
     {}
 
     const thorin::Enter* frame() const { assert(cur_fn); return cur_fn->frame(); }
@@ -109,7 +108,7 @@ public:
             prev->update_arg(prev->num_args()-1, world().end_hlt(prev->args().back(), hlt));
     }
 
-    const Fn* cur_fn;
+    const Fn* cur_fn = nullptr;
 };
 
 /*
