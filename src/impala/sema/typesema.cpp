@@ -1164,7 +1164,7 @@ Type ForExpr::check(TypeSema& sema, TypeExpectation expected) const {
 
 void ExprStmt::check(TypeSema& sema) const {
     if (sema.check(expr())->is_noret())
-        sema.error(expr()) << "expression does not return. Rendering subsequent statements unreachable\n";
+        sema.error(expr()) << "expression does not return; subsequent statements are unreachable\n";
 }
 
 void ItemStmt::check(TypeSema& sema) const {

@@ -1,1 +1,1 @@
-unreachable.impala:2 col 5 - 14: error: expression does not return. Rendering subsequent statements unreachable
+unreachable.impala:2 col 5 - 14: error: expression does not return; subsequent statements are unreachable
