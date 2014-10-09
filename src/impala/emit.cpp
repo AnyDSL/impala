@@ -228,7 +228,7 @@ void Fn::emit_body(CodeGen& cg) const {
     Def mem_param = lambda()->param(i++);
     mem_param->name = "mem";
     cg.set_mem(mem_param);
-    frame_ = cg.world().enter(mem_param);
+    frame_ = cg.world().enter(mem_param)->as<Enter>();
 
     // name bounds and memoize type params
     for (auto type_param : type_params()) {
