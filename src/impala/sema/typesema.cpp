@@ -665,7 +665,7 @@ Type PathExpr::check(TypeSema& sema, TypeExpectation expected) const {
     if (value_decl()) {
         if (auto local = value_decl()->isa<LocalDecl>()) {
             // if local lies in an outer function go through memory to implement closure
-            if (local->is_mut() && local->fn() != sema.cur_fn_)
+            if (local->is_mut() && (sema.nossa() || local->fn() != sema.cur_fn_))
                 local->take_address();
         }
         return sema.check(value_decl());
