@@ -22,7 +22,7 @@ public:
         : IRBuilder(world)
     {}
 
-    const thorin::Enter* frame() const { assert(cur_fn); return cur_fn->frame(); }
+    Def frame() const { assert(cur_fn); return cur_fn->frame(); }
     /// Enter \p x and perform \p get_value to collect return value.
     Def converge(const Expr* expr, JumpTarget& x) {
         emit_jump(expr, x);
@@ -228,7 +228,7 @@ void Fn::emit_body(CodeGen& cg) const {
     Def mem_param = lambda()->param(i++);
     mem_param->name = "mem";
     cg.set_mem(mem_param);
-    frame_ = cg.world().enter(mem_param)->as<Enter>();
+    frame_ = cg.create_frame();
 
     // name bounds and memoize type params
     for (auto type_param : type_params()) {
