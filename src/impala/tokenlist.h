@@ -43,7 +43,7 @@ IMPALA_POSTFIX(       AS, "as",     MUL) // cast expression (not as strong as mu
 #undef IMPALA_POSTFIX
 
 /*
- * binary operators
+ * infix operators
  */
 
 #ifndef IMPALA_INFIX_ASGN
@@ -99,53 +99,39 @@ IMPALA_INFIX(   REM,  "%",    MUL,  UNARY)
  * keywords
  */
 
-#ifndef IMPALA_KEY_EXPR
-#define IMPALA_KEY_EXPR(tok, str)
-#endif
-
-IMPALA_KEY_EXPR(TRUE,   "true")
-IMPALA_KEY_EXPR(FALSE,  "false")
-IMPALA_KEY_EXPR(SIZEOF, "sizeof")
-
-#undef IMPALA_KEY_EXPR
-
-#ifndef IMPALA_KEY_STMT
-#define IMPALA_KEY_STMT(tok, str)
-#endif
-
-IMPALA_KEY_STMT(DO,         "do")
-IMPALA_KEY_STMT(ELSE,       "else")
-IMPALA_KEY_STMT(FOR,        "for")
-IMPALA_KEY_STMT(IF,         "if")
-IMPALA_KEY_STMT(LET,        "let")
-IMPALA_KEY_STMT(WHILE,      "while")
-
-#undef IMPALA_KEY_STMT
-
-#ifndef IMPALA_KEY_MISC
-#define IMPALA_KEY_MISC(tok, str)
+#ifndef IMPALA_KEY
+#define IMPALA_KEY(tok, str)
 #endif
 
 // Windows workaround for MSVC18
 #undef IN
 
-IMPALA_KEY_MISC(AS,         "as")
-IMPALA_KEY_MISC(ENUM,       "enum")
-IMPALA_KEY_MISC(EXTERN,     "extern")
-IMPALA_KEY_MISC(FN,         "fn")
-IMPALA_KEY_MISC(IMPL,       "impl")
-IMPALA_KEY_MISC(IN,         "in")
-IMPALA_KEY_MISC(INTRINSIC,  "intrinsic")
-IMPALA_KEY_MISC(MOD,        "mod")
-IMPALA_KEY_MISC(PRIV,       "priv")
-IMPALA_KEY_MISC(PUB,        "pub")
-IMPALA_KEY_MISC(STATIC,     "static")
-IMPALA_KEY_MISC(STRUCT,     "struct")
-IMPALA_KEY_MISC(TRAIT,      "trait")
-IMPALA_KEY_MISC(TYPEDEF,    "type")
-IMPALA_KEY_MISC(TYPEOF,     "typeof")
+IMPALA_KEY(AS,        "as")
+IMPALA_KEY(DO,        "do")
+IMPALA_KEY(ELSE,      "else")
+IMPALA_KEY(ENUM,      "enum")
+IMPALA_KEY(EXTERN,    "extern")
+IMPALA_KEY(FALSE,     "false")
+IMPALA_KEY(FN,        "fn")
+IMPALA_KEY(FOR,       "for")
+IMPALA_KEY(IF,        "if")
+IMPALA_KEY(IMPL,      "impl")
+IMPALA_KEY(IN,        "in")
+IMPALA_KEY(INTRINSIC, "intrinsic")
+IMPALA_KEY(LET,       "let")
+IMPALA_KEY(MOD,       "mod")
+IMPALA_KEY(PRIV,      "priv")
+IMPALA_KEY(PUB,       "pub")
+IMPALA_KEY(SIZEOF,    "sizeof")
+IMPALA_KEY(STATIC,    "static")
+IMPALA_KEY(STRUCT,    "struct")
+IMPALA_KEY(TRAIT,     "trait")
+IMPALA_KEY(TRUE,      "true")
+IMPALA_KEY(TYPEDEF,   "type")
+IMPALA_KEY(TYPEOF,    "typeof")
+IMPALA_KEY(WHILE,     "while")
 
-#undef IMPALA_KEY_MISC
+#undef IMPALA_KEY
 
 /*
  * other miscellaneous tokens
@@ -155,19 +141,20 @@ IMPALA_KEY_MISC(TYPEOF,     "typeof")
 #define IMPALA_MISC(tok, str)
 #endif
 
-IMPALA_MISC(L_PAREN,        "(")
-IMPALA_MISC(R_PAREN,        ")")
-IMPALA_MISC(L_BRACE,        "{")
-IMPALA_MISC(R_BRACE,        "}")
-IMPALA_MISC(L_BRACKET,      "[")
-IMPALA_MISC(R_BRACKET,      "]")
-IMPALA_MISC(ARROW,          "->")
-IMPALA_MISC(FAT_ARRROW,     "=>")
-IMPALA_MISC(SEMICOLON,      ";")
-IMPALA_MISC(COLON,          ":")
-IMPALA_MISC(DOUBLE_COLON,   ":")
-IMPALA_MISC(COMMA,          ",")
-IMPALA_MISC(DOTDOT,         "..")
+IMPALA_MISC(L_PAREN,      "(")
+IMPALA_MISC(R_PAREN,      ")")
+IMPALA_MISC(L_BRACE,      "{")
+IMPALA_MISC(R_BRACE,      "}")
+IMPALA_MISC(L_BRACKET,    "[")
+IMPALA_MISC(R_BRACKET,    "]")
+IMPALA_MISC(RUN_BLOCK,    "@{")
+IMPALA_MISC(ARROW,        "->")
+IMPALA_MISC(FAT_ARRROW,   "=>")
+IMPALA_MISC(SEMICOLON,    ";")
+IMPALA_MISC(COLON,        ":")
+IMPALA_MISC(DOUBLE_COLON, ":")
+IMPALA_MISC(COMMA,        ",")
+IMPALA_MISC(DOTDOT,       "..")
 
 #undef IMPALA_MISC
 

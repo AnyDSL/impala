@@ -15,16 +15,11 @@ namespace impala {
 class Token : public impala::HasLocation {
 public:
     enum Kind {
-        /*
-         * !!! DO NOT CHANGE THIS ORDER !!!
-         */
-
+        // !!! DO NOT CHANGE THIS ORDER !!!
         // add prefix and postfix tokens manually in order to avoid duplicates in the enum
 #define IMPALA_INFIX(     tok, t_str, r, l) tok,
 #define IMPALA_INFIX_ASGN(tok, t_str, r, l) tok,
-#define IMPALA_KEY_EXPR(  tok, t_str)       tok,
-#define IMPALA_KEY_STMT(  tok, t_str)       tok,
-#define IMPALA_KEY_MISC(  tok, t_str)       tok,
+#define IMPALA_KEY(       tok, t_str)       tok,
 #define IMPALA_MISC(      tok, t_str)       tok,
 #define IMPALA_LIT(       tok, t)           LIT_##tok,
 #define IMPALA_TYPE(itype, atype)           TYPE_##itype,
