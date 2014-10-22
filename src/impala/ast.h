@@ -1260,11 +1260,8 @@ private:
 
 class StmtLikeExpr : public Expr {};
 
-class BlockExpr : public StmtLikeExpr {
+class BlockExprBase : public StmtLikeExpr {
 public:
-    BlockExpr() {}
-    BlockExpr(Location loc) { loc_ = loc; expr_ = new EmptyExpr(loc); }
-
     const AutoVector<const Stmt*>& stmts() const { return stmts_; }
     const Expr* expr() const { return expr_; }
     const Stmt* stmt(size_t i) const { return stmts_[i]; }
@@ -1273,15 +1270,33 @@ public:
     void add_local(const LocalDecl* local) const { locals_.push_back(local); }
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
+    virtual const char* prefix() const = 0;
 
-private:
+protected:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoVector<const Stmt*> stmts_;
     AutoPtr<const Expr> expr_;
-    mutable std::vector<const LocalDecl*> locals_; ///< All \p LocalDecl%s in this \p BlockExpr from top to bottom.
+    mutable std::vector<const LocalDecl*> locals_; ///< All \p LocalDecl%s in this \p BlockExprBase from top to bottom.
+
+    friend class Parser;
+};
+
+class BlockExpr : public BlockExprBase {
+public:
+    BlockExpr() {}
+    BlockExpr(Location loc) { loc_ = loc; expr_ = new EmptyExpr(loc); }
+
+    virtual const char* prefix() const override { return "{"; }
+
+    friend class Parser;
+};
+
+class RunBlockExpr : public BlockExprBase {
+public:
+    virtual const char* prefix() const override { return "@{"; }
 
     friend class Parser;
 };
@@ -1311,7 +1326,7 @@ private:
 class WhileExpr : public StmtLikeExpr {
 public:
     const Expr* cond() const { return cond_; }
-    const BlockExpr* body() const { return body_; }
+    const BlockExprBase* body() const { return body_; }
     const LocalDecl* break_decl() const { return break_decl_; }
     const LocalDecl* continue_decl() const { return continue_decl_; }
     virtual bool has_side_effect() const override;
@@ -1324,7 +1339,7 @@ private:
     virtual Type check(TypeSema&, TypeExpectation) const override;
 
     AutoPtr<const Expr> cond_;
-    AutoPtr<const BlockExpr> body_;
+    AutoPtr<const BlockExprBase> body_;
     AutoPtr<const LocalDecl> break_decl_;
     AutoPtr<const LocalDecl> continue_decl_;
 

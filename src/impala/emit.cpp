@@ -606,7 +606,7 @@ Def FieldExpr::remit(CodeGen& cg) const {
     return cg.extract(cg.remit(lhs()), index());
 }
 
-Def BlockExpr::remit(CodeGen& cg) const {
+Def BlockExprBase::remit(CodeGen& cg) const {
     for (auto stmt : stmts())
         cg.emit(stmt);
     return cg.remit(expr());

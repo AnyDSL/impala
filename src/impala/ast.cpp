@@ -49,7 +49,7 @@ PrimTypeKind LiteralExpr::literal2type() const {
 uint64_t LiteralExpr::get_u64() const { return thorin::bcast<uint64_t, thorin::Box>(box()); }
 
 bool IfExpr::has_else() const {
-    if (auto block = else_expr_->isa<BlockExpr>())
+    if (auto block = else_expr_->isa<BlockExprBase>())
         return !block->empty();
     return true;
 }
@@ -93,7 +93,7 @@ bool InfixExpr::has_side_effect() const {
 
 bool PostfixExpr::has_side_effect() const { return true; }
 bool MapExpr::has_side_effect() const { return lhs()->type().isa<FnType>(); }
-bool BlockExpr::has_side_effect() const { return !stmts().empty() || expr()->has_side_effect(); }
+bool BlockExprBase::has_side_effect() const { return !stmts().empty() || expr()->has_side_effect(); }
 
 bool IfExpr::has_side_effect() const {
     return cond()->has_side_effect() || then_expr()->has_side_effect() || else_expr()->has_side_effect();

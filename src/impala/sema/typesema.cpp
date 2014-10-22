@@ -119,7 +119,7 @@ private:
     std::vector<CheckBoundsData> check_bounds_stash_;
 
 public:
-    const BlockExpr* cur_block_expr_ = nullptr;
+    const BlockExprBase* cur_block_ = nullptr;
     const Fn* cur_fn_ = nullptr;
 };
 
@@ -1058,8 +1058,8 @@ Type MapExpr::check_as_method_call(TypeSema& sema, TypeExpectation expected) con
     return sema.type_error();
 }
 
-Type BlockExpr::check(TypeSema& sema, TypeExpectation expected) const {
-    THORIN_PUSH(sema.cur_block_expr_, this);
+Type BlockExprBase::check(TypeSema& sema, TypeExpectation expected) const {
+    THORIN_PUSH(sema.cur_block_, this);
     for (auto stmt : stmts())
         stmt->check(sema);
 
@@ -1174,7 +1174,7 @@ void ItemStmt::check(TypeSema& sema) const {
 }
 
 void LetStmt::check(TypeSema& sema) const {
-    sema.cur_block_expr_->add_local(local());
+    sema.cur_block_->add_local(local());
     Type expected = sema.check(local(), sema.unknown_type());
     if (init())
         sema.check(init(), expected, "initialization type");

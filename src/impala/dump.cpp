@@ -376,8 +376,8 @@ std::ostream& SizeofExpr::print(Printer& p) const {
     return ast_type()->print(p) << ')';
 }
 
-std::ostream& BlockExpr::print(Printer& p) const {
-    p.stream() << '{';
+std::ostream& BlockExprBase::print(Printer& p) const {
+    p.stream() << prefix();
     if (empty())
         return p.newline() << '}';
     p.up();
