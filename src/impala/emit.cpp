@@ -424,9 +424,8 @@ Def PrefixExpr::remit(CodeGen& cg) const {
         case NOT: return cg.world().arithop_not(cg.remit(rhs()));
         case TILDE: {
             auto def = cg.remit(rhs());
-            auto mem = cg.get_mem();
-            auto ptr = rhs()->extra() ? cg.world().alloc(def->type(), mem, rhs()->extra()) : cg.world().alloc(def->type(), mem);
-            cg.set_mem(cg.world().store(mem, ptr, def));
+            auto ptr = cg.alloc(def->type(), rhs()->extra());
+            cg.store(ptr, def);
             return ptr;
         }
         case AND: {
