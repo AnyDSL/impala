@@ -214,7 +214,8 @@ std::ostream& TypeParamList::print_type_params(Printer& p) const {
 std::ostream& Fn::print_params(Printer& p, bool returning) const {
     return p.dump_list([&] (const Param* param) {
             if (!param->is_anonymous())
-                p.stream() << (param->is_mut() ? "mut " : "") << param->symbol() << (param->ast_type() ? ": " : "");
+                p.stream() << (param->is_mut() ? "mut " : "") << param->symbol() << 
+                    ((param->ast_type() || param->type()) ? ": " : "");
             if (auto type = param->type())
                 p.stream() << type;
             else if (auto ast_type = param->ast_type())
