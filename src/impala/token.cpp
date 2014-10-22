@@ -175,9 +175,7 @@ void Token::init() {
 #define IMPALA_INFIX_ASGN(tok, str, r, l) insert(tok, str); tok2op_[tok] |= INFIX | ASGN_OP;
 #define IMPALA_MISC(      tok, str)       insert(tok, str);
 #define IMPALA_LIT(       tok, atype)     tok2str_[LIT_##tok] = Symbol("<literal>").str();
-#define IMPALA_KEY_EXPR(  tok, str)       insert_key(tok, str);
-#define IMPALA_KEY_STMT(  tok, str)       insert_key(tok, str);
-#define IMPALA_KEY_MISC(  tok, str)       insert_key(tok, str);
+#define IMPALA_KEY(       tok, str)       insert_key(tok, str);
 #define IMPALA_TYPE(itype, atype)         insert_key(TYPE_ ## itype, #itype );
 #include "impala/tokenlist.h"
 
