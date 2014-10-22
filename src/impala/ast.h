@@ -1272,9 +1272,11 @@ public:
     virtual void check(NameSema&) const override;
     virtual const char* prefix() const = 0;
 
-protected:
+private:
     virtual std::ostream& print(Printer&) const override;
     virtual Type check(TypeSema&, TypeExpectation) const override;
+
+protected:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoVector<const Stmt*> stmts_;
@@ -1297,6 +1299,9 @@ public:
 class RunBlockExpr : public BlockExprBase {
 public:
     virtual const char* prefix() const override { return "@{"; }
+
+private:
+    virtual thorin::Def remit(CodeGen&) const override;
 
     friend class Parser;
 };
