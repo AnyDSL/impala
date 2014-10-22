@@ -499,7 +499,7 @@ private:
 
 class SelfParam : public TypeParam {
 public:
-    SelfParam(const Location& loc) {}
+    SelfParam(const Location&) {}
     void set_loc(const Location& loc) { loc_ = loc; set_identifier(loc); }
 
 private:
