@@ -129,7 +129,7 @@ thorin::Type PrimTypeNode::convert(CodeGen& cg) const {
     }
 }
 
-thorin::Type NoRetTypeNode::convert(CodeGen& cg) const { return thorin::Type(); }
+thorin::Type NoRetTypeNode::convert(CodeGen&) const { return thorin::Type(); }
 
 thorin::Type FnTypeNode::convert(CodeGen& cg) const {
     std::vector<thorin::Type> nargs;
@@ -255,7 +255,7 @@ void Fn::emit_body(CodeGen& cg) const {
             std::vector<Def> args;
             args.push_back(mem);
             for (size_t i = 0, e = tuple->num_args(); i != e; ++i)
-                args.push_back(cg.world().extract(def, i));
+                args.push_back(cg.extract(def, i));
             cg.cur_bb->jump(ret_param(), args);
         } else
             cg.cur_bb->jump(ret_param(), {mem, def});
@@ -593,7 +593,7 @@ Def MapExpr::remit(CodeGen& cg) const {
         return ret;
     } else if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) {
         auto index = cg.remit(arg(0));
-        return cg.world().extract(cg.remit(lhs()), index, "", cg.get_mem());
+        return cg.extract(cg.remit(lhs()), index);
     }
     THORIN_UNREACHABLE;
 }
@@ -603,7 +603,7 @@ Var FieldExpr::lemit(CodeGen& cg) const {
 }
 
 Def FieldExpr::remit(CodeGen& cg) const {
-    return cg.world().extract(cg.remit(lhs()), index(), "", cg.get_mem());
+    return cg.extract(cg.remit(lhs()), index());
 }
 
 Def BlockExpr::remit(CodeGen& cg) const {
