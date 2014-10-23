@@ -188,7 +188,7 @@ thorin::Type TraitAppNode::convert(CodeGen& cg) const {
     return cg.convert(trait())->instantiate(nargs);
 }
 
-thorin::Type ImplNode::convert(CodeGen& cg) const { THORIN_UNREACHABLE; }
+thorin::Type ImplNode::convert(CodeGen&) const { THORIN_UNREACHABLE; }
 thorin::Type PtrTypeNode::convert(CodeGen& cg) const { return cg.world().ptr_type(cg.convert(referenced_type())); }
 thorin::Type DefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().definite_array_type(cg.convert(elem_type()), dim()); }
 thorin::Type IndefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().indefinite_array_type(cg.convert(elem_type())); }
@@ -279,7 +279,7 @@ void ModContents::emit(CodeGen& cg) const {
         cg.emit(item);
 }
 
-Var FnDecl::emit(CodeGen& cg, Def init) const {
+Var FnDecl::emit(CodeGen& cg, Def) const {
     // create thorin function
     var_ = Var::create_val(cg, emit_head(cg));
     if (is_extern())
@@ -309,7 +309,7 @@ void ExternBlock::emit_item(CodeGen& cg) const {
     }
 }
 
-void ModDecl::emit_item(CodeGen& cg) const {
+void ModDecl::emit_item(CodeGen&) const {
 }
 
 void ImplItem::emit_item(CodeGen& cg) const {
@@ -344,14 +344,14 @@ void TraitDecl::emit_item(CodeGen& cg) const {
     cg.convert(trait_abs());
 }
 
-void Typedef::emit_item(CodeGen& cg) const {
+void Typedef::emit_item(CodeGen&) const {
 }
 
 /*
  * expressions
  */
 
-Var Expr::lemit(CodeGen& cg) const { throw std::logic_error("cannot emit lvalue"); }
+Var Expr::lemit(CodeGen&) const { throw std::logic_error("cannot emit lvalue"); }
 Def Expr::remit(CodeGen& cg) const { return lemit(cg).load(); }
 void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     if (auto def = cg.remit(this)) {
@@ -364,7 +364,7 @@ void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
 void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.branch(cg.remit(this), t, f); }
 Def EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}); }
 
-thorin::Def SizeofExpr::remit(CodeGen& cg) const {
+thorin::Def SizeofExpr::remit(CodeGen&) const {
     assert(false && "TODO");
 }
 
@@ -606,10 +606,26 @@ Def FieldExpr::remit(CodeGen& cg) const {
     return cg.extract(cg.remit(lhs()), index());
 }
 
-Def BlockExpr::remit(CodeGen& cg) const {
+Def BlockExprBase::remit(CodeGen& cg) const {
     for (auto stmt : stmts())
         cg.emit(stmt);
     return cg.remit(expr());
+}
+
+Def RunBlockExpr::remit(CodeGen& cg) const {
+    World& w = cg.world();
+    auto lrun  = w.lambda(w.fn_type({w.mem_type()}), "run_block");
+    auto run = w.run(lrun);
+    cg.cur_bb->jump(run, {cg.get_mem()});
+    cg.cur_bb = lrun;
+    cg.set_mem(cg.cur_bb->param(0));
+    auto res = BlockExprBase::remit(cg);
+    Lambda* lnext = w.lambda(w.fn_type({cg.world().mem_type()}), "run_next");
+    auto next = cg.world().end_run(lnext, run);
+    cg.cur_bb->jump(next, {cg.get_mem()});
+    cg.cur_bb = lnext;
+    cg.set_mem(cg.cur_bb->param(0));
+    return res;
 }
 
 void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {

@@ -65,6 +65,7 @@
     case Token::SIZEOF: \
     case Token::L_PAREN: \
     case Token::L_BRACE: \
+    case Token::RUN_BLOCK: \
     case Token::L_BRACKET
 
 #define STMT_NOT_EXPR \
@@ -204,23 +205,23 @@ public:
 
     // expressions
     bool is_infix();
-    const Expr*        parse_expr(Prec prec);
-    const Expr*        parse_expr() { return parse_expr(BOTTOM, false); }
-    const Expr*        parse_expr(Prec prec, bool no_bars) { THORIN_PUSH(no_bars_, no_bars); return parse_expr(prec); }
-    const Expr*        parse_prefix_expr();
-    const Expr*        parse_infix_expr(const Expr* lhs);
-    const Expr*        parse_postfix_expr(const Expr* lhs);
-    const Expr*        parse_primary_expr();
-    const SizeofExpr*  parse_sizeof_expr();
-    const LiteralExpr* parse_literal_expr();
-    const CharExpr*    parse_char_expr();
-    const StrExpr*     parse_str_expr();
-    const FnExpr*      parse_fn_expr();
-    const IfExpr*      parse_if_expr();
-    const ForExpr*     parse_for_expr();
-    const WhileExpr*   parse_while_expr();
-    const BlockExpr*   parse_block_expr();
-    const BlockExpr*   try_block_expr(const std::string& context);
+    const Expr*             parse_expr(Prec prec);
+    const Expr*             parse_expr() { return parse_expr(BOTTOM, false); }
+    const Expr*             parse_expr(Prec prec, bool no_bars) { THORIN_PUSH(no_bars_, no_bars); return parse_expr(prec); }
+    const Expr*             parse_prefix_expr();
+    const Expr*             parse_infix_expr(const Expr* lhs);
+    const Expr*             parse_postfix_expr(const Expr* lhs);
+    const Expr*             parse_primary_expr();
+    const SizeofExpr*       parse_sizeof_expr();
+    const LiteralExpr*      parse_literal_expr();
+    const CharExpr*         parse_char_expr();
+    const StrExpr*          parse_str_expr();
+    const FnExpr*           parse_fn_expr();
+    const IfExpr*           parse_if_expr();
+    const ForExpr*          parse_for_expr();
+    const WhileExpr*        parse_while_expr();
+    const BlockExprBase*    parse_block_expr();
+    const BlockExprBase*    try_block_expr(const std::string& context);
 
     // statements
     const Stmt*     parse_stmt_not_expr();
@@ -992,7 +993,8 @@ const Expr* Parser::parse_primary_expr() {
         case Token::IF:         return parse_if_expr();
         case Token::FOR:        return parse_for_expr();
         case Token::WHILE:      return parse_while_expr();
-        case Token::L_BRACE:    return parse_block_expr();
+        case Token::L_BRACE:
+        case Token::RUN_BLOCK:  return parse_block_expr();
         default:                error("expression", ""); return new EmptyExpr(lex().loc());
     }
 }
@@ -1061,8 +1063,9 @@ const IfExpr* Parser::parse_if_expr() {
     if_expr->then_expr_ = try_block_expr("consequence of an if expression");
     if (accept(Token::ELSE)) {
         switch (la()) {
-            case Token::IF:      if_expr->else_expr_ = parse_if_expr(); break;
-            case Token::L_BRACE: if_expr->else_expr_ = parse_block_expr(); break;
+            case Token::IF:         if_expr->else_expr_ = parse_if_expr(); break;
+            case Token::L_BRACE:
+            case Token::RUN_BLOCK:  if_expr->else_expr_ = parse_block_expr(); break;
             default:
                 error("block or if expression", "alternative of an if expression");
         }
@@ -1098,9 +1101,9 @@ const WhileExpr* Parser::parse_while_expr() {
     return while_expr;
 }
 
-const BlockExpr* Parser::parse_block_expr() {
-    auto block = loc(new BlockExpr());
-    eat(Token::L_BRACE);
+const BlockExprBase* Parser::parse_block_expr() {
+    assert(la() == Token::L_BRACE || la() == Token::RUN_BLOCK);
+    auto block = loc(lex() == Token::L_BRACE ? (BlockExprBase*) new BlockExpr() : (BlockExprBase*) new RunBlockExpr());
     auto& stmts = block->stmts_;
     while (true) {
         switch (la()) {
@@ -1130,12 +1133,14 @@ const BlockExpr* Parser::parse_block_expr() {
     return nullptr;
 }
 
-const BlockExpr* Parser::try_block_expr(const std::string& context) {
-    if (la() == Token::L_BRACE)
-        return parse_block_expr();
-    else {
-        error("block expression", context);
-        return new BlockExpr(prev_loc());
+const BlockExprBase* Parser::try_block_expr(const std::string& context) {
+    switch (la()) {
+        case Token::L_BRACE:
+        case Token::RUN_BLOCK:
+            return parse_block_expr();
+        default:
+            error("block expression", context);
+            return new BlockExpr(prev_loc());
     }
 }
 

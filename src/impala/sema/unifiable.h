@@ -203,7 +203,7 @@ public:
     ArrayRef<TypeVar> type_vars() const { return ArrayRef<TypeVar>(type_vars_); }
     TypeVar type_var(size_t i) const { return type_vars_[i]; }
     size_t num_type_vars() const { return type_vars_.size(); }
-    const int id() const { return id_; }
+    int id() const { return id_; }
     const Unifiable* representative() const { return representative_; }
     bool is_unified() const { return representative_ != nullptr; }
     const Unifiable* unify() const;
@@ -323,7 +323,7 @@ public:
     virtual FnType find_method(Symbol) const override { THORIN_UNREACHABLE; }
     virtual bool is_sane() const override { THORIN_UNREACHABLE; }
     virtual std::ostream& print(Printer&) const override;
-    virtual bool is_subtype(const TypeNode* other) const override { THORIN_UNREACHABLE; }
+    virtual bool is_subtype(const TypeNode*) const override { THORIN_UNREACHABLE; }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -448,7 +448,7 @@ public:
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
-    virtual bool is_subtype(const TypeNode* other) const { THORIN_UNREACHABLE; }
+    virtual bool is_subtype(const TypeNode*) const { THORIN_UNREACHABLE; }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override { THORIN_UNREACHABLE; }
@@ -492,7 +492,7 @@ public:
     Type type() const { return arg(0); }
     virtual Type instantiate(ArrayRef<Type>) const override;
     virtual std::ostream& print(Printer&) const override;
-    virtual bool is_subtype(const TypeNode* other) const { THORIN_UNREACHABLE; }
+    virtual bool is_subtype(const TypeNode*) const { THORIN_UNREACHABLE; }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override { THORIN_UNREACHABLE; }
@@ -526,7 +526,7 @@ public:
     virtual bool implements(TraitApp, SpecializeMap&) const override;
     virtual FnType find_method(Symbol s) const override;
     virtual std::ostream& print(Printer&) const override;
-    virtual bool is_subtype(const TypeNode* other) const override;
+    virtual bool is_subtype(const TypeNode*) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const;
@@ -567,7 +567,7 @@ public:
     {}
 
     virtual std::ostream& print(Printer&) const override;
-    virtual bool is_subtype(const TypeNode* other) const override;
+    virtual bool is_subtype(const TypeNode*) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -605,7 +605,7 @@ public:
 
     uint64_t dim() const { return dim_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual bool is_subtype(const TypeNode* other) const override;
+    virtual bool is_subtype(const TypeNode*) const override;
     virtual bool equal(const Unifiable*) const override;
 
 private:

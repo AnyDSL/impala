@@ -274,7 +274,7 @@ void SizeofExpr::check(NameSema& sema) const {
     sema.check(ast_type());
 }
 
-void BlockExpr::check(NameSema& sema) const {
+void BlockExprBase::check(NameSema& sema) const {
     sema.push_scope();
     for (auto stmt : stmts()) {
         if (auto item_stmt = stmt->isa<ItemStmt>())

@@ -1,11 +1,3 @@
-/*
- * !!! DO NOT CHANGE THIS ORDER !!!
- */
-
-/*
- * prefix operators
- */
-
 #ifndef IMPALA_PREFIX
 #define IMPALA_PREFIX(tok, str, prec)
 #endif
@@ -25,10 +17,6 @@ IMPALA_PREFIX(  HLT,   "$",    EVAL) // stop partial evaluation
 
 #undef IMPALA_PREFIX
 
-/*
- * postfix operators
- */
-
 #ifndef IMPALA_POSTFIX
 #define IMPALA_POSTFIX(tok, str, prec)
 #endif
@@ -41,10 +29,6 @@ IMPALA_POSTFIX(      DOT,  ".", POSTFIX) // dot expression (struct access)
 IMPALA_POSTFIX(       AS, "as",     MUL) // cast expression (not as strong as mul)
 
 #undef IMPALA_POSTFIX
-
-/*
- * infix operators
- */
 
 #ifndef IMPALA_INFIX_ASGN
 #define IMPALA_INFIX_ASGN(tok, str, lprec, rprec)
@@ -70,34 +54,24 @@ IMPALA_INFIX_ASGN(SHR_ASGN, ">>=", COND, ASGN)
 
 IMPALA_INFIX(  OROR, "||",   OROR, ANDAND)
 IMPALA_INFIX(ANDAND, "&&", ANDAND,     OR)
-
 IMPALA_INFIX(    OR,  "|",     OR,    XOR)
 IMPALA_INFIX(   XOR,  "^",    XOR,    AND)
 IMPALA_INFIX(   AND,  "&",    AND,     EQ)
-
 IMPALA_INFIX(    EQ, "==",     EQ,    REL)
 IMPALA_INFIX(    NE, "!=",     EQ,    REL)
-
 IMPALA_INFIX(    LT,  "<",    REL,  SHIFT)
 IMPALA_INFIX(    LE, "<=",    REL,  SHIFT)
 IMPALA_INFIX(    GT,  ">",    REL,  SHIFT)
 IMPALA_INFIX(    GE, ">=",    REL,  SHIFT)
-
 IMPALA_INFIX(   SHL, "<<",  SHIFT,    ADD)
 IMPALA_INFIX(   SHR, ">>",  SHIFT,    ADD)
-
 IMPALA_INFIX(   ADD,  "+",    ADD,    MUL)
 IMPALA_INFIX(   SUB,  "-",    ADD,    MUL)
-
 IMPALA_INFIX(   MUL,  "*",    MUL,  UNARY)
 IMPALA_INFIX(   DIV,  "/",    MUL,  UNARY)
 IMPALA_INFIX(   REM,  "%",    MUL,  UNARY)
 
 #undef IMPALA_INFIX
-
-/*
- * keywords
- */
 
 #ifndef IMPALA_KEY
 #define IMPALA_KEY(tok, str)
@@ -133,10 +107,6 @@ IMPALA_KEY(WHILE,     "while")
 
 #undef IMPALA_KEY
 
-/*
- * other miscellaneous tokens
- */
-
 #ifndef IMPALA_MISC
 #define IMPALA_MISC(tok, str)
 #endif
@@ -157,10 +127,6 @@ IMPALA_MISC(COMMA,        ",")
 IMPALA_MISC(DOTDOT,       "..")
 
 #undef IMPALA_MISC
-
-/*
- * literals
- */
 
 #ifndef IMPALA_LIT
 #define IMPALA_LIT(itype, atype)

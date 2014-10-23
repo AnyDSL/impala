@@ -152,12 +152,18 @@ Token Lexer::lex() {
             return Token(loc_, Token::COLON);
         }
 
+        // @, @{
+        if (accept('@')) {
+            if (accept('{'))
+                return Token(loc_, Token::RUN_BLOCK);
+            return Token(loc_, Token::RUN);
+        }
+
         // single character tokens
         if (accept('(')) return Token(loc_, Token::L_PAREN);
         if (accept(')')) return Token(loc_, Token::R_PAREN);
         if (accept(',')) return Token(loc_, Token::COMMA);
         if (accept(';')) return Token(loc_, Token::SEMICOLON);
-        if (accept('@')) return Token(loc_, Token::RUN);
         if (accept('$')) return Token(loc_, Token::HLT);
         if (accept('[')) return Token(loc_, Token::L_BRACKET);
         if (accept(']')) return Token(loc_, Token::R_BRACKET);
