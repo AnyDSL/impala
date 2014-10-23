@@ -613,13 +613,19 @@ Def BlockExprBase::remit(CodeGen& cg) const {
 }
 
 Def RunBlockExpr::remit(CodeGen& cg) const {
-#if 0
-    auto run = cg.world().lambda(cg.world().fn_type({cg.world().mem_type()}), "run_block");
-    cg.jump_to_continuation(run);
-    cg.set_continuation(run);
+    World& w = cg.world();
+    auto lrun  = w.lambda(w.fn_type({w.mem_type()}), "run_block");
+    auto run = w.run(lrun);
+    cg.cur_bb->jump(run, {cg.get_mem()});
+    cg.cur_bb = lrun;
+    cg.set_mem(cg.cur_bb->param(0));
     auto res = BlockExprBase::remit(cg);
-#endif
-    return BlockExprBase::remit(cg);
+    Lambda* lnext = w.lambda(w.fn_type({cg.world().mem_type()}), "run_next");
+    auto next = cg.world().end_run(lnext, run);
+    cg.cur_bb->jump(next, {cg.get_mem()});
+    cg.cur_bb = lnext;
+    cg.set_mem(cg.cur_bb->param(0));
+    return res;
 }
 
 void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
