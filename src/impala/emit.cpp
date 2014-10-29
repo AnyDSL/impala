@@ -101,10 +101,9 @@ public:
     template<class T> thorin::Type convert(Proxy<T> type) { return convert(type->unify()); }
 
     void end_eval(Lambda* prev) {
-        if (auto run = prev->to()->isa<thorin::Run>()) {
-            //prev->update_arg(0, world().mem_blob(prev->arg(0)));
+        if (auto run = prev->to()->isa<thorin::Run>())
             prev->update_arg(prev->num_args()-1, world().end_run(prev->args().back(), run));
-        } else if (auto hlt = prev->to()->isa<thorin::Hlt>())
+        else if (auto hlt = prev->to()->isa<thorin::Hlt>())
             prev->update_arg(prev->num_args()-1, world().end_hlt(prev->args().back(), hlt));
     }
 
