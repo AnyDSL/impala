@@ -1,9 +1,5 @@
 #include "impala/ast.h"
 
-#include <iostream>
-#include <stdexcept>
-#include <vector>
-
 #include "thorin/irbuilder.h"
 #include "thorin/lambda.h"
 #include "thorin/primop.h"
@@ -350,7 +346,7 @@ void Typedef::emit_item(CodeGen&) const {
  * expressions
  */
 
-Var Expr::lemit(CodeGen&) const { throw std::logic_error("cannot emit lvalue"); }
+Var Expr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
 Def Expr::remit(CodeGen& cg) const { return lemit(cg).load(); }
 void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     if (auto def = cg.remit(this)) {
