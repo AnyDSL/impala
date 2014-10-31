@@ -63,7 +63,7 @@ public:
         return  def;
     }
     void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
-    void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
+    void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f, JumpTarget& x) { expr->emit_branch(*this, t, f, x); }
     void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }
     void emit(const Item* item) {
         assert(!item->done_);
@@ -128,7 +128,6 @@ thorin::Type NoRetTypeNode::convert(CodeGen&) const { return thorin::Type(); }
 
 thorin::Type FnTypeNode::convert(CodeGen& cg) const {
     std::vector<thorin::Type> nargs;
-
     nargs.push_back(cg.world().mem_type());
 
     for (auto type_var : type_vars()) {
@@ -356,7 +355,7 @@ void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     } else
         assert(!cg.is_reachable());
 }
-void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.branch(cg.remit(this), t, f); }
+void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f, JumpTarget& x) const { cg.branch(cg.remit(this), t, f, x); }
 Def EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}); }
 
 thorin::Def SizeofExpr::remit(CodeGen&) const {
@@ -440,27 +439,27 @@ Var PrefixExpr::lemit(CodeGen& cg) const {
     throw std::logic_error("cannot emit lvalue");
 }
 
-void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
+void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f, JumpTarget& x) const {
     if (kind() == NOT && cg.convert(type())->is_bool())
-        cg.emit_branch(rhs(), f, t);
+        cg.emit_branch(rhs(), f, t, x);
     else
-        cg.branch(cg.remit(rhs()), t, f);
+        cg.branch(cg.remit(rhs()), t, f, x);
 }
 
-void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
+void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f, JumpTarget& x) const {
     switch (kind()) {
         case ANDAND: {
-            JumpTarget x("and_extra");
-            cg.emit_branch(lhs(), x, f);
-            if (cg.enter(x))
-                cg.emit_branch(rhs(), t, f);
+            JumpTarget e("and_extra");
+            cg.emit_branch(lhs(), e, f, x);
+            if (cg.enter(e))
+                cg.emit_branch(rhs(), t, f, x);
             return;
         }
         case OROR: {
-            JumpTarget x("or_extra");
-            cg.emit_branch(lhs(), t, x);
-            if (cg.enter(x))
-                cg.emit_branch(rhs(), t, f);
+            JumpTarget e("or_extra");
+            cg.emit_branch(lhs(), t, e, x);
+            if (cg.enter(e))
+                cg.emit_branch(rhs(), t, f, x);
             return;
         }
         default:
@@ -473,14 +472,14 @@ Def InfixExpr::remit(CodeGen& cg) const {
     switch (kind()) {
         case ANDAND: {
             JumpTarget t("and_true"), f("and_false"), x("and_exit");
-            cg.emit_branch(lhs(), t, f);
+            cg.emit_branch(lhs(), t, f, x);
             if (cg.enter(t)) cg.emit_jump(rhs(), x);
             if (cg.enter(f)) cg.emit_jump(false, x);
             return cg.converge(this, x);
         }
         case OROR: {
             JumpTarget t("or_true"), f("or_false"), x("or_exit");
-            cg.emit_branch(lhs(), t, f);
+            cg.emit_branch(lhs(), t, f, x);
             if (cg.enter(t)) cg.emit_jump(true, x);
             if (cg.enter(f)) cg.emit_jump(rhs(), x);
             return cg.converge(this, x);
@@ -632,7 +631,7 @@ Def RunBlockExpr::remit(CodeGen& cg) const {
 
 void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     JumpTarget t("if_then"), f("if_else");
-    cg.emit_branch(cond(), t, f);
+    cg.emit_branch(cond(), t, f, x);
     if (cg.enter(t))
         cg.emit_jump(then_expr(), x);
     if (cg.enter(f))
@@ -660,7 +659,7 @@ void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
 
     cg.jump(head_bb);
     cg.enter_unsealed(head_bb);
-    cg.emit_branch(cond(), body_bb, exit_bb);
+    cg.emit_branch(cond(), body_bb, exit_bb, exit_bb);
     if (cg.enter(body_bb)) {
         cg.remit(body());
         cg.jump_to_continuation(continue_lambda);
