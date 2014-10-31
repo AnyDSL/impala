@@ -463,7 +463,7 @@ void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f, JumpTarge
             return;
         }
         default:
-            cg.branch(cg.remit(this), t, f);
+            cg.branch(cg.remit(this), t, f, x);
             return;
     }
 }
