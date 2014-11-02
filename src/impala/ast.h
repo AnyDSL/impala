@@ -823,8 +823,8 @@ private:
     virtual Type check(TypeSema&, TypeExpectation) const = 0;
     virtual thorin::Var lemit(CodeGen&) const;
     virtual thorin::Def remit(CodeGen&) const;
-    virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
-    virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&, thorin::JumpTarget&) const;
+    virtual void emit_jump(CodeGen&, thorin::JumpTarget*) const;
+    virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&, thorin::JumpTarget*) const;
 
     mutable Type actual_type_;
 
@@ -1021,7 +1021,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
-    virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
+    virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&, thorin::JumpTarget*) const override;
 
 private:
     virtual std::ostream& print(Printer&) const override;
@@ -1047,7 +1047,7 @@ public:
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
-    virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
+    virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&, thorin::JumpTarget*) const override;
 
 private:
     virtual std::ostream& print(Printer&) const override;
@@ -1315,7 +1315,7 @@ public:
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
-    virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
+    virtual void emit_jump(CodeGen&, thorin::JumpTarget*) const override;
 
 private:
     virtual std::ostream& print(Printer&) const override;
@@ -1337,7 +1337,7 @@ public:
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
-    virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
+    virtual void emit_jump(CodeGen&, thorin::JumpTarget*) const override;
 
 private:
     virtual std::ostream& print(Printer&) const override;

@@ -20,17 +20,17 @@ public:
 
     Def frame() const { assert(cur_fn); return cur_fn->frame(); }
     /// Enter \p x and perform \p get_value to collect return value.
-    Def converge(const Expr* expr, JumpTarget& x) {
+    Def converge(const Expr* expr, JumpTarget* x) {
         emit_jump(expr, x);
-        if (enter(x))
+        if (x && enter(*x))
             return cur_bb->get_value(1, convert(expr->type()));
         return Def();
     }
 
-    void emit_jump(bool val, JumpTarget& x) {
-        if (is_reachable()) {
+    void emit_jump(bool val, JumpTarget* x) {
+        if (x && is_reachable()) {
             cur_bb->set_value(1, world().literal(val));
-            jump(x);
+            jump(*x);
         }
     }
 
@@ -62,8 +62,8 @@ public:
             def = world().convert(convert(expr->type()), def);
         return  def;
     }
-    void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
-    void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f, JumpTarget& x) { expr->emit_branch(*this, t, f, x); }
+    void emit_jump(const Expr* expr, JumpTarget* x) { if (is_reachable()) expr->emit_jump(*this, x); }
+    void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f, JumpTarget* x) { expr->emit_branch(*this, t, f, x); }
     void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }
     void emit(const Item* item) {
         assert(!item->done_);
@@ -347,15 +347,15 @@ void Typedef::emit_item(CodeGen&) const {
 
 Var Expr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
 Def Expr::remit(CodeGen& cg) const { return lemit(cg).load(); }
-void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
+void Expr::emit_jump(CodeGen& cg, JumpTarget* x) const {
     if (auto def = cg.remit(this)) {
         assert(cg.is_reachable());
         cg.cur_bb->set_value(1, def);
-        cg.jump(x);
+        cg.jump(*x);
     } else
         assert(!cg.is_reachable());
 }
-void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f, JumpTarget& x) const { cg.branch(cg.remit(this), t, f, x); }
+void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f, JumpTarget* x) const { cg.branch(cg.remit(this), t, f, x); }
 Def EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}); }
 
 thorin::Def SizeofExpr::remit(CodeGen&) const {
@@ -439,14 +439,14 @@ Var PrefixExpr::lemit(CodeGen& cg) const {
     throw std::logic_error("cannot emit lvalue");
 }
 
-void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f, JumpTarget& x) const {
+void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f, JumpTarget* x) const {
     if (kind() == NOT && cg.convert(type())->is_bool())
         cg.emit_branch(rhs(), f, t, x);
     else
         cg.branch(cg.remit(rhs()), t, f, x);
 }
 
-void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f, JumpTarget& x) const {
+void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f, JumpTarget* x) const {
     switch (kind()) {
         case ANDAND: {
             JumpTarget e("and_extra");
@@ -472,17 +472,17 @@ Def InfixExpr::remit(CodeGen& cg) const {
     switch (kind()) {
         case ANDAND: {
             JumpTarget t("and_true"), f("and_false"), x("and_exit");
-            cg.emit_branch(lhs(), t, f, x);
-            if (cg.enter(t)) cg.emit_jump(rhs(), x);
-            if (cg.enter(f)) cg.emit_jump(false, x);
-            return cg.converge(this, x);
+            cg.emit_branch(lhs(), t, f, &x);
+            if (cg.enter(t)) cg.emit_jump(rhs(), &x);
+            if (cg.enter(f)) cg.emit_jump(false, &x);
+            return cg.converge(this, &x);
         }
         case OROR: {
             JumpTarget t("or_true"), f("or_false"), x("or_exit");
-            cg.emit_branch(lhs(), t, f, x);
-            if (cg.enter(t)) cg.emit_jump(true, x);
-            if (cg.enter(f)) cg.emit_jump(rhs(), x);
-            return cg.converge(this, x);
+            cg.emit_branch(lhs(), t, f, &x);
+            if (cg.enter(t)) cg.emit_jump(true, &x);
+            if (cg.enter(f)) cg.emit_jump(rhs(), &x);
+            return cg.converge(this, &x);
         }
         default:
             const TokenKind op = (TokenKind) kind();
@@ -629,44 +629,44 @@ Def RunBlockExpr::remit(CodeGen& cg) const {
     return Def();
 }
 
-void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
+void IfExpr::emit_jump(CodeGen& cg, JumpTarget* x) const {
     JumpTarget t("if_then"), f("if_else");
     cg.emit_branch(cond(), t, f, x);
     if (cg.enter(t))
         cg.emit_jump(then_expr(), x);
     if (cg.enter(f))
         cg.emit_jump(else_expr(), x);
-    cg.jump(x);
+    cg.jump(*x);
 }
 
 Def IfExpr::remit(CodeGen& cg) const {
     JumpTarget x("next");
-    return cg.converge(this, x);
+    return cg.converge(this, type().isa<NoRetType>() ? nullptr : &x);
 }
 
 Def WhileExpr::remit(CodeGen& cg) const {
     JumpTarget x("next");
     auto break_lambda = cg.create_continuation(break_decl());
 
-    cg.emit_jump(this, x);
+    cg.emit_jump(this, &x);
     cg.jump_to_continuation(break_lambda);
     return cg.world().tuple({});
 }
 
-void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
+void WhileExpr::emit_jump(CodeGen& cg, JumpTarget* exit_bb) const {
     JumpTarget head_bb("while_head"), body_bb("while_body");
     auto continue_lambda = cg.create_continuation(continue_decl());
 
     cg.jump(head_bb);
     cg.enter_unsealed(head_bb);
-    cg.emit_branch(cond(), body_bb, exit_bb, exit_bb);
+    cg.emit_branch(cond(), body_bb, *exit_bb, exit_bb);
     if (cg.enter(body_bb)) {
         cg.remit(body());
         cg.jump_to_continuation(continue_lambda);
     }
     cg.jump(head_bb);
     head_bb.seal();
-    cg.enter(exit_bb);
+    cg.enter(*exit_bb);
 }
 
 Def ForExpr::remit(CodeGen& cg) const {
