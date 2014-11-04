@@ -96,13 +96,6 @@ public:
     }
     template<class T> thorin::Type convert(Proxy<T> type) { return convert(type->unify()); }
 
-    void end_eval(Lambda* prev) {
-        if (auto run = prev->to()->isa<thorin::Run>())
-            prev->update_arg(prev->num_args()-1, world().end_run(prev->args().back(), run));
-        else if (auto hlt = prev->to()->isa<thorin::Hlt>())
-            prev->update_arg(prev->num_args()-1, world().end_hlt(prev->args().back(), hlt));
-    }
-
     const Fn* cur_fn = nullptr;
 };
 
@@ -578,12 +571,9 @@ Def MapExpr::remit(CodeGen& cg) const {
         defs.front() = cg.get_mem(); // now get the current memory monad
 
         auto ret_type = args().size() == fn->num_args() ? thorin::Type() : cg.convert(fn->return_type());
-        auto prev = cg.cur_bb;
         auto ret = cg.call(ldef, defs, ret_type);
-        if (ret_type) {
+        if (ret_type)
             cg.set_mem(cg.cur_bb->param(0));
-            cg.end_eval(prev);
-        }
         return ret;
     } else if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) {
         auto index = cg.remit(arg(0));
@@ -617,10 +607,9 @@ Def RunBlockExpr::remit(CodeGen& cg) const {
         auto res = BlockExprBase::remit(cg);
         if (cg.is_reachable()) {
             assert(res);
-            Lambda* lnext = w.lambda(w.fn_type({cg.world().mem_type()}), "run_next");
-            auto next = cg.world().end_run(lnext, run);
+            auto next = w.lambda(w.fn_type({cg.world().mem_type()}), "run_next");
             cg.cur_bb->jump(next, {cg.get_mem()});
-            cg.cur_bb = lnext;
+            cg.cur_bb = next;
             cg.set_mem(cg.cur_bb->param(0));
             assert(res);
             return res;
@@ -691,10 +680,8 @@ Def ForExpr::remit(CodeGen& cg) const {
     if (prefix && prefix->kind() == PrefixExpr::RUN) fun = cg.world().run(fun);
     if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun);
 
-    auto prev = cg.cur_bb;
     defs.front() = cg.get_mem(); // now get the current memory monad
     cg.call(fun, defs, thorin::Type());
-    cg.end_eval(prev);
 
     cg.set_continuation(break_lambda);
     if (break_lambda->num_params() == 2)
