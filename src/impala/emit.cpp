@@ -599,7 +599,34 @@ Def BlockExprBase::remit(CodeGen& cg) const {
 Def RunBlockExpr::remit(CodeGen& cg) const {
     if (cg.is_reachable()) {
         World& w = cg.world();
-        auto lrun  = w.lambda(w.fn_type({w.mem_type()}), "run_block");
+        auto fn_mem = w.fn_type({w.mem_type()});
+        auto lrun  = w.lambda(w.fn_type({w.mem_type(), fn_mem}), "run_block");
+        auto run = w.run(lrun);
+        auto old_bb = cg.cur_bb;
+        cg.cur_bb->jump(run, {cg.get_mem(), w.bottom(fn_mem)});
+        cg.cur_bb = lrun;
+        cg.set_mem(cg.cur_bb->param(0));
+        auto res = BlockExprBase::remit(cg);
+        if (cg.is_reachable()) {
+            assert(res);
+            auto next = w.lambda(fn_mem, "run_next");
+            cg.cur_bb->jump(lrun->param(1), {cg.get_mem()});
+            old_bb->update_arg(1, next);
+            cg.cur_bb = next;
+            cg.set_mem(cg.cur_bb->param(0));
+            assert(res);
+            return res;
+        }
+    }
+    return Def();
+}
+
+#if 0
+Def RunBlockExpr::remit(CodeGen& cg) const {
+    if (cg.is_reachable()) {
+        World& w = cg.world();
+        auto fn_mem = w.fn_type({w.mem_type()});
+        auto lrun  = w.lambda(fn_mem, "run_block");
         auto run = w.run(lrun);
         cg.cur_bb->jump(run, {cg.get_mem()});
         cg.cur_bb = lrun;
@@ -607,7 +634,7 @@ Def RunBlockExpr::remit(CodeGen& cg) const {
         auto res = BlockExprBase::remit(cg);
         if (cg.is_reachable()) {
             assert(res);
-            auto next = w.lambda(w.fn_type({cg.world().mem_type()}), "run_next");
+            auto next = w.lambda(fn_mem, "run_next");
             cg.cur_bb->jump(next, {cg.get_mem()});
             cg.cur_bb = next;
             cg.set_mem(cg.cur_bb->param(0));
@@ -617,6 +644,7 @@ Def RunBlockExpr::remit(CodeGen& cg) const {
     }
     return Def();
 }
+#endif
 
 void IfExpr::emit_jump(CodeGen& cg, JumpTarget* x) const {
     JumpTarget t("if_then"), f("if_else");
