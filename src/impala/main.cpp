@@ -3,6 +3,7 @@
 #include <cctype>
 #include <stdexcept>
 
+#include "thorin/analyses/cfg.h"
 #include "thorin/analyses/domtree.h"
 #include "thorin/analyses/looptree.h"
 #include "thorin/analyses/scope.h"
@@ -11,7 +12,6 @@
 #include "thorin/transform/vectorize.h"
 #include "thorin/transform/partial_evaluation.h"
 #include "thorin/be/thorin.h"
-#include "thorin/be/il.h"
 #include "thorin/be/llvm/llvm.h"
 #include "thorin/util/args.h"
 
@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
         Names breakpoints;
 #endif
         string outfile;
-        bool help, emit_thorin, emit_il, emit_ast, emit_annotated, emit_llvm, emit_domtree, emit_postdomtree, emit_looptree, fancy, nocolor, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, nocleanup, nossa = false;
+        bool help, emit_thorin, emit_ast, emit_annotated, emit_llvm, emit_domtree, emit_postdomtree, emit_looptree, fancy, nocolor, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, nocleanup, nossa = false;
         int vectorlength = 0;
         auto cmd_parser = ArgParser()
             .implicit_option("infiles", "input files", infiles)
@@ -59,7 +59,6 @@ int main(int argc, char** argv) {
             .add_option<bool>("emit-annotated",     "emit AST of impala program after semantical analysis", emit_annotated, false)
             .add_option<bool>("emit-ast",           "emit AST of impala program", emit_ast, false)
             .add_option<bool>("emit-domtree",       "emit dom tree", emit_domtree, false)
-            .add_option<bool>("emit-il",            "emit textual IL representation of impala program", emit_il, false)
             .add_option<bool>("emit-llvm",          "emit llvm from THORIN representation (implies -Othorin)", emit_llvm, false)
             .add_option<bool>("emit-looptree",      "emit loop tree", emit_looptree, false)
             .add_option<bool>("emit-postdomtree",   "emit dom tree", emit_postdomtree, false)
@@ -151,7 +150,7 @@ int main(int argc, char** argv) {
         if (result && emit_annotated)
             impala::dump(prg, fancy);
 
-        if (result && (emit_il || emit_llvm || emit_thorin))
+        if (result && (emit_llvm || emit_thorin))
             emit(init.world, prg);
 
         if (result) {
@@ -166,10 +165,9 @@ int main(int argc, char** argv) {
                 //init.world.cleanup();
             //}
             if (emit_thorin)        thorin::emit_thorin(init.world, fancy, !nocolor);
-            if (emit_il)            thorin::emit_il(init.world, fancy);
-            if (emit_domtree)       Scope::for_each(init.world, [] (const Scope& scope) { scope.domtree()->dump(); });
-            if (emit_postdomtree)   Scope::for_each(init.world, [] (const Scope& scope) { scope.postdomtree()->dump(); });
-            if (emit_looptree)      Scope::for_each(init.world, [] (const Scope& scope) { scope.looptree()->dump(); });
+            if (emit_domtree)       Scope::for_each(init.world, [] (const Scope& scope) { scope.cfg()->domtree()->dump(); });
+            if (emit_postdomtree)   Scope::for_each(init.world, [] (const Scope& scope) { scope.cfg()->postdomtree()->dump(); });
+            if (emit_looptree)      Scope::for_each(init.world, [] (const Scope& scope) { scope.cfg()->looptree()->dump(); });
             if (emit_llvm)          thorin::emit_llvm(init.world, opt);
         } else
             return EXIT_FAILURE;
