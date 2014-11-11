@@ -1,8 +1,12 @@
 *.bc
+*.cl
+*.cu
 *.ll
+*.nvvm
+*.pyc
+*.spir
 CMakeCache.txt
 CMakeFiles/
 build*
 html
 test/impala
-*.pyc
