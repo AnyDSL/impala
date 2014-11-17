@@ -165,9 +165,9 @@ int main(int argc, char** argv) {
                 //init.world.cleanup();
             //}
             if (emit_thorin)        thorin::emit_thorin(init.world, fancy, !nocolor);
-            if (emit_domtree)       Scope::for_each(init.world, [] (const Scope& scope) { scope.cfg()->domtree()->dump(); });
-            if (emit_postdomtree)   Scope::for_each(init.world, [] (const Scope& scope) { scope.cfg()->postdomtree()->dump(); });
-            if (emit_looptree)      Scope::for_each(init.world, [] (const Scope& scope) { scope.cfg()->looptree()->dump(); });
+            if (emit_domtree)       Scope::for_each(init.world, [] (const Scope& scope) { scope.cfa()->domtree()->dump(); });
+            if (emit_postdomtree)   Scope::for_each(init.world, [] (const Scope& scope) { scope.cfa()->postdomtree()->dump(); });
+            if (emit_looptree)      Scope::for_each(init.world, [] (const Scope& scope) { scope.cfa()->looptree()->dump(); });
             if (emit_llvm)          thorin::emit_llvm(init.world, opt);
         } else
             return EXIT_FAILURE;
