@@ -16,6 +16,7 @@
 #include "thorin/util/args.h"
 
 #include "impala/ast.h"
+#include "impala/cgen.h"
 #include "impala/dump.h"
 #include "impala/impala.h"
 #include "impala/location.h"
@@ -39,14 +40,20 @@ int main(int argc, char** argv) {
 #ifndef NDEBUG
         Names breakpoints;
 #endif
-        string outfile;
-        bool help, emit_thorin, emit_il, emit_ast, emit_annotated, emit_llvm, emit_domtree, emit_postdomtree, emit_looptree, fancy, nocolor, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, nocleanup, nossa = false;
+        string out_name;
+        bool help,
+             emit_cint, emit_thorin, emit_il, emit_ast, emit_annotated, emit_llvm,
+             emit_domtree, emit_postdomtree, emit_looptree,
+             fancy, nocolor,
+             opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3,
+             nocleanup, nossa;
+
         int vectorlength = 0;
         auto cmd_parser = ArgParser()
             .implicit_option("infiles", "input files", infiles)
             // specify options
             .add_option<bool>("help", "produce this help message", help, false)
-            .add_option<string>("o", "specifies the output file", outfile, "-")
+            .add_option<string>("o", "specifies the output module name", out_name, "")
 #ifndef NDEBUG
             .add_option<vector<string>>("break", "breakpoint at definition generation of number arg", breakpoints)
 #endif
@@ -59,6 +66,7 @@ int main(int argc, char** argv) {
             .add_option<bool>("emit-annotated",     "emit AST of impala program after semantical analysis", emit_annotated, false)
             .add_option<bool>("emit-ast",           "emit AST of impala program", emit_ast, false)
             .add_option<bool>("emit-domtree",       "emit dom tree", emit_domtree, false)
+            .add_option<bool>("emit-c-interface",   "emit C interface from impala code (experimental)", emit_cint, false)
             .add_option<bool>("emit-il",            "emit textual IL representation of impala program", emit_il, false)
             .add_option<bool>("emit-llvm",          "emit llvm from THORIN representation (implies -Othorin)", emit_llvm, false)
             .add_option<bool>("emit-looptree",      "emit loop tree", emit_looptree, false)
@@ -68,7 +76,7 @@ int main(int argc, char** argv) {
             .add_option<bool>("nc",                 "use uncolored output", nocolor, false)
             .add_option<bool>("nocleanup",          "no clean-up phase", nocleanup, false)
             .add_option<bool>("nossa",              "use slots + load/store instead of SSA construction", nossa, false)
-            .add_option< int>("vectorize",          "run vectorizer on main with given vector length (experimantal!!!), arg=<vector length>", vectorlength, false);
+            .add_option< int>("vectorize",          "run vectorizer on main with given vector length (experimental), arg=<vector length>", vectorlength, false);
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
@@ -96,18 +104,22 @@ int main(int argc, char** argv) {
         }
 
         std::string module_name;
-        for (auto infile : infiles) {
-            auto i = infile.find_last_of('.');
-            if (infile.substr(i + 1) != "impala")
-                throw logic_error("input file '" + infile + "' does not have '.impala' extension");
-            auto rest = infile.substr(0, i);
-            auto f = rest.find_last_of('/');
-            if (f != string::npos) {
-                rest = rest.substr(f+1);
+        if (out_name.length()) {
+            module_name = out_name;
+        } else {
+            for (auto infile : infiles) {
+                auto i = infile.find_last_of('.');
+                if (infile.substr(i + 1) != "impala")
+                    throw logic_error("input file '" + infile + "' does not have '.impala' extension");
+                auto rest = infile.substr(0, i);
+                auto f = rest.find_last_of('/');
+                if (f != string::npos) {
+                    rest = rest.substr(f+1);
+                }
+                if (rest.empty())
+                    throw logic_error("input file '" + infile + "' has empty module name");
+                module_name = rest;
             }
-            if (rest.empty())
-                throw logic_error("input file '" + infile + "' has empty module name");
-            module_name = rest;
         }
 
         impala::Init init(module_name);
@@ -150,6 +162,21 @@ int main(int argc, char** argv) {
 
         if (result && emit_annotated)
             impala::dump(prg, fancy);
+
+        if (result && emit_cint) {
+            impala::CGenOptions opts;
+            opts.file_name = module_name + ".h";
+            opts.guard = opts.file_name;
+            transform(opts.guard.begin(), opts.guard.end(), opts.guard.begin(), ::toupper);
+            opts.guard[opts.guard.length() - 2] = '_';
+
+            ofstream out_file(opts.file_name);
+            if (!out_file) {
+                std::cerr << "cannot open file " << opts.file_name << "for writing" << std::endl;
+                return EXIT_FAILURE;
+            }
+            impala::generate_c_interface(prg, opts, out_file);
+        }
 
         if (result && (emit_il || emit_llvm || emit_thorin))
             emit(init.world, prg);
