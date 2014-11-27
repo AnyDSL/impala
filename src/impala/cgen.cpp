@@ -144,7 +144,7 @@ private:
         struct_decls[cur_gen] = CUR_GEN;
 
         // Go through each dependency and generate it
-        for (auto field: cur_gen->field_decls()) {
+        for (auto field : cur_gen->field_decls()) {
             struct_from_type(field->type().node(), [&] (const StructDecl* decl) {
                 auto it = struct_decls.find(decl);
                 if (it != struct_decls.end()) {
@@ -237,7 +237,7 @@ public:
 
         for (auto st : order) {
             o << "struct " << st->item_symbol().str() << " {\n";
-            for (auto field: st->field_decls()) {
+            for (auto field : st->field_decls()) {
                 Type type = field->type();
                     
                 std::string ctype_pref, ctype_suf;
