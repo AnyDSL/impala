@@ -40,14 +40,14 @@ int main(int argc, char** argv) {
 #ifndef NDEBUG
         Names breakpoints;
 #endif
-        string outfile;
+        string out_name;
         bool help, emit_all, emit_thorin, emit_il, emit_ast, emit_annotated, emit_llvm, emit_domtree, emit_looptree, fancy, nocolor, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, nocleanup, nossa = false;
         int vectorlength = 0;
         auto cmd_parser = ArgParser()
             .implicit_option("infiles", "input files", infiles)
             // specify options
             .add_option<bool>("help", "produce this help message", help, false)
-            .add_option<string>("o", "specifies the output file", outfile, "-")
+            .add_option<string>("o", "specifies the output module name", out_name, "")
 #ifndef NDEBUG
             .add_option<vector<string>>("break", "breakpoint at definition generation of number arg", breakpoints)
 #endif
@@ -100,18 +100,22 @@ int main(int argc, char** argv) {
         }
 
         std::string module_name;
-        for (auto infile : infiles) {
-            auto i = infile.find_last_of('.');
-            if (infile.substr(i + 1) != "impala")
-                throw logic_error("input file '" + infile + "' does not have '.impala' extension");
-            auto rest = infile.substr(0, i);
-            auto f = rest.find_last_of('/');
-            if (f != string::npos) {
-                rest = rest.substr(f+1);
+        if (out_name.length()) {
+            module_name = out_name;
+        } else {
+            for (auto infile : infiles) {
+                auto i = infile.find_last_of('.');
+                if (infile.substr(i + 1) != "impala")
+                    throw logic_error("input file '" + infile + "' does not have '.impala' extension");
+                auto rest = infile.substr(0, i);
+                auto f = rest.find_last_of('/');
+                if (f != string::npos) {
+                    rest = rest.substr(f+1);
+                }
+                if (rest.empty())
+                    throw logic_error("input file '" + infile + "' has empty module name");
+                module_name = rest;
             }
-            if (rest.empty())
-                throw logic_error("input file '" + infile + "' has empty module name");
-            module_name = rest;
         }
 
         impala::Init init(module_name);
