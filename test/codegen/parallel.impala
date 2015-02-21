@@ -1,0 +1,9 @@
+fn main() -> bool {
+    let mut i = 0;
+
+    for x in parallel(2, 0, 4) {
+        i++;
+    }
+
+    i != 0
+}
