@@ -182,6 +182,7 @@ public:
     const PrimASTType*  parse_prim_type();
     const PtrASTType*   parse_ptr_type();
     const TupleASTType* parse_tuple_type();
+    const SimdASTType*  parse_simd_type();
     const ASTTypeApp*   parse_type_app();
 
     enum class BodyMode { None, Optional, Mandatory };
@@ -676,6 +677,7 @@ const ASTType* Parser::parse_type() {
         case Token::TILDE:
         case Token::AND:
         case Token::ANDAND:     return parse_ptr_type();
+        case Token::SIMD:       return parse_simd_type();
         default:  {
             error("type", "");
             auto error_type = new ErrorASTType(prev_loc());
@@ -793,6 +795,17 @@ const Typeof* Parser::parse_typeof() {
     typeof->expr_ = parse_expr();
     expect(Token::R_PAREN, "typeof");
     return typeof;
+}
+
+const SimdASTType* Parser::parse_simd_type() {
+    auto simd = loc(new SimdASTType());
+    eat(Token::SIMD);
+    expect(Token::L_BRACKET, "simd type");
+    simd->scalar_type_ = parse_type();
+    expect(Token::MUL, "simd type");
+    simd->size_ = parse_integer("simd vector size");
+    expect(Token::R_BRACKET, "simd type");
+    return simd;
 }
 
 /*
@@ -940,6 +953,13 @@ const Expr* Parser::parse_primary_expr() {
             parse_comma_list(Token::R_BRACKET, "elements of an array expression", [&] { array->args_.push_back(parse_expr()); });
             array->set_pos2(prev_loc().pos2());
             return array;
+        }
+        case Token::SIMD: {
+            auto simd = loc(new SimdExpr());
+            eat(Token::SIMD);
+            expect(Token::L_BRACKET, "simd expression");
+            parse_comma_list(Token::R_BRACKET, "elements of a simd expression", [&] { simd->args_.push_back(parse_expr()); });
+            return simd;
         }
         case Token::SIZEOF:     return parse_sizeof_expr();
 #define IMPALA_LIT(itype, atype) \

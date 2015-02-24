@@ -285,6 +285,11 @@ bool TraitAppNode::equal(const Unifiable* other) const {
     return Unifiable::equal(other) && this->trait()->equal(*other->as<TraitAppNode>()->trait());
 }
 
+bool SimdTypeNode::equal(const Unifiable* other) const {
+    assert(this->is_unified());
+    return Unifiable::equal(other) && (this->size() == other->as<SimdTypeNode>()->size());
+}
+
 //------------------------------------------------------------------------------
 
 /*
@@ -303,6 +308,10 @@ bool DefiniteArrayTypeNode::is_subtype(const TypeNode* other) const {
     }
 
     return dim_eq && other->isa<ArrayTypeNode>() && elem_type()->is_subtype(*other->as<ArrayTypeNode>()->elem_type());
+}
+
+bool SimdTypeNode::is_subtype(const TypeNode* other) const {
+    return this->equal(other); 
 }
 
 /*
@@ -437,6 +446,10 @@ Type BorrowedPtrTypeNode::vinstantiate(SpecializeMap& map) const {
 
 Type DefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const {
     return map[this] = *typetable().definite_array_type(elem_type()->specialize(map), dim());
+}
+
+Type SimdTypeNode::vinstantiate(SpecializeMap& map) const {
+    return map[this] = *typetable().simd_type(scalar_type()->specialize(map), size());
 }
 
 Type FnTypeNode::vinstantiate(SpecializeMap& map) const {

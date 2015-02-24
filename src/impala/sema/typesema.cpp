@@ -128,7 +128,12 @@ public:
 // TODO factor code with expect_num
 // TODO maybe have variant which also checks expr
 bool TypeSema::expect_int(const Expr* expr) {
-    Type t = expr->type();
+    Type e = expr->type(), t;
+    if (auto simd = e.isa<SimdType>()) {
+        t = simd->scalar_type();
+    } else {
+        t = e;
+    }
 
     if (!t->is_error() &&
         !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
@@ -140,7 +145,12 @@ bool TypeSema::expect_int(const Expr* expr) {
 }
 
 void TypeSema::expect_num(const Expr* expr) {
-    Type t = expr->type();
+    Type e = expr->type(), t;
+    if (auto simd = e.isa<SimdType>()) {
+        t = simd->scalar_type();
+    } else {
+        t = e;
+    }
 
     if (!t->is_error() &&
         !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
@@ -323,6 +333,15 @@ TraitApp ASTTypeApp::trait_app(TypeSema& sema, Type self) const {
             sema.error(this) << '\'' << symbol() << "' does not name a trait\n";
     }
     return sema.trait_app_error();
+}
+
+Type SimdASTType::check(TypeSema& sema) const {
+    if (scalar_type()->isa<PrimASTType>())
+        return sema.simd_type(sema.check(scalar_type()), size());
+    else {
+        sema.error(this) << "non primitive types forbidden in simd type\n";
+        return sema.type_error();
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -846,6 +865,13 @@ Type TupleExpr::check(TypeSema& sema, TypeExpectation expected) const {
         }
     }
     return sema.tuple_type(types);
+}
+
+Type SimdExpr::check(TypeSema& sema, TypeExpectation) const {
+    Type scalar_type = sema.unknown_type();
+    for (auto arg : args())
+        sema.check(arg, TypeExpectation(scalar_type, "element of simd expression"));
+    return sema.simd_type(scalar_type, num_args());
 }
 
 Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {

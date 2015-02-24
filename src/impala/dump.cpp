@@ -84,6 +84,11 @@ std::ostream& IndefiniteArrayTypeNode::print(Printer& p) const {
     return elem_type()->print(p) << "]";
 }
 
+std::ostream& SimdTypeNode::print(Printer& p) const {
+    p.stream() << "simd[";
+    return scalar_type()->print(p) << " * " << size() << ']';
+}
+
 std::ostream& StructAbsTypeNode::print(Printer& p) const {
     return p.stream() << struct_decl_->symbol().str();
 }
@@ -173,6 +178,13 @@ std::ostream& PrimASTType::print(Printer& p) const {
 std::ostream& Typeof::print(Printer& p) const {
     p.stream() << "typeof(";
     return p.print(expr()) << ')';
+}
+
+std::ostream& SimdASTType::print(Printer& p) const {
+    p.stream() << "simd[";
+    scalar_type()->print(p);
+    p.stream() << " * ";
+    return p.stream() << size() << ']';
 }
 
 /*
@@ -437,6 +449,10 @@ std::ostream& IndefiniteArrayExpr::print(Printer& p) const {
     p.stream() << '[';
     p.print(dim()) << ": ";
     return elem_type()->print(p) << ']';
+}
+
+std::ostream& SimdExpr::print(Printer& p) const {
+    return p.dump_list([&] (const Expr* expr) { p.print(expr); }, args(), "simd[", "]");
 }
 
 std::ostream& PrefixExpr::print(Printer& p) const {

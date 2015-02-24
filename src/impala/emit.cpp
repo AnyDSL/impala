@@ -193,6 +193,11 @@ thorin::Type PtrTypeNode::convert(CodeGen& cg) const { return cg.world().ptr_typ
 thorin::Type DefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().definite_array_type(cg.convert(elem_type()), dim()); }
 thorin::Type IndefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().indefinite_array_type(cg.convert(elem_type())); }
 
+thorin::Type SimdTypeNode::convert(CodeGen& cg) const {
+    auto scalar = cg.convert(scalar_type());
+    return cg.world().type(scalar.as<thorin::PrimType>()->primtype_kind(), size());
+}
+
 /*
  * Decls and Function
  */
@@ -543,6 +548,13 @@ Def TupleExpr::remit(CodeGen& cg) const {
 Def IndefiniteArrayExpr::remit(CodeGen& cg) const {
     extra_ = cg.remit(dim());
     return cg.world().indefinite_array(cg.convert(type()).as<thorin::IndefiniteArrayType>()->elem_type(), extra_);
+}
+
+Def SimdExpr::remit(CodeGen& cg) const {
+    Array<Def> thorin_args(num_args());
+    for (size_t i = 0, e = num_args(); i != e; ++i)
+        thorin_args[i] = cg.remit(arg(i));
+    return cg.world().vector(thorin_args);
 }
 
 Def StructExpr::remit(CodeGen& cg) const {
