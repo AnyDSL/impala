@@ -86,7 +86,7 @@ std::ostream& IndefiniteArrayTypeNode::print(Printer& p) const {
 
 std::ostream& SimdTypeNode::print(Printer& p) const {
     p.stream() << "simd[";
-    return scalar_type()->print(p) << " * " << size() << ']';
+    return elem_type()->print(p) << " * " << size() << ']';
 }
 
 std::ostream& StructAbsTypeNode::print(Printer& p) const {
@@ -182,7 +182,7 @@ std::ostream& Typeof::print(Printer& p) const {
 
 std::ostream& SimdASTType::print(Printer& p) const {
     p.stream() << "simd[";
-    scalar_type()->print(p);
+    elem_type()->print(p);
     p.stream() << " * ";
     return p.stream() << size() << ']';
 }

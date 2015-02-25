@@ -66,7 +66,8 @@
     case Token::L_PAREN: \
     case Token::L_BRACE: \
     case Token::RUN_BLOCK: \
-    case Token::L_BRACKET
+    case Token::L_BRACKET: \
+    case Token::SIMD
 
 #define STMT_NOT_EXPR \
          Token::LET: \
@@ -95,7 +96,8 @@
     case Token::TYPEOF: \
     case Token::TILDE: \
     case Token::AND: \
-    case Token::ANDAND
+    case Token::ANDAND: \
+    case Token::SIMD
 
 using namespace thorin;
 
@@ -801,7 +803,7 @@ const SimdASTType* Parser::parse_simd_type() {
     auto simd = loc(new SimdASTType());
     eat(Token::SIMD);
     expect(Token::L_BRACKET, "simd type");
-    simd->scalar_type_ = parse_type();
+    simd->elem_type_ = parse_type();
     expect(Token::MUL, "simd type");
     simd->size_ = parse_integer("simd vector size");
     expect(Token::R_BRACKET, "simd type");

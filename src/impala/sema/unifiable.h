@@ -632,14 +632,13 @@ private:
 
 //------------------------------------------------------------------------------
 
-class SimdTypeNode : public KnownTypeNode {
+class SimdTypeNode : public ArrayTypeNode {
 public:
-    SimdTypeNode(TypeTable& typetable, Type scalar_type, uint64_t size)
-        : KnownTypeNode(typetable, Kind_simd, { scalar_type })
+    SimdTypeNode(TypeTable& typetable, Type elem_type, uint64_t size)
+        : ArrayTypeNode(typetable, Kind_simd, { elem_type })
         , size_(size)
     {}
 
-    Type scalar_type() const { return arg(0); }
     uint64_t size() const { return size_; }
 
     virtual std::ostream& print(Printer&) const override;

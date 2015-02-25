@@ -130,7 +130,7 @@ public:
 bool TypeSema::expect_int(const Expr* expr) {
     Type e = expr->type(), t;
     if (auto simd = e.isa<SimdType>()) {
-        t = simd->scalar_type();
+        t = simd->elem_type();
     } else {
         t = e;
     }
@@ -147,7 +147,7 @@ bool TypeSema::expect_int(const Expr* expr) {
 void TypeSema::expect_num(const Expr* expr) {
     Type e = expr->type(), t;
     if (auto simd = e.isa<SimdType>()) {
-        t = simd->scalar_type();
+        t = simd->elem_type();
     } else {
         t = e;
     }
@@ -336,8 +336,9 @@ TraitApp ASTTypeApp::trait_app(TypeSema& sema, Type self) const {
 }
 
 Type SimdASTType::check(TypeSema& sema) const {
-    if (scalar_type()->isa<PrimASTType>())
-        return sema.simd_type(sema.check(scalar_type()), size());
+    auto type = sema.check(elem_type());
+    if (type.isa<PrimType>())
+        return sema.simd_type(type, size());
     else {
         sema.error(this) << "non primitive types forbidden in simd type\n";
         return sema.type_error();
@@ -868,10 +869,10 @@ Type TupleExpr::check(TypeSema& sema, TypeExpectation expected) const {
 }
 
 Type SimdExpr::check(TypeSema& sema, TypeExpectation) const {
-    Type scalar_type = sema.unknown_type();
+    Type elem_type = sema.unknown_type();
     for (auto arg : args())
-        sema.check(arg, TypeExpectation(scalar_type, "element of simd expression"));
-    return sema.simd_type(scalar_type, num_args());
+        sema.check(arg, TypeExpectation(elem_type, "element of simd expression"));
+    return sema.simd_type(elem_type, num_args());
 }
 
 Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {
@@ -1065,6 +1066,14 @@ Type MapExpr::check_as_map(TypeSema& sema, TypeExpectation expected) const {
                 sema.error(this) << "require integer as tuple subscript\n";
         } else
             sema.error(this) << "too many tuple subscripts\n";
+    } else if(auto simd = ltype.isa<SimdType>()) {
+        if (num_args() == 1) {
+            sema.check(arg(0));
+            if (!sema.expect_int(arg(0)))
+                sema.error(this) << "require integer as vector subscript\n";
+            return simd->elem_type();
+        } else
+            sema.error(this) << "too many simd vector subscripts\n";
     } else
         sema.error(this) << "incorrect type for map expression\n";
 

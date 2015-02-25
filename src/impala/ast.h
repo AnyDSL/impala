@@ -384,10 +384,9 @@ private:
     friend class Parser;
 };
 
-class SimdASTType : public ASTType {
+class SimdASTType : public ArrayASTType {
 public:
     uint64_t size() const { return size_; }
-    const ASTType* scalar_type() const { return scalar_type_; }
 
     virtual std::ostream& print(Printer&) const override;
 
@@ -395,7 +394,6 @@ private:
     virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 
-    AutoPtr<const ASTType> scalar_type_;
     thorin::u64 size_;
 
     friend class Parser;

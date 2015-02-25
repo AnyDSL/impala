@@ -449,7 +449,7 @@ Type DefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const {
 }
 
 Type SimdTypeNode::vinstantiate(SpecializeMap& map) const {
-    return map[this] = *typetable().simd_type(scalar_type()->specialize(map), size());
+    return map[this] = *typetable().simd_type(elem_type()->specialize(map), size());
 }
 
 Type FnTypeNode::vinstantiate(SpecializeMap& map) const {

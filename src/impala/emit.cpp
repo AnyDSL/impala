@@ -194,7 +194,7 @@ thorin::Type DefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world
 thorin::Type IndefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().indefinite_array_type(cg.convert(elem_type())); }
 
 thorin::Type SimdTypeNode::convert(CodeGen& cg) const {
-    auto scalar = cg.convert(scalar_type());
+    auto scalar = cg.convert(elem_type());
     return cg.world().type(scalar.as<thorin::PrimType>()->primtype_kind(), size());
 }
 
@@ -565,7 +565,7 @@ Def StructExpr::remit(CodeGen& cg) const {
 }
 
 Var MapExpr::lemit(CodeGen& cg) const {
-    if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>())
+    if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<SimdType>())
         return Var::create_agg(cg.lemit(lhs()), cg.remit(arg(0)));
     throw std::logic_error("cannot emit lvalue");
 }
@@ -603,7 +603,7 @@ Def MapExpr::remit(CodeGen& cg) const {
             cg.end_eval(prev);
         }
         return ret;
-    } else if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) {
+    } else if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<SimdType>()) {
         auto index = cg.remit(arg(0));
         return cg.extract(cg.remit(lhs()), index);
     }

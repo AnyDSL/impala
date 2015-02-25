@@ -151,7 +151,7 @@ void Typeof::check(NameSema& sema) const {
 }
 
 void SimdASTType::check(NameSema& sema) const {
-    sema.check(scalar_type());
+    sema.check(elem_type());
 }
 
 //------------------------------------------------------------------------------
