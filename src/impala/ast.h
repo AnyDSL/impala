@@ -384,6 +384,21 @@ private:
     friend class Parser;
 };
 
+class SimdASTType : public ArrayASTType {
+public:
+    uint64_t size() const { return size_; }
+
+    virtual std::ostream& print(Printer&) const override;
+
+private:
+    virtual void check(NameSema&) const override;
+    virtual Type check(TypeSema&) const override;
+
+    thorin::u64 size_;
+
+    friend class Parser;
+};
+
 //------------------------------------------------------------------------------
 
 /*
@@ -1176,6 +1191,18 @@ private:
 };
 
 class TupleExpr : public Expr, public Args {
+public:
+    virtual void check(NameSema&) const override;
+
+private:
+    virtual std::ostream& print(Printer&) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual thorin::Def remit(CodeGen&) const override;
+
+    friend class Parser;
+};
+
+class SimdExpr : public Expr, public Args {
 public:
     virtual void check(NameSema&) const override;
 

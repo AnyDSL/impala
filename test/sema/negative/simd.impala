@@ -1,0 +1,11 @@
+fn wrong_type1(id: int) -> float {
+    simd[1.0f, 2.0f, 3.0f, 4.0f]
+}
+
+fn wrong_type2(id: int) -> simd[float * 4] {
+    simd[1.0f, 2.0f, 3.0f, 4.0f](0)
+}
+
+fn wrong_type3(id: int) -> simd[float * 4] {
+    simd[1.0f, 2.0f, 3.0f, 4.0f] + simd[1, 2, 3, 4]
+}
