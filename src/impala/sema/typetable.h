@@ -28,6 +28,9 @@ public:
     IndefiniteArrayType indefinite_array_type(Type elem_type) { 
         return join(new IndefiniteArrayTypeNode(*this, elem_type)); 
     }
+    SimdType simd_type(Type elem_type, uint64_t size) {
+        return join(new SimdTypeNode(*this, elem_type, size));
+    }
     NoRetType           type_noret() { return type_noret_; }
     OwnedPtrType        owned_ptr_type(Type referenced_type) { return join(new OwnedPtrTypeNode(*this, referenced_type)); }
     PrimType            type(PrimTypeKind kind);

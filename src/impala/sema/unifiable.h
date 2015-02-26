@@ -35,6 +35,7 @@ class DefiniteArrayTypeNode;    typedef Proxy<DefiniteArrayTypeNode>    Definite
 class FnTypeNode;               typedef Proxy<FnTypeNode>               FnType;
 class ImplNode;                 typedef Proxy<ImplNode>                 Impl;
 class IndefiniteArrayTypeNode;  typedef Proxy<IndefiniteArrayTypeNode>  IndefiniteArrayType;
+class SimdTypeNode;             typedef Proxy<SimdTypeNode>             SimdType;
 class KnownTypeNode;            typedef Proxy<KnownTypeNode>            KnownType;
 class NoRetTypeNode;            typedef Proxy<NoRetTypeNode>            NoRetType;
 class OwnedPtrTypeNode;         typedef Proxy<OwnedPtrTypeNode>         OwnedPtrType;
@@ -153,6 +154,7 @@ enum Kind {
     Kind_fn,
     Kind_impl,
     Kind_indefinite_array,
+    Kind_simd,
     Kind_noret,
     Kind_owned_ptr,
     Kind_struct_abs,
@@ -629,6 +631,26 @@ private:
 };
 
 //------------------------------------------------------------------------------
+
+class SimdTypeNode : public ArrayTypeNode {
+public:
+    SimdTypeNode(TypeTable& typetable, Type elem_type, uint64_t size)
+        : ArrayTypeNode(typetable, Kind_simd, { elem_type })
+        , size_(size)
+    {}
+
+    uint64_t size() const { return size_; }
+
+    virtual std::ostream& print(Printer&) const override;
+    virtual bool is_subtype(const TypeNode*) const override;
+    virtual bool equal(const Unifiable*) const override;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const override;
+    virtual thorin::Type convert(CodeGen&) const override;
+
+    const uint64_t size_;
+};
 
 /**
  * Represents a declared trait.
