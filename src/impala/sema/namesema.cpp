@@ -150,6 +150,10 @@ void Typeof::check(NameSema& sema) const {
     expr()->check(sema);
 }
 
+void SimdASTType::check(NameSema& sema) const {
+    sema.check(elem_type());
+}
+
 //------------------------------------------------------------------------------
 
 void ModContents::check(NameSema& sema) const {
@@ -338,6 +342,11 @@ void IndefiniteArrayExpr::check(NameSema& sema) const {
 }
 
 void TupleExpr::check(NameSema& sema) const {
+    for (auto arg : args())
+        arg->check(sema);
+}
+
+void SimdExpr::check(NameSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }
