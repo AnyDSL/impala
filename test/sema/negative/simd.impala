@@ -1,11 +1,19 @@
-fn wrong_type1(id: int) -> float {
+fn wrong_type1() -> float {
     simd[1.0f, 2.0f, 3.0f, 4.0f]
 }
 
 fn wrong_type2(id: int) -> simd[float * 4] {
-    simd[1.0f, 2.0f, 3.0f, 4.0f](0)
+    simd[1.0f, 2.0f, 3.0f, 4.0f](id)
 }
 
-fn wrong_type3(id: int) -> simd[float * 4] {
+fn wrong_type3() -> simd[float * 4] {
     simd[1.0f, 2.0f, 3.0f, 4.0f] + simd[1, 2, 3, 4]
+}
+
+fn wrong_type4() -> bool {
+    simd[true, true, true, true] & true
+}
+
+fn wrong_type5() -> simd[bool * 4] {
+    simd[true, true, true, true] ^ simd[true, false, true, false, true]
 }
