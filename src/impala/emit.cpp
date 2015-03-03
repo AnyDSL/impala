@@ -387,7 +387,7 @@ Def StrExpr::remit(CodeGen& cg) const {
     if (is_used_as_global())
         return cg.world().global(str);
 
-    return  str;
+    return str;
 }
 
 Def CastExpr::remit(CodeGen& cg) const {
@@ -434,7 +434,7 @@ Def PrefixExpr::remit(CodeGen& cg) const {
 Var PrefixExpr::lemit(CodeGen& cg) const {
     if (kind() == MUL)
         return Var::create_ptr(cg, cg.remit(rhs()));
-    throw std::logic_error("cannot emit lvalue");
+    assert(false && "cannot emit lvalue");
 }
 
 void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
