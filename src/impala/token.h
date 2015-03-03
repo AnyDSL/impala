@@ -35,7 +35,7 @@ public:
     };
 
     struct KindHash {
-        size_t operator () (Kind kind) const { return thorin::hash_value((int) kind); }
+        uint64_t operator () (Kind kind) const { return thorin::hash_value((int) kind); }
     };
 
     Token() {}

@@ -9,7 +9,7 @@
 
 namespace impala {
 
-struct StrHash { size_t operator () (const char* s) const; };
+struct StrHash { uint64_t operator () (const char* s) const; };
 struct StrEqual { bool operator () (const char* s1, const char* s2) const { return std::strcmp(s1, s2) == 0; } };
 
 class Symbol {
@@ -44,7 +44,7 @@ namespace thorin {
 
 template<>
 struct Hash<impala::Symbol> {
-    size_t operator () (impala::Symbol symbol) const { return thorin::hash_value(symbol.str()); }
+    uint64_t operator () (impala::Symbol symbol) const { return thorin::hash_value(symbol.str()); }
 };
 
 }
