@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
         bool help,
              emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm,
              emit_domtree, emit_postdomtree, emit_looptree, emit_ycomp,
-             fancy, nocolor,
+             fancy, 
              opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3,
              nocleanup, nossa;
 
@@ -74,7 +74,6 @@ int main(int argc, char** argv) {
             .add_option<bool>("emit-thorin",        "emit textual THORIN representation of impala program", emit_thorin, false)
             .add_option<bool>("emit-ycomp",         "emit ycomp-compatible graph representation of impala program", emit_ycomp, false)
             .add_option<bool>("f",                  "use fancy output", fancy, false)
-            .add_option<bool>("nc",                 "use uncolored output", nocolor, false)
             .add_option<bool>("nocleanup",          "no clean-up phase", nocleanup, false)
             .add_option<bool>("nossa",              "use slots + load/store instead of SSA construction", nossa, false)
             .add_option< int>("vectorize",          "run vectorizer on main with given vector length (experimental), arg=<vector length>", vectorlength, false);
@@ -193,12 +192,12 @@ int main(int argc, char** argv) {
                 //thorin::vectorize(scope, vectorlength);
                 //init.world.cleanup();
             //}
-            if (emit_thorin)      thorin::emit_thorin(init.world, fancy, !nocolor);
+            if (emit_thorin)      thorin::emit_thorin(init.world);
             if (emit_domtree)     Scope::for_each(init.world, [] (const Scope& scope) { scope.f_cfg().domtree().dump(); });
             if (emit_postdomtree) Scope::for_each(init.world, [] (const Scope& scope) { scope.b_cfg().domtree().dump(); });
             if (emit_looptree)    Scope::for_each(init.world, [] (const Scope& scope) { scope.f_cfg().looptree().dump(); });
             if (emit_llvm)        thorin::emit_llvm(init.world, opt);
-            if (emit_ycomp)       thorin::emit_ycomp(init.world, fancy, !nocolor);
+            if (emit_ycomp)       thorin::emit_ycomp(init.world, true);
         } else
             return EXIT_FAILURE;
 
