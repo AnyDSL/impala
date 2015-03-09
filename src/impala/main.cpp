@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
             .add_option<bool>("emit-postdomtree",   "emit dom tree", emit_postdomtree, false)
             .add_option<bool>("emit-thorin",        "emit textual THORIN representation of impala program", emit_thorin, false)
             .add_option<bool>("emit-ycomp",         "emit ycomp-compatible graph representation of impala program", emit_ycomp, false)
-            .add_option<bool>("f",                  "use fancy output", fancy, false)
+            .add_option<bool>("f",                  "use fancy output: impala's AST dump uses only parentheses where necessary", fancy, false)
             .add_option<bool>("nocleanup",          "no clean-up phase", nocleanup, false)
             .add_option<bool>("nossa",              "use slots + load/store instead of SSA construction", nossa, false)
             .add_option< int>("vectorize",          "run vectorizer on main with given vector length (experimental), arg=<vector length>", vectorlength, false);
