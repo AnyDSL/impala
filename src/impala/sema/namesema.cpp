@@ -207,12 +207,10 @@ void StaticItem::check(NameSema& sema) const {
 void Fn::fn_check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
-    int i = 0;
     for (auto param : params()) {
         sema.insert(param);
         if (param->ast_type())
             sema.check(param->ast_type());
-        ++i;
     }
     if (body() != nullptr)
         body()->check(sema);
