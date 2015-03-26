@@ -113,12 +113,12 @@ void TypeParam::check(NameSema& sema) const {
 void TypeParamList::check_type_params(NameSema& sema) const {
     // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
     // first, insert names
-    for (const TypeParam* tp : type_params())
-        sema.insert(tp);
+    for (auto type_param : type_params())
+        sema.insert(type_param);
 
     // then, check bounds
-    for (const TypeParam* tp : type_params())
-        sema.check(tp);
+    for (auto type_param : type_params())
+        sema.check(type_param);
 }
 
 void ErrorASTType::check(NameSema& sema) const {}
