@@ -102,7 +102,7 @@ void NameSema::pop_scope() {
 //------------------------------------------------------------------------------
 
 void TypeParam::check(NameSema& sema) const {
-    for (const ASTType* bound : bounds())
+    for (auto bound : bounds())
         sema.check(bound);
 }
 
