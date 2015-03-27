@@ -102,7 +102,7 @@ void NameSema::pop_scope() {
 //------------------------------------------------------------------------------
 
 void TypeParam::check(NameSema& sema) const {
-    for (const ASTType* bound : bounds())
+    for (auto bound : bounds())
         sema.check(bound);
 }
 
@@ -113,12 +113,12 @@ void TypeParam::check(NameSema& sema) const {
 void TypeParamList::check_type_params(NameSema& sema) const {
     // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
     // first, insert names
-    for (const TypeParam* tp : type_params())
-        sema.insert(tp);
+    for (auto type_param : type_params())
+        sema.insert(type_param);
 
     // then, check bounds
-    for (const TypeParam* tp : type_params())
-        sema.check(tp);
+    for (auto type_param : type_params())
+        sema.check(type_param);
 }
 
 void ErrorASTType::check(NameSema& sema) const {}
@@ -207,12 +207,10 @@ void StaticItem::check(NameSema& sema) const {
 void Fn::fn_check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
-    int i = 0;
     for (auto param : params()) {
         sema.insert(param);
         if (param->ast_type())
             sema.check(param->ast_type());
-        ++i;
     }
     if (body() != nullptr)
         body()->check(sema);
