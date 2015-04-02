@@ -60,9 +60,16 @@ public:
         return true;
     }
     bool expect_int(const Expr*);
+    bool expect_int_or_bool(const Expr*);
     void expect_num(const Expr*);
     Type expect_type(const Expr* expr, Type found, TypeExpectation expected);
     Type expect_type(const Expr* expr, TypeExpectation expected) { return expect_type(expr, expr->type(), expected); }
+
+    Type comparison_result(const Expr* expr) {
+        if (auto simd = expr->type().isa<SimdType>())
+            return simd_type(type_bool(), simd->size());
+        return type_bool();
+    }
 
     TraitApp instantiate(const Location& loc, TraitAbs trait, Type self, ArrayRef<const ASTType*> args);
     Type instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args);
@@ -139,6 +146,24 @@ bool TypeSema::expect_int(const Expr* expr) {
         !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
         !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64()) { // TODO factor this test out
         error(expr) << "expected integer type but found " << t << "\n";
+        return false;
+    }
+    return true;
+}
+
+bool TypeSema::expect_int_or_bool(const Expr* expr) {
+    Type e = expr->type(), t;
+    if (auto simd = e.isa<SimdType>()) {
+        t = simd->elem_type();
+    } else {
+        t = e;
+    }
+
+    if (!t->is_error() &&
+        !t->is_bool() &&
+        !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
+        !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64()) { // TODO factor this test out
+        error(expr) << "expected integer or boolean type but found " << t << "\n";
         return false;
     }
     return true;
@@ -735,6 +760,10 @@ Type PrefixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         }
         case NOT: {
             auto rtype = sema.check(rhs(), expected);
+            if (auto simd = rtype.isa<SimdType>()) {
+                if (simd->elem_type()->is_bool())
+                    return rtype;
+            }
             if (rtype->is_bool() || sema.expect_int(rhs()))
                 return rtype;
             return sema.type_error();
@@ -754,7 +783,7 @@ Type InfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         case EQ:
         case NE:
             sema.check(rhs(), sema.check(lhs()));
-            return sema.type_bool();
+            return sema.comparison_result(lhs());
         case LT:
         case LE:
         case GT:
@@ -762,7 +791,7 @@ Type InfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
             sema.check(rhs(), sema.check(lhs()));
             sema.expect_num(lhs());
             sema.expect_num(rhs());
-            return sema.type_bool();
+            return sema.comparison_result(lhs());
         case OROR:
         case ANDAND:
             sema.check(lhs(), sema.type_bool(), "left-hand side of logical boolean expression");
@@ -779,13 +808,18 @@ Type InfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
             return type;
         }
         case SHL:
-        case SHR:
+        case SHR: {
+            auto type = sema.check(lhs(), sema.check(rhs(), expected));
+            sema.expect_int(lhs());
+            sema.expect_int(rhs());
+            return type;
+        }
         case OR:
         case XOR:
         case AND: {
             auto type = sema.check(lhs(), sema.check(rhs(), expected));
-            sema.expect_num(lhs());
-            sema.expect_num(rhs());
+            sema.expect_int_or_bool(lhs());
+            sema.expect_int_or_bool(rhs());
             return type;
         }
         case ASGN:

@@ -165,12 +165,21 @@ int main(int argc, char** argv) {
 
         if (result && emit_cint) {
             impala::CGenOptions opts;
-            opts.file_name = module_name + ".h";
+
+            size_t pos = module_name.find_last_of("\\/");
+            pos = (pos == std::string::npos) ? 0 : pos + 1;
+            opts.file_name = module_name.substr(pos) + ".h";
+
+            // Generate a valid include guard macro name
             opts.guard = opts.file_name;
-            transform(opts.guard.begin(), opts.guard.end(), opts.guard.begin(), ::toupper);
+            if (!std::isalpha(opts.guard[0]) && opts.guard[0] != '_') opts.guard.insert(opts.guard.begin(), '_');
+            transform(opts.guard.begin(), opts.guard.end(), opts.guard.begin(), [] (char c) -> char {
+                if (!std::isalnum(c)) return '_';
+                return ::toupper(c);
+            });
             opts.guard[opts.guard.length() - 2] = '_';
 
-            ofstream out_file(opts.file_name);
+            ofstream out_file(module_name + ".h");
             if (!out_file) {
                 std::cerr << "cannot open file " << opts.file_name << "for writing" << std::endl;
                 return EXIT_FAILURE;

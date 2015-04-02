@@ -3,5 +3,12 @@ fn simd_type(id: int) -> float {
     let j = simd[2.0f, 4.0f, 5.0f, 1.0f];
     let k = i + j * simd[2.0f, 2.0f, 2.0f, 2.0f];
     let l = simd[1, 2, 3, 4];
-    k(id) + i(l(id))
+
+    let m = !(j < k);
+
+    if m(id) {
+        k(id) + i(l(id))
+    } else {
+        i(id) * k(2)
+    }
 }
