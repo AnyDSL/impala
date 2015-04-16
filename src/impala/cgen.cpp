@@ -15,7 +15,11 @@ class CGen {
 private:
     // Analyses a type to see if it mentions a structure somewhere
     template <typename F>
-    static void struct_from_type(const Type type, const F& f) {
+    void struct_from_type(const Type type, const F& f) {
+        // If the type mentions a vector, then we need to include the intrinsics header
+        if (type.isa<SimdType>())
+            needs_vectors = true;
+
         // Is the value a structure ?
         if (auto app_type = type.isa<StructAppType>()) {
             f(app_type->struct_abs_type()->struct_decl());
@@ -79,6 +83,32 @@ private:
             }
         }
 
+        if (auto vector_type = type.isa<SimdType>()) {
+            auto prim = vector_type->elem_type().as<PrimType>();
+
+            ctype_suffix = "";
+            switch (prim->primtype_kind()) {
+                case PrimType_i32:
+                    if (vector_type->size() == 4) ctype_prefix = "__m128i";
+                    else if (vector_type->size() == 8) ctype_prefix = "__m258i";
+                    else return false;
+                    break;
+                case PrimType_f32:
+                    if (vector_type->size() == 4) ctype_prefix = "__m128";
+                    else if (vector_type->size() == 8) ctype_prefix = "__m258";
+                    else return false;
+                    break;
+                case PrimType_f64:
+                    if (vector_type->size() == 4) ctype_prefix = "__m128d";
+                    else if (vector_type->size() == 8) ctype_prefix = "__m258d";
+                    else return false;
+                    break;
+                default:
+                    return false;
+            }
+            return true;
+        }
+
         // Structure types
         if (auto struct_type = type.isa<StructAppType>()) {
             const StructDecl* decl = struct_type->struct_abs_type()->struct_decl();
@@ -138,7 +168,7 @@ private:
     };
 
     // Computes the order of generation of C structures
-    static void compute_struct_order(std::unordered_map<const StructDecl*, GenState>& struct_decls,
+    void compute_struct_order(std::unordered_map<const StructDecl*, GenState>& struct_decls,
                               std::vector<const StructDecl*>& order,
                               const StructDecl* cur_gen) {
         struct_decls[cur_gen] = CUR_GEN;
@@ -189,6 +219,8 @@ private:
     std::vector<const FnDecl*> export_fns;
 
 public:
+    bool needs_vectors = false;
+
     void process_module(const ModContents* mod) {
         for (auto item : mod->items()) {
             const FnDecl* decl = item->isa<FnDecl>();
@@ -207,7 +239,7 @@ public:
         } while (struct_count != export_structs.size());
     }
 
-    bool generate_structs(std::ostream& o) const {
+    bool generate_structs(std::ostream& o) {
         if (export_structs.empty())
             return true;
 
@@ -315,6 +347,10 @@ bool generate_c_interface(const ModContents* mod, const CGenOptions& opts, std::
       << "extern \"C\" {\n"
       << "#endif\n"
       << std::endl;
+
+    if (cgen.needs_vectors) {
+        o << "#include <immintrin.h>\n" << std::endl;
+    }
 
     // Export structures
     if (!opts.fns_only && !cgen.generate_structs(o)) {
