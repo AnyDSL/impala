@@ -206,7 +206,7 @@ private:
 
         // Read each argument in turn and record the structures that have to be exported
         FnType fn_type = fn_decl->fn_type();
-        for (int i = 0; i < fn_type->num_args(); i++) {
+        for (size_t i = 0; i < fn_type->num_args(); i++) {
             struct_from_type(fn_type->arg(i).node(), [this] (const StructDecl* decl) {
                 export_structs.insert(decl);
             });
@@ -230,7 +230,7 @@ public:
 
     void add_dependencies() {
         // Add all the structures references in the structure fields
-        int struct_count = 0;
+        size_t struct_count = 0;
         do {
             struct_count = export_structs.size();
             for (auto st : export_structs) {
@@ -258,7 +258,7 @@ public:
             compute_struct_order(struct_decls, order, struct_decls.begin()->first);
 
             // Remove structures that have been generated
-            for (int i = prev_id; i < order.size(); i++) {
+            for (size_t i = prev_id; i < order.size(); i++) {
                 struct_decls.erase(order[i]);
             }
 
@@ -305,7 +305,7 @@ public:
             o << return_pref << ' ' << fn->item_symbol().str() << '(';
 
             // Generate all arguments except the last one which is the implicit continuation
-            for (int i = 0; i < fn_type->num_args() - 1; i++) {
+            for (size_t i = 0; i < fn_type->num_args() - 1; i++) {
                 std::string ctype_pref, ctype_suf;
                 if (!ctype_from_impala(fn_type->arg(i).node(), ctype_pref, ctype_suf)) {
                     cgen_error(fn) << "function argument type not exportable\n";
