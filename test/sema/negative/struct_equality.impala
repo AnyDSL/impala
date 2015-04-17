@@ -1,0 +1,14 @@
+extern "C" { fn puts(&[u8]) -> (); }
+
+struct Lollipops {
+    i : int
+}
+
+fn main() -> () {
+    let i = Lollipops { i : 42 };
+    let j = Lollipops { i : 42 };
+    if i == j {
+        puts("equal")
+    }
+}
+

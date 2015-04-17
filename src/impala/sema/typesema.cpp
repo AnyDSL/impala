@@ -783,6 +783,11 @@ Type InfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         case EQ:
         case NE:
             sema.check(rhs(), sema.check(lhs()));
+            if (!lhs()->type().isa<PtrType>() &&
+                !lhs()->type().isa<PrimType>()) {
+                sema.error(this) << "expected primitive type or pointer type for equality operator\n";
+                return sema.type_error();
+            }
             return sema.comparison_result(lhs());
         case LT:
         case LE:
