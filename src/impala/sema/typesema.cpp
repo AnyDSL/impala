@@ -836,17 +836,25 @@ Type InfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         case SUB_ASGN:
         case MUL_ASGN:
         case DIV_ASGN:
-        case REM_ASGN:
-        case AND_ASGN:
-        case  OR_ASGN:
-        case XOR_ASGN:
-        case SHL_ASGN:
-        case SHR_ASGN: {
-            // TODO handle floats etc
+        case REM_ASGN: {
             sema.check(rhs(), sema.check(lhs()));
             if (sema.expect_lvalue(lhs())) {
                 sema.expect_num(lhs());
                 sema.expect_num(rhs());
+                return sema.unit();
+            }
+            break;
+        }
+        case AND_ASGN:
+        case  OR_ASGN:
+        case XOR_ASGN:
+        case SHL_ASGN:
+        case SHR_ASGN:  {
+            // TODO handle floats etc
+            sema.check(rhs(), sema.check(lhs()));
+            if (sema.expect_lvalue(lhs())) {
+                sema.expect_int_or_bool(lhs());
+                sema.expect_int_or_bool(rhs());
                 return sema.unit();
             }
             break;
