@@ -1,0 +1,14 @@
+fn out(fA: fn(fn(fn(fn(bool)), fn(bool))), fB: fn(fn(fn(fn(bool)), fn(bool)))) -> () {
+}
+
+fn main() -> bool {
+    let mut b = true;
+    fn M(c: bool) { return(c) }
+    fn N(c: bool) { return(c) }
+    fn C(pc: fn(bool)) { pc(b) }
+    fn A(pa: fn(fn(fn(bool)), fn(bool))) { pa(C, M) }
+    fn B(pb: fn(fn(fn(bool)), fn(bool))) { pb(C, N) }
+
+    out(A, B);
+    true
+}
