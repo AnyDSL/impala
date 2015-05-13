@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
         bool help,
              emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm,
              emit_domtree, emit_postdomtree, emit_looptree, emit_ycomp,
-             fancy, 
+             emit_ycomp_cfg, fancy,
              opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3,
              nocleanup, nossa;
 
@@ -73,6 +73,7 @@ int main(int argc, char** argv) {
             .add_option<bool>("emit-postdomtree",   "emit dom tree", emit_postdomtree, false)
             .add_option<bool>("emit-thorin",        "emit textual THORIN representation of impala program", emit_thorin, false)
             .add_option<bool>("emit-ycomp",         "emit ycomp-compatible graph representation of impala program", emit_ycomp, false)
+            .add_option<bool>("emit-ycomp-cfg",     "emit ycomp-compatible control-flow graph representation of impala program", emit_ycomp_cfg, false)
             .add_option<bool>("f",                  "use fancy output: impala's AST dump uses only parentheses where necessary", fancy, false)
             .add_option<bool>("nocleanup",          "no clean-up phase", nocleanup, false)
             .add_option<bool>("nossa",              "use slots + load/store instead of SSA construction", nossa, false)
@@ -187,7 +188,7 @@ int main(int argc, char** argv) {
             impala::generate_c_interface(prg, opts, out_file);
         }
 
-        if (result && (emit_llvm || emit_thorin || emit_ycomp))
+        if (result && (emit_llvm || emit_thorin || emit_ycomp || emit_ycomp_cfg))
             emit(init.world, prg);
 
         if (result) {
@@ -207,6 +208,7 @@ int main(int argc, char** argv) {
             if (emit_looptree)    Scope::for_each(init.world, [] (const Scope& scope) { scope.f_cfg().looptree().dump(); });
             if (emit_llvm)        thorin::emit_llvm(init.world, opt);
             if (emit_ycomp)       thorin::emit_ycomp(init.world, true);
+            if (emit_ycomp_cfg)   thorin::emit_ycomp_cfg(init.world);
         } else
             return EXIT_FAILURE;
 
