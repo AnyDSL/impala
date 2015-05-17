@@ -1,0 +1,60 @@
+extern "C" {
+    fn print_header(int, int) -> ();
+    fn put_u8(u8) -> ();
+}
+
+fn range(a: f64, b: f64, body: fn(f64, fn())) -> () {
+    if a < b {
+        body(a);
+        range(a+1.0, b, body, return)
+    }
+}
+
+fn main(n: int) -> () {
+    let w = n as f64;
+    let h = n as f64;
+    let iter = 50;
+    let limit = 2.0;
+
+    print_header(w as int, h as int);
+
+    let mut bit_num = 0;
+    let mut byte_acc = 0_u8;
+    
+    for y in range(0.0, h) {
+        for x in range(0.0, w) {
+            let mut Zr = 0.0;
+            let mut Zi = 0.0;
+            let mut Tr = 0.0;
+            let mut Ti = 0.0;
+            let Cr = (2.0*x)/w - 1.5;
+            let Ci = (2.0*y)/h - 1.0;
+        
+            let mut i = 0;
+            while i < iter && (Tr+Ti <= limit*limit) {
+                Zi = 2.0*Zr*Zi + Ci;
+                Zr = Tr - Ti + Cr;
+                Tr = Zr * Zr;
+                Ti = Zi * Zi;
+                ++i;
+            }
+       
+            byte_acc <<= 1u8; 
+            if Tr+Ti <= limit*limit {
+                byte_acc |= 0x01_u8;
+            }
+            
+            ++bit_num; 
+
+            if bit_num == 8 {
+                put_u8(byte_acc);
+                byte_acc = 0_u8;
+                bit_num = 0;
+            } else if x == w-1.0 {
+                put_u8(byte_acc << (8_u8 - (w as u8) % 8_u8));
+                byte_acc = 0_u8;
+                bit_num = 0;
+            }
+        }
+    }
+}

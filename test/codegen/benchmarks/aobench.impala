@@ -36,8 +36,8 @@ struct Ray {
     dir: vec,
 }
 
-static WIDTH       = 1024;
-static HEIGHT      = 1024;
+static WIDTH       = 512;
+static HEIGHT      = 512;
 static NSUBSAMPLES = 2;
 static NAO_SAMPLES = 2;
 static M_PI        = 3.14159265358979323846;
