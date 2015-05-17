@@ -1,0 +1,290 @@
+extern "C" {
+    fn drand48() -> f64;
+    fn memset(&i8, i32, u64) -> ();
+    fn sqrt(f64) -> f64;
+    fn fabs(f64) -> f64;
+    fn cos(f64) -> f64;
+    fn sin(f64) -> f64;
+    fn saveppm(&[u8], int, int, &[u8]) -> ();
+}
+
+struct vec {
+    x: f64,
+    y: f64,
+    z: f64,
+}
+
+struct Isect {
+    t: f64,
+    p: vec,
+    n: vec,
+    hit: int,
+}
+
+struct Sphere {
+    center: vec,
+    radius: f64,
+}
+
+struct Plane {
+    p: vec,
+    n: vec,
+}
+
+struct Ray {
+    org: vec,
+    dir: vec,
+}
+
+static WIDTH       = 1024;
+static HEIGHT      = 1024;
+static NSUBSAMPLES = 2;
+static NAO_SAMPLES = 2;
+static M_PI        = 3.14159265358979323846;
+
+static mut spheres: [Sphere * 3];
+static mut plane: Plane;
+
+fn range(a: int, b: int, body: fn(int, fn())) -> () {
+    if a < b {
+        body(a);
+        range(a+1, b, body, return)
+    }
+}
+
+fn vdot(v0: vec, v1: vec) -> f64 {
+    v0.x * v1.x + v0.y * v1.y + v0.z * v1.z
+}
+
+fn vcross(mut c: &vec, v0: vec, v1: vec) -> () {
+    c.x = v0.y * v1.z - v0.z * v1.y;
+    c.y = v0.z * v1.x - v0.x * v1.z;
+    c.z = v0.x * v1.y - v0.y * v1.x;
+}
+
+fn vnormalize(mut c: &vec) -> () {
+    let length = sqrt(vdot(*c, *c));
+
+    if fabs(length) > 1.0e-17 {
+        c.x /= length;
+        c.y /= length;
+        c.z /= length;
+    }
+}
+
+fn ray_sphere_intersect(mut isect: &Isect, ray: &Ray, sphere: &Sphere) -> () {
+    let rs = vec {
+        x: ray.org.x - sphere.center.x,
+        y: ray.org.y - sphere.center.y,
+        z: ray.org.z - sphere.center.z
+    };
+
+    let B = vdot(rs, ray.dir);
+    let C = vdot(rs, rs) - sphere.radius * sphere.radius;
+    let D = B * B - C;
+
+    if D > 0.0 {
+        let t = -B - sqrt(D);
+
+        if (t > 0.0) && (t < isect.t) {
+            isect.t = t;
+            isect.hit = 1;
+
+            isect.p.x = ray.org.x + ray.dir.x * t;
+            isect.p.y = ray.org.y + ray.dir.y * t;
+            isect.p.z = ray.org.z + ray.dir.z * t;
+
+            isect.n.x = isect.p.x - sphere.center.x;
+            isect.n.y = isect.p.y - sphere.center.y;
+            isect.n.z = isect.p.z - sphere.center.z;
+
+            vnormalize(&(isect.n));
+        }
+    }
+}
+
+fn ray_plane_intersect(mut isect: &Isect, ray: &Ray, plane: &Plane) -> () {
+    let d = -vdot(plane.p, plane.n);
+    let v = vdot(ray.dir, plane.n);
+
+    if fabs(v) < 1.0e-17 { return() }
+
+    let t = -(vdot(ray.org, plane.n) + d) / v;
+
+    if (t > 0.0) && (t < isect.t) {
+        isect.t = t;
+        isect.hit = 1;
+
+        isect.p.x = ray.org.x + ray.dir.x * t;
+        isect.p.y = ray.org.y + ray.dir.y * t;
+        isect.p.z = ray.org.z + ray.dir.z * t;
+
+        isect.n = plane.n;
+    }
+}
+
+fn orthoBasis(mut basis: &[vec], n: vec) -> () {
+    basis(2) = n;
+    basis(1).x = 0.0; basis(1).y = 0.0; basis(1).z = 0.0;
+
+    if (n.x < 0.6) && (n.x > -0.6) {
+        basis(1).x = 1.0;
+    } else if (n.y < 0.6) && (n.y > -0.6) {
+        basis(1).y = 1.0;
+    } else if (n.z < 0.6) && (n.z > -0.6) {
+        basis(1).z = 1.0;
+    } else {
+        basis(1).x = 1.0;
+    }
+
+    vcross(&basis(0), basis(1), basis(2));
+    vnormalize(&basis(0));
+
+    vcross(&basis(1), basis(2), basis(0));
+    vnormalize(&basis(1));
+}
+
+fn ambient_occlusion(mut col: &vec, isect: &Isect) -> () {
+    let ntheta = NAO_SAMPLES;
+    let nphi   = NAO_SAMPLES;
+    let eps    = 0.0001;
+
+    let p = vec {
+        x: isect.p.x + eps * isect.n.x,
+        y: isect.p.y + eps * isect.n.y,
+        z: isect.p.z + eps * isect.n.z
+    };
+
+    let mut basis: [vec * 3];
+    orthoBasis(&basis, isect.n);
+
+    let mut occlusion = 0.0;
+
+    for j in range(0, ntheta) {
+        for i in range(0, nphi) {
+            let theta = sqrt(drand48());
+            let phi   = 2.0 * M_PI * drand48();
+
+            let x = cos(phi) * theta;
+            let y = sin(phi) * theta;
+            let z = sqrt(1.0 - theta * theta);
+
+            // local -> global
+            let rx = x * basis(0).x + y * basis(1).x + z * basis(2).x;
+            let ry = x * basis(0).y + y * basis(1).y + z * basis(2).y;
+            let rz = x * basis(0).z + y * basis(1).z + z * basis(2).z;
+
+            let mut ray = Ray {
+                org: p,
+                dir: vec { x: rx, y: ry, z: rz }
+            };
+
+            let mut occIsect: Isect;
+            occIsect.t   = 1.0e+17;
+            occIsect.hit = 0;
+
+            ray_sphere_intersect(&occIsect, &ray, &spheres(0));
+            ray_sphere_intersect(&occIsect, &ray, &spheres(1));
+            ray_sphere_intersect(&occIsect, &ray, &spheres(2));
+            ray_plane_intersect (&occIsect, &ray, &plane);
+
+            if occIsect.hit == 1 { occlusion += 1.0; }
+        }
+    }
+
+    occlusion = ((ntheta * nphi) as f64 - occlusion) / ((ntheta * nphi) as f64);
+
+    col.x = occlusion;
+    col.y = occlusion;
+    col.z = occlusion;
+}
+
+fn clamp(f: f64) -> u8 {
+    let mut i = (f*255.5) as i32;
+
+    if i < 0 { i = 0; }
+    if i > 255 { i = 255; }
+
+    i as u8
+}
+
+fn render(mut img: &[u8], w: int, h: int, nsubsamples: int) -> () {
+    let mut fimg = ~[w*h*3:f64];
+    memset(fimg as &i8, 0, (w*h*3*8) as u64);
+
+    for y in range(0, h) {
+        for x in range(0, w) {
+            for v in range(0, nsubsamples) {
+                for u in range(0, nsubsamples) {
+                    let px =  (x as f64 + (u as f64 / (nsubsamples as f64)) - (w as f64 / 2.0)) / (w as f64 / 2.0);
+                    let py = -(y as f64 + (v as f64 / (nsubsamples as f64)) - (h as f64 / 2.0)) / (h as f64 / 2.0);
+
+                    let mut ray = Ray {
+                        org: vec { x: 0.0, y: 0.0, z: 0.0 },
+                        dir: vec { x: px,  y: py,  z: -1.0 }
+                    };
+
+                    vnormalize(&(ray.dir));
+
+                    let mut isect: Isect;
+                    isect.t   = 1.0e+17;
+                    isect.hit = 0;
+
+                    ray_sphere_intersect(&isect, &ray, &spheres(0));
+                    ray_sphere_intersect(&isect, &ray, &spheres(1));
+                    ray_sphere_intersect(&isect, &ray, &spheres(2));
+                    ray_plane_intersect (&isect, &ray, &plane);
+
+                    if isect.hit == 1 {
+                        let mut col: vec;
+                        ambient_occlusion(&col, &isect);
+
+                        fimg(3 * (y * w + x) + 0) += col.x;
+                        fimg(3 * (y * w + x) + 1) += col.y;
+                        fimg(3 * (y * w + x) + 2) += col.z;
+                    }
+                }
+            }
+
+            fimg(3 * (y * w + x) + 0) /= (nsubsamples * nsubsamples) as f64;
+            fimg(3 * (y * w + x) + 1) /= (nsubsamples * nsubsamples) as f64;
+            fimg(3 * (y * w + x) + 2) /= (nsubsamples * nsubsamples) as f64;
+
+            img(3 * (y * w + x) + 0) = clamp(fimg(3 *(y * w + x) + 0));
+            img(3 * (y * w + x) + 1) = clamp(fimg(3 *(y * w + x) + 1));
+            img(3 * (y * w + x) + 2) = clamp(fimg(3 *(y * w + x) + 2));
+        }
+    }
+}
+
+fn init_scene() -> () {
+    spheres(0).center.x = -2.0;
+    spheres(0).center.y =  0.0;
+    spheres(0).center.z = -3.5;
+    spheres(0).radius   =  0.5;
+
+    spheres(1).center.x = -0.5;
+    spheres(1).center.y =  0.0;
+    spheres(1).center.z = -3.0;
+    spheres(1).radius   =  0.5;
+
+    spheres(2).center.x =  1.0;
+    spheres(2).center.y =  0.0;
+    spheres(2).center.z = -2.2;
+    spheres(2).radius   =  0.5;
+
+    plane.p.x =  0.0;
+    plane.p.y = -0.5;
+    plane.p.z =  0.0;
+
+    plane.n.x = 0.0;
+    plane.n.y = 1.0;
+    plane.n.z = 0.0;
+}
+
+fn main(int) -> () {
+    let img = ~[WIDTH*HEIGHT*3:u8];
+    init_scene();
+    render(img, WIDTH, HEIGHT, NSUBSAMPLES);
+    saveppm("ao.ppm", WIDTH, HEIGHT, img);
+}

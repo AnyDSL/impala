@@ -152,12 +152,12 @@ class InvokeTest(Test):
     
     def invoke(self, gEx):
         # if any tmp file already exists do not touch it and fail
-        for tmp in self.tmp_files:
-            if os.path.exists(tmp):
-                print("[FAIL] "+os.path.join(self.basedir, self.srcfile))
-                print("  Will not overwrite existing file '%s'; please clean up before running tests" % tmp)
-                print
-                return False
+        #for tmp in self.tmp_files:
+        #    if os.path.exists(tmp):
+        #        print("[FAIL] "+os.path.join(self.basedir, self.srcfile))
+        #        print("  Will not overwrite existing file '%s'; please clean up before running tests" % tmp)
+        #        print
+        #        return False
 
         try:
             for phase in self.compilePhases(gEx):
@@ -252,6 +252,7 @@ def executeTests(tests, gEx):
     print("\n* Test summary\n")
     failOpt = 0
     failReq = 0
+    passOpt = []
     
     opt_tests = []
     req_tests = []
@@ -262,6 +263,8 @@ def executeTests(tests, gEx):
         if not res[t]:
             print("- REQUIRED test failed: "+t.getName())
             failReq += 1
+        else:
+            passOpt.append(t.getName())
             
     for t in opt_tests:
         if not res[t]:
@@ -279,3 +282,5 @@ def executeTests(tests, gEx):
             print("\n* All %i optional tests were successful." % len(opt_tests))
         else:
             print("\n!" + str(failOpt) + " of " + str(len(opt_tests)) + " OPTIONAL tests failed.")
+        for test in passOpt:
+            print("\n-> " + test + " passed.")
