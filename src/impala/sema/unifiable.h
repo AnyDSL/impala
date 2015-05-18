@@ -154,16 +154,16 @@ enum Kind {
     Kind_fn,
     Kind_impl,
     Kind_indefinite_array,
-    Kind_simd,
     Kind_noret,
     Kind_owned_ptr,
+    Kind_simd,
     Kind_struct_abs,
     Kind_struct_app,
-    Kind_typedef_abs,
     Kind_trait_abs,
     Kind_trait_app,
     Kind_tuple,
     Kind_type_var,
+    Kind_typedef_abs,
     Kind_unknown,
 };
 
