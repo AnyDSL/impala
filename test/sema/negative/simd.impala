@@ -17,3 +17,7 @@ fn wrong_type4() -> bool {
 fn wrong_type5() -> simd[bool * 4] {
     simd[true, true, true, true] ^ simd[true, false, true, false, true]
 }
+
+fn wrong_type6() -> simd[bool * 4] {
+    [true, false, true, false]
+}
