@@ -308,10 +308,10 @@ def executeTests(tests, gEx):
             print("- OPTIONAL test failed: "+t.getName())
             failOpt += 1
         else:
-            passOpt.append(t.getName)
+            passOpt.append(t.getName())
 
     for test in passOpt:
-        print("- OPTIONAL test passed: "+test.getName())
+        print("- OPTIONAL test passed: "+test)
     
     if failOpt == 0 and failReq == 0:
         print("\n* All " + str(len(tests)) +  " tests were successful.")
