@@ -24,7 +24,6 @@ optionals = [
     "sema/positive/methods7.impala",
     "sema/positive/methods8.impala",
     "sema/positive/struct01.impala",
-    "sema/positive/subtyping1.impala",
     "sema/positive/subtyping5.impala",
     "sema/positive/typevar_instantiation12.impala"
 ]
