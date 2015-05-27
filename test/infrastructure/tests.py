@@ -132,9 +132,16 @@ class InvokeTest(Test):
     srcfile = ""
     options = ""
     output_file = None
+    compare_file = None
+    input_file = None
+
+    args = None
+
+    LIB_C = os.path.join(os.path.dirname(__file__), "lib.c")
     CALL_IMPALA_MAIN_C = os.path.join(os.path.dirname(__file__), "call_impala_main.c")
+    CLANG = os.path.join(os.path.dirname(__file__), "..", "..", "..", "llvm_install", "bin", "clang")
     
-    def __init__(self, base, src, output_file, options=[]):
+    def __init__(self, base, src, output_file, options=[], benchmarks=False, compare=None, input_file=None):
         super(InvokeTest, self).__init__(base, src, options+["-emit-llvm"])
         self.output_file = output_file
         
@@ -144,20 +151,32 @@ class InvokeTest(Test):
         self.s_file = basename + ".s"
         self.exe_file = basename
         self.tmp_files = [self.ll_file, self.bc_file, self.s_file, self.exe_file]
+        self.benchmarks = benchmarks
+
+        if compare is not None:
+            self.compare_file = compare
+            self.tmp_files.append(self.compare_file)
+
+        self.input_file = input_file
     
     def compilePhases(self, gEx):
         yield [gEx] + self.options + [os.path.join(self.basedir, self.srcfile)]
-        yield ["llc", "-o", self.s_file, self.bc_file]
-        yield ["gcc", "-o", self.exe_file, self.s_file, InvokeTest.CALL_IMPALA_MAIN_C]
+        if(self.benchmarks):
+            yield [InvokeTest.CLANG, "-O3", InvokeTest.LIB_C, "-c"]
+            yield [InvokeTest.CLANG, "-O3", "lib.o", self.ll_file, "-L", "/opt/local/lib", "-lm", "-lpcre", "-lgmp", "-s", "-o", self.exe_file]
+        else:
+            yield ["llc", "-o", self.s_file, self.bc_file]
+            yield ["gcc", "-o", self.exe_file, self.s_file, InvokeTest.CALL_IMPALA_MAIN_C]
+
     
     def invoke(self, gEx):
         # if any tmp file already exists do not touch it and fail
-        for tmp in self.tmp_files:
-            if os.path.exists(tmp):
-                print("[FAIL] "+os.path.join(self.basedir, self.srcfile))
-                print("  Will not overwrite existing file '%s'; please clean up before running tests" % tmp)
-                print
-                return False
+        #for tmp in self.tmp_files:
+        #    if os.path.exists(tmp):
+        #        print("[FAIL] "+os.path.join(self.basedir, self.srcfile))
+        #        print("  Will not overwrite existing file '%s'; please clean up before running tests" % tmp)
+        #        print
+        #        return False
 
         try:
             for phase in self.compilePhases(gEx):
@@ -167,7 +186,16 @@ class InvokeTest(Test):
                     return False
             
             # run executable
-            p = RuntimeProcess([os.path.join(".", self.exe_file)], ".")
+            if self.args is None:
+                p = RuntimeProcess([os.path.join(".", self.exe_file)], ".")
+            else:
+                cmd = [os.path.join(".", self.exe_file)]
+                cmd.extend(self.args)
+                p = RuntimeProcess(cmd, ".")
+
+	    if self.input_file is not None:
+		p.setInput(self.input_file)
+
             p.execute()
             return self.checkBasics(p) and self.checkOutput(p)
         finally:
@@ -184,8 +212,14 @@ class InvokeTest(Test):
             return False
         
         if self.output_file is not None:
-            with open(os.path.join(self.basedir, self.output_file), 'r') as f:
-                return diff_output(proc.output, f.read())
+            if self.compare_file is None:
+                #Image.open();
+                with open(os.path.join(self.basedir, self.output_file), 'r') as f:
+                    return diff_output(proc.output, f.read())
+            else:
+                with open(self.compare_file, 'r') as f:
+                    with open(os.path.join(self.basedir, self.output_file), 'r') as g:
+                        return diff_output(f.read(), g.read())
         return True
             
     def cleanup(self, file):
@@ -224,11 +258,16 @@ def make_compiler_output_tests(directory, positive=True, options=[]):
 def make_tests(directory, positive=True, options=[]):
     return make_compiler_output_tests(directory, positive, options)
 
-def make_invoke_tests(directory, options=[]):
+def make_invoke_tests(directory, options=[], benchmarks=False, testToFile={}, inputs={}):
     """Creates a list of InvokeTests using get_tests(directory)"""
     tests = []
     for testfile, res in get_tests(directory):
-        tests.append(InvokeTest(directory, testfile, res, options))
+        input_file = inputs[testfile] if testfile in inputs else None
+        #print input_file, testfile
+	if testfile in testToFile:
+            tests.append(InvokeTest(directory, testfile, res, options, benchmarks, testToFile[testfile], input_file))
+        else:
+            tests.append(InvokeTest(directory, testfile, res, options, benchmarks, None, input_file))
     return sorted(tests, key=lambda test: test.getName())
 
 def get_tests_from_dir(directory):
@@ -252,6 +291,7 @@ def executeTests(tests, gEx):
     print("\n* Test summary\n")
     failOpt = 0
     failReq = 0
+    passOpt = []
     
     opt_tests = []
     req_tests = []
@@ -267,6 +307,11 @@ def executeTests(tests, gEx):
         if not res[t]:
             print("- OPTIONAL test failed: "+t.getName())
             failOpt += 1
+        else:
+            passOpt.append(t.getName())
+
+    for test in passOpt:
+        print("- OPTIONAL test passed: "+test)
     
     if failOpt == 0 and failReq == 0:
         print("\n* All " + str(len(tests)) +  " tests were successful.")

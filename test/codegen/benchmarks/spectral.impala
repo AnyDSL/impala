@@ -1,0 +1,63 @@
+extern "C" {
+    fn sqrt(f64) -> f64;
+    fn print_f64(f64) -> ();
+}
+
+fn range(a: int, b: int, body: fn(int, fn())) -> () {
+    if a < b {
+        body(a);
+        range(a+1, b, body, return)
+    }
+}
+
+fn eval_A(i: int, j: int) -> f64 { 
+    1.0/(((i+j)*(i+j+1)/2+i+1) as f64)
+}
+
+fn eval_A_times_u(N: int, u: &[f64], mut Au: &[f64]) -> () {
+    for i in range(0, N) {
+        Au(i) = 0.0;
+        for j in range(0, N) {
+            Au(i) += eval_A(i, j) * u(j);
+        }
+    }
+}
+
+fn eval_At_times_u(N: int, u: &[f64], mut Au: &[f64]) -> () {
+    for i in range(0, N) {
+        Au(i) = 0.0;
+        for j in range(0, N) {
+            Au(i) += eval_A(j, i) * u(j);
+        }
+    }
+}
+
+fn eval_AtA_times_u(N: int, u: &[f64], AtAu: &[f64]) -> () {
+    let v = ~[N: f64];
+    eval_A_times_u(N, u, v); 
+    eval_At_times_u(N, v, AtAu); 
+}
+
+fn main(n: int) -> () {
+    let mut u = ~[n: f64];
+    let v = ~[n: f64];
+
+    for i in range(0, n) {
+        u(i) = 1.0;
+    }
+
+    for i in range(0, 10) {
+        eval_AtA_times_u(n, u, v);
+        eval_AtA_times_u(n, v, u);
+    }
+
+    let mut vBv = 0.0;
+    let mut vv = 0.0;
+
+    for i in range(0, n) {
+        vBv += u(i)*v(i); 
+        vv  += v(i)*v(i);
+    }
+
+    print_f64(sqrt(vBv/vv));
+}
