@@ -1,0 +1,80 @@
+struct mpz_t {
+    a: i32, 
+    b: i32, 
+    c: &i64,
+}
+
+extern "C" {
+    fn "__gmpz_add"         mpz_add(&mpz_t, &mpz_t, &mpz_t) -> ();
+    fn "__gmpz_addmul_ui"   mpz_addmul_ui(&mpz_t, &mpz_t, u64) -> ();
+    fn "__gmpz_submul_ui"   mpz_submul_ui(&mpz_t, &mpz_t, u64) -> ();
+    fn "__gmpz_cmp"         mpz_cmp(&mpz_t, &mpz_t) -> int;
+    fn "__gmpz_get_ui"      mpz_get_ui(&mpz_t) -> u64;
+    fn "__gmpz_mul_ui"      mpz_mul_ui(&mpz_t, &mpz_t, u64) -> ();
+    fn "__gmpz_set_ui"      mpz_set_ui(&mpz_t, u64) -> ();
+    fn "__gmpz_tdiv_q"      mpz_tdiv_q(&mpz_t, &mpz_t, &mpz_t) -> ();
+    fn "__gmpz_init"        mpz_init(&mpz_t) -> ();
+    fn "__gmpz_init_set_ui" mpz_init_set_ui(&mpz_t, u64) -> ();
+    fn print_digits(u64) -> ();
+    fn putchar(int) -> int;
+    fn print_int(int) -> ();
+    fn print_char(u8) -> ();
+}
+
+static mut tmp1: mpz_t;
+static mut tmp2: mpz_t;
+static mut acc: mpz_t;
+static mut den: mpz_t;
+static mut num: mpz_t;
+
+fn extract_digit(nth: u64 ) -> u64 {
+    // joggling between tmp1 and tmp2, so GMP won't have to use temp buffers
+    mpz_mul_ui(&tmp1, &num, nth);
+    mpz_add(&tmp2, &tmp1, &acc);
+    mpz_tdiv_q(&tmp1, &tmp2, &den);
+    mpz_get_ui(&tmp1)
+}
+
+fn eliminate_digit(d: u64) -> () {
+    mpz_submul_ui(&acc, &den, d);
+    mpz_mul_ui(&acc, &acc, 10_u64);
+    mpz_mul_ui(&num, &num, 10_u64);
+}
+
+fn next_term(k: u64) -> () {
+    let k2 = k * 2_u64 + 1_u64;
+
+    mpz_addmul_ui(&acc, &num, 2_u64);
+    mpz_mul_ui(&acc, &acc, k2);
+    mpz_mul_ui(&den, &den, k2);
+    mpz_mul_ui(&num, &num, k);
+}
+
+fn main(n: int) -> () {
+    mpz_init(&tmp1);
+    mpz_init(&tmp2);
+
+    mpz_init_set_ui(&acc, 0_u64);
+    mpz_init_set_ui(&den, 1_u64);
+    mpz_init_set_ui(&num, 1_u64);
+
+    let mut k = 0_u64;
+    let mut i = 0_u64;
+    while i < (n as u64) {
+        next_term(++k);
+        if mpz_cmp(&num, &acc) > 0 {
+            continue()
+        }
+
+        let d = extract_digit(3_u64);
+        if d != extract_digit(4_u64) {
+            continue()
+        }
+
+        putchar('0' as int + d as int);
+        if ++i % 10_u64 == 0_u64 {
+            print_digits(i);
+        }
+        eliminate_digit(d);
+    }
+}
