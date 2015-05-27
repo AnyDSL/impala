@@ -303,11 +303,10 @@ bool OwnedPtrTypeNode::is_subtype(const TypeNode* other) const {
 }
 bool DefiniteArrayTypeNode::is_subtype(const TypeNode* other) const {
     bool dim_eq = true;
-    if (auto da_other = other->isa<DefiniteArrayTypeNode>()) {
+    if (auto da_other = other->isa<DefiniteArrayTypeNode>())
         dim_eq = dim() == da_other->dim();
-    }
 
-    return dim_eq && other->isa<ArrayTypeNode>() && elem_type()->is_subtype(*other->as<ArrayTypeNode>()->elem_type());
+    return dim_eq && other->isa<IndefiniteArrayTypeNode>() && elem_type()->is_subtype(*other->as<ArrayTypeNode>()->elem_type());
 }
 
 bool SimdTypeNode::is_subtype(const TypeNode* other) const {

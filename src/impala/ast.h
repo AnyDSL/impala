@@ -1132,6 +1132,7 @@ public:
     const Expr* lhs() const { return lhs_; }
     const ASTType* ast_type() const { return ast_type_; }
     virtual void check(NameSema&) const override;
+    virtual bool is_lvalue() const override;
 
 private:
     virtual std::ostream& print(Printer&) const override;
