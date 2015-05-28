@@ -1,0 +1,9 @@
+type Blob = (i32, i32);
+fn blobify(i: i32) -> Blob {
+    (i, i)
+}
+
+fn main() -> () {
+    let b = blobify(42);
+}
+
