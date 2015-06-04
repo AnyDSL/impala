@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 
 """Usage: run_tests.py [options] [subdirectory that contains test cases]
 
