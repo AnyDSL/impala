@@ -3,7 +3,7 @@ fn blobify(i: i32) -> Blob {
     (i, i)
 }
 
-fn main() -> () {
+fn main() -> bool {
     let b = blobify(42);
+    b(0) + b(1) == 84
 }
-
