@@ -362,9 +362,13 @@ public:
     const FnASTType* ret_fn_type() const;
     virtual std::ostream& print(Printer&) const override;
 
+    bool is_continuation() const { return cont_; }
+
 private:
     virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
+
+    bool cont_;
 
     friend class Parser;
 };
@@ -548,6 +552,8 @@ public:
     thorin::Lambda* emit_head(CodeGen&) const;
     void emit_body(CodeGen&) const;
 
+    bool is_continuation() const { return cont_; }
+
     virtual FnType fn_type() const = 0;
     virtual Symbol fn_symbol() const = 0;
 
@@ -559,6 +565,7 @@ protected:
 
 private:
     AutoPtr<const Expr> body_;
+    bool cont_;
 
     friend class Parser;
 };
