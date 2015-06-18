@@ -362,13 +362,9 @@ public:
     const FnASTType* ret_fn_type() const;
     virtual std::ostream& print(Printer&) const override;
 
-    bool is_continuation() const { return cont_; }
-
 private:
     virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
-
-    bool cont_;
 
     friend class Parser;
 };
