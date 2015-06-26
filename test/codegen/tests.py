@@ -4,6 +4,7 @@ tests.py for codegen
 
 # import the test infrastructure
 from infrastructure.tests import make_invoke_tests
+from infrastructure.tests import get_tests_from_dir
 
 optionals = [
     "codegen/conversion_trait.impala",

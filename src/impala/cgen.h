@@ -33,4 +33,3 @@ bool generate_c_interface(const ModContents* mod, const CGenOptions& opts = CGen
 }
 
 #endif
-

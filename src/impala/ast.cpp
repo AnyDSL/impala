@@ -71,10 +71,10 @@ bool PathExpr::is_lvalue() const {
 bool MapExpr::is_lvalue() const {
     if (!lhs()->type())
         return true; // prevent further errors
-    return (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>()) ? lhs()->is_lvalue() : false;
+    return (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<PtrType>()) && lhs()->is_lvalue();
 }
 
-bool PrefixExpr::is_lvalue() const { return kind() == MUL && rhs()->is_lvalue(); }
+bool PrefixExpr::is_lvalue() const { return (kind() == MUL || kind() == AND) && rhs()->is_lvalue(); }
 bool FieldExpr::is_lvalue() const { return lhs()->is_lvalue(); }
 bool CastExpr::is_lvalue() const { return lhs()->is_lvalue(); }
 

@@ -11,3 +11,4 @@ CMakeFiles/
 build*
 html
 test/impala
+test/lib.o
