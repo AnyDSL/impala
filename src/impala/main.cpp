@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
             if (true) {
                 GraphOutput out(std::cout);
 
-                Scope::for_each(init.world, [out] (const Scope& scope) {
+                Scope::for_each(init.world, [&out] (const Scope& scope) {
                     scope.f_cfg().domtree().print(out, "Scope_" + std::to_string(scope.id()));
                 });
 
