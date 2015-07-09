@@ -215,10 +215,8 @@ int main(int argc, char** argv) {
                 GraphOutput out(std::cout);
 
                 Scope::for_each(init.world, [&out] (const Scope& scope) {
-                    scope.f_cfg().domtree().print(out, "Scope_" + std::to_string(scope.id()));
+                    scope.f_cfg().domtree().print(out);
                 });
-
-                out.finish();
             }
         } else
             return EXIT_FAILURE;
