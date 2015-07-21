@@ -1,0 +1,8 @@
+fn main() -> bool {   
+    let mut k = 0;
+    if k == 0 {
+        return(true)
+    }
+    k=1;
+    false
+}
