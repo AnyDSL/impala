@@ -212,12 +212,7 @@ int main(int argc, char** argv) {
             if (emit_ycomp)       thorin::emit_ycomp(init.world, true);
             if (emit_ycomp_cfg)   thorin::emit_ycomp_cfg(init.world);
             if (true) {
-
-                //GraphOutput out(std::cout);
-
-                Scope::for_each(init.world, [&] (const Scope& scope) {
-                    DomTreeBase::print(scope);
-                });
+                DomTree::emit_world(init.world);
             }
         } else
             return EXIT_FAILURE;
