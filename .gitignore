@@ -1,8 +1,9 @@
 *.bc
 *.ll
+*.pyc
 CMakeCache.txt
 CMakeFiles/
 build*
 html
 test/impala
-*.pyc
+test/lib.o
