@@ -1,0 +1,19 @@
+struct Foo {
+    data: [i32 * 2],
+    id: i32
+}
+
+fn foo() -> Foo {
+    let mut bar: Foo;
+    bar.id = 2323;
+    bar.data(0) = 4242;
+    bar
+}
+
+fn take_address(bar: &Foo) -> () {}
+
+fn main() -> bool {
+    let mut bar = foo();
+    take_address(&bar);
+    bar.data(0) + bar.id == 6565
+}
