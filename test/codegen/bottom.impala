@@ -1,0 +1,33 @@
+struct Foo {
+    x: int,
+    y: float,
+}
+
+fn arr() -> [int * 2] {
+    let mut bar: [int * 2];
+    bar(0) = 23;
+    bar(1) = 42;
+    bar
+}
+
+fn tuple() -> (int, float) {
+    let mut bar: (int, float);
+    bar(0) = 23;
+    bar(1) = 42.f;
+    bar
+}
+
+fn foo() -> Foo {
+    let mut bar: Foo;
+    bar.x = 23;
+    bar.y = 42.f;
+    bar
+}
+
+
+fn main() -> bool {
+    let a = arr();
+    let t = tuple();
+    let f = foo();
+    a(0) as f32 + a(1) as f32 + t(0) as f32 + t(1) + f.x as f32 + f.y == 195.f
+}
