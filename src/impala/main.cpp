@@ -213,6 +213,7 @@ int main(int argc, char** argv) {
             if (emit_ycomp_cfg)   thorin::emit_ycomp_cfg(init.world);
             if (true) {
                 DomTree::emit_world(init.world);
+                LoopTree::emit_world(init.world);
             }
         } else
             return EXIT_FAILURE;
