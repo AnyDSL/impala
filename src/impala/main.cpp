@@ -212,7 +212,9 @@ int main(int argc, char** argv) {
             if (emit_ycomp)       thorin::emit_ycomp(init.world, true);
             if (emit_ycomp_cfg)   thorin::emit_ycomp_cfg(init.world);
             if (true) {
+                std::cout << "Printing DomTree:" << std::endl;
                 DomTree::emit_world(init.world);
+                std::cout << "Printing LoopTree:" << std::endl;
                 LoopTree::emit_world(init.world);
             }
         } else
