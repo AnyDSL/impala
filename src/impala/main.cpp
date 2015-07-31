@@ -215,7 +215,7 @@ int main(int argc, char** argv) {
                 std::cout << "Printing DomTree:" << std::endl;
                 DomTree::emit_world(init.world);
                 std::cout << "Printing LoopTree:" << std::endl;
-                LoopTree::emit_world(init.world);
+                LoopTree<true>::emit_world(init.world);
             }
         } else
             return EXIT_FAILURE;
