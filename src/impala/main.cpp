@@ -214,8 +214,14 @@ int main(int argc, char** argv) {
             if (true) {
                 std::cout << "Printing DomTree:" << std::endl;
                 DomTree::emit_world(init.world);
-                std::cout << "Printing LoopTree:" << std::endl;
+                std::cout << "Printing LoopTree: (true)" << std::endl;
                 LoopTree<true>::emit_world(init.world);
+                std::cout << "Printing LoopTree: (false)" << std::endl;
+                LoopTree<false>::emit_world(init.world);
+                std::cout << "Printing CFG: (true)" << std::endl;
+                CFG<true>::emit_world(init.world);
+                std::cout << "Printing CFG: (false)" << std::endl;
+                CFG<false>::emit_world(init.world);
             }
         } else
             return EXIT_FAILURE;
