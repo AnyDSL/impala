@@ -216,8 +216,8 @@ int main(int argc, char** argv) {
                 DomTree::emit_world(init.world);
                 std::cout << "Printing LoopTree: (true)" << std::endl;
                 LoopTree<true>::emit_world(init.world);
-                std::cout << "Printing LoopTree: (false)" << std::endl;
-                LoopTree<false>::emit_world(init.world);
+                //std::cout << "Printing LoopTree: (false)" << std::endl;
+                //LoopTree<false>::emit_world(init.world);
                 std::cout << "Printing CFG: (true)" << std::endl;
                 CFG<true>::emit_world(init.world);
                 std::cout << "Printing CFG: (false)" << std::endl;
