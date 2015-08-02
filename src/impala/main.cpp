@@ -225,8 +225,8 @@ int main(int argc, char** argv) {
                 //CFG<false>::emit_world(init.world);
                 std::cout << "Printing DFG: (true)" << std::endl;
                 DFGBase<true>::emit_world(init.world);
-                std::cout << "Printing DFG: (false)" << std::endl;
-                DFGBase<false>::emit_world(init.world);
+                //std::cout << "Printing DFG: (false)" << std::endl;
+                //DFGBase<false>::emit_world(init.world);
             }
         } else
             return EXIT_FAILURE;
