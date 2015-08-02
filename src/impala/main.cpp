@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "thorin/analyses/cfg.h"
+#include "thorin/analyses/dfg.h"
 #include "thorin/analyses/domtree.h"
 #include "thorin/analyses/looptree.h"
 #include "thorin/analyses/scope.h"
@@ -220,8 +221,12 @@ int main(int argc, char** argv) {
                 //LoopTree<false>::emit_world(init.world);
                 std::cout << "Printing CFG: (true)" << std::endl;
                 CFG<true>::emit_world(init.world);
-                std::cout << "Printing CFG: (false)" << std::endl;
-                CFG<false>::emit_world(init.world);
+                //std::cout << "Printing CFG: (false)" << std::endl;
+                //CFG<false>::emit_world(init.world);
+                std::cout << "Printing DFG: (true)" << std::endl;
+                DFGBase<true>::emit_world(init.world);
+                std::cout << "Printing DFG: (false)" << std::endl;
+                DFGBase<false>::emit_world(init.world);
             }
         } else
             return EXIT_FAILURE;
