@@ -1,3 +1,4 @@
+// https://github.com/AnyDSL/thorin/issues/27
 fn iterate_children(mut node_id: &i32) -> () {
     for call_me() {
         if 42 < *node_id {
