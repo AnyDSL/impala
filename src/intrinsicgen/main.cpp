@@ -27,17 +27,20 @@ int main() {
     ++printer.indent;
     for (int i = 1; i != num; ++i) {
         auto id = (llvm::Intrinsic::ID) i;
-        
-        if (!llvm::Intrinsic::isOverloaded(id)) {
-            std::string llvm_name = llvm::Intrinsic::getName(id);
-            // skip "experimental" intrinsics
-            if (llvm_name.find("experimental")!=std::string::npos) continue;
-            auto type = llvm::Intrinsic::getType(context, id);
-            assert(llvm_name.substr(0, 5) == "llvm.");
-            std::string name = llvm_name.substr(5); // remove 'llvm.' prefix
-            // replace '.' with '_'
-            std::transform(name.begin(), name.end(), name.begin(), [] (char c) { return c == '.' ? '_' : c; });
-            if (auto itype = llvm2impala(*init.typetable, type)) {
+        std::string llvm_name = llvm::Intrinsic::getName(id);
+        // skip "experimental" intrinsics
+        if (llvm_name.find("experimental")!=std::string::npos) continue;
+        assert(llvm_name.substr(0, 5) == "llvm.");
+        std::string name = llvm_name.substr(5); // remove 'llvm.' prefix
+        // replace '.' with '_'
+        std::transform(name.begin(), name.end(), name.begin(), [] (char c) { return c == '.' ? '_' : c; });
+
+        if (llvm::Intrinsic::isOverloaded(id)) {
+            printer.newline();
+            printer.stream() << "// fn \"" << llvm_name << "\" " << name;
+            printer.stream() << " (...) -> (...); // is overloaded";
+        } else {
+            if (auto itype = llvm2impala(*init.typetable, llvm::Intrinsic::getType(context, id))) {
                 printer.newline();
                 auto fn = itype.as<impala::FnType>();
                 printer.stream() << "fn \"" << llvm_name << "\" " << name;

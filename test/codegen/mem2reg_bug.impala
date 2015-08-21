@@ -1,0 +1,13 @@
+fn take_address(&&int) -> () {}
+
+fn main() -> bool {
+    let mut i = 23;
+    let mut p = &i;
+    take_address(&p);
+
+    while i < 42 {
+        (*p)++;
+    }
+
+    i == 42
+}
