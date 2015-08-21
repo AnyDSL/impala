@@ -17,11 +17,14 @@ import infrastructure.tests
 from infrastructure.timed_process import CompileProcess
 import os, sys, getopt, subprocess
 
-def invoke(executable, directory, valgrind):
+def invoke(executable, dir_or_file, valgrind):
     print("Using '%s' as executable." % executable)
     
-    tests = infrastructure.tests.get_tests_from_dir(directory)
-    
+    if(os.path.isfile(dir_or_file)):
+        tests = infrastructure.tests.get_tests_for_file(dir_or_file)
+    else:
+        tests = infrastructure.tests.get_tests_from_dir(dir_or_file)
+   
     if valgrind:
         tests = [infrastructure.tests.ValgrindTest(t) for t in tests]
     

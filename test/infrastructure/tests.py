@@ -270,6 +270,22 @@ def make_invoke_tests(directory, options=[], benchmarks=False, testToFile={}, in
             tests.append(InvokeTest(directory, testfile, res, options, benchmarks, None, input_file))
     return sorted(tests, key=lambda test: test.getName())
 
+def get_tests_for_file(file):
+    directory = os.path.dirname(file)
+    filename = os.path.basename(file)
+    testfile = os.path.join(directory, "tests.py")
+
+    if os.path.exists(testfile):
+        tests = imp.load_source("tests", testfile).allTests()
+    else:
+        tests = make_tests(directory)
+
+    for test in tests:
+        if test.srcfile == filename:
+            return [test]
+
+    sys.exit("Test not found!")
+
 def get_tests_from_dir(directory):
     testfile = os.path.join(directory, "tests.py")
     
