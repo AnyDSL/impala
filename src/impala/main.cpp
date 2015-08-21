@@ -50,6 +50,7 @@ int main(int argc, char** argv) {
              emit_ycomp_cfg, fancy,
              opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3,
              nocleanup, nossa, tobias_ycomp;
+	YCompCommandLine yComp;
 
         int vectorlength = 0;
         auto cmd_parser = ArgParser()
@@ -80,7 +81,8 @@ int main(int argc, char** argv) {
             .add_option<bool>("f",                  "use fancy output: impala's AST dump uses only parentheses where necessary", fancy, false)
             .add_option<bool>("nocleanup",          "no clean-up phase", nocleanup, false)
             .add_option<bool>("nossa",              "use slots + load/store instead of SSA construction", nossa, false)
-            .add_option< int>("vectorize",          "run vectorizer on main with given vector length (experimental), arg=<vector length>", vectorlength, false);
+            .add_option< int>("vectorize",          "run vectorizer on main with given vector length (experimental), arg=<vector length>", vectorlength, false)
+            .add_option<YCompCommandLine>("ycomp",  "print ycomp graphs to files", yComp, YCompCommandLine());
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
@@ -212,7 +214,9 @@ int main(int argc, char** argv) {
             if (emit_llvm)        thorin::emit_llvm(init.world, opt);
             if (emit_ycomp)       thorin::emit_ycomp(init.world, true);
             if (emit_ycomp_cfg)   thorin::emit_ycomp_cfg(init.world);
-            if (true) {
+            
+            yComp.print(init.world);
+	    /*if (true) {
                 std::cout << "Printing DomTree:" << std::endl;
                 DomTree::emit_world(init.world);
                 std::cout << "Printing LoopTree: (true)" << std::endl;
@@ -227,7 +231,7 @@ int main(int argc, char** argv) {
                 DFGBase<true>::emit_world(init.world);
                 std::cout << "Printing DFG: (false)" << std::endl;
                 DFGBase<false>::emit_world(init.world);
-            }
+            }*/
         } else
             return EXIT_FAILURE;
 
