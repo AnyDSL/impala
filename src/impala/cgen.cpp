@@ -223,8 +223,8 @@ public:
 
     void process_module(const ModContents* mod) {
         for (auto item : mod->items()) {
-            const FnDecl* decl = item->isa<FnDecl>();
-            if (decl) process_fn_decl(decl);
+            if (auto decl = item->isa<FnDecl>())
+                process_fn_decl(decl);
         }
     }
 
