@@ -1,8 +1,8 @@
 #include <fstream>
-#include <unordered_set>
-#include <unordered_map>
 #include <string>
 #include <cassert>
+
+#include "thorin/util/hash.h"
 
 #include "impala/ast.h"
 #include "impala/cgen.h"
@@ -168,7 +168,7 @@ private:
     };
 
     // Computes the order of generation of C structures
-    void compute_struct_order(std::unordered_map<const StructDecl*, GenState>& struct_decls,
+    void compute_struct_order(thorin::HashMap<const StructDecl*, GenState>& struct_decls,
                               std::vector<const StructDecl*>& order,
                               const StructDecl* cur_gen) {
         struct_decls[cur_gen] = CUR_GEN;
@@ -215,7 +215,7 @@ private:
         export_fns.push_back(fn_decl);
     }
 
-    std::unordered_set<const StructDecl*> export_structs;
+    thorin::HashSet<const StructDecl*> export_structs;
     std::vector<const FnDecl*> export_fns;
 
 public:
@@ -223,8 +223,8 @@ public:
 
     void process_module(const ModContents* mod) {
         for (auto item : mod->items()) {
-            const FnDecl* decl = item->isa<FnDecl>();
-            if (decl) process_fn_decl(decl);
+            if (auto decl = item->isa<FnDecl>())
+                process_fn_decl(decl);
         }
     }
 
@@ -246,7 +246,7 @@ public:
         // We have to make sure every structure is generated after each
         // of its dependencies has already been generated (otherwise the C
         // compiler will complain)
-        std::unordered_map<const StructDecl*, GenState> struct_decls;
+        thorin::HashMap<const StructDecl*, GenState> struct_decls;
         std::vector<const StructDecl*> order;
 
         for (auto st : export_structs) {

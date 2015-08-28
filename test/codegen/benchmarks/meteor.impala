@@ -629,7 +629,7 @@ fn main(n: int) -> () {
     calc_rows();
     solve(0, 0);
     print_meteor_scnt(solution_count);
-    let minmax = find_minmax(&solutions, solution_count);
+    let minmax = find_minmax(&solutions as &[[i8*50]], solution_count);
     pretty(minmax(0));
     pretty(minmax(1));
 }
