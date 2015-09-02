@@ -237,7 +237,7 @@ public:
 
             for (auto st : exports) {
                 process_struct_decl(st);
-            }          
+            }
         } while (exports.size() != export_structs.size());
     }
 
