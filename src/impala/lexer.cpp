@@ -30,7 +30,7 @@ Lexer::Lexer(std::istream& stream, const std::string& filename)
     stream_.exceptions(std::istream::badbit);
 }
 
-std::ostream& Lexer::error(const Location& loc) {
+std::ostream& Lexer::error(const thorin::Location& loc) {
     result_ = false;
     return loc.error();
 }

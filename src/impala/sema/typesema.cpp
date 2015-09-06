@@ -13,7 +13,7 @@ namespace impala {
 
 class CheckBoundsData {
 public:
-    CheckBoundsData(const Location& l, Uni u, ArrayRef<Type> ts)
+    CheckBoundsData(const thorin::Location& l, Uni u, ArrayRef<Type> ts)
         : loc(l), unifiable(u), types(ts.size())
     {
         for (size_t i = 0, e = ts.size(); i != e; ++i) {
@@ -22,7 +22,7 @@ public:
         }
     }
 
-    const Location& loc;
+    const thorin::Location& loc;
     Uni unifiable;
     std::vector<Type> types;
 };
@@ -48,7 +48,7 @@ public:
         }
     }
 
-    thorin::u8 char_value(const Location& loc, const char*& p);
+    thorin::u8 char_value(const thorin::Location& loc, const char*& p);
 
     // error handling
 
@@ -71,11 +71,11 @@ public:
         return type_bool();
     }
 
-    TraitApp instantiate(const Location& loc, TraitAbs trait, Type self, ArrayRef<const ASTType*> args);
-    Type instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args);
+    TraitApp instantiate(const thorin::Location& loc, TraitAbs trait, Type self, ArrayRef<const ASTType*> args);
+    Type instantiate(const thorin::Location& loc, Type type, ArrayRef<const ASTType*> args);
     Type check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, TypeExpectation expected);
 
-    void stash_bound_check(const Location& loc, Uni unifiable, ArrayRef<Type> types) {
+    void stash_bound_check(const thorin::Location& loc, Uni unifiable, ArrayRef<Type> types) {
         CheckBoundsData cbs(loc, unifiable, types);
         check_bounds_stash_.push_back(cbs);
     }
@@ -86,7 +86,7 @@ public:
         check_bounds_stash_.clear();
     }
 
-    bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
+    bool check_bounds(const thorin::Location& loc, Uni unifiable, ArrayRef<Type> types);
 
     // check wrappers
 
@@ -209,7 +209,7 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, TypeExpectation ex
     return expected.type();
 }
 
-TraitApp TypeSema::instantiate(const Location& loc, TraitAbs trait_abs, Type self, ArrayRef<const ASTType*> args) {
+TraitApp TypeSema::instantiate(const thorin::Location& loc, TraitAbs trait_abs, Type self, ArrayRef<const ASTType*> args) {
     if ((args.size()+1) == trait_abs->num_type_vars()) {
         std::vector<Type> type_args;
         type_args.push_back(self);
@@ -223,7 +223,7 @@ TraitApp TypeSema::instantiate(const Location& loc, TraitAbs trait_abs, Type sel
     return trait_app_error();
 }
 
-Type TypeSema::instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args) {
+Type TypeSema::instantiate(const thorin::Location& loc, Type type, ArrayRef<const ASTType*> args) {
     if (args.size() == type->num_type_vars()) {
         std::vector<Type> type_args;
         for (auto t : args)
@@ -236,7 +236,7 @@ Type TypeSema::instantiate(const Location& loc, Type type, ArrayRef<const ASTTyp
     return type_error();
 }
 
-bool TypeSema::check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> type_args) {
+bool TypeSema::check_bounds(const thorin::Location& loc, Uni unifiable, ArrayRef<Type> type_args) {
     SpecializeMap map = specialize_map(unifiable, type_args);
     assert(map.size() == type_args.size());
     bool result = true;
@@ -615,7 +615,7 @@ Type LiteralExpr::check(TypeSema& sema, TypeExpectation expected) const {
     return sema.type(literal2type());
 }
 
-thorin::u8 TypeSema::char_value(const Location& loc, const char*& p) {
+thorin::u8 TypeSema::char_value(const thorin::Location& loc, const char*& p) {
     thorin::u8 value = 0;
     if (*p++ == '\\') {
         switch (*p++) {
@@ -681,7 +681,7 @@ Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
     FnType fn_type;
     if (FnType exp_fn = expected.type().isa<FnType>()) {
         if (!is_continuation() && exp_fn->num_args() == num_params()+1) { // add return param to infer type
-            const Location& loc = body()->pos1();
+            const thorin::Location& loc = body()->pos1();
             const_cast<FnExpr*>(this)->params_.push_back(Param::create(ret_var_handle_, new Identifier("return", body()->pos1()), loc, nullptr));
         } else if (exp_fn->num_args() != num_params())
             sema.error(this) << "expected function with " << exp_fn->num_args() << " parameters, but found lambda expression with " << num_params() << " parameters\n";

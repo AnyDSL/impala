@@ -3,7 +3,8 @@
 
 #include <istream>
 
-#include "impala/location.h"
+#include "thorin/util/location.h"
+
 #include "impala/token.h"
 
 namespace impala {
@@ -15,7 +16,7 @@ public:
     Token lex(); ///< Get next \p Token in stream.
 
 private:
-    std::ostream& error(const Location& loc);
+    std::ostream& error(const thorin::Location& loc);
     bool lex_identifier(std::string&);
     Token lex_suffix(std::string&, bool floating);
     Token literal_error(std::string&, bool floating);
@@ -41,8 +42,8 @@ private:
     bool accept(std::string& str, char c) { return accept(str, (int) c); }
 
     std::istream& stream_;
-    Position pos_;
-    Location loc_;
+    thorin::Position pos_;
+    thorin::Location loc_;
     bool result_;
 };
 
