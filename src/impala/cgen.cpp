@@ -230,13 +230,15 @@ public:
 
     void add_dependencies() {
         // Add all the structures references in the structure fields
-        size_t struct_count = 0;
+        std::vector<const StructDecl*> exports;
         do {
-            struct_count = export_structs.size();
-            for (auto st : export_structs) {
+            exports.resize(export_structs.size());
+            std::copy(export_structs.begin(), export_structs.end(), exports.begin());
+
+            for (auto st : exports) {
                 process_struct_decl(st);
             }
-        } while (struct_count != export_structs.size());
+        } while (exports.size() != export_structs.size());
     }
 
     bool generate_structs(std::ostream& o) {

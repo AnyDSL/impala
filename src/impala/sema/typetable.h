@@ -15,7 +15,9 @@ public:
 
 #define IMPALA_TYPE(itype, atype) PrimType type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
-    BorrowedPtrType     borrowd_ptr_type(Type referenced_type) { return join(new BorrowedPtrTypeNode(*this, referenced_type)); }
+    BorrowedPtrType     borrowd_ptr_type(Type referenced_type, int addr_space = 0) {
+        return join(new BorrowedPtrTypeNode(*this, referenced_type, addr_space));
+    }
     TraitApp            trait_app(TraitAbs trait, ArrayRef<Type> args) { return join(new TraitAppNode(trait, args)); }
     TraitApp            trait_app_error() { return trait_app_error_; }
     DefiniteArrayType   definite_array_type(Type elem_type, uint64_t dim) { 
@@ -32,7 +34,9 @@ public:
         return join(new SimdTypeNode(*this, elem_type, size));
     }
     NoRetType           type_noret() { return type_noret_; }
-    OwnedPtrType        owned_ptr_type(Type referenced_type) { return join(new OwnedPtrTypeNode(*this, referenced_type)); }
+    OwnedPtrType        owned_ptr_type(Type referenced_type, int addr_space = 0) {
+        return join(new OwnedPtrTypeNode(*this, referenced_type, addr_space));
+    }
     PrimType            type(PrimTypeKind kind);
     StructAbsType       struct_abs_type(const StructDecl* struct_decl) { return join(new StructAbsTypeNode(*this, struct_decl)); }
     StructAppType       struct_app_type(StructAbsType struct_abs, ArrayRef<Type> args) { 
