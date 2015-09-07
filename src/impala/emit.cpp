@@ -64,7 +64,7 @@ public:
         auto def = expr->remit(*this);
         if (expr->needs_cast())
             def = world().convert(convert(expr->type()), def);
-        return  def;
+        return def;
     }
     void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
@@ -189,7 +189,7 @@ thorin::Type TraitAppNode::convert(CodeGen& cg) const {
 }
 
 thorin::Type ImplNode::convert(CodeGen&) const { THORIN_UNREACHABLE; }
-thorin::Type PtrTypeNode::convert(CodeGen& cg) const { return cg.world().ptr_type(cg.convert(referenced_type())); }
+thorin::Type PtrTypeNode::convert(CodeGen& cg) const { return cg.world().ptr_type(cg.convert(referenced_type()), 1, -1, thorin::AddressSpace(addr_space())); }
 thorin::Type DefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().definite_array_type(cg.convert(elem_type()), dim()); }
 thorin::Type IndefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().indefinite_array_type(cg.convert(elem_type())); }
 
