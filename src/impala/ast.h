@@ -268,6 +268,7 @@ public:
     const ASTType* referenced_type() const { return referenced_type_; }
     bool is_owned() const { return kind_ == '~'; }
     bool is_borrowed() const { return kind_ == '&'; }
+    int addr_space() const { return addr_space_; }
     virtual std::ostream& print(Printer&) const override;
 
 private:
@@ -275,6 +276,7 @@ private:
     virtual Type check(TypeSema&) const override;
 
     char kind_;
+    int addr_space_;
     AutoPtr<const ASTType> referenced_type_;
 
     friend class Parser;
