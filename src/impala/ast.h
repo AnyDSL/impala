@@ -547,8 +547,8 @@ public:
     std::ostream& print_params(Printer& p, bool returning) const;
     void fn_check(NameSema&) const;
     void check_body(TypeSema&, FnType) const;
-    thorin::Lambda* emit_head(CodeGen&) const;
-    void emit_body(CodeGen&) const;
+    thorin::Lambda* emit_head(CodeGen&, const thorin::Location&) const;
+    void emit_body(CodeGen&, const thorin::Location& loc) const;
 
     bool is_continuation() const { return cont_; }
 
