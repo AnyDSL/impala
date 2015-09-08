@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "thorin/analyses/cfg.h"
+#include "thorin/analyses/dfg.h"
 #include "thorin/analyses/domtree.h"
 #include "thorin/analyses/looptree.h"
 #include "thorin/analyses/scope.h"
@@ -11,6 +12,7 @@
 #include "thorin/transform/import.h"
 #include "thorin/transform/vectorize.h"
 #include "thorin/transform/partial_evaluation.h"
+#include "thorin/be/graphs.h"
 #include "thorin/be/thorin.h"
 #include "thorin/be/llvm/llvm.h"
 #include "thorin/be/ycomp.h"
@@ -47,7 +49,8 @@ int main(int argc, char** argv) {
              emit_domtree, emit_postdomtree, emit_looptree, emit_ycomp,
              emit_ycomp_cfg, fancy,
              opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3,
-             nocleanup, nossa;
+             nocleanup, nossa, tobias_ycomp;
+	YCompCommandLine yComp;
 
         int vectorlength = 0;
         auto cmd_parser = ArgParser()
@@ -74,10 +77,12 @@ int main(int argc, char** argv) {
             .add_option<bool>("emit-thorin",        "emit textual THORIN representation of impala program", emit_thorin, false)
             .add_option<bool>("emit-ycomp",         "emit ycomp-compatible graph representation of impala program", emit_ycomp, false)
             .add_option<bool>("emit-ycomp-cfg",     "emit ycomp-compatible control-flow graph representation of impala program", emit_ycomp_cfg, false)
+            .add_option<bool>("tobias",             "ycomp_test", tobias_ycomp, false)
             .add_option<bool>("f",                  "use fancy output: impala's AST dump uses only parentheses where necessary", fancy, false)
             .add_option<bool>("nocleanup",          "no clean-up phase", nocleanup, false)
             .add_option<bool>("nossa",              "use slots + load/store instead of SSA construction", nossa, false)
-            .add_option< int>("vectorize",          "run vectorizer on main with given vector length (experimental), arg=<vector length>", vectorlength, false);
+            .add_option< int>("vectorize",          "run vectorizer on main with given vector length (experimental), arg=<vector length>", vectorlength, false)
+            .add_option<YCompCommandLine>("ycomp",  "print ycomp graphs to files", yComp, YCompCommandLine());
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
@@ -209,6 +214,24 @@ int main(int argc, char** argv) {
             if (emit_llvm)        thorin::emit_llvm(init.world, opt);
             if (emit_ycomp)       thorin::emit_ycomp(init.world, true);
             if (emit_ycomp_cfg)   thorin::emit_ycomp_cfg(init.world);
+            
+            yComp.print(init.world);
+	    /*if (true) {
+                std::cout << "Printing DomTree:" << std::endl;
+                DomTree::emit_world(init.world);
+                std::cout << "Printing LoopTree: (true)" << std::endl;
+                LoopTree<true>::emit_world(init.world);
+                std::cout << "Printing LoopTree: (false)" << std::endl;
+                LoopTree<false>::emit_world(init.world);
+                std::cout << "Printing CFG: (true)" << std::endl;
+                CFG<true>::emit_world(init.world);
+                std::cout << "Printing CFG: (false)" << std::endl;
+                CFG<false>::emit_world(init.world);
+                std::cout << "Printing DFG: (true)" << std::endl;
+                DFGBase<true>::emit_world(init.world);
+                std::cout << "Printing DFG: (false)" << std::endl;
+                DFGBase<false>::emit_world(init.world);
+            }*/
         } else
             return EXIT_FAILURE;
 

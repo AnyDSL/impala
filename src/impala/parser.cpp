@@ -163,6 +163,7 @@ public:
     const Identifier* try_id(const std::string& what);
     Visibility parse_visibility();
     u64 parse_integer(const char* what);
+    int parse_addr_space();
 
     // paths
     const Path* parse_path();
@@ -352,6 +353,16 @@ u64 Parser::parse_integer(const char* what) {
     }
     lex();
     return dim;
+}
+
+int Parser::parse_addr_space() {
+    if (la(0) == Token::L_BRACKET && la(1) == Token::LIT_i32) {
+        eat(Token::L_BRACKET);
+        int addr_space = parse_integer("address space");
+        expect(Token::R_BRACKET, "address space annotation");
+        return addr_space;
+    }
+    return 0;
 }
 
 /*
@@ -760,6 +771,7 @@ const PtrASTType* Parser::parse_ptr_type() {
         auto inner = new PtrASTType();
         inner->kind_ = '&';
         lex();
+        inner->addr_space_ = parse_addr_space();
         inner->referenced_type_ = parse_type();
         auto outer = new PtrASTType();
         outer->kind_ = '&';
@@ -770,6 +782,7 @@ const PtrASTType* Parser::parse_ptr_type() {
     }
     auto ptr_type = loc(new PtrASTType());
     ptr_type->kind_ = lex().symbol().str()[0];
+    ptr_type->addr_space_ = parse_addr_space();
     ptr_type->referenced_type_ = parse_type();
     return ptr_type;
 }
