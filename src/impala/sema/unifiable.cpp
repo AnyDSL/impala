@@ -302,7 +302,8 @@ bool SimdTypeNode::equal(const Unifiable* other) const {
  */
 
 bool StructAppTypeNode::is_subtype(const TypeNode* other) const { return this == other; }
-bool TypeVarNode::is_subtype(const TypeNode* other) const { return this->equal(other); }
+bool TypeVarNode::is_subtype(const TypeNode* other) const { return equal(other); }
+bool PtrTypeNode::is_subtype(const TypeNode* other) const { return equal(other); }
 bool OwnedPtrTypeNode::is_subtype(const TypeNode* other) const {
     return other->isa<PtrTypeNode>() &&
            addr_space() == other->as<PtrTypeNode>()->addr_space() &&
