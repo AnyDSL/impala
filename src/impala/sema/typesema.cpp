@@ -718,6 +718,16 @@ Type PathExpr::check(TypeSema& sema, TypeExpectation expected) const {
     return sema.type_error();
 }
 
+static int take_addr_space(TypeSema& sema, const PrefixExpr* prefix) {
+    if (prefix->kind() == PrefixExpr::MUL) {
+        auto type = sema.check(prefix->rhs());
+        if (auto ptr = type.isa<PtrType>()) {
+            return ptr->addr_space();
+        }
+    }
+    return 0;
+}
+
 Type PrefixExpr::check(TypeSema& sema, TypeExpectation expected) const {
     switch (kind()) {
         case AND: {
@@ -732,7 +742,20 @@ Type PrefixExpr::check(TypeSema& sema, TypeExpectation expected) const {
                 rtype.clear();
                 rtype = TypeSema::turn_cast_inside_out(rhs());
             }
-            return sema.borrowd_ptr_type(rtype);
+
+            // Keep the address space of the original pointer, if possible
+            int addr_space = 0;
+            if (auto map = rhs()->isa<MapExpr>()) {
+                if (auto prefix = map->lhs()->isa<PrefixExpr>())
+                    addr_space = take_addr_space(sema, prefix);
+            } else if (auto field = rhs()->isa<FieldExpr>()) {
+                if (auto prefix = field->lhs()->isa<PrefixExpr>())
+                    addr_space = take_addr_space(sema, prefix);
+            } else if (auto prefix = rhs()->isa<PrefixExpr>()) {
+                addr_space = take_addr_space(sema, prefix);
+            }
+
+            return sema.borrowd_ptr_type(rtype, addr_space);
         }
         case TILDE:
             if (auto pty = expected.type().isa<PtrType>()) {
