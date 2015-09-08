@@ -575,7 +575,6 @@ public:
     {}
 
     virtual std::ostream& print(Printer&) const override;
-    virtual bool is_subtype(const TypeNode*) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -588,6 +587,7 @@ public:
     {}
 
     virtual std::ostream& print(Printer&) const override;
+    virtual bool is_subtype(const TypeNode*) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
