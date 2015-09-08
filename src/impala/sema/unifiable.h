@@ -560,6 +560,7 @@ public:
     int addr_space() const { return addr_space_; }
 
     virtual bool equal(const Unifiable*) const override;
+    virtual bool is_subtype(const TypeNode*) const override;
 
 private:
     virtual thorin::Type convert(CodeGen&) const override;

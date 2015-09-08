@@ -71,8 +71,17 @@ std::ostream& TraitAppNode::print(Printer& p) const {
     return p.stream();
 }
 
-std::ostream& OwnedPtrTypeNode::print(Printer& p)    const { p.stream() << '~'; return referenced_type()->print(p); }
-std::ostream& BorrowedPtrTypeNode::print(Printer& p) const { p.stream() << '&'; return referenced_type()->print(p); }
+template <typename T>
+std::ostream& print_ptr_type(Printer& p, char prefix, int addr_space, T ref_type) {
+    p.stream() << prefix;
+    if (addr_space != 0) {
+        p.stream() << '[' << addr_space << ']';
+    }
+    return ref_type->print(p);
+}
+
+std::ostream& OwnedPtrTypeNode::print(Printer& p)    const { return print_ptr_type(p, '~', addr_space(), referenced_type()); }
+std::ostream& BorrowedPtrTypeNode::print(Printer& p) const { return print_ptr_type(p, '&', addr_space(), referenced_type()); }
 
 std::ostream& DefiniteArrayTypeNode::print(Printer& p) const {
     p.stream() << '[';
@@ -126,8 +135,7 @@ std::ostream& ImplNode::print(Printer& p) const {
 std::ostream& ErrorASTType::print(Printer& p) const { return p.stream() << "<error>"; }
 
 std::ostream& PtrASTType::print(Printer& p) const {
-    p.stream() << kind();
-    return referenced_type()->print(p);
+    return print_ptr_type(p, kind(), addr_space(), referenced_type());
 }
 
 std::ostream& DefiniteArrayASTType::print(Printer& p) const {
@@ -237,7 +245,7 @@ std::ostream& Fn::print_params(Printer& p, bool returning) const {
 }
 
 std::ostream& ValueDecl::print(Printer& p) const {
-    p.stream() << (is_mut() ? "mut " : "" );;
+    p.stream() << (is_mut() ? "mut " : "" );
     if (!is_anonymous()) {
         p.stream() << symbol();
         if (!type().empty()) {

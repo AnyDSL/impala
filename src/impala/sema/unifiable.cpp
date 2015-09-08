@@ -302,7 +302,8 @@ bool SimdTypeNode::equal(const Unifiable* other) const {
  */
 
 bool StructAppTypeNode::is_subtype(const TypeNode* other) const { return this == other; }
-bool TypeVarNode::is_subtype(const TypeNode* other) const { return this->equal(other); }
+bool TypeVarNode::is_subtype(const TypeNode* other) const { return equal(other); }
+bool PtrTypeNode::is_subtype(const TypeNode* other) const { return equal(other); }
 bool OwnedPtrTypeNode::is_subtype(const TypeNode* other) const {
     return other->isa<PtrTypeNode>() &&
            addr_space() == other->as<PtrTypeNode>()->addr_space() &&
@@ -447,7 +448,7 @@ TraitApp TraitAbsNode::instantiate(ArrayRef<Type> args) const {
 }
 
 Type BorrowedPtrTypeNode::vinstantiate(SpecializeMap& map) const {
-    return map[this] = *typetable().borrowd_ptr_type(referenced_type()->specialize(map));
+    return map[this] = *typetable().borrowd_ptr_type(referenced_type()->specialize(map), addr_space());
 }
 
 Type DefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const {
@@ -467,7 +468,7 @@ Type IndefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const {
 }
 
 Type OwnedPtrTypeNode::vinstantiate(SpecializeMap& map) const {
-    return map[this] = *typetable().owned_ptr_type(referenced_type()->specialize(map));
+    return map[this] = *typetable().owned_ptr_type(referenced_type()->specialize(map), addr_space());
 }
 
 Type StructAppTypeNode::vinstantiate(SpecializeMap& map) const {
