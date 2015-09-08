@@ -764,9 +764,17 @@ Type PrefixExpr::check(TypeSema& sema, TypeExpectation expected) const {
                 return sema.owned_ptr_type(sema.check(rhs()));
             }
         case MUL: {
-            Type exp_ty = sema.borrowd_ptr_type(expected.type()); // this works because owned ptr is a subtype of borrowed ptr
-            if (auto ptr = sema.check(rhs(), TypeExpectation(expected, exp_ty)).isa<PtrType>())
+            auto type = sema.check(rhs());
+            // 'type' must be a pointer type (with any address space)
+            // and must reference the expected type.
+            if (auto ptr = type.isa<PtrType>()) {
+                sema.expect_type(rhs(), ptr->referenced_type(), expected.type());
                 return ptr->referenced_type();
+            } else {
+                auto ptr_type = sema.borrowd_ptr_type(expected.type());
+                sema.expect_type(rhs(), type, TypeExpectation(ptr_type));
+                return sema.type_error();
+            }
         }
         case INC:
         case DEC: {
