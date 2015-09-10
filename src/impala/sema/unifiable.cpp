@@ -303,11 +303,13 @@ bool SimdTypeNode::equal(const Unifiable* other) const {
 
 bool StructAppTypeNode::is_subtype(const TypeNode* other) const { return this == other; }
 bool TypeVarNode::is_subtype(const TypeNode* other) const { return equal(other); }
-bool PtrTypeNode::is_subtype(const TypeNode* other) const { return equal(other); }
-bool OwnedPtrTypeNode::is_subtype(const TypeNode* other) const {
+bool PtrTypeNode::is_subtype(const TypeNode* other) const {
     return other->isa<PtrTypeNode>() &&
            addr_space() == other->as<PtrTypeNode>()->addr_space() &&
            referenced_type()->is_subtype(*other->as<PtrTypeNode>()->referenced_type());
+}
+bool BorrowedPtrTypeNode::is_subtype(const TypeNode* other) const {
+    return PtrTypeNode::is_subtype(other) && !other->isa<OwnedPtrTypeNode>();
 }
 bool DefiniteArrayTypeNode::is_subtype(const TypeNode* other) const {
     bool dim_eq = true;
