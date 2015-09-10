@@ -552,24 +552,29 @@ public: // TODO make private
 
 class PtrTypeNode : public KnownTypeNode {
 public:
-    PtrTypeNode(TypeTable& typetable, Kind kind, Type referenced_type)
-        : KnownTypeNode(typetable, kind, { referenced_type })
+    PtrTypeNode(TypeTable& typetable, Kind kind, Type referenced_type, int addr_space)
+        : KnownTypeNode(typetable, kind, { referenced_type }), addr_space_(addr_space)
     {}
 
     Type referenced_type() const { return arg(0); }
+    int addr_space() const { return addr_space_; }
+
+    virtual bool equal(const Unifiable*) const override;
+    virtual bool is_subtype(const TypeNode*) const override;
 
 private:
     virtual thorin::Type convert(CodeGen&) const override;
+
+    int addr_space_;
 };
 
 class OwnedPtrTypeNode : public PtrTypeNode {
 public:
-    OwnedPtrTypeNode(TypeTable& typetable, Type referenced_type)
-        : PtrTypeNode(typetable, Kind_owned_ptr, referenced_type)
+    OwnedPtrTypeNode(TypeTable& typetable, Type referenced_type, int addr_space)
+        : PtrTypeNode(typetable, Kind_owned_ptr, referenced_type, addr_space)
     {}
 
     virtual std::ostream& print(Printer&) const override;
-    virtual bool is_subtype(const TypeNode*) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -577,11 +582,12 @@ private:
 
 class BorrowedPtrTypeNode : public PtrTypeNode {
 public:
-    BorrowedPtrTypeNode(TypeTable& typetable, Type referenced_type)
-        : PtrTypeNode(typetable, Kind_borrowed_ptr, referenced_type)
+    BorrowedPtrTypeNode(TypeTable& typetable, Type referenced_type, int addr_space)
+        : PtrTypeNode(typetable, Kind_borrowed_ptr, referenced_type, addr_space)
     {}
 
     virtual std::ostream& print(Printer&) const override;
+    virtual bool is_subtype(const TypeNode*) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
