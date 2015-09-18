@@ -366,8 +366,8 @@ public:
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual Type vinstantiate(SpecializeMap&) const;
-    virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
+    virtual Type vinstantiate(SpecializeMap&) const override;
+    virtual thorin::Type convert(CodeGen&) const override { assert(false); return thorin::Type(); }
 
     friend class TypeTable;
 };
@@ -382,7 +382,7 @@ public:
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual Type vinstantiate(SpecializeMap&) const;
+    virtual Type vinstantiate(SpecializeMap&) const override;
     virtual thorin::Type convert(CodeGen&) const override;
 
     friend class TypeTable;
@@ -399,8 +399,8 @@ public:
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual Type vinstantiate(SpecializeMap&) const;
-    virtual thorin::Type convert(CodeGen&) const;
+    virtual Type vinstantiate(SpecializeMap&) const override;
+    virtual thorin::Type convert(CodeGen&) const override;
 
     friend class TypeTable;
 };
@@ -416,8 +416,8 @@ public:
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual Type vinstantiate(SpecializeMap&) const;
-    virtual thorin::Type convert(CodeGen&) const;
+    virtual Type vinstantiate(SpecializeMap&) const override;
+    virtual thorin::Type convert(CodeGen&) const override;
 
     friend class TypeTable;
 };
@@ -432,8 +432,8 @@ public:
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual Type vinstantiate(SpecializeMap&) const;
-    virtual thorin::Type convert(CodeGen&) const;
+    virtual Type vinstantiate(SpecializeMap&) const override;
+    virtual thorin::Type convert(CodeGen&) const override;
 
     friend class TypeTable;
 };
@@ -450,7 +450,7 @@ public:
     virtual size_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
-    virtual bool is_subtype(const TypeNode*) const { THORIN_UNREACHABLE; }
+    virtual bool is_subtype(const TypeNode*) const override { THORIN_UNREACHABLE; }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override { THORIN_UNREACHABLE; }
@@ -475,8 +475,8 @@ public:
     virtual bool is_subtype(const TypeNode* other) const override;
 
 private:
-    virtual Type vinstantiate(SpecializeMap&) const;
-    virtual thorin::Type convert(CodeGen&) const;
+    virtual Type vinstantiate(SpecializeMap&) const override;
+    virtual thorin::Type convert(CodeGen&) const override;
 
     StructAbsType struct_abs_type_;
     mutable Array<Type> elem_cache_;
@@ -494,7 +494,7 @@ public:
     Type type() const { return arg(0); }
     virtual Type instantiate(ArrayRef<Type>) const override;
     virtual std::ostream& print(Printer&) const override;
-    virtual bool is_subtype(const TypeNode*) const { THORIN_UNREACHABLE; }
+    virtual bool is_subtype(const TypeNode*) const override { THORIN_UNREACHABLE; }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override { THORIN_UNREACHABLE; }
@@ -531,8 +531,8 @@ public:
     virtual bool is_subtype(const TypeNode*) const override;
 
 private:
-    virtual Type vinstantiate(SpecializeMap&) const;
-    virtual thorin::Type convert(CodeGen&) const { assert(false); return thorin::Type(); }
+    virtual Type vinstantiate(SpecializeMap&) const override;
+    virtual thorin::Type convert(CodeGen&) const override { assert(false); return thorin::Type(); }
 
     Symbol name_;
     mutable std::vector<TraitApp> bounds_; ///< All traits that restrict the instantiation of this variable.
@@ -749,8 +749,8 @@ public:
     Type type() const { return arg(0); }
     Impl specialize(SpecializeMap& map) const;
 
-    virtual size_t hash() const;
-    virtual bool equal(const Unifiable*) const { THORIN_UNREACHABLE; }
+    virtual size_t hash() const override;
+    virtual bool equal(const Unifiable*) const override { THORIN_UNREACHABLE; }
     virtual std::ostream& print(Printer&) const override;
 
 private:
