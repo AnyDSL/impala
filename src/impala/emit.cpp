@@ -31,9 +31,9 @@ public:
         return Def();
     }
 
-    void emit_jump(Def val, JumpTarget& x) {
+    void emit_jump(bool val, JumpTarget& x) {
         if (is_reachable()) {
-            cur_bb->set_value(1, val);
+            cur_bb->set_value(1, world().literal(val, Location()));
             jump(x);
         }
     }
@@ -485,13 +485,13 @@ Def InfixExpr::remit(CodeGen& cg) const {
             JumpTarget t("and_true"), f("and_false"), x("and_exit");
             cg.emit_branch(lhs(), t, f);
             if (cg.enter(t)) cg.emit_jump(rhs(), x);
-            if (cg.enter(f)) cg.emit_jump(cg.world().literal(false, loc()), x);
+            if (cg.enter(f)) cg.emit_jump(false, x);
             return cg.converge(this, x);
         }
         case OROR: {
             JumpTarget t("or_true"), f("or_false"), x("or_exit");
             cg.emit_branch(lhs(), t, f);
-            if (cg.enter(t)) cg.emit_jump(cg.world().literal(true, loc()), x);
+            if (cg.enter(t)) cg.emit_jump(true, x);
             if (cg.enter(f)) cg.emit_jump(rhs(), x);
             return cg.converge(this, x);
         }
