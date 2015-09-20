@@ -118,7 +118,7 @@ private:
         }
 
         // C void type is represented as an empty tuple (other tuples are not supported for interface generation)
-        if (auto tuple_type = type.isa<TupleType>()) {
+        if (type.isa<TupleType>()) {
             ctype_prefix = "void";
             ctype_suffix = "";
             return true;
