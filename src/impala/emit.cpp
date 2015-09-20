@@ -218,11 +218,11 @@ Var LocalDecl::emit(CodeGen& cg, Def init) const {
     return var_;
 }
 
-Lambda* Fn::emit_head(CodeGen& cg, const thorin::Location& loc) const {
+Lambda* Fn::emit_head(CodeGen& cg, const Location& loc) const {
     return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), loc, fn_symbol().remove_quotation());
 }
 
-void Fn::emit_body(CodeGen& cg, const thorin::Location& loc) const {
+void Fn::emit_body(CodeGen& cg, const Location& loc) const {
     // setup function nest
     lambda()->set_parent(cg.cur_bb);
     THORIN_PUSH(cg.cur_fn, this);

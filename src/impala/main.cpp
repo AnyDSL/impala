@@ -147,14 +147,14 @@ int main(int argc, char** argv) {
         for (auto infile : infiles) {
             std::string filename = infile.c_str();
             ifstream file(filename);
-            prg->set_loc(thorin::Location(filename, 1, 1, 1, 1));
+            prg->set_loc(Location(filename, 1, 1, 1, 1));
             result &= impala::parse(prg, file, filename);
         }
 
         if (!prg->items().empty())
-            prg->set_loc(thorin::Location(prg->items().front()->pos1(), prg->items().back()->pos2()));
+            prg->set_loc(Location(prg->items().front()->pos1(), prg->items().back()->pos2()));
         else
-            prg->set_loc(thorin::Location(infiles.front(), 1, 1, 1, 1));
+            prg->set_loc(Location(infiles.front(), 1, 1, 1, 1));
 
         if (emit_ast)
             impala::dump(prg, fancy);
