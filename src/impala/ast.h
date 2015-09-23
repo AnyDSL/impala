@@ -8,9 +8,9 @@
 #include "thorin/util/assert.h"
 #include "thorin/util/autoptr.h"
 #include "thorin/util/cast.h"
+#include "thorin/util/location.h"
 #include "thorin/util/types.h"
 
-#include "impala/location.h"
 #include "impala/symbol.h"
 #include "impala/token.h"
 #include "impala/sema/unifiable.h"
@@ -149,7 +149,7 @@ private:
 
 //------------------------------------------------------------------------------
 
-class ASTNode : public impala::HasLocation, public thorin::MagicCast<ASTNode> {
+class ASTNode : public thorin::HasLocation, public thorin::MagicCast<ASTNode> {
 public:
 #ifndef NDEBUG
     virtual ~ASTNode() { assert(loc_.is_set()); }
@@ -163,7 +163,7 @@ public:
 class Identifier : public ASTNode {
 public:
     Identifier() {}
-    Identifier(const char* str, const Location& loc)
+    Identifier(const char* str, const thorin::Location& loc)
         : symbol_(str)
     {
         loc_ = loc;
@@ -234,7 +234,7 @@ private:
 
 class ErrorASTType : public ASTType {
 public:
-    ErrorASTType(const Location& loc) { loc_ = loc; }
+    ErrorASTType(const thorin::Location& loc) { loc_ = loc; }
 
     virtual std::ostream& print(Printer&) const override;
 
@@ -358,7 +358,7 @@ private:
 class FnASTType : public TypeParamList, public CompoundASTType {
 public:
     FnASTType() {}
-    FnASTType(const Location& loc) {
+    FnASTType(const thorin::Location& loc) {
         set_loc(loc);
     }
     const FnASTType* ret_fn_type() const;
@@ -516,11 +516,11 @@ private:
 
 class SelfParam : public TypeParam {
 public:
-    SelfParam(const Location&) {}
-    void set_loc(const Location& loc) { loc_ = loc; set_identifier(loc); }
+    SelfParam(const thorin::Location&) {}
+    void set_loc(const thorin::Location& loc) { loc_ = loc; set_identifier(loc); }
 
 private:
-    void set_identifier(const Location& loc) { identifier_ = new Identifier("Self", loc); }
+    void set_identifier(const thorin::Location& loc) { identifier_ = new Identifier("Self", loc); }
 };
 
 class Param : public LocalDecl {
@@ -529,7 +529,7 @@ public:
         : LocalDecl(handle)
     {}
 
-    static const Param* create(size_t var_handle, const Identifier*, const Location&, const ASTType* fn_type);
+    static const Param* create(size_t var_handle, const Identifier*, const thorin::Location&, const ASTType* fn_type);
 
     friend class Fn;
     friend class Parser;
@@ -547,8 +547,8 @@ public:
     std::ostream& print_params(Printer& p, bool returning) const;
     void fn_check(NameSema&) const;
     void check_body(TypeSema&, FnType) const;
-    thorin::Lambda* emit_head(CodeGen&) const;
-    void emit_body(CodeGen&) const;
+    thorin::Lambda* emit_head(CodeGen&, const thorin::Location&) const;
+    void emit_body(CodeGen&, const thorin::Location& loc) const;
 
     bool is_continuation() const { return cont_; }
 
@@ -772,7 +772,7 @@ private:
 class TraitDecl : public NamedItem, public Decl, public TypeParamList {
 public:
     TraitDecl()
-        : self_param_(Location(loc().pos1(), loc().pos1()))
+        : self_param_(thorin::Location(loc().pos1(), loc().pos1()))
     {}
 
     const AutoVector<const ASTTypeApp*>& super_traits() const { return super_traits_; }
@@ -904,7 +904,7 @@ protected:
 
 class EmptyExpr : public Expr {
 public:
-    EmptyExpr(const Location& loc) { loc_ = loc; }
+    EmptyExpr(const thorin::Location& loc) { loc_ = loc; }
 
     virtual void check(NameSema&) const override;
 
@@ -922,7 +922,7 @@ public:
         LIT_bool,
     };
 
-    LiteralExpr(const Location& loc, Kind kind, thorin::Box box)
+    LiteralExpr(const thorin::Location& loc, Kind kind, thorin::Box box)
         : kind_(kind)
         , box_(box)
     {
@@ -946,7 +946,7 @@ private:
 
 class CharExpr : public Expr {
 public:
-    CharExpr(const Location& loc, Symbol symbol)
+    CharExpr(const thorin::Location& loc, Symbol symbol)
         : symbol_(symbol)
     {
         loc_ = loc;
@@ -1322,7 +1322,7 @@ protected:
 class BlockExpr : public BlockExprBase {
 public:
     BlockExpr() {}
-    BlockExpr(Location loc) { loc_ = loc; expr_ = new EmptyExpr(loc); }
+    BlockExpr(thorin::Location loc) { loc_ = loc; expr_ = new EmptyExpr(loc); }
 
     virtual const char* prefix() const override { return "{"; }
 
