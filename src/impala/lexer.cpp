@@ -6,6 +6,8 @@
 
 #include "impala/symbol.h"
 
+using namespace thorin;
+
 namespace impala {
 
 static inline bool sym(int c) { return std::isalpha(c) || c == '_'; }

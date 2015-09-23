@@ -14,12 +14,12 @@
 #include "thorin/be/il.h"
 #include "thorin/be/llvm/llvm.h"
 #include "thorin/util/args.h"
+#include "thorin/util/location.h"
 
 #include "impala/ast.h"
 #include "impala/cgen.h"
 #include "impala/dump.h"
 #include "impala/impala.h"
-#include "impala/location.h"
 
 //------------------------------------------------------------------------------
 
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
              emit_cint, emit_thorin, emit_il, emit_ast, emit_annotated, emit_llvm,
              emit_domtree, emit_postdomtree, emit_looptree,
              fancy, nocolor,
-             opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3,
+             opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
              nocleanup, nossa;
 
         int vectorlength = 0;
@@ -73,6 +73,7 @@ int main(int argc, char** argv) {
             .add_option<bool>("emit-postdomtree",   "emit dom tree", emit_postdomtree, false)
             .add_option<bool>("emit-thorin",        "emit textual THORIN representation of impala program", emit_thorin, false)
             .add_option<bool>("f",                  "use fancy output", fancy, false)
+            .add_option<bool>("g",                  "emit debug information", debug, false)
             .add_option<bool>("nc",                 "use uncolored output", nocolor, false)
             .add_option<bool>("nocleanup",          "no clean-up phase", nocleanup, false)
             .add_option<bool>("nossa",              "use slots + load/store instead of SSA construction", nossa, false)
@@ -146,14 +147,14 @@ int main(int argc, char** argv) {
         for (auto infile : infiles) {
             std::string filename = infile.c_str();
             ifstream file(filename);
-            prg->set_loc(impala::Location(filename, 1, 1, 1, 1));
+            prg->set_loc(Location(filename, 1, 1, 1, 1));
             result &= impala::parse(prg, file, filename);
         }
 
         if (!prg->items().empty())
-            prg->set_loc(impala::Location(prg->items().front()->pos1(), prg->items().back()->pos2()));
+            prg->set_loc(Location(prg->items().front()->pos1(), prg->items().back()->pos2()));
         else
-            prg->set_loc(impala::Location(infiles.front(), 1, 1, 1, 1));
+            prg->set_loc(Location(infiles.front(), 1, 1, 1, 1));
 
         if (emit_ast)
             impala::dump(prg, fancy);
@@ -206,7 +207,7 @@ int main(int argc, char** argv) {
             if (emit_domtree)       Scope::for_each(init.world, [] (const Scope& scope) { scope.domtree()->dump(); });
             if (emit_postdomtree)   Scope::for_each(init.world, [] (const Scope& scope) { scope.postdomtree()->dump(); });
             if (emit_looptree)      Scope::for_each(init.world, [] (const Scope& scope) { scope.looptree()->dump(); });
-            if (emit_llvm)          thorin::emit_llvm(init.world, opt);
+            if (emit_llvm)          thorin::emit_llvm(init.world, opt, debug);
         } else
             return EXIT_FAILURE;
 

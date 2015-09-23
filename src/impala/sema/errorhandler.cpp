@@ -2,6 +2,8 @@
 
 #include "impala/ast.h"
 
+using namespace thorin;
+
 namespace impala {
 
 std::ostream& ErrorHandler::warn(const ASTNode* n) { return n->warn(); }
