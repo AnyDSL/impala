@@ -10,7 +10,7 @@
 
 namespace impala {
 
-class Unifiable;                
+class Unifiable;
 class ASTNode;
 class Expr;
 
@@ -25,9 +25,9 @@ public:
     Prec prec;
 };
 
-/** 
+/**
  * @brief Dumps a human readable representation of the ASTNode \p n to output stream \p o.
- * 
+ *
  * @param n The \p ASTNode to dump.
  * @param fancy If set, the dumper makes minimal use of parenthesis for expressions.
  *  Otherwise, everything is put in parenthesis in order to fully debug the internal tree structure.
@@ -35,7 +35,7 @@ public:
  */
 void dump(const ASTNode* n, bool fancy = false, std::ostream& o = std::cout);
 std::ostream& operator << (std::ostream&, const ASTNode*);
-template<class T> 
+template<class T>
 std::ostream& operator << (std::ostream& o, Proxy<T> u) { Printer p(o, true); return u->print(p); }
 
 }

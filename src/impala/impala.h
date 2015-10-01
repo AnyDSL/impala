@@ -20,10 +20,10 @@ void init();
 void destroy();
 
 struct Init {
-    Init(std::string module_name) 
+    Init(std::string module_name)
         : world(module_name)
-    { 
-        init(); 
+    {
+        init();
     }
     ~Init() { destroy(); }
 

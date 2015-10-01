@@ -12,7 +12,7 @@ namespace impala {
 class Lexer {
 public:
     Lexer(std::istream& stream, const std::string& filename);
-    
+
     Token lex(); ///< Get next \p Token in stream.
 
 private:

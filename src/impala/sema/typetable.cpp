@@ -14,9 +14,9 @@ TypeTable::TypeTable()
     trait_app_error_ = unify(trait_app(trait_abs_error(), {type_error()}));
 }
 
-TypeTable::~TypeTable() { 
-    for (auto g : garbage_) 
-        delete g; 
+TypeTable::~TypeTable() {
+    for (auto g : garbage_)
+        delete g;
 }
 
 PrimType TypeTable::type(const PrimTypeKind kind) {

@@ -320,7 +320,7 @@ bool DefiniteArrayTypeNode::is_subtype(const TypeNode* other) const {
 }
 
 bool SimdTypeNode::is_subtype(const TypeNode* other) const {
-    return this->equal(other); 
+    return this->equal(other);
 }
 
 /*
