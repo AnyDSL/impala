@@ -1,5 +1,7 @@
 #include "impala/ast.h"
 
+using namespace thorin;
+
 namespace impala {
 
 //------------------------------------------------------------------------------

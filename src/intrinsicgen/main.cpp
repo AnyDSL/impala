@@ -16,7 +16,7 @@ impala::Type llvm2impala(impala::TypeTable&, llvm::Type*);
 int main() {
     impala::Init init("dummy");
     thorin::AutoPtr<impala::ModContents> prg = new impala::ModContents();
-    prg->set_loc(impala::Location("dummy", 1, 1, 1, 1));
+    prg->set_loc(thorin::Location("dummy", 1, 1, 1, 1));
     check(init, prg, false);
 
     auto& context = llvm::getGlobalContext();

@@ -7,6 +7,8 @@
 #include "impala/impala.h"
 #include "impala/sema/typetable.h"
 
+using namespace thorin;
+
 namespace impala {
 
 //------------------------------------------------------------------------------
@@ -1084,7 +1086,7 @@ Type FieldExpr::check(TypeSema& sema, TypeExpectation expected) const {
 
 Type FieldExpr::check_as_struct(TypeSema& sema, Type expected) const {
     auto ltype = sema.check(lhs());
-    if (auto ptr = ltype.isa<PtrType>()) {
+    if (ltype.isa<PtrType>()) {
         ltype.clear();
         PrefixExpr::create_deref(lhs_);
         ltype = sema.check(lhs());
@@ -1104,7 +1106,7 @@ Type FieldExpr::check_as_struct(TypeSema& sema, Type expected) const {
 
 Type MapExpr::check(TypeSema& sema, TypeExpectation expected) const {
     if (auto field_expr = lhs()->isa<FieldExpr>()) {
-        if (auto type = field_expr->check_as_struct(sema, sema.unknown_type()))
+        if (field_expr->check_as_struct(sema, sema.unknown_type()))
             return check_as_map(sema, expected);
         return check_as_method_call(sema, expected);
     }
@@ -1114,7 +1116,7 @@ Type MapExpr::check(TypeSema& sema, TypeExpectation expected) const {
 
 Type MapExpr::check_as_map(TypeSema& sema, TypeExpectation expected) const {
     auto ltype = sema.check(lhs());
-    if (auto ptr = ltype.isa<PtrType>()) {
+    if (ltype.isa<PtrType>()) {
         ltype.clear();
         PrefixExpr::create_deref(lhs_);
         ltype = sema.check(lhs());

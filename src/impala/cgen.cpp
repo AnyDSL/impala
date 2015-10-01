@@ -3,11 +3,11 @@
 #include <cassert>
 
 #include "thorin/util/hash.h"
+#include "thorin/util/location.h"
 
 #include "impala/ast.h"
 #include "impala/cgen.h"
 #include "impala/impala.h"
-#include "impala/location.h"
 
 namespace impala {
 
@@ -118,7 +118,7 @@ private:
         }
 
         // C void type is represented as an empty tuple (other tuples are not supported for interface generation)
-        if (auto tuple_type = type.isa<TupleType>()) {
+        if (type.isa<TupleType>()) {
             ctype_prefix = "void";
             ctype_suffix = "";
             return true;
@@ -253,7 +253,6 @@ public:
 
         for (auto st : export_structs)
             struct_decls.insert(std::make_pair(st, NOT_GEN));
-
         int prev_id = 0;
         do {
             compute_struct_order(struct_decls, order, struct_decls.begin()->first);

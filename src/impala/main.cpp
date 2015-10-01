@@ -17,12 +17,12 @@
 #include "thorin/be/llvm/llvm.h"
 #include "thorin/be/ycomp.h"
 #include "thorin/util/args.h"
+#include "thorin/util/location.h"
 
 #include "impala/ast.h"
 #include "impala/cgen.h"
 #include "impala/dump.h"
 #include "impala/impala.h"
-#include "impala/location.h"
 
 //------------------------------------------------------------------------------
 
@@ -48,9 +48,9 @@ int main(int argc, char** argv) {
              emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm,
              emit_domtree, emit_postdomtree, emit_looptree, emit_ycomp,
              emit_ycomp_cfg, fancy,
-             opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3,
+             opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
              nocleanup, nossa, tobias_ycomp;
-	YCompCommandLine yComp;
+        YCompCommandLine yComp;
 
         int vectorlength = 0;
         auto cmd_parser = ArgParser()
@@ -79,6 +79,7 @@ int main(int argc, char** argv) {
             .add_option<bool>("emit-ycomp-cfg",     "emit ycomp-compatible control-flow graph representation of impala program", emit_ycomp_cfg, false)
             .add_option<bool>("tobias",             "ycomp_test", tobias_ycomp, false)
             .add_option<bool>("f",                  "use fancy output: impala's AST dump uses only parentheses where necessary", fancy, false)
+            .add_option<bool>("g",                  "emit debug information", debug, false)
             .add_option<bool>("nocleanup",          "no clean-up phase", nocleanup, false)
             .add_option<bool>("nossa",              "use slots + load/store instead of SSA construction", nossa, false)
             .add_option< int>("vectorize",          "run vectorizer on main with given vector length (experimental), arg=<vector length>", vectorlength, false)
@@ -152,14 +153,14 @@ int main(int argc, char** argv) {
         for (auto infile : infiles) {
             std::string filename = infile.c_str();
             ifstream file(filename);
-            prg->set_loc(impala::Location(filename, 1, 1, 1, 1));
+            prg->set_loc(Location(filename, 1, 1, 1, 1));
             result &= impala::parse(prg, file, filename);
         }
 
         if (!prg->items().empty())
-            prg->set_loc(impala::Location(prg->items().front()->pos1(), prg->items().back()->pos2()));
+            prg->set_loc(Location(prg->items().front()->pos1(), prg->items().back()->pos2()));
         else
-            prg->set_loc(impala::Location(infiles.front(), 1, 1, 1, 1));
+            prg->set_loc(Location(infiles.front(), 1, 1, 1, 1));
 
         if (emit_ast)
             impala::dump(prg, fancy);
@@ -211,7 +212,7 @@ int main(int argc, char** argv) {
             if (emit_domtree)     Scope::for_each(init.world, [] (const Scope& scope) { scope.f_cfg().domtree().dump(); });
             if (emit_postdomtree) Scope::for_each(init.world, [] (const Scope& scope) { scope.b_cfg().domtree().dump(); });
             if (emit_looptree)    Scope::for_each(init.world, [] (const Scope& scope) { scope.f_cfg().looptree().dump(); });
-            if (emit_llvm)        thorin::emit_llvm(init.world, opt);
+            if (emit_llvm)        thorin::emit_llvm(init.world, opt, debug);
             if (emit_ycomp)       thorin::emit_ycomp(init.world, true);
             if (emit_ycomp_cfg)   thorin::emit_ycomp_cfg(init.world);
 

@@ -1,0 +1,75 @@
+------------------------------
+module 'asdf'
+
+
+main_impala_98(mem mem_99, fn(mem) return_100) extern 
+    (mem, frame) _102 = enter mem_99
+    frame _104 = extract _102, qu32 1
+    qs32* xxx_106 = slot _104
+    mem _103 = extract _102, qu32 0
+    mem _107 = store _103, xxx_106, qs32 42
+    while_head_112 _107
+
+    while_head_112(mem mem_114)
+        (mem, qs32) _116 = load mem_114, xxx_106
+        qs32 _118 = extract _116, qu32 1
+        bool _119 = lt _118, qs32 42
+        mem _117 = extract _116, qu32 0
+        fn(mem) _126 = @ _119 select while_body_120, next_123
+        _126 _117
+    
+    while_body_120(mem mem_122)
+        (mem, frame) _176 = enter mem_122
+        frame _178 = extract _176, qu32 1
+        qs32** node_id_180 = slot _178
+        mem _177 = extract _176, qu32 0
+        mem _181 = store _177, node_id_180, xxx_106
+        (mem, frame) _217 = enter _181
+        mem _218 = extract _217, qu32 0
+        (mem, qs32*) _225 = load _218, node_id_180
+        qs32* _227 = extract _225, qu32 1
+        mem _226 = extract _225, qu32 0
+        (mem, qs32) _229 = load _226, _227
+        qs32 _231 = extract _229, qu32 1
+        bool _232 = lt qs32 42, _231
+        mem _230 = extract _229, qu32 0
+        fn(mem) _275 = @ _232 select if_then_271, if_else_273
+        _275 _230
+    
+    if_then_271(mem mem_272)
+        next_277 mem_272
+    
+    if_else_273(mem mem_274)
+        next_277 mem_274
+    
+    next_277(mem mem_278)
+        (mem, qs32*) _280 = load mem_278, node_id_180
+        qs32* _282 = extract _280, qu32 1
+        mem _281 = extract _280, qu32 0
+        mem _283 = store _281, _282, qs32 42
+        while_head_112 _283
+    
+    next_123(mem mem_125)
+        return_100 mem_125
+    
+module 'asdf'
+
+
+main_impala_98(mem mem_99, fn(mem) return_100) extern 
+    (mem, frame) _102 = enter mem_99
+    mem _103 = extract _102, qu32 0
+    while_head_345 _103
+
+    while_head_345(mem mem_346)
+        next_123 mem_346
+    
+    next_123(mem mem_125)
+        return_100 mem_125
+    
+------------------------------
+module 'asdf'
+
+
+main_impala_98(mem mem_99, fn(mem) return_100) extern 
+    return_100 mem_99
+
