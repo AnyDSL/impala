@@ -34,12 +34,12 @@ typedef vector<string> Names;
 
 //------------------------------------------------------------------------------
 
-ostream& open(ofstream& stream, const string& name) {
+ostream* open(ofstream& stream, const string& name) {
     if (name == "-")
-        return cout;
+        return &cout;
 
     stream.open(name);
-    return stream;
+    return &stream;
 }
 
 int main(int argc, char** argv) {
@@ -63,36 +63,36 @@ int main(int argc, char** argv) {
 
         int vectorlength = 0;
         auto cmd_parser = ArgParser()
-            .implicit_option             ("infiles",                        "input files", infiles)
+            .implicit_option             (                      "<infiles>",            "input files", infiles)
 #ifndef NDEBUG
-            .add_option<vector<string>>  ("break <arg>",                    "breakpoint at definition generation of with global id <arg>; may be used multiple times", breakpoints)
-            .add_option<string>          ("log-level {none|info|debug}",    "set log level", log_level, "none")
-            .add_option<string>          ("log <arg>",                      "specifies log file; use '-' for stdout (default)", log_name, "-")
+            .add_option<vector<string>>  ("break",              "<arg>",                "breakpoint at definition generation of with global id <arg>; may be used multiple times", breakpoints)
+            .add_option<string>          ("log-level",          "{none|info|debug}",    "set log level", log_level, "none")
+            .add_option<string>          ("log",                "<arg>",                "specifies log file; use '-' for stdout (default)", log_name, "-")
 #endif
-            .add_option<bool>            ("help",                           "produce this help message", help, false)
-            .add_option<string>          ("o",                              "specifies the output module name", out_name, "")
-            .add_option<bool>            ("O0",                             "reduce compilation time and make debugging produce the expected results (default)", opt_0, false)
-            .add_option<bool>            ("O1",                             "optimize", opt_1, false)
-            .add_option<bool>            ("O2",                             "optimize even more", opt_2, false)
-            .add_option<bool>            ("O3",                             "optimize yet more", opt_3, false)
-            .add_option<bool>            ("Os",                             "optimize for size", opt_s, false)
-            .add_option<bool>            ("Othorin",                        "optimize at Thorin level", opt_thorin, false)
-            .add_option<bool>            ("emit-annotated",                 "emit AST of impala program after semantical analysis", emit_annotated, false)
-            .add_option<bool>            ("emit-ast",                       "emit AST of impala program", emit_ast, false)
-            .add_option<bool>            ("emit-domtree",                   "emit domimance tree", emit_domtree, false)
-            .add_option<bool>            ("emit-c-interface",               "emit C interface from impala code (experimental)", emit_cint, false)
-            .add_option<bool>            ("emit-llvm",                      "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
-            .add_option<bool>            ("emit-looptree",                  "emit loop tree", emit_looptree, false)
-            .add_option<bool>            ("emit-postdomtree",               "emit postdominance tree", emit_postdomtree, false)
-            .add_option<bool>            ("emit-thorin",                    "emit textual Thorin representation of impala program", emit_thorin, false)
-            .add_option<bool>            ("emit-ycomp",                     "emit ycomp-compatible graph representation of impala program", emit_ycomp, false)
-            .add_option<bool>            ("emit-ycomp-cfg",                 "emit ycomp-compatible control-flow graph representation of impala program", emit_ycomp_cfg, false)
-            .add_option<bool>            ("f",                              "use fancy output: impala's AST dump uses only parentheses where necessary", fancy, false)
-            .add_option<bool>            ("g",                              "emit debug information", debug, false)
-            .add_option<bool>            ("nocleanup",                      "no clean-up phase", nocleanup, false)
-            .add_option<bool>            ("nossa",                          "use slots + load/store instead of SSA construction", nossa, false)
-            .add_option< int>            ("vectorize <arg>",                "run vectorizer on main with vector length <arg>", vectorlength, false)
-            .add_option<YCompCommandLine>("ycomp",                          "print ycomp graphs to files", yComp, YCompCommandLine());
+            .add_option<bool>            ("help",               "",                     "produce this help message", help, false)
+            .add_option<string>          ("o",                  "",                     "specifies the output module name", out_name, "")
+            .add_option<bool>            ("O0",                 "",                     "reduce compilation time and make debugging produce the expected results (default)", opt_0, false)
+            .add_option<bool>            ("O1",                 "",                     "optimize", opt_1, false)
+            .add_option<bool>            ("O2",                 "",                     "optimize even more", opt_2, false)
+            .add_option<bool>            ("O3",                 "",                     "optimize yet more", opt_3, false)
+            .add_option<bool>            ("Os",                 "",                     "optimize for size", opt_s, false)
+            .add_option<bool>            ("Othorin",            "",                     "optimize at Thorin level", opt_thorin, false)
+            .add_option<bool>            ("emit-annotated",     "",                     "emit AST of impala program after semantical analysis", emit_annotated, false)
+            .add_option<bool>            ("emit-ast",           "",                     "emit AST of impala program", emit_ast, false)
+            .add_option<bool>            ("emit-domtree",       "",                     "emit domimance tree", emit_domtree, false)
+            .add_option<bool>            ("emit-c-interface",   "",                     "emit C interface from impala code (experimental)", emit_cint, false)
+            .add_option<bool>            ("emit-llvm",          "",                     "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
+            .add_option<bool>            ("emit-looptree",      "",                     "emit loop tree", emit_looptree, false)
+            .add_option<bool>            ("emit-postdomtree",   "",                     "emit postdominance tree", emit_postdomtree, false)
+            .add_option<bool>            ("emit-thorin",        "",                     "emit textual Thorin representation of impala program", emit_thorin, false)
+            .add_option<bool>            ("emit-ycomp",         "",                     "emit ycomp-compatible graph representation of impala program", emit_ycomp, false)
+            .add_option<bool>            ("emit-ycomp-cfg",     "",                     "emit ycomp-compatible control-flow graph representation of impala program", emit_ycomp_cfg, false)
+            .add_option<bool>            ("f",                  "",                     "use fancy output: impala's AST dump uses only parentheses where necessary", fancy, false)
+            .add_option<bool>            ("g",                  "",                     "emit debug information", debug, false)
+            .add_option<bool>            ("nocleanup",          "",                     "no clean-up phase", nocleanup, false)
+            .add_option<bool>            ("nossa",              "",                     "use slots + load/store instead of SSA construction", nossa, false)
+            .add_option< int>            ("vectorize",          "<arg>",                "run vectorizer on main with vector length <arg>", vectorlength, false)
+            .add_option<YCompCommandLine>("ycomp",              "",                     "print ycomp graphs to files", yComp, YCompCommandLine());
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
