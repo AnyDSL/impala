@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
              emit_domtree, emit_postdomtree, emit_looptree, emit_ycomp,
              emit_ycomp_cfg, fancy,
              opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
-             nocleanup, nossa, tobias_ycomp;
+             nocleanup, nossa
         YCompCommandLine yComp;
 
         int vectorlength = 0;
@@ -77,7 +77,6 @@ int main(int argc, char** argv) {
             .add_option<bool>("emit-thorin",        "emit textual THORIN representation of impala program", emit_thorin, false)
             .add_option<bool>("emit-ycomp",         "emit ycomp-compatible graph representation of impala program", emit_ycomp, false)
             .add_option<bool>("emit-ycomp-cfg",     "emit ycomp-compatible control-flow graph representation of impala program", emit_ycomp_cfg, false)
-            .add_option<bool>("tobias",             "ycomp_test", tobias_ycomp, false)
             .add_option<bool>("f",                  "use fancy output: impala's AST dump uses only parentheses where necessary", fancy, false)
             .add_option<bool>("g",                  "emit debug information", debug, false)
             .add_option<bool>("nocleanup",          "no clean-up phase", nocleanup, false)
