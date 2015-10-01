@@ -20,15 +20,15 @@ public:
     }
     TraitApp            trait_app(TraitAbs trait, ArrayRef<Type> args) { return join(new TraitAppNode(trait, args)); }
     TraitApp            trait_app_error() { return trait_app_error_; }
-    DefiniteArrayType   definite_array_type(Type elem_type, uint64_t dim) { 
-        return join(new DefiniteArrayTypeNode(*this, elem_type, dim)); 
+    DefiniteArrayType   definite_array_type(Type elem_type, uint64_t dim) {
+        return join(new DefiniteArrayTypeNode(*this, elem_type, dim));
     }
     FnType              fn_type(ArrayRef<Type> params) { return join(new FnTypeNode(*this, params)); }
-    Impl                impl(const ImplItem* impl, TraitApp trait_app, Type type) { 
-        return join(new ImplNode(*this, impl, trait_app, type)); 
+    Impl                impl(const ImplItem* impl, TraitApp trait_app, Type type) {
+        return join(new ImplNode(*this, impl, trait_app, type));
     }
-    IndefiniteArrayType indefinite_array_type(Type elem_type) { 
-        return join(new IndefiniteArrayTypeNode(*this, elem_type)); 
+    IndefiniteArrayType indefinite_array_type(Type elem_type) {
+        return join(new IndefiniteArrayTypeNode(*this, elem_type));
     }
     SimdType simd_type(Type elem_type, uint64_t size) {
         return join(new SimdTypeNode(*this, elem_type, size));
@@ -39,8 +39,8 @@ public:
     }
     PrimType            type(PrimTypeKind kind);
     StructAbsType       struct_abs_type(const StructDecl* struct_decl) { return join(new StructAbsTypeNode(*this, struct_decl)); }
-    StructAppType       struct_app_type(StructAbsType struct_abs, ArrayRef<Type> args) { 
-        return join(new StructAppTypeNode(*this, struct_abs, args)); 
+    StructAppType       struct_app_type(StructAbsType struct_abs, ArrayRef<Type> args) {
+        return join(new StructAppTypeNode(*this, struct_abs, args));
     }
     TypedefAbs          typedef_abs(Type t) { return join(new TypedefAbsNode(*this, t)); }
     TraitAbs            trait_abs(const TraitDecl* trait_decl) { return join(new TraitAbsNode(*this, trait_decl)); }
@@ -57,7 +57,7 @@ public:
     void verify() const; ///< Checks if all types in the type tables are sane and correctly unified.
 
 private:
-    template<class T> 
+    template<class T>
     Proxy<T> join(T* tn) { garbage_.push_back(tn); return Proxy<T>(tn); }
 
     struct UniHash {

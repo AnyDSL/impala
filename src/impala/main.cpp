@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
             if (emit_llvm)        thorin::emit_llvm(init.world, opt);
             if (emit_ycomp)       thorin::emit_ycomp(init.world, true);
             if (emit_ycomp_cfg)   thorin::emit_ycomp_cfg(init.world);
-            
+
             yComp.print(init.world);
 	    /*if (true) {
                 std::cout << "Printing DomTree:" << std::endl;

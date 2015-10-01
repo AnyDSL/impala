@@ -9,7 +9,7 @@ namespace impala {
 
 class Position {
 public:
-    Position() 
+    Position()
         : filename_("<unset>")
         , line_(-1)
         , col_(-1)

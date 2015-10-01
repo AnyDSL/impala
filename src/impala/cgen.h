@@ -19,10 +19,10 @@ struct CGenOptions {
     std::string guard;
 };
 
-/** 
+/**
  * @brief Generates a C interface from the contents of an Impala module.
  *  The typechecking pass has to be run before a call to this function.
- * 
+ *
  * @param mod The module contents.
  * @param opts C interface generation options.
  * @param o The stream to use as output.

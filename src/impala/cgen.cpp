@@ -253,7 +253,7 @@ public:
 
         for (auto st : export_structs)
             struct_decls.insert(std::make_pair(st, NOT_GEN));
-        
+
         int prev_id = 0;
         do {
             compute_struct_order(struct_decls, order, struct_decls.begin()->first);
@@ -271,14 +271,14 @@ public:
             o << "struct " << st->item_symbol().str() << " {\n";
             for (auto field : st->field_decls()) {
                 Type type = field->type();
-                    
+
                 std::string ctype_pref, ctype_suf;
                 if (!ctype_from_impala(type.node(), ctype_pref, ctype_suf)) {
                     cgen_error(field) << "structure field type not exportable\n";
                     return false;
                 }
 
-                o << "    " << ctype_pref << ' ' << field->symbol().str() << ctype_suf << ";\n"; 
+                o << "    " << ctype_pref << ' ' << field->symbol().str() << ctype_suf << ";\n";
             }
             o << "};\n" << std::endl;
         }
@@ -313,12 +313,12 @@ public:
                 }
 
                 o << ctype_pref << ' ' << fn->param(i)->symbol().str() << ctype_suf;
-                    
+
                 if (i < fn_type->num_args() - 2)
                     o << ", ";
             }
 
-            // Generate void functions when the function takes no argument to be C89 compatible 
+            // Generate void functions when the function takes no argument to be C89 compatible
             if (fn_type->num_args() == 1) {
                 o << "void";
             }
