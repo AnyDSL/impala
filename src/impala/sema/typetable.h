@@ -3,12 +3,11 @@
 
 #include "thorin/util/hash.h"
 
-#include "impala/sema/errorhandler.h"
 #include "impala/sema/unifiable.h"
 
 namespace impala {
 
-class TypeTable : public ErrorHandler {
+class TypeTable {
 public:
     TypeTable();
     ~TypeTable();

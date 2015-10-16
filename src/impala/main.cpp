@@ -171,13 +171,12 @@ int main(int argc, char** argv) {
         }
 #endif
 
-        bool result = true;
         thorin::AutoPtr<impala::ModContents> prg = new impala::ModContents();
         for (auto infile : infiles) {
             auto filename = infile.c_str();
             ifstream file(filename);
             prg->set_loc(Location(filename, 1, 1, 1, 1));
-            result &= impala::parse(prg, file, filename);
+            impala::parse(prg, file, filename);
         }
 
         if (!prg->items().empty())
@@ -188,7 +187,8 @@ int main(int argc, char** argv) {
         if (emit_ast)
             impala::dump(prg, fancy);
 
-        result &= check(init, prg, nossa);
+        check(init, prg, nossa);
+        bool result = impala::num_errors() == 0;
 
         if (result && emit_annotated)
             impala::dump(prg, fancy);

@@ -16,7 +16,6 @@ public:
     Token lex(); ///< Get next \p Token in stream.
 
 private:
-    std::ostream& error(const thorin::Location& loc);
     bool lex_identifier(std::string&);
     Token lex_suffix(std::string&, bool floating);
     Token literal_error(std::string&, bool floating);

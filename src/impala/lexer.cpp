@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <stdexcept>
 
+#include "impala/impala.h"
 #include "impala/symbol.h"
 
 using namespace thorin;
@@ -30,11 +31,6 @@ Lexer::Lexer(std::istream& stream, const char* filename)
         throw std::runtime_error("stream is bad");
 
     stream_.exceptions(std::istream::badbit);
-}
-
-std::ostream& Lexer::error(const Location& loc) {
-    result_ = false;
-    return loc.error();
 }
 
 int Lexer::next() {

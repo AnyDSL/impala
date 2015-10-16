@@ -40,7 +40,7 @@ private:
     }
 
     static std::ostream& cgen_error(const ASTNode* node) {
-        return node->loc().error() << "cannot generate C interface : ";
+        return error(node) << "cannot generate C interface : ";
     }
 
     // Generates a C type from an Impala type

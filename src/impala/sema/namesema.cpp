@@ -1,6 +1,6 @@
 #include "impala/ast.h"
 #include "impala/dump.h"
-#include "impala/sema/errorhandler.h"
+#include "impala/impala.h"
 
 #include <sstream>
 
@@ -8,7 +8,7 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-class NameSema : public ErrorHandler {
+class NameSema {
 public:
     /**
      * @brief Looks up the current definition of \p symbol.
@@ -307,7 +307,7 @@ void PathExpr::check(NameSema& sema) const {
     if (path()->decl()) {
         value_decl_ = path()->decl()->isa<ValueDecl>();
         if (!value_decl_)
-            sema.error(this) << '\'' << path() << "' is not a value\n";
+            error(this) << '\'' << path() << "' is not a value\n";
     }
 }
 
@@ -410,10 +410,9 @@ void ValueDecl::check(NameSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-bool name_analysis(const ModContents* mod) {
+void name_analysis(const ModContents* mod) {
     NameSema sema;
     mod->check(sema);
-    return sema.result();
 }
 
 //------------------------------------------------------------------------------

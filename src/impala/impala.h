@@ -14,6 +14,7 @@ namespace thorin {
 
 namespace impala {
 
+class ASTNode;
 class ModContents;
 
 void init();
@@ -31,11 +32,19 @@ struct Init {
     thorin::AutoPtr<TypeTable> typetable;
 };
 
-bool parse(ModContents*, std::istream&, const char*);
-bool name_analysis(const ModContents* mod);
-bool type_analysis(Init&, const ModContents*, bool nossa);
-bool check(Init&, const ModContents* mod, bool nossa);
+void parse(ModContents*, std::istream&, const char*);
+void name_analysis(const ModContents* mod);
+void type_analysis(Init&, const ModContents*, bool nossa);
+void check(Init&, const ModContents* mod, bool nossa);
 void emit(thorin::World&, const ModContents*);
+
+std::ostream& warn(const ASTNode* n);            ///< Emit warning while using \p n as \p Location.
+std::ostream& warn(const thorin::Location& loc); ///< Emit warning at \p Location \p loc.
+std::ostream& error(const ASTNode* n);           ///< Emit error while using \p n as \p Location.
+std::ostream& error(const thorin::Location& loc);///< Emit error at \p Location \p loc.
+
+int num_warnings();
+int num_errors();
 
 }
 
