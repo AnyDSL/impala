@@ -122,7 +122,7 @@ private:
 
 class Parser {
 public:
-    Parser(std::istream& stream, const std::string& filename)
+    Parser(std::istream& stream, const char* filename)
         : lexer(stream, filename)
         , cur_var_handle(2) // reserve 1 for conditionals, 0 for mem
         , no_bars_(false)
@@ -266,7 +266,7 @@ Loc<T>::~Loc() { node_->set_pos2(parser_.prev_loc().pos2()); }
 
 //------------------------------------------------------------------------------
 
-bool parse(ModContents* mod_contents, std::istream& i, const std::string& filename) {
+bool parse(ModContents* mod_contents, std::istream& i, const char* filename) {
     Parser parser(i, filename);
     parser.parse_mod_contents(mod_contents);
     if (parser.la() != Token::END_OF_FILE)

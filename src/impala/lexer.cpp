@@ -20,7 +20,7 @@ static inline bool hex(int c) { return std::isxdigit(c) != 0; }
 static inline bool eE(int c) { return c == 'e' || c == 'E'; }
 static inline bool sgn(int c){ return c == '+' || c == '-'; }
 
-Lexer::Lexer(std::istream& stream, const std::string& filename)
+Lexer::Lexer(std::istream& stream, const char* filename)
     : stream_(stream)
     , pos_(filename, 1, 1)
     , loc_(pos_)

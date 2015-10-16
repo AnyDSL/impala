@@ -21,7 +21,7 @@ void destroy();
 
 struct Init {
     Init(std::string module_name)
-        : world(module_name)
+        : world(std::move(module_name))
     {
         init();
     }
@@ -31,7 +31,7 @@ struct Init {
     thorin::AutoPtr<TypeTable> typetable;
 };
 
-bool parse(ModContents*, std::istream&, const std::string&);
+bool parse(ModContents*, std::istream&, const char*);
 bool name_analysis(const ModContents* mod);
 bool type_analysis(Init&, const ModContents*, bool nossa);
 bool check(Init&, const ModContents* mod, bool nossa);

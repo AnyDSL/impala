@@ -174,16 +174,16 @@ int main(int argc, char** argv) {
         bool result = true;
         thorin::AutoPtr<impala::ModContents> prg = new impala::ModContents();
         for (auto infile : infiles) {
-            std::string filename = infile.c_str();
+            auto filename = infile.c_str();
             ifstream file(filename);
             prg->set_loc(Location(filename, 1, 1, 1, 1));
             result &= impala::parse(prg, file, filename);
         }
 
         if (!prg->items().empty())
-            prg->set_loc(Location(prg->items().front()->pos1(), prg->items().back()->pos2()));
+            prg->set_loc(prg->items().front()->pos1(), prg->items().back()->pos2());
         else
-            prg->set_loc(Location(infiles.front(), 1, 1, 1, 1));
+            prg->set_loc(infiles.front().c_str(), 1, 1, 1, 1);
 
         if (emit_ast)
             impala::dump(prg, fancy);
