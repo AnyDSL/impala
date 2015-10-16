@@ -5,7 +5,7 @@
 #endif
 
 #include "thorin/util/assert.h"
-#include "thorin/util/queue.h"
+#include "thorin/util/pop.h"
 
 #include "impala/ast.h"
 #include "impala/sema/typetable.h"
