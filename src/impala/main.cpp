@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
         if (out_name.length()) {
             module_name = out_name;
         } else {
-            for (auto infile : infiles) {
+            for (const auto& infile : infiles) {
                 auto i = infile.find_last_of('.');
                 if (infile.substr(i + 1) != "impala")
                     throw invalid_argument("input file '" + infile + "' does not have '.impala' extension");
@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
 #endif
 
         thorin::AutoPtr<impala::ModContents> prg = new impala::ModContents();
-        for (auto infile : infiles) {
+        for (const auto& infile : infiles) {
             auto filename = infile.c_str();
             ifstream file(filename);
             prg->set_loc(Location(filename, 1, 1, 1, 1));
