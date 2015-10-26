@@ -749,8 +749,8 @@ public:
     Type type() const { return arg(0); }
     Impl specialize(SpecializeMap& map) const;
 
-    virtual uint64_t hash() const;
-    virtual bool equal(const Unifiable*) const { THORIN_UNREACHABLE; }
+    virtual uint64_t hash() const override;
+    virtual bool equal(const Unifiable*) const override { THORIN_UNREACHABLE; }
     virtual std::ostream& print(Printer&) const override;
 
 private:
