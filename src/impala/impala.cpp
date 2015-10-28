@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "thorin/util/streamf.h"
+#include "thorin/util/stream.h"
 
 #include "impala/ast.h"
 #include "impala/prec.h"
