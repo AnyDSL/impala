@@ -455,9 +455,7 @@ Type Typedef::check(TypeSema& sema) const {
     }
 }
 
-Type EnumDecl::check(TypeSema& sema) const {
-    return Type();
-}
+Type EnumDecl::check(TypeSema&) const { return Type(); }
 
 Type StructDecl::check(TypeSema& sema) const {
     check_type_params(sema);
@@ -612,7 +610,7 @@ Type SizeofExpr::check(TypeSema& sema, TypeExpectation) const {
     return sema.type_u32();
 }
 
-Type LiteralExpr::check(TypeSema& sema, TypeExpectation expected) const {
+Type LiteralExpr::check(TypeSema& sema, TypeExpectation) const {
     // FEATURE we could enhance this using the expected type (e.g. 4 could be interpreted as int8 if needed)
     return sema.type(literal2type());
 }
@@ -636,7 +634,7 @@ thorin::u8 TypeSema::char_value(const Location& loc, const char*& p) {
     return value;
 }
 
-Type CharExpr::check(TypeSema& sema, TypeExpectation expected) const {
+Type CharExpr::check(TypeSema& sema, TypeExpectation) const {
     const char* p = symbol().str();
     assert(*p == '\'');
     ++p;
@@ -706,7 +704,7 @@ Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
     return fn_type;
 }
 
-Type PathExpr::check(TypeSema& sema, TypeExpectation expected) const {
+Type PathExpr::check(TypeSema& sema, TypeExpectation) const {
     // FEATURE consider longer paths
     //auto* last = path()->path_args().back();
     if (value_decl()) {
@@ -1234,7 +1232,7 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
     }
 }
 
-Type WhileExpr::check(TypeSema& sema, TypeExpectation expected) const {
+Type WhileExpr::check(TypeSema& sema, TypeExpectation) const {
     sema.check(cond(), sema.type_bool(), "condition type");
     sema.check(break_decl());
     sema.check(continue_decl());

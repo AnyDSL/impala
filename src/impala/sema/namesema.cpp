@@ -121,8 +121,8 @@ void TypeParamList::check_type_params(NameSema& sema) const {
         sema.check(type_param);
 }
 
-void ErrorASTType::check(NameSema& sema) const {}
-void PrimASTType::check(NameSema& sema) const {}
+void ErrorASTType::check(NameSema&) const {}
+void PrimASTType::check(NameSema&) const {}
 void PtrASTType::check(NameSema& sema) const { sema.check(referenced_type()); }
 void IndefiniteArrayASTType::check(NameSema& sema) const { sema.check(elem_type()); }
 void DefiniteArrayASTType::check(NameSema& sema) const { sema.check(elem_type()); }
@@ -194,8 +194,7 @@ void Typedef::check(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void EnumDecl::check(NameSema& sema) const {
-}
+void EnumDecl::check(NameSema&) const {}
 
 void StaticItem::check(NameSema& sema) const {
     if (ast_type())
@@ -270,11 +269,8 @@ void ImplItem::check_item(NameSema& sema) const {
  * expressions
  */
 
-void EmptyExpr::check(NameSema& sema) const {}
-
-void SizeofExpr::check(NameSema& sema) const {
-    sema.check(ast_type());
-}
+void EmptyExpr::check(NameSema&) const {}
+void SizeofExpr::check(NameSema& sema) const { sema.check(ast_type()); }
 
 void BlockExprBase::check(NameSema& sema) const {
     sema.push_scope();
@@ -288,9 +284,9 @@ void BlockExprBase::check(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void LiteralExpr::check(NameSema& sema) const {}
-void CharExpr::check(NameSema& sema) const {}
-void StrExpr::check(NameSema& sema) const {}
+void LiteralExpr::check(NameSema&) const {}
+void CharExpr::check(NameSema&) const {}
+void StrExpr::check(NameSema&) const {}
 void FnExpr::check(NameSema& sema) const { fn_check(sema); }
 
 void PathElem::check(NameSema& sema) const {

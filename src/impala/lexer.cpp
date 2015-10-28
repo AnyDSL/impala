@@ -25,7 +25,6 @@ Lexer::Lexer(std::istream& stream, const char* filename)
     : stream_(stream)
     , pos_(filename, 1, 1)
     , loc_(pos_)
-    , result_(true)
 {
     if (!stream_)
         throw std::runtime_error("stream is bad");
