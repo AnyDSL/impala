@@ -10,7 +10,6 @@
 #include "thorin/analyses/scope.h"
 #include "thorin/analyses/verify.h"
 #include "thorin/transform/import.h"
-#include "thorin/transform/vectorize.h"
 #include "thorin/transform/partial_evaluation.h"
 #include "thorin/be/graphs.h"
 #include "thorin/be/thorin.h"
@@ -55,13 +54,11 @@ int main(int argc, char** argv) {
         string out_name, log_name, log_level;
         bool help,
              emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm,
-             emit_domtree, emit_postdomtree, emit_looptree, emit_ycomp,
-             emit_ycomp_cfg, fancy,
+             emit_ycomp, emit_ycomp_cfg, fancy,
              opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
              nocleanup, nossa;
         YCompCommandLine yComp;
 
-        int vectorlength = 0;
         auto cmd_parser = ArgParser()
             .implicit_option             (                      "<infiles>",                "input files", infiles)
             .add_option<bool>            ("help",               "",                         "produce this help message", help, false)
@@ -79,11 +76,8 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("Othorin",            "",                         "optimize at Thorin level", opt_thorin, false)
             .add_option<bool>            ("emit-annotated",     "",                         "emit AST of Impala program after semantical analysis", emit_annotated, false)
             .add_option<bool>            ("emit-ast",           "",                         "emit AST of Impala program", emit_ast, false)
-            .add_option<bool>            ("emit-domtree",       "",                         "emit domimance tree", emit_domtree, false)
             .add_option<bool>            ("emit-c-interface",   "",                         "emit C interface from Impala code (experimental)", emit_cint, false)
             .add_option<bool>            ("emit-llvm",          "",                         "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
-            .add_option<bool>            ("emit-looptree",      "",                         "emit loop tree", emit_looptree, false)
-            .add_option<bool>            ("emit-postdomtree",   "",                         "emit postdominance tree", emit_postdomtree, false)
             .add_option<bool>            ("emit-thorin",        "",                         "emit textual Thorin representation of Impala program", emit_thorin, false)
             .add_option<bool>            ("emit-ycomp",         "",                         "emit ycomp-compatible graph representation of Impala program", emit_ycomp, false)
             .add_option<bool>            ("emit-ycomp-cfg",     "",                         "emit ycomp-compatible control-flow graph representation of Impala program", emit_ycomp_cfg, false)
@@ -91,7 +85,6 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("g",                  "",                         "emit debug information", debug, false)
             .add_option<bool>            ("nocleanup",          "",                         "no clean-up phase", nocleanup, false)
             .add_option<bool>            ("nossa",              "",                         "use slots + load/store instead of SSA construction", nossa, false)
-            .add_option< int>            ("vectorize",          "<arg>",                    "run vectorizer on main with vector length <arg>", vectorlength, false)
             .add_option<YCompCommandLine>("ycomp",              "",                         "print ycomp graphs to files", yComp, YCompCommandLine());
 
         // do cmdline parsing
@@ -225,37 +218,11 @@ int main(int argc, char** argv) {
                 init.world.cleanup();
             if (opt_thorin)
                 init.world.opt();
-            //if (vectorlength != 0) {
-                //Lambda* impala_main = top_level_lambdas(init.world)[0];
-                //Scope scope(impala_main);
-                //thorin::vectorize(scope, vectorlength);
-                //init.world.cleanup();
-            //}
             if (emit_thorin)      thorin::emit_thorin(init.world);
-            if (emit_domtree)     Scope::for_each(init.world, [] (const Scope& scope) { scope.f_cfg().domtree().dump(); });
-            if (emit_postdomtree) Scope::for_each(init.world, [] (const Scope& scope) { scope.b_cfg().domtree().dump(); });
-            if (emit_looptree)    Scope::for_each(init.world, [] (const Scope& scope) { scope.f_cfg().looptree().dump(); });
             if (emit_llvm)        thorin::emit_llvm(init.world, opt, debug);
             if (emit_ycomp)       thorin::emit_ycomp(init.world, true);
             if (emit_ycomp_cfg)   thorin::emit_ycomp_cfg(init.world);
-
             yComp.print(init.world);
-	    /*if (true) {
-                std::cout << "Printing DomTree:" << std::endl;
-                DomTree::emit_world(init.world);
-                std::cout << "Printing LoopTree: (true)" << std::endl;
-                LoopTree<true>::emit_world(init.world);
-                std::cout << "Printing LoopTree: (false)" << std::endl;
-                LoopTree<false>::emit_world(init.world);
-                std::cout << "Printing CFG: (true)" << std::endl;
-                CFG<true>::emit_world(init.world);
-                std::cout << "Printing CFG: (false)" << std::endl;
-                CFG<false>::emit_world(init.world);
-                std::cout << "Printing DFG: (true)" << std::endl;
-                DFGBase<true>::emit_world(init.world);
-                std::cout << "Printing DFG: (false)" << std::endl;
-                DFGBase<false>::emit_world(init.world);
-            }*/
         } else
             return EXIT_FAILURE;
 
