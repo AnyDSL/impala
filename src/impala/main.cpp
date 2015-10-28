@@ -3,21 +3,13 @@
 #include <cctype>
 #include <stdexcept>
 
-#include "thorin/analyses/cfg.h"
-#include "thorin/analyses/dfg.h"
-#include "thorin/analyses/domtree.h"
-#include "thorin/analyses/looptree.h"
-#include "thorin/analyses/scope.h"
-#include "thorin/analyses/verify.h"
-#include "thorin/transform/import.h"
-#include "thorin/transform/partial_evaluation.h"
-#include "thorin/be/graphs.h"
 #include "thorin/be/thorin.h"
 #include "thorin/be/llvm/llvm.h"
 #include "thorin/be/ycomp.h"
 #include "thorin/util/args.h"
 #include "thorin/util/log.h"
 #include "thorin/util/location.h"
+#include "thorin/util/ycomp.h"
 
 #include "impala/ast.h"
 #include "impala/cgen.h"
