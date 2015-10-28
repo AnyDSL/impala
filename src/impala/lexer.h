@@ -43,7 +43,6 @@ private:
     std::istream& stream_;
     thorin::Position pos_;
     thorin::Location loc_;
-    bool result_;
 };
 
 }
