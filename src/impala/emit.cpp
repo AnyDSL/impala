@@ -357,7 +357,7 @@ void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.bra
 Def EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}, loc()); }
 
 thorin::Def SizeofExpr::remit(CodeGen&) const {
-    assert(false && "TODO");
+    THORIN_UNREACHABLE; // TODO
 }
 
 Def LiteralExpr::remit(CodeGen& cg) const {
@@ -434,7 +434,7 @@ Def PrefixExpr::remit(CodeGen& cg) const {
 Var PrefixExpr::lemit(CodeGen& cg) const {
     if (kind() == MUL)
         return Var::create_ptr(cg, cg.remit(rhs()));
-    assert(false && "cannot emit lvalue");
+    THORIN_UNREACHABLE; // TODO
 }
 
 void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
