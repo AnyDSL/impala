@@ -220,10 +220,10 @@ int main(int argc, char** argv) {
 
         return EXIT_SUCCESS;
     } catch (exception const& e) {
-        cerr << e.what() << endl;
+        cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     } catch (...) {
-        cerr << "unknown exception" << endl;
+        cerr << "unknown exception" << std::endl;
         return EXIT_FAILURE;
     }
 }
