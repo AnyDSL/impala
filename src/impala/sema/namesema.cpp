@@ -1,8 +1,5 @@
 #include "impala/ast.h"
-#include "impala/dump.h"
 #include "impala/impala.h"
-
-#include <sstream>
 
 namespace impala {
 
