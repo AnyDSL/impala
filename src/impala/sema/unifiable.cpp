@@ -92,7 +92,7 @@ void TypeVarNode::add_bound(TraitApp bound) const {
 }
 
 bool TraitAbsNode::add_super_trait(TraitApp trait) const {
-    auto p = super_traits_.insert(trait.unify());
+    const auto& p = super_traits_.insert(trait.unify());
     return p.second;
 }
 

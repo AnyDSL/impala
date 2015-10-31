@@ -211,7 +211,7 @@ void Token::insert_key(TokenKind tok, const char* str) {
 
 Symbol Token::insert(TokenKind tok, const char* str) {
     Symbol s = str;
-    auto p = tok2sym_.emplace(tok, s);
+    const auto& p = tok2sym_.emplace(tok, s);
 
 #ifndef NDEBUG
     if (!p.second) {

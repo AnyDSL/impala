@@ -572,7 +572,7 @@ void ImplItem::check_item(TypeSema& sema) const {
             Symbol meth_name = fn->symbol();
             if (auto method_type = trait_app->find_method(meth_name)) {
                 // remember name for check if all methods were implemented
-                auto p = implemented_methods.insert(meth_name);
+                const auto& p = implemented_methods.insert(meth_name);
                 assert(p.second && "there should be no such name in the set"); // else name analysis failed
 
                 // check that the types match
@@ -588,7 +588,7 @@ void ImplItem::check_item(TypeSema& sema) const {
     if (!bound.empty()) {
         if (implemented_methods.size() != bound->num_methods()) {
             assert(implemented_methods.size() < bound->num_methods());
-            for (auto p : bound->all_methods()) {
+            for (const auto& p : bound->all_methods()) {
                 if (!implemented_methods.contains(p.first))
                     error(this) << "must implement method '" << p.first << "'\n";
             }
@@ -1008,7 +1008,7 @@ Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {
                 }
 
                 if (done.size() != struct_decl->field_table().size()) {
-                    for (auto p : struct_decl->field_table()) {
+                    for (const auto& p : struct_decl->field_table()) {
                         if (!done.contains(p.second))
                             error(this) << "missing field '" << p.first << "'\n";
                     }
