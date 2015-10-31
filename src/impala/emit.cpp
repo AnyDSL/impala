@@ -553,7 +553,7 @@ Def StructExpr::remit(CodeGen& cg) const {
 
 Var MapExpr::lemit(CodeGen& cg) const {
     if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<SimdType>()) {
-        auto agg = cg.lemit(lhs())
+        auto agg = cg.lemit(lhs());
         return Var::create_agg(agg, cg.remit(arg(0)));
     }
     throw std::logic_error("cannot emit lvalue");
