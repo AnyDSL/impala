@@ -277,8 +277,7 @@ Var FnDecl::emit(CodeGen& cg, Def) const {
     if (is_extern())
         lambda_->make_external();
 
-    // handle main function
-    if (symbol() == Symbol("main")) {
+    if (symbol() == "main") {
         lambda()->name += "_impala";
         lambda()->make_external();
     }
@@ -292,11 +291,11 @@ void ExternBlock::emit_item(CodeGen& cg) const {
     for (auto fn : fns()) {
         cg.emit(static_cast<const ValueDecl*>(fn), Def()); // TODO use init
         auto lambda = fn->lambda();
-        if (abi() == Symbol("\"C\""))
+        if (abi() == "\"C\"")
             lambda->cc() = thorin::CC::C;
-        else if (abi() == Symbol("\"device\""))
+        else if (abi() == "\"device\"")
             lambda->cc() = thorin::CC::Device;
-        else if (abi() == Symbol("\"thorin\""))
+        else if (abi() == "\"thorin\"")
             lambda->set_intrinsic();
     }
 }
