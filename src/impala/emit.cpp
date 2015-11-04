@@ -370,8 +370,7 @@ void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.bra
 Def EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}, loc()); }
 
 Def SizeofExpr::remit(CodeGen&) const {
-    assert(false && "TODO");
-    return Def();
+    THORIN_UNREACHABLE; // TODO
 }
 
 Def LiteralExpr::remit(CodeGen& cg) const {
