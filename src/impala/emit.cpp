@@ -290,6 +290,11 @@ Var FnDecl::emit(CodeGen& cg, Def) const {
     if (is_extern())
         lambda_->make_external();
 
+    // handle main function
+    if (symbol() == Symbol("main")) {
+        lambda()->make_external();
+    }
+
     if (body())
         emit_body(cg, loc());
     return var_;
