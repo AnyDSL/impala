@@ -46,7 +46,7 @@ std::ostream& FnTypeNode::print(Printer& p) const {
     if (ret_type->is_noret())
         return p.dump_list([&] (Type type) { type->print(p); }, args(), "(", ")");
 
-    p.dump_list([&] (Type type) { p.stream() << type; }, args().slice_num_from_end(1), "(", ")");
+    p.dump_list([&] (Type type) { p.stream() << type; }, args().skip_back(), "(", ")");
     p.stream() << " -> ";
     return ret_type->print(p);
 }
@@ -67,7 +67,7 @@ std::ostream& TraitAppNode::print(Printer& p) const {
 
     p.stream() << trait();
     if (num_args() > 1)
-        return p.dump_list([&] (Type type) { type->print(p); }, args().slice_from_begin(1), "[", "]");
+        return p.dump_list([&] (Type type) { type->print(p); }, args().skip_front(), "[", "]");
     return p.stream();
 }
 
@@ -156,7 +156,7 @@ std::ostream& FnASTType::print(Printer& p) const {
     auto ret = ret_fn_type();
     p.stream() << "fn";
     print_type_params(p);
-    p.dump_list([&] (const ASTType* arg) { arg->print(p); }, ret != nullptr ? args().slice_num_from_end(1) : args(), "(", ")");
+    p.dump_list([&] (const ASTType* arg) { arg->print(p); }, ret != nullptr ? args().skip_back() : args(), "(", ")");
     if (ret != nullptr) {
         p.stream() << " -> ";
         if (ret->num_args() == 1) {
@@ -241,7 +241,7 @@ std::ostream& Fn::print_params(Printer& p, bool returning) const {
             else if (auto ast_type = param->ast_type())
                 ast_type->print(p);
         },
-        returning ? params().slice_num_from_end(1) : params());
+        returning ? params().skip_back() : params());
 }
 
 std::ostream& ValueDecl::print(Printer& p) const {
@@ -629,7 +629,7 @@ std::ostream& WhileExpr::print(Printer& p) const {
 
 std::ostream& ForExpr::print(Printer& p) const {
     p.stream() << "for ";
-    p.dump_list([&](const Param* param) { param->print(p); }, fn_expr()->params().slice_num_from_end(1)) << " in ";
+    p.dump_list([&](const Param* param) { param->print(p); }, fn_expr()->params().skip_back()) << " in ";
     p.print(expr()) << ' ';
     return p.print(fn_expr()->body());
 }

@@ -9,16 +9,17 @@ fn blocked_loop(length: int, get_block_size: fn(int) -> int, body: fn(int, fn(in
     fn blocked_iter(cur_level: int, i: int, N: int) -> int {
         let block_size = get_block_size(cur_level);
         if block_size <= 0 {
-            body(i);
+            body(i)
+        } else {
+            let mut res = 0;
+            for ii in $range_step(i, N, block_size) {
+                res += @blocked_iter(cur_level + 1, ii, block_size);
+            }
+            res
         }
-        let mut res = 0;
-        for ii in range_step(i, N, block_size) {
-            res += blocked_iter(cur_level + 1, ii, block_size);
-        }
-        res
     }
 
-    blocked_iter(1, 0, length)
+    @blocked_iter(1, 0, length)
 }
 
 fn main(i: int) -> int {

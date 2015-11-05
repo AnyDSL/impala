@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <stdexcept>
 
+#include "impala/impala.h"
 #include "impala/symbol.h"
 
 using namespace thorin;
@@ -20,21 +21,15 @@ static inline bool hex(int c) { return std::isxdigit(c) != 0; }
 static inline bool eE(int c) { return c == 'e' || c == 'E'; }
 static inline bool sgn(int c){ return c == '+' || c == '-'; }
 
-Lexer::Lexer(std::istream& stream, const std::string& filename)
+Lexer::Lexer(std::istream& stream, const char* filename)
     : stream_(stream)
     , pos_(filename, 1, 1)
     , loc_(pos_)
-    , result_(true)
 {
     if (!stream_)
         throw std::runtime_error("stream is bad");
 
     stream_.exceptions(std::istream::badbit);
-}
-
-std::ostream& Lexer::error(const Location& loc) {
-    result_ = false;
-    return loc.error();
 }
 
 int Lexer::next() {

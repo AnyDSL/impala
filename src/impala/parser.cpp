@@ -8,6 +8,7 @@
 #include "thorin/util/push.h"
 
 #include "impala/ast.h"
+#include "impala/impala.h"
 #include "impala/lexer.h"
 #include "impala/prec.h"
 
@@ -122,11 +123,10 @@ private:
 
 class Parser {
 public:
-    Parser(std::istream& stream, const std::string& filename)
+    Parser(std::istream& stream, const char* filename)
         : lexer(stream, filename)
         , cur_var_handle(2) // reserve 1 for conditionals, 0 for mem
         , no_bars_(false)
-        , result_(true)
     {
         lookahead[0] = lexer.lex();
         lookahead[1] = lexer.lex();
@@ -147,7 +147,6 @@ public:
     bool expect(TokenKind tok, const std::string& context);
     void error(const std::string& what, const std::string& context) { error(what, context, la()); }
     void error(const std::string& what, const std::string& context, const Token& tok);
-    bool result() const { return result_; }
     template<class T>
     Loc<T> loc(T* node) { return Loc<T>(*this, node); }
 
@@ -249,7 +248,6 @@ private:
     size_t cur_var_handle;
     bool no_bars_;
     Location prev_loc_;
-    bool result_;
 };
 
 //------------------------------------------------------------------------------
@@ -266,12 +264,11 @@ Loc<T>::~Loc() { node_->set_pos2(parser_.prev_loc().pos2()); }
 
 //------------------------------------------------------------------------------
 
-bool parse(ModContents* mod_contents, std::istream& i, const std::string& filename) {
+void parse(ModContents* mod_contents, std::istream& i, const char* filename) {
     Parser parser(i, filename);
     parser.parse_mod_contents(mod_contents);
     if (parser.la() != Token::END_OF_FILE)
         parser.error("module item", "module contents");
-    return parser.result();
 }
 
 //------------------------------------------------------------------------------
@@ -309,8 +306,7 @@ bool Parser::expect(TokenKind tok, const std::string& context) {
 }
 
 void Parser::error(const std::string& what, const std::string& context, const Token& tok) {
-    result_ = false;
-    std::ostream& os = tok.error() << "expected " << what << ", got '" << tok << "'";
+    std::ostream& os = impala::error(tok.loc()) << "expected " << what << ", got '" << tok << "'";
     if (!context.empty())
         os << " while parsing " << context;
     os << "\n";

@@ -1,0 +1,24 @@
+// https://github.com/AnyDSL/thorin/issues/27
+
+fn iterate_children(mut node_id: &i32) -> () {
+    for call_me() {
+        if 42 < *node_id {
+            // Nothing to see here
+        }
+    }
+    *node_id = 42;
+}
+
+fn call_me(body: fn() -> ()) -> () {
+    body();
+}
+
+fn main() -> bool {
+    let mut res = 42;
+    while res < 43 {
+        @iterate_children(&res);
+        ++res;
+    }
+
+    res == 43
+}
