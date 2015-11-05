@@ -54,28 +54,37 @@ private:
 
 const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
     assert(!symbol.empty() && "symbol is empty");
-    auto decl = thorin::find(symbol2decl_, symbol);
-    if (decl == nullptr)
-        error(n) << '\'' << symbol << "' not found in current scope\n";
-    return decl;
+
+    if (!symbol.is_anonymous()) {
+        auto decl = thorin::find(symbol2decl_, symbol);
+        if (decl == nullptr)
+            error(n) << '\'' << symbol << "' not found in current scope\n";
+        return decl;
+    } else {
+        error(n) << "identifier '_' is reverserved for anonymous declarations\n";
+        return nullptr;
+    }
 }
 
 void NameSema::insert(const Decl* decl) {
     assert(!decl->symbol().empty() && "symbol is empty");
-    if (auto other = clash(decl->symbol())) {
-        error(decl) << "symbol '" << decl->symbol() << "' already defined\n";
-        error(other) << "previous location here\n";
-        return;
+    auto symbol = decl->symbol();
+
+    if (!symbol.is_anonymous()) {
+        if (auto other = clash(symbol)) {
+            error(decl) << "symbol '" << symbol << "' already defined\n";
+            error(other) << "previous location here\n";
+            return;
+        }
+
+        assert(clash(symbol) == nullptr && "must not be found");
+
+        auto i = symbol2decl_.find(symbol);
+        decl->shadows_ = i != symbol2decl_.end() ? i->second : nullptr;
+        decl->depth_ = depth();
+        decl_stack_.push_back(decl);
+        symbol2decl_[symbol] = decl;
     }
-
-    Symbol symbol = decl->symbol();
-    assert(clash(symbol) == nullptr && "must not be found");
-
-    auto i = symbol2decl_.find(symbol);
-    decl->shadows_ = i != symbol2decl_.end() ? i->second : nullptr;
-    decl->depth_ = depth();
-    decl_stack_.push_back(decl);
-    symbol2decl_[symbol] = decl;
 }
 
 const Decl* NameSema::clash(Symbol symbol) const {
