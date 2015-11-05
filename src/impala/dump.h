@@ -17,12 +17,18 @@ class Expr;
 class Printer : public thorin::Printer {
 public:
     Printer(std::ostream& o, bool fancy)
-        : thorin::Printer(o, fancy)
+        : thorin::Printer(o)
         , prec(BOTTOM)
+        , fancy_(fancy)
     {}
+
     std::ostream& print(const Expr* expr);
+    bool is_fancy() const { return fancy_; }
 
     Prec prec;
+
+private:
+    const bool fancy_;
 };
 
 /**

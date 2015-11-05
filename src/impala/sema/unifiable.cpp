@@ -92,7 +92,7 @@ void TypeVarNode::add_bound(TraitApp bound) const {
 }
 
 bool TraitAbsNode::add_super_trait(TraitApp trait) const {
-    auto p = super_traits_.insert(trait.unify());
+    const auto& p = super_traits_.insert(trait.unify());
     return p.second;
 }
 
@@ -153,8 +153,8 @@ bool KnownTypeNode::is_sane() const {
  * hash
  */
 
-size_t Unifiable::hash() const {
-    size_t seed = hash_combine(hash_combine(hash_begin((int) kind()), num_args()), num_type_vars());
+uint64_t Unifiable::hash() const {
+    uint64_t seed = hash_combine(hash_combine(hash_begin((int) kind()), num_args()), num_type_vars());
 
     for (auto type_var : type_vars())
         seed = hash_combine(seed, type_var->num_bounds());
@@ -165,12 +165,12 @@ size_t Unifiable::hash() const {
     return seed;
 }
 
-size_t StructAbsTypeNode::hash() const { return hash_value(struct_decl()); }
-size_t StructAppTypeNode::hash() const { return hash_combine(Unifiable::hash(), struct_abs_type()->hash()); }
+uint64_t StructAbsTypeNode::hash() const { return hash_value(struct_decl()); }
+uint64_t StructAppTypeNode::hash() const { return hash_combine(Unifiable::hash(), struct_abs_type()->hash()); }
 
-size_t TraitAbsNode::hash() const { return hash_value(trait_decl()); }
-size_t TraitAppNode::hash() const { return hash_combine(Unifiable::hash(), trait()->id()); }
-size_t ImplNode::hash() const { return hash_value(impl_item()); }
+uint64_t TraitAbsNode::hash() const { return hash_value(trait_decl()); }
+uint64_t TraitAppNode::hash() const { return hash_combine(Unifiable::hash(), trait()->id()); }
+uint64_t ImplNode::hash() const { return hash_value(impl_item()); }
 
 //------------------------------------------------------------------------------
 

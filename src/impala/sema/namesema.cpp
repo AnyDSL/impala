@@ -1,14 +1,11 @@
 #include "impala/ast.h"
-#include "impala/dump.h"
-#include "impala/sema/errorhandler.h"
-
-#include <sstream>
+#include "impala/impala.h"
 
 namespace impala {
 
 //------------------------------------------------------------------------------
 
-class NameSema : public ErrorHandler {
+class NameSema {
 public:
     /**
      * @brief Looks up the current definition of \p symbol.
@@ -102,7 +99,7 @@ void NameSema::pop_scope() {
 //------------------------------------------------------------------------------
 
 void TypeParam::check(NameSema& sema) const {
-    for (const ASTType* bound : bounds())
+    for (auto bound : bounds())
         sema.check(bound);
 }
 
@@ -113,16 +110,16 @@ void TypeParam::check(NameSema& sema) const {
 void TypeParamList::check_type_params(NameSema& sema) const {
     // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
     // first, insert names
-    for (const TypeParam* tp : type_params())
-        sema.insert(tp);
+    for (auto type_param : type_params())
+        sema.insert(type_param);
 
     // then, check bounds
-    for (const TypeParam* tp : type_params())
-        sema.check(tp);
+    for (auto type_param : type_params())
+        sema.check(type_param);
 }
 
-void ErrorASTType::check(NameSema& sema) const {}
-void PrimASTType::check(NameSema& sema) const {}
+void ErrorASTType::check(NameSema&) const {}
+void PrimASTType::check(NameSema&) const {}
 void PtrASTType::check(NameSema& sema) const { sema.check(referenced_type()); }
 void IndefiniteArrayASTType::check(NameSema& sema) const { sema.check(elem_type()); }
 void DefiniteArrayASTType::check(NameSema& sema) const { sema.check(elem_type()); }
@@ -194,8 +191,7 @@ void Typedef::check(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void EnumDecl::check(NameSema& sema) const {
-}
+void EnumDecl::check(NameSema&) const {}
 
 void StaticItem::check(NameSema& sema) const {
     if (ast_type())
@@ -207,12 +203,10 @@ void StaticItem::check(NameSema& sema) const {
 void Fn::fn_check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
-    int i = 0;
     for (auto param : params()) {
         sema.insert(param);
         if (param->ast_type())
             sema.check(param->ast_type());
-        ++i;
     }
     if (body() != nullptr)
         body()->check(sema);
@@ -272,11 +266,8 @@ void ImplItem::check_item(NameSema& sema) const {
  * expressions
  */
 
-void EmptyExpr::check(NameSema& sema) const {}
-
-void SizeofExpr::check(NameSema& sema) const {
-    sema.check(ast_type());
-}
+void EmptyExpr::check(NameSema&) const {}
+void SizeofExpr::check(NameSema& sema) const { sema.check(ast_type()); }
 
 void BlockExprBase::check(NameSema& sema) const {
     sema.push_scope();
@@ -290,9 +281,9 @@ void BlockExprBase::check(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void LiteralExpr::check(NameSema& sema) const {}
-void CharExpr::check(NameSema& sema) const {}
-void StrExpr::check(NameSema& sema) const {}
+void LiteralExpr::check(NameSema&) const {}
+void CharExpr::check(NameSema&) const {}
+void StrExpr::check(NameSema&) const {}
 void FnExpr::check(NameSema& sema) const { fn_check(sema); }
 
 void PathElem::check(NameSema& sema) const {
@@ -309,7 +300,7 @@ void PathExpr::check(NameSema& sema) const {
     if (path()->decl()) {
         value_decl_ = path()->decl()->isa<ValueDecl>();
         if (!value_decl_)
-            sema.error(this) << '\'' << path() << "' is not a value\n";
+            error(this) << '\'' << path() << "' is not a value\n";
     }
 }
 
@@ -412,10 +403,9 @@ void ValueDecl::check(NameSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-bool name_analysis(const ModContents* mod) {
+void name_analysis(const ModContents* mod) {
     NameSema sema;
     mod->check(sema);
-    return sema.result();
 }
 
 //------------------------------------------------------------------------------

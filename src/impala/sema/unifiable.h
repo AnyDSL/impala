@@ -134,7 +134,7 @@ public:
     Proxy<T>& operator= (Proxy<T> other) { swap(*this, other); return *this; }
     friend void swap(Proxy<T>& p1, Proxy<T>& p2) {
         assert(p1.node_ == nullptr);
-        auto tmp = p2.node();
+        auto tmp = p2.node_;
         p2.node_ = p1.node_;
         p1.node_ = tmp;
     }
@@ -218,7 +218,7 @@ public:
      */
     virtual bool is_closed() const;
     virtual void bind(TypeVar v) const;
-    virtual size_t hash() const;
+    virtual uint64_t hash() const;
     virtual bool equal(const Unifiable*) const;
     virtual bool is_error() const { return false; }
     /// A \p Unifiable is known if it does not contain any \p UnknownTypeNode%s
@@ -252,7 +252,7 @@ protected:
 
 template<class T>
 struct IdHash {
-    size_t operator () (const T t) const { assert(t->is_unified() || !t->is_known()); return t->id(); }
+    uint64_t operator () (const T t) const { assert(t->is_unified() || !t->is_known()); return t->id(); }
 };
 
 template<class T>
@@ -319,7 +319,7 @@ private:
 
 public:
     virtual bool is_known() const override { return false; }
-    virtual size_t hash() const override { THORIN_UNREACHABLE; }
+    virtual uint64_t hash() const override { THORIN_UNREACHABLE; }
     virtual bool equal(const Unifiable*) const override { THORIN_UNREACHABLE; }
     virtual bool implements(TraitApp, SpecializeMap&) const override { THORIN_UNREACHABLE; }
     virtual FnType find_method(Symbol) const override { THORIN_UNREACHABLE; }
@@ -447,7 +447,7 @@ public:
     const StructDecl* struct_decl() const { return struct_decl_; }
     thorin::StructAbsType thorin_struct_abs_type() const { return thorin_struct_abs_type_; }
     virtual Type instantiate(ArrayRef<Type>) const override;
-    virtual size_t hash() const override;
+    virtual uint64_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
     virtual bool is_subtype(const TypeNode*) const override { THORIN_UNREACHABLE; }
@@ -469,7 +469,7 @@ private:
 public:
     Type elem(size_t i) const;
     StructAbsType struct_abs_type() const { return struct_abs_type_; }
-    virtual size_t hash() const override;
+    virtual uint64_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
     virtual bool is_subtype(const TypeNode* other) const override;
@@ -692,7 +692,7 @@ public:
     void add_impl(Impl impl) const;
 
     virtual bool is_error() const override { return trait_decl() == nullptr; }
-    virtual size_t hash() const override;
+    virtual uint64_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
 
@@ -722,7 +722,7 @@ public:
     TraitApp specialize(SpecializeMap&) const;
 
     virtual bool is_error() const override { return trait()->is_error(); }
-    virtual size_t hash() const override;
+    virtual uint64_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& print(Printer&) const override;
 
@@ -749,7 +749,7 @@ public:
     Type type() const { return arg(0); }
     Impl specialize(SpecializeMap& map) const;
 
-    virtual size_t hash() const override;
+    virtual uint64_t hash() const override;
     virtual bool equal(const Unifiable*) const override { THORIN_UNREACHABLE; }
     virtual std::ostream& print(Printer&) const override;
 

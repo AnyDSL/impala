@@ -3,12 +3,11 @@
 
 #include "thorin/util/hash.h"
 
-#include "impala/sema/errorhandler.h"
 #include "impala/sema/unifiable.h"
 
 namespace impala {
 
-class TypeTable : public ErrorHandler {
+class TypeTable {
 public:
     TypeTable();
     ~TypeTable();
@@ -61,7 +60,7 @@ private:
     Proxy<T> join(T* tn) { garbage_.push_back(tn); return Proxy<T>(tn); }
 
     struct UniHash {
-        size_t operator () (const Unifiable* u) const { return u->hash(); }
+        uint64_t operator () (const Unifiable* u) const { return u->hash(); }
     };
     struct UniEqual {
         bool operator () (const Unifiable* u1, const Unifiable* u2) const { return u1->equal(u2); }

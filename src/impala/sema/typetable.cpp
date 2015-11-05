@@ -62,7 +62,7 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
             std::stable_sort(type_var->bounds_.begin(), type_var->bounds_.end(), TraitAppLT());
         }
 
-        auto p = unifiables_.insert(unifiable);
+        const auto& p = unifiables_.insert(unifiable);
         assert(unifiable->representative() == unifiable);
         assert(p.second && "hash/equal broken");
         return unifiable;

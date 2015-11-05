@@ -1,3 +1,5 @@
+// https://github.com/AnyDSL/thorin/issues/27
+
 fn take_address(&&int) -> () {}
 
 fn main() -> bool {

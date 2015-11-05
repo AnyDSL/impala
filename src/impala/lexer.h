@@ -11,12 +11,11 @@ namespace impala {
 
 class Lexer {
 public:
-    Lexer(std::istream& stream, const std::string& filename);
+    Lexer(std::istream& stream, const char* filename);
 
     Token lex(); ///< Get next \p Token in stream.
 
 private:
-    std::ostream& error(const thorin::Location& loc);
     bool lex_identifier(std::string&);
     Token lex_suffix(std::string&, bool floating);
     Token literal_error(std::string&, bool floating);
@@ -44,7 +43,6 @@ private:
     std::istream& stream_;
     thorin::Position pos_;
     thorin::Location loc_;
-    bool result_;
 };
 
 }

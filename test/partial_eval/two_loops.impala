@@ -20,5 +20,5 @@ fn foo(a: int, b: int) -> int {
 }
 
 fn main(i: int) -> int {
-    foo(i, @10)
+    @foo(i, 10)
 }
