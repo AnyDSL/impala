@@ -224,8 +224,10 @@ private:
  */
 
 class ASTType : public ASTNode, public Typeable {
-private:
+public:
     virtual void check(NameSema&) const = 0;
+
+private:
     virtual Type check(TypeSema&) const = 0;
 
     friend class NameSema;
@@ -341,11 +343,11 @@ public:
     const Identifier* identifier() const { return identifier_; }
     Symbol symbol() const { return identifier()->symbol(); }
     SafePtr<const Decl> decl() const { return decl_; }
-    virtual std::ostream& print(Printer&) const override;
     TraitApp trait_app(TypeSema&, Type) const;
+    virtual std::ostream& print(Printer&) const override;
+    virtual void check(NameSema&) const override;
 
 private:
-    virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 
     AutoPtr<const Identifier> identifier_;
@@ -428,7 +430,7 @@ private:
 /// Base class for all declarations which must have a \p Type assigned.
 class TypeableDecl : public Decl, public Typeable {
 private:
-    virtual void check(NameSema&) const = 0;
+    //virtual void check(NameSema&) const = 0;
     virtual Type check(TypeSema&) const = 0;
 
     friend class NameSema;
@@ -451,7 +453,6 @@ public:
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual void check(NameSema&) const override;
     virtual Type check(TypeSema& sema) const override;
     Type check(TypeSema&, Type) const;
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const = 0;
@@ -478,6 +479,7 @@ public:
     bool is_address_taken() const { return is_address_taken_; }
     const Fn* fn() const { return fn_; }
     void take_address() const { is_address_taken_ = true; }
+    void check(NameSema&) const;
 
 private:
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const override;
@@ -503,10 +505,10 @@ public:
     const ASTTypes& bounds() const { return bounds_; }
     TypeVar type_var() const { return type().as<TypeVar>(); }
     TypeVar type_var(TypeSema&) const;
+    virtual void check(NameSema&) const;
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual void check(NameSema&) const override;
     virtual Type check(TypeSema&) const override;
 
     ASTTypes bounds_;
@@ -593,9 +595,9 @@ private:
 class Item : virtual public ASTNode {
 public:
     Visibility visibility() const { return  visibility_; }
+    virtual void check_item(NameSema&) const = 0;
 
 private:
-    virtual void check_item(NameSema&) const = 0;
     virtual void check_item(TypeSema&) const = 0;
     virtual void emit_item(CodeGen&) const = 0;
 
@@ -621,7 +623,7 @@ public:
     virtual const Identifier* item_identifier() const override { return TypeDecl::identifier(); }
 
 private:
-    virtual void check_item(NameSema&) const override;
+    //virtual void check_item(NameSema&) const override;
     virtual void check_item(TypeSema&) const override;
 
     friend class Parser;
@@ -632,7 +634,7 @@ public:
     virtual const Identifier* item_identifier() const override { return ValueDecl::identifier(); }
 
 private:
-    virtual void check_item(NameSema&) const override;
+    //virtual void check_item(NameSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 
     friend class Parser;
@@ -642,7 +644,7 @@ class ModDecl : public TypeDeclItem {
 public:
     const ModContents* mod_contents() const { return mod_contents_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
+    virtual void check_item(NameSema&) const override;
 
 private:
     virtual Type check(TypeSema&) const override;
@@ -674,7 +676,7 @@ class Typedef : public TypeDeclItem {
 public:
     const ASTType* ast_type() const { return ast_type_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
+    virtual void check_item(NameSema&) const override;
 
 private:
     virtual Type check(TypeSema&) const override;
@@ -690,7 +692,7 @@ public:
     int index() const { return index_; }
     const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     Visibility visibility() const { return  visibility_; }
-    virtual void check(NameSema&) const override;
+    void check(NameSema&) const;
     virtual std::ostream& print(Printer&) const override;
 
 private:
@@ -712,7 +714,7 @@ public:
     const FieldDecl* field_decl(Symbol symbol) const { return thorin::find(field_table_, symbol); }
     const FieldDecl* field_decl(const Identifier* ident) const { return field_decl(ident->symbol()); }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
+    virtual void check_item(NameSema&) const override;
 
 private:
     virtual Type check(TypeSema&) const override;
@@ -727,7 +729,7 @@ private:
 class EnumDecl : public TypeDeclItem {
 public:
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
+    virtual void check_item(NameSema&) const override;
 
 private:
     virtual Type check(TypeSema&) const override;
@@ -738,7 +740,7 @@ class StaticItem : public ValueItem {
 public:
     const Expr* init() const { return init_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
+    virtual void check_item(NameSema&) const override;
 
 private:
     virtual Type check(TypeSema&) const override;
@@ -755,7 +757,7 @@ public:
     bool is_extern() const { return is_extern_; }
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check(NameSema&) const override;
+    virtual void check_item(NameSema&) const override;
     virtual Symbol fn_symbol() const override { return export_name_ ? export_name_->symbol() : identifier()->symbol(); }
 
 private:
