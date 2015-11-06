@@ -104,10 +104,23 @@ void NameSema::pop_scope() {
 
 //------------------------------------------------------------------------------
 
+/*
+ * misc
+ */
+
 void TypeParam::check(NameSema& sema) const {
     for (auto bound : bounds())
         bound->check(sema);
 }
+
+
+void LocalDecl::check(NameSema& sema) const {
+    if (ast_type())
+        ast_type()->check(sema);
+    sema.insert(this);
+}
+
+//------------------------------------------------------------------------------
 
 /*
  * AST types
@@ -159,18 +172,6 @@ void SimdASTType::check(NameSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-void ModContents::check(NameSema& sema) const {
-    for (auto item : items()) {
-        sema.check_head(item);
-        if (auto named_item = item->isa<NamedItem>())
-            item_table_[named_item->item_symbol()] = named_item;
-    }
-    for (auto item : items())
-        item->check(sema);
-}
-
-//------------------------------------------------------------------------------
-
 /*
  * items
  */
@@ -180,6 +181,16 @@ void ModDecl::check(NameSema& sema) const {
     if (mod_contents())
         mod_contents()->check(sema);
     sema.pop_scope();
+}
+
+void ModContents::check(NameSema& sema) const {
+    for (auto item : items()) {
+        sema.check_head(item);
+        if (auto named_item = item->isa<NamedItem>())
+            item_table_[named_item->item_symbol()] = named_item;
+    }
+    for (auto item : items())
+        item->check(sema);
 }
 
 void ExternBlock::check(NameSema& sema) const {
@@ -394,14 +405,6 @@ void LetStmt::check(NameSema& sema) const {
     if (init())
         init()->check(sema);
     local()->check(sema);
-}
-
-//------------------------------------------------------------------------------
-
-void LocalDecl::check(NameSema& sema) const {
-    if (ast_type())
-        ast_type()->check(sema);
-    sema.insert(this);
 }
 
 //------------------------------------------------------------------------------
