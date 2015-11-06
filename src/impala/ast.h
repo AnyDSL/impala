@@ -595,7 +595,7 @@ private:
 class Item : virtual public ASTNode {
 public:
     Visibility visibility() const { return  visibility_; }
-    virtual void check_item(NameSema&) const = 0;
+    virtual void check(NameSema&) const = 0;
 
 private:
     virtual void check_item(TypeSema&) const = 0;
@@ -623,7 +623,7 @@ public:
     virtual const Identifier* item_identifier() const override { return TypeDecl::identifier(); }
 
 private:
-    //virtual void check_item(NameSema&) const override;
+    //virtual void check(NameSema&) const override;
     virtual void check_item(TypeSema&) const override;
 
     friend class Parser;
@@ -634,7 +634,7 @@ public:
     virtual const Identifier* item_identifier() const override { return ValueDecl::identifier(); }
 
 private:
-    //virtual void check_item(NameSema&) const override;
+    //virtual void check(NameSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 
     friend class Parser;
@@ -644,7 +644,7 @@ class ModDecl : public TypeDeclItem {
 public:
     const ModContents* mod_contents() const { return mod_contents_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check_item(NameSema&) const override;
+    virtual void check(NameSema&) const override;
 
 private:
     virtual Type check(TypeSema&) const override;
@@ -660,7 +660,7 @@ public:
     Symbol abi() const { return abi_; }
     const AutoVector<const FnDecl*>& fns() const { return fns_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check_item(NameSema&) const override;
+    virtual void check(NameSema&) const override;
 
 private:
     virtual void check_item(TypeSema&) const override;
@@ -676,7 +676,7 @@ class Typedef : public TypeDeclItem {
 public:
     const ASTType* ast_type() const { return ast_type_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check_item(NameSema&) const override;
+    virtual void check(NameSema&) const override;
 
 private:
     virtual Type check(TypeSema&) const override;
@@ -714,7 +714,7 @@ public:
     const FieldDecl* field_decl(Symbol symbol) const { return thorin::find(field_table_, symbol); }
     const FieldDecl* field_decl(const Identifier* ident) const { return field_decl(ident->symbol()); }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check_item(NameSema&) const override;
+    virtual void check(NameSema&) const override;
 
 private:
     virtual Type check(TypeSema&) const override;
@@ -729,7 +729,7 @@ private:
 class EnumDecl : public TypeDeclItem {
 public:
     virtual std::ostream& print(Printer&) const override;
-    virtual void check_item(NameSema&) const override;
+    virtual void check(NameSema&) const override;
 
 private:
     virtual Type check(TypeSema&) const override;
@@ -740,7 +740,7 @@ class StaticItem : public ValueItem {
 public:
     const Expr* init() const { return init_; }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check_item(NameSema&) const override;
+    virtual void check(NameSema&) const override;
 
 private:
     virtual Type check(TypeSema&) const override;
@@ -757,7 +757,7 @@ public:
     bool is_extern() const { return is_extern_; }
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual std::ostream& print(Printer&) const override;
-    virtual void check_item(NameSema&) const override;
+    virtual void check(NameSema&) const override;
     virtual Symbol fn_symbol() const override { return export_name_ ? export_name_->symbol() : identifier()->symbol(); }
 
 private:
@@ -786,7 +786,7 @@ public:
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual void check_item(NameSema&) const override;
+    virtual void check(NameSema&) const override;
     virtual void check_item(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 
@@ -811,7 +811,7 @@ public:
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual void check_item(NameSema&) const override;
+    virtual void check(NameSema&) const override;
     virtual void check_item(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 

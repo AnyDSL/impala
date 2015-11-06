@@ -166,7 +166,7 @@ void ModContents::check(NameSema& sema) const {
             item_table_[named_item->item_symbol()] = named_item;
     }
     for (auto item : items())
-        item->check_item(sema);
+        item->check(sema);
 }
 
 //------------------------------------------------------------------------------
@@ -175,31 +175,28 @@ void ModContents::check(NameSema& sema) const {
  * items
  */
 
-//void TypeDeclItem::check_item(NameSema& sema) const { static_cast<const TypeDecl*>(this)->check(sema); }
-//void ValueItem::check_item(NameSema& sema) const { static_cast<const ValueDecl*>(this)->check(sema); }
-
-void ModDecl::check_item(NameSema& sema) const {
+void ModDecl::check(NameSema& sema) const {
     sema.push_scope();
     if (mod_contents())
         mod_contents()->check(sema);
     sema.pop_scope();
 }
 
-void ExternBlock::check_item(NameSema& sema) const {
+void ExternBlock::check(NameSema& sema) const {
     for (auto fn : fns())
-        fn->check_item(sema);
+        fn->check(sema);
 }
 
-void Typedef::check_item(NameSema& sema) const {
+void Typedef::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
     ast_type()->check(sema);
     sema.pop_scope();
 }
 
-void EnumDecl::check_item(NameSema&) const {}
+void EnumDecl::check(NameSema&) const {}
 
-void StaticItem::check_item(NameSema& sema) const {
+void StaticItem::check(NameSema& sema) const {
     if (ast_type())
         ast_type()->check(sema);
     if (init())
@@ -219,7 +216,7 @@ void Fn::fn_check(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void FnDecl::check_item(NameSema& sema) const {
+void FnDecl::check(NameSema& sema) const {
     fn_check(sema);
 #ifndef NDEBUG
     for (auto param : params())
@@ -227,7 +224,7 @@ void FnDecl::check_item(NameSema& sema) const {
 #endif
 }
 
-void StructDecl::check_item(NameSema& sema) const {
+void StructDecl::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
     for (auto field_decl : field_decls()) {
@@ -242,27 +239,27 @@ void FieldDecl::check(NameSema& sema) const {
     sema.insert(this);
 }
 
-void TraitDecl::check_item(NameSema& sema) const {
+void TraitDecl::check(NameSema& sema) const {
     sema.push_scope();
     sema.insert(self_param());
     check_type_params(sema);
     for (auto t : super_traits())
         t->check(sema);
     for (auto method : methods()) {
-        method->check_item(sema);
+        method->check(sema);
         method_table_[method->symbol()] = method;
     }
     sema.pop_scope();
 }
 
-void ImplItem::check_item(NameSema& sema) const {
+void ImplItem::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
     if (trait())
         trait()->check(sema);
     ast_type()->check(sema);
     for (auto fn : methods())
-        fn->check_item(sema);
+        fn->check(sema);
     sema.pop_scope();
 }
 
@@ -392,7 +389,7 @@ void ForExpr::check(NameSema& sema) const {
  */
 
 void ExprStmt::check(NameSema& sema) const { expr()->check(sema); }
-void ItemStmt::check(NameSema& sema) const { item()->check_item(sema); }
+void ItemStmt::check(NameSema& sema) const { item()->check(sema); }
 void LetStmt::check(NameSema& sema) const {
     if (init())
         init()->check(sema);
