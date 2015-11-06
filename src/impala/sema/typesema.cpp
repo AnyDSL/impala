@@ -46,7 +46,7 @@ public:
         while (!impls_.empty()) {
             const ImplItem* i = impls_.back();
             impls_.pop_back();
-            check_item(i);
+            i->check_item(*this);
         }
     }
 
@@ -102,7 +102,6 @@ public:
             decl->type_ = decl->check(*this, expected);
         return decl->type();
     }
-    void check_item(const Item* item) { item->check_item(*this); }
     Type check(const Expr* expr, TypeExpectation expected) {
         if (!expr->type_.empty())
             return expr->type_;
@@ -354,7 +353,7 @@ Type Typeof::check(TypeSema& sema) const {
 TraitApp ASTTypeApp::trait_app(TypeSema& sema, Type self) const {
     if (decl()) {
         if (auto trait_decl = decl()->isa<TraitDecl>()) {
-            sema.check_item(trait_decl);
+            trait_decl->check_item(sema);
             return sema.instantiate(this->loc(), trait_decl->trait_abs(), self, args());
         } else
             error(this) << '\'' << symbol() << "' does not name a trait\n";
@@ -431,7 +430,7 @@ void ModContents::check(TypeSema& sema) const {
 
     sema.check_impls();
     for (auto item : non_impls)
-        sema.check_item(item);
+        item->check_item(sema);
 }
 
 void ExternBlock::check_item(TypeSema& sema) const {
@@ -1282,7 +1281,7 @@ void ExprStmt::check(TypeSema& sema) const {
 }
 
 void ItemStmt::check(TypeSema& sema) const {
-    sema.check_item(item());
+    item()->check_item(sema);
 }
 
 void LetStmt::check(TypeSema& sema) const {

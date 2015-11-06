@@ -596,9 +596,9 @@ class Item : virtual public ASTNode {
 public:
     Visibility visibility() const { return  visibility_; }
     virtual void check(NameSema&) const = 0;
+    virtual void check_item(TypeSema&) const = 0;
 
 private:
-    virtual void check_item(TypeSema&) const = 0;
     virtual void emit_item(CodeGen&) const = 0;
 
     Visibility visibility_;
@@ -784,10 +784,10 @@ public:
     TraitAbs trait_abs() const { return trait_abs_; }
     virtual const Identifier* item_identifier() const override { return Decl::identifier(); }
     virtual std::ostream& print(Printer&) const override;
-
-private:
     virtual void check(NameSema&) const override;
     virtual void check_item(TypeSema&) const override;
+
+private:
     virtual void emit_item(CodeGen&) const override;
 
     const SelfParam self_param_;
@@ -808,11 +808,11 @@ public:
     const FnDecl* method(size_t i) const { return methods_[i]; }
     size_t num_methods() const { return methods_.size(); }
     thorin::Def def() const { return def_; }
+    virtual void check(NameSema&) const override;
+    virtual void check_item(TypeSema&) const override;
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual void check(NameSema&) const override;
-    virtual void check_item(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 
     AutoPtr<const ASTType> trait_;
