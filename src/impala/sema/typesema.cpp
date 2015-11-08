@@ -123,13 +123,30 @@ public:
 
 private:
     bool nossa_;
+    bool todo_ = true;
     std::vector<const ImplItem*> impls_;
     std::vector<CheckBoundsData> check_bounds_stash_;
 
 public:
     const BlockExprBase* cur_block_ = nullptr;
     const Fn* cur_fn_ = nullptr;
+
+    friend void type_analysis(Init& init, const ModContents* mod, bool nossa);
 };
+
+void type_analysis(Init& init, const ModContents* mod, bool nossa) {
+    auto sema = new TypeSema(nossa);
+    init.typetable = sema;
+
+    while (sema->todo_) {
+        sema->todo_ = false;
+        mod->check(*sema);
+    }
+
+#ifndef NDEBUG
+    sema->verify();
+#endif
+}
 
 //------------------------------------------------------------------------------
 
@@ -1289,17 +1306,6 @@ void LetStmt::check(TypeSema& sema) const {
     Type expected = sema.check(local(), sema.unknown_type());
     if (init())
         sema.check(init(), expected, "initialization type");
-}
-
-//------------------------------------------------------------------------------
-
-void type_analysis(Init& init, const ModContents* mod, bool nossa) {
-    auto sema = new TypeSema(nossa);
-    init.typetable = sema;
-    mod->check(*sema);
-#ifndef NDEBUG
-    sema->verify();
-#endif
 }
 
 //------------------------------------------------------------------------------
