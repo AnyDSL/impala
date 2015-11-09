@@ -39,14 +39,12 @@ public:
 
     // helpers
 
+#if 0
     Type comparison_result(const Expr* expr) {
         if (auto simd = expr->type().isa<SimdType>())
             return simd_type(type_bool(), simd->size());
         return type_bool();
     }
-
-    TraitApp instantiate(const Location& loc, TraitAbs trait, Type self, ArrayRef<const ASTType*> args);
-    Type instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args);
 
     int take_addr_space(const PrefixExpr* prefix) {
         if (prefix->kind() == PrefixExpr::MUL) {
@@ -57,26 +55,12 @@ public:
         }
         return 0;
     }
+#endif
 
     // check wrappers
 
     Type check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected);
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
-
-    Type check(const Expr* expr, Type expected, const char* context = nullptr) {
-        auto type = expr->check(*this, expected);
-
-        if (expr->type().empty()) {
-            todo_ = true;
-            return expr->type_ = expect_type(expr, expr->check(*this, expected), expected, context);
-        }
-
-        assert(expr->type() == type);
-        return expr->type();
-    }
-
-    Type check(const Expr* expr) { return check(expr, unknown_type()); }
-    Type check(const ASTType* ast_type) { return ast_type->type_ = ast_type->check(*this); }
 
     static Type turn_cast_inside_out(const Expr* expr) {
         assert(expr->needs_cast());
@@ -94,18 +78,9 @@ public:
     const Fn* cur_fn_ = nullptr;
 };
 
-void type_analysis(Init& init, const ModContents* mod, bool nossa) {
-    auto sema = new TypeSema(nossa);
-    init.typetable = sema;
-
-    while (sema->todo_) {
-        sema->todo_ = false;
-        mod->check(*sema);
-    }
-
-#ifndef NDEBUG
-    sema->verify();
-#endif
+void type_analysis(const ModContents* mod, bool nossa) {
+    TypeSema sema(nossa);
+    mod->check(sema);
 }
 
 //------------------------------------------------------------------------------
