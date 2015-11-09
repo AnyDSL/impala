@@ -87,7 +87,7 @@ public:
 protected:
     mutable Type type_;
 
-    friend class TypeSema;
+    friend class ForExpr;
 };
 
 /// Mixin for all entities which have a list of \p TypeParam%s: [T1, T2 : A + B[...], ...].
@@ -103,50 +103,6 @@ protected:
     void check_type_params(TypeSema&) const;
 
     AutoVector<const TypeParam*> type_params_;
-};
-
-/// a bundle of expected type and a flag whether noret is also allowed
-class TypeExpectation {
-public:
-    TypeExpectation(Type type)
-        : type_(type)
-        , noret_(false)
-        , what_()
-    {}
-    TypeExpectation(Type type, bool noret)
-        : type_(type)
-        , noret_(noret)
-        , what_()
-    {}
-    TypeExpectation(Type type, const std::string& what)
-        : type_(type)
-        , noret_(false)
-        , what_(what)
-    {}
-    TypeExpectation(Type type, bool noret, const std::string& what)
-        : type_(type)
-        , noret_(noret)
-        , what_(what)
-    {}
-    TypeExpectation(TypeExpectation ty_exp, const std::string& what)
-        : type_(ty_exp.type())
-        , noret_(ty_exp.noret())
-        , what_(what)
-    {}
-    TypeExpectation(TypeExpectation ty_exp, Type type)
-        : type_(type)
-        , noret_(ty_exp.noret())
-        , what_(ty_exp.what())
-    {}
-    /// The expected type
-    Type type() const { return type_; }
-    /// Indicates whether NoRet is also allowed
-    bool noret() const { return noret_; }
-    const std::string& what() const { return what_; }
-private:
-    const Type type_;
-    const bool noret_;
-    const std::string what_;
 };
 
 //------------------------------------------------------------------------------
@@ -447,18 +403,10 @@ private:
 };
 
 /// Base class for all declarations which must have a \p Type assigned.
-class TypeableDecl : public Decl, public Typeable {
-private:
-    virtual Type check(TypeSema&) const = 0;
-
-    friend class NameSema;
-    friend class TypeSema;
-    friend class ForExpr;
-};
+class TypeableDecl : public Decl, public Typeable {};
 
 /// Base class for all declarations which represent a type definition.
-class TypeDecl : public TypeableDecl {
-};
+class TypeDecl : public TypeableDecl {};
 
 /// Base class for all declarations which represent a value.
 class ValueDecl : public TypeableDecl {
@@ -471,8 +419,6 @@ public:
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual Type check(TypeSema& sema) const override;
-    Type check(TypeSema&, Type) const;
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const = 0;
 
 protected:
@@ -482,7 +428,6 @@ protected:
     mutable thorin::Var var_;
 
     friend class Parser;
-    friend class TypeSema;
     friend class CodeGen;
 };
 
@@ -498,6 +443,7 @@ public:
     const Fn* fn() const { return fn_; }
     void take_address() const { is_address_taken_ = true; }
     void check(NameSema&) const;
+    Type check(TypeSema&, Type) const;
     void check(BorrowChecker&) const;
 
 private:
@@ -509,6 +455,7 @@ protected:
     mutable bool is_address_taken_ = false;
 
     friend class Parser;
+    friend class TypeSema;
     friend class ValueDecl;
 };
 
@@ -523,14 +470,13 @@ public:
     size_t num_bounds() const { return bounds().size(); }
     const ASTTypes& bounds() const { return bounds_; }
     TypeVar type_var() const { return type().as<TypeVar>(); }
-    TypeVar type_var(TypeSema&) const;
-    virtual void check(NameSema&) const;
-    virtual void check(BorrowChecker&) const;
+
+    void check(NameSema&) const;
+    TypeVar check(TypeSema&) const;
+    void check(BorrowChecker&) const;
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual Type check(TypeSema&) const override;
-
     ASTTypes bounds_;
 
     friend class Parser;
@@ -568,8 +514,8 @@ public:
     thorin::Def frame() const { return frame_; }
     std::ostream& print_params(Printer& p, bool returning) const;
     void fn_check(NameSema&) const;
-    void fn_check(BorrowChecker&) const;
     void check_body(TypeSema&, FnType) const;
+    void fn_check(BorrowChecker&) const;
     thorin::Lambda* emit_head(CodeGen&, const thorin::Location&) const;
     void emit_body(CodeGen&, const thorin::Location& loc) const;
 
@@ -603,8 +549,8 @@ public:
     const thorin::HashMap<Symbol, const NamedItem*>& item_table() const { return item_table_; }
     virtual std::ostream& print(Printer&) const override;
     void check(NameSema&) const;
-    void check(BorrowChecker&) const;
     void check(TypeSema&) const;
+    void check(BorrowChecker&) const;
     void emit(CodeGen&) const;
 
 private:
@@ -618,8 +564,8 @@ class Item : virtual public ASTNode {
 public:
     Visibility visibility() const { return  visibility_; }
     virtual void check(NameSema&) const = 0;
+    virtual void check(TypeSema&) const = 0;
     virtual void check(BorrowChecker&) const = 0;
-    virtual void check_item(TypeSema&) const = 0;
 
 private:
     virtual void emit_item(CodeGen&) const = 0;
@@ -645,9 +591,6 @@ class TypeDeclItem : public NamedItem, public TypeDecl, public TypeParamList {
 public:
     virtual const Identifier* item_identifier() const override { return TypeDecl::identifier(); }
 
-private:
-    virtual void check_item(TypeSema&) const override;
-
     friend class Parser;
 };
 
@@ -664,12 +607,13 @@ private:
 class ModDecl : public TypeDeclItem {
 public:
     const ModContents* mod_contents() const { return mod_contents_; }
+
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
+    virtual void check(TypeSema&) const override;
     virtual void check(BorrowChecker&) const override;
 
 private:
-    virtual Type check(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 
     AutoPtr<const ModContents> mod_contents_;
@@ -681,12 +625,13 @@ class ExternBlock : public Item {
 public:
     Symbol abi() const { return abi_; }
     const AutoVector<const FnDecl*>& fns() const { return fns_; }
+
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
+    virtual void check(TypeSema&) const override;
     virtual void check(BorrowChecker&) const override;
 
 private:
-    virtual void check_item(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 
     Symbol abi_;
@@ -698,12 +643,13 @@ private:
 class Typedef : public TypeDeclItem {
 public:
     const ASTType* ast_type() const { return ast_type_; }
+
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
+    virtual void check(TypeSema&) const override;
     virtual void check(BorrowChecker&) const override;
 
 private:
-    virtual Type check(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 
     AutoPtr<const ASTType> ast_type_;
@@ -711,19 +657,18 @@ private:
     friend class Parser;
 };
 
-class FieldDecl : public TypeDecl {
+class FieldDecl : public TypeableDecl {
 public:
     int index() const { return index_; }
-    const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
+    const ASTType* ast_type() const { return ast_type_; }
     Visibility visibility() const { return  visibility_; }
+
     void check(NameSema&) const;
+    Type check(TypeSema&) const;
     void check(BorrowChecker&) const;
     virtual std::ostream& print(Printer&) const override;
 
 private:
-    virtual Type check(TypeSema&) const override;
-    //virtual thorin::Var emit(CodeGen&) const override;
-
     int index_;
     AutoPtr<const ASTType> ast_type_;
     Visibility visibility_;
@@ -738,12 +683,13 @@ public:
     const thorin::HashMap<Symbol, const FieldDecl*>& field_table() const { return field_table_; }
     const FieldDecl* field_decl(Symbol symbol) const { return thorin::find(field_table_, symbol); }
     const FieldDecl* field_decl(const Identifier* ident) const { return field_decl(ident->symbol()); }
+
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
+    virtual void check(TypeSema&) const override;
     virtual void check(BorrowChecker&) const override;
 
 private:
-    virtual Type check(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 
     AutoVector<const FieldDecl*> field_decls_;
@@ -756,23 +702,23 @@ class EnumDecl : public TypeDeclItem {
 public:
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
+    virtual void check(TypeSema&) const override;
     virtual void check(BorrowChecker&) const override;
 
 private:
-    virtual Type check(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 };
 
 class StaticItem : public ValueItem {
 public:
     const Expr* init() const { return init_; }
+
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
+    virtual void check(TypeSema&) const override;
     virtual void check(BorrowChecker&) const override;
 
 private:
-    virtual Type check(TypeSema&) const override;
-    virtual void check_item(TypeSema&) const override;
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const override;
 
     AutoPtr<const Expr> init_;
@@ -786,12 +732,11 @@ public:
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
+    virtual void check(TypeSema&) const override;
     virtual void check(BorrowChecker&) const override;
     virtual Symbol fn_symbol() const override { return export_name_ ? export_name_->symbol() : identifier()->symbol(); }
 
 private:
-    virtual Type check(TypeSema&) const override;
-    virtual void check_item(TypeSema&) const override;
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const override;
 
     AutoPtr<const Identifier> export_name_;
@@ -814,8 +759,8 @@ public:
     virtual const Identifier* item_identifier() const override { return Decl::identifier(); }
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
+    virtual void check(TypeSema&) const override;
     virtual void check(BorrowChecker&) const override;
-    virtual void check_item(TypeSema&) const override;
 
 private:
     virtual void emit_item(CodeGen&) const override;
@@ -839,8 +784,8 @@ public:
     size_t num_methods() const { return methods_.size(); }
     thorin::Def def() const { return def_; }
     virtual void check(NameSema&) const override;
+    virtual void check(TypeSema&) const override;
     virtual void check(BorrowChecker&) const override;
-    virtual void check_item(TypeSema&) const override;
     virtual std::ostream& print(Printer&) const override;
 
 private:
@@ -866,15 +811,17 @@ public:
     Type actual_type() const { return actual_type_.empty() ? type() : actual_type_; }
     bool needs_cast() const { return !actual_type_.empty(); }
     thorin::Def extra() const { return extra_; }
+
     virtual bool is_lvalue() const { return false; }
     virtual bool has_side_effect() const { return false; }
     virtual void take_address() const {}
+
+    virtual std::ostream& print(Printer&) const = 0;
     virtual void check(NameSema&) const = 0;
     virtual void check(BorrowChecker&) const = 0;
 
 private:
-    virtual std::ostream& print(Printer&) const = 0;
-    virtual Type check(TypeSema&, TypeExpectation) const = 0;
+    virtual Type check(TypeSema&, Type) const = 0;
     virtual thorin::Var lemit(CodeGen&) const;
     virtual thorin::Def remit(CodeGen&) const;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
@@ -901,7 +848,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const ASTType> ast_type_;
@@ -946,7 +893,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 };
 
@@ -975,7 +922,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
 
     Kind kind_;
     thorin::Box box_;
@@ -997,7 +944,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
 
     Symbol symbol_;
     mutable thorin::u8 value_;
@@ -1014,7 +961,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
 
     std::vector<Symbol> symbols_;
     mutable std::vector<thorin::u8> values_;
@@ -1032,7 +979,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     size_t ret_var_handle_;
@@ -1057,7 +1004,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
 
     AutoPtr<const Path> path_;
@@ -1087,7 +1034,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
 
     Kind kind_;
     AutoPtr<const Expr> rhs_;
@@ -1114,7 +1061,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
 
     Kind kind_;
     AutoPtr<const Expr> lhs_;
@@ -1143,7 +1090,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
 
     Kind kind_;
     AutoPtr<const Expr> lhs_;
@@ -1165,7 +1112,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -1187,7 +1134,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
@@ -1203,7 +1150,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     friend class Parser;
@@ -1218,7 +1165,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> value_;
@@ -1236,7 +1183,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> dim_;
@@ -1252,7 +1199,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     friend class Parser;
@@ -1265,7 +1212,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     friend class Parser;
@@ -1312,7 +1259,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Path> path_;
@@ -1329,12 +1276,12 @@ public:
     virtual void take_address() const override;
     virtual void check(NameSema&) const override;
     virtual void check(BorrowChecker&) const override;
-    Type check_as_map(TypeSema&, TypeExpectation) const;
-    Type check_as_method_call(TypeSema&, TypeExpectation) const;
+    Type check_as_map(TypeSema&, Type) const;
+    Type check_as_method_call(TypeSema&, Type) const;
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -1361,7 +1308,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
 
 protected:
     virtual thorin::Def remit(CodeGen&) const override;
@@ -1407,7 +1354,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
 
     AutoPtr<const Expr> cond_;
     AutoPtr<const Expr> then_expr_;
@@ -1430,7 +1377,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
 
     AutoPtr<const Expr> cond_;
     AutoPtr<const BlockExprBase> body_;
@@ -1451,7 +1398,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual Type check(TypeSema&, Type) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const FnExpr> fn_expr_;
