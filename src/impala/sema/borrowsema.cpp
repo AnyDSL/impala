@@ -5,12 +5,12 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-class BorrowChecker {
+class BorrowSema {
 private:
     bool todo_ = true;
 
     friend void type_inference(const ModContents* mod) {
-        BorrowChecker sema;
+        BorrowSema sema;
 
         while (sema.todo_) {
             sema.todo_ = false;
@@ -25,12 +25,12 @@ private:
  * misc
  */
 
-void TypeParam::check(BorrowChecker& sema) const {
+void TypeParam::check(BorrowSema& sema) const {
     for (auto bound : bounds())
         bound->check(sema);
 }
 
-void LocalDecl::check(BorrowChecker& sema) const {
+void LocalDecl::check(BorrowSema& sema) const {
     if (ast_type())
         ast_type()->check(sema);
 }
@@ -41,38 +41,38 @@ void LocalDecl::check(BorrowChecker& sema) const {
  * AST types
  */
 
-void TypeParamList::check_type_params(BorrowChecker& sema) const {
+void TypeParamList::check_type_params(BorrowSema& sema) const {
     for (auto type_param : type_params())
         type_param->check(sema);
 }
 
-void ErrorASTType::check(BorrowChecker&) const {}
-void PrimASTType::check(BorrowChecker&) const {}
-void PtrASTType::check(BorrowChecker& sema) const { referenced_type()->check(sema); }
-void IndefiniteArrayASTType::check(BorrowChecker& sema) const { elem_type()->check(sema); }
-void DefiniteArrayASTType::check(BorrowChecker& sema) const { elem_type()->check(sema); }
+void ErrorASTType::check(BorrowSema&) const {}
+void PrimASTType::check(BorrowSema&) const {}
+void PtrASTType::check(BorrowSema& sema) const { referenced_type()->check(sema); }
+void IndefiniteArrayASTType::check(BorrowSema& sema) const { elem_type()->check(sema); }
+void DefiniteArrayASTType::check(BorrowSema& sema) const { elem_type()->check(sema); }
 
-void TupleASTType::check(BorrowChecker& sema) const {
+void TupleASTType::check(BorrowSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }
 
-void ASTTypeApp::check(BorrowChecker& sema) const {
+void ASTTypeApp::check(BorrowSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }
 
-void FnASTType::check(BorrowChecker& sema) const {
+void FnASTType::check(BorrowSema& sema) const {
     check_type_params(sema);
     for (auto arg : args())
         arg->check(sema);
 }
 
-void Typeof::check(BorrowChecker& sema) const {
+void Typeof::check(BorrowSema& sema) const {
     expr()->check(sema);
 }
 
-void SimdASTType::check(BorrowChecker& sema) const {
+void SimdASTType::check(BorrowSema& sema) const {
     elem_type()->check(sema);
 }
 
@@ -83,36 +83,36 @@ void SimdASTType::check(BorrowChecker& sema) const {
  * items
  */
 
-void ModDecl::check(BorrowChecker& sema) const {
+void ModDecl::check(BorrowSema& sema) const {
     if (mod_contents())
         mod_contents()->check(sema);
 }
 
-void ModContents::check(BorrowChecker& sema) const {
+void ModContents::check(BorrowSema& sema) const {
     for (auto item : items())
         item->check(sema);
 }
 
-void ExternBlock::check(BorrowChecker& sema) const {
+void ExternBlock::check(BorrowSema& sema) const {
     for (auto fn : fns())
         fn->check(sema);
 }
 
-void Typedef::check(BorrowChecker& sema) const {
+void Typedef::check(BorrowSema& sema) const {
     check_type_params(sema);
     ast_type()->check(sema);
 }
 
-void EnumDecl::check(BorrowChecker&) const {}
+void EnumDecl::check(BorrowSema&) const {}
 
-void StaticItem::check(BorrowChecker& sema) const {
+void StaticItem::check(BorrowSema& sema) const {
     if (ast_type())
         ast_type()->check(sema);
     if (init())
         init()->check(sema);
 }
 
-void Fn::fn_check(BorrowChecker& sema) const {
+void Fn::fn_check(BorrowSema& sema) const {
     check_type_params(sema);
     for (auto param : params()) {
         if (param->ast_type())
@@ -122,7 +122,7 @@ void Fn::fn_check(BorrowChecker& sema) const {
         body()->check(sema);
 }
 
-void FnDecl::check(BorrowChecker& sema) const {
+void FnDecl::check(BorrowSema& sema) const {
     fn_check(sema);
 #ifndef NDEBUG
     for (auto param : params())
@@ -130,7 +130,7 @@ void FnDecl::check(BorrowChecker& sema) const {
 #endif
 }
 
-void StructDecl::check(BorrowChecker& sema) const {
+void StructDecl::check(BorrowSema& sema) const {
     check_type_params(sema);
     for (auto field_decl : field_decls()) {
         field_decl->check(sema);
@@ -138,11 +138,11 @@ void StructDecl::check(BorrowChecker& sema) const {
     }
 }
 
-void FieldDecl::check(BorrowChecker& sema) const {
+void FieldDecl::check(BorrowSema& sema) const {
     ast_type()->check(sema);
 }
 
-void TraitDecl::check(BorrowChecker& sema) const {
+void TraitDecl::check(BorrowSema& sema) const {
     check_type_params(sema);
     for (auto t : super_traits())
         t->check(sema);
@@ -152,7 +152,7 @@ void TraitDecl::check(BorrowChecker& sema) const {
     }
 }
 
-void ImplItem::check(BorrowChecker& sema) const {
+void ImplItem::check(BorrowSema& sema) const {
     check_type_params(sema);
     if (trait())
         trait()->check(sema);
@@ -167,76 +167,76 @@ void ImplItem::check(BorrowChecker& sema) const {
  * expressions
  */
 
-void EmptyExpr::check(BorrowChecker&) const {}
-void SizeofExpr::check(BorrowChecker& sema) const { ast_type()->check(sema); }
+void EmptyExpr::check(BorrowSema&) const {}
+void SizeofExpr::check(BorrowSema& sema) const { ast_type()->check(sema); }
 
-void BlockExprBase::check(BorrowChecker& sema) const {
+void BlockExprBase::check(BorrowSema& sema) const {
     for (auto stmt : stmts())
         stmt->check(sema);
     expr()->check(sema);
 }
 
-void LiteralExpr::check(BorrowChecker&) const {}
-void CharExpr::check(BorrowChecker&) const {}
-void StrExpr::check(BorrowChecker&) const {}
-void FnExpr::check(BorrowChecker& sema) const { fn_check(sema); }
+void LiteralExpr::check(BorrowSema&) const {}
+void CharExpr::check(BorrowSema&) const {}
+void StrExpr::check(BorrowSema&) const {}
+void FnExpr::check(BorrowSema& sema) const { fn_check(sema); }
 
-void PathElem::check(BorrowChecker&) const {}
+void PathElem::check(BorrowSema&) const {}
 
-void Path::check(BorrowChecker& sema) const {
+void Path::check(BorrowSema& sema) const {
     for (auto path_elem : path_elems())
         path_elem->check(sema);
 }
 
-void PathExpr::check(BorrowChecker& sema) const {
+void PathExpr::check(BorrowSema& sema) const {
     path()->check(sema);
 }
 
-void PrefixExpr::check(BorrowChecker& sema) const  {                     rhs()->check(sema); }
-void InfixExpr::check(BorrowChecker& sema) const   { lhs()->check(sema); rhs()->check(sema); }
-void PostfixExpr::check(BorrowChecker& sema) const { lhs()->check(sema); }
+void PrefixExpr::check(BorrowSema& sema) const  {                     rhs()->check(sema); }
+void InfixExpr::check(BorrowSema& sema) const   { lhs()->check(sema); rhs()->check(sema); }
+void PostfixExpr::check(BorrowSema& sema) const { lhs()->check(sema); }
 
-void FieldExpr::check(BorrowChecker& sema) const {
+void FieldExpr::check(BorrowSema& sema) const {
     lhs()->check(sema);
     // don't infer symbol here as it depends on lhs' type - must be done in TypeSema
 }
 
-void CastExpr::check(BorrowChecker& sema) const {
+void CastExpr::check(BorrowSema& sema) const {
     lhs()->check(sema);
     ast_type()->check(sema);
 }
 
-void DefiniteArrayExpr::check(BorrowChecker& sema) const {
+void DefiniteArrayExpr::check(BorrowSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }
 
-void RepeatedDefiniteArrayExpr::check(BorrowChecker& sema) const {
+void RepeatedDefiniteArrayExpr::check(BorrowSema& sema) const {
     value()->check(sema);
 }
 
-void IndefiniteArrayExpr::check(BorrowChecker& sema) const {
+void IndefiniteArrayExpr::check(BorrowSema& sema) const {
     dim()->check(sema);
     elem_type()->check(sema);
 }
 
-void TupleExpr::check(BorrowChecker& sema) const {
+void TupleExpr::check(BorrowSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }
 
-void SimdExpr::check(BorrowChecker& sema) const {
+void SimdExpr::check(BorrowSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }
 
-void StructExpr::check(BorrowChecker& sema) const {
+void StructExpr::check(BorrowSema& sema) const {
     path()->check(sema);
     for (const auto& elem : elems())
         elem.expr()->check(sema);
 }
 
-void MapExpr::check(BorrowChecker& sema) const {
+void MapExpr::check(BorrowSema& sema) const {
     lhs()->check(sema);
     for (auto type_arg : type_args())
         type_arg->check(sema);
@@ -244,20 +244,20 @@ void MapExpr::check(BorrowChecker& sema) const {
         arg->check(sema);
 }
 
-void IfExpr::check(BorrowChecker& sema) const {
+void IfExpr::check(BorrowSema& sema) const {
     cond()->check(sema);
     then_expr()->check(sema);
     else_expr()->check(sema);
 }
 
-void WhileExpr::check(BorrowChecker& sema) const {
+void WhileExpr::check(BorrowSema& sema) const {
     cond()->check(sema);
     break_decl()->check(sema);
     continue_decl()->check(sema);
     body()->check(sema);
 }
 
-void ForExpr::check(BorrowChecker& sema) const {
+void ForExpr::check(BorrowSema& sema) const {
     expr()->check(sema);
     break_decl()->check(sema);
     fn_expr()->check(sema);
@@ -269,9 +269,9 @@ void ForExpr::check(BorrowChecker& sema) const {
  * statements
  */
 
-void ExprStmt::check(BorrowChecker& sema) const { expr()->check(sema); }
-void ItemStmt::check(BorrowChecker& sema) const { item()->check(sema); }
-void LetStmt::check(BorrowChecker& sema) const {
+void ExprStmt::check(BorrowSema& sema) const { expr()->check(sema); }
+void ItemStmt::check(BorrowSema& sema) const { item()->check(sema); }
+void LetStmt::check(BorrowSema& sema) const {
     if (init())
         init()->check(sema);
     local()->check(sema);
