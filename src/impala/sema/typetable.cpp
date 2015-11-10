@@ -64,7 +64,7 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
 
         const auto& p = unifiables_.insert(unifiable);
         assert(unifiable->representative() == unifiable);
-        assert(p.second && "hash/equal broken");
+        assert_unused(p.second && "hash/equal broken");
         return unifiable;
     }
 }
@@ -73,12 +73,12 @@ void TypeTable::verify() const {
     for (auto g : unifiables_) {
         assert(g != nullptr);
         if (auto type = g->isa<TypeNode>()) {
-            assert(type->is_known());
-            assert(type->is_sane());
+            assert_unused(type->is_known());
+            assert_unused(type->is_sane());
         } else if (auto trait = g->isa<TraitAbsNode>()) {
-            assert(trait->is_closed());
+            assert_unused(trait->is_closed());
         } else if (auto impl = g->isa<ImplNode>()) {
-            assert(impl->is_closed());
+            assert_unused(impl->is_closed());
         }
     }
 
