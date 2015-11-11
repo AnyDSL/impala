@@ -20,10 +20,11 @@ public:
 
     const char* str() const { return str_; }
     bool operator == (Symbol symbol) const { return str() == symbol.str(); }
-    bool operator == (const char* s) const { return str() == Symbol(s).str(); }
     bool operator != (Symbol symbol) const { return str() != symbol.str(); }
+    bool operator == (const char* s) const { return str() == Symbol(s).str(); }
     bool operator != (const char* s) const { return str() != Symbol(s).str(); }
     bool empty() const { return *str_ == '\0'; }
+    bool is_anonymous() { return (*this) == "_"; }
     std::string remove_quotation() const;
 
     static void destroy();
