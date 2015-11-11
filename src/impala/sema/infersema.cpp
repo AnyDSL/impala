@@ -19,8 +19,6 @@ public:
         : nossa_(nossa)
     {}
 
-    thorin::u8 char_value(const Location& loc, const char*& p);
-
     // helpers
 
     Type comparison_result(const Expr* expr) {
@@ -529,64 +527,11 @@ void ImplItem::check(InferSema& sema) const {
  */
 
 Type EmptyExpr::check(InferSema& sema, Type) const { return sema.unit(); }
-
-Type SizeofExpr::check(InferSema& sema, Type) const {
-    sema.check(ast_type());
-    return sema.type_u32();
-}
-
-Type LiteralExpr::check(InferSema& sema, Type) const {
-    // FEATURE we could enhance this using the expected type (e.g. 4 could be interpreted as int8 if needed)
-    return sema.type(literal2type());
-}
-
-thorin::u8 InferSema::char_value(const Location& loc, const char*& p) {
-    thorin::u8 value = 0;
-    if (*p++ == '\\') {
-        switch (*p++) {
-            case '0':  value = '\0'; break;
-            case 'n':  value = '\n'; break;
-            case 't':  value = '\t'; break;
-            case '\'': value = '\''; break;
-            case '\"': value = '\"'; break;
-            case '\\': value = '\\'; break;
-            default:
-                error(loc) << "unknown escape sequence '\\" << *(p-1) << "'\n";
-        }
-    } else
-        value = thorin::u8(*(p-1));
-
-    return value;
-}
-
-Type CharExpr::check(InferSema& sema, Type) const {
-    const char* p = symbol().str();
-    assert(*p == '\'');
-    ++p;
-    if (*p != '\'') {
-        value_ = sema.char_value(loc(), p);
-
-        if (*p++ != '\'')
-            error(this) << "multi-character character constant\n";
-        else
-            assert(*p == '\0');
-    } else
-        error(this) << "empty character constant\n";
-
-    return sema.type_u8();
-}
+Type SizeofExpr::check(InferSema& sema, Type) const { sema.check(ast_type()); return sema.type_u32(); }
+Type LiteralExpr::check(InferSema& sema, Type) const { return sema.type(literal2type()); }
+Type CharExpr::check(InferSema& sema, Type) const { return sema.type_u8(); }
 
 Type StrExpr::check(InferSema& sema, Type expected) const {
-    for (auto symbol : symbols()) {
-        const char* p = symbol.str();
-        assert(*p == '"');
-        ++p;
-        while (*p != '"')
-            values_.push_back(sema.char_value(loc(), p));
-        assert(p[1] == '\0');
-    }
-    values_.push_back('\0');
-
     auto result = sema.definite_array_type(sema.type_u8(), values_.size());
     if (auto ptr = expected.isa<BorrowedPtrType>()) {
         if (auto array = ptr->referenced_type().isa<ArrayType>()) {

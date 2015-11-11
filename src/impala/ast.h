@@ -188,7 +188,7 @@ private:
 class ASTType : public ASTNode, public Typeable {
 public:
     virtual void check(NameSema&) const = 0;
-    virtual void check(TypeSema&) const = 0;
+    virtual Type check(TypeSema&) const = 0;
     virtual void check(BorrowSema&) const = 0;
 
 private:
@@ -208,7 +208,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual void check(TypeSema&) const override;
+    virtual Type check(TypeSema&) const override;
 };
 
 class PrimASTType : public ASTType {
@@ -226,7 +226,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual void check(TypeSema&) const override;
+    virtual Type check(TypeSema&) const override;
 
     Kind kind_;
 
@@ -247,7 +247,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual void check(TypeSema&) const override;
+    virtual Type check(TypeSema&) const override;
 
     char kind_;
     int addr_space_;
@@ -274,7 +274,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual void check(TypeSema&) const override;
+    virtual Type check(TypeSema&) const override;
 };
 
 class DefiniteArrayASTType : public ArrayASTType {
@@ -287,7 +287,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual void check(TypeSema&) const override;
+    virtual Type check(TypeSema&) const override;
 
     thorin::u64 dim_;
 
@@ -314,7 +314,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual void check(TypeSema&) const override;
+    virtual Type check(TypeSema&) const override;
 };
 
 class ASTTypeApp : public CompoundASTType {
@@ -330,7 +330,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual void check(TypeSema&) const override;
+    virtual Type check(TypeSema&) const override;
 
     AutoPtr<const Identifier> identifier_;
     mutable SafePtr<const Decl> decl_;
@@ -352,7 +352,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual void check(TypeSema&) const override;
+    virtual Type check(TypeSema&) const override;
 
     friend class Parser;
 };
@@ -367,7 +367,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual void check(TypeSema&) const override;
+    virtual Type check(TypeSema&) const override;
 
     AutoPtr<const Expr> expr_;
 
@@ -384,7 +384,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual void check(TypeSema&) const override;
+    virtual Type check(TypeSema&) const override;
 
     thorin::u64 size_;
 
@@ -530,7 +530,7 @@ public:
     std::ostream& print_params(Printer& p, bool returning) const;
     void fn_check(NameSema&) const;
     void check_body(InferSema&, FnType) const;
-    void check_body(TypeSema&, FnType) const;
+    void check_body(TypeSema&) const;
     void fn_check(BorrowSema&) const;
     thorin::Lambda* emit_head(CodeGen&, const thorin::Location&) const;
     void emit_body(CodeGen&, const thorin::Location& loc) const;
