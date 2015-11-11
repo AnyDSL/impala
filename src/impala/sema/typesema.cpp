@@ -15,7 +15,7 @@ namespace impala {
 
 class TypeSema {
 public:
-    TypeSema(const bool nossa)
+    TypeSema(bool nossa)
         : nossa_(nossa)
     {}
 
@@ -162,37 +162,6 @@ Type TypeSema::expect_type(const Expr* expr, Type found_type, Type expected, con
     return expected;
 }
 
-TraitApp TypeSema::instantiate(const Location& loc, TraitAbs trait_abs, Type self, ArrayRef<const ASTType*> args) {
-    if ((args.size()+1) == trait_abs->num_type_vars()) {
-        std::vector<Type> type_args;
-        type_args.push_back(self);
-        for (auto t : args)
-            type_args.push_back(check(t));
-
-        // TODO
-        //stash_bound_check(loc, *trait_abs, type_args);
-        return trait_abs->instantiate(type_args);
-    } else
-        error(loc) << "wrong number of instances for bound type variables of trait '" << trait_abs << "': " << args.size() << " for " << (trait_abs->num_type_vars()-1) << "\n";
-
-    return trait_app_error();
-}
-
-Type TypeSema::instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args) {
-    if (args.size() == type->num_type_vars()) {
-        std::vector<Type> type_args;
-        for (auto t : args)
-            type_args.push_back(check(t));
-
-        // TODO
-        //stash_bound_check(loc, *type, type_args);
-        return type->instantiate(type_args);
-    } else
-        error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << type->num_type_vars() << "\n";
-
-    return type_error();
-}
-
 bool TypeSema::check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> type_args) {
     SpecializeMap map = specialize_map(unifiable, type_args);
     assert(map.size() == type_args.size());
@@ -229,6 +198,7 @@ bool TypeSema::check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> t
  * AST types
  */
 
+#if 0
 void TypeParamList::check_type_params(TypeSema& sema) const {
     for (auto type_param : type_params()) {
         auto type_var = type_param->check(sema);
@@ -241,116 +211,64 @@ void TypeParamList::check_type_params(TypeSema& sema) const {
         }
     }
 }
+#endif
 
-TypeVar TypeParam::check(TypeSema& sema) const { return sema.type_var(symbol()); }
-Type ErrorASTType::check(TypeSema& sema) const { return sema.type_error(); }
+TypeVar TypeParam::check(TypeSema&) const { return type_var(); }
+void ErrorASTType::check(TypeSema& ) const {}
+void PrimASTType::check(TypeSema&) const {}
+void PtrASTType::check(TypeSema& sema) const { referenced_type()->check(sema); }
+void IndefiniteArrayASTType::check(TypeSema& sema) const { return elem_type()->check(sema); }
+void   DefiniteArrayASTType::check(TypeSema& sema) const { return elem_type()->check(sema); }
 
-Type PrimASTType::check(TypeSema& sema) const {
-    switch (kind()) {
-#define IMPALA_TYPE(itype, atype) case TYPE_##itype: return sema.type(PrimType_##itype);
-#include "impala/tokenlist.h"
-        default: THORIN_UNREACHABLE;
-    }
-}
-
-Type PtrASTType::check(TypeSema& sema) const {
-    auto type = sema.check(referenced_type());
-    if (is_owned())
-        return sema.owned_ptr_type(type, addr_space());
-    if (is_borrowed())
-        return sema.borrowd_ptr_type(type, addr_space());
-    assert(false && "only owned and borrowed ptrs are supported");
-    return Type();
-}
-
-Type IndefiniteArrayASTType::check(TypeSema& sema) const {
-    return sema.indefinite_array_type(sema.check(elem_type()));
-}
-
-Type DefiniteArrayASTType::check(TypeSema& sema) const {
-    return sema.definite_array_type(sema.check(elem_type()), dim());
-}
-
-Type TupleASTType::check(TypeSema& sema) const {
-    std::vector<Type> types;
+void TupleASTType::check(TypeSema& sema) const {
     for (auto arg : args())
-        types.push_back(sema.check(arg));
-
-    return sema.tuple_type(types);
+        arg->check(sema);
 }
 
-Type FnASTType::check(TypeSema& sema) const {
+void FnASTType::check(TypeSema& sema) const {
     check_type_params(sema);
-
-    std::vector<Type> params;
     for (auto arg : args())
-        params.push_back(sema.check(arg));
-
-    FnType fn_type = sema.fn_type(params);
-    for (auto type_param : type_params())
-        fn_type->bind(type_param->check(sema));
-
-    return fn_type;
+        arg->check(sema);
 }
 
-Type ASTTypeApp::check(TypeSema& sema) const {
+void ASTTypeApp::check(TypeSema&) const {
     if (decl()) {
-        if (auto type_decl = decl()->isa<TypeDecl>()) {
-            if (auto type = type_decl->type())
-                return sema.instantiate(loc(), type, args());
-            else
-                return sema.unknown_type();
-        }
+        if (decl()->isa<TypeDecl>())
+            return; // OK
     }
 
     error(identifier()) << '\'' << symbol() << "' does not name a type\n";
-    return sema.type_error();
 }
 
-Type Typeof::check(TypeSema& sema) const {
-    return sema.check(expr());
-}
+void Typeof::check(TypeSema& sema) const { expr()->check(sema); }
 
+#if 0
 TraitApp ASTTypeApp::trait_app(TypeSema& sema, Type self) const {
     if (decl()) {
-        if (auto trait_decl = decl()->isa<TraitDecl>()) {
-            if (auto trait_abs = trait_decl->trait_abs())
-                return sema.instantiate(this->loc(), trait_abs, self, args());
-            else
-                //return sema.unknown_type();
-                return sema.trait_app_error(); // TODO we need an unknown_trait here
-        } else
+        if (!decl()->isa<TraitDecl>())
             error(this) << '\'' << symbol() << "' does not name a trait\n";
     }
-    return sema.trait_app_error();
 }
+#endif
 
-Type SimdASTType::check(TypeSema& sema) const {
-    auto type = sema.check(elem_type());
-    if (type.isa<PrimType>())
-        return sema.simd_type(type, size());
-    else {
+void SimdASTType::check(TypeSema& sema) const {
+    elem_type()->check(sema);
+    if (!type().isa<PrimType>())
         error(this) << "non primitive types forbidden in simd type\n";
-        return sema.type_error();
-    }
 }
 
 //------------------------------------------------------------------------------
 
-Type LocalDecl::check(TypeSema& sema, Type expected) const {
-    fn_ = sema.cur_fn_;
-
-    if (ast_type())
-        type_ = sema.check(ast_type());
-    else if (expected)
-        type_ = expected;
-
-    return type_;
+Type LocalDecl::check(TypeSema& sema) const {
+    ast_type()->check(sema);
+    return type();
 }
 
 void Fn::check_body(TypeSema& sema, FnType fn_type) const {
     auto return_type = fn_type->return_type();
-    sema.check(body(), return_type, "return type");
+    auto body_type = body()->check(sema);
+    if (body_type != return_type)
+        error(body()) << "TODO\n";
 
     for (auto param : params()) {
         if (param->is_mut() && !param->is_written())
@@ -386,15 +304,7 @@ void ExternBlock::check(TypeSema& sema) const {
 
 void Typedef::check(TypeSema& sema) const {
     check_type_params(sema);
-    Type type = sema.check(ast_type());
-
-    if (type_params().size() > 0) {
-        Type abs = sema.typedef_abs(type);
-        for (auto type_param : type_params())
-            abs->bind(type_param->check(sema));
-        type_ = abs;
-    } else
-        type_ = type;
+    ast_type()->check(sema);
 }
 
 void EnumDecl::check(TypeSema&) const { /*TODO*/ }

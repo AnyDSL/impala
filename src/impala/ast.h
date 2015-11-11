@@ -188,11 +188,11 @@ private:
 class ASTType : public ASTNode, public Typeable {
 public:
     virtual void check(NameSema&) const = 0;
+    virtual void check(TypeSema&) const = 0;
     virtual void check(BorrowSema&) const = 0;
 
 private:
     virtual Type check(InferSema&) const = 0;
-    virtual Type check(TypeSema&) const = 0;
 
     friend class NameSema;
     friend class InferSema;
@@ -208,7 +208,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual Type check(TypeSema&) const override;
+    virtual void check(TypeSema&) const override;
 };
 
 class PrimASTType : public ASTType {
@@ -226,7 +226,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual Type check(TypeSema&) const override;
+    virtual void check(TypeSema&) const override;
 
     Kind kind_;
 
@@ -247,7 +247,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual Type check(TypeSema&) const override;
+    virtual void check(TypeSema&) const override;
 
     char kind_;
     int addr_space_;
@@ -274,7 +274,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual Type check(TypeSema&) const override;
+    virtual void check(TypeSema&) const override;
 };
 
 class DefiniteArrayASTType : public ArrayASTType {
@@ -287,7 +287,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual Type check(TypeSema&) const override;
+    virtual void check(TypeSema&) const override;
 
     thorin::u64 dim_;
 
@@ -314,7 +314,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual Type check(TypeSema&) const override;
+    virtual void check(TypeSema&) const override;
 };
 
 class ASTTypeApp : public CompoundASTType {
@@ -330,7 +330,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual Type check(TypeSema&) const override;
+    virtual void check(TypeSema&) const override;
 
     AutoPtr<const Identifier> identifier_;
     mutable SafePtr<const Decl> decl_;
@@ -352,7 +352,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual Type check(TypeSema&) const override;
+    virtual void check(TypeSema&) const override;
 
     friend class Parser;
 };
@@ -367,7 +367,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual Type check(TypeSema&) const override;
+    virtual void check(TypeSema&) const override;
 
     AutoPtr<const Expr> expr_;
 
@@ -384,7 +384,7 @@ public:
 
 private:
     virtual Type check(InferSema&) const override;
-    virtual Type check(TypeSema&) const override;
+    virtual void check(TypeSema&) const override;
 
     thorin::u64 size_;
 
@@ -457,7 +457,7 @@ public:
     void take_address() const { is_address_taken_ = true; }
     void check(NameSema&) const;
     Type check(InferSema&, Type) const;
-    Type check(TypeSema&, Type) const;
+    Type check(TypeSema&) const;
     void check(BorrowSema&) const;
 
 private:
@@ -845,7 +845,7 @@ public:
     virtual void take_address() const {}
     virtual std::ostream& print(Printer&) const = 0;
     virtual void check(NameSema&) const = 0;
-    virtual Type check(TypeSema&, Type) const = 0;
+    virtual Type check(TypeSema&) const = 0;
     virtual void check(BorrowSema&) const = 0;
 
 private:
@@ -873,7 +873,7 @@ public:
     const ASTType* ast_type() const { return ast_type_; }
 
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
@@ -919,7 +919,7 @@ public:
     EmptyExpr(const thorin::Location& loc) { loc_ = loc; }
 
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
@@ -954,7 +954,7 @@ public:
 
 private:
     virtual std::ostream& print(Printer&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual Type check(InferSema&, Type) const override;
 
     Kind kind_;
@@ -973,7 +973,7 @@ public:
     thorin::u8 value() const { return value_; }
 
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -992,7 +992,7 @@ public:
     bool is_used_as_global() const { return is_used_as_global_; }
 
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -1013,7 +1013,7 @@ public:
     virtual Symbol fn_symbol() const override { return Symbol("lambda"); }
 
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
@@ -1040,7 +1040,7 @@ public:
     virtual bool is_lvalue() const override;
     virtual void take_address() const override;
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
@@ -1069,7 +1069,7 @@ public:
     virtual bool is_lvalue() const override;
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
@@ -1099,7 +1099,7 @@ public:
 
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
@@ -1131,7 +1131,7 @@ public:
 
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -1162,7 +1162,7 @@ public:
     Type check_as_struct(TypeSema&, Type) const;
 
 private:
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -1181,7 +1181,7 @@ public:
 
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
     virtual bool is_lvalue() const override;
 
@@ -1199,7 +1199,7 @@ class DefiniteArrayExpr : public Expr, public Args {
 public:
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
@@ -1215,7 +1215,7 @@ public:
     thorin::u64 count() const { return count_; }
 
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
@@ -1235,7 +1235,7 @@ public:
     const ASTType* elem_type() const { return elem_type_; }
 
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
@@ -1252,7 +1252,7 @@ private:
 class TupleExpr : public Expr, public Args {
 public:
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
@@ -1266,7 +1266,7 @@ private:
 class SimdExpr : public Expr, public Args {
 public:
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
@@ -1315,7 +1315,7 @@ public:
     const std::vector<Elem>& elems() const { return elems_; }
 
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
@@ -1338,7 +1338,7 @@ public:
     virtual void take_address() const override;
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
     Type check_as_map(InferSema&, Type) const;
@@ -1371,7 +1371,7 @@ public:
     virtual const char* prefix() const = 0;
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
@@ -1417,7 +1417,7 @@ public:
 
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
@@ -1443,7 +1443,7 @@ public:
     virtual bool has_side_effect() const override;
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
@@ -1468,7 +1468,7 @@ public:
     virtual bool has_side_effect() const override;
     virtual std::ostream& print(Printer&) const override;
     virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&, Type) const override;
+    virtual Type check(TypeSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
