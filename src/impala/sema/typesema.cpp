@@ -906,7 +906,9 @@ Type CastExpr::check(TypeSema& sema, TypeExpectation) const {
         (src_type.isa<PtrType>() && sema.is_int(dst_type))   ||  // Pointer to integer
         (sema.is_int(src_type)   && sema.is_float(dst_type)) ||  // Integer to float
         (sema.is_float(src_type) && sema.is_int(dst_type))   ||  // Float to integer
-        (sema.is_int(src_type)   && sema.is_int(dst_type));      // Integer to integer
+        (sema.is_int(src_type)   && sema.is_int(dst_type))   ||  // Integer to integer
+        (sema.is_float(src_type) && sema.is_float(dst_type)) ||  // Float to float
+        (src_type->is_bool()     && sema.is_float(dst_type));    // Boolean to float
 
     if (!valid_cast) {
         error(this) << "invalid source and destination types for cast operator, got '"
