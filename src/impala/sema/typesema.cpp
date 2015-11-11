@@ -896,19 +896,31 @@ Type PostfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
     return lhs()->type();
 }
 
+template <typename F, typename T>
+bool symmetric(F f, T a, T b) {
+    return f(a, b) || f(b, a);
+}
+
 Type CastExpr::check(TypeSema& sema, TypeExpectation) const {
     auto src_type = sema.check(lhs());
     auto dst_type = sema.check(ast_type());
 
+    auto ptr_to_ptr     = [&] (Type a, Type b) { return a.isa<PtrType>() && b.isa<PtrType>(); };
+    auto int_to_int     = [&] (Type a, Type b) { return sema.is_int(a)   && sema.is_int(b);   };
+    auto float_to_float = [&] (Type a, Type b) { return sema.is_float(a) && sema.is_float(b); };
+    auto int_to_ptr     = [&] (Type a, Type b) { return sema.is_int(a)   && b.isa<PtrType>(); };
+    auto int_to_float   = [&] (Type a, Type b) { return sema.is_int(a)   && sema.is_float(b); };
+    auto int_to_bool    = [&] (Type a, Type b) { return sema.is_int(a)   && b->is_bool();     };
+    auto float_to_bool  = [&] (Type a, Type b) { return sema.is_float(a) && b->is_bool();     };
+
     bool valid_cast =
-        (src_type.isa<PtrType>() && dst_type.isa<PtrType>()) ||  // Pointer to pointer
-        (sema.is_int(src_type)   && dst_type.isa<PtrType>()) ||  // Integer to pointer
-        (src_type.isa<PtrType>() && sema.is_int(dst_type))   ||  // Pointer to integer
-        (sema.is_int(src_type)   && sema.is_float(dst_type)) ||  // Integer to float
-        (sema.is_float(src_type) && sema.is_int(dst_type))   ||  // Float to integer
-        (sema.is_int(src_type)   && sema.is_int(dst_type))   ||  // Integer to integer
-        (sema.is_float(src_type) && sema.is_float(dst_type)) ||  // Float to float
-        (src_type->is_bool()     && sema.is_float(dst_type));    // Boolean to float
+        ptr_to_ptr(src_type, dst_type) ||
+        float_to_float(src_type, dst_type) ||
+        int_to_int(src_type, dst_type) ||
+        symmetric(int_to_ptr, src_type, dst_type) ||
+        symmetric(int_to_float, src_type, dst_type) ||
+        symmetric(int_to_bool, src_type, dst_type) ||
+        symmetric(float_to_bool, src_type, dst_type);
 
     if (!valid_cast) {
         error(this) << "invalid source and destination types for cast operator, got '"
