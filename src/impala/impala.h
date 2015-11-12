@@ -33,9 +33,11 @@ struct Init {
 };
 
 void parse(ModContents*, std::istream&, const char*);
-void name_analysis(const ModContents* mod);
+void name_analysis(const ModContents*);
+void type_inference(const ModContents*);
 void type_analysis(Init&, const ModContents*, bool nossa);
-void check(Init&, const ModContents* mod, bool nossa);
+void borrow_check(const ModContents*);
+void check(Init&, const ModContents*);
 void emit(thorin::World&, const ModContents*);
 
 std::ostream& warn(const ASTNode* n);            ///< Emit warning while using \p n as \p Location.

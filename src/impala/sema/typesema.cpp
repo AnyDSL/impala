@@ -620,8 +620,8 @@ bool symmetric(F f, T a, T b) {
 }
 
 Type CastExpr::check(TypeSema& sema) const {
-    auto src_type = sema.check(lhs());
-    auto dst_type = sema.check(ast_type());
+    auto src_type = lhs()->check(sema);
+    auto dst_type = ast_type()->check(sema);
 
     auto ptr_to_ptr     = [&] (Type a, Type b) { return a.isa<PtrType>() && b.isa<PtrType>(); };
     auto int_to_int     = [&] (Type a, Type b) { return sema.is_int(a)   && sema.is_int(b);   };
@@ -668,6 +668,7 @@ Type IndefiniteArrayExpr::check(TypeSema& sema) const {
     return type();
 }
 
+#if 0
 Type TupleExpr::check(TypeSema& sema) const {
     std::vector<Type> types;
     if (auto exp_tup = expected.isa<TupleType>()) {
@@ -687,12 +688,19 @@ Type TupleExpr::check(TypeSema& sema) const {
     }
     return sema.tuple_type(types);
 }
+#endif
 
 Type SimdExpr::check(TypeSema& sema) const {
-    Type elem_type = sema.unknown_type();
-    for (auto arg : args())
-        sema.check(arg, elem_type, "element of simd expression");
-    return sema.simd_type(elem_type, num_args());
+    Type elem_type;
+    for (auto arg : args()) {
+        auto arg_type = arg->check(sema);
+        if (elem_type) {
+            if (elem_type != arg_type)
+                sema.expect_type(arg, arg_type, elem_type, "element of simd expression");
+        } else
+            elem_type = arg_type;
+    }
+    return type();
 }
 
 Type StructExpr::check(TypeSema& sema) const {

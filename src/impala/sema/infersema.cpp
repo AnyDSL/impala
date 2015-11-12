@@ -15,10 +15,6 @@ namespace impala {
 
 class InferSema : public TypeTable {
 public:
-    InferSema(const bool nossa)
-        : nossa_(nossa)
-    {}
-
     // helpers
 
     Type comparison_result(const Expr* expr) {
@@ -763,7 +759,6 @@ Type PostfixExpr::check(InferSema& sema, Type expected) const {
 }
 
 Type CastExpr::check(InferSema& sema, Type) const {
-    // TODO check whether cast is possible at all
     sema.check(lhs());
     return sema.check(ast_type());
 }
