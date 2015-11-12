@@ -129,7 +129,7 @@ public:
     template<class U> Proxy<typename U::BaseType> as() const {
         return Proxy<typename U::BaseType>((*this)->template as <typename U::BaseType>());
     }
-    operator bool() const { return !empty(); }
+    explicit operator bool() const { return !empty(); }
     void clear() { assert(node_ != nullptr); node_ = nullptr; }
     Proxy<T>& operator= (Proxy<T> other) { swap(*this, other); return *this; }
     friend void swap(Proxy<T>& p1, Proxy<T>& p2) {
@@ -137,6 +137,15 @@ public:
         auto tmp = p2.node_;
         p2.node_ = p1.node_;
         p1.node_ = tmp;
+    }
+
+    template<class U>
+    void operator += (Proxy<U> other) {
+        static_assert(std::is_base_of<T, U>::value, "T is not a base type of U");
+        if (*this) {
+            infer(*this, other);
+        } else
+            node_ = *other;
     }
 
 private:

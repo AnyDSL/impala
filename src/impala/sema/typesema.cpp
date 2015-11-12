@@ -191,9 +191,9 @@ void TypeParamList::check_type_params(TypeSema& sema) const {
 TypeVar TypeParam::check(TypeSema&) const { return type_var(); }
 Type ErrorASTType::check(TypeSema& ) const { return type(); }
 Type PrimASTType::check(TypeSema&) const { return type(); }
-Type PtrASTType::check(TypeSema& sema) const { return referenced_type()->check(sema); }
-Type IndefiniteArrayASTType::check(TypeSema& sema) const { return elem_type()->check(sema); }
-Type   DefiniteArrayASTType::check(TypeSema& sema) const { return elem_type()->check(sema); }
+Type PtrASTType::check(TypeSema& sema) const { return referenced_ast_type()->check(sema); }
+Type IndefiniteArrayASTType::check(TypeSema& sema) const { return elem_ast_type()->check(sema); }
+Type   DefiniteArrayASTType::check(TypeSema& sema) const { return elem_ast_type()->check(sema); }
 
 Type TupleASTType::check(TypeSema& sema) const {
     for (auto arg : args())
@@ -226,7 +226,7 @@ TraitApp ASTTypeApp::trait_app(TypeSema& sema, Type self) const {
 #endif
 
 Type SimdASTType::check(TypeSema& sema) const {
-    if (!elem_type()->check(sema).isa<PrimType>())
+    if (!elem_ast_type()->check(sema).isa<PrimType>())
         error(this) << "non primitive types forbidden in simd type\n";
     return type();
 }
@@ -664,7 +664,7 @@ Type RepeatedDefiniteArrayExpr::check(TypeSema& sema) const {
 Type IndefiniteArrayExpr::check(TypeSema& sema) const {
     dim()->check(sema);
     sema.expect_int(dim());
-    elem_type()->check(sema);
+    elem_ast_type()->check(sema);
     return type();
 }
 

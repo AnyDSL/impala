@@ -48,9 +48,11 @@ void TypeParamList::check_type_params(BorrowSema& sema) const {
 
 void ErrorASTType::check(BorrowSema&) const {}
 void PrimASTType::check(BorrowSema&) const {}
-void PtrASTType::check(BorrowSema& sema) const { referenced_type()->check(sema); }
-void IndefiniteArrayASTType::check(BorrowSema& sema) const { elem_type()->check(sema); }
-void DefiniteArrayASTType::check(BorrowSema& sema) const { elem_type()->check(sema); }
+void PtrASTType::check(BorrowSema& sema) const { referenced_ast_type()->check(sema); }
+void IndefiniteArrayASTType::check(BorrowSema& sema) const { elem_ast_type()->check(sema); }
+void DefiniteArrayASTType::check(BorrowSema& sema) const { elem_ast_type()->check(sema); }
+void SimdASTType::check(BorrowSema& sema) const { elem_ast_type()->check(sema); }
+void Typeof::check(BorrowSema& sema) const { expr()->check(sema); }
 
 void TupleASTType::check(BorrowSema& sema) const {
     for (auto arg : args())
@@ -66,14 +68,6 @@ void FnASTType::check(BorrowSema& sema) const {
     check_type_params(sema);
     for (auto arg : args())
         arg->check(sema);
-}
-
-void Typeof::check(BorrowSema& sema) const {
-    expr()->check(sema);
-}
-
-void SimdASTType::check(BorrowSema& sema) const {
-    elem_type()->check(sema);
 }
 
 //------------------------------------------------------------------------------
@@ -217,7 +211,7 @@ void RepeatedDefiniteArrayExpr::check(BorrowSema& sema) const {
 
 void IndefiniteArrayExpr::check(BorrowSema& sema) const {
     dim()->check(sema);
-    elem_type()->check(sema);
+    elem_ast_type()->check(sema);
 }
 
 void TupleExpr::check(BorrowSema& sema) const {

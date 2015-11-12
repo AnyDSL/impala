@@ -15,7 +15,7 @@ void init() { PrecTable::init(); Token::init(); }
 void destroy() { Symbol::destroy(); }
 void check(Init& init, const ModContents* mod, bool nossa) {
     name_analysis(mod);
-    type_inference(init, mod);
+    type_inference(init, mod, nossa);
     type_analysis(mod);
     borrow_check(mod);
 }

@@ -135,17 +135,17 @@ std::ostream& ImplNode::print(Printer& p) const {
 std::ostream& ErrorASTType::print(Printer& p) const { return p.stream() << "<error>"; }
 
 std::ostream& PtrASTType::print(Printer& p) const {
-    return print_ptr_type(p, kind(), addr_space(), referenced_type());
+    return print_ptr_type(p, kind(), addr_space(), referenced_ast_type());
 }
 
 std::ostream& DefiniteArrayASTType::print(Printer& p) const {
     p.stream() << '[';
-    return elem_type()->print(p) << " * " << dim() << ']';
+    return elem_ast_type()->print(p) << " * " << dim() << ']';
 }
 
 std::ostream& IndefiniteArrayASTType::print(Printer& p) const {
     p.stream() << '[';
-    return elem_type()->print(p) << ']';
+    return elem_ast_type()->print(p) << ']';
 }
 
 std::ostream& TupleASTType::print(Printer& p) const {
@@ -190,7 +190,7 @@ std::ostream& Typeof::print(Printer& p) const {
 
 std::ostream& SimdASTType::print(Printer& p) const {
     p.stream() << "simd[";
-    elem_type()->print(p);
+    elem_ast_type()->print(p);
     p.stream() << " * ";
     return p.stream() << size() << ']';
 }
@@ -456,7 +456,7 @@ std::ostream& RepeatedDefiniteArrayExpr::print(Printer& p) const {
 std::ostream& IndefiniteArrayExpr::print(Printer& p) const {
     p.stream() << '[';
     p.print(dim()) << ": ";
-    return elem_type()->print(p) << ']';
+    return elem_ast_type()->print(p) << ']';
 }
 
 std::ostream& SimdExpr::print(Printer& p) const {

@@ -699,10 +699,10 @@ const ASTType* Parser::parse_type() {
 const ArrayASTType* Parser::parse_array_type() {
     auto pos1 = la().pos1();
     eat(Token::L_BRACKET);
-    const ASTType* elem_type = parse_type();
+    const ASTType* elem_ast_type = parse_type();
     if (accept(Token::MUL)) {
         auto definite_array = new DefiniteArrayASTType();
-        definite_array->elem_type_ = elem_type;
+        definite_array->elem_ast_type_ = elem_ast_type;
         definite_array->dim_ = parse_integer("definite array type");
         expect(Token::R_BRACKET, "definite array type");
         definite_array->set_loc(pos1, prev_loc().pos2());
@@ -710,7 +710,7 @@ const ArrayASTType* Parser::parse_array_type() {
     }
 
     auto indefinite_array = new IndefiniteArrayASTType();
-    indefinite_array->elem_type_ = elem_type;
+    indefinite_array->elem_ast_type_ = elem_ast_type;
     expect(Token::R_BRACKET, "indefinite array type");
     indefinite_array->set_loc(pos1, prev_loc().pos2());
     return indefinite_array;
@@ -768,10 +768,10 @@ const PtrASTType* Parser::parse_ptr_type() {
         inner->kind_ = '&';
         lex();
         inner->addr_space_ = parse_addr_space();
-        inner->referenced_type_ = parse_type();
+        inner->referenced_ast_type_ = parse_type();
         auto outer = new PtrASTType();
         outer->kind_ = '&';
-        outer->referenced_type_ = inner;
+        outer->referenced_ast_type_ = inner;
         inner->set_loc(pos1, prev_loc().pos2());
         outer->loc_ = inner->loc();
         return outer;
@@ -779,7 +779,7 @@ const PtrASTType* Parser::parse_ptr_type() {
     auto ptr_type = loc(new PtrASTType());
     ptr_type->kind_ = lex().symbol().str()[0];
     ptr_type->addr_space_ = parse_addr_space();
-    ptr_type->referenced_type_ = parse_type();
+    ptr_type->referenced_ast_type_ = parse_type();
     return ptr_type;
 }
 
@@ -816,7 +816,7 @@ const SimdASTType* Parser::parse_simd_type() {
     auto simd = loc(new SimdASTType());
     eat(Token::SIMD);
     expect(Token::L_BRACKET, "simd type");
-    simd->elem_type_ = parse_type();
+    simd->elem_ast_type_ = parse_type();
     expect(Token::MUL, "simd type");
     simd->size_ = parse_integer("simd vector size");
     expect(Token::R_BRACKET, "simd type");

@@ -139,9 +139,11 @@ void TypeParamList::check_type_params(NameSema& sema) const {
 
 void ErrorASTType::check(NameSema&) const {}
 void PrimASTType::check(NameSema&) const {}
-void PtrASTType::check(NameSema& sema) const { referenced_type()->check(sema); }
-void IndefiniteArrayASTType::check(NameSema& sema) const { elem_type()->check(sema); }
-void DefiniteArrayASTType::check(NameSema& sema) const { elem_type()->check(sema); }
+void PtrASTType::check(NameSema& sema) const { referenced_ast_type()->check(sema); }
+void IndefiniteArrayASTType::check(NameSema& sema) const { elem_ast_type()->check(sema); }
+void DefiniteArrayASTType::check(NameSema& sema) const { elem_ast_type()->check(sema); }
+void SimdASTType::check(NameSema& sema) const { elem_ast_type()->check(sema); }
+void Typeof::check(NameSema& sema) const { expr()->check(sema); }
 
 void TupleASTType::check(NameSema& sema) const {
     for (auto arg : args())
@@ -160,14 +162,6 @@ void FnASTType::check(NameSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
     sema.pop_scope();
-}
-
-void Typeof::check(NameSema& sema) const {
-    expr()->check(sema);
-}
-
-void SimdASTType::check(NameSema& sema) const {
-    elem_type()->check(sema);
 }
 
 //------------------------------------------------------------------------------
@@ -343,7 +337,7 @@ void RepeatedDefiniteArrayExpr::check(NameSema& sema) const {
 
 void IndefiniteArrayExpr::check(NameSema& sema) const {
     dim()->check(sema);
-    elem_type()->check(sema);
+    elem_ast_type()->check(sema);
 }
 
 void TupleExpr::check(NameSema& sema) const {
