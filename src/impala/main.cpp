@@ -3,7 +3,6 @@
 #include <cctype>
 #include <stdexcept>
 
-#include "thorin/be/thorin.h"
 #include "thorin/be/llvm/llvm.h"
 #include "thorin/be/ycomp.h"
 #include "thorin/util/args.h"
@@ -210,7 +209,7 @@ int main(int argc, char** argv) {
                 init.world.cleanup();
             if (opt_thorin)
                 init.world.opt();
-            if (emit_thorin)      thorin::emit_thorin(init.world);
+            if (emit_thorin)      init.world.dump();
             if (emit_llvm)        thorin::emit_llvm(init.world, opt, debug);
             if (emit_ycomp)       thorin::emit_ycomp(init.world, true);
             if (emit_ycomp_cfg)   thorin::emit_ycomp_cfg(init.world);
