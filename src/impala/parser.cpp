@@ -949,7 +949,7 @@ const Expr* Parser::parse_primary_expr() {
             if (accept(Token::COLON)) {
                 auto indefinite_array_expr = new IndefiniteArrayExpr();
                 indefinite_array_expr->dim_ = expr;
-                indefinite_array_expr->elem_type_ = parse_type();
+                indefinite_array_expr->elem_ast_type_ = parse_type();
                 expect(Token::R_BRACKET, "indefinite array expression");
                 indefinite_array_expr->set_loc(pos1, prev_loc().pos2());
                 return indefinite_array_expr;
