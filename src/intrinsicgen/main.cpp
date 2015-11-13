@@ -52,7 +52,7 @@ int main() {
             }
         }
     }
-    std::cout << thorin::down_endl << '}' << thorin::down;
+    std::cout << thorin::down << thorin::endl << '}' << thorin::endl;
 }
 
 impala::Type llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
