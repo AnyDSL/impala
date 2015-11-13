@@ -37,7 +37,7 @@ private:
     static Table table_;
 };
 
-inline std::ostream& operator << (std::ostream& o, Symbol s) { return o << s.str(); }
+inline std::ostream& operator << (std::ostream& os, Symbol s) { return os << s.str(); }
 
 }
 

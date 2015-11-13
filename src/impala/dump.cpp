@@ -1,129 +1,102 @@
-#include "impala/dump.h"
-
 #include "impala/ast.h"
-#include "impala/dump.h"
+#include "impala/impala.h"
 
 namespace impala {
 
-//------------------------------------------------------------------------------
+using namespace thorin;
+
+Prec prec = BOTTOM;
 
 /*
  * types
  */
 
-std::ostream& Unifiable::print_type_vars(Printer& p) const {
-    if (is_polymorphic())
-        return p.dump_list([&] (TypeVar type_var) {
-                    type_var->print(p);
-                    if (type_var->num_bounds() != 0) {
-                        p.stream() << ": ";
-                        p.dump_list([&] (TraitApp bound) { bound->print(p); }, type_var->bounds(), "", "", " + ");
-                    }
-                }, type_vars(), "[", "]");
-    return p.stream();
+std::ostream& Unifiable::stream_type_vars(std::ostream& os) const {
+    if (is_polymorphic()) {
+        return streamf(os, "[%]", stream_list(type_vars(), [&](TypeVar type_var) {
+            os << type_var;
+            if (type_var->num_bounds() != 0)
+                streamf(os, ": %", stream_list(type_var->bounds(), [&](TraitApp bound) { os << bound; }, " + "));
+        }));
+    }
+    return os;
 }
 
-std::ostream& UnknownTypeNode::print(Printer& p) const {
-    assert(!is_unified());
-    return p.stream() << '?' << id();
-}
+std::ostream& UnknownTypeNode::stream(std::ostream& os) const { assert(!is_unified()); return os << '?' << id(); }
 
-std::ostream& PrimTypeNode::print(Printer& p) const {
+std::ostream& PrimTypeNode::stream(std::ostream& os) const {
     switch (primtype_kind()) {
-#define IMPALA_TYPE(itype, atype) case PrimType_##itype: return p.stream() << #itype;
+#define IMPALA_TYPE(itype, atype) case PrimType_##itype: return os << #itype;
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
 }
 
-std::ostream& TypeErrorNode::print(Printer& p) const { return p.stream() << "<type error>"; }
-std::ostream& NoRetTypeNode::print(Printer& p) const { return p.stream() << "<no-return>"; }
+std::ostream& TypeErrorNode::stream(std::ostream& os) const { return os << "<type error>"; }
+std::ostream& NoRetTypeNode::stream(std::ostream& os) const { return os << "<no-return>"; }
 
-std::ostream& FnTypeNode::print(Printer& p) const {
-    p.stream() << "fn";
-    print_type_vars(p);
+std::ostream& FnTypeNode::stream(std::ostream& os) const {
+    stream_type_vars(os << "fn");
     Type ret_type = return_type();
     if (ret_type->is_noret())
-        return p.dump_list([&] (Type type) { type->print(p); }, args(), "(", ")");
+        return stream_list(os, args(), [&](Type type) { os << type; }, "(", ")");
 
-    p.dump_list([&] (Type type) { p.stream() << type; }, args().skip_back(), "(", ")");
-    p.stream() << " -> ";
-    return ret_type->print(p);
+    return streamf(os, "(%) -> %", stream_list(args().skip_back(), [&](Type type) { os << type; }), ret_type);
 }
 
-std::ostream& TypeVarNode::print(Printer& p) const {
+std::ostream& TypeVarNode::stream(std::ostream& os) const {
     if (!name_.empty())
-        return p.stream() << name_.str();
-    return p.stream() << '_' << id() << '_';
+        return os << name_.str();
+    return os << '_' << id() << '_';
 }
 
-std::ostream& TraitAbsNode::print(Printer& p) const {
-    return p.stream() << (is_error() ? "<trait error>" : trait_decl()->symbol().str());
+std::ostream& TraitAbsNode::stream(std::ostream& os) const {
+    return os << (is_error() ? "<trait error>" : trait_decl()->symbol());
 }
 
-std::ostream& TraitAppNode::print(Printer& p) const {
+std::ostream& TraitAppNode::stream(std::ostream& os) const {
     if (is_error())
-        return p.stream() << "<bound error>";
+        return os << "<bound error>";
 
-    p.stream() << trait();
+    os << trait();
     if (num_args() > 1)
-        return p.dump_list([&] (Type type) { type->print(p); }, args().skip_front(), "[", "]");
-    return p.stream();
+        return stream_list(os, args().skip_front(), [&](Type type) { os << type; }, "[", "]");
+    return os;
 }
 
 template <typename T>
-std::ostream& print_ptr_type(Printer& p, char prefix, int addr_space, T ref_type) {
-    p.stream() << prefix;
-    if (addr_space != 0) {
-        p.stream() << '[' << addr_space << ']';
-    }
-    return ref_type->print(p);
+std::ostream& stream_ptr_type(std::ostream& os, char prefix, int addr_space, T ref_type) {
+    os << prefix;
+    if (addr_space != 0)
+        os << '[' << addr_space << ']';
+    return os << ref_type;
 }
 
-std::ostream& OwnedPtrTypeNode::print(Printer& p)    const { return print_ptr_type(p, '~', addr_space(), referenced_type()); }
-std::ostream& BorrowedPtrTypeNode::print(Printer& p) const { return print_ptr_type(p, '&', addr_space(), referenced_type()); }
+std::ostream& OwnedPtrTypeNode::stream(std::ostream& os)    const { return stream_ptr_type(os, '~', addr_space(), referenced_type()); }
+std::ostream& BorrowedPtrTypeNode::stream(std::ostream& os) const { return stream_ptr_type(os, '&', addr_space(), referenced_type()); }
+std::ostream& DefiniteArrayTypeNode::stream(std::ostream& os) const { return streamf(os, "[% * %]", elem_type(), dim()); }
+std::ostream& IndefiniteArrayTypeNode::stream(std::ostream& os) const { return streamf(os, "[%]", elem_type()); }
+std::ostream& SimdTypeNode::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_type(), size()); }
+std::ostream& StructAbsTypeNode::stream(std::ostream& os) const { return os << struct_decl_->symbol(); }
 
-std::ostream& DefiniteArrayTypeNode::print(Printer& p) const {
-    p.stream() << '[';
-    return elem_type()->print(p) << " * " << dim() << ']';
-}
-
-std::ostream& IndefiniteArrayTypeNode::print(Printer& p) const {
-    p.stream() << '[';
-    return elem_type()->print(p) << "]";
-}
-
-std::ostream& SimdTypeNode::print(Printer& p) const {
-    p.stream() << "simd[";
-    return elem_type()->print(p) << " * " << size() << ']';
-}
-
-std::ostream& StructAbsTypeNode::print(Printer& p) const {
-    return p.stream() << struct_decl_->symbol().str();
-}
-
-std::ostream& StructAppTypeNode::print(Printer& p) const {
-    p.stream() << struct_abs_type()->struct_decl()->symbol().str();
+std::ostream& StructAppTypeNode::stream(std::ostream& os) const {
+    os << struct_abs_type()->struct_decl()->symbol();
     if (num_args() != 0)
-        return p.dump_list([&] (Type type) { type->print(p); }, args(), "[", "]");
-    return p.stream();
+        return stream_list(os, args(), [&](Type type) { os << type; }, "[", "]");
+    return os;
 }
 
-std::ostream& TypedefAbsNode::print(Printer& p) const {
+std::ostream& TypedefAbsNode::stream(std::ostream& os) const {
     assert(num_type_vars() > 0); // otherwise no TypedefAbsNode should have been used in the first place
-    p.stream() << "type";
-    print_type_vars(p);
-    p.stream() << " = ";
-    return type()->print(p);
+    return stream_type_vars(os << "type") << " = " << type();
 }
 
-std::ostream& TupleTypeNode::print(Printer& p) const {
-    print_type_vars(p);
-    return p.dump_list([&] (Type type) { type->print(p); }, args(), "(", ")");
+std::ostream& TupleTypeNode::stream(std::ostream& os) const {
+    return stream_list(stream_type_vars(os), args(), [&](Type type) { os << type; }, "(", ")");
 }
 
-std::ostream& ImplNode::print(Printer& p) const {
-    return p.stream() << "TODO";
+std::ostream& ImplNode::stream(std::ostream& os) const {
+    return os << "TODO";
 }
 
 //------------------------------------------------------------------------------
@@ -132,172 +105,141 @@ std::ostream& ImplNode::print(Printer& p) const {
  * AST types
  */
 
-std::ostream& ErrorASTType::print(Printer& p) const { return p.stream() << "<error>"; }
+std::ostream& ErrorASTType::stream(std::ostream& os) const { return os << "<error>"; }
 
-std::ostream& PtrASTType::print(Printer& p) const {
-    return print_ptr_type(p, kind(), addr_space(), referenced_type());
+std::ostream& PtrASTType::stream(std::ostream& os) const {
+    return stream_ptr_type(os, kind(), addr_space(), referenced_type());
 }
 
-std::ostream& DefiniteArrayASTType::print(Printer& p) const {
-    p.stream() << '[';
-    return elem_type()->print(p) << " * " << dim() << ']';
+std::ostream& DefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[% * %]", elem_type(), dim()); }
+std::ostream& IndefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[%]", elem_type()); }
+std::ostream& SimdASTType::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_type(), size()); }
+
+std::ostream& TupleASTType::stream(std::ostream& os) const {
+    return stream_list(os, args(), [&](const ASTType* type) { os << type; }, "(", ")");
 }
 
-std::ostream& IndefiniteArrayASTType::print(Printer& p) const {
-    p.stream() << '[';
-    return elem_type()->print(p) << ']';
-}
-
-std::ostream& TupleASTType::print(Printer& p) const {
-    return p.dump_list([&] (const ASTType* elem) { elem->print(p); }, args(), "(", ")");
-}
-
-std::ostream& FnASTType::print(Printer& p) const {
+std::ostream& FnASTType::stream(std::ostream& os) const {
     auto ret = ret_fn_type();
-    p.stream() << "fn";
-    print_type_params(p);
-    p.dump_list([&] (const ASTType* arg) { arg->print(p); }, ret != nullptr ? args().skip_back() : args(), "(", ")");
+    stream_type_params(os << "fn");
+    stream_list(os, ret != nullptr ? args().skip_back() : args(), [&](const ASTType* arg) { os << arg; }, "(", ")");
     if (ret != nullptr) {
-        p.stream() << " -> ";
-        if (ret->num_args() == 1) {
-            ret->args().front()->print(p);
-        } else {
-            p.dump_list([&] (const ASTType* arg) { arg->print(p); }, ret->args(), "(", ")");
-        }
+        os << " -> ";
+        if (ret->num_args() == 1)
+            os << ret->args().front();
+        else
+            stream_list(os, ret->args(), [&](const ASTType* arg) { os << arg; }, "(", ")");
     }
-    return p.stream();
+    return os;
 }
 
-std::ostream& ASTTypeApp::print(Printer& p) const {
-    p.stream() << symbol();
+std::ostream& ASTTypeApp::stream(std::ostream& os) const {
+    os << symbol();
     if (num_args() != 0)
-        p.dump_list([&] (const ASTType* arg) { arg->print(p); }, args(), "[", "]");
-    return p.stream();
+        stream_list(os, args(), [&](const ASTType* arg) { os << arg; }, "[", "]");
+    return os;
 }
 
-std::ostream& PrimASTType::print(Printer& p) const {
+std::ostream& PrimASTType::stream(std::ostream& os) const {
     switch (kind()) {
-#define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return p.stream() << #itype;
+#define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return os << #itype;
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
 }
 
-std::ostream& Typeof::print(Printer& p) const {
-    p.stream() << "typeof(";
-    return p.print(expr()) << ')';
-}
-
-std::ostream& SimdASTType::print(Printer& p) const {
-    p.stream() << "simd[";
-    elem_type()->print(p);
-    p.stream() << " * ";
-    return p.stream() << size() << ']';
+std::ostream& Typeof::stream(std::ostream& os) const {
+    return streamf(os, "typeof(%)", expr());
 }
 
 /*
  * paths
  */
 
-std::ostream& Identifier::print(Printer& p) const {
-    return p.stream() << symbol();
-}
-
-std::ostream& PathElem::print(Printer& p) const {
-    return p.stream() << symbol();
-}
-
-std::ostream& Path::print(Printer& p) const {
-    p.stream() << (is_global() ? "::" : "");
-    return p.dump_list([&] (const PathElem* path_elem) { path_elem->print(p); }, path_elems(), "", "", "::");
+std::ostream& Identifier::stream(std::ostream& os) const { return os << symbol(); }
+std::ostream& PathElem::stream(std::ostream& os) const { return os << symbol(); }
+std::ostream& Path::stream(std::ostream& os) const {
+    os << (is_global() ? "::" : "");
+    return stream_list(os, path_elems(), [&](const PathElem* path_elem) { os << path_elem; }, "", "", "::");
 }
 
 /*
  * parameters
  */
 
-std::ostream& TypeParam::print(Printer& p) const {
-    p.stream() << symbol() << (bounds_.empty() ? "" : ": ");
-    return p.dump_list([&] (const ASTType* type) { type->print(p); }, bounds(), "", "", " + ");
+std::ostream& TypeParam::stream(std::ostream& os) const {
+    os << symbol() << (bounds_.empty() ? "" : ": ");
+    return stream_list(os, bounds(), [&](const ASTType* type) { os << type; }, "", "", " + ");
 }
 
-std::ostream& TypeParamList::print_type_params(Printer& p) const {
+std::ostream& TypeParamList::stream_type_params(std::ostream& os) const {
     if (!type_params().empty())
-        p.dump_list([&] (const TypeParam* type_param) { type_param->print(p); }, type_params(), "[", "]");
-    return p.stream();
+        stream_list(os, type_params(), [&](const TypeParam* type_param) { os << type_param; }, "[", "]");
+    return os;
 }
 
 /*
  * other decls
  */
 
-std::ostream& Fn::print_params(Printer& p, bool returning) const {
-    return p.dump_list([&] (const Param* param) {
-            if (!param->is_anonymous())
-                p.stream() << (param->is_mut() ? "mut " : "") << param->symbol() <<
-                    ((param->ast_type() || param->type()) ? ": " : "");
-            if (auto type = param->type())
-                p.stream() << type;
-            else if (auto ast_type = param->ast_type())
-                ast_type->print(p);
-        },
-        returning ? params().skip_back() : params());
+std::ostream& Fn::stream_params(std::ostream& os, bool returning) const {
+    return stream_list(os, returning ? params().skip_back() : params(), [&](const Param* param) {
+        if (!param->is_anonymous())
+            os << (param->is_mut() ? "mut " : "") << param->symbol() <<
+                ((param->ast_type() || param->type()) ? ": " : "");
+        if (auto type = param->type())
+            os << type;
+        else if (auto ast_type = param->ast_type())
+            os << ast_type;
+    });
+
 }
 
-std::ostream& ValueDecl::print(Printer& p) const {
-    p.stream() << (is_mut() ? "mut " : "" );
+std::ostream& ValueDecl::stream(std::ostream& os) const {
+    os << (is_mut() ? "mut " : "" );
     if (!is_anonymous()) {
-        p.stream() << symbol();
-        if (!type().empty()) {
-            p.stream() << ": ";
-            p.stream() << type();
-        } else if (ast_type()) {
-            p.stream() << ": ";
-            ast_type()->print(p);
-        }
+        os << symbol();
+        if (!type().empty())
+            os << ": " << type();
+        else if (ast_type())
+            os << ": " << ast_type();
     }
 
-    return p.stream();
+    return os;
 }
 
 /*
  * items + item helpers
  */
 
-std::ostream& ModContents::print(Printer& p) const {
-    return p.dump_list([&] (const Item* item) { item->print(p); p.newline(); }, items(), "", "", "", true);
+std::ostream& ModContents::stream(std::ostream& os) const {
+    return stream_list(os, items(), [&](const Item* item) { os << item << endl; }, "", "", "", true);
 }
 
-std::ostream& ModDecl::print(Printer& p) const {
-    p.stream() << "mod " << symbol();
-    print_type_params(p);
+std::ostream& ModDecl::stream(std::ostream& os) const {
+    stream_type_params(os << "mod " << symbol());
     if (mod_contents()) {
-        p.stream() << " {";
-        p.up();
-        mod_contents()->print(p);
-        return p.down() << " }";
+        return os << " {" << up_endl << mod_contents() << down_endl << "}";
     } else
-        return p.stream() << ';';
+        return os << ';';
 }
 
-std::ostream& ExternBlock::print(Printer& p) const {
-    p.stream() << "extern ";
+std::ostream& ExternBlock::stream(std::ostream& os) const {
+    os << "extern ";
     if (!abi_.empty())
-        p.stream() << abi_.str() << ' ';
-    p.stream() << '{';
-    p.up();
-    p.dump_list([&] (const FnDecl* fn) { fn->print(p); }, fns(), "", "", "", true);
-    return p.down() << '}';
+        os << abi_.str() << ' ';
+    os << '{' << up_endl;
+    stream_list(os, fns(), [&](const FnDecl* fn) { os << fn; }, "", "", "", true);
+    return os << down_endl << '}';
 }
 
-std::ostream& FnDecl::print(Printer& p) const {
+std::ostream& FnDecl::stream(std::ostream& os) const {
     if (is_extern())
-        p.stream() << "extern ";
-    p.stream() << "fn ";
+        os << "extern ";
+    os << "fn ";
     if (export_name_)
-        p.stream() << export_name_->symbol() << ' ';
-    p.stream() << symbol();
-    print_type_params(p);
+        os << export_name_->symbol() << ' ';
+    stream_type_params(os << symbol());
 
     const FnASTType* ret = nullptr;
     if (!params().empty() && params().back()->symbol() == "return") {
@@ -305,169 +247,145 @@ std::ostream& FnDecl::print(Printer& p) const {
             ret = fn_type;
     }
 
-    p.stream() << '(';
-    print_params(p, ret != nullptr);
-    p.stream() << ")";
+    stream_params(os << '(', ret != nullptr) << ")";
 
     if (ret) {
-        p.stream() << " -> ";
+        os << " -> ";
         if (ret->num_args() == 1)
-            ret->arg(0)->print(p);
+            os << ret->arg(0);
         else
-            p.dump_list([&] (const ASTType* type) { type->print(p); }, ret->args(), "(", ")", ", ");
+            stream_list(os, ret->args(), [&](const ASTType* type) { os << type; }, "(", ")", ", ");
     }
 
     if (body()) {
-        p.stream() << ' ';
-        p.print(body());
+        os << ' ' << body();
     } else
-        p.stream() << ';';
+        os << ';';
 
-    return p.stream();
+    return os;
 }
 
-std::ostream& FieldDecl::print(Printer& p) const {
-    p.stream() << visibility().str() << symbol() << ": ";
-    return ast_type()->print(p);
+std::ostream& FieldDecl::stream(std::ostream& os) const {
+    return streamf(os, "%%: %", visibility().str(), symbol(), ast_type());
 }
 
-std::ostream& StaticItem::print(Printer& p) const {
-    p.stream() << "static ";
-    ValueDecl::print(p);
-    if (init()) {
-        p.stream() << " = ";
-        p.print(init());
-    }
-    return p.stream() << ";";
+std::ostream& StaticItem::stream(std::ostream& os) const {
+    ValueDecl::stream(os << "static ");
+    if (init())
+        os << " = " << init();
+    return os << ";";
 }
 
-std::ostream& StructDecl::print(Printer& p) const {
-    p.stream() << visibility().str() << "struct " << symbol();
-    print_type_params(p) << " {";
-    p.up();
-    p.dump_list([&] (const FieldDecl* field) { field->print(p); }, field_decls(), "", "", ",", true);
-    p.down() << "}";
-    return p.stream();
+std::ostream& StructDecl::stream(std::ostream& os) const {
+    stream_type_params(streamf(os, "%struct %", visibility().str(), symbol())) << " {" << up_endl;
+    return stream_list(os, field_decls(), [&](const FieldDecl* field) { os << field; }, "", "", ",", true) << down_endl << "}";
 }
 
-std::ostream& Typedef::print(Printer& p) const {
-    p.stream() << visibility().str() << "type " << symbol();
-    print_type_params(p) << " = ";
-    return ast_type()->print(p) << ';';
+std::ostream& Typedef::stream(std::ostream& os) const {
+    return stream_type_params(streamf(os, "%type %", visibility().str(), symbol())) << " = " << ast_type() << ';';
 }
 
-std::ostream& TraitDecl::print(Printer& p) const {
-    p.stream() << "trait " << symbol();
-    print_type_params(p);
+std::ostream& TraitDecl::stream(std::ostream& os) const {
+    os << "trait " << symbol();
+    stream_type_params(os);
 
     if (!super_traits().empty()) {
-        p.stream() << " : ";
-        p.dump_list([&] (const ASTTypeApp* type_app) { type_app->print(p); }, super_traits());
+        os << " : ";
+        stream_list(os, super_traits(), [&](const ASTTypeApp* type_app) { os << type_app; });
     }
 
-    p.stream() << " {";
-    p.up();
-    p.dump_list([&] (const FnDecl* method) { method->print(p); }, methods(), "", "", "", true);
-    return p.down() << "}";
+    os << " {" << up_endl;
+    stream_list(os, methods(), [&](const FnDecl* method) { os << method; }, "", "", "", true);
+    return os << down_endl << '}';
 }
 
-std::ostream& ImplItem::print(Printer& p) const {
-    p.stream() << "impl";
-    print_type_params(p) << ' ';
+std::ostream& ImplItem::stream(std::ostream& os) const {
+    os << "impl";
+    stream_type_params(os) << ' ';
     if (trait())
-        trait()->print(p) << " for ";
-    ast_type()->print(p);
-    p.stream() << " {";
-    p.up();
-    p.dump_list([&] (const FnDecl* method) { method->print(p); }, methods(), "", "", "", true);
-    return p.down() << "}";
+        os << trait() << " for ";
+    os << ast_type() << " {" << up_endl;
+    stream_list(os, methods(), [&](const FnDecl* method) { os << method; }, "", "", "", true);
+    return os << down_endl << "}";
 }
 
 /*
  * expressions
  */
 
-std::ostream& Printer::print(const Expr* expr) {
-    return expr->print(*this);
-}
+std::ostream& SizeofExpr::stream(std::ostream& os) const { return streamf(os, "sizeof(%)", ast_type()); }
 
-std::ostream& SizeofExpr::print(Printer& p) const {
-    p.stream() << "sizeof(";
-    return ast_type()->print(p) << ')';
-}
-
-std::ostream& BlockExprBase::print(Printer& p) const {
-    p.stream() << prefix();
+std::ostream& BlockExprBase::stream(std::ostream& os) const {
+    os << prefix();
     if (empty())
-        return p.newline() << '}';
-    p.up();
-    p.dump_list([&] (const Stmt* stmt) { stmt->print(p); }, stmts(), "", "", "", true);
+        return os << endl << '}';
+
+    stream_list(os << up_endl, stmts(), [&](const Stmt* stmt) { os << stmt; }, "", "", "", true);
+
     if (!expr()->isa<EmptyExpr>()) {
         if (!stmts().empty())
-            p.newline();
-        p.print(expr());
+            os << endl;
+        os << expr();
     }
 
-    return p.down() << "}";
+    return os << down_endl << "}";
 }
 
-std::ostream& LiteralExpr::print(Printer& p) const {
+std::ostream& LiteralExpr::stream(std::ostream& os) const {
     switch (kind()) {
-        case LIT_i8:  return p.stream() << box().get_s8()  << "i8";
-        case LIT_i16: return p.stream() << box().get_s16() << "i16";
-        case LIT_i32: return p.stream() << box().get_s32();
-        case LIT_i64: return p.stream() << box().get_s64() << "i64";
-        case LIT_u8:  return p.stream() << box().get_s8()  << "u8";
-        case LIT_u16: return p.stream() << box().get_s16() << "u16";
-        case LIT_u32: return p.stream() << box().get_s32() << "u";
-        case LIT_u64: return p.stream() << box().get_s64() << "u64";
-        case LIT_f32: return p.stream() << box().get_f32() << "f";
-        case LIT_f64: return p.stream() << box().get_f64() << "f64";
-        case LIT_bool: return p.stream() << (box().get_bool() ? "true" : "false");
+        case LIT_i8:  return os << box().get_s8()  << "i8";
+        case LIT_i16: return os << box().get_s16() << "i16";
+        case LIT_i32: return os << box().get_s32();
+        case LIT_i64: return os << box().get_s64() << "i64";
+        case LIT_u8:  return os << box().get_s8()  << "u8";
+        case LIT_u16: return os << box().get_s16() << "u16";
+        case LIT_u32: return os << box().get_s32() << "u";
+        case LIT_u64: return os << box().get_s64() << "u64";
+        case LIT_f32: return os << box().get_f32() << "f";
+        case LIT_f64: return os << box().get_f64() << "f64";
+        case LIT_bool: return os << (box().get_bool() ? "true" : "false");
         default: THORIN_UNREACHABLE;
     }
 }
 
-std::ostream& CharExpr::print(Printer& p) const {
-    return p.stream() << symbol();
+std::ostream& CharExpr::stream(std::ostream& os) const {
+    return os << symbol();
 }
 
-std::ostream& StrExpr::print(Printer& p) const {
+std::ostream& StrExpr::stream(std::ostream& os) const {
     if (symbols().size() == 1)
-        return p.stream() << '\'' << symbols().front().remove_quotation() << '\'';
-    p.up();
-    p.dump_list([&] (Symbol symbol) { p.stream() << symbol; }, symbols() , "", "", "", true);
-    return p.down();
+        return os << '\'' << symbols().front().remove_quotation() << '\'';
+    stream_list(os << up_endl, symbols() , [&](Symbol symbol) { os << symbol; }, "", "", "", true);
+    return os << down_endl;
 }
 
-std::ostream& PathExpr ::print(Printer& p) const { return path()->print(p); }
-std::ostream& EmptyExpr::print(Printer& p) const { return p.stream() << "/*empty*/"; }
-std::ostream& TupleExpr::print(Printer& p) const { return p.dump_list([&] (const Expr* expr) { p.print(expr); }, args(), "(", ")"); }
-
-std::ostream& DefiniteArrayExpr::print(Printer& p) const {
-    return p.dump_list([&] (const Expr* expr) { p.print(expr); }, args(), "[", "]");
+std::ostream& PathExpr ::stream(std::ostream& os) const { return os << path(); }
+std::ostream& EmptyExpr::stream(std::ostream& os) const { return os << "/*empty*/"; }
+std::ostream& TupleExpr::stream(std::ostream& os) const {
+    return stream_list(os, args(), [&](const Expr* expr) { os << expr; }, "(", ")");
 }
 
-std::ostream& RepeatedDefiniteArrayExpr::print(Printer& p) const {
-    p.stream() << '[';
-    return p.print(value()) << ", .. " << count() << ']';
+std::ostream& DefiniteArrayExpr::stream(std::ostream& os) const {
+    return stream_list(os, args(), [&](const Expr* expr) { os << expr; }, "[", "]");
 }
 
-std::ostream& IndefiniteArrayExpr::print(Printer& p) const {
-    p.stream() << '[';
-    p.print(dim()) << ": ";
-    return elem_type()->print(p) << ']';
+std::ostream& RepeatedDefiniteArrayExpr::stream(std::ostream& os) const {
+    return streamf(os, "[%, .. %]", value(), count());
 }
 
-std::ostream& SimdExpr::print(Printer& p) const {
-    return p.dump_list([&] (const Expr* expr) { p.print(expr); }, args(), "simd[", "]");
+std::ostream& IndefiniteArrayExpr::stream(std::ostream& os) const {
+    return streamf(os, "[%: %]", dim(), elem_type());
 }
 
-std::ostream& PrefixExpr::print(Printer& p) const {
+std::ostream& SimdExpr::stream(std::ostream& os) const {
+    return stream_list(os, args(), [&](const Expr* expr) { os << expr; }, "simd[", "]");
+}
+
+std::ostream& PrefixExpr::stream(std::ostream& os) const {
     Prec r = PrecTable::prefix_r[kind()];
-    Prec old = p.prec;
-    bool paren = !p.is_fancy() || p.prec <= r;
-    if (paren) p.stream() << "(";
+    Prec old = prec;
+    bool paren = !fancy || prec <= r;
+    if (paren) os << "(";
 
     const char* op;
     switch (kind()) {
@@ -476,37 +394,35 @@ std::ostream& PrefixExpr::print(Printer& p) const {
         default: THORIN_UNREACHABLE;
     }
 
-    p.stream() << op;
-    p.prec = r;
-    p.print(rhs());
-    p.prec = old;
+    os << op;
+    prec = r;
+    os << rhs();
+    prec = old;
 
-    if (paren) p.stream() << ")";
-    return p.stream();
+    if (paren) os << ")";
+    return os;
 }
 
-static std::pair<Prec, bool> open(Printer& p, int kind) {
+static std::pair<Prec, bool> open(std::ostream& os, int kind) {
     std::pair<Prec, bool> result;
     Prec l = PrecTable::postfix_l[kind];
-    result.first = p.prec;
-    result.second = !p.is_fancy() || p.prec > l;
+    result.first = prec;
+    result.second = !fancy || prec > l;
     if (result.second)
-        p.stream() << "(";
-    p.prec = l;
+        os << "(";
+    prec = l;
     return result;
 }
 
-static std::ostream& close(Printer& p, std::pair<Prec, bool> pair) {
-    p.prec = pair.first;
+static std::ostream& close(std::ostream& os, std::pair<Prec, bool> pair) {
+    prec = pair.first;
     if (pair.second)
-        p.stream() << ")";
-    return p.stream();
+        os << ")";
+    return os;
 }
 
-std::ostream& InfixExpr::print(Printer& p) const {
-    auto open_state = open(p, kind());
-    p.print(lhs());
-
+std::ostream& InfixExpr::stream(std::ostream& os) const {
+    auto open_state = open(os, kind());
     const char* op;
     switch (kind()) {
 #define IMPALA_INFIX_ASGN(tok, str, lprec, rprec) case tok: op = str; break;
@@ -514,17 +430,14 @@ std::ostream& InfixExpr::print(Printer& p) const {
 #include "impala/tokenlist.h"
     }
 
-    p.stream() << " " << op << " ";
-
-    p.prec = PrecTable::infix_r[kind()];
-    p.print(rhs());
-    return close(p, open_state);
+    os << lhs() << " " << op << " ";
+    prec = PrecTable::infix_r[kind()];
+    os << rhs();
+    return close(os, open_state);
 }
 
-std::ostream& PostfixExpr::print(Printer& p) const {
-    auto open_state = open(p, kind());
-    p.print(lhs());
-
+std::ostream& PostfixExpr::stream(std::ostream& os) const {
+    auto open_state = open(os, kind());
     const char* op;
     switch (kind()) {
         case INC: op = "++"; break;
@@ -532,141 +445,118 @@ std::ostream& PostfixExpr::print(Printer& p) const {
         default: THORIN_UNREACHABLE;
     }
 
-    p.stream() << op;
-    return close(p, open_state);
+    os << lhs() << op;
+    return close(os, open_state);
 }
 
-std::ostream& FieldExpr::print(Printer& p) const {
-    auto open_state = open(p, Token::DOT);
-    p.print(lhs()) << '.' << symbol();
-    return close(p, open_state);
+std::ostream& FieldExpr::stream(std::ostream& os) const {
+    auto open_state = open(os, Token::DOT);
+    os << lhs() << '.' << symbol();
+    return close(os, open_state);
 }
 
-std::ostream& CastExpr::print(Printer& p) const {
-    auto open_state = open(p, Token::AS);
-    p.print(lhs()) << " as ";
-    ast_type()->print(p);
-    return close(p, open_state);
+std::ostream& CastExpr::stream(std::ostream& os) const {
+    auto open_state = open(os, Token::AS);
+    streamf(os, "% as %", lhs(), ast_type());
+    return close(os, open_state);
 }
 
-std::ostream& TypeArgs::print_type_args(Printer& p) const {
+std::ostream& TypeArgs::stream_type_args(std::ostream& os) const {
     if (num_type_args() != 0)
-        return p.dump_list([&](const ASTType* type) { type->print(p); }, type_args(), "[", "]");
-    return p.stream();
+        return stream_list(os, type_args(), [&](const ASTType* type) { os << type; }, "[", "]");
+    return os;
 }
 
-std::ostream& StructExpr::print(Printer& p) const {
-    path()->print(p);
+std::ostream& StructExpr::stream(std::ostream& os) const {
+    path()->stream(os);
     if (num_inferred_args() == 0)
-        print_type_args(p);
+        stream_type_args(os);
     else
-        p.dump_list([&] (Type t) { p.stream() << t; }, inferred_args(), "[", "]", ", ", false);
-    return p.dump_list([&] (const Elem& elem) { p.stream() << elem.symbol() << ": "; p.print(elem.expr()); }, elems(), "{", "}");
+        stream_list(os, inferred_args(), [&](Type t) { os << t; }, "[", "]", ", ", false);
+    return stream_list(os, elems(), [&](const Elem& elem) { os << elem.symbol() << ": " << elem.expr(); }, "{", "}");
 }
 
-std::ostream& MapExpr::print(Printer& p) const {
+std::ostream& MapExpr::stream(std::ostream& os) const {
     Prec l = PrecTable::postfix_l[Token::L_PAREN];
-    Prec old = p.prec;
-    bool paren = !p.is_fancy() || p.prec > l;
-    if (paren) p.stream() << "(";
+    Prec old = prec;
+    bool paren = !fancy || prec > l;
+    if (paren) os << "(";
 
-    p.prec = l;
-    p.print(lhs());
+    prec = l;
+    os << lhs();
     if (num_inferred_args() == 0)
-        print_type_args(p);
+        stream_type_args(os);
     else
-        p.dump_list([&] (Type t) { p.stream() << t; }, inferred_args(), "[", "]", ", ", false);
-    p.dump_list([&](const Expr* expr) { p.print(expr); }, args(), "(", ")");
-    p.prec = old;
-    if (paren) p.stream() << ")";
-    return p.stream();
+        stream_list(os, inferred_args(), [&](Type type) { os << type; }, "[", "]", ", ", false);
+    stream_list(os, args(), [&](const Expr* expr) { os << expr; }, "(", ")");
+    prec = old;
+    if (paren) os << ")";
+    return os;
 }
 
-std::ostream& FnExpr::print(Printer& p) const {
+std::ostream& FnExpr::stream(std::ostream& os) const {
     bool has_return_type = !params().empty() && params().back()->symbol() == "return";
-    p.stream() << '|';
-    print_params(p, has_return_type);
-    p.stream() << "| ";
+    os << '|';
+    stream_params(os, has_return_type);
+    os << "| ";
 
     if (has_return_type) {
-        p.stream() << "-> ";
+        os << "-> ";
         auto ret = params().back();
         if (!ret->type().empty()) {
             auto rettype = ret->type().as<FnType>();
             if (rettype->num_args() == 1)
-                p.stream() << rettype->arg(0);
+                os << rettype->arg(0);
             else
-                p.dump_list([&] (Type type) { p.stream() << type; }, rettype->args(), "(", ")", ", ");
+                stream_list(os, rettype->args(), [&](Type type) { os << type; }, "(", ")", ", ");
         } else if (ret->ast_type()) {
             auto rettype = ret->ast_type()->as<FnASTType>();
             if (rettype->num_args() == 1)
-                rettype->arg(0)->print(p);
+                os << rettype->arg(0);
             else
-                p.dump_list([&] (const ASTType* type) { type->print(p); }, rettype->args(), "(", ")", ", ");
+                stream_list(os, rettype->args(), [&](const ASTType* type) { os << type; }, "(", ")", ", ");
         }
-        p.stream() << " ";
+        os << " ";
     }
 
-    return p.print(body());
+    return os << body();
 }
 
-std::ostream& IfExpr::print(Printer& p) const {
-    p.stream() << "if ";
-    p.print(cond()) << ' ';
-    p.print(then_expr());
-    if (has_else()) {
-        p.stream() << " else ";
-        p.print(else_expr());
-    }
-    return p.stream();
+std::ostream& IfExpr::stream(std::ostream& os) const {
+    streamf(os, "if % %", cond(), then_expr());
+    if (has_else())
+        os << " else " << else_expr();
+    return os;
 }
 
-std::ostream& WhileExpr::print(Printer& p) const {
-    p.stream() << "while ";
-    p.print(cond()) << ' ';
-    return p.print(body());
+std::ostream& WhileExpr::stream(std::ostream& os) const {
+    return streamf(os, "while % %", cond(), body());
 }
 
-std::ostream& ForExpr::print(Printer& p) const {
-    p.stream() << "for ";
-    p.dump_list([&](const Param* param) { param->print(p); }, fn_expr()->params().skip_back()) << " in ";
-    p.print(expr()) << ' ';
-    return p.print(fn_expr()->body());
+std::ostream& ForExpr::stream(std::ostream& os) const {
+    stream_list(os << "for ", fn_expr()->params().skip_back(), [&](const Param* param) { os << param; }) << " in ";
+    return os << expr() << ' ' << fn_expr()->body();
 }
 
 /*
  * statements
  */
 
-std::ostream& ItemStmt::print(Printer& p) const { return item()->print(p); }
+std::ostream& ItemStmt::stream(std::ostream& os) const { return os << item(); }
 
-std::ostream& LetStmt::print(Printer& p) const {
-    p.stream() << "let ";
-    local()->print(p);
-    if (init()) {
-        p.stream() << " = ";
-        p.print(init());
-    }
-    return p.stream() << ';';
+std::ostream& LetStmt::stream(std::ostream& os) const {
+    os << "let " << local();
+    if (init())
+        os << " = " << init();
+    return os << ';';
 }
 
-std::ostream& ExprStmt::print(Printer& p) const {
+std::ostream& ExprStmt::stream(std::ostream& os) const {
     bool no_semi = expr()->isa<IfExpr>() || expr()->isa<ForExpr>();
-    p.print(expr());
+    os << expr();
     if (!no_semi)
-        p.stream() << ';';
-    return p.stream();
+        os << ';';
+    return os;
 }
-
-//------------------------------------------------------------------------------
-
-void ASTNode::dump() const { Printer p(std::cout, true); print(p) << std::endl; }
-void Unifiable::dump() const { Printer p(std::cout, true); print(p) << std::endl; }
-
-void dump(const ASTNode* n, bool fancy, std::ostream& o) { Printer p(o, fancy); n->print(p); }
-std::ostream& operator << (std::ostream& o, const ASTNode* n) { Printer p(o, true); return n->print(p); }
-std::ostream& operator << (std::ostream& o, const Uni& uni) { Printer p(o, true); return uni->print(p); }
-
-//------------------------------------------------------------------------------
 
 }
