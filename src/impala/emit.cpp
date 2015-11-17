@@ -277,7 +277,6 @@ Var FnDecl::emit(CodeGen& cg, Def) const {
     if (is_extern())
         lambda_->make_external();
 
-    // handle main function
     if (symbol() == "main") {
         lambda()->name += "_impala";
         lambda()->make_external();
