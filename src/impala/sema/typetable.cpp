@@ -14,9 +14,9 @@ TypeTable::TypeTable()
     trait_app_error_ = unify(trait_app(trait_abs_error(), {type_error()}));
 }
 
-TypeTable::~TypeTable() { 
-    for (auto g : garbage_) 
-        delete g; 
+TypeTable::~TypeTable() {
+    for (auto g : garbage_)
+        delete g;
 }
 
 PrimType TypeTable::type(const PrimTypeKind kind) {
@@ -62,7 +62,7 @@ const Unifiable* TypeTable::unify(const Unifiable* unifiable) {
             std::stable_sort(type_var->bounds_.begin(), type_var->bounds_.end(), TraitAppLT());
         }
 
-        auto p = unifiables_.insert(unifiable);
+        const auto& p = unifiables_.insert(unifiable);
         assert(unifiable->representative() == unifiable);
         assert(p.second && "hash/equal broken");
         return unifiable;

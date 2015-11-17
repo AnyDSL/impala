@@ -40,7 +40,7 @@ private:
     }
 
     static std::ostream& cgen_error(const ASTNode* node) {
-        return node->loc().error() << "cannot generate C interface : ";
+        return error(node) << "cannot generate C interface : ";
     }
 
     // Generates a C type from an Impala type
@@ -206,8 +206,8 @@ private:
 
         // Read each argument in turn and record the structures that have to be exported
         FnType fn_type = fn_decl->fn_type();
-        for (size_t i = 0; i < fn_type->num_args(); i++) {
-            struct_from_type(fn_type->arg(i).node(), [this] (const StructDecl* decl) {
+        for (auto arg : fn_type->args()) {
+            struct_from_type(arg, [this] (const StructDecl* decl) {
                 export_structs.insert(decl);
             });
         }
@@ -251,18 +251,15 @@ public:
         thorin::HashMap<const StructDecl*, GenState> struct_decls;
         std::vector<const StructDecl*> order;
 
-        for (auto st : export_structs) {
+        for (auto st : export_structs)
             struct_decls.insert(std::make_pair(st, NOT_GEN));
-        }
-        
         int prev_id = 0;
         do {
             compute_struct_order(struct_decls, order, struct_decls.begin()->first);
 
             // Remove structures that have been generated
-            for (size_t i = prev_id; i < order.size(); i++) {
+            for (size_t i = prev_id, e = order.size(); i != e; i++)
                 struct_decls.erase(order[i]);
-            }
 
             prev_id = order.size();
         } while (!struct_decls.empty());
@@ -273,14 +270,14 @@ public:
             o << "struct " << st->item_symbol().str() << " {\n";
             for (auto field : st->field_decls()) {
                 Type type = field->type();
-                    
+
                 std::string ctype_pref, ctype_suf;
                 if (!ctype_from_impala(type.node(), ctype_pref, ctype_suf)) {
                     cgen_error(field) << "structure field type not exportable\n";
                     return false;
                 }
 
-                o << "    " << ctype_pref << ' ' << field->symbol().str() << ctype_suf << ";\n"; 
+                o << "    " << ctype_pref << ' ' << field->symbol().str() << ctype_suf << ";\n";
             }
             o << "};\n" << std::endl;
         }
@@ -307,7 +304,7 @@ public:
             o << return_pref << ' ' << fn->item_symbol().str() << '(';
 
             // Generate all arguments except the last one which is the implicit continuation
-            for (size_t i = 0; i < fn_type->num_args() - 1; i++) {
+            for (size_t i = 0, e = fn_type->num_args() - 1; i != e; ++i) {
                 std::string ctype_pref, ctype_suf;
                 if (!ctype_from_impala(fn_type->arg(i).node(), ctype_pref, ctype_suf)) {
                     cgen_error(fn) << "function argument type not exportable\n";
@@ -315,12 +312,12 @@ public:
                 }
 
                 o << ctype_pref << ' ' << fn->param(i)->symbol().str() << ctype_suf;
-                    
+
                 if (i < fn_type->num_args() - 2)
                     o << ", ";
             }
 
-            // Generate void functions when the function takes no argument to be C89 compatible 
+            // Generate void functions when the function takes no argument to be C89 compatible
             if (fn_type->num_args() == 1) {
                 o << "void";
             }

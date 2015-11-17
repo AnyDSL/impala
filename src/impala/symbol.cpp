@@ -5,8 +5,8 @@
 
 namespace impala {
 
-size_t StrHash::operator () (const char* s) const {
-    size_t seed = thorin::FNV1<sizeof(size_t)>::offset;
+uint64_t StrHash::operator () (const char* s) const {
+    uint64_t seed = thorin::FNV1::offset;
     const char* i = s;
 
     while (*i != '\0')

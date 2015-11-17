@@ -31,7 +31,7 @@ Token::Token(const Location& loc, const std::string& str)
 Token::Token(const Location& loc, Kind kind, const std::string& str)
     : HasLocation(loc)
     , symbol_(str)
-    , kind_(kind) 
+    , kind_(kind)
 {
     using namespace std;
 
@@ -79,7 +79,7 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
 
 bool Token::is_rel(Kind op) {
     switch (op) {
-        case EQ: case LT: case LE: 
+        case EQ: case LT: case LE:
         case NE: case GT: case GE: return true;
         default: return false;
     }
@@ -169,9 +169,9 @@ void Token::init() {
     for (size_t i = 0; i < NUM_TOKENS; ++i)
         tok2op_[i] = NONE;
 
-#define IMPALA_PREFIX(    tok, str, r   ) insert(tok, str); tok2op_[tok] |= PREFIX;  
-#define IMPALA_POSTFIX(   tok, str,    l) insert(tok, str); tok2op_[tok] |= POSTFIX; 
-#define IMPALA_INFIX(     tok, str, r, l) insert(tok, str); tok2op_[tok] |= INFIX;   
+#define IMPALA_PREFIX(    tok, str, r   ) insert(tok, str); tok2op_[tok] |= PREFIX;
+#define IMPALA_POSTFIX(   tok, str,    l) insert(tok, str); tok2op_[tok] |= POSTFIX;
+#define IMPALA_INFIX(     tok, str, r, l) insert(tok, str); tok2op_[tok] |= INFIX;
 #define IMPALA_INFIX_ASGN(tok, str, r, l) insert(tok, str); tok2op_[tok] |= INFIX | ASGN_OP;
 #define IMPALA_MISC(      tok, str)       insert(tok, str);
 #define IMPALA_KEY(       tok, str)       insert_key(tok, str);
@@ -190,7 +190,7 @@ void Token::init() {
     sym2lit_["i8"]  = LIT_i8;  sym2lit_["u8"]  = LIT_u8;
     sym2lit_["i16"] = LIT_i16; sym2lit_["u16"] = LIT_u16;
     sym2lit_["i32"] = LIT_i32; sym2lit_["u32"] = LIT_u32;
-    sym2lit_["i64"] = LIT_i64; sym2lit_["u64"] = LIT_u64; 
+    sym2lit_["i64"] = LIT_i64; sym2lit_["u64"] = LIT_u64;
 
     sym2lit_["f"]   = LIT_f32; sym2flit_["f"]   = LIT_f32;
     sym2lit_["f32"] = LIT_f32; sym2flit_["f32"] = LIT_f32;
@@ -211,7 +211,7 @@ void Token::insert_key(TokenKind tok, const char* str) {
 
 Symbol Token::insert(TokenKind tok, const char* str) {
     Symbol s = str;
-    auto p = tok2sym_.emplace(tok, s);
+    const auto& p = tok2sym_.emplace(tok, s);
 
 #ifndef NDEBUG
     if (!p.second) {

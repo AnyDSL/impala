@@ -3,7 +3,6 @@
 #include "thorin/util/push.h"
 
 #include "impala/ast.h"
-#include "impala/dump.h"
 #include "impala/impala.h"
 #include "impala/sema/typetable.h"
 
@@ -46,7 +45,7 @@ public:
         while (!impls_.empty()) {
             const ImplItem* i = impls_.back();
             impls_.pop_back();
-            check_item(i);
+            i->check_item(*this);
         }
     }
 
@@ -61,6 +60,9 @@ public:
         }
         return true;
     }
+    Type scalar_type(const Expr*);
+    bool is_int(Type t);
+    bool is_float(Type t);
     bool expect_int(const Expr*);
     bool expect_int_or_bool(const Expr*);
     void expect_num(const Expr*);
@@ -102,7 +104,6 @@ public:
             decl->type_ = decl->check(*this, expected);
         return decl->type();
     }
-    void check_item(const Item* item) { item->check_item(*this); }
     Type check(const Expr* expr, TypeExpectation expected) {
         if (!expr->type_.empty())
             return expr->type_;
@@ -134,19 +135,27 @@ public:
 
 //------------------------------------------------------------------------------
 
-// TODO factor code with expect_num
-// TODO maybe have variant which also checks expr
-bool TypeSema::expect_int(const Expr* expr) {
-    Type e = expr->type(), t;
-    if (auto simd = e.isa<SimdType>()) {
-        t = simd->elem_type();
-    } else {
-        t = e;
+Type TypeSema::scalar_type(const Expr* e) {
+    Type t = e->type();
+    if (auto simd = t.isa<SimdType>()) {
+        return simd->elem_type();
     }
+    return t;
+}
 
-    if (!t->is_error() &&
-        !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
-        !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64()) { // TODO factor this test out
+bool TypeSema::is_int(Type t) {
+    return t->is_i8() || t->is_i16() || t->is_i32() || t->is_i64() ||
+           t->is_u8() || t->is_u16() || t->is_u32() || t->is_u64();
+}
+
+bool TypeSema::is_float(Type t) {
+    return t->is_f32() || t->is_f64();
+}
+
+bool TypeSema::expect_int(const Expr* expr) {
+    auto t = scalar_type(expr);
+
+    if (!t->is_error() && !is_int(t)) {
         error(expr) << "expected integer type but found " << t << "\n";
         return false;
     }
@@ -154,17 +163,9 @@ bool TypeSema::expect_int(const Expr* expr) {
 }
 
 bool TypeSema::expect_int_or_bool(const Expr* expr) {
-    Type e = expr->type(), t;
-    if (auto simd = e.isa<SimdType>()) {
-        t = simd->elem_type();
-    } else {
-        t = e;
-    }
+    auto t = scalar_type(expr);
 
-    if (!t->is_error() &&
-        !t->is_bool() &&
-        !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
-        !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64()) { // TODO factor this test out
+    if (!t->is_error() && !t->is_bool() && !is_int(t)) {
         error(expr) << "expected integer or boolean type but found " << t << "\n";
         return false;
     }
@@ -172,17 +173,9 @@ bool TypeSema::expect_int_or_bool(const Expr* expr) {
 }
 
 void TypeSema::expect_num(const Expr* expr) {
-    Type e = expr->type(), t;
-    if (auto simd = e.isa<SimdType>()) {
-        t = simd->elem_type();
-    } else {
-        t = e;
-    }
+    auto t = scalar_type(expr);
 
-    if (!t->is_error() &&
-        !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
-        !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64() &&
-        !t->is_f32() && !t->is_f64()) // TODO factor this test out
+    if (!t->is_error() && !t->is_bool() && !is_int(t) && !is_float(t))
         error(expr) << "expected number type but found " << t << "\n";
 }
 
@@ -279,7 +272,7 @@ void TypeParamList::check_type_params(TypeSema& sema) const {
             if (auto type_app = bound->isa<ASTTypeApp>()) {
                 type_var->add_bound(type_app->trait_app(sema, type_var));
             } else {
-                sema.error(type_param) << "bounds must be trait instances, not types\n";
+                error(type_param) << "bounds must be trait instances, not types\n";
             }
         }
     }
@@ -343,7 +336,7 @@ Type ASTTypeApp::check(TypeSema& sema) const {
             return sema.instantiate(loc(), sema.check(type_decl), args());
     }
 
-    sema.error(identifier()) << '\'' << symbol() << "' does not name a type\n";
+    error(identifier()) << '\'' << symbol() << "' does not name a type\n";
     return sema.type_error();
 }
 
@@ -354,10 +347,10 @@ Type Typeof::check(TypeSema& sema) const {
 TraitApp ASTTypeApp::trait_app(TypeSema& sema, Type self) const {
     if (decl()) {
         if (auto trait_decl = decl()->isa<TraitDecl>()) {
-            sema.check_item(trait_decl);
+            trait_decl->check_item(sema);
             return sema.instantiate(this->loc(), trait_decl->trait_abs(), self, args());
         } else
-            sema.error(this) << '\'' << symbol() << "' does not name a trait\n";
+            error(this) << '\'' << symbol() << "' does not name a trait\n";
     }
     return sema.trait_app_error();
 }
@@ -367,7 +360,7 @@ Type SimdASTType::check(TypeSema& sema) const {
     if (type.isa<PrimType>())
         return sema.simd_type(type, size());
     else {
-        sema.error(this) << "non primitive types forbidden in simd type\n";
+        error(this) << "non primitive types forbidden in simd type\n";
         return sema.type_error();
     }
 }
@@ -385,11 +378,11 @@ Type ValueDecl::check(TypeSema& sema, Type expected) const {
         if (expected.empty() || expected == t) {
             return t;
         } else {
-            sema.error(this) << "could not infer types: expected '" << expected << "' but found '" << t << "'\n";
+            error(this) << "could not infer types: expected '" << expected << "' but found '" << t << "'\n";
             return sema.type_error();
         }
     } else if (expected.empty()) {
-        sema.error(this) << "could not infer parameter type for " << this << "\n";
+        error(this) << "could not infer parameter type for " << this << "\n";
         return sema.type_error();
     } else {
         return expected;
@@ -402,7 +395,7 @@ void Fn::check_body(TypeSema& sema, FnType fn_type) const {
 
     for (auto param : params()) {
         if (param->is_mut() && !param->is_written())
-            sema.warn(param) << "parameter '" << param->symbol() << "' declared mutable but parameter is never written to\n";
+            warn(param) << "parameter '" << param->symbol() << "' declared mutable but parameter is never written to\n";
     }
 }
 
@@ -431,13 +424,13 @@ void ModContents::check(TypeSema& sema) const {
 
     sema.check_impls();
     for (auto item : non_impls)
-        sema.check_item(item);
+        item->check_item(sema);
 }
 
 void ExternBlock::check_item(TypeSema& sema) const {
     if (!abi().empty())
         if (abi() != Symbol("\"C\"") && abi() != Symbol("\"device\"") && abi() != Symbol("\"thorin\""))
-            sema.error(this) << "unknown extern specification\n";  // TODO: better location
+            error(this) << "unknown extern specification\n";  // TODO: better location
     for (auto fn : fns())
         sema.check(fn);
 }
@@ -455,9 +448,7 @@ Type Typedef::check(TypeSema& sema) const {
     }
 }
 
-Type EnumDecl::check(TypeSema& sema) const {
-    return Type();
-}
+Type EnumDecl::check(TypeSema&) const { return Type(); }
 
 Type StructDecl::check(TypeSema& sema) const {
     check_type_params(sema);
@@ -533,7 +524,7 @@ void TraitDecl::check_item(TypeSema& sema) const {
 
     for (auto type_app : super_traits()) {
         if (!trait_abs_->add_super_trait(type_app->trait_app(sema, self_var)))
-            sema.error(type_app) << "duplicate super trait '" << type_app << "' for trait '" << symbol() << "'\n";
+            error(type_app) << "duplicate super trait '" << type_app << "' for trait '" << symbol() << "'\n";
     }
 
     sema.treat_bound_check_stash();
@@ -559,7 +550,7 @@ void ImplItem::check_item(TypeSema& sema) const {
                 trait_app->trait()->add_impl(impl);
             }
         } else
-            sema.error(trait()) << "expected trait instance\n";
+            error(trait()) << "expected trait instance\n";
     }
 
     sema.treat_bound_check_stash();
@@ -574,12 +565,12 @@ void ImplItem::check_item(TypeSema& sema) const {
             Symbol meth_name = fn->symbol();
             if (auto method_type = trait_app->find_method(meth_name)) {
                 // remember name for check if all methods were implemented
-                auto p = implemented_methods.insert(meth_name);
+                const auto& p = implemented_methods.insert(meth_name);
                 assert(p.second && "there should be no such name in the set"); // else name analysis failed
 
                 // check that the types match
                 if (fn_type != method_type)
-                    sema.error(fn) << "method '" << trait() << "." << meth_name << "' should have type '" << method_type << "', but implementation has type '" << fn_type << "'\n";
+                    error(fn) << "method '" << trait() << "." << meth_name << "' should have type '" << method_type << "', but implementation has type '" << fn_type << "'\n";
             }
         }
     }
@@ -590,9 +581,9 @@ void ImplItem::check_item(TypeSema& sema) const {
     if (!bound.empty()) {
         if (implemented_methods.size() != bound->num_methods()) {
             assert(implemented_methods.size() < bound->num_methods());
-            for (auto p : bound->all_methods()) {
+            for (const auto& p : bound->all_methods()) {
                 if (!implemented_methods.contains(p.first))
-                    sema.error(this) << "must implement method '" << p.first << "'\n";
+                    error(this) << "must implement method '" << p.first << "'\n";
             }
         }
     }
@@ -612,7 +603,7 @@ Type SizeofExpr::check(TypeSema& sema, TypeExpectation) const {
     return sema.type_u32();
 }
 
-Type LiteralExpr::check(TypeSema& sema, TypeExpectation expected) const {
+Type LiteralExpr::check(TypeSema& sema, TypeExpectation) const {
     // FEATURE we could enhance this using the expected type (e.g. 4 could be interpreted as int8 if needed)
     return sema.type(literal2type());
 }
@@ -636,7 +627,7 @@ thorin::u8 TypeSema::char_value(const Location& loc, const char*& p) {
     return value;
 }
 
-Type CharExpr::check(TypeSema& sema, TypeExpectation expected) const {
+Type CharExpr::check(TypeSema& sema, TypeExpectation) const {
     const char* p = symbol().str();
     assert(*p == '\'');
     ++p;
@@ -644,11 +635,11 @@ Type CharExpr::check(TypeSema& sema, TypeExpectation expected) const {
         value_ = sema.char_value(loc(), p);
 
         if (*p++ != '\'')
-            sema.error(this) << "multi-character character constant\n";
+            error(this) << "multi-character character constant\n";
         else
             assert(*p == '\0');
     } else
-        sema.error(this) << "empty character constant\n";
+        error(this) << "empty character constant\n";
 
     return sema.type_u8();
 }
@@ -686,7 +677,7 @@ Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
             const Location& loc = body()->pos1();
             const_cast<FnExpr*>(this)->params_.push_back(Param::create(ret_var_handle_, new Identifier("return", body()->pos1()), loc, nullptr));
         } else if (exp_fn->num_args() != num_params())
-            sema.error(this) << "expected function with " << exp_fn->num_args() << " parameters, but found lambda expression with " << num_params() << " parameters\n";
+            error(this) << "expected function with " << exp_fn->num_args() << " parameters, but found lambda expression with " << num_params() << " parameters\n";
 
         for (size_t i = 0; i < num_params() && i < exp_fn->num_args(); ++i)
             sema.check(param(i), exp_fn->arg(i));
@@ -706,7 +697,7 @@ Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
     return fn_type;
 }
 
-Type PathExpr::check(TypeSema& sema, TypeExpectation expected) const {
+Type PathExpr::check(TypeSema& sema, TypeExpectation) const {
     // FEATURE consider longer paths
     //auto* last = path()->path_args().back();
     if (value_decl()) {
@@ -817,7 +808,7 @@ Type InfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         case NE:
             sema.check(rhs(), sema.check(lhs()));
             if (!lhs()->type().isa<PtrType>() && !lhs()->type().isa<PrimType>() && !lhs()->type().isa<SimdType>()) {
-                sema.error(this) << "expected primitive type, pointer type or SIMD type for equality operator\n";
+                error(this) << "expected primitive type, pointer type or SIMD type for equality operator\n";
                 return sema.type_error();
             }
             return sema.comparison_result(lhs());
@@ -904,10 +895,38 @@ Type PostfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
     return lhs()->type();
 }
 
+template <typename F, typename T>
+bool symmetric(F f, T a, T b) {
+    return f(a, b) || f(b, a);
+}
+
 Type CastExpr::check(TypeSema& sema, TypeExpectation) const {
-    // TODO check whether cast is possible at all
-    sema.check(lhs());
-    return sema.check(ast_type());
+    auto src_type = sema.check(lhs());
+    auto dst_type = sema.check(ast_type());
+
+    auto ptr_to_ptr     = [&] (Type a, Type b) { return a.isa<PtrType>() && b.isa<PtrType>(); };
+    auto int_to_int     = [&] (Type a, Type b) { return sema.is_int(a)   && sema.is_int(b);   };
+    auto float_to_float = [&] (Type a, Type b) { return sema.is_float(a) && sema.is_float(b); };
+    auto int_to_ptr     = [&] (Type a, Type b) { return sema.is_int(a)   && b.isa<PtrType>(); };
+    auto int_to_float   = [&] (Type a, Type b) { return sema.is_int(a)   && sema.is_float(b); };
+    auto int_to_bool    = [&] (Type a, Type b) { return sema.is_int(a)   && b->is_bool();     };
+    auto float_to_bool  = [&] (Type a, Type b) { return sema.is_float(a) && b->is_bool();     };
+
+    bool valid_cast =
+        ptr_to_ptr(src_type, dst_type) ||
+        float_to_float(src_type, dst_type) ||
+        int_to_int(src_type, dst_type) ||
+        symmetric(int_to_ptr, src_type, dst_type) ||
+        symmetric(int_to_float, src_type, dst_type) ||
+        symmetric(int_to_bool, src_type, dst_type) ||
+        symmetric(float_to_bool, src_type, dst_type);
+
+    if (!valid_cast) {
+        error(this) << "invalid source and destination types for cast operator, got '"
+                    << src_type << "' and '" << dst_type << "'\n";
+    }
+
+    return dst_type;
 }
 
 Type DefiniteArrayExpr::check(TypeSema& sema, TypeExpectation) const {
@@ -931,7 +950,7 @@ Type TupleExpr::check(TypeSema& sema, TypeExpectation expected) const {
     std::vector<Type> types;
     if (auto exp_tup = expected.type().isa<TupleType>()) {
         if (exp_tup->num_args() != num_args())
-            sema.error(this) << "expected tuple with " << exp_tup->num_args() << " elements, but found tuple expression with " << num_args() << " elements\n";
+            error(this) << "expected tuple with " << exp_tup->num_args() << " elements, but found tuple expression with " << num_args() << " elements\n";
 
         size_t i = 0;
         for (auto arg : args()) {
@@ -968,7 +987,7 @@ Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {
                 if (exp_type && (decl_type == exp_type->struct_abs_type())) {
                     for (size_t i = 0; i < exp_type->num_args(); ++i) {
                         if ((i < num_type_args()) && (exp_type->arg(i) != sema.check(type_arg(i))))
-                            sema.error(type_arg(i)) << "expected different argument for type parameter '" << decl_type->type_var(i) << "': expected '" << exp_type->arg(i) << "' but found '" << type_arg(i)->type() << "'\n";
+                            error(type_arg(i)) << "expected different argument for type parameter '" << decl_type->type_var(i) << "': expected '" << exp_type->arg(i) << "' but found '" << type_arg(i)->type() << "'\n";
                         inferred_args_.push_back(exp_type->arg(i));
                     }
 
@@ -987,10 +1006,10 @@ Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {
                     if (instantiated_decl_type.isa<StructAppType>())
                         struct_app = instantiated_decl_type.as<StructAppType>();
                     else
-                        sema.error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
+                        error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
                 }
             } else
-                sema.error(this) << "too many type arguments to structure: " << num_type_args() << " for " << decl_type->num_type_vars() << "\n";
+                error(this) << "too many type arguments to structure: " << num_type_args() << " for " << decl_type->num_type_vars() << "\n";
 
             if (struct_app) {
                 auto struct_abs  = struct_app->struct_abs_type();
@@ -1004,22 +1023,22 @@ Type StructExpr::check(TypeSema& sema, TypeExpectation expected) const {
                             oss << "initialization type for field '" << elem.symbol() << '\'';
                             sema.check(elem.expr(), TypeExpectation(struct_app->elem(field_decl->index()), oss.str()));
                         } else
-                            sema.error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
+                            error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
                     } else
-                        sema.error(elem.expr()) << "structure '" << struct_decl->symbol() << "' has no field named '" << elem.symbol() << "'\n";
+                        error(elem.expr()) << "structure '" << struct_decl->symbol() << "' has no field named '" << elem.symbol() << "'\n";
                 }
 
                 if (done.size() != struct_decl->field_table().size()) {
-                    for (auto p : struct_decl->field_table()) {
+                    for (const auto& p : struct_decl->field_table()) {
                         if (!done.contains(p.second))
-                            sema.error(this) << "missing field '" << p.first << "'\n";
+                            error(this) << "missing field '" << p.first << "'\n";
                     }
                 }
 
                 return struct_app;
             }
         } else
-            sema.error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
+            error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
     }
     return sema.type_error();
 }
@@ -1080,7 +1099,7 @@ Type FieldExpr::check(TypeSema& sema, TypeExpectation expected) const {
         return type;
 
     if (!lhs()->type()->is_error())
-        sema.error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << lhs()->type() << "', but no field with that name was found\n";
+        error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << lhs()->type() << "', but no field with that name was found\n";
     return sema.type_error();
 }
 
@@ -1130,9 +1149,9 @@ Type MapExpr::check_as_map(TypeSema& sema, TypeExpectation expected) const {
             if (sema.expect_int(arg(0)))
                 return array->elem_type();
             else
-                sema.error(this) << "require integer as array subscript\n";
+                error(this) << "require integer as array subscript\n";
         } else
-            sema.error(this) << "too many array subscripts\n";
+            error(this) << "too many array subscripts\n";
     } else if (auto exp_tup = ltype.isa<TupleType>()) {
         if (num_args() == 1) {
             sema.check(arg(0));
@@ -1140,21 +1159,21 @@ Type MapExpr::check_as_map(TypeSema& sema, TypeExpectation expected) const {
                 if (auto lit = arg(0)->isa<LiteralExpr>())
                     return exp_tup->arg(lit->get_u64());
                 else
-                    sema.error(this) << "require literal as tuple subscript\n";
+                    error(this) << "require literal as tuple subscript\n";
             } else
-                sema.error(this) << "require integer as tuple subscript\n";
+                error(this) << "require integer as tuple subscript\n";
         } else
-            sema.error(this) << "too many tuple subscripts\n";
+            error(this) << "too many tuple subscripts\n";
     } else if(auto simd = ltype.isa<SimdType>()) {
         if (num_args() == 1) {
             sema.check(arg(0));
             if (!sema.expect_int(arg(0)))
-                sema.error(this) << "require integer as vector subscript\n";
+                error(this) << "require integer as vector subscript\n";
             return simd->elem_type();
         } else
-            sema.error(this) << "too many simd vector subscripts\n";
+            error(this) << "too many simd vector subscripts\n";
     } else
-        sema.error(this) << "incorrect type for map expression\n";
+        error(this) << "incorrect type for map expression\n";
 
     return sema.type_error();
 }
@@ -1168,7 +1187,7 @@ Type MapExpr::check_as_method_call(TypeSema& sema, TypeExpectation expected) con
         std::copy(args().begin(), args().end(), nargs.begin()+1);
         return field_expr->type_ = sema.check_call(this, fn_method, type_args(), inferred_args_, nargs, expected);
     } else
-        sema.error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
+        error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
     return sema.type_error();
 }
 
@@ -1181,7 +1200,7 @@ Type BlockExprBase::check(TypeSema& sema, TypeExpectation expected) const {
 
     for (auto local : locals_) {
         if (local->is_mut() && !local->is_written())
-            sema.warn(local) << "variable '" << local->symbol() << "' declared mutable but variable is never written to\n";
+            warn(local) << "variable '" << local->symbol() << "' declared mutable but variable is never written to\n";
     }
 
     return expr() ? expr()->type() : sema.unit().as<Type>();
@@ -1222,9 +1241,9 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
             return sema.expect_type(this, then_type, TypeExpectation(expected, "if expression type"));
         }
 
-        sema.error(this) << "different types in arms of an if expression\n";
-        sema.error(then_expr()) << "type of the consequence is '" << then_type << "'\n";
-        sema.error(else_expr()) << "type of the alternative is '" << else_type << "'\n";
+        error(this) << "different types in arms of an if expression\n";
+        error(then_expr()) << "type of the consequence is '" << then_type << "'\n";
+        error(else_expr()) << "type of the alternative is '" << else_type << "'\n";
         return sema.type_error();
     } else {
         // we always allow noret in one of the branches as long
@@ -1234,7 +1253,7 @@ Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
     }
 }
 
-Type WhileExpr::check(TypeSema& sema, TypeExpectation expected) const {
+Type WhileExpr::check(TypeSema& sema, TypeExpectation) const {
     sema.check(cond(), sema.type_bool(), "condition type");
     sema.check(break_decl());
     sema.check(continue_decl());
@@ -1266,7 +1285,7 @@ Type ForExpr::check(TypeSema& sema, TypeExpectation expected) const {
         assert(false && field_expr && "TODO");
     }
 
-    sema.error(expr()) << "the looping expression does not support the 'for' protocol\n";
+    error(expr()) << "the looping expression does not support the 'for' protocol\n";
     return sema.unit();
 }
 
@@ -1278,13 +1297,13 @@ Type ForExpr::check(TypeSema& sema, TypeExpectation expected) const {
 
 void ExprStmt::check(TypeSema& sema) const {
     if (sema.check(expr())->is_noret())
-        sema.error(expr()) << "expression does not return; subsequent statements are unreachable\n";
+        error(expr()) << "expression does not return; subsequent statements are unreachable\n";
     if (!expr()->has_side_effect())
-        sema.warn(expr()) << "statement with no effect\n";
+        warn(expr()) << "statement with no effect\n";
 }
 
 void ItemStmt::check(TypeSema& sema) const {
-    sema.check_item(item());
+    item()->check_item(sema);
 }
 
 void LetStmt::check(TypeSema& sema) const {
@@ -1296,14 +1315,13 @@ void LetStmt::check(TypeSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-bool type_analysis(Init& init, const ModContents* mod, bool nossa) {
+void type_analysis(Init& init, const ModContents* mod, bool nossa) {
     auto sema = new TypeSema(nossa);
     init.typetable = sema;
     mod->check(*sema);
 #ifndef NDEBUG
     sema->verify();
 #endif
-    return sema->result();
 }
 
 //------------------------------------------------------------------------------

@@ -7,12 +7,12 @@ fn range(a: int, b: int, body: fn(int, fn())) -> () {
 
 fn foo(a: int, b: int) -> int {
     let mut res1 = 0;
-    for i in range(0, a) {
+    for i in range(7, a) {
         res1 += 666;
     }
 
     let mut res2 = 0;
-    for i in range(0, b) {
+    for i in range(17, b) {
         res2 += 3333;
     }
 
@@ -20,5 +20,5 @@ fn foo(a: int, b: int) -> int {
 }
 
 fn main(i: int) -> int {
-    @foo(i, 10)
+    @foo(i, 19)
 }
