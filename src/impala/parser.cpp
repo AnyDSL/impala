@@ -1126,7 +1126,7 @@ const ForExpr* Parser::parse_for_expr() {
     fn_expr->cont_ = true;
     for_expr->break_decl_ = create_continuation_decl("break", /*set type during TypeSema*/ false);
     for_expr->expr_ = parse_expr();
-    fn_expr->body_ = try_block_expr("body of function");
+    fn_expr->body_ = try_block_expr("body of for loop");
     return for_expr;
 }
 
@@ -1135,12 +1135,12 @@ const ForExpr* Parser::parse_with_expr() {
     // they have no parameters and no continue statement
     auto with_expr = loc(new ForExpr());
     eat(Token::WITH);
-    THORIN_PUSH(cur_var_handle, cur_var_handle);
     auto fn_expr = loc(new FnExpr());
     with_expr->fn_expr_ = fn_expr.get();
+    fn_expr->cont_ = true;
     with_expr->break_decl_ = create_continuation_decl("break", /*set type during TypeSema*/ false);
     with_expr->expr_ = parse_expr();
-    fn_expr->body_ = try_block_expr("body of function");
+    fn_expr->body_ = try_block_expr("body of with statement");
     return with_expr;
 }
 
