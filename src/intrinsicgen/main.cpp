@@ -5,9 +5,10 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
 
+#include "thorin/util/stream.h"
+
 #include "impala/ast.h"
 #include "impala/impala.h"
-#include "impala/dump.h"
 #include "impala/sema/typetable.h"
 #include "impala/sema/unifiable.h"
 
@@ -21,10 +22,8 @@ int main() {
 
     auto& context = llvm::getGlobalContext();
     int num = llvm::Intrinsic::num_intrinsics - 1;
-    impala::Printer printer(std::cout, false);
 
-    printer.stream() << "extern \"device\" {";
-    ++printer.indent;
+    std::cout << "extern \"device\" {" << thorin::up;
     for (int i = 1; i != num; ++i) {
         auto id = (llvm::Intrinsic::ID) i;
         std::string llvm_name = llvm::Intrinsic::getName(id);
@@ -36,26 +35,24 @@ int main() {
         std::transform(name.begin(), name.end(), name.begin(), [] (char c) { return c == '.' ? '_' : c; });
 
         if (llvm::Intrinsic::isOverloaded(id)) {
-            printer.newline();
-            printer.stream() << "// fn \"" << llvm_name << "\" " << name;
-            printer.stream() << " (...) -> (...); // is overloaded";
+            std::cout << thorin::endl;
+            std::cout << "// fn \"" << llvm_name << "\" " << name;
+            std::cout << " (...) -> (...); // is overloaded";
         } else {
             if (auto itype = llvm2impala(*init.typetable, llvm::Intrinsic::getType(context, id))) {
-                printer.newline();
+                std::cout << thorin::endl;
                 auto fn = itype.as<impala::FnType>();
-                printer.stream() << "fn \"" << llvm_name << "\" " << name;
-                printer.dump_list([&] (impala::Type type) { printer.stream() << type; }, fn->args().skip_back(fn->num_args()-1), "(", ")");
-                printer.stream() << " -> ";
+                std::cout << "fn \"" << llvm_name << "\" " << name;
+                stream_list(std::cout, fn->args().skip_back(fn->num_args()-1), [&](impala::Type type) { std::cout << type; }, "(", ")");
+                std::cout << " -> ";
                 if (fn->return_type()->is_noret())
-                    printer.stream() << "();";
+                    std::cout << "();";
                 else
-                    printer.stream() << fn->return_type() << ';';
+                    std::cout << fn->return_type() << ';';
             }
         }
     }
-    --printer.indent;
-    printer.newline() << "}";
-    printer.newline();
+    std::cout << thorin::down << thorin::endl << '}' << thorin::endl;
 }
 
 impala::Type llvm2impala(impala::TypeTable& tt, llvm::Type* type) {

@@ -62,6 +62,7 @@
     case Token::HLT: \
     case Token::IF: \
     case Token::FOR: \
+    case Token::WITH: \
     case Token::WHILE: \
     case Token::SIZEOF: \
     case Token::L_PAREN: \
@@ -222,6 +223,7 @@ public:
     const FnExpr*           parse_fn_expr();
     const IfExpr*           parse_if_expr();
     const ForExpr*          parse_for_expr();
+    const ForExpr*          parse_with_expr();
     const WhileExpr*        parse_while_expr();
     const BlockExprBase*    parse_block_expr();
     const BlockExprBase*    try_block_expr(const std::string& context);
@@ -1027,6 +1029,7 @@ const Expr* Parser::parse_primary_expr() {
         }
         case Token::IF:         return parse_if_expr();
         case Token::FOR:        return parse_for_expr();
+        case Token::WITH:       return parse_with_expr();
         case Token::WHILE:      return parse_while_expr();
         case Token::L_BRACE:
         case Token::RUN_BLOCK:  return parse_block_expr();
@@ -1123,8 +1126,22 @@ const ForExpr* Parser::parse_for_expr() {
     fn_expr->cont_ = true;
     for_expr->break_decl_ = create_continuation_decl("break", /*set type during TypeSema*/ false);
     for_expr->expr_ = parse_expr();
-    fn_expr->body_ = try_block_expr("body of function");
+    fn_expr->body_ = try_block_expr("body of for loop");
     return for_expr;
+}
+
+const ForExpr* Parser::parse_with_expr() {
+    // With-expressions are like for-expressions except that
+    // they have no parameters and no continue statement
+    auto with_expr = loc(new ForExpr());
+    eat(Token::WITH);
+    auto fn_expr = loc(new FnExpr());
+    with_expr->fn_expr_ = fn_expr.get();
+    fn_expr->cont_ = true;
+    with_expr->break_decl_ = create_continuation_decl("break", /*set type during TypeSema*/ false);
+    with_expr->expr_ = parse_expr();
+    fn_expr->body_ = try_block_expr("body of with statement");
+    return with_expr;
 }
 
 const WhileExpr* Parser::parse_while_expr() {

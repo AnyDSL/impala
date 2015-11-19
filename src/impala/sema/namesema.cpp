@@ -30,8 +30,6 @@ public:
     void push_scope() { levels_.push_back(decl_stack_.size()); } ///< Opens a new scope.
     void pop_scope();                                            ///< Discards current scope.
 
-    void check(const ASTType* ast_type) { ast_type->check(*this); }
-    void check(const TypeableDecl* decl) { decl->check(*this); }
     void check_head(const Item* item) {
         if (auto decl = item->isa<Decl>())
             insert(decl);
@@ -40,7 +38,6 @@ public:
                 insert(fn);
         }
     }
-    void check_item(const Item* item) { item->check_item(*this); }
 
 private:
     size_t depth() const { return levels_.size(); }
@@ -54,28 +51,37 @@ private:
 
 const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
     assert(!symbol.empty() && "symbol is empty");
-    auto decl = thorin::find(symbol2decl_, symbol);
-    if (decl == nullptr)
-        error(n) << '\'' << symbol << "' not found in current scope\n";
-    return decl;
+
+    if (!symbol.is_anonymous()) {
+        auto decl = thorin::find(symbol2decl_, symbol);
+        if (decl == nullptr)
+            error(n) << '\'' << symbol << "' not found in current scope\n";
+        return decl;
+    } else {
+        error(n) << "identifier '_' is reverserved for anonymous declarations\n";
+        return nullptr;
+    }
 }
 
 void NameSema::insert(const Decl* decl) {
     assert(!decl->symbol().empty() && "symbol is empty");
-    if (auto other = clash(decl->symbol())) {
-        error(decl) << "symbol '" << decl->symbol() << "' already defined\n";
-        error(other) << "previous location here\n";
-        return;
+    auto symbol = decl->symbol();
+
+    if (!symbol.is_anonymous()) {
+        if (auto other = clash(symbol)) {
+            error(decl) << "symbol '" << symbol << "' already defined\n";
+            error(other) << "previous location here\n";
+            return;
+        }
+
+        assert(clash(symbol) == nullptr && "must not be found");
+
+        auto i = symbol2decl_.find(symbol);
+        decl->shadows_ = i != symbol2decl_.end() ? i->second : nullptr;
+        decl->depth_ = depth();
+        decl_stack_.push_back(decl);
+        symbol2decl_[symbol] = decl;
     }
-
-    Symbol symbol = decl->symbol();
-    assert(clash(symbol) == nullptr && "must not be found");
-
-    auto i = symbol2decl_.find(symbol);
-    decl->shadows_ = i != symbol2decl_.end() ? i->second : nullptr;
-    decl->depth_ = depth();
-    decl_stack_.push_back(decl);
-    symbol2decl_[symbol] = decl;
 }
 
 const Decl* NameSema::clash(Symbol symbol) const {
@@ -98,10 +104,23 @@ void NameSema::pop_scope() {
 
 //------------------------------------------------------------------------------
 
+/*
+ * misc
+ */
+
 void TypeParam::check(NameSema& sema) const {
     for (auto bound : bounds())
-        sema.check(bound);
+        bound->check(sema);
 }
+
+
+void LocalDecl::check(NameSema& sema) const {
+    if (ast_type())
+        ast_type()->check(sema);
+    sema.insert(this);
+}
+
+//------------------------------------------------------------------------------
 
 /*
  * AST types
@@ -115,31 +134,31 @@ void TypeParamList::check_type_params(NameSema& sema) const {
 
     // then, check bounds
     for (auto type_param : type_params())
-        sema.check(type_param);
+        type_param->check(sema);
 }
 
 void ErrorASTType::check(NameSema&) const {}
 void PrimASTType::check(NameSema&) const {}
-void PtrASTType::check(NameSema& sema) const { sema.check(referenced_type()); }
-void IndefiniteArrayASTType::check(NameSema& sema) const { sema.check(elem_type()); }
-void DefiniteArrayASTType::check(NameSema& sema) const { sema.check(elem_type()); }
+void PtrASTType::check(NameSema& sema) const { referenced_type()->check(sema); }
+void IndefiniteArrayASTType::check(NameSema& sema) const { elem_type()->check(sema); }
+void DefiniteArrayASTType::check(NameSema& sema) const { elem_type()->check(sema); }
 
 void TupleASTType::check(NameSema& sema) const {
     for (auto arg : args())
-        sema.check(arg);
+        arg->check(sema);
 }
 
 void ASTTypeApp::check(NameSema& sema) const {
     decl_ = sema.lookup(this, symbol());
     for (auto arg : args())
-        sema.check(arg);
+        arg->check(sema);
 }
 
 void FnASTType::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
     for (auto arg : args())
-        sema.check(arg);
+        arg->check(sema);
     sema.pop_scope();
 }
 
@@ -148,19 +167,7 @@ void Typeof::check(NameSema& sema) const {
 }
 
 void SimdASTType::check(NameSema& sema) const {
-    sema.check(elem_type());
-}
-
-//------------------------------------------------------------------------------
-
-void ModContents::check(NameSema& sema) const {
-    for (auto item : items()) {
-        sema.check_head(item);
-        if (auto named_item = item->isa<NamedItem>())
-            item_table_[named_item->item_symbol()] = named_item;
-    }
-    for (auto item : items())
-        sema.check_item(item);
+    elem_type()->check(sema);
 }
 
 //------------------------------------------------------------------------------
@@ -169,9 +176,6 @@ void ModContents::check(NameSema& sema) const {
  * items
  */
 
-void TypeDeclItem::check_item(NameSema& sema) const { sema.check(static_cast<const TypeDecl*>(this)); }
-void ValueItem::check_item(NameSema& sema) const { sema.check(static_cast<const ValueDecl*>(this)); }
-
 void ModDecl::check(NameSema& sema) const {
     sema.push_scope();
     if (mod_contents())
@@ -179,15 +183,25 @@ void ModDecl::check(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void ExternBlock::check_item(NameSema& sema) const {
+void ModContents::check(NameSema& sema) const {
+    for (auto item : items()) {
+        sema.check_head(item);
+        if (auto named_item = item->isa<NamedItem>())
+            item_table_[named_item->item_symbol()] = named_item;
+    }
+    for (auto item : items())
+        item->check(sema);
+}
+
+void ExternBlock::check(NameSema& sema) const {
     for (auto fn : fns())
-        sema.check(fn);
+        fn->check(sema);
 }
 
 void Typedef::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
-    sema.check(ast_type());
+    ast_type()->check(sema);
     sema.pop_scope();
 }
 
@@ -195,7 +209,7 @@ void EnumDecl::check(NameSema&) const {}
 
 void StaticItem::check(NameSema& sema) const {
     if (ast_type())
-        sema.check(ast_type());
+        ast_type()->check(sema);
     if (init())
         init()->check(sema);
 }
@@ -206,7 +220,7 @@ void Fn::fn_check(NameSema& sema) const {
     for (auto param : params()) {
         sema.insert(param);
         if (param->ast_type())
-            sema.check(param->ast_type());
+            param->ast_type()->check(sema);
     }
     if (body() != nullptr)
         body()->check(sema);
@@ -232,16 +246,16 @@ void StructDecl::check(NameSema& sema) const {
 }
 
 void FieldDecl::check(NameSema& sema) const {
-    sema.check(ast_type());
+    ast_type()->check(sema);
     sema.insert(this);
 }
 
-void TraitDecl::check_item(NameSema& sema) const {
+void TraitDecl::check(NameSema& sema) const {
     sema.push_scope();
     sema.insert(self_param());
     check_type_params(sema);
     for (auto t : super_traits())
-        sema.check(t);
+        t->check(sema);
     for (auto method : methods()) {
         method->check(sema);
         method_table_[method->symbol()] = method;
@@ -249,12 +263,12 @@ void TraitDecl::check_item(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void ImplItem::check_item(NameSema& sema) const {
+void ImplItem::check(NameSema& sema) const {
     sema.push_scope();
     check_type_params(sema);
     if (trait())
-        sema.check(trait());
-    sema.check(ast_type());
+        trait()->check(sema);
+    ast_type()->check(sema);
     for (auto fn : methods())
         fn->check(sema);
     sema.pop_scope();
@@ -267,7 +281,7 @@ void ImplItem::check_item(NameSema& sema) const {
  */
 
 void EmptyExpr::check(NameSema&) const {}
-void SizeofExpr::check(NameSema& sema) const { sema.check(ast_type()); }
+void SizeofExpr::check(NameSema& sema) const { ast_type()->check(sema); }
 
 void BlockExprBase::check(NameSema& sema) const {
     sema.push_scope();
@@ -315,7 +329,7 @@ void FieldExpr::check(NameSema& sema) const {
 
 void CastExpr::check(NameSema& sema) const {
     lhs()->check(sema);
-    sema.check(ast_type());
+    ast_type()->check(sema);
 }
 
 void DefiniteArrayExpr::check(NameSema& sema) const {
@@ -329,7 +343,7 @@ void RepeatedDefiniteArrayExpr::check(NameSema& sema) const {
 
 void IndefiniteArrayExpr::check(NameSema& sema) const {
     dim()->check(sema);
-    sema.check(elem_type());
+    elem_type()->check(sema);
 }
 
 void TupleExpr::check(NameSema& sema) const {
@@ -351,7 +365,7 @@ void StructExpr::check(NameSema& sema) const {
 void MapExpr::check(NameSema& sema) const {
     lhs()->check(sema);
     for (auto type_arg : type_args())
-        sema.check(type_arg);
+        type_arg->check(sema);
     for (auto arg : args())
         arg->check(sema);
 }
@@ -365,8 +379,8 @@ void IfExpr::check(NameSema& sema) const {
 void WhileExpr::check(NameSema& sema) const {
     cond()->check(sema);
     sema.push_scope();
-    sema.check(break_decl());
-    sema.check(continue_decl());
+    break_decl()->check(sema);
+    continue_decl()->check(sema);
     body()->check(sema);
     sema.pop_scope();
 }
@@ -374,7 +388,7 @@ void WhileExpr::check(NameSema& sema) const {
 void ForExpr::check(NameSema& sema) const {
     expr()->check(sema);
     sema.push_scope();
-    sema.check(break_decl());
+    break_decl()->check(sema);
     fn_expr()->check(sema);
     sema.pop_scope();
 }
@@ -386,19 +400,11 @@ void ForExpr::check(NameSema& sema) const {
  */
 
 void ExprStmt::check(NameSema& sema) const { expr()->check(sema); }
-void ItemStmt::check(NameSema& sema) const { sema.check_item(item()); }
+void ItemStmt::check(NameSema& sema) const { item()->check(sema); }
 void LetStmt::check(NameSema& sema) const {
     if (init())
         init()->check(sema);
-    sema.check(local());
-}
-
-//------------------------------------------------------------------------------
-
-void ValueDecl::check(NameSema& sema) const {
-    if (ast_type())
-        sema.check(ast_type());
-    sema.insert(this);
+    local()->check(sema);
 }
 
 //------------------------------------------------------------------------------

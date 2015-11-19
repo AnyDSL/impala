@@ -1,0 +1,3 @@
+fn foo(_: int, a: int) -> int {
+    a + _
+}

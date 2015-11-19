@@ -1,0 +1,9 @@
+fn foo(_: int, _: int) -> int {
+    let _ = 23;
+    let _ = 42;
+    1337
+}
+
+fn main() -> bool {
+    foo(1, 2) == 1337
+}

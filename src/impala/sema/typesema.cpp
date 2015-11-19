@@ -3,7 +3,6 @@
 #include "thorin/util/push.h"
 
 #include "impala/ast.h"
-#include "impala/dump.h"
 #include "impala/impala.h"
 #include "impala/sema/typetable.h"
 
@@ -46,7 +45,7 @@ public:
         while (!impls_.empty()) {
             const ImplItem* i = impls_.back();
             impls_.pop_back();
-            check_item(i);
+            i->check_item(*this);
         }
     }
 
@@ -61,6 +60,9 @@ public:
         }
         return true;
     }
+    Type scalar_type(const Expr*);
+    bool is_int(Type t);
+    bool is_float(Type t);
     bool expect_int(const Expr*);
     bool expect_int_or_bool(const Expr*);
     void expect_num(const Expr*);
@@ -102,7 +104,6 @@ public:
             decl->type_ = decl->check(*this, expected);
         return decl->type();
     }
-    void check_item(const Item* item) { item->check_item(*this); }
     Type check(const Expr* expr, TypeExpectation expected) {
         if (!expr->type_.empty())
             return expr->type_;
@@ -134,19 +135,27 @@ public:
 
 //------------------------------------------------------------------------------
 
-// TODO factor code with expect_num
-// TODO maybe have variant which also checks expr
-bool TypeSema::expect_int(const Expr* expr) {
-    Type e = expr->type(), t;
-    if (auto simd = e.isa<SimdType>()) {
-        t = simd->elem_type();
-    } else {
-        t = e;
+Type TypeSema::scalar_type(const Expr* e) {
+    Type t = e->type();
+    if (auto simd = t.isa<SimdType>()) {
+        return simd->elem_type();
     }
+    return t;
+}
 
-    if (!t->is_error() &&
-        !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
-        !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64()) { // TODO factor this test out
+bool TypeSema::is_int(Type t) {
+    return t->is_i8() || t->is_i16() || t->is_i32() || t->is_i64() ||
+           t->is_u8() || t->is_u16() || t->is_u32() || t->is_u64();
+}
+
+bool TypeSema::is_float(Type t) {
+    return t->is_f32() || t->is_f64();
+}
+
+bool TypeSema::expect_int(const Expr* expr) {
+    auto t = scalar_type(expr);
+
+    if (!t->is_error() && !is_int(t)) {
         error(expr) << "expected integer type but found " << t << "\n";
         return false;
     }
@@ -154,17 +163,9 @@ bool TypeSema::expect_int(const Expr* expr) {
 }
 
 bool TypeSema::expect_int_or_bool(const Expr* expr) {
-    Type e = expr->type(), t;
-    if (auto simd = e.isa<SimdType>()) {
-        t = simd->elem_type();
-    } else {
-        t = e;
-    }
+    auto t = scalar_type(expr);
 
-    if (!t->is_error() &&
-        !t->is_bool() &&
-        !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
-        !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64()) { // TODO factor this test out
+    if (!t->is_error() && !t->is_bool() && !is_int(t)) {
         error(expr) << "expected integer or boolean type but found " << t << "\n";
         return false;
     }
@@ -172,17 +173,9 @@ bool TypeSema::expect_int_or_bool(const Expr* expr) {
 }
 
 void TypeSema::expect_num(const Expr* expr) {
-    Type e = expr->type(), t;
-    if (auto simd = e.isa<SimdType>()) {
-        t = simd->elem_type();
-    } else {
-        t = e;
-    }
+    auto t = scalar_type(expr);
 
-    if (!t->is_error() &&
-        !t->is_i8() && !t->is_i16() && !t->is_i32() && !t->is_i64() &&
-        !t->is_u8() && !t->is_u16() && !t->is_u32() && !t->is_u64() &&
-        !t->is_f32() && !t->is_f64()) // TODO factor this test out
+    if (!t->is_error() && !t->is_bool() && !is_int(t) && !is_float(t))
         error(expr) << "expected number type but found " << t << "\n";
 }
 
@@ -354,7 +347,7 @@ Type Typeof::check(TypeSema& sema) const {
 TraitApp ASTTypeApp::trait_app(TypeSema& sema, Type self) const {
     if (decl()) {
         if (auto trait_decl = decl()->isa<TraitDecl>()) {
-            sema.check_item(trait_decl);
+            trait_decl->check_item(sema);
             return sema.instantiate(this->loc(), trait_decl->trait_abs(), self, args());
         } else
             error(this) << '\'' << symbol() << "' does not name a trait\n";
@@ -431,7 +424,7 @@ void ModContents::check(TypeSema& sema) const {
 
     sema.check_impls();
     for (auto item : non_impls)
-        sema.check_item(item);
+        item->check_item(sema);
 }
 
 void ExternBlock::check_item(TypeSema& sema) const {
@@ -902,10 +895,38 @@ Type PostfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
     return lhs()->type();
 }
 
+template <typename F, typename T>
+bool symmetric(F f, T a, T b) {
+    return f(a, b) || f(b, a);
+}
+
 Type CastExpr::check(TypeSema& sema, TypeExpectation) const {
-    // TODO check whether cast is possible at all
-    sema.check(lhs());
-    return sema.check(ast_type());
+    auto src_type = sema.check(lhs());
+    auto dst_type = sema.check(ast_type());
+
+    auto ptr_to_ptr     = [&] (Type a, Type b) { return a.isa<PtrType>() && b.isa<PtrType>(); };
+    auto int_to_int     = [&] (Type a, Type b) { return sema.is_int(a)   && sema.is_int(b);   };
+    auto float_to_float = [&] (Type a, Type b) { return sema.is_float(a) && sema.is_float(b); };
+    auto int_to_ptr     = [&] (Type a, Type b) { return sema.is_int(a)   && b.isa<PtrType>(); };
+    auto int_to_float   = [&] (Type a, Type b) { return sema.is_int(a)   && sema.is_float(b); };
+    auto int_to_bool    = [&] (Type a, Type b) { return sema.is_int(a)   && b->is_bool();     };
+    auto float_to_bool  = [&] (Type a, Type b) { return sema.is_float(a) && b->is_bool();     };
+
+    bool valid_cast =
+        ptr_to_ptr(src_type, dst_type) ||
+        float_to_float(src_type, dst_type) ||
+        int_to_int(src_type, dst_type) ||
+        symmetric(int_to_ptr, src_type, dst_type) ||
+        symmetric(int_to_float, src_type, dst_type) ||
+        symmetric(int_to_bool, src_type, dst_type) ||
+        symmetric(float_to_bool, src_type, dst_type);
+
+    if (!valid_cast) {
+        error(this) << "invalid source and destination types for cast operator, got '"
+                    << src_type << "' and '" << dst_type << "'\n";
+    }
+
+    return dst_type;
 }
 
 Type DefiniteArrayExpr::check(TypeSema& sema, TypeExpectation) const {
@@ -1282,7 +1303,7 @@ void ExprStmt::check(TypeSema& sema) const {
 }
 
 void ItemStmt::check(TypeSema& sema) const {
-    sema.check_item(item());
+    item()->check_item(sema);
 }
 
 void LetStmt::check(TypeSema& sema) const {

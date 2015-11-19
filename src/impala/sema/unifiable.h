@@ -22,7 +22,6 @@ template<class T> using Array    = thorin::Array<T>;
 
 class CodeGen;
 class ImplItem;
-class Printer;
 class StructDecl;
 class TraitDecl;
 class TypeTable;
@@ -143,6 +142,9 @@ private:
     const T* node_;
 };
 
+template<class T>
+std::ostream& operator << (std::ostream& os, Proxy<T> proxy) { return proxy->stream(os); }
+
 //------------------------------------------------------------------------------
 
 enum Kind {
@@ -223,10 +225,10 @@ public:
     virtual bool is_error() const { return false; }
     /// A \p Unifiable is known if it does not contain any \p UnknownTypeNode%s
     virtual bool is_known() const;
-    virtual std::ostream& print(Printer&) const = 0;
+    virtual std::ostream& stream(std::ostream&) const = 0;
 
 protected:
-    std::ostream& print_type_vars(Printer& p) const;
+    std::ostream& stream_type_vars(std::ostream&) const;
 
 private:
     virtual thorin::Type convert(CodeGen&) const = 0;
@@ -324,7 +326,7 @@ public:
     virtual bool implements(TraitApp, SpecializeMap&) const override { THORIN_UNREACHABLE; }
     virtual FnType find_method(Symbol) const override { THORIN_UNREACHABLE; }
     virtual bool is_sane() const override { THORIN_UNREACHABLE; }
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override { THORIN_UNREACHABLE; }
 
 private:
@@ -363,7 +365,7 @@ private:
 
 public:
     virtual bool is_error() const override { return true; }
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -379,7 +381,7 @@ private:
     {}
 
 public:
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -396,7 +398,7 @@ private:
 
 public:
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -413,7 +415,7 @@ private:
 
 public:
     Type return_type() const;
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -429,7 +431,7 @@ private:
     {}
 
 public:
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -449,7 +451,7 @@ public:
     virtual Type instantiate(ArrayRef<Type>) const override;
     virtual uint64_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override { THORIN_UNREACHABLE; }
 
 private:
@@ -471,7 +473,7 @@ public:
     StructAbsType struct_abs_type() const { return struct_abs_type_; }
     virtual uint64_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode* other) const override;
 
 private:
@@ -493,7 +495,7 @@ private:
 public:
     Type type() const { return arg(0); }
     virtual Type instantiate(ArrayRef<Type>) const override;
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override { THORIN_UNREACHABLE; }
 
 private:
@@ -527,7 +529,7 @@ public:
     virtual bool equal(const Unifiable*) const override;
     virtual bool implements(TraitApp, SpecializeMap&) const override;
     virtual FnType find_method(Symbol s) const override;
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override;
 
 private:
@@ -574,7 +576,7 @@ public:
         : PtrTypeNode(typetable, Kind_owned_ptr, referenced_type, addr_space)
     {}
 
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -586,7 +588,7 @@ public:
         : PtrTypeNode(typetable, Kind_borrowed_ptr, referenced_type, addr_space)
     {}
 
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override;
 
 private:
@@ -612,7 +614,7 @@ public:
     {}
 
     uint64_t dim() const { return dim_; }
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override;
     virtual bool equal(const Unifiable*) const override;
 
@@ -629,7 +631,7 @@ public:
         : ArrayTypeNode(typetable, Kind_indefinite_array, elem_type)
     {}
 
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -647,7 +649,7 @@ public:
 
     uint64_t size() const { return size_; }
 
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override;
     virtual bool equal(const Unifiable*) const override;
 
@@ -694,7 +696,7 @@ public:
     virtual bool is_error() const override { return trait_decl() == nullptr; }
     virtual uint64_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual thorin::Type convert(CodeGen&) const override;
@@ -724,7 +726,7 @@ public:
     virtual bool is_error() const override { return trait()->is_error(); }
     virtual uint64_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual thorin::Type convert(CodeGen&) const override;
@@ -751,7 +753,7 @@ public:
 
     virtual uint64_t hash() const override;
     virtual bool equal(const Unifiable*) const override { THORIN_UNREACHABLE; }
-    virtual std::ostream& print(Printer&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual thorin::Type convert(CodeGen&) const override;
