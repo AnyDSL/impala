@@ -1137,7 +1137,6 @@ const ForExpr* Parser::parse_with_expr() {
     eat(Token::WITH);
     auto fn_expr = loc(new FnExpr());
     with_expr->fn_expr_ = fn_expr.get();
-    fn_expr->cont_ = true;
     with_expr->break_decl_ = create_continuation_decl("break", /*set type during TypeSema*/ false);
     with_expr->expr_ = parse_expr();
     fn_expr->body_ = try_block_expr("body of with statement");
