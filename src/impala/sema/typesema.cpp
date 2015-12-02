@@ -57,7 +57,7 @@ private:
 
 public:
     const BlockExprBase* cur_block_ = nullptr;
-    const Fn* cur_fn_ = nullptr;
+    const Expr* cur_fn_ = nullptr;
 };
 
 void type_analysis(const ModContents* mod, bool nossa) {
@@ -288,8 +288,7 @@ void StructDecl::check(TypeSema& sema) const {
 Type FieldDecl::check(TypeSema& sema) const { return ast_type()->check(sema); }
 
 void FnDecl::check(TypeSema& sema) const {
-    THORIN_PUSH(sema.cur_fn_, this);
-
+    THORIN_PUSH(sema.cur_fn_, body());
     check_type_params(sema);
     for (auto param : params())
         param->check(sema);
@@ -437,8 +436,8 @@ Type StrExpr::check(TypeSema& sema) const {
 }
 
 #if 0
-Type FnExpr::check(TypeSema& sema) const {
-    THORIN_PUSH(sema.cur_fn_, this);
+Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
+    THORIN_PUSH(sema.cur_fn_, body());
     assert(type_params().empty());
 
     FnType fn_type;
@@ -933,6 +932,11 @@ Type BlockExprBase::check(TypeSema& sema) const {
     }
 
     return expr() ? expr()->type() : sema.unit().as<Type>();
+}
+
+Type RunBlockExpr::check(TypeSema& sema, TypeExpectation expected) const {
+    THORIN_PUSH(sema.cur_fn_, this);
+    return BlockExprBase::check(sema, expected);
 }
 
 Type IfExpr::check(TypeSema& sema) const {

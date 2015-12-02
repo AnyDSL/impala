@@ -1,0 +1,7 @@
+fn fun1(a: i32, b: i32) -> i32 { a }
+fn fun2(a: i32, b: i32) -> i32 { b }
+
+fn main(flag: bool) -> i32 {
+    let fun = if flag { fun1 } else { fun2 };
+    @fun(47, 11)
+}

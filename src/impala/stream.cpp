@@ -219,7 +219,7 @@ std::ostream& ModContents::stream(std::ostream& os) const {
 std::ostream& ModDecl::stream(std::ostream& os) const {
     stream_type_params(os << "mod " << symbol());
     if (mod_contents()) {
-        return os << " {" << up_endl << mod_contents() << down_endl << "}";
+        return os << " {" << up << endl << mod_contents() << down << endl << "}";
     } else
         return os << ';';
 }
@@ -228,9 +228,9 @@ std::ostream& ExternBlock::stream(std::ostream& os) const {
     os << "extern ";
     if (!abi_.empty())
         os << abi_.str() << ' ';
-    os << '{' << up_endl;
+    os << '{' << up << endl;
     stream_list(os, fns(), [&](const FnDecl* fn) { os << fn; }, "", "", "", true);
-    return os << down_endl << '}';
+    return os << down << endl << '}';
 }
 
 std::ostream& FnDecl::stream(std::ostream& os) const {
@@ -277,8 +277,8 @@ std::ostream& StaticItem::stream(std::ostream& os) const {
 }
 
 std::ostream& StructDecl::stream(std::ostream& os) const {
-    stream_type_params(streamf(os, "%struct %", visibility().str(), symbol())) << " {" << up_endl;
-    return stream_list(os, field_decls(), [&](const FieldDecl* field) { os << field; }, "", "", ",", true) << down_endl << "}";
+    stream_type_params(streamf(os, "%struct %", visibility().str(), symbol())) << " {" << up << endl;
+    return stream_list(os, field_decls(), [&](const FieldDecl* field) { os << field; }, "", "", ",", true) << down << endl << "}";
 }
 
 std::ostream& Typedef::stream(std::ostream& os) const {
@@ -294,9 +294,9 @@ std::ostream& TraitDecl::stream(std::ostream& os) const {
         stream_list(os, super_traits(), [&](const ASTTypeApp* type_app) { os << type_app; });
     }
 
-    os << " {" << up_endl;
+    os << " {" << up << endl;
     stream_list(os, methods(), [&](const FnDecl* method) { os << method; }, "", "", "", true);
-    return os << down_endl << '}';
+    return os << down << endl << '}';
 }
 
 std::ostream& ImplItem::stream(std::ostream& os) const {
@@ -304,9 +304,9 @@ std::ostream& ImplItem::stream(std::ostream& os) const {
     stream_type_params(os) << ' ';
     if (trait())
         os << trait() << " for ";
-    os << ast_type() << " {" << up_endl;
+    os << ast_type() << " {" << up << endl;
     stream_list(os, methods(), [&](const FnDecl* method) { os << method; }, "", "", "", true);
-    return os << down_endl << "}";
+    return os << down << endl << "}";
 }
 
 /*
@@ -320,7 +320,7 @@ std::ostream& BlockExprBase::stream(std::ostream& os) const {
     if (empty())
         return os << endl << '}';
 
-    stream_list(os << up_endl, stmts(), [&](const Stmt* stmt) { os << stmt; }, "", "", "", true);
+    stream_list(os << up << endl, stmts(), [&](const Stmt* stmt) { os << stmt; }, "", "", "", true);
 
     if (!expr()->isa<EmptyExpr>()) {
         if (!stmts().empty())
@@ -328,7 +328,7 @@ std::ostream& BlockExprBase::stream(std::ostream& os) const {
         os << expr();
     }
 
-    return os << down_endl << "}";
+    return os << down << endl << "}";
 }
 
 std::ostream& LiteralExpr::stream(std::ostream& os) const {
@@ -355,8 +355,8 @@ std::ostream& CharExpr::stream(std::ostream& os) const {
 std::ostream& StrExpr::stream(std::ostream& os) const {
     if (symbols().size() == 1)
         return os << '\'' << symbols().front().remove_quotation() << '\'';
-    stream_list(os << up_endl, symbols() , [&](Symbol symbol) { os << symbol; }, "", "", "", true);
-    return os << down_endl;
+    stream_list(os << up << endl, symbols() , [&](Symbol symbol) { os << symbol; }, "", "", "", true);
+    return os << down << endl;
 }
 
 std::ostream& PathExpr ::stream(std::ostream& os) const { return os << path(); }
