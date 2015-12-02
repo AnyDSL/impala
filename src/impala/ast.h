@@ -1319,6 +1319,10 @@ private:
 
 class MapExpr : public Expr, public Args, public TypeArgs {
 public:
+    enum State {
+        None, Run, Hlt
+    };
+
     const Expr* lhs() const { return lhs_; }
     virtual bool is_lvalue() const override;
     virtual bool has_side_effect() const override;
@@ -1333,9 +1337,11 @@ private:
     virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
+    thorin::Def remit(CodeGen&, State, thorin::Location) const;
 
     AutoPtr<const Expr> lhs_;
 
+    friend class CodeGen;
     friend class Parser;
     friend class ForExpr;
 };
