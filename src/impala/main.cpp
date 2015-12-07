@@ -12,7 +12,6 @@
 
 #include "impala/ast.h"
 #include "impala/cgen.h"
-#include "impala/dump.h"
 #include "impala/impala.h"
 
 //------------------------------------------------------------------------------
@@ -44,8 +43,7 @@ int main(int argc, char** argv) {
 #endif
         string out_name, log_name, log_level;
         bool help,
-             emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm,
-             emit_ycomp, emit_ycomp_cfg, fancy,
+             emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm, emit_ycomp, emit_ycomp_cfg,
              opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
              nocleanup, nossa;
         YCompCommandLine yComp;
@@ -72,11 +70,13 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("emit-thorin",        "",                         "emit textual Thorin representation of Impala program", emit_thorin, false)
             .add_option<bool>            ("emit-ycomp",         "",                         "emit ycomp-compatible graph representation of Impala program", emit_ycomp, false)
             .add_option<bool>            ("emit-ycomp-cfg",     "",                         "emit ycomp-compatible control-flow graph representation of Impala program", emit_ycomp_cfg, false)
-            .add_option<bool>            ("f",                  "",                         "use fancy output: Impala's AST dump uses only parentheses where necessary", fancy, false)
+            .add_option<bool>            ("f",                  "",                         "use fancy output: Impala's AST dump uses only parentheses where necessary", impala::fancy, false)
             .add_option<bool>            ("g",                  "",                         "emit debug information", debug, false)
             .add_option<bool>            ("nocleanup",          "",                         "no clean-up phase", nocleanup, false)
             .add_option<bool>            ("nossa",              "",                         "use slots + load/store instead of SSA construction", nossa, false)
-            .add_option<YCompCommandLine>("ycomp",              "",                         "print ycomp graphs to files", yComp, YCompCommandLine());
+            .add_option<YCompCommandLine>("ycomp",              "{cfg|domtree|domfrontiers|looptree} {true|false} <arg>    ",
+                "print ycomp graph to <arg>; the flag indicates whether the graph is based upon a forward (true) or backwards (false) CFG; the option can be specified multiple times",
+                yComp, YCompCommandLine());
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
@@ -169,13 +169,13 @@ int main(int argc, char** argv) {
             prg->set_loc(infiles.front().c_str(), 1, 1, 1, 1);
 
         if (emit_ast)
-            impala::dump(prg, fancy);
+            prg->stream(std::cout);
 
         check(init, prg, nossa);
         bool result = impala::num_errors() == 0;
 
         if (result && emit_annotated)
-            impala::dump(prg, fancy);
+            prg->stream(std::cout);
 
         if (result && emit_cint) {
             impala::CGenOptions opts;

@@ -3,7 +3,6 @@
 #include "thorin/util/push.h"
 
 #include "impala/ast.h"
-#include "impala/dump.h"
 #include "impala/impala.h"
 #include "impala/sema/typetable.h"
 
@@ -131,7 +130,7 @@ private:
 
 public:
     const BlockExprBase* cur_block_ = nullptr;
-    const Fn* cur_fn_ = nullptr;
+    const Expr* cur_fn_ = nullptr;
 };
 
 //------------------------------------------------------------------------------
@@ -475,7 +474,7 @@ void FnDecl::check_item(TypeSema& sema) const {
 }
 
 Type FnDecl::check(TypeSema& sema) const {
-    THORIN_PUSH(sema.cur_fn_, this);
+    THORIN_PUSH(sema.cur_fn_, body());
     check_type_params(sema);
     std::vector<Type> types;
     for (auto param : params())
@@ -669,7 +668,7 @@ Type StrExpr::check(TypeSema& sema, TypeExpectation expected) const {
 }
 
 Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
-    THORIN_PUSH(sema.cur_fn_, this);
+    THORIN_PUSH(sema.cur_fn_, body());
     assert(type_params().empty());
 
     FnType fn_type;
@@ -1205,6 +1204,11 @@ Type BlockExprBase::check(TypeSema& sema, TypeExpectation expected) const {
     }
 
     return expr() ? expr()->type() : sema.unit().as<Type>();
+}
+
+Type RunBlockExpr::check(TypeSema& sema, TypeExpectation expected) const {
+    THORIN_PUSH(sema.cur_fn_, this);
+    return BlockExprBase::check(sema, expected);
 }
 
 Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {

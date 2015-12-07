@@ -1,0 +1,8 @@
+fn main() -> bool {
+    let mut i = 0;
+    while true {
+        i++;
+    }
+
+    true
+}
