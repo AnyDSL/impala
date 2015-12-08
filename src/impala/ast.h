@@ -493,7 +493,7 @@ public:
 
     size_t handle() const { return handle_; }
     bool is_address_taken() const { return is_address_taken_; }
-    const Fn* fn() const { return fn_; }
+    const Expr* fn() const { return fn_; }
     void take_address() const { is_address_taken_ = true; }
     void check(NameSema&) const;
     void check(BorrowSema&) const;
@@ -503,7 +503,7 @@ private:
 
 protected:
     size_t handle_;
-    mutable const Fn* fn_ = nullptr;
+    mutable const Expr* fn_ = nullptr;
     mutable bool is_address_taken_ = false;
 
     friend class Parser;
@@ -1340,9 +1340,9 @@ public:
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
 
 protected:
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoVector<const Stmt*> stmts_;
@@ -1367,6 +1367,7 @@ public:
     virtual const char* prefix() const override { return "@{"; }
 
 private:
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     friend class Parser;
