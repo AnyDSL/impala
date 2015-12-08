@@ -162,7 +162,6 @@ void ImplItem::check(BorrowSema& sema) const {
  */
 
 void EmptyExpr::check(BorrowSema&) const {}
-void SizeofExpr::check(BorrowSema& sema) const { ast_type()->check(sema); }
 
 void BlockExprBase::check(BorrowSema& sema) const {
     for (auto stmt : stmts())

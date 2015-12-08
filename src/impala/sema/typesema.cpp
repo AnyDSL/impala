@@ -382,7 +382,6 @@ void ImplItem::check(TypeSema& sema) const {
  */
 
 Type EmptyExpr::check(TypeSema&) const { return type(); }
-Type SizeofExpr::check(TypeSema& sema) const { return ast_type()->check(sema); }
 Type LiteralExpr::check(TypeSema&) const { return type(); }
 
 thorin::u8 TypeSema::char_value(const Location& loc, const char*& p) {

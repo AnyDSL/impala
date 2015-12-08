@@ -313,8 +313,6 @@ std::ostream& ImplItem::stream(std::ostream& os) const {
  * expressions
  */
 
-std::ostream& SizeofExpr::stream(std::ostream& os) const { return streamf(os, "sizeof(%)", ast_type()); }
-
 std::ostream& BlockExprBase::stream(std::ostream& os) const {
     os << prefix();
     if (empty())

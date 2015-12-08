@@ -876,24 +876,6 @@ protected:
     friend class IfExpr;
 };
 
-class SizeofExpr : public Expr {
-public:
-    const ASTType* ast_type() const { return ast_type_; }
-
-    virtual std::ostream& stream(std::ostream&) const override;
-    virtual void check(NameSema&) const override;
-    virtual Type check(TypeSema&) const override;
-    virtual void check(BorrowSema&) const override;
-
-private:
-    virtual bool check(InferSema&, Type) const override;
-    virtual thorin::Def remit(CodeGen&) const override;
-
-    AutoPtr<const ASTType> ast_type_;
-
-    friend class Parser;
-};
-
 /// Use as mixin for anything which uses type args: [T1, ..., Tn]
 class TypeArgs {
 public:

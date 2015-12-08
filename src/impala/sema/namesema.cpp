@@ -275,7 +275,6 @@ void ImplItem::check(NameSema& sema) const {
  */
 
 void EmptyExpr::check(NameSema&) const {}
-void SizeofExpr::check(NameSema& sema) const { ast_type()->check(sema); }
 
 void BlockExprBase::check(NameSema& sema) const {
     sema.push_scope();
