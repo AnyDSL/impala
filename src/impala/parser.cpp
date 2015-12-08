@@ -64,7 +64,6 @@
     case Token::FOR: \
     case Token::WITH: \
     case Token::WHILE: \
-    case Token::SIZEOF: \
     case Token::L_PAREN: \
     case Token::L_BRACE: \
     case Token::RUN_BLOCK: \
@@ -216,7 +215,6 @@ public:
     const Expr*             parse_infix_expr(const Expr* lhs);
     const Expr*             parse_postfix_expr(const Expr* lhs);
     const Expr*             parse_primary_expr();
-    const SizeofExpr*       parse_sizeof_expr();
     const LiteralExpr*      parse_literal_expr();
     const CharExpr*         parse_char_expr();
     const StrExpr*          parse_str_expr();
@@ -978,7 +976,6 @@ const Expr* Parser::parse_primary_expr() {
             parse_comma_list(Token::R_BRACKET, "elements of a simd expression", [&] { simd->args_.push_back(parse_expr()); });
             return simd;
         }
-        case Token::SIZEOF:     return parse_sizeof_expr();
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype:
 #include "impala/tokenlist.h"
@@ -1035,15 +1032,6 @@ const Expr* Parser::parse_primary_expr() {
         case Token::RUN_BLOCK:  return parse_block_expr();
         default:                error("expression", ""); return new EmptyExpr(lex().loc());
     }
-}
-
-const SizeofExpr* Parser::parse_sizeof_expr() {
-    auto sizeof_expr = loc(new SizeofExpr());
-    eat(Token::SIZEOF);
-    expect(Token::L_PAREN, "sizeof expression");
-    sizeof_expr->ast_type_ = parse_type();
-    expect(Token::R_PAREN, "sizeof expression");
-    return sizeof_expr;
 }
 
 const LiteralExpr* Parser::parse_literal_expr() {
