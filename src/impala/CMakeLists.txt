@@ -17,6 +17,7 @@ SET ( SOURCES
     prec.cpp
     prec.h
     sema/borrowsema.cpp
+    sema/infersema.cpp
     sema/namesema.cpp
     sema/typesema.cpp
     sema/typetable.cpp
