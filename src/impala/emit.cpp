@@ -583,11 +583,11 @@ Def MapExpr::remit(CodeGen& cg) const {
         auto ret_type = args().size() == fn->num_args() ? thorin::Type() : cg.convert(fn->return_type());
 
         // convert the type arguments
-        auto type_params = Array<thorin::Type>(fn->num_type_vars());
+        Array<thorin::Type> type_args(fn->num_type_vars());
         for (int i = 0, e = fn->num_type_vars(); i < e; i++)
-            type_params[i] = cg.convert(inferred_arg(i));
+            type_args[i] = cg.convert(inferred_arg(i));
 
-        auto ret = cg.call(type_params, ldef, defs, ret_type);
+        auto ret = cg.call(ldef, type_args, defs, ret_type);
         if (ret_type)
             cg.set_mem(cg.cur_bb->param(0));
         return ret;
@@ -725,7 +725,7 @@ Def ForExpr::remit(CodeGen& cg) const {
     if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun, loc());
 
     defs.front() = cg.get_mem(); // now get the current memory monad
-    cg.call({}, fun, defs, thorin::Type());
+    cg.call(fun, {}, defs, thorin::Type());
 
     cg.set_continuation(break_lambda);
     if (break_lambda->num_params() == 2)
