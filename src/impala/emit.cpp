@@ -536,22 +536,21 @@ Var MapExpr::lemit(CodeGen& cg) const {
 }
 
 Def MapExpr::remit(CodeGen& cg) const {
-    if (auto fn = lhs()->type().isa<FnType>()) {
-        Def dst = cg.remit(lhs());
-        assert(fn->num_type_vars() == num_inferred_args());
+    if (lhs()->type().isa<FnType>()) {
+        assert(lhs()->type().isa<FnType>()->num_type_vars() == num_inferred_args());
 
-        Array<thorin::Type> type_args(fn->num_type_vars());
-        for (size_t i = 0, e = type_args.size(); i != e; ++i) {
+        Array<thorin::Type> type_args(fn_mono()->num_type_vars());
+        for (size_t i = 0, e = type_args.size(); i != e; ++i)
             type_args[i] = cg.convert(inferred_arg(i));
-        }
 
+        Def dst = cg.remit(lhs());
         std::vector<Def> defs;
         defs.push_back(Def()); // reserve for mem but set later - some other args may update the monad
         for (auto arg : args())
             defs.push_back(cg.remit(arg));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
-        auto ret_type = args().size() == fn->num_args() ? thorin::Type() : cg.convert(fn->return_type());
+        auto ret_type = args().size() == fn_mono()->num_args() ? thorin::Type() : cg.convert(fn_mono()->return_type());
 
         auto ret = cg.call(dst, type_args, defs, ret_type);
         if (ret_type)
