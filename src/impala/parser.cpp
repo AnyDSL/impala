@@ -64,7 +64,6 @@
     case Token::FOR: \
     case Token::WITH: \
     case Token::WHILE: \
-    case Token::SIZEOF: \
     case Token::L_PAREN: \
     case Token::L_BRACE: \
     case Token::RUN_BLOCK: \
@@ -216,7 +215,6 @@ public:
     const Expr*             parse_infix_expr(const Expr* lhs);
     const Expr*             parse_postfix_expr(const Expr* lhs);
     const Expr*             parse_primary_expr();
-    const SizeofExpr*       parse_sizeof_expr();
     const LiteralExpr*      parse_literal_expr();
     const CharExpr*         parse_char_expr();
     const StrExpr*          parse_str_expr();
@@ -978,7 +976,6 @@ const Expr* Parser::parse_primary_expr() {
             parse_comma_list(Token::R_BRACKET, "elements of a simd expression", [&] { simd->args_.push_back(parse_expr()); });
             return simd;
         }
-        case Token::SIZEOF:     return parse_sizeof_expr();
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype:
 #include "impala/tokenlist.h"
@@ -1035,15 +1032,6 @@ const Expr* Parser::parse_primary_expr() {
         case Token::RUN_BLOCK:  return parse_block_expr();
         default:                error("expression", ""); return new EmptyExpr(lex().loc());
     }
-}
-
-const SizeofExpr* Parser::parse_sizeof_expr() {
-    auto sizeof_expr = loc(new SizeofExpr());
-    eat(Token::SIZEOF);
-    expect(Token::L_PAREN, "sizeof expression");
-    sizeof_expr->ast_type_ = parse_type();
-    expect(Token::R_PAREN, "sizeof expression");
-    return sizeof_expr;
 }
 
 const LiteralExpr* Parser::parse_literal_expr() {
@@ -1132,11 +1120,13 @@ const ForExpr* Parser::parse_for_expr() {
 
 const ForExpr* Parser::parse_with_expr() {
     // With-expressions are like for-expressions except that
-    // they have no parameters and no continue statement
+    // they have no continue statement
     auto with_expr = loc(new ForExpr());
     eat(Token::WITH);
     auto fn_expr = loc(new FnExpr());
     with_expr->fn_expr_ = fn_expr.get();
+    if (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
+        parse_param_list(fn_expr->params_, Token::IN, true);
     with_expr->break_decl_ = create_continuation_decl("break", /*set type during TypeSema*/ false);
     with_expr->expr_ = parse_expr();
     fn_expr->body_ = try_block_expr("body of with statement");
