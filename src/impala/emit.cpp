@@ -122,15 +122,6 @@ thorin::Type NoRetTypeNode::convert(CodeGen&) const { return thorin::Type(); }
 thorin::Type FnTypeNode::convert(CodeGen& cg) const {
     std::vector<thorin::Type> nargs;
     nargs.push_back(cg.world().mem_type());
-
-    for (auto type_var : type_vars()) {
-        Array<thorin::Type> bounds(type_var->num_bounds());
-        for (size_t j = 0, e = bounds.size(); j != e; ++j)
-            bounds[j] = cg.convert(type_var->bound(j));
-
-        nargs.push_back(cg.world().tuple_type(bounds));
-    }
-
     convert_args(cg, nargs);
     return cg.world().fn_type(nargs);
 }
@@ -222,13 +213,6 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
     cg.set_mem(mem_param);
     frame_ = cg.create_frame(loc);
 
-    // name bounds and memoize type params
-    for (auto type_param : type_params()) {
-        auto param = lambda()->param(i++);
-        param->name = type_param->symbol().str();
-        type_param->type_var()->defs_.push(param);
-    }
-
     // name params and setup store locations
     for (auto param : params()) {
         auto p = lambda()->param(i++);
@@ -253,10 +237,6 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
         } else
             cg.cur_bb->jump(ret_param(), {}, {mem, def});
     }
-
-    // pop type_param stacks
-    for (auto type_param : type_params())
-        type_param->type_var()->defs_.pop();
 }
 
 /*
@@ -557,37 +537,23 @@ Var MapExpr::lemit(CodeGen& cg) const {
 
 Def MapExpr::remit(CodeGen& cg) const {
     if (auto fn = lhs()->type().isa<FnType>()) {
-        Def ldef = cg.remit(lhs());
+        Def dst = cg.remit(lhs());
         assert(fn->num_type_vars() == num_inferred_args());
-        std::vector<Def> defs;
-        defs.push_back(Def()); // reserve for mem but set later - some other args may update the monad
-        for (size_t i = 0, e = fn->num_type_vars(); i != e; ++i) {
-            if (auto type_var = inferred_arg(i).isa<TypeVar>())
-                defs.push_back(type_var->defs_.top());
-            else {
-                auto known_type = inferred_arg(i).as<KnownType>();
-                std::vector<Def> bounds;
-                for (auto bound : fn->type_var(i)->bounds()) {
-                    auto impl = known_type->find_impl(bound);
-                    cg.emit(impl->impl_item());
-                    bounds.push_back(impl->impl_item()->def());
-                }
-                defs.push_back(cg.world().tuple(bounds, loc()));
-            }
+
+        Array<thorin::Type> type_args(fn->num_type_vars());
+        for (size_t i = 0, e = type_args.size(); i != e; ++i) {
+            type_args[i] = cg.convert(inferred_arg(i));
         }
 
+        std::vector<Def> defs;
+        defs.push_back(Def()); // reserve for mem but set later - some other args may update the monad
         for (auto arg : args())
             defs.push_back(cg.remit(arg));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
         auto ret_type = args().size() == fn->num_args() ? thorin::Type() : cg.convert(fn->return_type());
 
-        // convert the type arguments
-        Array<thorin::Type> type_args(fn->num_type_vars());
-        for (int i = 0, e = fn->num_type_vars(); i < e; i++)
-            type_args[i] = cg.convert(inferred_arg(i));
-
-        auto ret = cg.call(ldef, type_args, defs, ret_type);
+        auto ret = cg.call(dst, type_args, defs, ret_type);
         if (ret_type)
             cg.set_mem(cg.cur_bb->param(0));
         return ret;
