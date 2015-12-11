@@ -12,6 +12,7 @@
 #include "thorin/util/array.h"
 #include "thorin/util/cast.h"
 #include "thorin/util/hash.h"
+#include "thorin/util/stream.h"
 
 #include "impala/symbol.h"
 
@@ -174,7 +175,7 @@ enum PrimTypeKind {
 #include "impala/tokenlist.h"
 };
 
-class Unifiable : public thorin::MagicCast<Unifiable> {
+class Unifiable : public thorin::Streamable, public thorin::MagicCast<Unifiable> {
 private:
     Unifiable& operator = (const Unifiable&); ///< Do not copy-assign a \p Unifiable.
     Unifiable(const Unifiable&);              ///< Do not copy-construct a \p Unifiable.
@@ -211,7 +212,6 @@ public:
     const Unifiable* representative() const { return representative_; }
     bool is_unified() const { return representative_ != nullptr; }
     const Unifiable* unify() const;
-    void dump() const;
     /// Returns true if this \p Type does have any bound type variabes (\p type_vars_).
     bool is_polymorphic() const { return !type_vars_.empty(); }
     /**
