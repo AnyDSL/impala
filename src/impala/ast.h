@@ -1329,6 +1329,7 @@ private:
 class MapExpr : public Expr, public Args, public TypeArgs {
 public:
     const Expr* lhs() const { return lhs_; }
+    FnType fn_mono() const { return fn_mono_; }
 
     virtual bool is_lvalue() const override;
     virtual bool has_side_effect() const override;
@@ -1349,9 +1350,11 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
+    mutable FnType fn_mono_;
 
     friend class Parser;
     friend class ForExpr;
+    friend class TypeSema;
 };
 
 class StmtLikeExpr : public Expr {};

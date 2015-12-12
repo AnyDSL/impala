@@ -550,9 +550,6 @@ private:
     mutable const Unifiable* bound_at_; ///< The type where this variable is bound.
     mutable const TypeVarNode* equiv_;  ///< Used to define equivalence constraints when checking equality of types.
 
-public: // TODO make private
-    mutable std::stack<thorin::Def> defs_;
-
     friend class TypeTable;
     friend void Unifiable::bind(TypeVar) const;
     friend bool Unifiable::equal(const Unifiable*) const;
