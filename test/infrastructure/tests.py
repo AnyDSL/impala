@@ -77,7 +77,7 @@ class ValgrindTest(Test):
             
             return success
         except Exception as e:
-            print "Parsing valgrind output FAILED: %s" % e
+            print("Parsing valgrind output FAILED: %s" % e)
             return False
 
 def diff_output(output, expected):
@@ -193,8 +193,8 @@ class InvokeTest(Test):
                 cmd.extend(self.args)
                 p = RuntimeProcess(cmd, ".")
 
-	    if self.input_file is not None:
-		p.setInput(self.input_file)
+            if self.input_file is not None:
+                p.setInput(self.input_file)
 
             p.execute()
             return self.checkBasics(p) and self.checkOutput(p)
@@ -264,7 +264,7 @@ def make_invoke_tests(directory, options=[], benchmarks=False, testToFile={}, in
     for testfile, res in get_tests(directory):
         input_file = inputs[testfile] if testfile in inputs else None
         #print input_file, testfile
-	if testfile in testToFile:
+        if testfile in testToFile:
             tests.append(InvokeTest(directory, testfile, res, options, benchmarks, testToFile[testfile], input_file))
         else:
             tests.append(InvokeTest(directory, testfile, res, options, benchmarks, None, input_file))
