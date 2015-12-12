@@ -537,7 +537,7 @@ Var MapExpr::lemit(CodeGen& cg) const {
 
 Def MapExpr::remit(CodeGen& cg) const {
     if (auto fn_poly = lhs()->type().isa<FnType>()) {
-        assert(lhs()->fn_poly->num_type_vars() == num_inferred_args());
+        assert(fn_poly->num_type_vars() == num_inferred_args());
 
         Array<thorin::Type> type_args(fn_poly->num_type_vars());
         for (size_t i = 0, e = type_args.size(); i != e; ++i)
