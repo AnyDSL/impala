@@ -1,0 +1,7 @@
+fn id[T](x: T) -> T {
+    x
+}
+
+fn main() -> bool {
+    id[i32](23) == 23
+}
