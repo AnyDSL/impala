@@ -598,11 +598,6 @@ void ImplItem::check_item(TypeSema& sema) const {
 
 Type EmptyExpr::check(TypeSema& sema, TypeExpectation) const { return sema.unit(); }
 
-Type SizeofExpr::check(TypeSema& sema, TypeExpectation) const {
-    sema.check(ast_type());
-    return sema.type_u32();
-}
-
 Type LiteralExpr::check(TypeSema& sema, TypeExpectation) const {
     // FEATURE we could enhance this using the expected type (e.g. 4 could be interpreted as int8 if needed)
     return sema.type(literal2type());
@@ -1055,15 +1050,15 @@ Type TypeSema::check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& t
             inferred_args.push_back(unknown_type());
 
         assert(inferred_args.size() == fn_poly->num_type_vars());
-        auto fn_mono = fn_poly->instantiate(inferred_args).as<FnType>();
+        expr->fn_mono_ = fn_poly->instantiate(inferred_args).as<FnType>();
 
-        bool is_contuation = num_args == fn_mono->num_args();
-        if (is_contuation || num_args+1 == fn_mono->num_args()) {
+        bool is_contuation = num_args == expr->fn_mono()->num_args();
+        if (is_contuation || num_args+1 == expr->fn_mono()->num_args()) {
             for (size_t i = 0; i != num_args; ++i)
-                check(args[i], fn_mono->arg(i), "argument type");
+                check(args[i], expr->fn_mono()->arg(i), "argument type");
 
             // note: the order is important because of the unifying side-effects of ==
-            if (is_contuation || fn_mono->return_type() == expected.type()) { // TODO this looks overly complicated
+            if (is_contuation || expr->fn_mono()->return_type() == expected.type()) { // TODO this looks overly complicated
                 // check if all type variables could be inferred
                 bool is_known = true;
                 for (size_t i = 0, e = inferred_args.size(); i != e; ++i) {
@@ -1077,15 +1072,15 @@ Type TypeSema::check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& t
                     check_bounds(expr->loc(), fn_poly, inferred_args);
                     if (is_contuation)
                         return type_noret();
-                    if (!fn_mono->return_type()->is_noret())
-                        return expect_type(expr, fn_mono->return_type(), expected);
+                    if (!expr->fn_mono()->return_type()->is_noret())
+                        return expect_type(expr, expr->fn_mono()->return_type(), expected);
                     error(expr) << "missing last argument to call continuation\n";
                 }
             } else
-                error(expr->loc()) << "return type '" << fn_mono->return_type() << "' does not match expected type '" << expected.type() << "'\n";
+                error(expr->loc()) << "return type '" << expr->fn_mono()->return_type() << "' does not match expected type '" << expected.type() << "'\n";
         } else {
-            std::string rela = (num_args+1 < fn_mono->num_args()) ? "few" : "many";
-            size_t exp_args = fn_mono->num_args() > 0 ? fn_mono->num_args()-1 : 0;
+            std::string rela = (num_args+1 < expr->fn_mono()->num_args()) ? "few" : "many";
+            size_t exp_args = expr->fn_mono()->num_args() > 0 ? expr->fn_mono()->num_args()-1 : 0;
             error(expr->loc()) << "too " << rela << " arguments: " << num_args << " for " << exp_args << "\n";
         }
     } else

@@ -888,23 +888,6 @@ protected:
     friend class IfExpr;
 };
 
-class SizeofExpr : public Expr {
-public:
-    const ASTType* ast_type() const { return ast_type_; }
-
-    virtual void check(NameSema&) const override;
-    virtual void check(BorrowSema&) const override;
-
-private:
-    virtual std::ostream& stream(std::ostream&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
-    virtual thorin::Def remit(CodeGen&) const override;
-
-    AutoPtr<const ASTType> ast_type_;
-
-    friend class Parser;
-};
-
 /// Use as mixin for anything which uses type args: [T1, ..., Tn]
 class TypeArgs {
 public:
@@ -1320,6 +1303,7 @@ private:
 class MapExpr : public Expr, public Args, public TypeArgs {
 public:
     const Expr* lhs() const { return lhs_; }
+    FnType fn_mono() const { return fn_mono_; }
     virtual bool is_lvalue() const override;
     virtual bool has_side_effect() const override;
     virtual void take_address() const override;
@@ -1335,9 +1319,11 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
+    mutable FnType fn_mono_;
 
     friend class Parser;
     friend class ForExpr;
+    friend class TypeSema;
 };
 
 class StmtLikeExpr : public Expr {};
