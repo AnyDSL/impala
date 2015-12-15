@@ -28,7 +28,7 @@ def invoke(executable, dir_or_file, valgrind):
     if valgrind:
         tests = [infrastructure.tests.ValgrindTest(t) for t in tests]
     
-    infrastructure.tests.executeTests(tests, executable)
+    return infrastructure.tests.executeTests(tests, executable)
 
 def get_executable():
     if sys.platform == "win32":
@@ -86,6 +86,6 @@ def main():
     else:
         directory = args[0]
 
-    invoke(executable, directory, valgrind)
+    return invoke(executable, directory, valgrind)
 
 main()
