@@ -341,4 +341,4 @@ def executeTests(tests, gEx):
         else:
             print("\n!" + str(failOpt) + " of " + str(len(opt_tests)) + " OPTIONAL tests failed.")
             
-    return -failReq if failReq > 0 else 0
+    return -1 if failReq > 0 else 0

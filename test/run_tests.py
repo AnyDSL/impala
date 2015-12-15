@@ -88,4 +88,4 @@ def main():
 
     return invoke(executable, directory, valgrind)
 
-main()
+sys.exit(main())
