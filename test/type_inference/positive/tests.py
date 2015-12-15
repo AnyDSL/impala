@@ -10,6 +10,7 @@ optionals = [
     "type_inference/positive/fixed_point_iteration01.impala",
     "type_inference/positive/hard2.impala",
     "type_inference/positive/map.impala",
+    "type_inference/positive/type_args_prefix03.impala",
     "type_inference/positive/type_args10.impala",
     "type_inference/positive/type_args11.impala",
     "type_inference/positive/type_args12.impala",
