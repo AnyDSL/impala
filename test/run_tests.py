@@ -16,7 +16,7 @@ Command line options:
 """
 
 import infrastructure.tests
-from infrastructure.timed_process import CompileProcess
+from infrastructure.timed_process import CompileProcess, RuntimeProcess
 import os, sys, getopt, subprocess
 
 def invoke(executable, dir_or_file, valgrind):
