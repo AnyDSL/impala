@@ -75,5 +75,5 @@ class RuntimeProcess(TimedProcess):
     DEFAULT_TIMEOUT = 5.0
     timeout = DEFAULT_TIMEOUT
     
-    def __init__(self, cmd, cwd, timeout=timeout):
-        super(RuntimeProcess, self).__init__(cmd, cwd, timeout)
+    def __init__(self, cmd, cwd, t=None):
+        super(RuntimeProcess, self).__init__(cmd, cwd, t if t is not None else RuntimeProcess.timeout)
