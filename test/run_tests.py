@@ -61,7 +61,7 @@ def main():
     
     # get cmd file
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "he:t:L", ["help", "executable", "compiler-timeout", "valgrind"])
+        opts, args = getopt.getopt(sys.argv[1:], "he:t:L", ["help", "executable", "compiler-timeout", "runtime-timeout", "valgrind"])
     except getopt.error as msg:
         print(msg)
         sys.exit(2)
