@@ -1,4 +1,8 @@
+type char = u8;
+type str = [char];
+
 extern "C" {
+    fn atoi(&str) -> int;
     fn print_int(int) -> ();
 }
 
@@ -80,7 +84,8 @@ fn tk(n: int) -> () {
     }
 }
 
-fn main(n: int) -> int {
+fn main(argc: int, argv: &[&str]) -> int {
+    let n = if argc >= 2 { atoi(argv(1)) } else { 0 };
     max_n = n;
     for i in range(0, max_n) {
         s(i) = i;

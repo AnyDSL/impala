@@ -1,4 +1,8 @@
+type char = u8;
+type str = [char];
+
 extern "C" {
+    fn atoi(&str) -> int;
     fn sqrt(f64) -> f64;
     fn print_f64(f64) -> ();
 }
@@ -38,7 +42,8 @@ fn eval_AtA_times_u(N: int, u: &[f64], AtAu: &[f64]) -> () {
     eval_At_times_u(N, v, AtAu); 
 }
 
-fn main(n: int) -> int {
+fn main(argc: int, argv: &[&str]) -> int {
+    let n = if argc >= 2 { atoi(argv(1)) } else { 0 };
     let mut u = ~[n: f64];
     let v = ~[n: f64];
 

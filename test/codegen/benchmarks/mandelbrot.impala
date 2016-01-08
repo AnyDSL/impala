@@ -1,4 +1,8 @@
+type char = u8;
+type str = [char];
+
 extern "C" {
+    fn atoi(&str) -> int;
     fn print_header(int, int) -> ();
     fn put_u8(u8) -> ();
 }
@@ -10,7 +14,8 @@ fn range(a: f64, b: f64, body: fn(f64, fn())) -> () {
     }
 }
 
-fn main(n: int) -> int {
+fn main(argc: int, argv: &[&str]) -> int {
+    let n = if argc >= 2 { atoi(argv(1)) } else { 0 };
     let w = n as f64;
     let h = n as f64;
     let iter = 50;

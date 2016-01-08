@@ -1,3 +1,6 @@
+type char = u8;
+type str = [char];
+
 struct mpz_t {
     a: i32, 
     b: i32, 
@@ -15,6 +18,7 @@ extern "C" {
     fn "__gmpz_tdiv_q"      mpz_tdiv_q(&mpz_t, &mpz_t, &mpz_t) -> ();
     fn "__gmpz_init"        mpz_init(&mpz_t) -> ();
     fn "__gmpz_init_set_ui" mpz_init_set_ui(&mpz_t, u64) -> ();
+    fn atoi(&str) -> int;
     fn print_digits(u64) -> ();
     fn putchar(int) -> int;
     fn print_int(int) -> ();
@@ -50,7 +54,8 @@ fn next_term(k: u64) -> () {
     mpz_mul_ui(&num, &num, k);
 }
 
-fn main(n: int) -> int {
+fn main(argc: int, argv: &[&str]) -> int {
+    let n = if argc >= 2 { atoi(argv(1)) } else { 0 };
     mpz_init(&tmp1);
     mpz_init(&tmp2);
 
