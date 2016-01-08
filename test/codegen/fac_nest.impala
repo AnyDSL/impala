@@ -14,6 +14,6 @@ extern fn fac(n: int) -> int {
     }
 }
 
-fn main() -> bool {
-    fac(4) == 24
+fn main() -> int {
+    if fac(4) == 24 { 0 } else { 1 }
 }

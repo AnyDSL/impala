@@ -1,15 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void main_impala(int);
-
-int main(int argc, const char** argv) {
-    int n = 0;
-    if (argc >= 2)
-        n = atoi(argv[1]);
-    main_impala(n);
-}
-
 void print_char(char c) {
    printf("%c\n", (int)c);
 }

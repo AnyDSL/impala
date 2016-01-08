@@ -1,8 +1,8 @@
-fn main() -> bool {   
+fn main() -> int {
     let mut k = 0;
     if k == 0 {
         return(true)
     }
     k=1;
-    false
+    if false { 0 } else { 1 }
 }

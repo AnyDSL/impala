@@ -12,8 +12,8 @@ fn foo() -> Foo {
 
 fn take_address(bar: &Foo) -> () {}
 
-fn main() -> bool {
+fn main() -> int {
     let mut bar = foo();
     take_address(&bar);
-    bar.data(0) + bar.id == 6565
+    if bar.data(0) + bar.id == 6565 { 0 } else { 1 }
 }

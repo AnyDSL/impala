@@ -13,10 +13,10 @@ fn foo(i: int, f: fn(int, int) -> int, g: fn(int, int) -> int) -> int {
     g(f(i, i+1), 42)
 }
 
-fn main() -> bool {
+fn main() -> int {
     let mut sum = 0;
     for i in range(0, 10) {
         sum += foo(i, clamp, clamp)
     }
-    sum == 45
+    if sum == 45 { 0 } else { 1 }
 }

@@ -1,7 +1,7 @@
 fn out(fA: fn(fn(fn(fn(bool)), fn(bool))), fB: fn(fn(fn(fn(bool)), fn(bool)))) -> () {
 }
 
-fn main() -> bool {
+fn main() -> int {
     let mut b = true;
     fn M(c: bool) { return(c) }
     fn N(c: bool) { return(c) }
@@ -10,5 +10,5 @@ fn main() -> bool {
     fn B(pb: fn(fn(fn(bool)), fn(bool))) { pb(C, N) }
 
     out(A, B);
-    true
+    if true { 0 } else { 1 }
 }

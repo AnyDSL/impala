@@ -9,12 +9,14 @@ Command line options:
      Default is 'impala' (if possible) or '../build/bin/impala' otherwise;
      on Windows '.exe' is appended
  -t, --compiler-timeout <floating point value in seconds>
-                         Default is 1.0
+                         Default is 5.0
+ -r, --runtime-timeout <floating point value in seconds>
+                         Default is 5.0
  -L, --valgrind   Use valgrind to check for memory leaks during testing
 """
 
 import infrastructure.tests
-from infrastructure.timed_process import CompileProcess
+from infrastructure.timed_process import CompileProcess, RuntimeProcess
 import os, sys, getopt, subprocess
 
 def invoke(executable, dir_or_file, valgrind):
@@ -28,7 +30,7 @@ def invoke(executable, dir_or_file, valgrind):
     if valgrind:
         tests = [infrastructure.tests.ValgrindTest(t) for t in tests]
     
-    infrastructure.tests.executeTests(tests, executable)
+    return infrastructure.tests.executeTests(tests, executable)
 
 def get_executable():
     if sys.platform == "win32":
@@ -59,7 +61,7 @@ def main():
     
     # get cmd file
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "he:t:L", ["help", "executable", "compiler-timeout", "valgrind"])
+        opts, args = getopt.getopt(sys.argv[1:], "he:t:r:L", ["help", "executable", "compiler-timeout", "runtime-timeout", "valgrind"])
     except getopt.error as msg:
         print(msg)
         sys.exit(2)
@@ -73,6 +75,8 @@ def main():
             executable = a
         if o in ("-t", "--compiler-timeout"):
             CompileProcess.timeout = float(a)
+        if o in ("-r", "--runtime-timeout"):
+            RuntimeProcess.timeout = float(a)
         if o in ("-L", "--valgrind"):
             valgrind = True
 
@@ -86,6 +90,6 @@ def main():
     else:
         directory = args[0]
 
-    invoke(executable, directory, valgrind)
+    return invoke(executable, directory, valgrind)
 
-main()
+sys.exit(main())

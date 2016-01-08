@@ -12,6 +12,6 @@ extern fn f(i: int) -> int {
     sum
 }
 
-fn main() -> bool {
-    f(38) == 2
+fn main() -> int {
+    if f(38) == 2 { 0 } else { 1 }
 }

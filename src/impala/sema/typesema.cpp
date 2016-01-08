@@ -350,7 +350,7 @@ void ImplItem::check(TypeSema& sema) const {
             if (auto method_type = trait_app->find_method(meth_name)) {
                 // remember name for check if all methods were implemented
                 const auto& p = implemented_methods.insert(meth_name);
-                assert(p.second && "there should be no such name in the set"); // else name analysis failed
+                assert_unused(p.second && "there should be no such name in the set"); // else name analysis failed
 
                 // check that the types match
                 if (fn_type != method_type)
@@ -1014,7 +1014,7 @@ Type ForExpr::check(TypeSema& sema) const {
             }
         }
     } else if (auto field_expr = forexpr->isa<FieldExpr>()) {
-        assert(false && field_expr && "TODO");
+        assert_unused(false && field_expr && "TODO");
     }
 
     error(expr()) << "the looping expression does not support the 'for' protocol\n";

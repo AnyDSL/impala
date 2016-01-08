@@ -1,9 +1,9 @@
-fn main() -> bool {
+fn main() -> int {
     let mut i = 0;
 
     for x in parallel(2, 0, 4) {
         i++;
     }
 
-    i != 0
+    if i != 0 { 0 } else { 1 }
 }

@@ -2,7 +2,7 @@ extern "C" {
     fn println(&[u8]) -> ();
 }
 
-fn main() -> bool {
+fn main() -> int {
     println("hello world");
-    true
+    if true { 0 } else { 1 }
 }

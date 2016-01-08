@@ -26,9 +26,9 @@ fn foo() -> Foo {
 }
 
 
-fn main() -> bool {
+fn main() -> int {
     let a = arr();
     let t = tuple();
     let f = foo();
-    a(0) as f32 + a(1) as f32 + t(0) as f32 + t(1) + f.x as f32 + f.y == 195.f
+    if a(0) as f32 + a(1) as f32 + t(0) as f32 + t(1) + f.x as f32 + f.y == 195.f { 0 } else { 1 }
 }

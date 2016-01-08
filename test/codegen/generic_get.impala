@@ -3,6 +3,6 @@ fn get[T]() -> T {
     tuple(0)
 }
 
-fn main() -> bool {
-    get() // TODO true or false expected?
+fn main() -> int {
+    if get() // TODO true or false expected?
 }
