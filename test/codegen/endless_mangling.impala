@@ -1,6 +1,6 @@
 fn f(a: int, ret1: fn(int), ret2: fn(int)) {
     if a < 42 {
-        f(a + 1, ret2, ret1)
+        f(a + 1, |i| -> ! ret2(a+i), |i| -> ! ret1(a-i))
     } else {
         ret1(a+2)
     }
