@@ -7,7 +7,7 @@ fn sum(a: int, b: int, mut acc: &int, body: fn(int) -> int) -> int {
     *acc + 23
 }
 
-fn main() -> bool {
+fn main() -> int {
     let mut acc = 0;
     let res = for i in sum(0, 13, &acc) {
         if i == 19 {
@@ -16,5 +16,5 @@ fn main() -> bool {
             i
         }
     };
-    res == 101
+    if res == 101 { 0 } else { 1 }
 }

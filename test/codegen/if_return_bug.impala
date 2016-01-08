@@ -6,6 +6,6 @@ fn foo(i: int) -> int {
     }
 }
 
-fn main() -> bool {
-    foo(23) == 23
+fn main() -> int {
+    if foo(23) == 23 { 0 } else { 1 }
 }

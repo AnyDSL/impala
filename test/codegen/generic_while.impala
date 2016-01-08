@@ -13,8 +13,8 @@ fn generic_while[L, B](l : L,
         }
     )
 }
-
-fn main(ret_main : fn(bool))
+if  { 0 } else { 1 }
+fn main(ret_main : fn(int))
 {
     generic_while(
         0, // counter

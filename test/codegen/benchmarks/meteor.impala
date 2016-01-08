@@ -623,7 +623,7 @@ fn pretty(b: &[i8]) -> () {
     println("");
 }
 
-fn main(n: int) -> () {
+fn main(n: int) -> int {
     max_solutions = n;
     calc_pieces();
     calc_rows();
@@ -632,4 +632,5 @@ fn main(n: int) -> () {
     let minmax = find_minmax(&solutions as &[[i8*50]], solution_count);
     pretty(minmax(0));
     pretty(minmax(1));
+    0
 }

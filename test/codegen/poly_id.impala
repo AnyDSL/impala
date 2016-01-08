@@ -2,6 +2,6 @@ fn id[T](x: T) -> T {
     x
 }
 
-fn main() -> bool {
-    id[i32](23) == 23
+fn main() -> int {
+    if id[i32](23) == 23 { 0 } else { 1 }
 }

@@ -10,7 +10,7 @@ fn range(a: f64, b: f64, body: fn(f64, fn())) -> () {
     }
 }
 
-fn main(n: int) -> () {
+fn main(n: int) -> int {
     let w = n as f64;
     let h = n as f64;
     let iter = 50;
@@ -57,4 +57,5 @@ fn main(n: int) -> () {
             }
         }
     }
+    0
 }

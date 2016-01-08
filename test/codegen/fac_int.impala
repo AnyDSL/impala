@@ -18,6 +18,6 @@ fn fac(n : int) -> int {
     r
 }
 
-fn main() -> bool {
-    fac(5) == 120
+fn main() -> int {
+    if fac(5) == 120 { 0 } else { 1 }
 }

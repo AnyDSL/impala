@@ -4,6 +4,6 @@ extern fn g(i: int) -> int {
     f(i)
 }
 
-fn main() -> bool {
-    g(5) == 10
+fn main() -> int {
+    if g(5) == 10 { 0 } else { 1 }
 }

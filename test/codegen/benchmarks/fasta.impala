@@ -154,7 +154,7 @@ fn generate_And_Wrap_Pseudorandom_DNA_Sequence(
     }
 }
 
-fn main(n: int) -> () {
+fn main(n: int) -> int {
     println(">ONE Homo sapiens alu");
     let mut homo_Sapiens_Alu =
         "GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGGGAGGCCGAGGCGGGCGGATCACCTGAGGTC"
@@ -191,4 +191,5 @@ fn main(n: int) -> () {
         nucleotide_info{letter: 't', probability: 0.3015094502008f}
     ];
     generate_And_Wrap_Pseudorandom_DNA_Sequence(&homo_Sapien_Nucleotides_Information, 4, 5*n);
+    0
 }

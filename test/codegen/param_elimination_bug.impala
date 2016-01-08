@@ -27,6 +27,6 @@ extern fn cleanup_bug(i: &i32) -> () @{
     }
 }
 
-fn main() -> bool {
-    true
+fn main() -> int {
+    if true { 0 } else { 1 }
 }

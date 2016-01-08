@@ -13,12 +13,12 @@ fn call_me(body: fn() -> ()) -> () {
     body();
 }
 
-fn main() -> bool {
+fn main() -> int {
     let mut res = 42;
     while res < 43 {
         @iterate_children(&res);
         ++res;
     }
 
-    res == 43
+    if res == 43 { 0 } else { 1 }
 }

@@ -50,7 +50,7 @@ fn next_term(k: u64) -> () {
     mpz_mul_ui(&num, &num, k);
 }
 
-fn main(n: int) -> () {
+fn main(n: int) -> int {
     mpz_init(&tmp1);
     mpz_init(&tmp2);
 
@@ -77,4 +77,5 @@ fn main(n: int) -> () {
         }
         eliminate_digit(d);
     }
+    0
 }

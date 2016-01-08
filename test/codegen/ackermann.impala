@@ -8,6 +8,6 @@ fn a(m: int, n: int) -> int {
     }
 }
 
-fn main() -> bool {
-    a(3, 4) == 125
+fn main() -> int {
+    if a(3, 4) == 125 { 0 } else { 1 }
 }

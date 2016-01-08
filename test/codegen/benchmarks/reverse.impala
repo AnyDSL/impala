@@ -26,7 +26,7 @@ fn errex(s: &[u8]) -> () {            // error message+value, return 1
 
 fn take_address(&[u8]) -> () {}
 
-fn main(n: int) -> () {                                // ***** main *****
+fn main(n: int) -> int {                                // ***** main *****
     let mut jjj: [u8*82];        // allocate input line buffer
     let mut qqq = ~[QBFSIZE: u8];   // output buffer (dyn. size)
     let mut pqstop = QBFSIZE;        // size of qqq
@@ -102,4 +102,5 @@ fn main(n: int) -> () {                                // ***** main *****
         }
         printn(qqq, pq);
     }
+    0
 }

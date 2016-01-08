@@ -15,7 +15,7 @@ fn init_zero(mut arr: &[f32]) -> () {
     }
 }
 
-fn main() -> bool {
+fn main() -> int {
     init_zero(~[42: f32]);
-    true
+    if true { 0 } else { 1 }
 }

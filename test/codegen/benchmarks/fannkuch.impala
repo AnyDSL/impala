@@ -80,7 +80,7 @@ fn tk(n: int) -> () {
     }
 }
 
-fn main(n: int) -> () {
+fn main(n: int) -> int {
     max_n = n;
     for i in range(0, max_n) {
         s(i) = i;
@@ -89,4 +89,5 @@ fn main(n: int) -> () {
     print_int(checksum);
     print_int(max_n);
     print_int(maxflips);
+    0
 }

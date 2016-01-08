@@ -282,9 +282,10 @@ fn init_scene() -> () {
     plane.n.z = 0.0;
 }
 
-fn main(int) -> () {
+fn main(int, &[u8]) -> int {
     let img = ~[WIDTH*HEIGHT*3:u8];
     init_scene();
     render(img, WIDTH, HEIGHT, NSUBSAMPLES);
     saveppm("ao.ppm", WIDTH, HEIGHT, img);
+    0
 }
