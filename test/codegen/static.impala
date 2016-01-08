@@ -1,9 +1,9 @@
-fn main() -> bool {
+fn main() -> int {
     static mut x = 3;
     static y = 4;
     foo += 17;
     ++x;
-    (foo + bar + foobar + x + y) == 132
+    if (foo + bar + foobar + x + y) == 132 { 0 } else { 1 }
 }
 
 static mut foo = 42;

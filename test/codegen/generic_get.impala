@@ -4,5 +4,5 @@ fn get[T]() -> T {
 }
 
 fn main() -> int {
-    if get() // TODO true or false expected? { 0 } else { 1 }
+    if get() // TODO true or false expected?
 }

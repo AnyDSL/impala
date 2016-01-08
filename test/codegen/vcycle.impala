@@ -20,7 +20,7 @@ fn sort(num : int, mut arr : &[i64]) -> () {
     }
 }
 
-fn main() -> bool {
+fn main() -> int {
     let levels = 2;
     let mut times = ~[2:i64];
 
@@ -34,6 +34,6 @@ fn main() -> bool {
         }
     }
     @vcycle_dsl_intern(0);
-    true
+    if true { 0 } else { 1 }
 }
 

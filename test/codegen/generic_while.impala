@@ -13,11 +13,13 @@ fn generic_while[L, B](l : L,
         }
     )
 }
-if  { 0 } else { 1 }
-fn main(ret_main : fn(int))
-{
-    generic_while(
-        0, // counter
-        |i : int, ret : fn(int, bool)| { ret(i, i < 42) },
-        |i : int| -> int { i + 1 }) == 42
+
+fn main() -> int {
+    if generic_while(/*counter*/ 0,
+                    |i : int, ret : fn(int, bool)| { ret(i, i < 42) },
+                    |i : int| -> int { i + 1 }) == 42 {
+        0 
+    } else {
+        1
+    }
 }
