@@ -29,7 +29,6 @@ def allTests():
       "codegen/trait_impls.impala",
       "codegen/vcycle.impala",
       "codegen/while_true.impala",
-      "codegen/zip.impala"
     ]
 
 
