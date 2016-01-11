@@ -1,5 +1,5 @@
 extern "C" {
-    fn thorin_print_long(i64) -> ();
+    fn print_int(int) -> ();
 }
 fn range(a : int, b : int, yield : fn(int, fn())) -> () {
     if a < b {
@@ -27,7 +27,7 @@ fn main() -> int {
     fn vcycle_dsl_intern(level : int) -> () {
         sort(2, times);
         if level == levels-1 {
-            thorin_print_long(times(1));
+            print_int(times(1) as int);
         } else {
             vcycle_dsl_intern(level+1);
             times(level) = 0i64;

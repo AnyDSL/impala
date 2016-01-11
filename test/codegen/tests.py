@@ -27,7 +27,6 @@ def allTests():
       "codegen/return_tuple.impala",
       "codegen/system_f_problem.impala",
       "codegen/trait_impls.impala",
-      "codegen/vcycle.impala",
       "codegen/while_true.impala",
     ]
 
