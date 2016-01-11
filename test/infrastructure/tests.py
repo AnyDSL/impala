@@ -138,7 +138,6 @@ class InvokeTest(Test):
     args = None
 
     LIB_C = os.path.join(os.path.dirname(__file__), "lib.c")
-    CALL_IMPALA_MAIN_C = os.path.join(os.path.dirname(__file__), "call_impala_main.c")
     
     def __init__(self, base, src, output_file, options=[], benchmarks=False, compare=None, input_file=None):
         super(InvokeTest, self).__init__(base, src, options+["-emit-llvm"])
@@ -165,7 +164,7 @@ class InvokeTest(Test):
             yield ["clang", "-O3", "lib.o", self.ll_file, "-L", "/opt/local/lib", "-lm", "-lpcre", "-lgmp", "-s", "-o", self.exe_file]
         else:
             yield ["llc", "-o", self.s_file, self.bc_file]
-            yield ["cc", "-o", self.exe_file, self.s_file, InvokeTest.CALL_IMPALA_MAIN_C]
+            yield ["cc", "-o", self.exe_file, self.s_file, InvokeTest.LIB_C]
 
     
     def invoke(self, gEx):
