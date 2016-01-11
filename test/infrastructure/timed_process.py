@@ -31,8 +31,8 @@ class TimedProcess(object):
 
         thread = threading.Thread(target=target)
         thread.start()
-	
-	#print self.cmd, self.cwd, self.input_file
+        
+        #print self.cmd, self.cwd, self.input_file
 
         thread.join(self.timeout)
         if thread.is_alive():
