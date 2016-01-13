@@ -140,12 +140,12 @@ public:
     }
 
     template<class U>
-    void operator += (Proxy<U> other) {
+    bool operator += (Proxy<U> other) {
         static_assert(std::is_base_of<T, U>::value, "T is not a base type of U");
-        if (*this) {
-            infer(*this, other);
-        } else
-            node_ = *other;
+        if (*this)
+            return infer(*this, other);
+        node_ = *other;
+        return true;
     }
 
 private:

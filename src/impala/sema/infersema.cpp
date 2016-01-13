@@ -171,9 +171,9 @@ bool InferSema::check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> 
  */
 
 #if 0
-void TypeParamList::check_type_params(InferSema& sema) const {
+bool TypeParamList::check_type_params(InferSema& sema) const {
     for (auto type_param : type_params()) {
-        auto type_var = type_param->check(sema);
+        auto type_var = sema.check(type_param);
         for (auto bound : type_param->bounds()) {
             if (auto type_app = bound->isa<ASTTypeApp>()) {
                 type_var->add_bound(type_app->trait_app(sema, type_var));
@@ -185,7 +185,14 @@ void TypeParamList::check_type_params(InferSema& sema) const {
 }
 #endif
 
-bool TypeParam::check(InferSema& sema) const { type_ = sema.type_var(symbol()); return false; }
+bool TypeParam::check(InferSema& sema) const {
+    if (todo_) {
+        type_ = sema.type_var(symbol());
+        return todo_ = true;
+    }
+    return false;
+}
+
 bool ErrorASTType::check(InferSema& sema) const { type_ = sema.type_error(); return false; }
 
 bool PrimASTType::check(InferSema& sema) const {
@@ -201,10 +208,10 @@ bool PtrASTType::check(InferSema& sema) const {
     auto referenced_type = referenced_ast_type()->type();
 
     if (is_owned())
-        type_ += sema.owned_ptr_type(referenced_type, addr_space());
+        todo_ |= type_ += sema.owned_ptr_type(referenced_type, addr_space());
     else {
         assert(is_borrowed() && "only owned and borrowed ptrs are supported");
-        type_ += sema.borrowd_ptr_type(referenced_type, addr_space());
+        todo_ |= type_ += sema.borrowd_ptr_type(referenced_type, addr_space());
     }
 
     return todo_;
@@ -212,13 +219,13 @@ bool PtrASTType::check(InferSema& sema) const {
 
 bool IndefiniteArrayASTType::check(InferSema& sema) const {
     todo_ |= sema.check(elem_ast_type());
-    type_ += sema.indefinite_array_type(elem_ast_type()->type());
+    todo_ |= type_ += sema.indefinite_array_type(elem_ast_type()->type());
     return todo_;
 }
 
 bool DefiniteArrayASTType::check(InferSema& sema) const {
     todo_ |= sema.check(elem_ast_type());
-    type_ += sema.definite_array_type(elem_ast_type()->type(), dim());
+    todo_ |= type_ += sema.definite_array_type(elem_ast_type()->type(), dim());
     return todo_;
 }
 
@@ -228,7 +235,7 @@ bool TupleASTType::check(InferSema& sema) const {
         todo_ |= sema.check(arg(i));
         types[i] = arg(i)->type();
     }
-    type_ += sema.tuple_type(types);
+    todo_ |= type_ += sema.tuple_type(types);
 
     return todo_;
 }
@@ -247,7 +254,7 @@ bool FnASTType::check(InferSema& sema) const {
         sema.check(type_param);
         fn_type->bind(type_param->type_var());
     }
-    type_ += fn_type;
+    todo_ |= type_ += fn_type;
 
     return todo_;
 }
@@ -302,21 +309,15 @@ bool LocalDecl::check(InferSema& sema, Type expected) const {
 
     if (ast_type()) {
         todo_ |= sema.check(ast_type());
-        type_ += ast_type()->type();
+        todo_ |= type_ += ast_type()->type();
     } else
-        type_ += expected;
+        todo_ |= type_ += expected;
 
     return todo_;
 }
 
 bool Fn::check_body(InferSema& sema, FnType fn_type) const {
-    auto return_type = fn_type->return_type();
-    todo |= sema.check(body(), return_type);
-
-    for (auto param : params()) {
-        if (param->is_mut() && !param->is_written())
-            warn(param) << "parameter '" << param->symbol() << "' declared mutable but parameter is never written to\n";
-    }
+    return sema.check(body(), fn_type->return_type());
 }
 
 //------------------------------------------------------------------------------
@@ -325,42 +326,44 @@ bool Fn::check_body(InferSema& sema, FnType fn_type) const {
  * items
  */
 
-void ModDecl::check(InferSema& sema) const {
+bool ModDecl::check(InferSema& sema) const {
     if (mod_contents())
-        mod_contents()->check(sema);
+        return todo_ |= sema.check(mod_contents());
 }
 
-void ModContents::check(InferSema& sema) const {
+bool ModContents::check(InferSema& sema) const {
     for (auto item : items())
-        item->check(sema);
+        todo_ |= sema.check(item);
+    return todo_;
 }
 
-void ExternBlock::check(InferSema& sema) const {
-    if (!abi().empty()) {
-        if (abi() != "\"C\"" && abi() != "\"device\"" && abi() != "\"thorin\"")
-            error(this) << "unknown extern specification\n";  // TODO: better location
-    }
-
+bool ExternBlock::check(InferSema& sema) const {
     for (auto fn : fns())
-        fn->check(sema);
+        todo_ |= sema.check(fn);
+    return todo_;
 }
 
-void Typedef::check(InferSema& sema) const {
-    check_type_params(sema);
-    Type type = sema.check(ast_type());
+bool Typedef::check(InferSema& sema) const {
+    todo_ |= check_type_params(sema);
+    todo_ |= sema.check(ast_type());
 
     if (type_params().size() > 0) {
-        Type abs = sema.typedef_abs(type);
-        for (auto type_param : type_params())
-            abs->bind(type_param->check(sema));
-        type_ = abs;
+        Type abs = sema.typedef_abs(ast_type()->type());
+        for (auto type_param : type_params()) {
+            todo_ |= sema.check(type_param);
+            abs->bind(type_param->type_var());
+        }
+
+        todo_ |= type_ = abs;
     } else
-        type_ = type;
+        todo_ |= type_ = ast_type()->type();
+
+    return todo_;
 }
 
-void EnumDecl::check(InferSema&) const { /*TODO*/ }
+bool EnumDecl::check(InferSema&) const { /*TODO*/ return false; }
 
-void StructDecl::check(InferSema& sema) const {
+bool StructDecl::check(InferSema& sema) const {
     check_type_params(sema);
     auto struct_type = type_.empty() ? sema.struct_abs_type(this) : type().as<StructAbsType>();
 
@@ -369,15 +372,19 @@ void StructDecl::check(InferSema& sema) const {
             struct_type->set(field->index(), field_type);
     }
 
-    for (auto type_param : type_params())
-        struct_type->bind(type_param->check(sema));
+    for (auto type_param : type_params()) {
+        todo_ |= sema.check(type_param);
+        struct_type->bind(type_param->type_var());
+    }
+
+    return todo_;
 }
 
 bool FieldDecl::check(InferSema& sema) const {
-    return sema.check(ast_type());
+    return todo_ |= sema.check(ast_type());
 }
 
-void FnDecl::check(InferSema& sema) const {
+bool FnDecl::check(InferSema& sema) const {
     THORIN_PUSH(sema.cur_fn_, this);
 
     check_type_params(sema);
@@ -394,12 +401,12 @@ void FnDecl::check(InferSema& sema) const {
         check_body(sema, fn_type);
 }
 
-void StaticItem::check(InferSema& sema) const {
+bool StaticItem::check(InferSema& sema) const {
     if (init())
         type_ = sema.check(init());
 }
 
-void TraitDecl::check(InferSema& sema) const {
+bool TraitDecl::check(InferSema& sema) const {
     TypeVar self_var = self_param()->check(sema);
     trait_abs_ = sema.trait_abs(this);
     trait_abs_->bind(self_var);
@@ -417,7 +424,7 @@ void TraitDecl::check(InferSema& sema) const {
         method->check(sema);
 }
 
-void ImplItem::check(InferSema& sema) const {
+bool ImplItem::check(InferSema& sema) const {
     check_type_params(sema);
     Type for_type = sema.check(this->ast_type());
 
@@ -1086,18 +1093,18 @@ bool ForExpr::check(InferSema& sema, Type expected) const {
  * statements
  */
 
-void ExprStmt::check(InferSema& sema) const {
+bool ExprStmt::check(InferSema& sema) const {
     if (sema.check(expr())->is_noret())
         error(expr()) << "expression does not return; subsequent statements are unreachable\n";
     if (!expr()->has_side_effect())
         warn(expr()) << "statement with no effect\n";
 }
 
-void ItemStmt::check(InferSema& sema) const {
+bool ItemStmt::check(InferSema& sema) const {
     item()->check(sema);
 }
 
-void LetStmt::check(InferSema& sema) const {
+bool LetStmt::check(InferSema& sema) const {
     sema.cur_block_->add_local(local());
     auto expected = local()->check(sema, sema.unknown_type());
     if (init())
