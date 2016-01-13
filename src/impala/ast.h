@@ -324,7 +324,7 @@ public:
     const Identifier* identifier() const { return identifier_; }
     Symbol symbol() const { return identifier()->symbol(); }
     SafePtr<const Decl> decl() const { return decl_; }
-    TraitApp trait_app(TypeSema&, Type) const;
+    TraitApp trait_app(InferSema&, Type) const;
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;

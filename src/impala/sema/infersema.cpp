@@ -285,9 +285,10 @@ TraitApp ASTTypeApp::trait_app(InferSema& sema, Type self) const {
 }
 
 bool SimdASTType::check(InferSema& sema) const {
-    auto type = sema.check(elem_type());
-    if (type.isa<PrimType>())
-        return sema.simd_type(type, size());
+    todo_ |= sema.check(elem_ast_type());
+    auto elem_type = elem_ast_type()->type();
+    if (elem_type.isa<PrimType>())
+        return sema.simd_type(elem_type, size());
     else {
         error(this) << "non primitive types forbidden in simd type\n";
         return sema.type_error();
