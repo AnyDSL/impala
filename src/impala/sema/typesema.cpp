@@ -237,8 +237,8 @@ Type LocalDecl::check(TypeSema& sema) const {
     return type();
 }
 
-void Fn::check_body(TypeSema& sema) const {
-    body()->check(sema);
+bool Fn::check_body(TypeSema& sema) const {
+    todo_ |= body()->check(sema);
 
     for (auto param : params()) {
         if (param->is_mut() && !param->is_written())

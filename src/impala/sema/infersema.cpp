@@ -60,7 +60,7 @@ public:
 
 public:
     const BlockExprBase* cur_block_ = nullptr;
-    const Fn* cur_fn_ = nullptr;
+    const Expr* cur_fn_ = nullptr;
 };
 
 void type_inference(Init& init, const ModContents* mod) {
@@ -300,17 +300,18 @@ bool SimdASTType::check(InferSema& sema) const {
 bool LocalDecl::check(InferSema& sema, Type expected) const {
     fn_ = sema.cur_fn_;
 
-    if (ast_type())
-        type_ = sema.check(ast_type());
-    else if (expected)
-        type_ = expected;
+    if (ast_type()) {
+        todo_ |= sema.check(ast_type());
+        type_ += ast_type()->type();
+    } else
+        type_ += expected;
 
-    return type_;
+    return todo_;
 }
 
-void Fn::check_body(InferSema& sema, FnType fn_type) const {
+bool Fn::check_body(InferSema& sema, FnType fn_type) const {
     auto return_type = fn_type->return_type();
-    sema.check(body(), return_type, "return type");
+    todo |= sema.check(body(), return_type);
 
     for (auto param : params()) {
         if (param->is_mut() && !param->is_written())
