@@ -287,7 +287,6 @@ fn init_scene() -> () {
 }
 
 fn main(argc: int, argv: &[&str]) -> int {
-    let n = if argc >= 2 { atoi(argv(1)) } else { 0 };
     let img = ~[WIDTH*HEIGHT*3:u8];
     init_scene();
     render(img, WIDTH, HEIGHT, NSUBSAMPLES);

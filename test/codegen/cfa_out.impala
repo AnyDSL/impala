@@ -1,14 +1,14 @@
-fn out(fA: fn(fn(fn(fn(bool)), fn(bool))), fB: fn(fn(fn(fn(bool)), fn(bool)))) -> () {
+fn out(fA: fn(fn(fn(fn(int)), fn(int))), fB: fn(fn(fn(fn(int)), fn(int)))) -> () {
 }
 
 fn main() -> int {
-    let mut b = true;
-    fn M(c: bool) { return(c) }
-    fn N(c: bool) { return(c) }
-    fn C(pc: fn(bool)) { pc(b) }
-    fn A(pa: fn(fn(fn(bool)), fn(bool))) { pa(C, M) }
-    fn B(pb: fn(fn(fn(bool)), fn(bool))) { pb(C, N) }
+    let mut i = 42;
+    fn M(c: int) { return(c) }
+    fn N(c: int) { return(c) }
+    fn C(pc: fn(int)) { pc(i++) }
+    fn A(pa: fn(fn(fn(int)), fn(int))) { pa(C, M) }
+    fn B(pb: fn(fn(fn(int)), fn(int))) { pb(C, N) }
 
     out(A, B);
-    if true { 0 } else { 1 }
+    0
 }

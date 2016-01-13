@@ -34,7 +34,7 @@ fn main(main_ret: fn(int)) {
             next(result)
         },
         |result : (int, int)| {
-            main_ret(result(0) == 0)
+            main_ret(if result(0) == 0 { 0 } else { 1 })
         }
-    if ) { 0 } else { 1 }
+    )
 }

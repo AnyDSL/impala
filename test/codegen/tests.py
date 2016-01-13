@@ -18,18 +18,14 @@ def allTests():
       "codegen/diderot.impala",
       "codegen/endless_mangling.impala",
       "codegen/generic_get.impala",
-      "codegen/generic_while.impala",
       "codegen/parallel.impala",
-      "codegen/primes.impala",
       "codegen/range.impala",
       "codegen/range_poly.impala",
       "codegen/ret_assert.impala",
       "codegen/return_tuple.impala",
       "codegen/system_f_problem.impala",
       "codegen/trait_impls.impala",
-      "codegen/vcycle.impala",
       "codegen/while_true.impala",
-      "codegen/zip.impala"
     ]
 
 

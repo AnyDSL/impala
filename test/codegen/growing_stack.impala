@@ -14,5 +14,5 @@ fn main() -> int {
         take_address(&foo);
         sum += foo
     }
-    if sum == 5000000000 { 0 } else { 1 }
+    if sum == 704982704 { 0 } else { 1 }
 }
