@@ -388,22 +388,31 @@ bool FnDecl::check(InferSema& sema) const {
     THORIN_PUSH(sema.cur_fn_, this);
 
     check_type_params(sema);
-    std::vector<Type> types; // TODO use thorin::Array
-    for (auto param : params())
-        types.push_back(param->check(sema, sema.unknown_type() /*TODO: infer*/));
+    Array<Type> param_types(num_params());
+    for (size_t i = 0, e = num_params(); i != e; ++i) {
+        todo_ |= param(i)->check(sema, sema.unknown_type());
+        param_types[i] = param(i)->type();
+    }
 
-    auto fn_type = sema.fn_type(types);
-    for (auto type_param : type_params())
-        fn_type->bind(type_param->check(sema));
-    type_ = fn_type;
+    todo_ |= type_ += sema.fn_type(param_types);
+    for (auto type_param : type_params()) {
+        todo_ |= sema.check(type_param);
+        fn_type()->bind(type_param->type_var());
+    }
 
     if (body() != nullptr)
-        check_body(sema, fn_type);
+        todo_ |= check_body(sema, fn_type());
+
+    return todo_;
 }
 
 bool StaticItem::check(InferSema& sema) const {
-    if (init())
-        type_ = sema.check(init());
+    if (init()) {
+        todo_ |= sema.check(init());
+        todo_ |= type_ += init()->type();
+    }
+
+    return todo_;
 }
 
 bool TraitDecl::check(InferSema& sema) const {
