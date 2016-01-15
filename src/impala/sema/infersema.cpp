@@ -416,13 +416,16 @@ bool StaticItem::check(InferSema& sema) const {
 }
 
 bool TraitDecl::check(InferSema& sema) const {
-    TypeVar self_var = self_param()->check(sema);
+    todo_ |= sema.check(self_param());
+    TypeVar self_var = self_param()->type_var();
     trait_abs_ = sema.trait_abs(this);
     trait_abs_->bind(self_var);
 
     check_type_params(sema);
-    for (auto type_param : type_params())
-        trait_abs_->bind(type_param->check(sema));
+    for (auto type_param : type_params()) {
+        todo_ |= sema.check(type_param);
+        trait_abs_->bind(type_param->type_var());
+    }
 
     for (auto type_app : super_traits()) {
         if (!trait_abs_->add_super_trait(type_app->trait_app(sema, self_var)))
@@ -430,20 +433,24 @@ bool TraitDecl::check(InferSema& sema) const {
     }
 
     for (auto method : methods())
-        method->check(sema);
+        todo_ |= sema.check(method);
+    return todo_;
 }
 
 bool ImplItem::check(InferSema& sema) const {
     check_type_params(sema);
-    Type for_type = sema.check(this->ast_type());
+    todo_ |= sema.check(ast_type());
+    Type for_type = ast_type()->type();
 
     TraitApp trait_app;
     if (trait() != nullptr) {
         if (auto type_app = trait()->isa<ASTTypeApp>()) {
             trait_app = type_app->trait_app(sema, for_type);
             auto impl = sema.impl(this, trait_app, for_type);
-            for (auto type_param : type_params())
-                impl->bind(type_param->check(sema));
+            for (auto type_param : type_params()) {
+                todo_ |= sema.check(type_param);
+                impl->bind(type_param->type_var());
+            }
 
             if (!for_type->is_error() && !trait_app->is_error()) {
                 for_type.as<KnownType>()->add_impl(impl);
@@ -455,7 +462,7 @@ bool ImplItem::check(InferSema& sema) const {
 
     thorin::HashSet<Symbol> implemented_methods;
     for (auto method : methods()) {
-        method->check(sema);
+        todo_ |= sema.check(method);
         Type fn_type = method->type();
 
         if (trait() != nullptr) {
@@ -487,6 +494,7 @@ bool ImplItem::check(InferSema& sema) const {
         }
     }
 #endif
+    return todo_;
 }
 
 //------------------------------------------------------------------------------
@@ -496,7 +504,6 @@ bool ImplItem::check(InferSema& sema) const {
  */
 
 bool EmptyExpr::check(InferSema& sema, Type) const { return sema.unit(); }
-bool SizeofExpr::check(InferSema& sema, Type) const { sema.check(ast_type()); return sema.type_u32(); }
 bool LiteralExpr::check(InferSema& sema, Type) const { return sema.type(literal2type()); }
 bool CharExpr::check(InferSema& sema, Type) const { return sema.type_u8(); }
 
@@ -531,8 +538,10 @@ bool FnExpr::check(InferSema& sema, Type expected) const {
         fn_type = exp_fn;
     } else {
         std::vector<Type> param_types; // TODO use thorin::Array
-        for (auto param : params())
-            param_types.push_back(param->check(sema, sema.unknown_type()));
+        for (auto param : params()) {
+            todo_ |= param->check(sema, sema.unknown_type());
+            param_types.push_back(param->type());
+        }
 
         fn_type = sema.fn_type(param_types);
     }
@@ -1001,7 +1010,7 @@ bool MapExpr::check_as_method_call(InferSema& sema, Type expected) const {
 bool BlockExprBase::check(InferSema& sema, Type expected) const {
     THORIN_PUSH(sema.cur_block_, this);
     for (auto stmt : stmts())
-        stmt->check(sema);
+        todo_ |= sema.check(stmt);
 
     sema.check(expr(), expected);
 
@@ -1010,7 +1019,8 @@ bool BlockExprBase::check(InferSema& sema, Type expected) const {
             warn(local) << "variable '" << local->symbol() << "' declared mutable but variable is never written to\n";
     }
 
-    return expr() ? expr()->type() : sema.unit().as<Type>();
+    todo_ |= type_ += expr() ? expr()->type() : sema.unit().as<Type>();
+    return todo_;
 }
 
 bool IfExpr::check(InferSema& sema, Type expected) const {
