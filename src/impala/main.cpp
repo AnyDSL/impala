@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
         bool help,
              emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm, emit_ycomp, emit_ycomp_cfg,
              opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
-             nocleanup, nossa;
+             nocleanup, nossa, fancy;
         YCompCommandLine yComp;
 
         auto cmd_parser = ArgParser()
@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("emit-thorin",        "",                               "emit textual Thorin representation of Impala program", emit_thorin, false)
             .add_option<bool>            ("emit-ycomp",         "",                               "emit ycomp-compatible graph representation of Impala program", emit_ycomp, false)
             .add_option<bool>            ("emit-ycomp-cfg",     "",                               "emit ycomp-compatible control-flow graph representation of Impala program", emit_ycomp_cfg, false)
-            .add_option<bool>            ("f",                  "",                               "use fancy output: Impala's AST dump uses only parentheses where necessary", impala::fancy, false)
+            .add_option<bool>            ("f",                  "",                               "use fancy output: Impala's AST dump uses only parentheses where necessary", fancy, false)
             .add_option<bool>            ("g",                  "",                               "emit debug information", debug, false)
             .add_option<bool>            ("nocleanup",          "",                               "no clean-up phase", nocleanup, false)
             .add_option<bool>            ("nossa",              "",                               "use slots + load/store instead of SSA construction", nossa, false)
@@ -81,6 +81,8 @@ int main(int argc, char** argv) {
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
         opt_thorin |= emit_llvm;
+
+		impala::fancy() = fancy;
 
 #ifndef NDEBUG
         ofstream log_stream;
