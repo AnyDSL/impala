@@ -95,7 +95,7 @@ bool InfixExpr::has_side_effect() const {
 }
 
 bool PostfixExpr::has_side_effect() const { return true; }
-bool MapExpr::has_side_effect() const { return lhs()->type().isa<FnType>(); }
+bool MapExpr::has_side_effect() const { return bool(lhs()->type().isa<FnType>()); }
 bool BlockExprBase::has_side_effect() const { return !stmts().empty() || expr()->has_side_effect(); }
 
 bool IfExpr::has_side_effect() const {

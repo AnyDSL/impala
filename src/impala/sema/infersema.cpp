@@ -76,32 +76,6 @@ void type_inference(Init& init, const ModContents* mod) {
 
 //------------------------------------------------------------------------------
 
-#if 0
-Type InferSema::expect_type(const Expr* expr, Type found_type, Type expected, const char* context) {
-    if (found_type == expected)
-        return found_type;
-    if (found_type <= expected) {
-        expr->actual_type_ = found_type;
-        return expected;
-    }
-
-    // TODO noret
-    //if (expected.noret() && (found_type == type_noret()))
-        //return found_type;
-
-    if (found_type->is_polymorphic()) { // try to infer instantiations for this polymorphic type
-        std::vector<Type> type_args;
-        Type inst = instantiate_unknown(found_type, type_args);
-        if (inst == expected) {
-            check_bounds(expr->loc(), *found_type, type_args);
-            return expected;
-        }
-    }
-
-    error(expr->loc()) << "mismatched types: expected '" << expected << "' but found '" << found_type << (context ? std::string("' as ") + context : "'" ) << "\n";
-    return expected;
-}
-
 TraitApp InferSema::instantiate(const Location& loc, TraitAbs trait_abs, Type self, ArrayRef<const ASTType*> args) {
     if ((args.size()+1) == trait_abs->num_type_vars()) {
         std::vector<Type> type_args;
@@ -133,6 +107,7 @@ Type InferSema::instantiate(const Location& loc, Type type, ArrayRef<const ASTTy
     return type_error();
 }
 
+#if 0
 bool InferSema::check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> type_args) {
     SpecializeMap map = specialize_map(unifiable, type_args);
     assert(map.size() == type_args.size());
@@ -219,14 +194,12 @@ bool PtrASTType::check(InferSema& sema) const {
 
 bool IndefiniteArrayASTType::check(InferSema& sema) const {
     todo_ |= sema.check(elem_ast_type());
-    todo_ |= type_ += sema.indefinite_array_type(elem_ast_type()->type());
-    return todo_;
+    return todo_ |= type_ += sema.indefinite_array_type(elem_ast_type()->type());
 }
 
 bool DefiniteArrayASTType::check(InferSema& sema) const {
     todo_ |= sema.check(elem_ast_type());
-    todo_ |= type_ += sema.definite_array_type(elem_ast_type()->type(), dim());
-    return todo_;
+    return todo_ |= type_ += sema.definite_array_type(elem_ast_type()->type(), dim());
 }
 
 bool TupleASTType::check(InferSema& sema) const {
@@ -235,9 +208,8 @@ bool TupleASTType::check(InferSema& sema) const {
         todo_ |= sema.check(arg(i));
         types[i] = arg(i)->type();
     }
-    todo_ |= type_ += sema.tuple_type(types);
 
-    return todo_;
+    return todo_ |= type_ += sema.tuple_type(types);
 }
 
 bool FnASTType::check(InferSema& sema) const {
@@ -254,9 +226,8 @@ bool FnASTType::check(InferSema& sema) const {
         sema.check(type_param);
         fn_type->bind(type_param->type_var());
     }
-    todo_ |= type_ += fn_type;
 
-    return todo_;
+    return todo_ |= type_ += fn_type;
 }
 
 bool ASTTypeApp::check(InferSema& sema) const {
@@ -554,16 +525,9 @@ bool FnExpr::check(InferSema& sema, Type expected) const {
 
 bool PathExpr::check(InferSema& sema, Type) const {
     // FEATURE consider longer paths
-    //auto* last = path()->path_args().back();
-    if (value_decl()) {
-        if (auto local = value_decl()->isa<LocalDecl>()) {
-            // if local lies in an outer function go through memory to implement closure
-            if (local->is_mut() && (sema.nossa() || local->fn() != sema.cur_fn_))
-                local->take_address();
-        }
-        return value_decl()->type();
-    }
-    return sema.type_error();
+    if (value_decl())
+        return todo_ |= type_ += value_decl()->type();
+    return todo_ |= type_ += sema.type_error();
 }
 
 bool PrefixExpr::check(InferSema& sema, Type expected) const {
