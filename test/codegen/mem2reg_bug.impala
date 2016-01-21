@@ -2,7 +2,7 @@
 
 fn take_address(&&int) -> () {}
 
-fn main() -> bool {
+fn main() -> int {
     let mut i = 23;
     let mut p = &i;
     take_address(&p);
@@ -11,5 +11,5 @@ fn main() -> bool {
         (*p)++;
     }
 
-    i == 42
+    if i == 42 { 0 } else { 1 }
 }

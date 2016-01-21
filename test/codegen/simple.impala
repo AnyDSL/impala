@@ -8,6 +8,6 @@ extern fn f(i: int) -> int {
     a
 }
 
-fn main() -> bool {
-    (f(0) + f(1)) == 65
+fn main() -> int {
+    if (f(0) + f(1)) == 65 { 0 } else { 1 }
 }

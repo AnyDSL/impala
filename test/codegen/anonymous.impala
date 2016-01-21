@@ -4,6 +4,6 @@ fn foo(_: int, _: int) -> int {
     1337
 }
 
-fn main() -> bool {
-    foo(1, 2) == 1337
+fn main() -> int {
+    if foo(1, 2) == 1337 { 0 } else { 1 }
 }

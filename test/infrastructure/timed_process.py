@@ -31,8 +31,8 @@ class TimedProcess(object):
 
         thread = threading.Thread(target=target)
         thread.start()
-	
-	#print self.cmd, self.cwd, self.input_file
+        
+        #print self.cmd, self.cwd, self.input_file
 
         thread.join(self.timeout)
         if thread.is_alive():
@@ -75,5 +75,5 @@ class RuntimeProcess(TimedProcess):
     DEFAULT_TIMEOUT = 5.0
     timeout = DEFAULT_TIMEOUT
     
-    def __init__(self, cmd, cwd, timeout=timeout):
-        super(RuntimeProcess, self).__init__(cmd, cwd, timeout)
+    def __init__(self, cmd, cwd, t=None):
+        super(RuntimeProcess, self).__init__(cmd, cwd, t if t is not None else RuntimeProcess.timeout)

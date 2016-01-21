@@ -6,7 +6,7 @@
 namespace impala {
 
 uint64_t StrHash::operator () (const char* s) const {
-    uint64_t seed = thorin::FNV1::offset;
+    uint64_t seed = thorin::hash_begin();
     const char* i = s;
 
     while (*i != '\0')

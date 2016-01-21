@@ -16,7 +16,7 @@ fn fib(n : int, yield : fn(int)->(), ret : fn()) {
     loop(n, 1, 0)
 }
 
-fn main() -> bool {
+fn main() -> int {
     let mut result : int = 0;
     for i in range(0, 15000000) {
         fib(13,
@@ -24,5 +24,5 @@ fn main() -> bool {
             continue
         )
     }
-    result == 236
+    if result == 236 { 0 } else { 1 }
 }

@@ -18,22 +18,14 @@ def allTests():
       "codegen/diderot.impala",
       "codegen/endless_mangling.impala",
       "codegen/generic_get.impala",
-      "codegen/generic_while.impala",
-      "codegen/mutable_in_run_block.impala",
       "codegen/parallel.impala",
-      "codegen/partial_eval_bug.impala",
-      "codegen/poly_id.impala",
-      "codegen/primes.impala",
       "codegen/range.impala",
       "codegen/range_poly.impala",
       "codegen/ret_assert.impala",
       "codegen/return_tuple.impala",
-      "codegen/steensgard.impala",
       "codegen/system_f_problem.impala",
       "codegen/trait_impls.impala",
-      "codegen/vcycle.impala",
       "codegen/while_true.impala",
-      "codegen/zip.impala"
     ]
 
 

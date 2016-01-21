@@ -4,7 +4,11 @@
  * ported to impala from Christian Vosteen's C solution
  */
 
+type char = u8;
+type str = [char];
+
 extern "C" {
+    fn atoi(&str) -> int;
     fn println(&[u8]) -> ();
     fn printa(&[i8]) -> ();
     fn print_piece_mask(&[u64]) -> ();
@@ -623,7 +627,8 @@ fn pretty(b: &[i8]) -> () {
     println("");
 }
 
-fn main(n: int) -> () {
+fn main(argc: int, argv: &[&str]) -> int {
+    let n = if argc >= 2 { atoi(argv(1)) } else { 0 };
     max_solutions = n;
     calc_pieces();
     calc_rows();
@@ -632,4 +637,5 @@ fn main(n: int) -> () {
     let minmax = find_minmax(&solutions as &[[i8*50]], solution_count);
     pretty(minmax(0));
     pretty(minmax(1));
+    0
 }

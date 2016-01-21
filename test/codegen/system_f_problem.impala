@@ -1,6 +1,6 @@
 fn id[T](a: T) -> T { a }
 
-fn main() -> bool {
+fn main() -> int {
     let foo = id[fn[T](T)->T](id);
-    true
+    if true { 0 } else { 1 }
 }

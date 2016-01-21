@@ -28,6 +28,6 @@ fn myfun(i: int) -> int {
     branch(i == 0, b, c)
 }
 
-fn main() -> bool {
-    myfun(2) == 23
+fn main() -> int {
+    if myfun(2) == 23 { 0 } else { 1 }
 }

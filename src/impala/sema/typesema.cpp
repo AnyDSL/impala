@@ -130,7 +130,7 @@ private:
 
 public:
     const BlockExprBase* cur_block_ = nullptr;
-    const Fn* cur_fn_ = nullptr;
+    const Expr* cur_fn_ = nullptr;
 };
 
 //------------------------------------------------------------------------------
@@ -474,7 +474,7 @@ void FnDecl::check_item(TypeSema& sema) const {
 }
 
 Type FnDecl::check(TypeSema& sema) const {
-    THORIN_PUSH(sema.cur_fn_, this);
+    THORIN_PUSH(sema.cur_fn_, body());
     check_type_params(sema);
     std::vector<Type> types;
     for (auto param : params())
@@ -566,7 +566,7 @@ void ImplItem::check_item(TypeSema& sema) const {
             if (auto method_type = trait_app->find_method(meth_name)) {
                 // remember name for check if all methods were implemented
                 const auto& p = implemented_methods.insert(meth_name);
-                assert(p.second && "there should be no such name in the set"); // else name analysis failed
+                assert_unused(p.second && "there should be no such name in the set"); // else name analysis failed
 
                 // check that the types match
                 if (fn_type != method_type)
@@ -597,11 +597,6 @@ void ImplItem::check_item(TypeSema& sema) const {
  */
 
 Type EmptyExpr::check(TypeSema& sema, TypeExpectation) const { return sema.unit(); }
-
-Type SizeofExpr::check(TypeSema& sema, TypeExpectation) const {
-    sema.check(ast_type());
-    return sema.type_u32();
-}
 
 Type LiteralExpr::check(TypeSema& sema, TypeExpectation) const {
     // FEATURE we could enhance this using the expected type (e.g. 4 could be interpreted as int8 if needed)
@@ -668,7 +663,7 @@ Type StrExpr::check(TypeSema& sema, TypeExpectation expected) const {
 }
 
 Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
-    THORIN_PUSH(sema.cur_fn_, this);
+    THORIN_PUSH(sema.cur_fn_, body());
     assert(type_params().empty());
 
     FnType fn_type;
@@ -1055,15 +1050,15 @@ Type TypeSema::check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& t
             inferred_args.push_back(unknown_type());
 
         assert(inferred_args.size() == fn_poly->num_type_vars());
-        auto fn_mono = fn_poly->instantiate(inferred_args).as<FnType>();
+        expr->fn_mono_ = fn_poly->instantiate(inferred_args).as<FnType>();
 
-        bool is_contuation = num_args == fn_mono->num_args();
-        if (is_contuation || num_args+1 == fn_mono->num_args()) {
+        bool is_contuation = num_args == expr->fn_mono()->num_args();
+        if (is_contuation || num_args+1 == expr->fn_mono()->num_args()) {
             for (size_t i = 0; i != num_args; ++i)
-                check(args[i], fn_mono->arg(i), "argument type");
+                check(args[i], expr->fn_mono()->arg(i), "argument type");
 
             // note: the order is important because of the unifying side-effects of ==
-            if (is_contuation || fn_mono->return_type() == expected.type()) { // TODO this looks overly complicated
+            if (is_contuation || expr->fn_mono()->return_type() == expected.type()) { // TODO this looks overly complicated
                 // check if all type variables could be inferred
                 bool is_known = true;
                 for (size_t i = 0, e = inferred_args.size(); i != e; ++i) {
@@ -1077,15 +1072,15 @@ Type TypeSema::check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& t
                     check_bounds(expr->loc(), fn_poly, inferred_args);
                     if (is_contuation)
                         return type_noret();
-                    if (!fn_mono->return_type()->is_noret())
-                        return expect_type(expr, fn_mono->return_type(), expected);
+                    if (!expr->fn_mono()->return_type()->is_noret())
+                        return expect_type(expr, expr->fn_mono()->return_type(), expected);
                     error(expr) << "missing last argument to call continuation\n";
                 }
             } else
-                error(expr->loc()) << "return type '" << fn_mono->return_type() << "' does not match expected type '" << expected.type() << "'\n";
+                error(expr->loc()) << "return type '" << expr->fn_mono()->return_type() << "' does not match expected type '" << expected.type() << "'\n";
         } else {
-            std::string rela = (num_args+1 < fn_mono->num_args()) ? "few" : "many";
-            size_t exp_args = fn_mono->num_args() > 0 ? fn_mono->num_args()-1 : 0;
+            std::string rela = (num_args+1 < expr->fn_mono()->num_args()) ? "few" : "many";
+            size_t exp_args = expr->fn_mono()->num_args() > 0 ? expr->fn_mono()->num_args()-1 : 0;
             error(expr->loc()) << "too " << rela << " arguments: " << num_args << " for " << exp_args << "\n";
         }
     } else
@@ -1206,6 +1201,11 @@ Type BlockExprBase::check(TypeSema& sema, TypeExpectation expected) const {
     return expr() ? expr()->type() : sema.unit().as<Type>();
 }
 
+Type RunBlockExpr::check(TypeSema& sema, TypeExpectation expected) const {
+    THORIN_PUSH(sema.cur_fn_, this);
+    return BlockExprBase::check(sema, expected);
+}
+
 Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
     sema.check(cond(), sema.type_bool(), "condition type");
 
@@ -1282,7 +1282,7 @@ Type ForExpr::check(TypeSema& sema, TypeExpectation expected) const {
             }
         }
     } else if (auto field_expr = forexpr->isa<FieldExpr>()) {
-        assert(false && field_expr && "TODO");
+        assert_unused(false && field_expr && "TODO");
     }
 
     error(expr()) << "the looping expression does not support the 'for' protocol\n";

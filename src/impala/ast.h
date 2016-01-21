@@ -493,7 +493,7 @@ public:
 
     size_t handle() const { return handle_; }
     bool is_address_taken() const { return is_address_taken_; }
-    const Fn* fn() const { return fn_; }
+    const Expr* fn() const { return fn_; }
     void take_address() const { is_address_taken_ = true; }
     void check(NameSema&) const;
     void check(BorrowSema&) const;
@@ -503,7 +503,7 @@ private:
 
 protected:
     size_t handle_;
-    mutable const Fn* fn_ = nullptr;
+    mutable const Expr* fn_ = nullptr;
     mutable bool is_address_taken_ = false;
 
     friend class Parser;
@@ -886,23 +886,6 @@ protected:
     friend class Parser;
     friend class TypeSema;
     friend class IfExpr;
-};
-
-class SizeofExpr : public Expr {
-public:
-    const ASTType* ast_type() const { return ast_type_; }
-
-    virtual void check(NameSema&) const override;
-    virtual void check(BorrowSema&) const override;
-
-private:
-    virtual std::ostream& stream(std::ostream&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
-    virtual thorin::Def remit(CodeGen&) const override;
-
-    AutoPtr<const ASTType> ast_type_;
-
-    friend class Parser;
 };
 
 /// Use as mixin for anything which uses type args: [T1, ..., Tn]
@@ -1320,6 +1303,7 @@ private:
 class MapExpr : public Expr, public Args, public TypeArgs {
 public:
     const Expr* lhs() const { return lhs_; }
+    FnType fn_mono() const { return fn_mono_; }
     virtual bool is_lvalue() const override;
     virtual bool has_side_effect() const override;
     virtual void take_address() const override;
@@ -1335,9 +1319,11 @@ private:
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
+    mutable FnType fn_mono_;
 
     friend class Parser;
     friend class ForExpr;
+    friend class TypeSema;
 };
 
 class StmtLikeExpr : public Expr {};
@@ -1357,9 +1343,9 @@ public:
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
-    virtual Type check(TypeSema&, TypeExpectation) const override;
 
 protected:
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     AutoVector<const Stmt*> stmts_;
@@ -1384,6 +1370,7 @@ public:
     virtual const char* prefix() const override { return "@{"; }
 
 private:
+    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
     friend class Parser;

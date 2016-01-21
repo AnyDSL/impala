@@ -6,6 +6,6 @@ fn fac_rec(n : int) -> int {
     }
 }
 
-fn main() -> bool {
-    @fac_rec(5) == 120
+fn main() -> int {
+    if @fac_rec(5) == 120 { 0 } else { 1 }
 }

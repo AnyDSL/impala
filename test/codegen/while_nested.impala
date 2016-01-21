@@ -1,4 +1,4 @@
-fn main() -> bool {
+fn main() -> int {
     let mut i = 0;
     let mut sum = 0;
     while true {
@@ -11,5 +11,5 @@ fn main() -> bool {
             break()
         }
     }
-    sum == 46
+    if sum == 46 { 0 } else { 1 }
 }

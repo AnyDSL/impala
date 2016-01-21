@@ -8,8 +8,8 @@ fn power(a: int, mut b: int) -> int {
     result
 }
 
-fn main() -> bool {
+fn main() -> int {
     //let power4 = |a: int| -> int { @power(4, a) };
     //power4(i) + power(3, 4)
-    @power(3, 4) == 81
+    if @power(3, 4) == 81 { 0 } else { 1 }
 }

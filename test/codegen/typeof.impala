@@ -1,0 +1,6 @@
+fn main() -> int {
+    let i = 23;
+    let j: typeof(i) = i;
+    let k: typeof(42) = 42;
+    if i == j { 0 } else { 1 }
+}

@@ -19,6 +19,6 @@ fn fold(f: fn(int, int) -> int, z: int, stream: (int, fn(int, fn(int, fn()), fn(
         }, || { ret(res) })
 }
 
-fn main() -> bool {
-    fold(|a: int, b: int| -> int { a + b }, 0, seq(0, 10)) == 55
+fn main() -> int {
+    if fold(|a: int, b: int| -> int { a + b }, 0, seq(0, 10)) == 55 { 0 } else { 1 }
 }
