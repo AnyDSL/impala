@@ -11,6 +11,15 @@ using namespace thorin;
 
 namespace impala {
 
+// see http://stackoverflow.com/a/11763277
+#define GET_CHECK(_1, _2, NAME, ...) NAME
+#define CHECK(...) GET_CHECK(__VA_ARGS__, CHECK2, CHECK1)(__VA_ARGS__)
+
+#define CHECK1(N)    ((todo_ |= sema.check((N))     ), (N)->type())
+#define CHECK2(N, E) ((todo_ |= sema.check((N), (E))), (N)->type())
+
+#define TYPE(T) ((todo_ |= type_ += T), todo_)
+
 //------------------------------------------------------------------------------
 
 class InferSema : public TypeTable {
@@ -55,6 +64,14 @@ public:
         return false;
     }
 
+    bool check(const Expr* expr) {
+        if (expr->todo_) {
+            expr->todo_ = false;
+            return expr->check(*this, unknown_type());
+        }
+        return false;
+    }
+
     Type check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected);
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
 
@@ -76,6 +93,7 @@ void type_inference(Init& init, const ModContents* mod) {
 
 //------------------------------------------------------------------------------
 
+#if 0
 TraitApp InferSema::instantiate(const Location& loc, TraitAbs trait_abs, Type self, ArrayRef<const ASTType*> args) {
     if ((args.size()+1) == trait_abs->num_type_vars()) {
         std::vector<Type> type_args;
@@ -107,7 +125,6 @@ Type InferSema::instantiate(const Location& loc, Type type, ArrayRef<const ASTTy
     return type_error();
 }
 
-#if 0
 bool InferSema::check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> type_args) {
     SpecializeMap map = specialize_map(unifiable, type_args);
     assert(map.size() == type_args.size());
@@ -179,57 +196,49 @@ bool PrimASTType::check(InferSema& sema) const {
 }
 
 bool PtrASTType::check(InferSema& sema) const {
-    todo_ |= sema.check(referenced_ast_type());
-    auto referenced_type = referenced_ast_type()->type();
+    auto referenced_type = CHECK(referenced_ast_type());
 
     if (is_owned())
-        todo_ |= type_ += sema.owned_ptr_type(referenced_type, addr_space());
+        return TYPE(sema.owned_ptr_type(referenced_type, addr_space()));
     else {
         assert(is_borrowed() && "only owned and borrowed ptrs are supported");
-        todo_ |= type_ += sema.borrowd_ptr_type(referenced_type, addr_space());
+        return TYPE(sema.borrowd_ptr_type(referenced_type, addr_space()));
     }
-
-    return todo_;
 }
 
 bool IndefiniteArrayASTType::check(InferSema& sema) const {
-    todo_ |= sema.check(elem_ast_type());
-    return todo_ |= type_ += sema.indefinite_array_type(elem_ast_type()->type());
+    return TYPE(sema.indefinite_array_type(CHECK(elem_ast_type())));
 }
 
 bool DefiniteArrayASTType::check(InferSema& sema) const {
-    todo_ |= sema.check(elem_ast_type());
-    return todo_ |= type_ += sema.definite_array_type(elem_ast_type()->type(), dim());
+    return TYPE(sema.definite_array_type(CHECK(elem_ast_type()), dim()));
 }
 
 bool TupleASTType::check(InferSema& sema) const {
     Array<Type> types(num_args());
-    for (size_t i = 0, e = num_args(); i != e; ++i) {
-        todo_ |= sema.check(arg(i));
-        types[i] = arg(i)->type();
-    }
+    for (size_t i = 0, e = num_args(); i != e; ++i)
+        types[i] = CHECK(arg(i));
 
-    return todo_ |= type_ += sema.tuple_type(types);
+    return TYPE(sema.tuple_type(types));
 }
 
 bool FnASTType::check(InferSema& sema) const {
     todo_ |= check_type_params(sema);
 
     Array<Type> types(num_args());
-    for (size_t i = 0, e = num_args(); i != e; ++i) {
-        todo_ |= sema.check(arg(i));
-        types[i] = arg(i)->type();
-    }
+    for (size_t i = 0, e = num_args(); i != e; ++i)
+        types[i] = CHECK(arg(i));
 
     auto fn_type = sema.fn_type(types);
     for (auto type_param : type_params()) {
-        sema.check(type_param);
+        CHECK(type_param);
         fn_type->bind(type_param->type_var());
     }
 
-    return todo_ |= type_ += fn_type;
+    return TYPE(fn_type);
 }
 
+#if 0
 bool ASTTypeApp::check(InferSema& sema) const {
     if (decl()) {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
@@ -261,15 +270,15 @@ TraitApp ASTTypeApp::trait_app(InferSema& sema, Type self) const {
     }
     return sema.trait_app_error();
 }
+#endif
 
 bool SimdASTType::check(InferSema& sema) const {
-    todo_ |= sema.check(elem_ast_type());
-    auto elem_type = elem_ast_type()->type();
+    auto elem_type = CHECK(elem_ast_type());
     if (elem_type.isa<PrimType>())
-        return sema.simd_type(elem_type, size());
+        return TYPE(sema.simd_type(elem_type, size()));
     else {
         error(this) << "non primitive types forbidden in simd type\n";
-        return sema.type_error();
+        return TYPE(sema.type_error());
     }
 }
 
@@ -314,6 +323,7 @@ bool ExternBlock::check(InferSema& sema) const {
     return todo_;
 }
 
+#if 0
 bool Typedef::check(InferSema& sema) const {
     todo_ |= check_type_params(sema);
     todo_ |= sema.check(ast_type());
@@ -331,6 +341,7 @@ bool Typedef::check(InferSema& sema) const {
 
     return todo_;
 }
+#endif
 
 bool EnumDecl::check(InferSema&) const { /*TODO*/ return false; }
 
@@ -474,23 +485,31 @@ bool ImplItem::check(InferSema& sema) const {
  * expressions
  */
 
-bool EmptyExpr::check(InferSema& sema, Type) const { return sema.unit(); }
-bool LiteralExpr::check(InferSema& sema, Type) const { return sema.type(literal2type()); }
-bool CharExpr::check(InferSema& sema, Type) const { return sema.type_u8(); }
-
-bool StrExpr::check(InferSema& sema, Type expected) const {
-    auto result = sema.definite_array_type(sema.type_u8(), values_.size());
-    if (auto ptr = expected.isa<BorrowedPtrType>()) {
-        if (auto array = ptr->referenced_type().isa<ArrayType>()) {
-            if (array->elem_type()->is_u8()) {
-                is_used_as_global_ = true;
-                return sema.borrowd_ptr_type(result);
-            }
-        }
-    }
-    return result;
+bool EmptyExpr::check(InferSema& sema, Type) const {
+    type_ = sema.unit();
+    assert(todo_ == false);
+    return false;
 }
 
+bool LiteralExpr::check(InferSema& sema, Type) const {
+    type_ = sema.type(literal2type());
+    assert(todo_ == false);
+    return false;
+}
+
+bool CharExpr::check(InferSema& sema, Type) const {
+    type_ = sema.type_u8();
+    assert(todo_ == false);
+    return false;
+}
+
+bool StrExpr::check(InferSema& sema, Type expected) const {
+    type_ = sema.definite_array_type(sema.type_u8(), values_.size());
+    assert(todo_ == false);
+    return false;
+}
+
+#if 0
 bool FnExpr::check(InferSema& sema, Type expected) const {
     THORIN_PUSH(sema.cur_fn_, this);
     assert(type_params().empty());
@@ -522,6 +541,7 @@ bool FnExpr::check(InferSema& sema, Type expected) const {
 
     return fn_type;
 }
+#endif
 
 bool PathExpr::check(InferSema& sema, Type) const {
     // FEATURE consider longer paths
@@ -533,20 +553,15 @@ bool PathExpr::check(InferSema& sema, Type) const {
 bool PrefixExpr::check(InferSema& sema, Type expected) const {
     switch (kind()) {
         case AND: {
-            Type rtype;
-            if (auto ptr = expected.isa<PtrType>()) {
-                rtype = sema.check(rhs(), ptr->referenced_type());
-            } else
-                rtype = sema.check(rhs());
-            sema.expect_lvalue(rhs(), "as unary '&' operand");
-            rhs()->take_address();
-            if (rhs()->needs_cast()) {
-                rtype.clear();
-                rtype = InferSema::turn_cast_inside_out(rhs());
-            }
+            if (auto ptr = expected.isa<PtrType>())
+                CHECK(rhs(), ptr->referenced_type());
+            else
+                CHECK(rhs());
 
-            // Keep the address space of the original pointer, if possible
+            auto rtype = rhs()->type();
             int addr_space = 0;
+#if 0
+            // keep the address space of the original pointer, if possible
             if (auto map = rhs()->isa<MapExpr>()) {
                 if (auto prefix = map->lhs()->isa<PrefixExpr>())
                     addr_space = sema.take_addr_space(prefix);
@@ -556,157 +571,63 @@ bool PrefixExpr::check(InferSema& sema, Type expected) const {
             } else if (auto prefix = rhs()->isa<PrefixExpr>()) {
                 addr_space = sema.take_addr_space(prefix);
             }
+#endif
 
-            return sema.borrowd_ptr_type(rtype, addr_space);
+            return TYPE(sema.borrowd_ptr_type(rtype, addr_space));
+
         }
         case TILDE:
-            if (auto pty = expected.isa<PtrType>()) {
-                return sema.owned_ptr_type(sema.check(rhs(), pty->referenced_type()));
-            } else {
-                return sema.owned_ptr_type(sema.check(rhs()));
-            }
-        case MUL: {
-            auto type = sema.check(rhs());
-            // 'type' must be a pointer type (with any address space)
-            // and must reference the expected type.
-            if (auto ptr = type.isa<PtrType>()) {
-                sema.expect_type(rhs(), ptr->referenced_type(), expected);
-                return ptr->referenced_type();
-            } else {
-                auto ptr_type = sema.borrowd_ptr_type(expected);
-                sema.expect_type(rhs(), type, Type(ptr_type));
-                return sema.type_error();
-            }
-        }
-        case INC:
-        case DEC: {
-            auto rtype = sema.check(rhs(), expected);
-            sema.expect_num(rhs());
-            sema.expect_lvalue(rhs());
-            return rtype;
-        }
-        case ADD:
-        case SUB: {
-            auto rtype = sema.check(rhs(), expected);
-            sema.expect_num(rhs());
-            return rtype;
-        }
-        case NOT: {
-            auto rtype = sema.check(rhs(), expected);
-            if (auto simd = rtype.isa<SimdType>()) {
-                if (simd->elem_type()->is_bool())
-                    return rtype;
-            }
-            if (rtype->is_bool() || sema.expect_int(rhs()))
-                return rtype;
-            return sema.type_error();
-        }
-        case RUN:
-        case HLT:
-            return sema.check(rhs()); // TODO can we propagate expected here?
-        default:
+            if (auto ptr = expected.isa<PtrType>())
+                return TYPE(sema.owned_ptr_type(CHECK(rhs(), ptr->referenced_type())));
+            else
+                return TYPE(sema.owned_ptr_type(CHECK(rhs())));
+        case MUL:
+            return TYPE(CHECK(rhs(), sema.borrowd_ptr_type(expected)));
+        case INC: case DEC:
+        case ADD: case SUB:
+        case NOT:
+        case RUN: case HLT:
+            return TYPE(CHECK(rhs(), expected));
+        case OR:  case OROR: // Lambda
             THORIN_UNREACHABLE;
     }
-
-    return sema.type_error();
+    THORIN_UNREACHABLE;
 }
 
 bool InfixExpr::check(InferSema& sema, Type expected) const {
     switch (kind()) {
-        case EQ:
-        case NE:
-            sema.check(rhs(), sema.check(lhs()));
-            if (!lhs()->type().isa<PtrType>() && !lhs()->type().isa<PrimType>() && !lhs()->type().isa<SimdType>()) {
-                error(this) << "expected primitive type, pointer type or SIMD type for equality operator\n";
-                return sema.type_error();
-            }
-            return sema.comparison_result(lhs());
-        case LT:
-        case LE:
-        case GT:
-        case GE:
-            sema.check(rhs(), sema.check(lhs()));
-            sema.expect_num(lhs());
-            sema.expect_num(rhs());
-            return sema.comparison_result(lhs());
+        case EQ: case NE:
+        case LT: case LE:
+        case GT: case GE:
+            return TYPE(CHECK(rhs(), CHECK(lhs())));
         case OROR:
         case ANDAND:
-            sema.check(lhs(), sema.type_bool(), "left-hand side of logical boolean expression");
-            sema.check(rhs(), sema.type_bool(), "right-hand side of logical boolean expression");
-            return sema.type_bool();
-        case ADD:
-        case SUB:
-        case MUL:
-        case DIV:
-        case REM: {
-            auto type = sema.check(lhs(), sema.check(rhs(), expected));
-            sema.expect_num(lhs());
-            sema.expect_num(rhs());
-            return type;
-        }
-        case SHL:
-        case SHR: {
-            auto type = sema.check(lhs(), sema.check(rhs(), expected));
-            sema.expect_int(lhs());
-            sema.expect_int(rhs());
-            return type;
-        }
-        case OR:
-        case XOR:
-        case AND: {
-            auto type = sema.check(lhs(), sema.check(rhs(), expected));
-            sema.expect_int_or_bool(lhs());
-            sema.expect_int_or_bool(rhs());
-            return type;
-        }
+            CHECK(lhs(), sema.type_bool());
+            CHECK(rhs(), sema.type_bool());
+            return TYPE(sema.type_bool());
+        case ADD: case SUB:
+        case MUL: case DIV: case REM:
+        case SHL: case SHR:
+        case AND: case OR:  case XOR:
+            return TYPE(CHECK(rhs(), CHECK(lhs(), expected)));
         case ASGN:
-            sema.check(rhs(), sema.check(lhs()));
-            if (sema.expect_lvalue(lhs()))
-                return sema.unit();
-            break;
-        case ADD_ASGN:
-        case SUB_ASGN:
-        case MUL_ASGN:
-        case DIV_ASGN:
-        case REM_ASGN: {
-            sema.check(rhs(), sema.check(lhs()));
-            if (sema.expect_lvalue(lhs())) {
-                sema.expect_num(lhs());
-                sema.expect_num(rhs());
-                return sema.unit();
-            }
-            break;
-        }
-        case AND_ASGN:
-        case  OR_ASGN:
-        case XOR_ASGN:
-        case SHL_ASGN:
-        case SHR_ASGN:  {
-            // TODO handle floats etc
-            sema.check(rhs(), sema.check(lhs()));
-            if (sema.expect_lvalue(lhs())) {
-                sema.expect_int_or_bool(lhs());
-                sema.expect_int_or_bool(rhs());
-                return sema.unit();
-            }
-            break;
-        }
-        default: THORIN_UNREACHABLE;
+        case ADD_ASGN: case SUB_ASGN:
+        case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
+        case SHL_ASGN: case SHR_ASGN:
+        case AND_ASGN: case  OR_ASGN: case XOR_ASGN:
+            return TYPE(CHECK(rhs(), CHECK(lhs())));
     }
 
-    return sema.type_error();
+    THORIN_UNREACHABLE;
 }
 
 bool PostfixExpr::check(InferSema& sema, Type expected) const {
-    // TODO check if operator supports the type
-    sema.check(lhs(), expected);
-    sema.expect_lvalue(lhs());
-    return lhs()->type();
+    return TYPE(CHECK(lhs(), expected));
 }
 
 bool CastExpr::check(InferSema& sema, Type) const {
-    sema.check(lhs());
-    return sema.check(ast_type());
+    CHECK(lhs());
+    return TYPE(CHECK(ast_type()));
 }
 
 bool DefiniteArrayExpr::check(InferSema& sema, Type) const {
