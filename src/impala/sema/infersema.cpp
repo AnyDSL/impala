@@ -45,6 +45,8 @@ public:
         return 0;
     }
 
+    Type guess_elem_type(Type);
+
     // check wrappers
 
     template<class N>
@@ -630,21 +632,29 @@ bool CastExpr::check(InferSema& sema, Type) const {
     return TYPE(CHECK(ast_type()));
 }
 
-bool DefiniteArrayExpr::check(InferSema& sema, Type) const {
-    Type elem_type = sema.unknown_type();
+Type InferSema::guess_elem_type(Type expected) {
+    if (auto array_type = expected.isa<ArrayType>())
+        return array_type->elem_type();
+    return unknown_type();
+}
+
+bool DefiniteArrayExpr::check(InferSema& sema, Type expected) const {
+    Type elem_type = sema.guess_elem_type(expected);
+
     for (auto arg : args())
-        sema.check(arg, elem_type, "element of definite array expression");
-    return sema.definite_array_type(elem_type, num_args());
+        CHECK(arg, elem_type);
+
+    return TYPE(sema.definite_array_type(elem_type, num_args()));
 }
 
-bool RepeatedDefiniteArrayExpr::check(InferSema& sema, Type) const {
-    return sema.definite_array_type(sema.check(value()), count());
+bool RepeatedDefiniteArrayExpr::check(InferSema& sema, Type expected) const {
+    Type elem_type = sema.guess_elem_type(expected);
+    return TYPE(sema.definite_array_type(CHECK(value(), elem_type), count()));
 }
 
-bool IndefiniteArrayExpr::check(InferSema& sema, Type) const {
-    sema.check(dim());
-    sema.expect_int(dim());
-    return sema.indefinite_array_type(sema.check(elem_type()));
+bool IndefiniteArrayExpr::check(InferSema& sema, Type expected) const {
+    CHECK(dim());
+    return TYPE(sema.indefinite_array_type(CHECK(elem_ast_type())));
 }
 
 bool TupleExpr::check(InferSema& sema, Type expected) const {
