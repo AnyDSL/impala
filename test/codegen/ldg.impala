@@ -1,0 +1,7 @@
+extern "C" {
+    fn __ldg[T](&T) -> T;
+}
+
+fn main(x: &int) -> int {
+    __ldg(x)
+}
