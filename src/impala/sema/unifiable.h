@@ -140,17 +140,23 @@ public:
     }
 
     template<class U>
-    bool operator += (Proxy<U> other) {
+    bool operator -= (Proxy<U> other) {
         static_assert(std::is_base_of<T, U>::value, "T is not a base type of U");
-        if (*this)
-            return infer(*this, other);
-        node_ = *other;
-        return true;
+        if ( *this && other) return infer(*this, other);
+        if (!*this && other) { node_ = *other; return true; }
+        return false;
     }
 
 private:
     const T* node_;
 };
+
+inline Type operator-(Type t1, Type t2) {
+    if (!t1) return t2;
+    if (!t2) return t1;
+    t1 -= t2;
+    return t1;
+}
 
 template<class T>
 std::ostream& operator << (std::ostream& os, Proxy<T> proxy) { return proxy->stream(os); }
