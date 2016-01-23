@@ -19,6 +19,7 @@ def allTests():
       "codegen/endless_mangling.impala",
       "codegen/generic_get.impala",
       "codegen/parallel.impala",
+      "codegen/poly_type_arg.impala",
       "codegen/range.impala",
       "codegen/range_poly.impala",
       "codegen/ret_assert.impala",
