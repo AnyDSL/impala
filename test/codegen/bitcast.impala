@@ -1,0 +1,8 @@
+
+extern "thorin" {
+    fn bitcast[D, S](S) -> D;
+}
+
+fn main() -> int {
+    bitcast[int](0.f)
+}
