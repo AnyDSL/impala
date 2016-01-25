@@ -477,7 +477,7 @@ std::ostream& StructExpr::stream(std::ostream& os) const {
 std::ostream& MapExpr::stream(std::ostream& os) const {
     Prec l = PrecTable::postfix_l[Token::L_PAREN];
     Prec old = prec;
-    bool paren = !fancy || prec > l;
+    bool paren = !fancy() || prec > l;
     if (paren) os << "(";
 
     prec = l;

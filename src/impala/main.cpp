@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
         cmd_parser.parse(argc, argv);
         opt_thorin |= emit_llvm;
 
-		impala::fancy() = fancy;
+        impala::fancy() = fancy;
 
 #ifndef NDEBUG
         ofstream log_stream;
