@@ -615,13 +615,17 @@ bool InfixExpr::check(InferSema& sema, Type expected) const {
         case MUL: case DIV: case REM:
         case SHL: case SHR:
         case AND: case OR:  case XOR:
-            return TYPE(CHECK(rhs(), expected - CHECK(lhs(), expected - rhs()->type())));
+            CHECK(lhs(), expected - rhs()->type());
+            CHECK(rhs(), expected - lhs()->type());
+            return TYPE(lhs()->type());
         case ASGN:
         case ADD_ASGN: case SUB_ASGN:
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
         case SHL_ASGN: case SHR_ASGN:
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN:
-            return TYPE(CHECK(rhs(), CHECK(lhs(), rhs()->type())));
+            CHECK(lhs(), rhs()->type());
+            CHECK(rhs(), lhs()->type());
+            return TYPE(sema.unit());
     }
 
     THORIN_UNREACHABLE;
