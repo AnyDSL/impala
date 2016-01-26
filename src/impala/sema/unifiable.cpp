@@ -20,6 +20,20 @@ namespace impala {
 
 int Unifiable::counter_ = 0;
 
+Unifiable::Unifiable(TypeTable& tt, Kind kind, ArrayRef<Type> args)
+    : typetable_(tt)
+    , kind_(kind)
+    , representative_(nullptr)
+    , id_(counter_++)
+    , args_(args.size())
+{
+    for (size_t i = 0, e = args.size(); i != e; ++i) {
+        if (auto arg = args[i])
+            set(i, arg);
+    }
+}
+
+
 void Unifiable::bind(TypeVar v) const {
     assert(!v->is_closed() && "type variables already bound");
     assert(!is_unified() && "type already unified");

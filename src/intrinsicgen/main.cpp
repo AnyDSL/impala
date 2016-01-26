@@ -5,12 +5,8 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
 
-#include "thorin/util/stream.h"
-
 #include "impala/ast.h"
 #include "impala/impala.h"
-#include "impala/sema/typetable.h"
-#include "impala/sema/unifiable.h"
 
 impala::Type llvm2impala(impala::TypeTable&, llvm::Type*);
 
