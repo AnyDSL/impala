@@ -11,7 +11,7 @@
 
 namespace impala {
 
-extern bool fancy;
+bool& fancy();
 
 class ASTNode;
 class ModContents;
