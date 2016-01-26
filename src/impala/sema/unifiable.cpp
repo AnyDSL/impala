@@ -33,7 +33,6 @@ Unifiable::Unifiable(TypeTable& tt, Kind kind, ArrayRef<Type> args)
     }
 }
 
-
 void Unifiable::bind(TypeVar v) const {
     assert(!v->is_closed() && "type variables already bound");
     assert(!is_unified() && "type already unified");

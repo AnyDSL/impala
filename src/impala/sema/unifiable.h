@@ -639,8 +639,6 @@ private:
     virtual thorin::Type convert(CodeGen&) const override;
 };
 
-//------------------------------------------------------------------------------
-
 class SimdTypeNode : public ArrayTypeNode {
 public:
     SimdTypeNode(TypeTable& typetable, Type elem_type, uint64_t size)
@@ -660,6 +658,8 @@ private:
 
     const uint64_t size_;
 };
+
+//------------------------------------------------------------------------------
 
 /**
  * Represents a declared trait.

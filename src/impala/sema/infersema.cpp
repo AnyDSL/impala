@@ -77,6 +77,10 @@ public:
     Type check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected);
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
 
+    Type safe_get_arg(Type type, size_t i) {
+        return type && i < type->num_args() ? type->arg(i) : unknown_type().as<Type>();
+    }
+
 public:
     const BlockExprBase* cur_block_ = nullptr;
     const Expr* cur_fn_ = nullptr;
@@ -666,30 +670,27 @@ bool IndefiniteArrayExpr::check(InferSema& sema, Type) const {
 }
 
 bool TupleExpr::check(InferSema& sema, Type expected) const {
-    std::vector<Type> types;
-    if (auto exp_tup = expected.isa<TupleType>()) {
-        if (exp_tup->num_args() != num_args())
-            error(this) << "expected tuple with " << exp_tup->num_args() << " elements, but found tuple expression with " << num_args() << " elements\n";
-
-        size_t i = 0;
-        for (auto arg : args()) {
-            sema.check(arg, exp_tup->arg(i++));
-            types.push_back(arg->type());
-        }
-    } else {
-        for (auto arg : args()) {
-            sema.check(arg);
-            types.push_back(arg->type());
-        }
-    }
-    return sema.tuple_type(types);
+    Array<Type> types(num_args());
+    auto expected_tuple = expected.isa<TupleType>();
+    for (size_t i = 0, e = types.size(); i != e; ++i)
+        types[i] = CHECK(arg(i), sema.safe_get_arg(expected_tuple, i));
+    return TYPE(sema.tuple_type(types));
 }
 
-bool SimdExpr::check(InferSema& sema, Type) const {
-    Type elem_type = sema.unknown_type();
+bool SimdExpr::check(InferSema& sema, Type expected) const {
+    Type expected_elem_type;
+    if (auto array_type = expected.isa<ArrayType>())
+        expected_elem_type = array_type->elem_type();
+    else
+        expected_elem_type = sema.unknown_type();
+
     for (auto arg : args())
-        sema.check(arg, elem_type, "element of simd expression");
-    return sema.simd_type(elem_type, num_args());
+        expected_elem_type -= arg->type();
+
+    for (auto arg : args())
+        expected_elem_type -= CHECK(arg, expected_elem_type);
+
+    return TYPE(sema.simd_type(expected_elem_type, num_args()));
 }
 
 bool StructExpr::check(InferSema& sema, Type expected) const {
