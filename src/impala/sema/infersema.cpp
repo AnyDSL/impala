@@ -45,8 +45,6 @@ public:
         return 0;
     }
 
-    Type guess_elem_type(Type);
-
     // check wrappers
 
     template<class N>
@@ -559,13 +557,8 @@ bool PathExpr::check(InferSema& sema, Type) const {
 bool PrefixExpr::check(InferSema& sema, Type expected) const {
     switch (kind()) {
         case AND: {
-            Type referenced_type;
-            if (auto ptr = expected.isa<PtrType>())
-                referenced_type = ptr->referenced_type();
-            else
-                referenced_type = sema.unknown_type();
-
-            auto rtype = CHECK(rhs(), referenced_type);
+            Type expected_referenced_type = sema.safe_get_arg(expected, 0);
+            auto rtype = CHECK(rhs(), expected_referenced_type);
             int addr_space = 0;
 #if 0
             // keep the address space of the original pointer, if possible
@@ -583,14 +576,8 @@ bool PrefixExpr::check(InferSema& sema, Type expected) const {
             return TYPE(sema.borrowd_ptr_type(rtype, addr_space));
 
         }
-        case TILDE: {
-            Type referenced_type;
-            if (auto ptr = expected.isa<PtrType>())
-                referenced_type = ptr->referenced_type();
-            else
-                referenced_type = sema.unknown_type();
-            return TYPE(sema.owned_ptr_type(CHECK(rhs(), referenced_type)));
-        }
+        case TILDE:
+            return TYPE(sema.owned_ptr_type(CHECK(rhs(), sema.safe_get_arg(expected, 0))));
         case MUL:
             return TYPE(CHECK(rhs(), sema.borrowd_ptr_type(expected)));
         case INC: case DEC:
@@ -644,24 +631,33 @@ bool CastExpr::check(InferSema& sema, Type) const {
     return TYPE(CHECK(ast_type()));
 }
 
-Type InferSema::guess_elem_type(Type expected) {
-    if (auto array_type = expected.isa<ArrayType>())
-        return array_type->elem_type();
-    return unknown_type();
-}
-
 bool DefiniteArrayExpr::check(InferSema& sema, Type expected) const {
-    Type elem_type = sema.guess_elem_type(expected);
+    Type expected_elem_type = sema.safe_get_arg(expected, 0);
 
     for (auto arg : args())
-        CHECK(arg, elem_type);
+        expected_elem_type -= arg->type();
 
-    return TYPE(sema.definite_array_type(elem_type, num_args()));
+    for (auto arg : args())
+        CHECK(arg, expected_elem_type);
+
+    return TYPE(sema.definite_array_type(expected_elem_type, num_args()));
+}
+
+bool SimdExpr::check(InferSema& sema, Type expected) const {
+    Type expected_elem_type = sema.safe_get_arg(expected, 0);
+
+    for (auto arg : args())
+        expected_elem_type -= arg->type();
+
+    for (auto arg : args())
+        expected_elem_type -= CHECK(arg, expected_elem_type);
+
+    return TYPE(sema.simd_type(expected_elem_type, num_args()));
 }
 
 bool RepeatedDefiniteArrayExpr::check(InferSema& sema, Type expected) const {
-    Type elem_type = sema.guess_elem_type(expected);
-    return TYPE(sema.definite_array_type(CHECK(value(), elem_type), count()));
+    Type expected_elem_type = sema.safe_get_arg(expected, 0);
+    return TYPE(sema.definite_array_type(CHECK(value(), expected_elem_type), count()));
 }
 
 bool IndefiniteArrayExpr::check(InferSema& sema, Type) const {
@@ -671,26 +667,9 @@ bool IndefiniteArrayExpr::check(InferSema& sema, Type) const {
 
 bool TupleExpr::check(InferSema& sema, Type expected) const {
     Array<Type> types(num_args());
-    auto expected_tuple = expected.isa<TupleType>();
     for (size_t i = 0, e = types.size(); i != e; ++i)
-        types[i] = CHECK(arg(i), sema.safe_get_arg(expected_tuple, i));
+        types[i] = CHECK(arg(i), sema.safe_get_arg(expected, i));
     return TYPE(sema.tuple_type(types));
-}
-
-bool SimdExpr::check(InferSema& sema, Type expected) const {
-    Type expected_elem_type;
-    if (auto array_type = expected.isa<ArrayType>())
-        expected_elem_type = array_type->elem_type();
-    else
-        expected_elem_type = sema.unknown_type();
-
-    for (auto arg : args())
-        expected_elem_type -= arg->type();
-
-    for (auto arg : args())
-        expected_elem_type -= CHECK(arg, expected_elem_type);
-
-    return TYPE(sema.simd_type(expected_elem_type, num_args()));
 }
 
 bool StructExpr::check(InferSema& sema, Type expected) const {
