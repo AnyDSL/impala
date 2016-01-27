@@ -1,3 +1,4 @@
+#if 0
 #include <sstream>
 
 #include "thorin/util/push.h"
@@ -1048,3 +1049,4 @@ void LetStmt::check(TypeSema& sema) const {
 //------------------------------------------------------------------------------
 
 }
+#endif

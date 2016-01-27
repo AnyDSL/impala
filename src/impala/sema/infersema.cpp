@@ -62,6 +62,11 @@ public:
         return Type();
     }
 
+    Type constrain(const Typeable* typeable, Type expected) {
+        todo_ |= typeable->type_ -= expected;
+        return typeable->type();
+    }
+
     Type check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected);
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
 
@@ -499,14 +504,13 @@ Type FnExpr::check(InferSema& sema, Type expected) const {
     return fn_type;
 }
 
-Type PathExpr::check(InferSema& sema, Type) const {
-    // FEATURE consider longer paths
-    if (value_decl())
-        return todo_ |= type_ -= value_decl()->type();
-    return todo_ |= type_ -= sema.type_error();
-}
-
 #endif
+
+Type PathExpr::check(InferSema& sema, Type expected) const {
+    if (value_decl())
+        return sema.constrain(value_decl(), expected);
+    return sema.type_error();
+}
 
 Type PrefixExpr::check(InferSema& sema, Type expected) const {
     switch (kind()) {

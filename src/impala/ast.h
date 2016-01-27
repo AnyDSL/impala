@@ -88,6 +88,7 @@ protected:
     mutable Type type_;
 
     friend class ForExpr;
+    friend class InferSema;
 };
 
 /// Mixin for all entities which have a list of \p TypeParam%s: [T1, T2 : A + B[...], ...].

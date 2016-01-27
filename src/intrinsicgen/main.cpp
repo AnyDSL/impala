@@ -71,7 +71,7 @@ impala::Type llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
         bool valid = true;
         for (size_t i = 0, e = fn->getNumParams(); i != e; ++i) {
             auto t = llvm2impala(tt, fn->getParamType(i));
-            valid &= t;
+            valid &= bool(t);
             if (valid) param_types[i] = t;
         }
 
