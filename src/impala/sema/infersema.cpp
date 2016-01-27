@@ -30,6 +30,15 @@ public:
         return 0;
     }
 
+    Type constrain(const Typeable* typeable, Type type) {
+        todo_ |= typeable->type_ -= type;
+        return typeable->type();
+    }
+
+    Type safe_get_arg(Type type, size_t i) {
+        return type && i < type->num_args() ? type->arg(i) : unknown_type().as<Type>();
+    }
+
     // check wrappers
 
     template<class N>
@@ -61,24 +70,11 @@ public:
         return Type();
     }
 
-    Type check(const Expr* expr, Type expected) {
-        todo_ |= expr->type_ -=  expr->check(*this, expected);
-        return expr->type();
-    }
-
+    Type check(const Expr* expr, Type expected) { return constrain(expr, expr->check(*this, expected)); }
     Type check(const Expr* expr) { return check(expr, unknown_type()); }
-
-    Type constrain(const ValueDecl* value_decl, Type expected) {
-        todo_ |= value_decl->type_ -= expected;
-        return value_decl->type();
-    }
 
     Type check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected);
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
-
-    Type safe_get_arg(Type type, size_t i) {
-        return type && i < type->num_args() ? type->arg(i) : unknown_type().as<Type>();
-    }
 
 private:
     bool todo_ = true;
@@ -300,48 +296,45 @@ void ExternBlock::check(InferSema& sema) const {
         sema.check(fn);
 }
 
-#if 0
 void Typedef::check(InferSema& sema) const {
-    todo_ |= check_type_params(sema);
-    todo_ |= sema.check(ast_type());
+    // TODO this is broken
+    check_type_params(sema);
+    sema.check(ast_type());
 
     if (type_params().size() > 0) {
         Type abs = sema.typedef_abs(ast_type()->type());
-        for (auto type_param : type_params()) {
-            todo_ |= sema.check(type_param);
+        for (auto type_param : type_params())
             abs->bind(type_param->type_var());
-        }
-
-        todo_ |= type_ = abs;
     } else
-        todo_ |= type_ = ast_type()->type();
-
-    return todo_;
+        sema.constrain(this, ast_type()->type());
 }
 
-void EnumDecl::check(InferSema&) const { /*TODO*/ return false; }
+void EnumDecl::check(InferSema&) const { /*TODO*/ }
 
 void StructDecl::check(InferSema& sema) const {
     check_type_params(sema);
-    auto struct_type = type_.empty() ? sema.struct_abs_type(this) : type().as<StructAbsType>();
 
     for (auto field : field_decls()) {
-        if (auto field_type = field->type())
-            struct_type->set(field->index(), field_type);
+        if (auto field_type = field->type()) {
+            if (!field_type || !field_type->is_known())
+                return; // bail out for now if we don't yet know all field types
+        }
     }
 
-    for (auto type_param : type_params()) {
-        todo_ |= sema.check(type_param);
+    auto struct_type = sema.struct_abs_type(this);
+
+    for (auto field : field_decls())
+        struct_type->set(field->index(), field->type());
+
+    for (auto type_param : type_params())
         struct_type->bind(type_param->type_var());
-    }
 
-    return todo_;
+    type_ = struct_type;
 }
 
-void FieldDecl::check(InferSema& sema) const {
-    return todo_ |= sema.check(ast_type());
-}
+void FieldDecl::check(InferSema& sema) const { sema.check(ast_type()); }
 
+#if 0
 void FnDecl::check(InferSema& sema) const {
     check_type_params(sema);
     Array<Type> param_types(num_params());
@@ -362,14 +355,14 @@ void FnDecl::check(InferSema& sema) const {
     return todo_;
 }
 
-void StaticItem::check(InferSema& sema) const {
-    if (init()) {
-        todo_ |= sema.check(init());
-        todo_ |= type_ -= init()->type();
-    }
+#endif
 
-    return todo_;
+void StaticItem::check(InferSema& sema) const {
+    if (init())
+        sema.constrain(this, init()->type());
 }
+
+#if 0
 
 void TraitDecl::check(InferSema& sema) const {
     todo_ |= sema.check(self_param());
