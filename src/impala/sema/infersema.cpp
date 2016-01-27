@@ -586,14 +586,14 @@ Type TupleExpr::check(InferSema& sema, Type expected) const {
     Array<Type> types(num_args());
     for (size_t i = 0, e = types.size(); i != e; ++i)
         types[i] = sema.check(arg(i), sema.safe_get_arg(expected, i));
+
     return sema.tuple_type(types);
 }
 
 #if 0
+
 Type StructExpr::check(InferSema& sema, Type expected) const {
     if (auto decl = path()->decl()) {
-        StructAppType struct_app;
-
         if (auto typeable_decl = decl->isa<TypeableDecl>()) {
             if (auto decl_type = typeable_decl->type()) {
                 if (num_type_args() <= decl_type->num_type_vars()) {
@@ -627,36 +627,11 @@ Type StructExpr::check(InferSema& sema, Type expected) const {
                 } else
                     error(this) << "too many type arguments to structure: " << num_type_args() << " for " << decl_type->num_type_vars() << "\n";
 
-                if (struct_app) {
-                    auto struct_abs  = struct_app->struct_abs_type();
-                    auto struct_decl = struct_abs->struct_decl();
-                    thorin::HashSet<const FieldDecl*> done;
-                    for (const auto& elem : elems()) {
-                        if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
-                            elem.field_decl_ = field_decl;
-                            if (!thorin::visit(done, field_decl)) {
-                                std::ostringstream oss;
-                                oss << "initialization type for field '" << elem.symbol() << '\'';
-                                sema.check(elem.expr(), struct_app->elem(field_decl->index()), oss.str().c_str());
-                            } else
-                                error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
-                        } else
-                            error(elem.expr()) << "structure '" << struct_decl->symbol() << "' has no field named '" << elem.symbol() << "'\n";
-                    }
-
-                    if (done.size() != struct_decl->field_table().size()) {
-                        for (const auto& p : struct_decl->field_table()) {
-                            if (!done.contains(p.second))
-                                error(this) << "missing field '" << p.first << "'\n";
-                        }
-                    }
-
+                if (struct_app)
                     return struct_app;
-                }
             } else
                 return sema.unknown_type();
-        } else
-            error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
+        }
     }
     return sema.type_error();
 }
