@@ -450,39 +450,18 @@ Type LiteralExpr::check(InferSema& sema, Type) const { return sema.type(literal2
 Type CharExpr::check(InferSema& sema, Type) const { return sema.type_u8(); }
 Type StrExpr::check(InferSema& sema, Type) const { return sema.definite_array_type(sema.type_u8(), values_.size()); }
 
-#if 0
 Type FnExpr::check(InferSema& sema, Type expected) const {
     assert(type_params().empty());
 
-    FnType fn_type;
-    if (FnType exp_fn = expected.isa<FnType>()) {
-        if (!is_continuation() && exp_fn->num_args() == num_params()+1) { // add return param to infer type
-            const Location& loc = body()->pos1();
-            const_cast<FnExpr*>(this)->params_.push_back(Param::create(ret_var_handle_, new Identifier("return", body()->pos1()), loc, nullptr));
-        } else if (exp_fn->num_args() != num_params())
-            error(this) << "expected function with " << exp_fn->num_args() << " parameters, but found lambda expression with " << num_params() << " parameters\n";
+    Array<Type> param_types(num_params());
+    for (size_t i = 0, e = num_params(); i != e; ++i)
+        param_types[i] = sema.constrain(param(i), sema.safe_get_arg(expected, i));
 
-        for (size_t i = 0; i < num_params() && i < exp_fn->num_args(); ++i)
-            param(i)->check(sema, exp_fn->arg(i));
-
-        fn_type = exp_fn;
-    } else {
-        std::vector<Type> param_types; // TODO use thorin::Array
-        for (auto param : params()) {
-            todo_ |= param->check(sema, sema.unknown_type());
-            param_types.push_back(param->type());
-        }
-
-        fn_type = sema.fn_type(param_types);
-    }
-
+    auto fn_type = sema.fn_type(param_types);
     assert(body() != nullptr);
     check_body(sema, fn_type);
-
     return fn_type;
 }
-
-#endif
 
 Type PathExpr::check(InferSema& sema, Type expected) const {
     if (value_decl())
