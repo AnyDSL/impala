@@ -173,27 +173,31 @@ bool TypeSema::check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> t
  * AST types
  */
 
-#if 0
 void TypeParamList::check_type_params(TypeSema& sema) const {
     for (auto type_param : type_params()) {
-        auto type_var = type_param->check(sema);
+        /*auto type_var = */type_param->check(sema);
         for (auto bound : type_param->bounds()) {
-            if (auto type_app = bound->isa<ASTTypeApp>()) {
-                type_var->add_bound(type_app->trait_app(sema, type_var));
+            if (/*auto type_app = */bound->isa<ASTTypeApp>()) {
+                //type_var->add_bound(type_app->trait_app(sema, type_var));
             } else {
                 error(type_param) << "bounds must be trait instances, not types\n";
             }
         }
     }
 }
-#endif
 
 TypeVar TypeParam::check(TypeSema&) const { return type_var(); }
 Type ErrorASTType::check(TypeSema& ) const { return type(); }
 Type PrimASTType::check(TypeSema&) const { return type(); }
-Type PtrASTType::check(TypeSema& sema) const { return referenced_ast_type()->check(sema); }
-Type IndefiniteArrayASTType::check(TypeSema& sema) const { return elem_ast_type()->check(sema); }
-Type   DefiniteArrayASTType::check(TypeSema& sema) const { return elem_ast_type()->check(sema); }
+Type PtrASTType::check(TypeSema& sema) const { referenced_ast_type()->check(sema); return type(); }
+Type IndefiniteArrayASTType::check(TypeSema& sema) const { elem_ast_type()->check(sema); return type(); }
+Type   DefiniteArrayASTType::check(TypeSema& sema) const { elem_ast_type()->check(sema); return type(); }
+
+Type SimdASTType::check(TypeSema& sema) const {
+    if (!elem_ast_type()->check(sema).isa<PrimType>())
+        error(this) << "non primitive types forbidden in simd type\n";
+    return type();
+}
 
 Type TupleASTType::check(TypeSema& sema) const {
     for (auto arg : args())
@@ -214,7 +218,7 @@ Type ASTTypeApp::check(TypeSema&) const {
     return type();
 }
 
-Type Typeof::check(TypeSema& sema) const { return expr()->check(sema); }
+Type Typeof::check(TypeSema& sema) const { expr()->check(sema); return type(); }
 
 #if 0
 TraitApp ASTTypeApp::trait_app(TypeSema& sema, Type self) const {
@@ -225,12 +229,6 @@ TraitApp ASTTypeApp::trait_app(TypeSema& sema, Type self) const {
 }
 #endif
 
-Type SimdASTType::check(TypeSema& sema) const {
-    if (!elem_ast_type()->check(sema).isa<PrimType>())
-        error(this) << "non primitive types forbidden in simd type\n";
-    return type();
-}
-
 //------------------------------------------------------------------------------
 
 Type LocalDecl::check(TypeSema& sema) const {
@@ -238,13 +236,15 @@ Type LocalDecl::check(TypeSema& sema) const {
     return type();
 }
 
-bool Fn::check_body(TypeSema& sema) const {
-    todo_ |= body()->check(sema);
+Type Fn::check_body(TypeSema& sema) const {
+    body()->check(sema);
 
     for (auto param : params()) {
         if (param->is_mut() && !param->is_written())
             warn(param) << "parameter '" << param->symbol() << "' declared mutable but parameter is never written to\n";
     }
+
+    return body()->type();
 }
 
 //------------------------------------------------------------------------------
@@ -435,51 +435,28 @@ Type StrExpr::check(TypeSema& sema) const {
     return type();
 }
 
-#if 0
-Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
+Type FnExpr::check(TypeSema& sema) const {
     THORIN_PUSH(sema.cur_fn_, body());
     assert(type_params().empty());
 
-    FnType fn_type;
-    if (FnType exp_fn = expected.isa<FnType>()) {
-        if (!is_continuation() && exp_fn->num_args() == num_params()+1) { // add return param to infer type
-            const Location& loc = body()->pos1();
-            const_cast<FnExpr*>(this)->params_.push_back(Param::create(ret_var_handle_, new Identifier("return", body()->pos1()), loc, nullptr));
-        } else if (exp_fn->num_args() != num_params())
-            error(this) << "expected function with " << exp_fn->num_args() << " parameters, but found lambda expression with " << num_params() << " parameters\n";
-
-        for (size_t i = 0; i < num_params() && i < exp_fn->num_args(); ++i)
-            param(i)->check(sema, exp_fn->arg(i));
-
-        fn_type = exp_fn;
-    } else {
-        std::vector<Type> param_types; // TODO use thorin::Array
-        for (auto param : params())
-            param_types.push_back(param->check(sema, sema.unknown_type()));
-
-        fn_type = sema.fn_type(param_types);
-    }
+    for (size_t i = 0, e = num_params(); i != e; ++i)
+        param(i)->check(sema);
 
     assert(body() != nullptr);
-    check_body(sema, fn_type);
-
-    return fn_type;
+    check_body(sema);
+    return type();
 }
 
 Type PathExpr::check(TypeSema& sema) const {
-    // FEATURE consider longer paths
-    //auto* last = path()->path_args().back();
     if (value_decl()) {
         if (auto local = value_decl()->isa<LocalDecl>()) {
             // if local lies in an outer function go through memory to implement closure
             if (local->is_mut() && (sema.nossa() || local->fn() != sema.cur_fn_))
                 local->take_address();
         }
-        return value_decl()->type();
     }
-    return sema.type_error();
+    return type();
 }
-#endif
 
 Type PrefixExpr::check(TypeSema& sema) const {
     auto rtype = rhs()->check(sema);
@@ -488,8 +465,8 @@ Type PrefixExpr::check(TypeSema& sema) const {
         case AND: {
             sema.expect_lvalue(rhs(), "as unary '&' operand");
             if (rhs()->needs_cast()) {
-                rtype.clear();
-                rtype = TypeSema::turn_cast_inside_out(rhs()); // TODO reference?
+                //rtype.clear();
+                //rtype = TypeSema::turn_cast_inside_out(rhs()); // TODO reference?
             }
 
             return rtype;

@@ -532,7 +532,7 @@ public:
     std::ostream& stream_params(std::ostream& p, bool returning) const;
     void fn_check(NameSema&) const;
     Type check_body(InferSema&, FnType) const;
-    void check_body(TypeSema&) const;
+    Type check_body(TypeSema&) const;
     void fn_check(BorrowSema&) const;
     thorin::Lambda* emit_head(CodeGen&, const thorin::Location&) const;
     void emit_body(CodeGen&, const thorin::Location& loc) const;
