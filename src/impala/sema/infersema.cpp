@@ -41,19 +41,19 @@ public:
 
     // check wrappers
 
-    template<class N>
-    void check(const N* n) { n->check(*this); }
+    void check(const ModContents* n) { n->check(*this); }
+    Type check(const LocalDecl* local) { return constrain(local, local->check(*this)); }
+    void check(const Item* n) { n->check(*this); }
+    void check(const Stmt* n) { n->check(*this); }
+    Type check(const Expr* expr) { return check(expr, unknown_type()); }
+    Type check(const Expr* expr, Type expected) { return constrain(expr, expr->check(*this, expected)); }
+
 
     TypeVar check(const TypeParam* type_param) {
         if (type_param->type())
             return type_param->type_var();
         todo_ = true;
         return (type_param->type_ = type_param->check(*this)).as<TypeVar>();
-    }
-
-    Type check(const LocalDecl* local) {
-        todo_ |= local->type_ -= local->check(*this);
-        return local->type();
     }
 
     Type check(const ASTType* ast_type) {
@@ -69,9 +69,6 @@ public:
 
         return Type();
     }
-
-    Type check(const Expr* expr, Type expected) { return constrain(expr, expr->check(*this, expected)); }
-    Type check(const Expr* expr) { return check(expr, unknown_type()); }
 
     Type check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected);
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
@@ -334,28 +331,21 @@ void StructDecl::check(InferSema& sema) const {
 
 void FieldDecl::check(InferSema& sema) const { sema.check(ast_type()); }
 
-#if 0
 void FnDecl::check(InferSema& sema) const {
     check_type_params(sema);
-    Array<Type> param_types(num_params());
-    for (size_t i = 0, e = num_params(); i != e; ++i) {
-        todo_ |= param(i)->check(sema, sema.unknown_type());
-        param_types[i] = param(i)->type();
-    }
 
-    todo_ |= type_ -= sema.fn_type(param_types);
-    for (auto type_param : type_params()) {
-        todo_ |= sema.check(type_param);
+    Array<Type> param_types(num_params());
+    for (size_t i = 0, e = num_params(); i != e; ++i)
+        param_types[i] = sema.check(param(i));
+
+    sema.constrain(this, sema.fn_type(param_types));
+
+    for (auto type_param : type_params())
         fn_type()->bind(type_param->type_var());
-    }
 
     if (body() != nullptr)
-        todo_ |= check_body(sema, fn_type());
-
-    return todo_;
+        check_body(sema, fn_type());
 }
-
-#endif
 
 void StaticItem::check(InferSema& sema) const {
     if (init())
