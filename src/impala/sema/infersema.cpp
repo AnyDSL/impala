@@ -80,10 +80,10 @@ public:
         return type && i < type->num_args() ? type->arg(i) : unknown_type().as<Type>();
     }
 
-public:
-    const BlockExprBase* cur_block_ = nullptr;
-    const Expr* cur_fn_ = nullptr;
+private:
     bool todo_ = true;
+
+    friend void type_inference(Init&, const ModContents*);
 };
 
 void type_inference(Init& init, const ModContents* mod) {
@@ -343,8 +343,6 @@ void FieldDecl::check(InferSema& sema) const {
 }
 
 void FnDecl::check(InferSema& sema) const {
-    THORIN_PUSH(sema.cur_fn_, this);
-
     check_type_params(sema);
     Array<Type> param_types(num_params());
     for (size_t i = 0, e = num_params(); i != e; ++i) {
@@ -471,7 +469,6 @@ Type StrExpr::check(InferSema& sema, Type) const { return sema.definite_array_ty
 
 #if 0
 Type FnExpr::check(InferSema& sema, Type expected) const {
-    THORIN_PUSH(sema.cur_fn_, this);
     assert(type_params().empty());
 
     FnType fn_type;
@@ -851,8 +848,6 @@ Type MapExpr::check_as_method_call(InferSema& sema, Type expected) const {
 #endif
 
 Type BlockExprBase::check(InferSema& sema, Type expected) const {
-    THORIN_PUSH(sema.cur_block_, this);
-
     for (auto stmt : stmts())
         sema.check(stmt);
 
@@ -916,7 +911,6 @@ void ExprStmt::check(InferSema& sema) const { sema.check(expr()); }
 void ItemStmt::check(InferSema& sema) const { sema.check(item()); }
 
 void LetStmt::check(InferSema& sema) const {
-    sema.cur_block_->add_local(local());
     auto expected = sema.check(local());
     if (init())
         sema.check(init(), expected);
