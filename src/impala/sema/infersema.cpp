@@ -17,12 +17,6 @@ class InferSema : public TypeTable {
 public:
     // helpers
 
-    Type comparison_result(const Expr* expr) {
-        if (auto simd = expr->type().isa<SimdType>())
-            return simd_type(type_bool(), simd->size());
-        return type_bool();
-    }
-
     TraitApp instantiate(const Location& loc, TraitAbs trait, Type self, ArrayRef<const ASTType*> args);
     Type instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args);
 
