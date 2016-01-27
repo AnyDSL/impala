@@ -44,10 +44,9 @@ public:
     void check(const ModContents* n) { n->check(*this); }
     Type check(const LocalDecl* local) { return constrain(local, local->check(*this)); }
     void check(const Item* n) { n->check(*this); }
-    void check(const Stmt* n) { n->check(*this); }
     Type check(const Expr* expr) { return check(expr, unknown_type()); }
     Type check(const Expr* expr, Type expected) { return constrain(expr, expr->check(*this, expected)); }
-
+    void check(const Stmt* n) { n->check(*this); }
 
     TypeVar check(const TypeParam* type_param) {
         if (type_param->type())
