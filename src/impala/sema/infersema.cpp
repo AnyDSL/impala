@@ -267,10 +267,8 @@ Type SimdASTType::check(InferSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-Type LocalDecl::check(InferSema& sema, Type expected) const {
-    fn_ = sema.cur_fn_;
-    expected -= sema.check(ast_type());
-    sema.todo_ |= type_ -= expected;
+Type LocalDecl::check(InferSema& sema) const {
+    sema.todo_ |= type_ -= sema.check(ast_type());
     return type_;
 }
 
@@ -628,6 +626,7 @@ Type TupleExpr::check(InferSema& sema, Type expected) const {
     return sema.tuple_type(types);
 }
 
+#if 0
 Type StructExpr::check(InferSema& sema, Type expected) const {
     if (auto decl = path()->decl()) {
         StructAppType struct_app;
@@ -845,78 +844,35 @@ Type MapExpr::check_as_method_call(InferSema& sema, Type expected) const {
         error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
     return sema.type_error();
 }
+#endif
 
 Type BlockExprBase::check(InferSema& sema, Type expected) const {
     THORIN_PUSH(sema.cur_block_, this);
+
     for (auto stmt : stmts())
-        todo_ |= sema.check(stmt);
+        sema.check(stmt);
 
     sema.check(expr(), expected);
 
-    for (auto local : locals_) {
-        if (local->is_mut() && !local->is_written())
-            warn(local) << "variable '" << local->symbol() << "' declared mutable but variable is never written to\n";
-    }
-
-    todo_ |= type_ -= expr() ? expr()->type() : sema.unit().as<Type>();
-    return todo_;
+    return expr() ? expr()->type() : sema.unit().as<Type>();
 }
 
 Type IfExpr::check(InferSema& sema, Type expected) const {
-    sema.check(cond(), sema.type_bool(), "condition type");
-
-    // if there is an expected type, we want to pipe it down to enable type inference
-    // otherwise we cannot do so because if then_type is noret, else type still can be anything
-    if (expected.isa<UnknownType>()) {
-        Type then_type = sema.check(then_expr(), sema.unknown_type());
-        Type else_type = sema.check(else_expr(), sema.unknown_type());
-
-        if (then_type->is_noret() && else_type->is_noret())
-            return sema.type_noret();
-        if (then_type->is_noret())
-            return sema.expect_type(else_expr(), expected, "if expression type");
-        if (else_type->is_noret())
-            return sema.expect_type(then_expr(), expected, "if expression type");
-        if (then_type == else_type) {
-            assert(!then_expr()->needs_cast());
-            assert(!else_expr()->needs_cast());
-            return sema.expect_type(this, then_type, expected, "if expression type");
-        }
-        if (then_type <= else_type) {
-            assert(!then_expr()->needs_cast());
-            then_expr()->actual_type_ = then_type;
-            then_expr()->type_.clear();
-            then_expr()->type_ = else_type;
-            return sema.expect_type(this, else_type, expected, "if expression type");
-        }
-        if (else_type <= then_type) {
-            assert(!else_expr()->needs_cast());
-            else_expr()->actual_type_ = else_type;
-            else_expr()->type_.clear();
-            else_expr()->type_ = then_type;
-            return sema.expect_type(this, then_type, expected, "if expression type");
-        }
-
-        error(this) << "different types in arms of an if expression\n";
-        error(then_expr()) << "type of the consequence is '" << then_type << "'\n";
-        error(else_expr()) << "type of the alternative is '" << else_type << "'\n";
-        return sema.type_error();
-    } else {
-        // we always allow noret in one of the branches as long
-        Type then_type = sema.check(then_expr(), expected, "type of then branch");
-        Type else_type = sema.check(else_expr(), expected, "type of else branch");
-        return (then_type->is_noret()) ? else_type : then_type;
-    }
+    sema.check(cond(), sema.type_bool());
+    sema.check(then_expr(), expected - else_expr()->type());
+    sema.check(else_expr(), expected - then_expr()->type());
+    return then_expr()->type() - else_expr()->type();
 }
 
 Type WhileExpr::check(InferSema& sema, Type) const {
-    sema.check(cond(), sema.type_bool(), "condition type");
-    break_decl()->check(sema, sema.unknown_type());
-    continue_decl()->check(sema, sema.unknown_type());
-    sema.check(body(), sema.unit(), "body type of while loop");
+    sema.check(cond(), sema.type_bool());
+    break_decl()->check(sema);
+    continue_decl()->check(sema);
+    sema.check(body(), sema.unit());
     return sema.unit();
 }
 
+#if 0
 Type ForExpr::check(InferSema& sema, Type expected) const {
     auto forexpr = expr();
     if (auto prefix = forexpr->isa<PrefixExpr>())
@@ -944,6 +900,7 @@ Type ForExpr::check(InferSema& sema, Type expected) const {
     error(expr()) << "the looping expression does not support the 'for' protocol\n";
     return sema.unit();
 }
+#endif
 
 //------------------------------------------------------------------------------
 
@@ -951,22 +908,14 @@ Type ForExpr::check(InferSema& sema, Type expected) const {
  * statements
  */
 
-void ExprStmt::check(InferSema& sema) const {
-    if (sema.check(expr())->is_noret())
-        error(expr()) << "expression does not return; subsequent statements are unreachable\n";
-    if (!expr()->has_side_effect())
-        warn(expr()) << "statement with no effect\n";
-}
-
-void ItemStmt::check(InferSema& sema) const {
-    item()->check(sema);
-}
+void ExprStmt::check(InferSema& sema) const { sema.check(expr()); }
+void ItemStmt::check(InferSema& sema) const { sema.check(item()); }
 
 void LetStmt::check(InferSema& sema) const {
     sema.cur_block_->add_local(local());
-    auto expected = local()->check(sema, sema.unknown_type());
+    auto expected = local()->check(sema);
     if (init())
-        sema.check(init(), expected, "initialization type");
+        sema.check(init(), expected);
 }
 
 //------------------------------------------------------------------------------

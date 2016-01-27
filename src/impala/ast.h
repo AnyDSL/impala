@@ -456,7 +456,7 @@ public:
     void take_address() const { is_address_taken_ = true; }
     void check(NameSema&) const;
     Type check(TypeSema&) const;
-    Type check(InferSema&, Type) const;
+    Type check(InferSema&) const;
     void check(BorrowSema&) const;
 
 private:
@@ -495,6 +495,7 @@ private:
     ASTTypes bounds_;
 
     friend class Parser;
+    friend class InferSema;
 };
 
 class SelfParam : public TypeParam {
@@ -576,6 +577,7 @@ private:
     mutable thorin::HashMap<Symbol, const NamedItem*> item_table_;
 
     friend class Parser;
+    friend class InferSema;
 };
 
 class Item : virtual public ASTNode {
@@ -771,6 +773,7 @@ private:
     bool is_extern_ = false;
 
     friend class Parser;
+    friend class InferSema;
 };
 
 class TraitDecl : public NamedItem, public Decl, public TypeParamList {
@@ -1497,6 +1500,8 @@ public:
 
 private:
     virtual void check(InferSema&) const = 0;
+
+    friend class InferSema;
 };
 
 class ExprStmt : public Stmt {
