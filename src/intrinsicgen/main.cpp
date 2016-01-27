@@ -76,7 +76,7 @@ impala::Type llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
         }
 
         auto ret = fn->getReturnType()->isVoidTy() ? (impala::Type)tt.tuple_type({}) : llvm2impala(tt, fn->getReturnType());
-        valid &= ret;
+        valid &= bool(ret);
         if (valid) {
             param_types.back() = fn->getReturnType()->isVoidTy() ? tt.tuple_type({}) : tt.tuple_type({ret});
             return tt.fn_type(param_types);

@@ -457,10 +457,10 @@ public:
     void take_address() const { is_address_taken_ = true; }
     void check(NameSema&) const;
     Type check(TypeSema&) const;
-    Type check(InferSema&) const;
     void check(BorrowSema&) const;
 
 private:
+    Type check(InferSema&) const;
     virtual thorin::Var emit(CodeGen&, thorin::Def init) const override;
 
 protected:

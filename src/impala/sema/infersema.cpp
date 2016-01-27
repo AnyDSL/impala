@@ -35,12 +35,17 @@ public:
     template<class N>
     void check(const N* n) { n->check(*this); }
 
-    Type check(const Expr* expr, Type expected) {
-        todo_ |= expr->type_ -=  expr->check(*this, expected);
-        return expr->type();
+    TypeVar check(const TypeParam* type_param) {
+        if (type_param->type())
+            return type_param->type_var();
+        todo_ = true;
+        return (type_param->type_ = type_param->check(*this)).as<TypeVar>();
     }
 
-    Type check(const Expr* expr) { return check(expr, unknown_type()); }
+    Type check(const LocalDecl* local) {
+        todo_ |= local->type_ -= local->check(*this);
+        return local->type();
+    }
 
     Type check(const ASTType* ast_type) {
         if (ast_type->type())
@@ -56,9 +61,16 @@ public:
         return Type();
     }
 
-    Type constrain(const Typeable* typeable, Type expected) {
-        todo_ |= typeable->type_ -= expected;
-        return typeable->type();
+    Type check(const Expr* expr, Type expected) {
+        todo_ |= expr->type_ -=  expr->check(*this, expected);
+        return expr->type();
+    }
+
+    Type check(const Expr* expr) { return check(expr, unknown_type()); }
+
+    Type constrain(const ValueDecl* value_decl, Type expected) {
+        todo_ |= value_decl->type_ -= expected;
+        return value_decl->type();
     }
 
     Type check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected);
@@ -156,25 +168,33 @@ bool InferSema::check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> 
 //------------------------------------------------------------------------------
 
 /*
- * AST types
+ * misc
  */
 
-#if 0
-bool TypeParamList::check_type_params(InferSema& sema) const {
+TypeVar TypeParam::check(InferSema& sema) const { return sema.type_var(symbol()); }
+
+void TypeParamList::check_type_params(InferSema& sema) const {
     for (auto type_param : type_params()) {
         auto type_var = sema.check(type_param);
         for (auto bound : type_param->bounds()) {
-            if (auto type_app = bound->isa<ASTTypeApp>()) {
+            if (auto type_app = bound->isa<ASTTypeApp>())
                 type_var->add_bound(type_app->trait_app(sema, type_var));
-            } else {
-                error(type_param) << "bounds must be trait instances, not types\n";
-            }
         }
     }
 }
-#endif
 
-TypeVar TypeParam::check(InferSema& sema) const { return sema.type_var(symbol()); }
+Type LocalDecl::check(InferSema& sema) const { return sema.check(ast_type()); }
+
+Type Fn::check_body(InferSema& sema, FnType fn_type) const {
+    return sema.check(body(), fn_type->return_type());
+}
+
+//------------------------------------------------------------------------------
+
+/*
+ * AST types
+ */
+
 Type ErrorASTType::check(InferSema& sema) const { return sema.type_error(); }
 
 Type PrimASTType::check(InferSema& sema) const {
@@ -262,17 +282,6 @@ Type SimdASTType::check(InferSema& sema) const {
     if (elem_type.isa<PrimType>())
         return sema.simd_type(elem_type, size());
     return Type();
-}
-
-//------------------------------------------------------------------------------
-
-Type LocalDecl::check(InferSema& sema) const {
-    sema.todo_ |= type_ -= sema.check(ast_type());
-    return type_;
-}
-
-Type Fn::check_body(InferSema& sema, FnType fn_type) const {
-    return sema.check(body(), fn_type->return_type());
 }
 
 //------------------------------------------------------------------------------
@@ -866,8 +875,8 @@ Type IfExpr::check(InferSema& sema, Type expected) const {
 
 Type WhileExpr::check(InferSema& sema, Type) const {
     sema.check(cond(), sema.type_bool());
-    break_decl()->check(sema);
-    continue_decl()->check(sema);
+    sema.check(break_decl());
+    sema.check(continue_decl());
     sema.check(body(), sema.unit());
     return sema.unit();
 }
@@ -913,7 +922,7 @@ void ItemStmt::check(InferSema& sema) const { sema.check(item()); }
 
 void LetStmt::check(InferSema& sema) const {
     sema.cur_block_->add_local(local());
-    auto expected = local()->check(sema);
+    auto expected = sema.check(local());
     if (init())
         sema.check(init(), expected);
 }
