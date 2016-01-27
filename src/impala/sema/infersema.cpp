@@ -243,7 +243,6 @@ Type FnASTType::check(InferSema& sema) const {
     return fn_type;
 }
 
-#if 0
 Type ASTTypeApp::check(InferSema& sema) const {
     if (decl()) {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
@@ -254,14 +253,12 @@ Type ASTTypeApp::check(InferSema& sema) const {
         }
     }
 
-    error(identifier()) << '\'' << symbol() << "' does not name a type\n";
     return sema.type_error();
 }
 
-Type Typeof::check(InferSema& sema) const {
-    return sema.check(expr());
-}
+Type Typeof::check(InferSema& sema) const { return sema.check(expr()); }
 
+#if 0
 TraitApp ASTTypeApp::trait_app(InferSema& sema, Type self) const {
     if (decl()) {
         if (auto trait_decl = decl()->isa<TraitDecl>()) {
