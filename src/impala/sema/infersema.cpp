@@ -548,7 +548,9 @@ Type InfixExpr::check(InferSema& sema, Type expected) const {
         case EQ: case NE:
         case LT: case LE:
         case GT: case GE:
-            return sema.check(rhs(), expected - sema.check(lhs(), rhs()->type()));
+            sema.check(lhs(), expected - rhs()->type());
+            sema.check(rhs(), expected - lhs()->type());
+            return sema.type_bool();
         case OROR:
         case ANDAND:
             sema.check(lhs(), sema.type_bool());
@@ -560,7 +562,7 @@ Type InfixExpr::check(InferSema& sema, Type expected) const {
         case AND: case OR:  case XOR:
             sema.check(lhs(), expected - rhs()->type());
             sema.check(rhs(), expected - lhs()->type());
-            return lhs()->type();
+            return lhs()->type() - rhs()->type();
         case ASGN:
         case ADD_ASGN: case SUB_ASGN:
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
