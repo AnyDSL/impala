@@ -219,6 +219,13 @@ Type PtrASTType::check(InferSema& sema) const {
 Type IndefiniteArrayASTType::check(InferSema& sema) const { return sema.indefinite_array_type(sema.check(elem_ast_type())); }
 Type DefiniteArrayASTType::check(InferSema& sema) const { return sema.definite_array_type(sema.check(elem_ast_type()), dim()); }
 
+Type SimdASTType::check(InferSema& sema) const {
+    auto elem_type = sema.check(elem_ast_type());
+    if (elem_type.isa<PrimType>())
+        return sema.simd_type(elem_type, size());
+    return Type();
+}
+
 Type TupleASTType::check(InferSema& sema) const {
     Array<Type> types(num_args());
     for (size_t i = 0, e = num_args(); i != e; ++i)
@@ -243,6 +250,8 @@ Type FnASTType::check(InferSema& sema) const {
     return fn_type;
 }
 
+Type Typeof::check(InferSema& sema) const { return sema.check(expr()); }
+
 Type ASTTypeApp::check(InferSema& sema) const {
     if (decl()) {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
@@ -256,9 +265,6 @@ Type ASTTypeApp::check(InferSema& sema) const {
     return sema.type_error();
 }
 
-Type Typeof::check(InferSema& sema) const { return sema.check(expr()); }
-
-#if 0
 TraitApp ASTTypeApp::trait_app(InferSema& sema, Type self) const {
     if (decl()) {
         if (auto trait_decl = decl()->isa<TraitDecl>()) {
@@ -271,14 +277,6 @@ TraitApp ASTTypeApp::trait_app(InferSema& sema, Type self) const {
             error(this) << '\'' << symbol() << "' does not name a trait\n";
     }
     return sema.trait_app_error();
-}
-#endif
-
-Type SimdASTType::check(InferSema& sema) const {
-    auto elem_type = sema.check(elem_ast_type());
-    if (elem_type.isa<PrimType>())
-        return sema.simd_type(elem_type, size());
-    return Type();
 }
 
 //------------------------------------------------------------------------------

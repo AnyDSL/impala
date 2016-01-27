@@ -410,18 +410,19 @@ void Parser::parse_param_list(AutoVector<const Param*>& params, TokenKind delimi
 const Param* Parser::parse_param(int i, bool lambda) {
     auto param = loc(new Param(cur_var_handle++));
     param->is_mut_ = accept(Token::MUT);
-    const Identifier* ident = nullptr;
+    const Identifier* identifier = nullptr;
     const ASTType* type = nullptr;
     Token tok = la();
 
     if (tok == Token::ID)
-        ident = new Identifier(lex());
+        identifier = new Identifier(lex());
     else {
         switch (tok) {
-            case TYPE:
-                type = parse_type(); break;
+            case Token::TYPE:
+                type = parse_type();
+                break;
             default:
-                ident = new Identifier("<error>", tok.loc());
+                identifier = new Identifier("<error>", tok.loc());
                 error("identifier", "parameter");
         }
     }
@@ -429,23 +430,22 @@ const Param* Parser::parse_param(int i, bool lambda) {
     if (accept(Token::COLON)) {
         if (type)
             error("identifier", "parameter", tok);
-        param->identifier_ = ident;
+        param->identifier_ = identifier;
         param->ast_type_ = parse_type();
     } else if (lambda) {
         if (type)
             error("identifier", "parameter", tok);
-        param->identifier_ = ident;
+        param->identifier_ = identifier;
     } else {
         if (type == nullptr) {
             // we assume that the identifier refers to a type
             auto type_app = new ASTTypeApp();
             type_app->set_loc(tok.loc());
-            type_app->identifier_ = ident;
+            type_app->identifier_ = identifier;
             type = type_app;
         }
         param->ast_type_ = type;
     }
-
 
     if (param->identifier_ == nullptr) {
         std::ostringstream oss;
@@ -457,7 +457,7 @@ const Param* Parser::parse_param(int i, bool lambda) {
 }
 
 void Parser::parse_return_param(Fn* fn) {
-    if (auto fn_type = parse_return_type(fn->cont_)) {
+    if (auto fn_type = parse_return_type(fn->is_continuation_)) {
         const Location& loc = fn_type->loc();
         fn->params_.push_back(Param::create(cur_var_handle++, new Identifier("return", loc), loc, fn_type));
     }
@@ -1111,7 +1111,7 @@ const ForExpr* Parser::parse_for_expr() {
     if (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
         parse_param_list(fn_expr->params_, Token::IN, true);
     fn_expr->params_.push_back(Param::create(cur_var_handle++, new Identifier("continue", prev_loc()), prev_loc(), nullptr));
-    fn_expr->cont_ = true;
+    fn_expr->is_continuation_ = true;
     for_expr->break_decl_ = create_continuation_decl("break", /*set type during TypeSema*/ false);
     for_expr->expr_ = parse_expr();
     fn_expr->body_ = try_block_expr("body of for loop");
