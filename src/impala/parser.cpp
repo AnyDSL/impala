@@ -179,7 +179,7 @@ public:
     const ASTType*      parse_type();
     const ArrayASTType* parse_array_type();
     const Typeof*       parse_typeof();
-    const ASTType*      parse_return_type(bool&);
+    const ASTType*      parse_return_type(bool& is_continuation, bool mandatory);
     const FnASTType*    parse_fn_type();
     const PrimASTType*  parse_prim_type();
     const PtrASTType*   parse_ptr_type();
@@ -457,8 +457,9 @@ const Param* Parser::parse_param(int i, bool lambda) {
 }
 
 void Parser::parse_return_param(Fn* fn) {
-    if (auto fn_type = parse_return_type(fn->is_continuation_)) {
-        const Location& loc = fn_type->loc();
+    auto fn_type = parse_return_type(fn->is_continuation_, false);
+    if (!fn->is_continuation()) {
+        auto loc = fn_type ? fn_type->loc() : prev_loc();
         fn->params_.push_back(Param::create(cur_var_handle++, new Identifier("return", loc), loc, fn_type));
     }
 }
@@ -726,17 +727,17 @@ const FnASTType* Parser::parse_fn_type() {
     });
 
     bool unused;
-    if (auto ret_type = parse_return_type(unused))
+    if (auto ret_type = parse_return_type(unused, true))
         fn_type->args_.push_back(ret_type);
 
     return fn_type;
 }
 
-const ASTType* Parser::parse_return_type(bool& cont) {
-    cont = false;
+const ASTType* Parser::parse_return_type(bool& is_continuation, bool mandatory) {
+    is_continuation = false;
     if (accept(Token::ARROW)) {
         if (accept(Token::NOT)) {
-            cont = true;
+            is_continuation = true;
             return nullptr;
         }
 
@@ -752,6 +753,9 @@ const ASTType* Parser::parse_return_type(bool& cont) {
         }
         return ret_type;
     }
+
+    if (mandatory)
+        error("return type", "function type");
     return nullptr;
 }
 
