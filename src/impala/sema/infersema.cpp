@@ -372,7 +372,6 @@ void TraitDecl::check(InferSema& sema) const {
 
     for (auto method : methods())
         todo_ |= sema.check(method);
-    return todo_;
 }
 
 void ImplItem::check(InferSema& sema) const {
@@ -418,21 +417,6 @@ void ImplItem::check(InferSema& sema) const {
             }
         }
     }
-
-    // TODO
-#if 0
-    // check that all methods are implemented
-    if (!bound.empty()) {
-        if (implemented_methods.size() != bound->num_methods()) {
-            assert(implemented_methods.size() < bound->num_methods());
-            for (const auto& p : bound->all_methods()) {
-                if (!implemented_methods.contains(p.first))
-                    error(this) << "must implement method '" << p.first << "'\n";
-            }
-        }
-    }
-#endif
-    return todo_;
 }
 
 #endif

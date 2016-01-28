@@ -369,19 +369,7 @@ void ImplItem::check(TypeSema& sema) const {
         }
     }
 
-    // TODO
-#if 0
-    // check that all methods are implemented
-    if (!bound.empty()) {
-        if (implemented_methods.size() != bound->num_methods()) {
-            assert(implemented_methods.size() < bound->num_methods());
-            for (const auto& p : bound->all_methods()) {
-                if (!implemented_methods.contains(p.first))
-                    error(this) << "must implement method '" << p.first << "'\n";
-            }
-        }
-    }
-#endif
+    // TODO: check that all methods are implemented
 }
 #endif
 
