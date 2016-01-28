@@ -579,17 +579,16 @@ Type StructExpr::check(InferSema& sema, Type expected) const {
             if (auto decl_type = typeable_decl->type()) {
                 inferred_args_.resize(decl_type->num_type_vars());
 
+                // TODO consider fields
+
                 for (size_t i = 0, e = inferred_args_.size(); i != e; ++i) {
-                    if (i < num_type_args())
-                        inferred_args_[i] -= sema.check(type_arg(i)) - sema.safe_get_arg(expected, i);
-                    else
-                        inferred_args_[i] -= sema.unknown_type().as<Type>();
+                    inferred_args_[i] -= i < num_type_args()
+                        ? sema.check(type_arg(i)) - sema.safe_get_arg(expected, i)
+                        : sema.unknown_type().as<Type>();
                 }
 
                 if (auto struct_app = decl_type->instantiate(inferred_args_))
                     return struct_app;
-                else
-                    return Type();
             }
         }
     }
