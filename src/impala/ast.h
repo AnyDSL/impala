@@ -891,7 +891,7 @@ class TypeArgs {
 public:
     const ASTTypes& type_args() const { return type_args_; }
     const ASTType* type_arg(size_t i) const { assert(i < type_args_.size()); return type_args_[i]; }
-    size_t num_type_args() const { return type_args_.size(); }
+    size_t num_type_args() const { return type_args().size(); }
     ArrayRef<Type> inferred_args() const { return inferred_args_; }
     Type inferred_arg(size_t i) const { return inferred_args_[i]; }
     size_t num_inferred_args() const { return inferred_args_.size(); }

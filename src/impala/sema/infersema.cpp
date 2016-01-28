@@ -573,52 +573,30 @@ Type TupleExpr::check(InferSema& sema, Type expected) const {
     return sema.tuple_type(types);
 }
 
-#if 0
-
 Type StructExpr::check(InferSema& sema, Type expected) const {
     if (auto decl = path()->decl()) {
         if (auto typeable_decl = decl->isa<TypeableDecl>()) {
             if (auto decl_type = typeable_decl->type()) {
-                if (num_type_args() <= decl_type->num_type_vars()) {
-                    StructAppType exp_type = expected.isa<StructAppType>();
+                inferred_args_.resize(decl_type->num_type_vars());
 
-                    // use the expected type if there is any
-                    if (exp_type && (decl_type == exp_type->struct_abs_type())) {
-                        for (size_t i = 0; i < exp_type->num_args(); ++i) {
-                            if ((i < num_type_args()) && (exp_type->arg(i) != sema.check(type_arg(i))))
-                                error(type_arg(i)) << "expected different argument for type parameter '" << decl_type->type_var(i) << "': expected '" << exp_type->arg(i) << "' but found '" << type_arg(i)->type() << "'\n";
-                            inferred_args_.push_back(exp_type->arg(i));
-                        }
+                for (size_t i = 0, e = inferred_args_.size(); i != e; ++i) {
+                    if (i < num_type_args())
+                        inferred_args_[i] -= sema.check(type_arg(i)) - sema.safe_get_arg(expected, i);
+                    else
+                        inferred_args_[i] -= sema.unknown_type().as<Type>();
+                }
 
-                        assert(inferred_args_.size() == decl_type->num_type_vars());
-                        struct_app = exp_type;
-                    } else { // if no expected type was given fill type arguments with unknowns
-                        for (auto type_arg : type_args())
-                            inferred_args_.push_back(sema.check(type_arg));
-
-                        for (size_t i = num_type_args(), e = decl_type->num_type_vars(); i != e; ++i)
-                            inferred_args_.push_back(sema.unknown_type());
-
-                        assert(inferred_args_.size() == decl_type->num_type_vars());
-                        auto instantiated_decl_type = decl_type->instantiate(inferred_args_);
-
-                        if (instantiated_decl_type.isa<StructAppType>())
-                            struct_app = instantiated_decl_type.as<StructAppType>();
-                        else
-                            error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
-                    }
-                } else
-                    error(this) << "too many type arguments to structure: " << num_type_args() << " for " << decl_type->num_type_vars() << "\n";
-
-                if (struct_app)
+                if (auto struct_app = decl_type->instantiate(inferred_args_))
                     return struct_app;
-            } else
-                return sema.unknown_type();
+                else
+                    return Type();
+            }
         }
     }
     return sema.type_error();
 }
 
+#if 0
 Type InferSema::check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected) {
     size_t num_type_args = type_args.size();
     size_t num_args = args.size();
@@ -765,6 +743,7 @@ Type MapExpr::check_as_method_call(InferSema& sema, Type expected) const {
         error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
     return sema.type_error();
 }
+
 #endif
 
 Type BlockExprBase::check(InferSema& sema, Type expected) const {
