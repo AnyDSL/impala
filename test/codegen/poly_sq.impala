@@ -1,0 +1,7 @@
+fn sq[T](mul: fn(T, T) -> T, val: T) -> T {
+    mul(val, val)
+}
+
+fn main() -> int {
+    if sq[i32](|a, b| a * b, 4) == 16 { 0 } else { 1 }
+}

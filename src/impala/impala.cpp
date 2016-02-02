@@ -11,7 +11,9 @@
 
 namespace impala {
 
-bool fancy = false;
+bool fancy_output = false;
+
+bool& fancy() { return fancy_output; }
 
 void init() { PrecTable::init(); Token::init(); }
 void destroy() { Symbol::destroy(); }

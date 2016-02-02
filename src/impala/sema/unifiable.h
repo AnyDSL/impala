@@ -181,18 +181,7 @@ private:
     Unifiable(const Unifiable&);              ///< Do not copy-construct a \p Unifiable.
 
 protected:
-    Unifiable(TypeTable& tt, Kind kind, ArrayRef<Type> args)
-        : typetable_(tt)
-        , kind_(kind)
-        , representative_(nullptr)
-        , id_(counter_++)
-        , args_(args.size())
-    {
-        for (size_t i = 0, e = args.size(); i != e; ++i) {
-            if (auto arg = args[i])
-                set(i, arg);
-        }
-    }
+    Unifiable(TypeTable& tt, Kind kind, ArrayRef<Type> args);
 
     void set(size_t i, Type t) { args_[i] = t; }
     Array<Type> specialize_args(SpecializeMap&) const;
