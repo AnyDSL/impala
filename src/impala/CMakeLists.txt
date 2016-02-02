@@ -2,9 +2,35 @@ SET ( EXECUTABLE_NAME exe_impala )
 SET ( LIBRARY_NAME lib_impala )
 
 # get source files
-FILE ( GLOB_RECURSE SOURCES *.cpp *.h )
-FILE ( GLOB MAIN main.cpp )
-LIST (REMOVE_ITEM SOURCES ${MAIN})
+
+SET ( SOURCES
+    ast.cpp
+    ast.h
+    cgen.cpp
+    cgen.h
+    emit.cpp
+    impala.cpp
+    impala.h
+    lexer.cpp
+    lexer.h
+    parser.cpp
+    prec.cpp
+    prec.h
+    sema/borrowsema.cpp
+    sema/namesema.cpp
+    sema/typesema.cpp
+    sema/typetable.cpp
+    sema/typetable.h
+    sema/unifiable.cpp
+    sema/unifiable.h
+    stream.cpp
+    symbol.cpp
+    symbol.h
+    token.cpp
+    token.h
+    tokenlist.h
+)
+
 
 IF ( BUILD_STATIC )
     MESSAGE ( "Building impala as static library ..." )
@@ -15,9 +41,9 @@ ELSE ()
 ENDIF ()
 TARGET_LINK_LIBRARIES ( ${LIBRARY_NAME} ${THORIN_LIBRARIES} )
 
-ADD_EXECUTABLE( ${EXECUTABLE_NAME} ${MAIN} )
-TARGET_LINK_LIBRARIES ( ${EXECUTABLE_NAME} ${THORIN_LIBRARIES} lib_impala )
-ADD_DEPENDENCIES ( ${EXECUTABLE_NAME} lib_impala )
+ADD_EXECUTABLE( ${EXECUTABLE_NAME} main.cpp )
+TARGET_LINK_LIBRARIES ( ${EXECUTABLE_NAME} ${THORIN_LIBRARIES} ${LIBRARY_NAME} )
+ADD_DEPENDENCIES ( ${EXECUTABLE_NAME} ${LIBRARY_NAME} )
 
-SET_TARGET_PROPERTIES(exe_impala PROPERTIES OUTPUT_NAME impala)
-SET_TARGET_PROPERTIES(lib_impala PROPERTIES OUTPUT_NAME impala)
+SET_TARGET_PROPERTIES( ${EXECUTABLE_NAME} PROPERTIES OUTPUT_NAME impala)
+SET_TARGET_PROPERTIES( ${LIBRARY_NAME} PROPERTIES OUTPUT_NAME impala)

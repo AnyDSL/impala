@@ -77,7 +77,7 @@ class ValgrindTest(Test):
             
             return success
         except Exception as e:
-            print "Parsing valgrind output FAILED: %s" % e
+            print("Parsing valgrind output FAILED: %s" % e)
             return False
 
 def diff_output(output, expected):
@@ -138,8 +138,6 @@ class InvokeTest(Test):
     args = None
 
     LIB_C = os.path.join(os.path.dirname(__file__), "lib.c")
-    CALL_IMPALA_MAIN_C = os.path.join(os.path.dirname(__file__), "call_impala_main.c")
-    CLANG = os.path.join(os.path.dirname(__file__), "..", "..", "..", "llvm_install", "bin", "clang")
     
     def __init__(self, base, src, output_file, options=[], benchmarks=False, compare=None, input_file=None):
         super(InvokeTest, self).__init__(base, src, options+["-emit-llvm"])
@@ -162,11 +160,11 @@ class InvokeTest(Test):
     def compilePhases(self, gEx):
         yield [gEx] + self.options + [os.path.join(self.basedir, self.srcfile)]
         if(self.benchmarks):
-            yield [InvokeTest.CLANG, "-O3", InvokeTest.LIB_C, "-c"]
-            yield [InvokeTest.CLANG, "-O3", "lib.o", self.ll_file, "-L", "/opt/local/lib", "-lm", "-lpcre", "-lgmp", "-s", "-o", self.exe_file]
+            yield ["clang", "-O3", InvokeTest.LIB_C, "-c"]
+            yield ["clang", "-O3", "lib.o", self.ll_file, "-L", "/opt/local/lib", "-lm", "-lpcre", "-lgmp", "-s", "-o", self.exe_file]
         else:
             yield ["llc", "-o", self.s_file, self.bc_file]
-            yield ["cc", "-o", self.exe_file, self.s_file, InvokeTest.CALL_IMPALA_MAIN_C]
+            yield ["cc", "-o", self.exe_file, self.s_file, InvokeTest.LIB_C]
 
     
     def invoke(self, gEx):
@@ -193,8 +191,8 @@ class InvokeTest(Test):
                 cmd.extend(self.args)
                 p = RuntimeProcess(cmd, ".")
 
-	    if self.input_file is not None:
-		p.setInput(self.input_file)
+            if self.input_file is not None:
+                p.setInput(self.input_file)
 
             p.execute()
             return self.checkBasics(p) and self.checkOutput(p)
@@ -264,7 +262,7 @@ def make_invoke_tests(directory, options=[], benchmarks=False, testToFile={}, in
     for testfile, res in get_tests(directory):
         input_file = inputs[testfile] if testfile in inputs else None
         #print input_file, testfile
-	if testfile in testToFile:
+        if testfile in testToFile:
             tests.append(InvokeTest(directory, testfile, res, options, benchmarks, testToFile[testfile], input_file))
         else:
             tests.append(InvokeTest(directory, testfile, res, options, benchmarks, None, input_file))
@@ -340,3 +338,5 @@ def executeTests(tests, gEx):
             print("\n* All %i optional tests were successful." % len(opt_tests))
         else:
             print("\n!" + str(failOpt) + " of " + str(len(opt_tests)) + " OPTIONAL tests failed.")
+            
+    return -1 if failReq > 0 else 0

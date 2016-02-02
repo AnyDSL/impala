@@ -6,6 +6,6 @@ fn cmp(cond: bool) -> bool {
     i == 1
 }
 
-fn main() -> bool {
-    cmp(true)
+fn main() -> int {
+    if cmp(true) { 0 } else { 1 }
 }

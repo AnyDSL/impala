@@ -12,10 +12,10 @@ fn check(p: &int) -> () {
     }
 }
 
-fn main() -> bool {
+fn main() -> int {
     let mut p = int_nullptr;
     check(p);
     p = ~42;
     check(p);
-    true
+    if true { 0 } else { 1 }
 }

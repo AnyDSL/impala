@@ -34,7 +34,7 @@ fn initially[G,T,R](g: G, xn: int, yn: int, make_strand: fn(G) -> T, write_resul
     })
 }
 
-fn main() -> i64 {
+fn main() -> int {
     fn update(g: i64, t: i16, xn: int, yn: int, loop: fn(i16), stabilize: fn(i16), die: fn()) {
         if xn + yn < 42 {
             die()
@@ -51,5 +51,5 @@ fn main() -> i64 {
 
     let mut g = 26_i64;
 
-    initially(g, 100, 200, make_strand, write_result, update)
+    if initially(g, 100, 200, make_strand, write_result, update) == 0i64 { 0 } else { 1 }
 }

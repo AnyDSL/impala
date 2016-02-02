@@ -1,7 +1,7 @@
 fn f() -> () {
 }
 
-fn main() -> bool {
+fn main() -> int {
     f();
-    true
+    if true { 0 } else { 1 }
 }

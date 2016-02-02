@@ -3,9 +3,9 @@ struct S {
     arr:   &[i32],
 }
 
-fn main() -> bool {
+fn main() -> int {
     let mut s : S;
     s.roots = ~[0u];
 
-    true
+    if true { 0 } else { 1 }
 }

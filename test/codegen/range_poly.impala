@@ -17,7 +17,7 @@ fn range[I: Iterator](a: I, b: I, body: fn(I)->()) -> () {
     }
 }
 
-fn main() -> bool {
+fn main() -> int {
     let mut sum = 0;
     for i in range(0, 10) {
         let j: int =
@@ -32,5 +32,5 @@ fn main() -> bool {
             };
         sum += j + j;
     }
-    sum == 118
+    if sum == 118 { 0 } else { 1 }
 }

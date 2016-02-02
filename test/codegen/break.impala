@@ -5,7 +5,7 @@ fn range(a: int, z: int, body: fn(int)->()) -> () {
     }
 }
 
-fn main() -> bool {
+fn main() -> int {
     let mut res : int = 0;
     for i in range(0, 15) {
         if i*i > 42 {
@@ -13,5 +13,5 @@ fn main() -> bool {
         }
         res += 1;
     }
-    res == 7
+    if res == 7 { 0 } else { 1 }
 }

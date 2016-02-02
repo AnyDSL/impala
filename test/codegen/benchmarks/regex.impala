@@ -1,13 +1,19 @@
+struct pcre {}
+struct pcre_extra {}
+struct File {}
+
 type FILE = &File;
-type PCRE_SPTR = &[u8];
+type char = u8;
+type str = [char];
 
 extern "C" {
+    fn atoi(&str) -> int;
     fn ferror(FILE) -> bool;
     fn fread(&u8, u64, u64, FILE) -> u64;
     fn get_stdin() -> FILE;
     fn memcpy(&u8, &u8, u64) -> &[u8];
     fn pcre_compile(&[u8], int, &&[u8], &int, &[u8]) -> &pcre;
-    fn pcre_exec(&pcre, &pcre_extra, PCRE_SPTR, int, int, int, &[int], int) -> int;
+    fn pcre_exec(&pcre, &pcre_extra, &str, int, int, int, &[int], int) -> int;
     fn pcre_study(&pcre, int, &&[u8]) -> &pcre_extra;
     fn print_int(int) -> ();
     fn print_num_matches(&[u8], int) -> ();
@@ -15,10 +21,6 @@ extern "C" {
     fn realloc(&[u8], u64) -> &[u8];
     fn strlen(&[u8]) -> u64;
 }
-
-struct pcre {}
-struct pcre_extra {}
-struct File {}
 
 static PCRE_CASELESS = 1;
 
@@ -140,7 +142,8 @@ static NUM_PAT = 11;
 
 fn take_address(a: &[&[u8]]) -> () {}
 
-fn main(n: int) -> () {
+fn main(argc: int, argv: &[&str]) -> int {
+    let n = if argc >= 2 { atoi(argv(1)) } else { 0 };
     let mut seq = [
         fbuf_t{buf: nullptr, size: 0_u64, len: 0_u64},
         fbuf_t{buf: nullptr, size: 0_u64, len: 0_u64}
@@ -167,4 +170,5 @@ fn main(n: int) -> () {
     print_int(ilen as int);
     print_int(clen as int);
     print_int(slen as int);
+    0
 }

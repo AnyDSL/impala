@@ -1,15 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void main_impala(int);
-
-int main(int argc, const char** argv) {
-    int n = 0;
-    if (argc >= 2)
-        n = atoi(argv[1]);
-    main_impala(n);
-}
-
 void print_char(char c) {
    printf("%c\n", (int)c);
 }
@@ -43,7 +34,7 @@ void put_u8(unsigned char ui) {
    putc(ui, stdout);
 }
 
-void* thorin_malloc(size_t size) {
+void* thorin_alloc(int32_t dev, int64_t size) {
     void* p;
     posix_memalign(&p, 64, size);
     return p;

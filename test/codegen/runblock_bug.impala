@@ -1,0 +1,6 @@
+fn test() -> i32 { 23 }
+
+fn main() -> i32 {
+    let s = @{ test() };
+    if s == 23 { 0 } else { 1 }
+}

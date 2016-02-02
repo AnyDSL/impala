@@ -1,8 +1,8 @@
-fn main() -> bool {
+fn main() -> int {
     let a = '\0';
     let b = '\n';
     let c = '\t';
     let d = '\'';
     let e = '\\';
-    a + b + c + d + e == 150_u8
+    if a + b + c + d + e == 150_u8 { 0 } else { 1 }
 }

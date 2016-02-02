@@ -5,7 +5,7 @@ fn range(a: int, z: int, body: fn(int)->()) -> () {
     }
 }
 
-fn main() -> bool {
+fn main() -> int {
     let mut r = 0;
     for i in range(0, 10) {
         let outer = break;
@@ -18,5 +18,5 @@ fn main() -> bool {
         }
     }
 
-    r == 0
+    if r == 0 { 0 } else { 1 }
 }

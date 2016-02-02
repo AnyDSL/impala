@@ -17,7 +17,7 @@ fn iteration_broken(body : fn(int) -> ()) -> () {
 }
 
 
-fn main() -> bool {
+fn main() -> int {
     let size    = 1024;
     let arr     = ~[size:float];
     let mut out = ~[size:float];
@@ -26,5 +26,5 @@ fn main() -> bool {
         out(x) = arr(x);
     }
 
-    true
+    if true { 0 } else { 1 }
 }

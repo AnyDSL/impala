@@ -2,7 +2,7 @@ fn foo(a: bool, b: bool) -> bool {
     a || b
 }
 
-fn main() -> bool {
+fn main() -> int {
     let mut res = 0;
     if foo(false, false) {
         res += 1;
@@ -16,5 +16,5 @@ fn main() -> bool {
     if foo( true,  true) {
         res += 8;
     }
-    res == 14
+    if res == 14 { 0 } else { 1 }
 }

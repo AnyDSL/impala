@@ -313,8 +313,6 @@ std::ostream& ImplItem::stream(std::ostream& os) const {
  * expressions
  */
 
-std::ostream& SizeofExpr::stream(std::ostream& os) const { return streamf(os, "sizeof(%)", ast_type()); }
-
 std::ostream& BlockExprBase::stream(std::ostream& os) const {
     os << prefix();
     if (empty())
@@ -384,7 +382,7 @@ std::ostream& SimdExpr::stream(std::ostream& os) const {
 std::ostream& PrefixExpr::stream(std::ostream& os) const {
     Prec r = PrecTable::prefix_r[kind()];
     Prec old = prec;
-    bool paren = !fancy || prec <= r;
+    bool paren = !fancy() || prec <= r;
     if (paren) os << "(";
 
     const char* op;
@@ -407,7 +405,7 @@ static std::pair<Prec, bool> open(std::ostream& os, int kind) {
     std::pair<Prec, bool> result;
     Prec l = PrecTable::postfix_l[kind];
     result.first = prec;
-    result.second = !fancy || prec > l;
+    result.second = !fancy() || prec > l;
     if (result.second)
         os << "(";
     prec = l;
@@ -479,7 +477,7 @@ std::ostream& StructExpr::stream(std::ostream& os) const {
 std::ostream& MapExpr::stream(std::ostream& os) const {
     Prec l = PrecTable::postfix_l[Token::L_PAREN];
     Prec old = prec;
-    bool paren = !fancy || prec > l;
+    bool paren = !fancy() || prec > l;
     if (paren) os << "(";
 
     prec = l;

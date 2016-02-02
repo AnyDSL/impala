@@ -48,7 +48,7 @@ public:
 
     void jump_to_continuation(Lambda* lambda) {
         if (is_reachable())
-            cur_bb->jump(lambda, {get_mem()});
+            cur_bb->jump(lambda, lambda->type_args(), {get_mem()});
         set_continuation(lambda);
     }
 
@@ -89,12 +89,12 @@ public:
         auto unifiable = uni->unify();
         if (!unifiable->thorin_type_) {
             for (auto type_var : unifiable->type_vars())    // convert type vars
-                type_var->thorin_type_ = world().type_var();
+                type_var->thorin_type_ = world().type_param();
 
             unifiable->thorin_type_ = unifiable->convert(*this);
 
             for (auto type_var : unifiable->type_vars())    // bind type vars
-                unifiable->thorin_type_->bind(convert(type_var).as<thorin::TypeVar>());
+                unifiable->thorin_type_->bind(convert(type_var).as<thorin::TypeParam>());
         }
         return unifiable->thorin_type_;
     }
@@ -126,15 +126,6 @@ thorin::Type NoRetTypeNode::convert(CodeGen&) const { return thorin::Type(); }
 thorin::Type FnTypeNode::convert(CodeGen& cg) const {
     std::vector<thorin::Type> nargs;
     nargs.push_back(cg.world().mem_type());
-
-    for (auto type_var : type_vars()) {
-        Array<thorin::Type> bounds(type_var->num_bounds());
-        for (size_t j = 0, e = bounds.size(); j != e; ++j)
-            bounds[j] = cg.convert(type_var->bound(j));
-
-        nargs.push_back(cg.world().tuple_type(bounds));
-    }
-
     convert_args(cg, nargs);
     return cg.world().fn_type(nargs);
 }
@@ -226,13 +217,6 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
     cg.set_mem(mem_param);
     frame_ = cg.create_frame(loc);
 
-    // name bounds and memoize type params
-    for (auto type_param : type_params()) {
-        auto param = lambda()->param(i++);
-        param->name = type_param->symbol().str();
-        type_param->type_var()->defs_.push(param);
-    }
-
     // name params and setup store locations
     for (auto param : params()) {
         auto p = lambda()->param(i++);
@@ -247,19 +231,16 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
     auto def = cg.remit(body());
     if (def) {
         Def mem = cg.get_mem();
+
         if (auto tuple = def->type().isa<thorin::TupleType>()) {
             std::vector<Def> args;
             args.push_back(mem);
             for (size_t i = 0, e = tuple->num_args(); i != e; ++i)
                 args.push_back(cg.extract(def, i, loc));
-            cg.cur_bb->jump(ret_param(), args);
+            cg.cur_bb->jump(ret_param(), {}, args);
         } else
-            cg.cur_bb->jump(ret_param(), {mem, def});
+            cg.cur_bb->jump(ret_param(), {}, {mem, def});
     }
-
-    // pop type_param stacks
-    for (auto type_param : type_params())
-        type_param->type_var()->defs_.pop();
 }
 
 /*
@@ -281,8 +262,8 @@ Var FnDecl::emit(CodeGen& cg, Def) const {
     if (is_extern())
         lambda_->make_external();
 
+    // handle main function
     if (symbol() == "main") {
-        lambda()->name += "_impala";
         lambda()->make_external();
     }
 
@@ -358,10 +339,6 @@ void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
 }
 void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.branch(cg.remit(this), t, f); }
 Def EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}, loc()); }
-
-Def SizeofExpr::remit(CodeGen&) const {
-    THORIN_UNREACHABLE; // TODO
-}
 
 Def LiteralExpr::remit(CodeGen& cg) const {
     thorin::PrimTypeKind tkind;
@@ -563,34 +540,23 @@ Var MapExpr::lemit(CodeGen& cg) const {
 Def MapExpr::remit(CodeGen& cg) const { return remit(cg, None, Location()); }
 
 Def MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
-    if (auto fn = lhs()->type().isa<FnType>()) {
-        Def ldef = cg.remit(lhs());
-        assert(fn->num_type_vars() == num_inferred_args());
+    if (auto fn_poly = lhs()->type().isa<FnType>()) {
+        assert(fn_poly->num_type_vars() == num_inferred_args());
+
+        Array<thorin::Type> type_args(fn_poly->num_type_vars());
+        for (size_t i = 0, e = type_args.size(); i != e; ++i)
+            type_args[i] = cg.convert(inferred_arg(i));
+
+        Def dst = cg.remit(lhs());
         std::vector<Def> defs;
         defs.push_back(Def()); // reserve for mem but set later - some other args may update the monad
-        for (size_t i = 0, e = fn->num_type_vars(); i != e; ++i) {
-            if (auto type_var = inferred_arg(i).isa<TypeVar>())
-                defs.push_back(type_var->defs_.top());
-            else {
-                auto known_type = inferred_arg(i).as<KnownType>();
-                std::vector<Def> bounds;
-                for (auto bound : fn->type_var(i)->bounds()) {
-                    auto impl = known_type->find_impl(bound);
-                    cg.emit(impl->impl_item());
-                    bounds.push_back(impl->impl_item()->def());
-                }
-                defs.push_back(cg.world().tuple(bounds, loc()));
-            }
-        }
-
         for (auto arg : args())
             defs.push_back(cg.remit(arg));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
-        auto ret_type = args().size() == fn->num_args() ? thorin::Type() : cg.convert(fn->return_type());
-
+        auto ret_type = args().size() == fn_mono()->num_args() ? thorin::Type() : cg.convert(fn_mono()->return_type());
         auto old_bb = cg.cur_bb;
-        auto ret = cg.call(ldef, defs, ret_type);
+        auto ret = cg.call(dst, type_args, defs, ret_type);
         if (ret_type)
             cg.set_mem(cg.cur_bb->param(0));
 
@@ -628,12 +594,12 @@ Def RunBlockExpr::remit(CodeGen& cg) const {
         auto lrun = w.basicblock(loc(), "run_block");
         auto next = w.basicblock(loc(), "run_next");
         auto old_bb = cg.cur_bb;
-        cg.cur_bb->jump(lrun);
+        cg.cur_bb->jump(lrun, {}, {});
         cg.enter(lrun);
         auto res = BlockExprBase::remit(cg);
         if (cg.is_reachable()) {
             assert(res);
-            cg.cur_bb->jump(next);
+            cg.cur_bb->jump(next, {}, {});
             cg.enter(next);
             old_bb->update_to(w.run(lrun, next, loc()));
             return res;
@@ -707,7 +673,7 @@ Def ForExpr::remit(CodeGen& cg) const {
     if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun, break_lambda, loc());
 
     defs.front() = cg.get_mem(); // now get the current memory monad
-    cg.call(fun, defs, thorin::Type());
+    cg.call(fun, {}, defs, thorin::Type());
 
     cg.set_continuation(break_lambda);
     if (break_lambda->num_params() == 2)

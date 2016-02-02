@@ -1,0 +1,30 @@
+extern "thorin" {
+    fn bitcast[D,S](S) -> D;
+    fn spir(i32, (i32, i32, i32), (i32, i32, i32), fn() -> ()) -> ();
+}
+extern "device" {
+    fn "_Z10atomic_addPVU3AS1ii"        atomic_addi(&[1]i32, i32) -> i32;
+    fn "_Z14atomic_cmpxchgPVU3AS1jjj"   atomic_cmpxchg_u32(&[1]u32, u32, u32) -> u32;
+    fn _Z12get_local_idj(i32) -> i64;
+}
+fn atomic_addf(a: &[1]f32, b: f32) -> f32 {
+    let addr_as_ui  = bitcast[&[1]u32](a);
+    let mut assumed = *addr_as_ui;
+    let mut old     = atomic_cmpxchg_u32(addr_as_ui, assumed, bitcast[u32](b + bitcast[f32](assumed)));
+
+    while assumed != old {
+        assumed = old;
+        old = atomic_cmpxchg_u32(addr_as_ui, assumed, bitcast[u32](b + bitcast[f32](assumed)));
+    }
+
+    bitcast[f32](old)
+}
+fn tidx() -> i32    { _Z12get_local_idj(0) as i32 }
+
+extern
+fn risk(mut x: &[1][i32], mut y: &[1][f32]) -> () {
+    with spir(0, (128, 1, 1), (32, 1, 1)) @{
+        atomic_addf(&y(tidx()), 23.0f);
+        atomic_addi(&x(tidx()), 1);
+    }
+}
