@@ -725,35 +725,31 @@ Type WhileExpr::check(InferSema& sema, Type) const {
     return sema.unit();
 }
 
-#if 0
 Type ForExpr::check(InferSema& sema, Type expected) const {
     auto forexpr = expr();
     if (auto prefix = forexpr->isa<PrefixExpr>())
         if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HLT)
             forexpr = prefix->rhs();
-    if (auto map = forexpr->isa<MapExpr>()) {
-        Type lhst = sema.check(map->lhs());
 
-        if (auto fn_for = lhst.isa<FnType>()) {
+    if (auto map = forexpr->isa<MapExpr>()) {
+        Type ltype = sema.check(map->lhs());
+
+        if (auto fn_for = ltype.isa<FnType>()) {
             if (fn_for->num_args() != 0) {
                 if (auto fn_ret = fn_for->args().back().isa<FnType>()) {
-                    break_decl_->type_ = fn_ret; // inherit the type for break
+                    break_decl_->type_ -= fn_ret; // inherit the type for break
 
                     // copy over args and check call
                     Array<const Expr*> args(map->args().size()+1);
                     *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
-                    return sema.check_call(map, fn_for, map->type_args(), map->inferred_args_, args, expected);
+                    return sema.check_call(fn_for, map->inferred_args_, map->type_args(), args, expected);
                 }
             }
         }
-    } else if (auto field_expr = forexpr->isa<FieldExpr>()) {
-        assert(false && field_expr && "TODO");
     }
 
-    error(expr()) << "the looping expression does not support the 'for' protocol\n";
     return sema.unit();
 }
-#endif
 
 //------------------------------------------------------------------------------
 
