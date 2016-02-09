@@ -619,7 +619,6 @@ Type InferSema::check_call(FnType fn_poly, std::vector<Type>& inferred_args, con
 }
 
 #if 0
-
 Type FieldExpr::check(InferSema& sema, Type expected) const {
     if (auto type = check_as_struct(sema, expected))
         return type;
@@ -659,6 +658,8 @@ Type MapExpr::check(InferSema& sema, Type expected) const {
     return check_as_map(sema, expected);
 }
 
+#endif
+
 Type MapExpr::check_as_map(InferSema& sema, Type expected) const {
     auto ltype = sema.check(lhs());
     if (ltype.isa<PtrType>()) {
@@ -668,42 +669,25 @@ Type MapExpr::check_as_map(InferSema& sema, Type expected) const {
     }
 
     if (auto fn_poly = ltype.isa<FnType>()) {
-        return sema.check_call(this, fn_poly, type_args(), inferred_args_, args(), expected);
-    } else if (auto array = ltype.isa<ArrayType>()) {
-        if (num_args() == 1) {
+        return sema.check_call(fn_poly, inferred_args_, type_args(), args(), expected);
+    } else {
+        if (num_args() == 1)
             sema.check(arg(0));
-            if (sema.expect_int(arg(0)))
-                return array->elem_type();
-            else
-                error(this) << "require integer as array subscript\n";
-        } else
-            error(this) << "too many array subscripts\n";
-    } else if (auto exp_tup = ltype.isa<TupleType>()) {
-        if (num_args() == 1) {
-            sema.check(arg(0));
-            if (sema.expect_int(arg(0))) {
-                if (auto lit = arg(0)->isa<LiteralExpr>())
-                    return exp_tup->arg(lit->get_u64());
-                else
-                    error(this) << "require literal as tuple subscript\n";
-            } else
-                error(this) << "require integer as tuple subscript\n";
-        } else
-            error(this) << "too many tuple subscripts\n";
-    } else if(auto simd = ltype.isa<SimdType>()) {
-        if (num_args() == 1) {
-            sema.check(arg(0));
-            if (!sema.expect_int(arg(0)))
-                error(this) << "require integer as vector subscript\n";
-            return simd->elem_type();
-        } else
-            error(this) << "too many simd vector subscripts\n";
-    } else
-        error(this) << "incorrect type for map expression\n";
+
+        if (auto array = ltype.isa<ArrayType>()) {
+            return array->elem_type();
+        } else if (auto tuple_type = ltype.isa<TupleType>()) {
+            if (auto lit = arg(0)->isa<LiteralExpr>())
+                return tuple_type->arg(lit->get_u64());
+        } else if(auto simd_type = ltype.isa<SimdType>()) {
+            return simd_type->elem_type();
+        }
+    }
 
     return sema.type_error();
 }
 
+#if 0
 Type MapExpr::check_as_method_call(InferSema& sema, Type expected) const {
     auto field_expr = lhs()->as<FieldExpr>();
     if (auto fn_method = sema.check(field_expr->lhs())->find_method(field_expr->symbol())) {
@@ -715,7 +699,6 @@ Type MapExpr::check_as_method_call(InferSema& sema, Type expected) const {
         error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
     return sema.type_error();
 }
-
 #endif
 
 Type BlockExprBase::check(InferSema& sema, Type expected) const {
