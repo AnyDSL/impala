@@ -618,13 +618,9 @@ Type InferSema::check_call(FnType fn_poly, std::vector<Type>& inferred_args, con
     return fn_mono->return_type();
 }
 
-#if 0
 Type FieldExpr::check(InferSema& sema, Type expected) const {
     if (auto type = check_as_struct(sema, expected))
         return type;
-
-    if (!lhs()->type()->is_error())
-        error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << lhs()->type() << "', but no field with that name was found\n";
     return sema.type_error();
 }
 
@@ -637,15 +633,11 @@ Type FieldExpr::check_as_struct(InferSema& sema, Type expected) const {
     }
 
     if (auto struct_app = ltype.isa<StructAppType>()) {
-        if (auto field_decl = struct_app->struct_abs_type()->struct_decl()->field_decl(symbol())) {
-            index_ = field_decl->index();
-            // a struct cannot have fields of type noret, so we can check against expected (noret defaults to false)
-            sema.expect_type(this, struct_app->elem(index_), expected, "field expression type");
-            return expected;
-        }
+        if (auto field_decl = struct_app->struct_abs_type()->struct_decl()->field_decl(symbol()))
+            return struct_app->elem(field_decl->index()) - expected;
     }
 
-    return Type();
+    return sema.type_error();
 }
 
 Type MapExpr::check(InferSema& sema, Type expected) const {
@@ -657,8 +649,6 @@ Type MapExpr::check(InferSema& sema, Type expected) const {
 
     return check_as_map(sema, expected);
 }
-
-#endif
 
 Type MapExpr::check_as_map(InferSema& sema, Type expected) const {
     auto ltype = sema.check(lhs());
