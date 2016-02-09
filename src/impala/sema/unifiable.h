@@ -206,7 +206,7 @@ public:
     TypeTable& typetable() const { return typetable_; }
     Kind kind() const { return kind_; }
     ArrayRef<Type> args() const { return ArrayRef<Type>(args_); }
-    const Type arg(size_t i) const { return args_[i]; }
+    Type arg(size_t i) const { return args_[i]; }
     size_t num_args() const { return args_.size(); }
     bool is_empty() const { assert(!args_.empty() || type_vars_.empty()); return args_.empty(); }
     ArrayRef<TypeVar> type_vars() const { return ArrayRef<TypeVar>(type_vars_); }

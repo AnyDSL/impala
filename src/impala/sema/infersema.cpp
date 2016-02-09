@@ -69,7 +69,7 @@ public:
         return Type();
     }
 
-    Type check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected);
+    Type check_call(FnType fn_poly, std::vector<Type>& inferred_args, const ASTTypes& type_args, ArrayRef<const Expr*> args, Type expected);
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
 
 private:
@@ -592,60 +592,33 @@ Type StructExpr::check(InferSema& sema, Type expected) const {
             }
         }
     }
+
     return sema.type_error();
 }
 
-#if 0
-Type InferSema::check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected) {
-    size_t num_type_args = type_args.size();
-    size_t num_args = args.size();
+Type InferSema::check_call(FnType fn_poly, std::vector<Type>& inferred_args, const ASTTypes& type_args, ArrayRef<const Expr*> args, Type expected) {
+    inferred_args.resize(fn_poly->num_type_vars());
 
-    if (num_type_args <= fn_poly->num_type_vars()) {
-        for (auto type_arg : type_args)
-            inferred_args.push_back(check(type_arg));
+    for (size_t i = 0, e = inferred_args.size(); i != e; ++i)
+        inferred_args[i] -= i < type_args.size() ? check(type_args[i]) : unknown_type().as<Type>();
 
-        for (size_t i = num_type_args, e = fn_poly->num_type_vars(); i != e; ++i)
-            inferred_args.push_back(unknown_type());
+    auto fn_mono = fn_poly->instantiate(inferred_args).as<FnType>();
+    auto max_arg_index = std::min(args.size(), fn_mono->num_args());
+    bool is_returning  = args.size()+1 == fn_mono->num_args();
 
-        assert(inferred_args.size() == fn_poly->num_type_vars());
-        auto fn_mono = fn_poly->instantiate(inferred_args).as<FnType>();
+    for (size_t i = 0; i != max_arg_index; ++i)
+        fn_mono->arg(i) -= args[i]->type();
 
-        bool is_contuation = num_args == fn_mono->num_args();
-        if (is_contuation || num_args+1 == fn_mono->num_args()) {
-            for (size_t i = 0; i != num_args; ++i)
-                check(args[i], fn_mono->arg(i), "argument type");
+    if (is_returning)
+        fn_mono->return_type() -= expected;
 
-            // note: the order is important because of the unifying side-effects of ==
-            if (is_contuation || fn_mono->return_type() == expected) { // TODO this looks overly complicated
-                // check if all type variables could be inferred
-                bool is_known = true;
-                for (size_t i = 0, e = inferred_args.size(); i != e; ++i) {
-                    if (!inferred_args[i]->is_known()) {
-                        is_known = false;
-                        error(expr->loc()) << "could not find instance for type variable '" << fn_poly->type_var(i) << "' of function '" << expr->lhs() << "'\n";
-                    }
-                }
+    for (size_t i = 0; i != max_arg_index; ++i)
+        check(args[i], fn_mono->arg(i));
 
-                if (is_known) {
-                    check_bounds(expr->loc(), fn_poly, inferred_args);
-                    if (is_contuation)
-                        return type_noret();
-                    if (!fn_mono->return_type()->is_noret())
-                        return expect_type(expr, fn_mono->return_type(), expected);
-                    error(expr) << "missing last argument to call continuation\n";
-                }
-            } else
-                error(expr->loc()) << "return type '" << fn_mono->return_type() << "' does not match expected type '" << expected << "'\n";
-        } else {
-            std::string rela = (num_args+1 < fn_mono->num_args()) ? "few" : "many";
-            size_t exp_args = fn_mono->num_args() > 0 ? fn_mono->num_args()-1 : 0;
-            error(expr->loc()) << "too " << rela << " arguments: " << num_args << " for " << exp_args << "\n";
-        }
-    } else
-        error(expr->loc()) << "too many type arguments to function: " << num_type_args << " for " << fn_poly->num_type_vars() << "\n";
-
-    return type_error();
+    return fn_mono->return_type();
 }
+
+#if 0
 
 Type FieldExpr::check(InferSema& sema, Type expected) const {
     if (auto type = check_as_struct(sema, expected))
