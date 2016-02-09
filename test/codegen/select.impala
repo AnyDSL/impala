@@ -1,0 +1,7 @@
+extern "thorin" {
+    fn select[T,U](T, U, U) -> U;
+}
+
+fn main() -> int {
+    if select(true, 23, 42) == 23 { 0 } else { 1 }
+}

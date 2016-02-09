@@ -31,14 +31,7 @@ SET ( SOURCES
     tokenlist.h
 )
 
-
-IF ( BUILD_STATIC )
-    MESSAGE ( "Building impala as static library ..." )
-    ADD_LIBRARY ( ${LIBRARY_NAME} STATIC ${SOURCES} )
-ELSE ()
-    MESSAGE ( "Building impala as shared library ..." )
-    ADD_LIBRARY ( ${LIBRARY_NAME} SHARED ${SOURCES} )
-ENDIF ()
+ADD_LIBRARY ( ${LIBRARY_NAME} ${SOURCES} )
 TARGET_LINK_LIBRARIES ( ${LIBRARY_NAME} ${THORIN_LIBRARIES} )
 
 ADD_EXECUTABLE( ${EXECUTABLE_NAME} main.cpp )
