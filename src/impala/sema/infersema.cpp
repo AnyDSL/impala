@@ -173,7 +173,11 @@ void TypeParamList::check_type_params(InferSema& sema) const {
     }
 }
 
-Type LocalDecl::check(InferSema& sema) const { return sema.check(ast_type()); }
+Type LocalDecl::check(InferSema& sema) const {
+    if (ast_type())
+        return sema.check(ast_type());
+    return type();
+}
 
 Type Fn::check_body(InferSema& sema, FnType fn_type) const {
     return sema.check(body(), fn_type->return_type());
