@@ -49,7 +49,7 @@ public:
     void check(const Item* n) { n->check(*this); }
     Type check(const Expr* expr) { expr->check(*this); return expr->type(); }
     void check(const Stmt* n) { n->check(*this); }
-    Type check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args, Type expected);
+    Type check_call(const MapExpr* expr, FnType fn_poly, const std::vector<Type>& inferred_args, ArrayRef<const Expr*> args);
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
 
     static Type turn_cast_inside_out(const Expr* expr) {
@@ -327,8 +327,8 @@ void TraitDecl::check(TypeSema& sema) const {
         sema.check(method);
 }
 
-#if 0
 void ImplItem::check(TypeSema& sema) const {
+#if 0
     check_type_params(sema);
     Type for_type = sema.check(this->ast_type());
 
@@ -370,8 +370,8 @@ void ImplItem::check(TypeSema& sema) const {
     }
 
     // TODO: check that all methods are implemented
-}
 #endif
+}
 
 //------------------------------------------------------------------------------
 
@@ -611,12 +611,12 @@ void CastExpr::check(TypeSema& sema) const {
     }
 }
 
-#if 0
 void DefiniteArrayExpr::check(TypeSema& sema) const {
+#if 0
     for (auto arg : args())
         sema.check(arg, elem_type, "element of definite array expression");
-}
 #endif
+}
 
 void RepeatedDefiniteArrayExpr::check(TypeSema& sema) const {
     sema.check(value());
@@ -628,8 +628,8 @@ void IndefiniteArrayExpr::check(TypeSema& sema) const {
     sema.check(elem_ast_type());
 }
 
-#if 0
 void TupleExpr::check(TypeSema& sema) const {
+#if 0
     std::vector<Type> types;
     if (auto exp_tup = expected.isa<TupleType>()) {
         if (exp_tup->num_args() != num_args())
@@ -647,8 +647,8 @@ void TupleExpr::check(TypeSema& sema) const {
         }
     }
     return sema.tuple_type(types);
-}
 #endif
+}
 
 void SimdExpr::check(TypeSema& sema) const {
     Type elem_type;
@@ -662,9 +662,8 @@ void SimdExpr::check(TypeSema& sema) const {
     }
 }
 
-#if 0
-
 void StructExpr::check(TypeSema& sema) const {
+#if 0
     if (auto decl = path()->decl()) {
         StructAppType struct_app;
 
@@ -733,9 +732,11 @@ void StructExpr::check(TypeSema& sema) const {
             error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
     }
     return sema.type_error();
+#endif
 }
 
-Type TypeSema::check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& type_args, std::vector<Type>& inferred_args, ArrayRef<const Expr*> args) {
+Type TypeSema::check_call(const MapExpr* expr, FnType fn_poly, const std::vector<Type>& inferred_args, ArrayRef<const Expr*> args) {
+#if 0
     size_t num_type_args = type_args.size();
     size_t num_args = args.size();
 
@@ -784,18 +785,23 @@ Type TypeSema::check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& t
         error(expr->loc()) << "too many type arguments to function: " << num_type_args << " for " << fn_poly->num_type_vars() << "\n";
 
     return type_error();
+#endif
+    return Type();
 }
 
 void FieldExpr::check(TypeSema& sema) const {
+#if 0
     if (auto type = check_as_struct(sema, expected))
         return type;
 
     if (!lhs()->type()->is_error())
         error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << lhs()->type() << "', but no field with that name was found\n";
     return sema.type_error();
+#endif
 }
 
 Type FieldExpr::check_as_struct(TypeSema& sema) const {
+#if 0
     auto ltype = sema.check(lhs());
     if (ltype.isa<PtrType>()) {
         ltype.clear();
@@ -811,9 +817,12 @@ Type FieldExpr::check_as_struct(TypeSema& sema) const {
             return expected;
         }
     }
+#endif
+    return Type();
 }
 
 void MapExpr::check(TypeSema& sema) const {
+#if 0
     if (auto field_expr = lhs()->isa<FieldExpr>()) {
         if (field_expr->check_as_struct(sema, sema.unknown_type()))
             return check_as_map(sema, expected);
@@ -821,9 +830,11 @@ void MapExpr::check(TypeSema& sema) const {
     }
 
     return check_as_map(sema, expected);
+#endif
 }
 
 Type MapExpr::check_as_map(TypeSema& sema) const {
+#if 0
     auto ltype = sema.check(lhs());
     if (ltype.isa<PtrType>()) {
         ltype.clear();
@@ -866,9 +877,12 @@ Type MapExpr::check_as_map(TypeSema& sema) const {
         error(this) << "incorrect type for map expression\n";
 
     return sema.type_error();
+#endif
+    return Type();
 }
 
 Type MapExpr::check_as_method_call(TypeSema& sema) const {
+#if 0
     auto field_expr = lhs()->as<FieldExpr>();
     if (auto fn_method = sema.check(field_expr->lhs())->find_method(field_expr->symbol())) {
         Array<const Expr*> nargs(num_args() + 1);
@@ -878,9 +892,9 @@ Type MapExpr::check_as_method_call(TypeSema& sema) const {
     } else
         error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
     return sema.type_error();
-}
-
 #endif
+    return Type();
+}
 
 void BlockExprBase::check(TypeSema& sema) const {
     THORIN_PUSH(sema.cur_block_, this);
@@ -958,8 +972,8 @@ void WhileExpr::check(TypeSema& sema) const {
     sema.check(body());
 }
 
-#if 0
 void ForExpr::check(TypeSema& sema) const {
+#if 0
     auto forexpr = expr();
     if (auto prefix = forexpr->isa<PrefixExpr>())
         if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HLT)
@@ -985,8 +999,8 @@ void ForExpr::check(TypeSema& sema) const {
 
     error(expr()) << "the looping expression does not support the 'for' protocol\n";
     return sema.unit();
-}
 #endif
+}
 
 //------------------------------------------------------------------------------
 

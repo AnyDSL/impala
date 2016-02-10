@@ -1164,11 +1164,11 @@ public:
     virtual void check(BorrowSema&) const override;
 
     Type check_as_struct(InferSema&, Type) const;
-    virtual void check(TypeSema&) const override;
-    Type check_as_struct(TypeSema&, Type) const;
+    Type check_as_struct(TypeSema&) const;
 
 private:
     virtual Type check(InferSema&, Type) const override;
+    virtual void check(TypeSema&) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
@@ -1349,13 +1349,13 @@ public:
     virtual void check(BorrowSema&) const override;
 
     Type check_as_map(InferSema&, Type) const;
-    virtual void check(TypeSema&) const override;
-    Type check_as_map(TypeSema&, Type) const;
+    Type check_as_map(TypeSema&) const;
     Type check_as_method_call(InferSema&, Type) const;
-    Type check_as_method_call(TypeSema&, Type) const;
+    Type check_as_method_call(TypeSema&) const;
 
 private:
     virtual Type check(InferSema&, Type) const override;
+    virtual void check(TypeSema&) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual thorin::Def remit(CodeGen&) const override;
 
