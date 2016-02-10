@@ -94,7 +94,6 @@ void type_inference(Init& init, const ModContents* mod) {
 
 //------------------------------------------------------------------------------
 
-#if 0
 TraitApp InferSema::instantiate(const Location& loc, TraitAbs trait_abs, Type self, ArrayRef<const ASTType*> args) {
     if ((args.size()+1) == trait_abs->num_type_vars()) {
         std::vector<Type> type_args;
@@ -155,7 +154,6 @@ bool InferSema::check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> 
 
     return result;
 }
-#endif
 
 //------------------------------------------------------------------------------
 
@@ -351,10 +349,9 @@ void StaticItem::check(InferSema& sema) const {
         sema.constrain(this, init()->type());
 }
 
-#if 0
-
 void TraitDecl::check(InferSema& sema) const {
-    todo_ |= sema.check(self_param());
+#if 0
+    sema.check(self_param());
     TypeVar self_var = self_param()->type_var();
     trait_abs_ = sema.trait_abs(this);
     trait_abs_->bind(self_var);
@@ -372,9 +369,11 @@ void TraitDecl::check(InferSema& sema) const {
 
     for (auto method : methods())
         todo_ |= sema.check(method);
+#endif
 }
 
 void ImplItem::check(InferSema& sema) const {
+#if 0
     check_type_params(sema);
     todo_ |= sema.check(ast_type());
     Type for_type = ast_type()->type();
@@ -417,9 +416,8 @@ void ImplItem::check(InferSema& sema) const {
             }
         }
     }
-}
-
 #endif
+}
 
 
 //------------------------------------------------------------------------------
