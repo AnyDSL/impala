@@ -677,19 +677,18 @@ Type MapExpr::check_as_map(InferSema& sema, Type expected) const {
     return sema.type_error();
 }
 
-#if 0
 Type MapExpr::check_as_method_call(InferSema& sema, Type expected) const {
     auto field_expr = lhs()->as<FieldExpr>();
     if (auto fn_method = sema.check(field_expr->lhs())->find_method(field_expr->symbol())) {
         Array<const Expr*> nargs(num_args() + 1);
         nargs[0] = field_expr->lhs();
         std::copy(args().begin(), args().end(), nargs.begin()+1);
-        return field_expr->type_ = sema.check_call(this, fn_method, type_args(), inferred_args_, nargs, expected);
-    } else
-        error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
+        field_expr->type_ -= sema.check_call(fn_method, inferred_args_, type_args(), nargs, expected);
+        return field_expr->type_;
+    }
+
     return sema.type_error();
 }
-#endif
 
 Type BlockExprBase::check(InferSema& sema, Type expected) const {
     for (auto stmt : stmts())
