@@ -23,5 +23,5 @@ fn f[T: A + B, U: A](a: T, b: U) -> int {
 }
 
 fn main() -> int {
-    if f(23, 42) == 0 // TODO { 0 } else { 1 }
+    if f(23, 42) == 0 { 0 } else { 1 }
 }
