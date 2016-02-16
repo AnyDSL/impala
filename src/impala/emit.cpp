@@ -423,14 +423,14 @@ void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
 void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
     switch (kind()) {
         case ANDAND: {
-            JumpTarget x("and_extra");
+            JumpTarget x(rhs()->loc().begin(), "and_extra");
             cg.emit_branch(lhs(), x, f);
             if (cg.enter(x))
                 cg.emit_branch(rhs(), t, f);
             return;
         }
         case OROR: {
-            JumpTarget x("or_extra");
+            JumpTarget x(rhs()->loc().begin(), "or_extra");
             cg.emit_branch(lhs(), t, x);
             if (cg.enter(x))
                 cg.emit_branch(rhs(), t, f);
@@ -445,14 +445,14 @@ void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
 Def InfixExpr::remit(CodeGen& cg) const {
     switch (kind()) {
         case ANDAND: {
-            JumpTarget t("and_true"), f("and_false"), x("and_exit");
+            JumpTarget t(lhs()->loc().begin(), "and_true"), f(rhs()->loc().begin(), "and_false"), x(loc().end(), "and_exit");
             cg.emit_branch(lhs(), t, f);
             if (cg.enter(t)) cg.emit_jump(rhs(), x);
             if (cg.enter(f)) cg.emit_jump(false, x);
             return cg.converge(this, x);
         }
         case OROR: {
-            JumpTarget t("or_true"), f("or_false"), x("or_exit");
+            JumpTarget t(lhs()->loc().begin(), "or_true"), f(rhs()->loc().begin(), "or_false"), x(loc().end(), "or_exit");
             cg.emit_branch(lhs(), t, f);
             if (cg.enter(t)) cg.emit_jump(true, x);
             if (cg.enter(f)) cg.emit_jump(rhs(), x);
@@ -628,7 +628,7 @@ Def RunBlockExpr::remit(CodeGen& cg) const {
 #endif
 
 void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
-    JumpTarget t("if_then"), f("if_else");
+    JumpTarget t(then_expr()->loc().begin(), "if_then"), f(else_expr()->loc().begin(), "if_else");
     cg.emit_branch(cond(), t, f);
     if (cg.enter(t))
         cg.emit_jump(then_expr(), x);
@@ -638,12 +638,12 @@ void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
 }
 
 Def IfExpr::remit(CodeGen& cg) const {
-    JumpTarget x("next");
+    JumpTarget x(loc().end(), "next");
     return cg.converge(this, x);
 }
 
 Def WhileExpr::remit(CodeGen& cg) const {
-    JumpTarget x("next");
+    JumpTarget x(loc().end(), "next");
     auto break_lambda = cg.create_continuation(break_decl());
 
     cg.emit_jump(this, x);
@@ -652,11 +652,11 @@ Def WhileExpr::remit(CodeGen& cg) const {
 }
 
 void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
-    JumpTarget head_bb("while_head"), body_bb("while_body");
+    JumpTarget head_bb(cond()->loc().begin(), "while_head"), body_bb(body()->loc().begin(), "while_body");
     auto continue_lambda = cg.create_continuation(continue_decl());
 
     cg.jump(head_bb);
-    cg.enter_unsealed(head_bb, loc());
+    cg.enter_unsealed(head_bb);
     cg.emit_branch(cond(), body_bb, exit_bb);
     if (cg.enter(body_bb)) {
         cg.remit(body());
