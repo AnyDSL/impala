@@ -801,7 +801,7 @@ private:
 class TraitDecl : public NamedItem, public Decl, public TypeParamList {
 public:
     TraitDecl()
-        : self_param_(thorin::Location(loc().pos1(), loc().pos1()))
+        : self_param_(thorin::Location(loc().begin(), loc().begin()))
     {}
 
     const AutoVector<const ASTTypeApp*>& super_traits() const { return super_traits_; }
