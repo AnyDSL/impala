@@ -27,10 +27,10 @@ public:
         return Def();
     }
 
-    void emit_jump(bool val, JumpTarget& x) {
+    void emit_jump_boolean(bool val, JumpTarget& x, const thorin::Location& loc) {
         if (is_reachable()) {
-            cur_bb->set_value(1, world().literal(val, Location()));
-            jump(x);
+            cur_bb->set_value(1, world().literal(val, loc));
+            jump(x, loc);
         }
     }
 
@@ -46,9 +46,9 @@ public:
         set_mem(lambda->param(0));
     }
 
-    void jump_to_continuation(Lambda* lambda) {
+    void jump_to_continuation(Lambda* lambda, const thorin::Location& loc) {
         if (is_reachable())
-            cur_bb->jump(lambda, lambda->type_args(), {get_mem()});
+            cur_bb->jump(lambda, lambda->type_args(), {get_mem()}, loc);
         set_continuation(lambda);
     }
 
@@ -233,9 +233,9 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
             args.push_back(mem);
             for (size_t i = 0, e = tuple->num_args(); i != e; ++i)
                 args.push_back(cg.extract(def, i, loc));
-            cg.cur_bb->jump(ret_param(), {}, args);
+            cg.cur_bb->jump(ret_param(), {}, args, loc.end());
         } else
-            cg.cur_bb->jump(ret_param(), {}, {mem, def});
+            cg.cur_bb->jump(ret_param(), {}, {mem, def}, loc.end());
     }
 }
 
@@ -329,11 +329,11 @@ void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     if (auto def = cg.remit(this)) {
         assert(cg.is_reachable());
         cg.cur_bb->set_value(1, def);
-        cg.jump(x);
+        cg.jump(x, loc().end());
     } else
         assert(!cg.is_reachable());
 }
-void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.branch(cg.remit(this), t, f); }
+void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.branch(cg.remit(this), t, f, loc().end()); }
 Def EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}, loc()); }
 
 Def LiteralExpr::remit(CodeGen& cg) const {
@@ -417,7 +417,7 @@ void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
     if (kind() == NOT && cg.convert(type())->is_bool())
         cg.emit_branch(rhs(), f, t);
     else
-        cg.branch(cg.remit(rhs()), t, f);
+        cg.branch(cg.remit(rhs()), t, f, loc().end());
 }
 
 void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
@@ -437,7 +437,7 @@ void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
             return;
         }
         default:
-            cg.branch(cg.remit(this), t, f);
+            cg.branch(cg.remit(this), t, f, loc().end());
             return;
     }
 }
@@ -448,13 +448,13 @@ Def InfixExpr::remit(CodeGen& cg) const {
             JumpTarget t(lhs()->loc().begin(), "and_true"), f(rhs()->loc().begin(), "and_false"), x(loc().end(), "and_exit");
             cg.emit_branch(lhs(), t, f);
             if (cg.enter(t)) cg.emit_jump(rhs(), x);
-            if (cg.enter(f)) cg.emit_jump(false, x);
+            if (cg.enter(f)) cg.emit_jump_boolean(false, x, lhs()->loc().end());
             return cg.converge(this, x);
         }
         case OROR: {
             JumpTarget t(lhs()->loc().begin(), "or_true"), f(rhs()->loc().begin(), "or_false"), x(loc().end(), "or_exit");
             cg.emit_branch(lhs(), t, f);
-            if (cg.enter(t)) cg.emit_jump(true, x);
+            if (cg.enter(t)) cg.emit_jump_boolean(true, x, rhs()->loc().end());
             if (cg.enter(f)) cg.emit_jump(rhs(), x);
             return cg.converge(this, x);
         }
@@ -552,7 +552,7 @@ Def MapExpr::remit(CodeGen& cg) const {
 
         auto ret_type = args().size() == fn_mono()->num_args() ? thorin::Type() : cg.convert(fn_mono()->return_type());
 
-        auto ret = cg.call(dst, type_args, defs, ret_type);
+        auto ret = cg.call(dst, type_args, defs, ret_type, loc());
         if (ret_type)
             cg.set_mem(cg.cur_bb->param(0));
         return ret;
@@ -584,14 +584,14 @@ Def RunBlockExpr::remit(CodeGen& cg) const {
         auto lrun  = w.lambda(w.fn_type({w.mem_type(), fn_mem}), loc(), "run_block");
         auto run = w.run(lrun, loc());
         auto old_bb = cg.cur_bb;
-        cg.cur_bb->jump(run, {}, {cg.get_mem(), w.bottom(fn_mem, loc())});
+        cg.cur_bb->jump(run, {}, {cg.get_mem(), w.bottom(fn_mem, loc())}, loc());
         cg.cur_bb = lrun;
         cg.set_mem(cg.cur_bb->param(0));
         auto res = BlockExprBase::remit(cg);
         if (cg.is_reachable()) {
             assert(res);
             auto next = w.lambda(fn_mem, loc(), "run_next");
-            cg.cur_bb->jump(lrun->param(1), {}, {cg.get_mem()});
+            cg.cur_bb->jump(lrun->param(1), {}, {cg.get_mem()}, loc());
             old_bb->update_arg(1, next);
             cg.cur_bb = next;
             cg.set_mem(cg.cur_bb->param(0));
@@ -634,7 +634,7 @@ void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
         cg.emit_jump(then_expr(), x);
     if (cg.enter(f))
         cg.emit_jump(else_expr(), x);
-    cg.jump(x);
+    cg.jump(x, loc().end());
 }
 
 Def IfExpr::remit(CodeGen& cg) const {
@@ -647,7 +647,7 @@ Def WhileExpr::remit(CodeGen& cg) const {
     auto break_lambda = cg.create_continuation(break_decl());
 
     cg.emit_jump(this, x);
-    cg.jump_to_continuation(break_lambda);
+    cg.jump_to_continuation(break_lambda, loc().end());
     return cg.world().tuple({}, loc());
 }
 
@@ -655,14 +655,14 @@ void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
     JumpTarget head_bb(cond()->loc().begin(), "while_head"), body_bb(body()->loc().begin(), "while_body");
     auto continue_lambda = cg.create_continuation(continue_decl());
 
-    cg.jump(head_bb);
+    cg.jump(head_bb, cond()->loc().end());
     cg.enter_unsealed(head_bb);
     cg.emit_branch(cond(), body_bb, exit_bb);
     if (cg.enter(body_bb)) {
         cg.remit(body());
-        cg.jump_to_continuation(continue_lambda);
+        cg.jump_to_continuation(continue_lambda, cond()->loc().end());
     }
-    cg.jump(head_bb);
+    cg.jump(head_bb, cond()->loc().end());
     head_bb.seal();
     cg.enter(exit_bb);
 }
@@ -690,7 +690,7 @@ Def ForExpr::remit(CodeGen& cg) const {
     if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun, loc());
 
     defs.front() = cg.get_mem(); // now get the current memory monad
-    cg.call(fun, {}, defs, thorin::Type());
+    cg.call(fun, {}, defs, thorin::Type(), map_expr->loc());
 
     cg.set_continuation(break_lambda);
     if (break_lambda->num_params() == 2)
