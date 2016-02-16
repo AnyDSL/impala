@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
         }
 
         if (!prg->items().empty())
-            prg->set_loc(prg->items().front()->pos1(), prg->items().back()->pos2());
+            prg->set_loc(prg->items().front()->loc().begin(), prg->items().back()->loc().end());
         else
             prg->set_loc(infiles.front().c_str(), 1, 1, 1, 1);
 
