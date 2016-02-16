@@ -35,7 +35,7 @@ Lexer::Lexer(std::istream& stream, const char* filename)
 int Lexer::next() {
     int c = stream_.get();
 
-    loc_.set_pos2(pos_);
+    loc_.set_end(pos_);
 
     if (c == '\n') {
         pos_.inc_line();
@@ -49,7 +49,7 @@ int Lexer::next() {
 Token Lexer::lex() {
     while (true) {
         std::string str; // the token string is concatenated here
-        loc_.set_pos1(pos_);
+        loc_.set_begin(pos_);
 
         // end of file
         if (accept(std::istream::traits_type::eof()))
@@ -111,7 +111,7 @@ Token Lexer::lex() {
 #define IMPALA_WITHIN_COMMENT(delim) \
         while (true) { \
             if (accept(std::istream::traits_type::eof())) { \
-                error(loc_.pos1()) << "unterminated comment\n"; \
+                error(loc_.begin()) << "unterminated comment\n"; \
                 return Token(loc_, Token::END_OF_FILE); \
             } \
             if (delim) break; \
