@@ -738,6 +738,7 @@ void LetStmt::emit(CodeGen& cg) const {
 void emit(World& world, const ModContents* mod) {
     CodeGen cg(world);
     mod->emit(cg);
+    clear_value_numbering_table(world);
 }
 
 //------------------------------------------------------------------------------
