@@ -35,7 +35,7 @@ public:
     }
 
     Lambda* create_continuation(const LocalDecl* decl) {
-        auto result = world().lambda(convert(decl->type()).as<thorin::FnType>(), decl->loc(), decl->symbol().str());
+        auto result = lambda(convert(decl->type()).as<thorin::FnType>(), decl->loc(), decl->symbol().str());
         result->param(0)->name = "mem";
         decl->var_ = Var::create_val(*this, result);
         return result;
@@ -197,7 +197,7 @@ Var LocalDecl::emit(CodeGen& cg, const Def* init) const {
 }
 
 Lambda* Fn::emit_head(CodeGen& cg, const Location& loc) const {
-    return lambda_ = cg.world().lambda(cg.convert(fn_type()).as<thorin::FnType>(), loc, fn_symbol().remove_quotation());
+    return lambda_ = cg.lambda(cg.convert(fn_type()).as<thorin::FnType>(), loc, fn_symbol().remove_quotation());
 }
 
 void Fn::emit_body(CodeGen& cg, const Location& loc) const {
