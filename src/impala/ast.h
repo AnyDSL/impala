@@ -272,10 +272,11 @@ private:
 
 class PtrASTType : public ASTType {
 public:
-    char kind() const { assert(is_owned() || is_borrowed()); return kind_; }
+    enum Kind { Borrowed, Mut, Owned };
+
+    Kind kind() const { return kind_; }
+    std::string prefix() const;
     const ASTType* referenced_type() const { return referenced_type_; }
-    bool is_owned() const { return kind_ == '~'; }
-    bool is_borrowed() const { return kind_ == '&'; }
     int addr_space() const { return addr_space_; }
 
     virtual std::ostream& stream(std::ostream&) const override;
@@ -285,7 +286,7 @@ public:
 private:
     virtual Type check(TypeSema&) const override;
 
-    char kind_;
+    Kind kind_;
     int addr_space_;
     AutoPtr<const ASTType> referenced_type_;
 
