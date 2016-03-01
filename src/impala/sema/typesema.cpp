@@ -292,12 +292,12 @@ Type PrimASTType::check(TypeSema& sema) const {
 
 Type PtrASTType::check(TypeSema& sema) const {
     auto type = sema.check(referenced_type());
-    if (is_owned())
-        return sema.owned_ptr_type(type, addr_space());
-    if (is_borrowed())
-        return sema.borrowd_ptr_type(type, addr_space());
-    assert(false && "only owned and borrowed ptrs are supported");
-    return Type();
+    switch (kind()) {
+        case Borrowed: return sema.borrowd_ptr_type(type, addr_space());
+        case Mut:      return sema.mut_ptr_type(type, addr_space());
+        case Owned:    return sema.owned_ptr_type(type, addr_space());
+    }
+    THORIN_UNREACHABLE;
 }
 
 Type IndefiniteArrayASTType::check(TypeSema& sema) const {

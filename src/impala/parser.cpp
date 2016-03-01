@@ -765,19 +765,29 @@ const PtrASTType* Parser::parse_ptr_type() {
     if (la() == Token::ANDAND) {
         auto begin = la().loc().begin();
         auto inner = new PtrASTType();
-        inner->kind_ = '&';
         lex();
+        inner->kind_ = accept(Token::MUT) ? PtrASTType::Mut : PtrASTType::Borrowed;
         inner->addr_space_ = parse_addr_space();
         inner->referenced_type_ = parse_type();
         auto outer = new PtrASTType();
-        outer->kind_ = '&';
+        outer->kind_ = PtrASTType::Borrowed;
         outer->referenced_type_ = inner;
         inner->set_loc(begin, prev_loc().end());
         outer->loc_ = inner->loc();
         return outer;
     }
     auto ptr_type = loc(new PtrASTType());
-    ptr_type->kind_ = lex().symbol().str()[0];
+
+    if (accept(Token::TILDE))
+        ptr_type->kind_ = PtrASTType::Owned;
+    else {
+        eat(Token::AND);
+        if (accept(Token::MUT))
+            ptr_type->kind_ = PtrASTType::Mut;
+        else
+            ptr_type->kind_ = PtrASTType::Borrowed;
+    }
+
     ptr_type->addr_space_ = parse_addr_space();
     ptr_type->referenced_type_ = parse_type();
     return ptr_type;
