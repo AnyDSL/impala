@@ -30,6 +30,15 @@ const char* Visibility::str() {
     return "";
 }
 
+std::string PtrASTType::prefix() const {
+    switch (kind()) {
+        case Borrowed: return "&";
+        case Mut:      return "&mut";
+        case Owned:    return "~";
+    }
+    THORIN_UNREACHABLE;
+}
+
 const FnASTType* FnASTType::ret_fn_type() const {
     if (num_args() != 0) {
         if (auto fn_type = args().back()->isa<FnASTType>())

@@ -35,21 +35,22 @@ class DefiniteArrayTypeNode;    typedef Proxy<DefiniteArrayTypeNode>    Definite
 class FnTypeNode;               typedef Proxy<FnTypeNode>               FnType;
 class ImplNode;                 typedef Proxy<ImplNode>                 Impl;
 class IndefiniteArrayTypeNode;  typedef Proxy<IndefiniteArrayTypeNode>  IndefiniteArrayType;
-class SimdTypeNode;             typedef Proxy<SimdTypeNode>             SimdType;
 class KnownTypeNode;            typedef Proxy<KnownTypeNode>            KnownType;
+class MutPtrTypeNode;           typedef Proxy<MutPtrTypeNode>           MutPtrType;
 class NoRetTypeNode;            typedef Proxy<NoRetTypeNode>            NoRetType;
 class OwnedPtrTypeNode;         typedef Proxy<OwnedPtrTypeNode>         OwnedPtrType;
 class PrimTypeNode;             typedef Proxy<PrimTypeNode>             PrimType;
 class PtrTypeNode;              typedef Proxy<PtrTypeNode>              PtrType;
+class SimdTypeNode;             typedef Proxy<SimdTypeNode>             SimdType;
 class StructAbsTypeNode;        typedef Proxy<StructAbsTypeNode>        StructAbsType;
 class StructAppTypeNode;        typedef Proxy<StructAppTypeNode>        StructAppType;
-class TypedefAbsNode;           typedef Proxy<TypedefAbsNode>           TypedefAbs;
 class TraitAbsNode;             typedef Proxy<TraitAbsNode>             TraitAbs;
 class TraitAppNode;             typedef Proxy<TraitAppNode>             TraitApp;
 class TupleTypeNode;            typedef Proxy<TupleTypeNode>            TupleType;
 class TypeErrorNode;            typedef Proxy<TypeErrorNode>            TypeError;
 class TypeNode;                 typedef Proxy<TypeNode>                 Type;
 class TypeVarNode;              typedef Proxy<TypeVarNode>              TypeVar;
+class TypedefAbsNode;           typedef Proxy<TypedefAbsNode>           TypedefAbs;
 class Unifiable;                typedef Proxy<Unifiable>                Uni;
 class UnknownTypeNode;          typedef Proxy<UnknownTypeNode>          UnknownType;
 
@@ -172,6 +173,7 @@ enum Kind {
     Kind_fn,
     Kind_impl,
     Kind_indefinite_array,
+    Kind_mut_ptr,
     Kind_noret,
     Kind_owned_ptr,
     Kind_simd,
@@ -571,18 +573,6 @@ private:
     int addr_space_;
 };
 
-class OwnedPtrTypeNode : public PtrTypeNode {
-public:
-    OwnedPtrTypeNode(TypeTable& typetable, Type referenced_type, int addr_space)
-        : PtrTypeNode(typetable, Kind_owned_ptr, referenced_type, addr_space)
-    {}
-
-    virtual std::ostream& stream(std::ostream&) const override;
-
-private:
-    virtual Type vinstantiate(SpecializeMap&) const override;
-};
-
 class BorrowedPtrTypeNode : public PtrTypeNode {
 public:
     BorrowedPtrTypeNode(TypeTable& typetable, Type referenced_type, int addr_space)
@@ -591,6 +581,30 @@ public:
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const override;
+};
+
+class MutPtrTypeNode : public PtrTypeNode {
+public:
+    MutPtrTypeNode(TypeTable& typetable, Type referenced_type, int addr_space)
+        : PtrTypeNode(typetable, Kind_mut_ptr, referenced_type, addr_space)
+    {}
+
+    virtual std::ostream& stream(std::ostream&) const override;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const override;
+};
+
+class OwnedPtrTypeNode : public PtrTypeNode {
+public:
+    OwnedPtrTypeNode(TypeTable& typetable, Type referenced_type, int addr_space)
+        : PtrTypeNode(typetable, Kind_owned_ptr, referenced_type, addr_space)
+    {}
+
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;

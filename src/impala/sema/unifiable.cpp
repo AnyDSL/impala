@@ -482,6 +482,10 @@ Type IndefiniteArrayTypeNode::vinstantiate(SpecializeMap& map) const {
     return map[this] = *typetable().indefinite_array_type(elem_type()->specialize(map));
 }
 
+Type MutPtrTypeNode::vinstantiate(SpecializeMap& map) const {
+    return map[this] = *typetable().mut_ptr_type(referenced_type()->specialize(map), addr_space());
+}
+
 Type OwnedPtrTypeNode::vinstantiate(SpecializeMap& map) const {
     return map[this] = *typetable().owned_ptr_type(referenced_type()->specialize(map), addr_space());
 }
