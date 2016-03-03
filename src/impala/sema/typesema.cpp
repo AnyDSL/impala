@@ -49,7 +49,7 @@ public:
     void check(const Item* n) { n->check(*this); }
     Type check(const Expr* expr) { expr->check(*this); return expr->type(); }
     void check(const Stmt* n) { n->check(*this); }
-    Type check_call(const MapExpr* expr, FnType fn_poly, const std::vector<Type>& inferred_args, ArrayRef<const Expr*> args);
+    Type check_call(const MapExpr* expr, FnType fn_poly, const std::vector<Type>& type_args, ArrayRef<const Expr*> args);
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
 
     static Type turn_cast_inside_out(const Expr* expr) {
@@ -327,7 +327,7 @@ void TraitDecl::check(TypeSema& sema) const {
         sema.check(method);
 }
 
-void ImplItem::check(TypeSema& sema) const {
+void ImplItem::check(TypeSema& /*sema*/) const {
 #if 0
     check_type_params(sema);
     Type for_type = sema.check(this->ast_type());
@@ -611,7 +611,7 @@ void CastExpr::check(TypeSema& sema) const {
     }
 }
 
-void DefiniteArrayExpr::check(TypeSema& sema) const {
+void DefiniteArrayExpr::check(TypeSema& /*sema*/) const {
 #if 0
     for (auto arg : args())
         sema.check(arg, elem_type, "element of definite array expression");
@@ -628,7 +628,7 @@ void IndefiniteArrayExpr::check(TypeSema& sema) const {
     sema.check(elem_ast_type());
 }
 
-void TupleExpr::check(TypeSema& sema) const {
+void TupleExpr::check(TypeSema& /*sema*/) const {
 #if 0
     std::vector<Type> types;
     if (auto exp_tup = expected.isa<TupleType>()) {
@@ -662,35 +662,35 @@ void SimdExpr::check(TypeSema& sema) const {
     }
 }
 
-void StructExpr::check(TypeSema& sema) const {
+void StructExpr::check(TypeSema& /*sema*/) const {
 #if 0
     if (auto decl = path()->decl()) {
         StructAppType struct_app;
 
         if (auto typeable_decl = decl->isa<TypeableDecl>()) {
             if (auto decl_type = typeable_decl->type()) {
-                if (num_type_args() <= decl_type->num_type_vars()) {
+                if (num_ast_type_args() <= decl_type->num_type_vars()) {
                     StructAppType exp_type = expected.isa<StructAppType>();
 
                     // use the expected type if there is any
                     if (exp_type && (decl_type == exp_type->struct_abs_type())) {
                         for (size_t i = 0; i < exp_type->num_args(); ++i) {
-                            if ((i < num_type_args()) && (exp_type->arg(i) != sema.check(type_arg(i))))
+                            if ((i < num_ast_type_args()) && (exp_type->arg(i) != sema.check(type_arg(i))))
                                 error(type_arg(i)) << "expected different argument for type parameter '" << decl_type->type_var(i) << "': expected '" << exp_type->arg(i) << "' but found '" << type_arg(i)->type() << "'\n";
-                            inferred_args_.push_back(exp_type->arg(i));
+                            type_args_.push_back(exp_type->arg(i));
                         }
 
-                        assert(inferred_args_.size() == decl_type->num_type_vars());
+                        assert(type_args_.size() == decl_type->num_type_vars());
                         struct_app = exp_type;
                     } else { // if no expected type was given fill type arguments with unknowns
-                        for (auto type_arg : type_args())
-                            inferred_args_.push_back(sema.check(type_arg));
+                        for (auto type_arg : ast_type_args())
+                            type_args_.push_back(sema.check(type_arg));
 
-                        for (size_t i = num_type_args(), e = decl_type->num_type_vars(); i != e; ++i)
-                            inferred_args_.push_back(sema.unknown_type());
+                        for (size_t i = num_ast_type_args(), e = decl_type->num_type_vars(); i != e; ++i)
+                            type_args_.push_back(sema.unknown_type());
 
-                        assert(inferred_args_.size() == decl_type->num_type_vars());
-                        auto instantiated_decl_type = decl_type->instantiate(inferred_args_);
+                        assert(type_args_.size() == decl_type->num_type_vars());
+                        auto instantiated_decl_type = decl_type->instantiate(type_args_);
 
                         if (instantiated_decl_type.isa<StructAppType>())
                             struct_app = instantiated_decl_type.as<StructAppType>();
@@ -698,7 +698,7 @@ void StructExpr::check(TypeSema& sema) const {
                             error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
                     }
                 } else
-                    error(this) << "too many type arguments to structure: " << num_type_args() << " for " << decl_type->num_type_vars() << "\n";
+                    error(this) << "too many type arguments to structure: " << num_ast_type_args() << " for " << decl_type->num_type_vars() << "\n";
 
                 if (struct_app) {
                     auto struct_abs  = struct_app->struct_abs_type();
@@ -735,20 +735,20 @@ void StructExpr::check(TypeSema& sema) const {
 #endif
 }
 
-Type TypeSema::check_call(const MapExpr* expr, FnType fn_poly, const std::vector<Type>& inferred_args, ArrayRef<const Expr*> args) {
+Type TypeSema::check_call(const MapExpr* /*expr*/, FnType /*fn_poly*/, const std::vector<Type>& /*type_args*/, ArrayRef<const Expr*> /*args*/) {
 #if 0
-    size_t num_type_args = type_args.size();
+    size_t num_ast_type_args = ast_type_args.size();
     size_t num_args = args.size();
 
-    if (num_type_args <= fn_poly->num_type_vars()) {
-        for (auto type_arg : type_args)
-            inferred_args.push_back(check(type_arg));
+    if (num_ast_type_args <= fn_poly->num_type_vars()) {
+        for (auto type_arg : ast_type_args)
+            type_args.push_back(check(type_arg));
 
-        for (size_t i = num_type_args, e = fn_poly->num_type_vars(); i != e; ++i)
-            inferred_args.push_back(unknown_type());
+        for (size_t i = num_ast_type_args, e = fn_poly->num_type_vars(); i != e; ++i)
+            type_args.push_back(unknown_type());
 
-        assert(inferred_args.size() == fn_poly->num_type_vars());
-        expr->fn_mono_ = fn_poly->instantiate(inferred_args).as<FnType>();
+        assert(type_args.size() == fn_poly->num_type_vars());
+        expr->fn_mono_ = fn_poly->instantiate(type_args).as<FnType>();
 
         bool is_contuation = num_args == expr->fn_mono()->num_args();
         if (is_contuation || num_args+1 == expr->fn_mono()->num_args()) {
@@ -759,15 +759,15 @@ Type TypeSema::check_call(const MapExpr* expr, FnType fn_poly, const std::vector
             if (is_contuation || expr->fn_mono->return_type() == expected) { // TODO this looks overly complicated
                 // check if all type variables could be inferred
                 bool is_known = true;
-                for (size_t i = 0, e = inferred_args.size(); i != e; ++i) {
-                    if (!inferred_args[i]->is_known()) {
+                for (size_t i = 0, e = type_args.size(); i != e; ++i) {
+                    if (!type_args[i]->is_known()) {
                         is_known = false;
                         error(expr->loc()) << "could not find instance for type variable '" << fn_poly->type_var(i) << "' of function '" << expr->lhs() << "'\n";
                     }
                 }
 
                 if (is_known) {
-                    check_bounds(expr->loc(), fn_poly, inferred_args);
+                    check_bounds(expr->loc(), fn_poly, type_args);
                     if (is_contuation)
                         return type_noret();
                     if (!expr->fn_mono()->return_type()->is_noret())
@@ -782,14 +782,14 @@ Type TypeSema::check_call(const MapExpr* expr, FnType fn_poly, const std::vector
             error(expr->loc()) << "too " << rela << " arguments: " << num_args << " for " << exp_args << "\n";
         }
     } else
-        error(expr->loc()) << "too many type arguments to function: " << num_type_args << " for " << fn_poly->num_type_vars() << "\n";
+        error(expr->loc()) << "too many type arguments to function: " << num_ast_type_args << " for " << fn_poly->num_type_vars() << "\n";
 
     return type_error();
 #endif
     return Type();
 }
 
-void FieldExpr::check(TypeSema& sema) const {
+void FieldExpr::check(TypeSema& /*sema*/) const {
 #if 0
     if (auto type = check_as_struct(sema, expected))
         return type;
@@ -800,7 +800,7 @@ void FieldExpr::check(TypeSema& sema) const {
 #endif
 }
 
-Type FieldExpr::check_as_struct(TypeSema& sema) const {
+Type FieldExpr::check_as_struct(TypeSema& /*sema*/) const {
 #if 0
     auto ltype = sema.check(lhs());
     if (ltype.isa<PtrType>()) {
@@ -821,7 +821,7 @@ Type FieldExpr::check_as_struct(TypeSema& sema) const {
     return Type();
 }
 
-void MapExpr::check(TypeSema& sema) const {
+void MapExpr::check(TypeSema& /*sema*/) const {
 #if 0
     if (auto field_expr = lhs()->isa<FieldExpr>()) {
         if (field_expr->check_as_struct(sema, sema.unknown_type()))
@@ -833,7 +833,7 @@ void MapExpr::check(TypeSema& sema) const {
 #endif
 }
 
-Type MapExpr::check_as_map(TypeSema& sema) const {
+Type MapExpr::check_as_map(TypeSema& /*sema*/) const {
 #if 0
     auto ltype = sema.check(lhs());
     if (ltype.isa<PtrType>()) {
@@ -843,7 +843,7 @@ Type MapExpr::check_as_map(TypeSema& sema) const {
     }
 
     if (auto fn_poly = ltype.isa<FnType>()) {
-        return sema.check_call(this, fn_poly, type_args(), inferred_args_, args(), expected);
+        return sema.check_call(this, fn_poly, ast_type_args(), type_args_, args(), expected);
     } else if (auto array = ltype.isa<ArrayType>()) {
         if (num_args() == 1) {
             sema.check(arg(0));
@@ -881,14 +881,14 @@ Type MapExpr::check_as_map(TypeSema& sema) const {
     return Type();
 }
 
-Type MapExpr::check_as_method_call(TypeSema& sema) const {
+Type MapExpr::check_as_method_call(TypeSema& /*sema*/) const {
 #if 0
     auto field_expr = lhs()->as<FieldExpr>();
     if (auto fn_method = sema.check(field_expr->lhs())->find_method(field_expr->symbol())) {
         Array<const Expr*> nargs(num_args() + 1);
         nargs[0] = field_expr->lhs();
         std::copy(args().begin(), args().end(), nargs.begin()+1);
-        return field_expr->type_ = sema.check_call(this, fn_method, type_args(), inferred_args_, nargs, expected);
+        return field_expr->type_ = sema.check_call(this, fn_method, ast_type_args(), type_args_, nargs, expected);
     } else
         error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
     return sema.type_error();
@@ -972,7 +972,7 @@ void WhileExpr::check(TypeSema& sema) const {
     sema.check(body());
 }
 
-void ForExpr::check(TypeSema& sema) const {
+void ForExpr::check(TypeSema& /*sema*/) const {
 #if 0
     auto forexpr = expr();
     if (auto prefix = forexpr->isa<PrefixExpr>())
@@ -989,7 +989,7 @@ void ForExpr::check(TypeSema& sema) const {
                     // copy over args and check call
                     Array<const Expr*> args(map->args().size()+1);
                     *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
-                    return sema.check_call(map, fn_for, map->type_args(), map->inferred_args_, args, expected);
+                    return sema.check_call(map, fn_for, map->ast_type_args(), map->type_args_, args, expected);
                 }
             }
         }

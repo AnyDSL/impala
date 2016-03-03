@@ -906,7 +906,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
             auto map = new MapExpr();
             map->lhs_ = lhs;
             if (accept(Token::L_BRACKET))
-                parse_comma_list(Token::R_BRACKET, "type arguments of a map expression", [&] { map->type_args_.push_back(parse_type()); });
+                parse_comma_list(Token::R_BRACKET, "type arguments of a map expression", [&] { map->ast_type_args_.push_back(parse_type()); });
             if (accept(Token::L_PAREN))
                 parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
             map->set_loc(lhs->loc().begin(), prev_loc().end());
@@ -1000,21 +1000,21 @@ const Expr* Parser::parse_primary_expr() {
         case Token::DOUBLE_COLON:
         case Token::ID:  {
             auto path = parse_path();
-            ASTTypes type_args;
+            ASTTypes ast_type_args;
             if (accept(Token::L_BRACKET)) {     // struct or map expression
-                parse_comma_list(Token::R_BRACKET, "type arguments", [&] { type_args.push_back(parse_type()); });
+                parse_comma_list(Token::R_BRACKET, "type arguments", [&] { ast_type_args.push_back(parse_type()); });
 
                 if (accept(Token::L_PAREN)) {   // map expression
                     auto map = new MapExpr();
                     map->lhs_ = new PathExpr(path);
-                    swap(map->type_args_, type_args);
+                    swap(map->ast_type_args_, ast_type_args);
                     parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
                     map->set_loc(path->loc().begin(), prev_loc().end());
                     return map;
                 } else if (accept(Token::L_BRACE)) {
                     auto struct_expr = new StructExpr();
                     struct_expr->path_ = path;
-                    swap(struct_expr->type_args_, type_args);
+                    swap(struct_expr->ast_type_args_, ast_type_args);
                     parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
                         auto symbol = try_id("identifier in struct expression");
                         expect(Token::COLON, "struct expression");

@@ -108,9 +108,8 @@ public:
     bool empty() const { return node_ == nullptr; }
     bool operator == (const Proxy<T>& other) const {
         assert(&node()->typetable() == &other.node()->typetable());
-        if (this->node_ == other.node_) // TODO do we really wanna have this check?
-            return true;
-        return infer(*this, other) || (*this)->is_error() || other->is_error();
+        assert((*this)->is_unified() && other->is_unified());
+        return (*this)->is_error() || other->is_error() || this->representative() == other.representative();
     }
     bool operator != (const Proxy<T>& other) const { return !(*this == other); }
     bool operator <= (const Proxy<T>& other) const { return is_subtype(*this, other); }
@@ -119,6 +118,7 @@ public:
     const T* node() const { assert(node_ != nullptr); return node_; }
     const T* operator  * () const { return node()->is_unified() ? representative() : node(); }
     const T* operator -> () const { return *(*this); }
+
     /// Automatic up-cast in the class hierarchy.
     template<class U> operator Proxy<U>() const {
         static_assert(std::is_base_of<U, T>::value, "U is not a base type of T");
@@ -130,6 +130,7 @@ public:
     template<class U> Proxy<typename U::BaseType> as() const {
         return Proxy<typename U::BaseType>((*this)->template as <typename U::BaseType>());
     }
+
     explicit operator bool() const { return !empty(); }
     void clear() { assert(node_ != nullptr); node_ = nullptr; }
     Proxy<T>& operator= (Proxy<T> other) { swap(*this, other); return *this; }
@@ -152,12 +153,12 @@ private:
     const T* node_;
 };
 
-inline Type operator-(Type t1, Type t2) {
-    if (!t1) return t2;
-    if (!t2) return t1;
-    t1 -= t2;
-    return t1;
-}
+//inline Type operator-(Type t1, Type t2) {
+    //if (!t1) return t2;
+    //if (!t2) return t1;
+    //t1 -= t2;
+    //return t1;
+//}
 
 template<class T>
 std::ostream& operator << (std::ostream& os, Proxy<T> proxy) { return proxy->stream(os); }

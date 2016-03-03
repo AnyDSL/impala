@@ -357,8 +357,8 @@ void StructExpr::check(NameSema& sema) const {
 
 void MapExpr::check(NameSema& sema) const {
     lhs()->check(sema);
-    for (auto type_arg : type_args())
-        type_arg->check(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
     for (auto arg : args())
         arg->check(sema);
 }

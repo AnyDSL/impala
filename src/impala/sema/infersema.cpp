@@ -20,6 +20,7 @@ public:
     TraitApp instantiate(const Location& loc, TraitAbs trait, Type self, ArrayRef<const ASTType*> args);
     Type instantiate(const Location& loc, Type type, ArrayRef<const ASTType*> args);
 
+#if 0
     int take_addr_space(const PrefixExpr* prefix) {
         check(prefix->rhs());
         if (prefix->kind() == PrefixExpr::MUL) {
@@ -29,22 +30,24 @@ public:
         }
         return 0;
     }
+#endif
 
-    Type constrain(const Typeable* typeable, Type type) {
-        todo_ |= typeable->type_ -= type;
-        return typeable->type();
-    }
+    Type constrain(Type t1, const Type t2) { todo_ |= t1 -= t2; return t1; }
+    Type constrain(Type t1, const Type t2, const Type t3) { return constrain(constrain(t1, t2), t3); }
+    Type constrain(const Typeable* typeable, const Type t1) { return constrain(typeable->type_, t1); }
+    Type constrain(const Typeable* typeable, const Type t1, const Type t2) { return constrain(constrain(typeable->type_, t1), t2); }
+    void fill_type_args(std::vector<Type>& type_args, const ASTTypes& ast_type_args, Type expected);
 
-    Type safe_get_arg(Type type, size_t i) {
-        return type && i < type->num_args() ? type->arg(i) : unknown_type().as<Type>();
-    }
+    Type safe_get_arg(Type type, size_t i) { return type && i < type->num_args() ? type->arg(i) : Type(); }
+
+    void unknown_type(Type& type) { if (!type) type = TypeTable::unknown_type(); }
 
     // check wrappers
 
     void check(const ModContents* n) { n->check(*this); }
     Type check(const LocalDecl* local) { return constrain(local, local->check(*this)); }
     void check(const Item* n) { n->check(*this); }
-    Type check(const Expr* expr) { return check(expr, unknown_type()); }
+    Type check(const Expr* expr) { unknown_type(expr->type_); return check(expr, expr->type_); }
     Type check(const Expr* expr, Type expected) { return constrain(expr, expr->check(*this, expected)); }
     void check(const Stmt* n) { n->check(*this); }
 
@@ -69,7 +72,7 @@ public:
         return Type();
     }
 
-    Type check_call(FnType fn_poly, std::vector<Type>& inferred_args, const ASTTypes& type_args, ArrayRef<const Expr*> args, Type expected);
+    Type check_call(FnType fn_poly, std::vector<Type>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, Type expected);
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
 
 private:
@@ -251,7 +254,7 @@ Type ASTTypeApp::check(InferSema& sema) const {
             if (auto type = type_decl->type())
                 return sema.instantiate(loc(), type, args());
             else
-                return sema.unknown_type();
+                return sema.TypeTable::unknown_type();
         }
     }
 
@@ -352,7 +355,7 @@ void StaticItem::check(InferSema& sema) const {
         sema.constrain(this, init()->type());
 }
 
-void TraitDecl::check(InferSema& sema) const {
+void TraitDecl::check(InferSema& /*sema*/) const {
 #if 0
     sema.check(self_param());
     TypeVar self_var = self_param()->type_var();
@@ -375,7 +378,7 @@ void TraitDecl::check(InferSema& sema) const {
 #endif
 }
 
-void ImplItem::check(InferSema& sema) const {
+void ImplItem::check(InferSema& /*sema*/) const {
 #if 0
     check_type_params(sema);
     todo_ |= sema.check(ast_type());
@@ -495,8 +498,9 @@ Type InfixExpr::check(InferSema& sema, Type expected) const {
         case EQ: case NE:
         case LT: case LE:
         case GT: case GE:
-            sema.check(lhs(), expected - rhs()->type());
-            sema.check(rhs(), expected - lhs()->type());
+            sema.constrain(expected, lhs()->type(), rhs()->type());
+            sema.check(lhs(), expected);
+            sema.check(rhs(), expected);
             return sema.type_bool();
         case OROR:
         case ANDAND:
@@ -507,9 +511,10 @@ Type InfixExpr::check(InferSema& sema, Type expected) const {
         case MUL: case DIV: case REM:
         case SHL: case SHR:
         case AND: case OR:  case XOR:
-            sema.check(lhs(), expected - rhs()->type());
-            sema.check(rhs(), expected - lhs()->type());
-            return lhs()->type() - rhs()->type();
+            sema.constrain(expected, lhs()->type(), rhs()->type());
+            sema.check(lhs(), expected);
+            sema.check(rhs(), expected);
+            return expected;
         case ASGN:
         case ADD_ASGN: case SUB_ASGN:
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
@@ -536,7 +541,7 @@ Type DefiniteArrayExpr::check(InferSema& sema, Type expected) const {
     Type expected_elem_type = sema.safe_get_arg(expected, 0);
 
     for (auto arg : args())
-        expected_elem_type -= arg->type();
+        sema.constrain(expected_elem_type, arg->type());
 
     for (auto arg : args())
         sema.check(arg, expected_elem_type);
@@ -548,10 +553,10 @@ Type SimdExpr::check(InferSema& sema, Type expected) const {
     Type expected_elem_type = sema.safe_get_arg(expected, 0);
 
     for (auto arg : args())
-        expected_elem_type -= arg->type();
+        sema.constrain(expected_elem_type, arg->type());
 
     for (auto arg : args())
-        expected_elem_type -= sema.check(arg, expected_elem_type);
+        sema.constrain(expected_elem_type, sema.check(arg, expected_elem_type));
 
     return sema.simd_type(expected_elem_type, num_args());
 }
@@ -574,21 +579,23 @@ Type TupleExpr::check(InferSema& sema, Type expected) const {
     return sema.tuple_type(types);
 }
 
+void InferSema::fill_type_args(std::vector<Type>& type_args, const ASTTypes& ast_type_args, Type expected) {
+    for (size_t i = 0, e = type_args.size(); i != e; ++i) {
+        if (i < ast_type_args.size())
+            constrain(type_args[i], check(ast_type_args[i]), safe_get_arg(expected, i));
+        else
+            unknown_type(type_args[i]);
+    }
+}
+
 Type StructExpr::check(InferSema& sema, Type expected) const {
     if (auto decl = path()->decl()) {
         if (auto typeable_decl = decl->isa<TypeableDecl>()) {
             if (auto decl_type = typeable_decl->type()) {
-                inferred_args_.resize(decl_type->num_type_vars());
+                type_args_.resize(decl_type->num_type_vars());
+                sema.fill_type_args(type_args_, ast_type_args_, expected);
 
-                // TODO consider fields
-
-                for (size_t i = 0, e = inferred_args_.size(); i != e; ++i) {
-                    inferred_args_[i] -= i < num_type_args()
-                        ? sema.check(type_arg(i)) - sema.safe_get_arg(expected, i)
-                        : sema.unknown_type().as<Type>();
-                }
-
-                if (auto struct_app = decl_type->instantiate(inferred_args_))
+                if (auto struct_app = decl_type->instantiate(type_args_))
                     return struct_app;
             }
         }
@@ -597,21 +604,19 @@ Type StructExpr::check(InferSema& sema, Type expected) const {
     return sema.type_error();
 }
 
-Type InferSema::check_call(FnType fn_poly, std::vector<Type>& inferred_args, const ASTTypes& type_args, ArrayRef<const Expr*> args, Type expected) {
-    inferred_args.resize(fn_poly->num_type_vars());
+Type InferSema::check_call(FnType fn_poly, std::vector<Type>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, Type expected) {
+    type_args.resize(fn_poly->num_type_vars());
+    fill_type_args(type_args, ast_type_args, expected);
 
-    for (size_t i = 0, e = inferred_args.size(); i != e; ++i)
-        inferred_args[i] -= i < type_args.size() ? check(type_args[i]) : unknown_type().as<Type>();
-
-    auto fn_mono = fn_poly->instantiate(inferred_args).as<FnType>();
+    auto fn_mono = fn_poly->instantiate(type_args).as<FnType>();
     auto max_arg_index = std::min(args.size(), fn_mono->num_args());
     bool is_returning  = args.size()+1 == fn_mono->num_args();
 
     for (size_t i = 0; i != max_arg_index; ++i)
-        fn_mono->arg(i) -= args[i]->type();
+        constrain(fn_mono->arg(i), args[i]->type());
 
     if (is_returning)
-        fn_mono->return_type() -= expected;
+        constrain(fn_mono->return_type(), expected);
 
     for (size_t i = 0; i != max_arg_index; ++i)
         check(args[i], fn_mono->arg(i));
@@ -619,13 +624,13 @@ Type InferSema::check_call(FnType fn_poly, std::vector<Type>& inferred_args, con
     return fn_mono->return_type();
 }
 
-Type FieldExpr::check(InferSema& sema, Type expected) const {
-    if (auto type = check_as_struct(sema, expected))
+Type FieldExpr::check(InferSema& sema, Type /*expected*/) const {
+    if (auto type = check_as_struct(sema, Type() /*TODO expected*/))
         return type;
     return sema.type_error();
 }
 
-Type FieldExpr::check_as_struct(InferSema& sema, Type expected) const {
+Type FieldExpr::check_as_struct(InferSema& sema, Type /*TODO expected*/) const {
     auto ltype = sema.check(lhs());
     if (ltype.isa<PtrType>()) {
         ltype.clear();
@@ -635,7 +640,7 @@ Type FieldExpr::check_as_struct(InferSema& sema, Type expected) const {
 
     if (auto struct_app = ltype.isa<StructAppType>()) {
         if (auto field_decl = struct_app->struct_abs_type()->struct_decl()->field_decl(symbol()))
-            return struct_app->elem(field_decl->index()) - expected;
+            return struct_app->elem(field_decl->index());
     }
 
     return sema.type_error();
@@ -643,7 +648,7 @@ Type FieldExpr::check_as_struct(InferSema& sema, Type expected) const {
 
 Type MapExpr::check(InferSema& sema, Type expected) const {
     if (auto field_expr = lhs()->isa<FieldExpr>()) {
-        if (field_expr->check_as_struct(sema, sema.unknown_type()))
+        if (field_expr->check_as_struct(sema, Type() /*TODO*/))
             return check_as_map(sema, expected);
         return check_as_method_call(sema, expected);
     }
@@ -660,7 +665,7 @@ Type MapExpr::check_as_map(InferSema& sema, Type expected) const {
     }
 
     if (auto fn_poly = ltype.isa<FnType>()) {
-        return sema.check_call(fn_poly, inferred_args_, type_args(), args(), expected);
+        return sema.check_call(fn_poly, type_args_, ast_type_args(), args(), expected);
     } else {
         if (num_args() == 1)
             sema.check(arg(0));
@@ -670,7 +675,7 @@ Type MapExpr::check_as_map(InferSema& sema, Type expected) const {
         } else if (auto tuple_type = ltype.isa<TupleType>()) {
             if (auto lit = arg(0)->isa<LiteralExpr>())
                 return tuple_type->arg(lit->get_u64());
-        } else if(auto simd_type = ltype.isa<SimdType>()) {
+        } else if (auto simd_type = ltype.isa<SimdType>()) {
             return simd_type->elem_type();
         }
     }
@@ -684,7 +689,7 @@ Type MapExpr::check_as_method_call(InferSema& sema, Type expected) const {
         Array<const Expr*> nargs(num_args() + 1);
         nargs[0] = field_expr->lhs();
         std::copy(args().begin(), args().end(), nargs.begin()+1);
-        field_expr->type_ -= sema.check_call(fn_method, inferred_args_, type_args(), nargs, expected);
+        sema.constrain(field_expr, sema.check_call(fn_method, type_args_, ast_type_args(), nargs, expected));
         return field_expr->type_;
     }
 
@@ -702,9 +707,11 @@ Type BlockExprBase::check(InferSema& sema, Type expected) const {
 
 Type IfExpr::check(InferSema& sema, Type expected) const {
     sema.check(cond(), sema.type_bool());
-    sema.check(then_expr(), expected - else_expr()->type());
-    sema.check(else_expr(), expected - then_expr()->type());
-    return then_expr()->type() - else_expr()->type();
+    sema.constrain(then_expr(), else_expr()->type(), expected);
+    sema.constrain(else_expr(), then_expr()->type(), expected);
+    sema.check(then_expr(), expected);
+    sema.check(else_expr(), expected);
+    return sema.constrain(this, then_expr()->type(), else_expr()->type());
 }
 
 Type WhileExpr::check(InferSema& sema, Type) const {
@@ -727,12 +734,12 @@ Type ForExpr::check(InferSema& sema, Type expected) const {
         if (auto fn_for = ltype.isa<FnType>()) {
             if (fn_for->num_args() != 0) {
                 if (auto fn_ret = fn_for->args().back().isa<FnType>()) {
-                    break_decl_->type_ -= fn_ret; // inherit the type for break
+                    sema.constrain(break_decl_->type_, fn_ret); // inherit the type for break
 
                     // copy over args and check call
                     Array<const Expr*> args(map->args().size()+1);
                     *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
-                    return sema.check_call(fn_for, map->inferred_args_, map->type_args(), args, expected);
+                    return sema.check_call(fn_for, map->type_args_, map->ast_type_args(), args, expected);
                 }
             }
         }

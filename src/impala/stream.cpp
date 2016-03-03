@@ -460,18 +460,24 @@ std::ostream& CastExpr::stream(std::ostream& os) const {
     return close(os, open_state);
 }
 
+std::ostream& TypeArgs::stream_ast_type_args(std::ostream& os) const {
+    if (num_ast_type_args() != 0)
+        return stream_list(os, ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "[", "]");
+    return os;
+}
+
 std::ostream& TypeArgs::stream_type_args(std::ostream& os) const {
     if (num_type_args() != 0)
-        return stream_list(os, type_args(), [&](const ASTType* type) { os << type; }, "[", "]");
+        return stream_list(os, type_args(), [&](Type type) { os << type; }, "[", "]", ", ", false);
     return os;
 }
 
 std::ostream& StructExpr::stream(std::ostream& os) const {
     path()->stream(os);
-    if (num_inferred_args() == 0)
-        stream_type_args(os);
+    if (num_type_args() == 0)
+        stream_ast_type_args(os);
     else
-        stream_list(os, inferred_args(), [&](Type t) { os << t; }, "[", "]", ", ", false);
+        stream_type_args(os);
     return stream_list(os, elems(), [&](const Elem& elem) { os << elem.symbol() << ": " << elem.expr(); }, "{", "}");
 }
 
@@ -483,10 +489,10 @@ std::ostream& MapExpr::stream(std::ostream& os) const {
 
     prec = l;
     os << lhs();
-    if (num_inferred_args() == 0)
-        stream_type_args(os);
+    if (num_type_args() == 0)
+        stream_ast_type_args(os);
     else
-        stream_list(os, inferred_args(), [&](Type type) { os << type; }, "[", "]", ", ", false);
+        stream_type_args(os);
     stream_list(os, args(), [&](const Expr* expr) { os << expr; }, "(", ")");
     prec = old;
     if (paren) os << ")";

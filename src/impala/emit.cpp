@@ -537,11 +537,11 @@ Var MapExpr::lemit(CodeGen& cg) const {
 
 const Def* MapExpr::remit(CodeGen& cg) const {
     if (auto fn_poly = lhs()->type().isa<FnType>()) {
-        assert(fn_poly->num_type_vars() == num_inferred_args());
+        assert(fn_poly->num_type_vars() == num_type_args());
 
         Array<thorin::Type> type_args(fn_poly->num_type_vars());
         for (size_t i = 0, e = type_args.size(); i != e; ++i)
-            type_args[i] = cg.convert(inferred_arg(i));
+            type_args[i] = cg.convert(type_arg(i));
 
         const Def* dst = cg.remit(lhs());
         std::vector<const Def*> defs;

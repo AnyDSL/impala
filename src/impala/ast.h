@@ -890,17 +890,18 @@ protected:
 /// Use as mixin for anything which uses type args: [T1, ..., Tn]
 class TypeArgs {
 public:
-    const ASTTypes& type_args() const { return type_args_; }
-    const ASTType* type_arg(size_t i) const { assert(i < type_args_.size()); return type_args_[i]; }
-    size_t num_type_args() const { return type_args().size(); }
-    ArrayRef<Type> inferred_args() const { return inferred_args_; }
-    Type inferred_arg(size_t i) const { return inferred_args_[i]; }
-    size_t num_inferred_args() const { return inferred_args_.size(); }
+    const ASTTypes& ast_type_args() const { return ast_type_args_; }
+    const ASTType* ast_type_arg(size_t i) const { assert(i < ast_type_args_.size()); return ast_type_args_[i]; }
+    size_t num_ast_type_args() const { return ast_type_args().size(); }
+    ArrayRef<Type> type_args() const { return type_args_; }
+    Type type_arg(size_t i) const { return type_args_[i]; }
+    size_t num_type_args() const { return type_args_.size(); }
+    std::ostream& stream_ast_type_args(std::ostream& p) const;
     std::ostream& stream_type_args(std::ostream& p) const;
 
 protected:
-    ASTTypes type_args_;
-    mutable std::vector<Type> inferred_args_;
+    ASTTypes ast_type_args_;
+    mutable std::vector<Type> type_args_;
 };
 
 /// Use as mixin for anything which uses args: (expr_1, ..., expr_n)
