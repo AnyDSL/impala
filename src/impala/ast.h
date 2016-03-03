@@ -110,13 +110,11 @@ protected:
 
 //------------------------------------------------------------------------------
 
-class ASTNode : public thorin::HasLocation, public thorin::MagicCast<ASTNode> {
+class ASTNode : public thorin::HasLocation, public thorin::Streamable, public thorin::MagicCast<ASTNode> {
 public:
 #ifndef NDEBUG
     virtual ~ASTNode() { assert(loc_.is_set()); }
 #endif
-    virtual std::ostream& stream(std::ostream&) const = 0;
-    void dump() const;
 };
 
 //------------------------------------------------------------------------------
