@@ -72,11 +72,10 @@ Type instantiate_unknown(Type, std::vector<Type>&);
 //------------------------------------------------------------------------------
 
 /**
- * Try to fill in missing type information by matching this possibly incomplete Unifiable with a complete Unifiable.
+ * @brief Try to fill in missing type information by matching this possibly incomplete Unifiable with a complete Unifiable.
  * Example: fn(?0, ?1) unified_with fn(int, bool)  will set ?0=int and ?1=bool
- * @return \p true if unification worked, i.e. both generics were structurally equal
- *         and there were no contradictions during unification (a contradiction
- *         would be fn(?0, ?0) unified with fn(int, bool)).
+ *
+ * @return @c true if something happened, @c false if everything stayed the same.
  */
 bool infer(Uni, Uni);
 
