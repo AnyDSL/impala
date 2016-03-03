@@ -242,7 +242,8 @@ TraitApp ASTTypeApp::trait_app(TypeSema& sema, Type self) const {
 //------------------------------------------------------------------------------
 
 void LocalDecl::check(TypeSema& sema) const {
-    sema.check(ast_type());
+    if (ast_type())
+        sema.check(ast_type());
 }
 
 Type Fn::check_body(TypeSema& sema) const {

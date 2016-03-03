@@ -892,7 +892,7 @@ public:
     const ASTType* ast_type_arg(size_t i) const { assert(i < ast_type_args_.size()); return ast_type_args_[i]; }
     size_t num_ast_type_args() const { return ast_type_args().size(); }
     ArrayRef<Type> type_args() const { return type_args_; }
-    Type type_arg(size_t i) const { return type_args_[i]; }
+    Type& type_arg(size_t i) const { return type_args_[i]; }
     size_t num_type_args() const { return type_args_.size(); }
     std::ostream& stream_ast_type_args(std::ostream& p) const;
     std::ostream& stream_type_args(std::ostream& p) const;
