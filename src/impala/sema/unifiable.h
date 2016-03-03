@@ -153,13 +153,6 @@ private:
     const T* node_;
 };
 
-//inline Type operator-(Type t1, Type t2) {
-    //if (!t1) return t2;
-    //if (!t2) return t1;
-    //t1 -= t2;
-    //return t1;
-//}
-
 template<class T>
 std::ostream& operator << (std::ostream& os, Proxy<T> proxy) { return proxy->stream(os); }
 
