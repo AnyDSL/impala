@@ -28,8 +28,10 @@ Unifiable::Unifiable(TypeTable& tt, Kind kind, ArrayRef<Type> args)
     , args_(args.size())
 {
     for (size_t i = 0, e = args.size(); i != e; ++i) {
-        if (auto arg = args[i])
+        if (auto arg = args[i]) {
             set(i, arg);
+        }
+        assert(args[i]);
     }
 }
 

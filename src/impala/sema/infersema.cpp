@@ -39,10 +39,7 @@ public:
     Type& constrain(const Typeable* t, const Type u) { return constrain(t->type_, u); }
     Type& constrain(const Typeable* t, const Type u, const Type v) { return constrain(constrain(t, u), v); }
     void fill_type_args(std::vector<Type>& type_args, const ASTTypes& ast_type_args, const Type expected);
-
     Type safe_get_arg(Type type, size_t i) { return type && i < type->num_args() ? type->arg(i) : Type(); }
-
-    void unknown_type(Type& type) { if (!type) type = TypeTable::unknown_type(); }
 
     // check wrappers
 
@@ -50,15 +47,15 @@ public:
     Type check(const LocalDecl* local) { return constrain(local, local->check(*this)); }
     void check(const Item* n) { n->check(*this); }
     void check(const Stmt* n) { n->check(*this); }
-    Type check(const Expr* expr, const Type expected) { return constrain(expr, expr->check(*this, expected)); }
-    Type check(const Expr* expr) {
+    Type check(const Expr* expr, const Type expected = Type()) {
         auto i = expr2expected_.find(expr);
         if (i == expr2expected_.end()) {
-            auto p = expr2expected_.emplace(expr, TypeTable::unknown_type());
+            auto insert = expected ? expected : unknown_type().as<Type>();
+            auto p = expr2expected_.emplace(expr, insert);
             assert(p.second);
             i = p.first;
         }
-        return check(expr, i->second);
+        return constrain(expr, expr->check(*this, i->second));
     }
 
     TypeVar check(const TypeParam* type_param) {
@@ -101,7 +98,7 @@ void type_inference(Init& init, const ModContents* mod) {
         //sema->check(mod);
     //}
 
-    for (int i = 0; i < 1000; ++i)
+    for (int i = 0; i < 20; ++i)
         sema->check(mod);
 
 #ifndef NDEBUG
@@ -193,7 +190,7 @@ void TypeParamList::check_type_params(InferSema& sema) const {
 Type LocalDecl::check(InferSema& sema) const {
     if (ast_type())
         return sema.check(ast_type());
-    return type();
+    return sema.unknown_type();
 }
 
 Type Fn::check_body(InferSema& sema, FnType fn_type) const {
@@ -268,7 +265,7 @@ Type ASTTypeApp::check(InferSema& sema) const {
             if (auto type = type_decl->type())
                 return sema.instantiate(loc(), type, args());
             else
-                return sema.TypeTable::unknown_type();
+                return sema.unknown_type();
         }
     }
 
@@ -599,8 +596,8 @@ void InferSema::fill_type_args(std::vector<Type>& type_args, const ASTTypes& ast
     for (size_t i = 0, e = type_args.size(); i != e; ++i) {
         if (i < ast_type_args.size())
             constrain(type_args[i], check(ast_type_args[i]), safe_get_arg(expected, i));
-        else
-            unknown_type(type_args[i]);
+        else if (!type_args[i])
+            type_args[i] = unknown_type();
     }
 }
 
@@ -631,7 +628,7 @@ Type InferSema::check_call(FnType& fn_mono, FnType fn_poly, std::vector<Type>& t
     for (size_t i = 0; i != max_arg_index; ++i)
         constrain(args[i], fn_mono->arg(i));
 
-    if (is_returning) {
+    if (is_returning && expected) {
         Array<Type> args(fn_mono->num_args());
         *std::copy(fn_mono->args().begin(), fn_mono->args().end()-1, args.begin()) = expected;
         constrain(fn_mono, fn_type(args));
