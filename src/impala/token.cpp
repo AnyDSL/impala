@@ -58,8 +58,8 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
         }
     }
 
-    // remove underscores and '0b'/'0x'/'0x' prefix
-    std::copy_if(begin, str.end(), std::back_inserter(literal), [] (char c) { return c != '_'; });
+    // remove underscores and '0b'/'0o'/'0x' prefix if applicable
+    std::copy_if(begin, str.end(), std::back_inserter(literal), [](char c) { return c != '_'; });
     auto nptr = &literal.front();
 
     switch (kind_) {
