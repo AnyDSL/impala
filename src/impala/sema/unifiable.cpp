@@ -565,16 +565,18 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
             u1->representative_ = u2->representative();             // set u1 to u2
             return true;
         } else if (u1->unify()->is_unified()) {
-            return u1->representative() == u2->representative();    // both are unified - are types equal?
-        } else if (bool result = u1->kind() == u2->kind()           // recursively infer sub elements
+            return false;
+            //return u1->representative() == u2->representative();    // both are unified - are types equal?
+        } else if (u1->kind() == u2->kind()                         // recursively infer sub elements
                 && u1->num_type_vars() == u2->num_type_vars()
                 && u1->num_args() == u2->num_args()) {
+            bool result = false;
             // TODO handle type vars
             for (size_t i = 0, e = u1->num_args(); i != e && result; ++i)
-                result &= infer(u1->arg(i), u2->arg(i));
+                result |= infer(u1->arg(i), u2->arg(i));
 
-            if (auto b1 = u1->isa<TraitAppNode>())
-                result &= b1->trait() == u2->as<TraitAppNode>()->trait();
+            //if (auto b1 = u1->isa<TraitAppNode>())
+                //result &= b1->trait() == u2->as<TraitAppNode>()->trait();
 
             return result;
         }

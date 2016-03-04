@@ -1,6 +1,7 @@
 #include <sstream>
 
 #include "thorin/util/array.h"
+#include "thorin/util/log.h"
 #include "thorin/util/push.h"
 
 #include "impala/ast.h"
@@ -84,16 +85,19 @@ private:
 };
 
 void type_inference(Init& init, const ModContents* mod) {
+    static const int max_runs = 100;
     auto sema = new InferSema();
     init.typetable = sema;
 
-    //while (sema->todo_) {
-        //sema->todo_ = false;
-        //sema->check(mod);
-    //}
-
-    for (int i = 0; i < 20; ++i)
+    int i = 0;
+    for (; sema->todo_ && i < max_runs; ++i) {
+        sema->todo_ = false;
         sema->check(mod);
+    }
+
+    WLOG("iterations needed for type inference: %", i);
+    if (i == max_runs)
+        WLOG("needed max number of runs");
 
 #ifndef NDEBUG
     sema->verify();
@@ -184,7 +188,9 @@ void TypeParamList::check_type_params(InferSema& sema) const {
 Type LocalDecl::check(InferSema& sema) const {
     if (ast_type())
         return sema.check(ast_type());
-    return sema.unknown_type();
+    else if (!type())
+        return sema.unknown_type();
+    return type();
 }
 
 Type Fn::check_body(InferSema& sema, FnType fn_type) const {
@@ -253,7 +259,7 @@ Type ASTTypeApp::check(InferSema& sema) const {
             if (auto type = sema.type(type_decl))
                 return sema.instantiate(loc(), type, args());
             else
-                return sema.unknown_type();
+                return sema.unknown_type(); // TODO don't create a new thing here
         }
     }
 
