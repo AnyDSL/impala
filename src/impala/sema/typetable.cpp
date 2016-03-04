@@ -19,7 +19,7 @@ TypeTable::~TypeTable() {
         delete g;
 }
 
-PrimType TypeTable::type(const PrimTypeKind kind) {
+PrimType TypeTable::prim_type(const PrimTypeKind kind) {
     switch (kind) {
 #define IMPALA_TYPE(itype, atype) case PrimType_##itype: return itype##_;
 #include "impala/tokenlist.h"

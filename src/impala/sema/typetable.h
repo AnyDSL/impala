@@ -39,7 +39,7 @@ public:
     OwnedPtrType        owned_ptr_type(Type referenced_type, int addr_space = 0) {
         return join(new OwnedPtrTypeNode(*this, referenced_type, addr_space));
     }
-    PrimType            type(PrimTypeKind kind);
+    PrimType            prim_type(PrimTypeKind kind);
     StructAbsType       struct_abs_type(const StructDecl* struct_decl) { return join(new StructAbsTypeNode(*this, struct_decl)); }
     StructAppType       struct_app_type(StructAbsType struct_abs, ArrayRef<Type> args) {
         return join(new StructAppTypeNode(*this, struct_abs, args));

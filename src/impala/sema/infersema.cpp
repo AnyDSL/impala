@@ -40,6 +40,7 @@ public:
     Type& constrain(const Typeable* t, const Type u, const Type v) { return constrain(constrain(t, u), v); }
     void fill_type_args(std::vector<Type>& type_args, const ASTTypes& ast_type_args, const Type expected);
     Type safe_get_arg(Type type, size_t i) { return type && i < type->num_args() ? type->arg(i) : Type(); }
+    Type type(const Typeable* typeable) { return typeable->type_ ? typeable->type_ : typeable->type_ = unknown_type(); }
 
     // check wrappers
 
@@ -47,11 +48,12 @@ public:
     Type check(const LocalDecl* local) { return constrain(local, local->check(*this)); }
     void check(const Item* n) { n->check(*this); }
     void check(const Stmt* n) { n->check(*this); }
-    Type check(const Expr* expr, const Type expected = Type()) {
+    Type check(const Expr* expr, const Type expected) { return constrain(expr, expr->check(*this, expected)); }
+    Type check(const Expr* expr) {
         auto i = expr2expected_.find(expr);
         if (i == expr2expected_.end()) {
-            auto insert = expected ? expected : unknown_type().as<Type>();
-            auto p = expr2expected_.emplace(expr, insert);
+            auto unknown = unknown_type();
+            auto p = expr2expected_.emplace(expr, unknown);
             assert(p.second);
             i = p.first;
         }
@@ -207,7 +209,7 @@ Type ErrorASTType::check(InferSema& sema) const { return sema.type_error(); }
 
 Type PrimASTType::check(InferSema& sema) const {
     switch (kind()) {
-#define IMPALA_TYPE(itype, atype) case TYPE_##itype: return sema.type(PrimType_##itype);
+#define IMPALA_TYPE(itype, atype) case TYPE_##itype: return sema.prim_type(PrimType_##itype);
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
@@ -313,7 +315,7 @@ void Typedef::check(InferSema& sema) const {
     sema.check(ast_type());
 
     if (type_params().size() > 0) {
-        Type abs = sema.typedef_abs(ast_type()->type());
+        Type abs = sema.typedef_abs(ast_type()->type()); // TODO might be nullptr
         for (auto type_param : type_params())
             abs->bind(type_param->type_var());
     } else
@@ -362,8 +364,7 @@ void FnDecl::check(InferSema& sema) const {
 }
 
 void StaticItem::check(InferSema& sema) const {
-    if (init())
-        sema.constrain(this, init()->type());
+    sema.constrain(this, sema.type(init()));
 }
 
 void TraitDecl::check(InferSema& /*sema*/) const {
@@ -444,7 +445,7 @@ void ImplItem::check(InferSema& /*sema*/) const {
  */
 
 Type EmptyExpr::check(InferSema& sema, Type) const { return sema.unit(); }
-Type LiteralExpr::check(InferSema& sema, Type) const { return sema.type(literal2type()); }
+Type LiteralExpr::check(InferSema& sema, Type) const { return sema.prim_type(literal2type()); }
 Type CharExpr::check(InferSema& sema, Type) const { return sema.type_u8(); }
 Type StrExpr::check(InferSema& sema, Type) const { return sema.definite_array_type(sema.type_u8(), values_.size()); }
 
@@ -509,8 +510,8 @@ Type InfixExpr::check(InferSema& sema, const Type expected) const {
         case EQ: case NE:
         case LT: case LE:
         case GT: case GE:
-            sema.check(lhs(), expected - rhs()->type());
-            sema.check(rhs(), lhs()->type());
+            sema.check(lhs(), expected - sema.type(rhs()));
+            sema.check(rhs(), sema.type(lhs()));
             return sema.type_bool();
         case OROR:
         case ANDAND:
@@ -521,16 +522,16 @@ Type InfixExpr::check(InferSema& sema, const Type expected) const {
         case MUL: case DIV: case REM:
         case SHL: case SHR:
         case AND: case OR:  case XOR:
-            sema.check(lhs(), expected - rhs()->type());
-            sema.check(rhs(), lhs()->type());
-            return rhs()->type();
+            sema.check(lhs(), expected - sema.type(rhs()));
+            sema.check(rhs(), sema.type(lhs()));
+            return sema.type(rhs());
         case ASGN:
         case ADD_ASGN: case SUB_ASGN:
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
         case SHL_ASGN: case SHR_ASGN:
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN:
-            sema.check(lhs(), rhs()->type());
-            sema.check(rhs(), lhs()->type());
+            sema.check(lhs(), sema.type(rhs()));
+            sema.check(rhs(), sema.type(lhs()));
             return sema.unit();
     }
 
@@ -550,12 +551,12 @@ Type DefiniteArrayExpr::check(InferSema& sema, const Type expected) const {
     Type expected_elem_type = sema.safe_get_arg(expected, 0);
 
     for (size_t i = 0, e = num_args(); i != e; ++i) {
-        expected_elem_type -= arg((i+1)%e)->type();
+        expected_elem_type -= sema.type(arg((i+1)%e));
         sema.check(arg(i), expected_elem_type);
     }
 
     for (auto arg : args())
-        expected_elem_type -= arg->type();
+        expected_elem_type -= sema.type(arg);
 
     for (auto arg : args())
         sema.check(arg, expected_elem_type);
@@ -567,7 +568,7 @@ Type SimdExpr::check(InferSema& sema, const Type expected) const {
     Type expected_elem_type = sema.safe_get_arg(expected, 0);
 
     for (size_t i = 0, e = num_args(); i != e; ++i) {
-        expected_elem_type -= arg((i+1)%e)->type();
+        expected_elem_type -= sema.type(arg((i+1)%e));
         sema.check(arg(i), expected_elem_type);
     }
 
@@ -604,7 +605,7 @@ void InferSema::fill_type_args(std::vector<Type>& type_args, const ASTTypes& ast
 Type StructExpr::check(InferSema& sema, const Type expected) const {
     if (auto decl = path()->decl()) {
         if (auto typeable_decl = decl->isa<TypeableDecl>()) {
-            if (auto decl_type = typeable_decl->type()) {
+            if (auto decl_type = sema.type(typeable_decl)) {
                 type_args_.resize(decl_type->num_type_vars());
                 sema.fill_type_args(type_args_, ast_type_args_, expected);
 
@@ -718,16 +719,16 @@ Type BlockExprBase::check(InferSema& sema, const Type expected) const {
 
     sema.check(expr(), expected);
 
-    return expr() ? expr()->type() : sema.unit().as<Type>();
+    return expr() ? sema.type(expr()) : sema.unit().as<Type>();
 }
 
 Type IfExpr::check(InferSema& sema, const Type expected) const {
     sema.check(cond(), sema.type_bool());
-    sema.constrain(then_expr(), else_expr()->type(), expected);
-    sema.constrain(else_expr(), then_expr()->type(), expected);
+    sema.constrain(then_expr(), sema.type(else_expr()), expected);
+    sema.constrain(else_expr(), sema.type(then_expr()), expected);
     sema.check(then_expr(), expected);
     sema.check(else_expr(), expected);
-    return sema.constrain(this, then_expr()->type(), else_expr()->type());
+    return sema.constrain(this, sema.type(then_expr()), sema.type(else_expr()));
 }
 
 Type WhileExpr::check(InferSema& sema, Type) const {
