@@ -514,6 +514,7 @@ public:
     size_t num_bounds() const { return bounds_.size(); }
     const Unifiable* bound_at() const { return bound_at_; }
     void add_bound(TraitApp) const;
+    const Symbol& name() const { return name_; }
 
     virtual bool is_closed() const override { return bound_at_ != nullptr; }
     virtual bool is_sane() const override { return is_closed(); }

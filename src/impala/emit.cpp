@@ -85,7 +85,7 @@ public:
         auto unifiable = uni->unify();
         if (!unifiable->thorin_type_) {
             for (auto type_var : unifiable->type_vars())    // convert type vars
-                type_var->thorin_type_ = world().type_param();
+                type_var->thorin_type_ = world().type_param(type_var->name().str());
 
             auto thorin_type = unifiable->convert(*this);
 
