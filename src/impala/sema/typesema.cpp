@@ -461,6 +461,11 @@ void PrefixExpr::check(TypeSema& sema) const {
                 //rtype = TypeSema::turn_cast_inside_out(rhs()); // TODO reference?
             }
 
+            rhs()->take_address();
+            if (rhs()->needs_cast()) {
+                rtype.clear();
+                rtype = TypeSema::turn_cast_inside_out(rhs());
+            }
             return;
         }
         case MUL:
@@ -503,7 +508,7 @@ void PrefixExpr::check(TypeSema& sema) const {
 
 void InfixExpr::check(TypeSema& sema) const {
     auto ltype = sema.check(lhs());
-    //auto rtype = sema.check(rhs());
+    /*auto rtype =*/ sema.check(rhs());
 
     switch (kind()) {
         case EQ:
@@ -822,7 +827,10 @@ Type FieldExpr::check_as_struct(TypeSema& /*sema*/) const {
     return Type();
 }
 
-void MapExpr::check(TypeSema& /*sema*/) const {
+void MapExpr::check(TypeSema& sema) const {
+    sema.check(lhs());
+    for (auto arg : args())
+        sema.check(arg);
 #if 0
     if (auto field_expr = lhs()->isa<FieldExpr>()) {
         if (field_expr->check_as_struct(sema, sema.unknown_type()))
