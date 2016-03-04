@@ -52,9 +52,9 @@ public:
     void check(const Stmt* n) { n->check(*this); }
     Type check(const Expr* expr, const Type expected) { return constrain(expr, expr->check(*this, expected)); }
     Type check(const Expr* expr) {
-        auto i = expr2unknown_.find(expr);
-        if (i == expr2unknown_.end()) {
-            auto p = expr2unknown_.emplace(expr, TypeTable::unknown_type());
+        auto i = expr2expected_.find(expr);
+        if (i == expr2expected_.end()) {
+            auto p = expr2expected_.emplace(expr, TypeTable::unknown_type());
             assert(p.second);
             i = p.first;
         }
@@ -86,7 +86,7 @@ public:
     bool check_bounds(const Location& loc, Uni unifiable, ArrayRef<Type> types);
 
 private:
-    thorin::HashMap<const Expr*, UnknownType> expr2unknown_;
+    thorin::HashMap<const Expr*, Type> expr2expected_;
     bool todo_ = true;
 
     friend void type_inference(Init&, const ModContents*);
