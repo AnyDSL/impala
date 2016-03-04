@@ -562,6 +562,7 @@ bool infer(const Unifiable* u1, const Unifiable* u2) {
     if (u2->unify()->is_unified()) {                                // if u2 is unified we try to infer u1
         if (u1->isa<UnknownTypeNode>()) {
             assert(u2->representative()->isa<KnownTypeNode>());
+            // TODO use union by rank
             u1->representative_ = u2->representative();             // set u1 to u2
             return true;
         } else if (u1->unify()->is_unified()) {
