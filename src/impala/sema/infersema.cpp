@@ -68,17 +68,9 @@ public:
     }
 
     Type check(const ASTType* ast_type) {
-        if (ast_type->type())
+        if (ast_type->type() && ast_type->type()->is_known())
             return ast_type->type();
-
-        if (auto type = ast_type->check(*this)) {
-            if (type->is_known()) {
-                todo_ = true;
-                return ast_type->type_ = type;
-            }
-        }
-
-        return Type();
+        return constrain(ast_type, ast_type->check(*this));
     }
 
     Type check_call(FnType& fn_mono, FnType fn_poly, std::vector<Type>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type expected);
@@ -227,13 +219,7 @@ Type PtrASTType::check(InferSema& sema) const {
 
 Type IndefiniteArrayASTType::check(InferSema& sema) const { return sema.indefinite_array_type(sema.check(elem_ast_type())); }
 Type DefiniteArrayASTType::check(InferSema& sema) const { return sema.definite_array_type(sema.check(elem_ast_type()), dim()); }
-
-Type SimdASTType::check(InferSema& sema) const {
-    auto elem_type = sema.check(elem_ast_type());
-    if (elem_type.isa<PrimType>())
-        return sema.simd_type(elem_type, size());
-    return Type();
-}
+Type SimdASTType::check(InferSema& sema) const { return sema.simd_type(sema.check(elem_ast_type()), size()); }
 
 Type TupleASTType::check(InferSema& sema) const {
     Array<Type> types(num_args());
@@ -264,7 +250,7 @@ Type Typeof::check(InferSema& sema) const { return sema.check(expr()); }
 Type ASTTypeApp::check(InferSema& sema) const {
     if (decl()) {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
-            if (auto type = type_decl->type())
+            if (auto type = sema.type(type_decl))
                 return sema.instantiate(loc(), type, args());
             else
                 return sema.unknown_type();
@@ -315,11 +301,11 @@ void Typedef::check(InferSema& sema) const {
     sema.check(ast_type());
 
     if (type_params().size() > 0) {
-        Type abs = sema.typedef_abs(ast_type()->type()); // TODO might be nullptr
+        Type abs = sema.typedef_abs(sema.type(ast_type())); // TODO might be nullptr
         for (auto type_param : type_params())
             abs->bind(type_param->type_var());
     } else
-        sema.constrain(this, ast_type()->type());
+        sema.constrain(this, sema.type(ast_type()));
 }
 
 void EnumDecl::check(InferSema&) const { /*TODO*/ }
@@ -328,7 +314,7 @@ void StructDecl::check(InferSema& sema) const {
     check_type_params(sema);
 
     for (auto field : field_decls()) {
-        if (auto field_type = field->type()) {
+        if (auto field_type = sema.type(field)) {
             if (!field_type || !field_type->is_known())
                 return; // bail out for now if we don't yet know all field types
         }
@@ -337,7 +323,7 @@ void StructDecl::check(InferSema& sema) const {
     auto struct_type = sema.struct_abs_type(this);
 
     for (auto field : field_decls())
-        struct_type->set(field->index(), field->type());
+        struct_type->set(field->index(), sema.type(field));
 
     for (auto type_param : type_params())
         struct_type->bind(type_param->type_var());
@@ -394,7 +380,7 @@ void ImplItem::check(InferSema& /*sema*/) const {
 #if 0
     check_type_params(sema);
     todo_ |= sema.check(ast_type());
-    Type for_type = ast_type()->type();
+    Type for_type = sema.type(ast_type());
 
     TraitApp trait_app;
     if (trait() != nullptr) {
@@ -417,7 +403,7 @@ void ImplItem::check(InferSema& /*sema*/) const {
     thorin::HashSet<Symbol> implemented_methods;
     for (auto method : methods()) {
         todo_ |= sema.check(method);
-        Type fn_type = method->type();
+        Type fn_type = sema.type(method);
 
         if (trait() != nullptr) {
             assert(!trait_app.empty());
