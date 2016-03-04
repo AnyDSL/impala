@@ -234,7 +234,7 @@ private:
     std::vector<Type> args_; ///< The operands of this type constructor.
 
 protected:
-    mutable const thorin::Type* thorin_type_;
+    mutable const thorin::Type* thorin_type_ = nullptr;
 
     friend class CodeGen;
     friend class TypeTable;
