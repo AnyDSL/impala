@@ -125,7 +125,7 @@ const thorin::Type* FnTypeNode::convert(CodeGen& cg) const {
     std::vector<const thorin::Type*> nargs;
     nargs.push_back(cg.world().mem_type());
     convert_args(cg, nargs);
-    return cg.world().fn_type(nargs);
+    return cg.world().fn_type(nargs, num_type_vars());
 }
 
 const thorin::Type* TupleTypeNode::convert(CodeGen& cg) const {
