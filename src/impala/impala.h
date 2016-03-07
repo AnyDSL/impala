@@ -34,6 +34,9 @@ struct Init {
 void parse(ModContents*, std::istream&, const char*);
 void name_analysis(const ModContents* mod);
 void type_analysis(Init&, const ModContents*, bool nossa);
+void move_analysis(const ModContents*);
+void borrow_analysis(const ModContents*);
+void lifetime_analysis(const ModContents*);
 void check(Init&, const ModContents* mod, bool nossa);
 void emit(thorin::World&, const ModContents*);
 

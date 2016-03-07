@@ -1,16 +1,18 @@
 #include "impala/ast.h"
 #include "impala/impala.h"
 
+#include <iostream>
+
 namespace impala {
 
 //------------------------------------------------------------------------------
 
-class BorrowSema {
+class MoveSema {
 private:
     bool todo_ = true;
 
     friend void type_inference(const ModContents* mod) {
-        BorrowSema sema;
+        MoveSema sema;
 
         while (sema.todo_) {
             sema.todo_ = false;
@@ -25,12 +27,12 @@ private:
  * misc
  */
 
-void TypeParam::check(BorrowSema& sema) const {
+void TypeParam::check(MoveSema& sema) const {
     for (auto bound : bounds())
         bound->check(sema);
 }
 
-void LocalDecl::check(BorrowSema& sema) const {
+void LocalDecl::check(MoveSema& sema) const {
     if (ast_type())
         ast_type()->check(sema);
 }
@@ -41,38 +43,38 @@ void LocalDecl::check(BorrowSema& sema) const {
  * AST types
  */
 
-void TypeParamList::check_type_params(BorrowSema& sema) const {
+void TypeParamList::check_type_params(MoveSema& sema) const {
     for (auto type_param : type_params())
         type_param->check(sema);
 }
 
-void ErrorASTType::check(BorrowSema&) const {}
-void PrimASTType::check(BorrowSema&) const {}
-void PtrASTType::check(BorrowSema& sema) const { referenced_type()->check(sema); }
-void IndefiniteArrayASTType::check(BorrowSema& sema) const { elem_type()->check(sema); }
-void DefiniteArrayASTType::check(BorrowSema& sema) const { elem_type()->check(sema); }
+void ErrorASTType::check(MoveSema&) const {}
+void PrimASTType::check(MoveSema&) const {}
+void PtrASTType::check(MoveSema& sema) const { referenced_type()->check(sema); }
+void IndefiniteArrayASTType::check(MoveSema& sema) const { elem_type()->check(sema); }
+void DefiniteArrayASTType::check(MoveSema& sema) const { elem_type()->check(sema); }
 
-void TupleASTType::check(BorrowSema& sema) const {
+void TupleASTType::check(MoveSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }
 
-void ASTTypeApp::check(BorrowSema& sema) const {
+void ASTTypeApp::check(MoveSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }
 
-void FnASTType::check(BorrowSema& sema) const {
+void FnASTType::check(MoveSema& sema) const {
     check_type_params(sema);
     for (auto arg : args())
         arg->check(sema);
 }
 
-void Typeof::check(BorrowSema& sema) const {
+void Typeof::check(MoveSema& sema) const {
     expr()->check(sema);
 }
 
-void SimdASTType::check(BorrowSema& sema) const {
+void SimdASTType::check(MoveSema& sema) const {
     elem_type()->check(sema);
 }
 
@@ -83,36 +85,36 @@ void SimdASTType::check(BorrowSema& sema) const {
  * items
  */
 
-void ModDecl::check(BorrowSema& sema) const {
+void ModDecl::check(MoveSema& sema) const {
     if (mod_contents())
         mod_contents()->check(sema);
 }
 
-void ModContents::check(BorrowSema& sema) const {
+void ModContents::check(MoveSema& sema) const {
     for (auto item : items())
         item->check(sema);
 }
 
-void ExternBlock::check(BorrowSema& sema) const {
+void ExternBlock::check(MoveSema& sema) const {
     for (auto fn : fns())
         fn->check(sema);
 }
 
-void Typedef::check(BorrowSema& sema) const {
+void Typedef::check(MoveSema& sema) const {
     check_type_params(sema);
     ast_type()->check(sema);
 }
 
-void EnumDecl::check(BorrowSema&) const {}
+void EnumDecl::check(MoveSema&) const {}
 
-void StaticItem::check(BorrowSema& sema) const {
+void StaticItem::check(MoveSema& sema) const {
     if (ast_type())
         ast_type()->check(sema);
     if (init())
         init()->check(sema);
 }
 
-void Fn::fn_check(BorrowSema& sema) const {
+void Fn::fn_check(MoveSema& sema) const {
     check_type_params(sema);
     for (auto param : params()) {
         if (param->ast_type())
@@ -122,7 +124,8 @@ void Fn::fn_check(BorrowSema& sema) const {
         body()->check(sema);
 }
 
-void FnDecl::check(BorrowSema& sema) const {
+void FnDecl::check(MoveSema& sema) const {
+    std::cout << "blabla\n";
     fn_check(sema);
 #ifndef NDEBUG
     for (auto param : params())
@@ -130,7 +133,7 @@ void FnDecl::check(BorrowSema& sema) const {
 #endif
 }
 
-void StructDecl::check(BorrowSema& sema) const {
+void StructDecl::check(MoveSema& sema) const {
     check_type_params(sema);
     for (auto field_decl : field_decls()) {
         field_decl->check(sema);
@@ -138,11 +141,11 @@ void StructDecl::check(BorrowSema& sema) const {
     }
 }
 
-void FieldDecl::check(BorrowSema& sema) const {
+void FieldDecl::check(MoveSema& sema) const {
     ast_type()->check(sema);
 }
 
-void TraitDecl::check(BorrowSema& sema) const {
+void TraitDecl::check(MoveSema& sema) const {
     check_type_params(sema);
     for (auto t : super_traits())
         t->check(sema);
@@ -152,7 +155,7 @@ void TraitDecl::check(BorrowSema& sema) const {
     }
 }
 
-void ImplItem::check(BorrowSema& sema) const {
+void ImplItem::check(MoveSema& sema) const {
     check_type_params(sema);
     if (trait())
         trait()->check(sema);
@@ -167,75 +170,75 @@ void ImplItem::check(BorrowSema& sema) const {
  * expressions
  */
 
-void EmptyExpr::check(BorrowSema&) const {}
+void EmptyExpr::check(MoveSema&) const {}
 
-void BlockExprBase::check(BorrowSema& sema) const {
+void BlockExprBase::check(MoveSema& sema) const {
     for (auto stmt : stmts())
         stmt->check(sema);
     expr()->check(sema);
 }
 
-void LiteralExpr::check(BorrowSema&) const {}
-void CharExpr::check(BorrowSema&) const {}
-void StrExpr::check(BorrowSema&) const {}
-void FnExpr::check(BorrowSema& sema) const { fn_check(sema); }
+void LiteralExpr::check(MoveSema&) const {}
+void CharExpr::check(MoveSema&) const {}
+void StrExpr::check(MoveSema&) const {}
+void FnExpr::check(MoveSema& sema) const { fn_check(sema); }
 
-void PathElem::check(BorrowSema&) const {}
+void PathElem::check(MoveSema&) const {}
 
-void Path::check(BorrowSema& sema) const {
+void Path::check(MoveSema& sema) const {
     for (auto path_elem : path_elems())
         path_elem->check(sema);
 }
 
-void PathExpr::check(BorrowSema& sema) const {
+void PathExpr::check(MoveSema& sema) const {
     path()->check(sema);
 }
 
-void PrefixExpr::check(BorrowSema& sema) const  {                     rhs()->check(sema); }
-void InfixExpr::check(BorrowSema& sema) const   { lhs()->check(sema); rhs()->check(sema); }
-void PostfixExpr::check(BorrowSema& sema) const { lhs()->check(sema); }
+void PrefixExpr::check(MoveSema& sema) const  {                     rhs()->check(sema); }
+void InfixExpr::check(MoveSema& sema) const   { lhs()->check(sema); rhs()->check(sema); }
+void PostfixExpr::check(MoveSema& sema) const { lhs()->check(sema); }
 
-void FieldExpr::check(BorrowSema& sema) const {
+void FieldExpr::check(MoveSema& sema) const {
     lhs()->check(sema);
     // don't infer symbol here as it depends on lhs' type - must be done in TypeSema
 }
 
-void CastExpr::check(BorrowSema& sema) const {
+void CastExpr::check(MoveSema& sema) const {
     lhs()->check(sema);
     ast_type()->check(sema);
 }
 
-void DefiniteArrayExpr::check(BorrowSema& sema) const {
+void DefiniteArrayExpr::check(MoveSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }
 
-void RepeatedDefiniteArrayExpr::check(BorrowSema& sema) const {
+void RepeatedDefiniteArrayExpr::check(MoveSema& sema) const {
     value()->check(sema);
 }
 
-void IndefiniteArrayExpr::check(BorrowSema& sema) const {
+void IndefiniteArrayExpr::check(MoveSema& sema) const {
     dim()->check(sema);
     elem_type()->check(sema);
 }
 
-void TupleExpr::check(BorrowSema& sema) const {
+void TupleExpr::check(MoveSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }
 
-void SimdExpr::check(BorrowSema& sema) const {
+void SimdExpr::check(MoveSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }
 
-void StructExpr::check(BorrowSema& sema) const {
+void StructExpr::check(MoveSema& sema) const {
     path()->check(sema);
     for (const auto& elem : elems())
         elem.expr()->check(sema);
 }
 
-void MapExpr::check(BorrowSema& sema) const {
+void MapExpr::check(MoveSema& sema) const {
     lhs()->check(sema);
     for (auto type_arg : type_args())
         type_arg->check(sema);
@@ -243,20 +246,20 @@ void MapExpr::check(BorrowSema& sema) const {
         arg->check(sema);
 }
 
-void IfExpr::check(BorrowSema& sema) const {
+void IfExpr::check(MoveSema& sema) const {
     cond()->check(sema);
     then_expr()->check(sema);
     else_expr()->check(sema);
 }
 
-void WhileExpr::check(BorrowSema& sema) const {
+void WhileExpr::check(MoveSema& sema) const {
     cond()->check(sema);
     break_decl()->check(sema);
     continue_decl()->check(sema);
     body()->check(sema);
 }
 
-void ForExpr::check(BorrowSema& sema) const {
+void ForExpr::check(MoveSema& sema) const {
     expr()->check(sema);
     break_decl()->check(sema);
     fn_expr()->check(sema);
@@ -268,9 +271,9 @@ void ForExpr::check(BorrowSema& sema) const {
  * statements
  */
 
-void ExprStmt::check(BorrowSema& sema) const { expr()->check(sema); }
-void ItemStmt::check(BorrowSema& sema) const { item()->check(sema); }
-void LetStmt::check(BorrowSema& sema) const {
+void ExprStmt::check(MoveSema& sema) const { expr()->check(sema); }
+void ItemStmt::check(MoveSema& sema) const { item()->check(sema); }
+void LetStmt::check(MoveSema& sema) const {
     if (init())
         init()->check(sema);
     local()->check(sema);
@@ -278,9 +281,13 @@ void LetStmt::check(BorrowSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-void borrow_analysis(const ModContents* mod) {
-    // TODO
-    return;
+void move_analysis(const ModContents* mod) {
+    // TODO: why do we need to say new here?
+    auto sema = new MoveSema();
+    mod->check(*sema);
+#ifndef NDEBUG
+    //TODO: verify something? like in type sema?
+#endif
 }
 
 //------------------------------------------------------------------------------
