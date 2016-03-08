@@ -8,17 +8,9 @@ namespace impala {
 //------------------------------------------------------------------------------
 
 class MoveSema {
+public:
+    
 private:
-    bool todo_ = true;
-
-    friend void type_inference(const ModContents* mod) {
-        MoveSema sema;
-
-        while (sema.todo_) {
-            sema.todo_ = false;
-            mod->check(sema);
-        }
-    }
 };
 
 //------------------------------------------------------------------------------
@@ -125,7 +117,6 @@ void Fn::fn_check(MoveSema& sema) const {
 }
 
 void FnDecl::check(MoveSema& sema) const {
-    std::cout << "blabla\n";
     fn_check(sema);
 #ifndef NDEBUG
     for (auto param : params())
@@ -183,7 +174,9 @@ void CharExpr::check(MoveSema&) const {}
 void StrExpr::check(MoveSema&) const {}
 void FnExpr::check(MoveSema& sema) const { fn_check(sema); }
 
-void PathElem::check(MoveSema&) const {}
+void PathElem::check(MoveSema&) const {
+    std::cout << "path elem: " << symbol().str() << "\n"; 
+}
 
 void Path::check(MoveSema& sema) const {
     for (auto path_elem : path_elems())
@@ -194,7 +187,11 @@ void PathExpr::check(MoveSema& sema) const {
     path()->check(sema);
 }
 
-void PrefixExpr::check(MoveSema& sema) const  {                     rhs()->check(sema); }
+void PrefixExpr::check(MoveSema& sema) const  {
+    std::cout << "prefix: " << this << "\n";
+    rhs()->check(sema);
+}
+
 void InfixExpr::check(MoveSema& sema) const   { lhs()->check(sema); rhs()->check(sema); }
 void PostfixExpr::check(MoveSema& sema) const { lhs()->check(sema); }
 

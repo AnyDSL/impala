@@ -1,4 +1,5 @@
 #include "impala/ast.h"
+#include "impala/sema/lvaluemap.h"
 
 using namespace thorin;
 
