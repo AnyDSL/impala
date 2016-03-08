@@ -449,7 +449,9 @@ class UnknownType : public Type {
 private:
     UnknownType(TypeTable& typetable)
         : Type(typetable, Kind_unknown, {})
-    {}
+    {
+        known_ = false;
+    }
 
 public:
     virtual std::ostream& stream(std::ostream&) const override;
