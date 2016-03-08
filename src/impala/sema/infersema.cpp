@@ -80,7 +80,28 @@ public:
     const Type* check_call(FnType& fn_mono, const FnType* fn_poly, std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type* expected);
 
 private:
+    struct Representative {
+        Representative() {}
+        Representative(const Type* parent)
+            : parent(parent)
+        {}
+
+        const Type* parent = nullptr;
+        int rank = 0;
+    };
+
+    Representative representative(const Type* type) {
+        auto i = representatives_.find(type);
+        if (i == representatives_.end()) {
+            auto p = representatives_.emplace(type, type);
+            assert_unused(p.second);
+            return type;
+        }
+        return i->second;
+    }
+
     thorin::HashMap<const Expr*, const Type*> expr2expected_;
+    TypeMap<Representative> representatives_;
     bool todo_ = true;
 
     friend void type_inference(Init&, const ModContents*);
