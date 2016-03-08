@@ -1159,9 +1159,6 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
 
-    const Type* check_as_struct(InferSema&, const Type*) const;
-    const Type* check_as_struct(TypeSema&) const;
-
 private:
     virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
@@ -1343,11 +1340,6 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
-
-    const Type* check_as_map(InferSema&, const Type*) const;
-    const Type* check_as_map(TypeSema&) const;
-    const Type* check_as_method_call(InferSema&, const Type*) const;
-    const Type* check_as_method_call(TypeSema&) const;
 
 private:
     virtual const Type* check(InferSema&, const Type*) const override;

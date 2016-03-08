@@ -272,61 +272,24 @@ void TraitDecl::check(TypeSema& sema) const {
     sema.check(self_param());
     check_ast_type_params(sema);
 
-#if 0
-    for (auto type_app : super_traits()) {
-        if (!trait_abs_->add_super_trait(type_app->trait_app(sema, self_var)))
-            error(type_app) << "duplicate super trait '" << type_app << "' for trait '" << symbol() << "'\n";
-    }
-#endif
+    for (auto type_app : super_traits())
+        sema.check(type_app);
 
     for (auto method : methods())
         sema.check(method);
 }
 
-void ImplItem::check(TypeSema& /*sema*/) const {
-#if 0
+void ImplItem::check(TypeSema& sema) const {
     check_ast_type_params(sema);
-    auto for_type = sema.check(this->ast_type());
+    sema.check(this->ast_type());
 
-    TraitApp trait_app;
-    if (trait() != nullptr) {
-        if (auto type_app = trait()->isa<ASTTypeApp>()) {
-            trait_app = type_app->trait_app(sema, for_type);
-            auto impl = sema.impl(this, trait_app, for_type);
-            for (auto type_param : type_params())
-                impl->bind(sema.check(type_param));
-
-            if (!for_type->is_error() && !trait_app->is_error()) {
-                for_type->as<KnownType>()->add_impl(impl);
-                trait_app->trait()->add_impl(impl);
-            }
+    if (trait()) {
+        if (trait()->isa<ASTTypeApp>()) {
+            for (auto type_param : ast_type_params())
+                sema.check(type_param);
         } else
             error(trait()) << "expected trait instance\n";
     }
-
-    thorin::HashSet<Symbol> implemented_methods;
-    for (auto method : methods()) {
-        sema.check(method);
-        auto fn_type = method->type();
-
-        if (trait() != nullptr) {
-            assert(!trait_app.empty());
-
-            Symbol meth_name = method->symbol();
-            if (auto method_type = trait_app->find_method(meth_name)) {
-                // remember name for check if all methods were implemented
-                const auto& p = implemented_methods.insert(meth_name);
-                assert_unused(p.second && "there should be no such name in the set"); // else name analysis failed
-
-                // check that the types match
-                if (fn_type != method_type)
-                    error(method) << "method '" << trait() << "." << meth_name << "' should have type '" << method_type << "', but implementation has type '" << fn_type << "'\n";
-            }
-        }
-    }
-
-    // TODO: check that all methods are implemented
-#endif
 }
 
 //------------------------------------------------------------------------------
@@ -750,18 +713,18 @@ const Type* TypeSema::check_call(const MapExpr* /*expr*/, FnType /*fn_poly*/, co
     return nullptr;
 }
 
-void FieldExpr::check(TypeSema& /*sema*/) const {
 #if 0
+void FieldExpr::check(TypeSema& /*sema*/) const {
     if (auto type = check_as_struct(sema, expected))
         return type;
 
     if (!lhs()->type()->is_error())
         error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << lhs()->type() << "', but no field with that name was found\n";
     return sema.type_error();
-#endif
 }
+#endif
 
-const Type* FieldExpr::check_as_struct(TypeSema& /*sema*/) const {
+void FieldExpr::check(TypeSema& /*sema*/) const {
 #if 0
     auto ltype = sema.check(lhs());
     if (ltype->isa<PtrType>()) {
@@ -779,35 +742,18 @@ const Type* FieldExpr::check_as_struct(TypeSema& /*sema*/) const {
         }
     }
 #endif
-    return nullptr;
 }
 
 void MapExpr::check(TypeSema& sema) const {
+#if 0
     sema.check(lhs());
     for (auto arg : args())
         sema.check(arg);
-#if 0
-    if (auto field_expr = lhs()->isa<FieldExpr>()) {
-        if (field_expr->check_as_struct(sema, sema.unknown_type()))
-            return check_as_map(sema, expected);
-        return check_as_method_call(sema, expected);
-    }
 
-    return check_as_map(sema, expected);
-#endif
-}
-
-const Type* MapExpr::check_as_map(TypeSema& /*sema*/) const {
-#if 0
     auto ltype = sema.check(lhs());
-    if (ltype->isa<PtrType>()) {
-        ltype.clear();
-        PrefixExpr::create_deref(lhs_);
-        ltype = sema.check(lhs());
-    }
 
     if (auto fn_poly = ltype->isa<FnType>()) {
-        return sema.check_call(this, fn_poly, ast_type_args(), type_args_, args(), expected);
+        return sema.check_call(this, fn_poly, ast_type_args(), type_args_, args());
     } else if (auto array = ltype->isa<ArrayType>()) {
         if (num_args() == 1) {
             sema.check(arg(0));
@@ -839,25 +785,7 @@ const Type* MapExpr::check_as_map(TypeSema& /*sema*/) const {
             error(this) << "too many simd vector subscripts\n";
     } else
         error(this) << "incorrect type for map expression\n";
-
-    return sema.type_error();
 #endif
-    return nullptr;
-}
-
-const Type* MapExpr::check_as_method_call(TypeSema& /*sema*/) const {
-#if 0
-    auto field_expr = lhs()->as<FieldExpr>();
-    if (auto fn_method = sema.check(field_expr->lhs())->find_method(field_expr->symbol())) {
-        Array<const Expr*> nargs(num_args() + 1);
-        nargs[0] = field_expr->lhs();
-        std::copy(args().begin(), args().end(), nargs.begin()+1);
-        return field_expr->type_ = sema.check_call(this, fn_method, ast_type_args(), type_args_, nargs, expected);
-    } else
-        error(this) << "no declaration for method '" << field_expr->symbol() << "' found\n";
-    return sema.type_error();
-#endif
-    return nullptr;
 }
 
 void BlockExprBase::check(TypeSema& sema) const {
