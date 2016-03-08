@@ -227,16 +227,13 @@ std::ostream& FnType::stream(std::ostream& os) const {
 
 std::ostream& TypeParam::stream(std::ostream& os) const { return os << symbol().str(); }
 
-std::ostream& PtrType::stream_ptr_type(std::ostream& os, std::string prefix, int addr_space, const Type* ref_type) const {
-    os << prefix;
-    if (addr_space != 0)
-        os << '[' << addr_space << ']';
-    return os << ref_type;
+std::ostream& PtrType::stream(std::ostream& os) const {
+    os << prefix();
+    if (addr_space() != 0)
+        os << '[' << addr_space() << ']';
+    return os << referenced_type();
 }
 
-std::ostream& OwnedPtrType::stream(std::ostream& os)    const { return stream_ptr_type(os, "~",    addr_space(), referenced_type()); }
-std::ostream& BorrowedPtrType::stream(std::ostream& os) const { return stream_ptr_type(os, "&",    addr_space(), referenced_type()); }
-std::ostream& MutPtrType::stream(std::ostream& os)      const { return stream_ptr_type(os, "&mut", addr_space(), referenced_type()); }
 std::ostream& DefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[% * %]", elem_type(), dim()); }
 std::ostream& IndefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[%]", elem_type()); }
 std::ostream& SimdType::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_type(), dim()); }

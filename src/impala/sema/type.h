@@ -180,6 +180,8 @@ private:
     friend class TypeTable;
 };
 
+//------------------------------------------------------------------------------
+
 class PtrType : public Type {
 protected:
     PtrType(TypeTable& typetable, Kind kind, const Type* referenced_type, int addr_space)
@@ -193,10 +195,10 @@ public:
     const Type* referenced_type() const { return arg(0); }
     int addr_space() const { return addr_space_; }
 
+    virtual std::ostream& stream(std::ostream&) const override;
     virtual uint64_t vhash() const override;
     virtual bool equal(const Type* other) const override;
-
-    virtual std::ostream& stream(std::ostream&) const override;
+    virtual std::string prefix() const = 0;
 
 private:
     virtual const thorin::Type* convert(CodeGen&) const override;
@@ -212,8 +214,8 @@ public:
         : PtrType(typetable, Kind_borrowed_ptr, referenced_type, addr_space)
     {}
 
-    virtual std::ostream& stream(std::ostream&) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
+    virtual std::string prefix() const override { return "&"; }
 };
 
 class MutPtrType : public PtrType {
@@ -222,8 +224,8 @@ public:
         : PtrType(typetable, Kind_mut_ptr, referenced_type, addr_space)
     {}
 
-    virtual std::ostream& stream(std::ostream&) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
+    virtual std::string prefix() const override { return "&mut"; }
 };
 
 class OwnedPtrType : public PtrType {
@@ -232,9 +234,11 @@ public:
         : PtrType(typetable, Kind_owned_ptr, referenced_type, addr_space)
     {}
 
-    virtual std::ostream& stream(std::ostream&) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
+    virtual std::string prefix() const override { return "~"; }
 };
+
+//------------------------------------------------------------------------------
 
 class StructAbsType : public Type {
 private:

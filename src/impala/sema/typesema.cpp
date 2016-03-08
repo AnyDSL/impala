@@ -406,7 +406,7 @@ void PathExpr::check(TypeSema& sema) const {
 }
 
 void PrefixExpr::check(TypeSema& sema) const {
-    auto rtype = sema.check(rhs());
+    /*auto rtype = */sema.check(rhs());
 
     switch (kind()) {
         case AND: {
@@ -419,7 +419,7 @@ void PrefixExpr::check(TypeSema& sema) const {
             rhs()->take_address();
             if (rhs()->needs_cast()) {
                 //rtype.clear();
-                rtype = TypeSema::turn_cast_inside_out(rhs());
+                /*rtype = */TypeSema::turn_cast_inside_out(rhs());
             }
             return;
         }

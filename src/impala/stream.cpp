@@ -14,7 +14,10 @@ Prec prec = BOTTOM;
 std::ostream& ErrorASTType::stream(std::ostream& os) const { return os << "<error>"; }
 
 std::ostream& PtrASTType::stream(std::ostream& os) const {
-    return stream_ptr_type(os, prefix(), addr_space(), referenced_ast_type());
+    os << prefix();
+    if (addr_space() != 0)
+        os << '[' << addr_space() << ']';
+    return os << referenced_ast_type();
 }
 
 std::ostream& DefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[% * %]", elem_ast_type(), dim()); }
@@ -27,7 +30,7 @@ std::ostream& TupleASTType::stream(std::ostream& os) const {
 
 std::ostream& FnASTType::stream(std::ostream& os) const {
     auto ret = ret_fn_type();
-    stream_type_params(os << "fn");
+    stream_ast_type_params(os << "fn");
     stream_list(os, ret != nullptr ? args().skip_back() : args(), [&](const ASTType* arg) { os << arg; }, "(", ")");
     if (ret != nullptr) {
         os << " -> ";
@@ -73,14 +76,14 @@ std::ostream& Path::stream(std::ostream& os) const {
  * parameters
  */
 
-std::ostream& TypeParam::stream(std::ostream& os) const {
+std::ostream& ASTTypeParam::stream(std::ostream& os) const {
     os << symbol() << (bounds_.empty() ? "" : ": ");
     return stream_list(os, bounds(), [&](const ASTType* type) { os << type; }, "", "", " + ");
 }
 
-std::ostream& TypeParamList::stream_type_params(std::ostream& os) const {
-    if (!type_params().empty())
-        stream_list(os, type_params(), [&](const TypeParam* type_param) { os << type_param; }, "[", "]");
+std::ostream& ASTTypeParamList::stream_ast_type_params(std::ostream& os) const {
+    if (!ast_type_params().empty())
+        stream_list(os, ast_type_params(), [&](const ASTTypeParam* ast_type_param) { os << ast_type_param; }, "[", "]");
     return os;
 }
 
@@ -105,7 +108,7 @@ std::ostream& ValueDecl::stream(std::ostream& os) const {
     os << (is_mut() ? "mut " : "" );
     if (!is_anonymous()) {
         os << symbol();
-        if (!type().empty())
+        if (type())
             os << ": " << type();
         else if (ast_type())
             os << ": " << ast_type();
@@ -123,7 +126,7 @@ std::ostream& ModContents::stream(std::ostream& os) const {
 }
 
 std::ostream& ModDecl::stream(std::ostream& os) const {
-    stream_type_params(os << "mod " << symbol());
+    stream_ast_type_params(os << "mod " << symbol());
     if (mod_contents()) {
         return os << " {" << up << endl << mod_contents() << down << endl << "}";
     } else
@@ -145,7 +148,7 @@ std::ostream& FnDecl::stream(std::ostream& os) const {
     os << "fn ";
     if (export_name_)
         os << export_name_->symbol() << ' ';
-    stream_type_params(os << symbol());
+    stream_ast_type_params(os << symbol());
 
     const FnASTType* ret = nullptr;
     if (!params().empty() && params().back()->symbol() == "return") {
@@ -183,17 +186,17 @@ std::ostream& StaticItem::stream(std::ostream& os) const {
 }
 
 std::ostream& StructDecl::stream(std::ostream& os) const {
-    stream_type_params(streamf(os, "%struct %", visibility().str(), symbol())) << " {" << up << endl;
+    stream_ast_type_params(streamf(os, "%struct %", visibility().str(), symbol())) << " {" << up << endl;
     return stream_list(os, field_decls(), [&](const FieldDecl* field) { os << field; }, "", "", ",", true) << down << endl << "}";
 }
 
 std::ostream& Typedef::stream(std::ostream& os) const {
-    return stream_type_params(streamf(os, "%type %", visibility().str(), symbol())) << " = " << ast_type() << ';';
+    return stream_ast_type_params(streamf(os, "%type %", visibility().str(), symbol())) << " = " << ast_type() << ';';
 }
 
 std::ostream& TraitDecl::stream(std::ostream& os) const {
     os << "trait " << symbol();
-    stream_type_params(os);
+    stream_ast_type_params(os);
 
     if (!super_traits().empty()) {
         os << " : ";
@@ -207,7 +210,7 @@ std::ostream& TraitDecl::stream(std::ostream& os) const {
 
 std::ostream& ImplItem::stream(std::ostream& os) const {
     os << "impl";
-    stream_type_params(os) << ' ';
+    stream_ast_type_params(os) << ' ';
     if (trait())
         os << trait() << " for ";
     os << ast_type() << " {" << up << endl;
@@ -373,7 +376,7 @@ std::ostream& TypeArgs::stream_ast_type_args(std::ostream& os) const {
 
 std::ostream& TypeArgs::stream_type_args(std::ostream& os) const {
     if (num_type_args() != 0)
-        return stream_list(os, type_args(), [&](Type type) { os << type; }, "[", "]", ", ", false);
+        return stream_list(os, type_args(), [&](const Type* type) { os << type; }, "[", "]", ", ", false);
     return os;
 }
 
@@ -413,12 +416,12 @@ std::ostream& FnExpr::stream(std::ostream& os) const {
     if (has_return_type) {
         os << "-> ";
         auto ret = params().back();
-        if (!ret->type().empty()) {
-            auto rettype = ret->type().as<FnType>();
+        if (ret->type()) {
+            auto rettype = ret->type()->as<FnType>();
             if (rettype->num_args() == 1)
                 os << rettype->arg(0);
             else
-                stream_list(os, rettype->args(), [&](Type type) { os << type; }, "(", ")", ", ");
+                stream_list(os, rettype->args(), [&](const Type* type) { os << type; }, "(", ")", ", ");
         } else if (ret->ast_type()) {
             auto rettype = ret->ast_type()->as<FnASTType>();
             if (rettype->num_args() == 1)

@@ -51,7 +51,6 @@ public:
     /// Unify a type and return its representative.
     template<class T> const T* unify(const T* type) { return unify_base(type)->template as<T>(); }
     const Type* unify_base(const Type*);
-    void verify() const; ///< Checks if all types in the type tables are sane and correctly unified.
 
 private:
     struct TypeHash {
@@ -62,10 +61,10 @@ private:
     };
 
     thorin::HashSet<const Type*, TypeHash, TypeEqual> types_;
+    const TypeError* type_error_;
+    const NoRetType* type_noret_;
 #define IMPALA_TYPE(itype, atype) const PrimType* itype##_;
 #include "impala/tokenlist.h"
-    const NoRetType* type_noret_;
-    const TypeError* type_error_;
 };
 
 }
