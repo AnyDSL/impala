@@ -114,7 +114,14 @@ public:
     const Type* instantiate(Type2Type&) const;
     const Type* specialize(Type2Type&) const;
     const thorin::Type* thorin_type() const { return thorin_type_; }
+
+#define IMPALA_TYPE(itype, atype) bool is_##itype() const { return is(PrimType_##itype); }
+#include "impala/tokenlist.h"
+    bool is(PrimTypeKind kind) const;
+    bool is_int() const { return is_i8() || is_i16() || is_i32() || is_i64() || is_u8() || is_u16() || is_u32() || is_u64(); }
+    bool is_float() const { return is_f32() || is_f64(); }
     bool is_noret() const;
+    bool is_error() const;
 
     uint64_t hash() const { return is_hashed() ? hash_ : hash_ = vhash(); }
     virtual uint64_t vhash() const;
