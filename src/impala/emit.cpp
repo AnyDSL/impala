@@ -81,22 +81,20 @@ public:
             decl->var_ = decl->emit(*this, init);
         return decl->var_;
     }
-    const thorin::Type* convert(const Unifiable* uni) {
-        auto unifiable = uni->unify();
-        if (!unifiable->thorin_type_) {
-            for (auto type_var : unifiable->type_vars())    // convert type vars
-                type_var->thorin_type_ = world().type_param(type_var->name().str());
+    const thorin::Type* convert(const Type* type) {
+        if (!type->thorin_type_) {
+            for (auto type_param : type->type_params())
+                type_param->thorin_type_ = world().type_param(type_param->symbol().str());
 
-            auto thorin_type = unifiable->convert(*this);
+            auto thorin_type = type->convert(*this);
 
-            Array<const thorin::TypeParam*> type_params(unifiable->num_type_vars());
+            Array<const thorin::TypeParam*> type_params(type->num_type_params());
             for (size_t i = 0, e = type_params.size(); i != e; ++i)
-                type_params[i] = convert(unifiable->type_var(i))->as<thorin::TypeParam>();
-            unifiable->thorin_type_ = thorin_type->close(type_params);
+                type_params[i] = convert(type->type_param(i))->as<thorin::TypeParam>();
+            type->thorin_type_ = thorin_type->close(type_params);
         }
-        return unifiable->thorin_type_;
+        return type->thorin_type_;
     }
-    template<class T> const thorin::Type* convert(Proxy<T> type) { return convert(type->unify()); }
 
     const Fn* cur_fn = nullptr;
 };
@@ -105,12 +103,12 @@ public:
  * Type
  */
 
-void Unifiable::convert_args(CodeGen& cg, std::vector<const thorin::Type*>& nargs) const {
+void Type::convert_args(CodeGen& cg, std::vector<const thorin::Type*>& nargs) const {
     for (auto arg : args())
         nargs.push_back(cg.convert(arg));
 }
 
-const thorin::Type* PrimTypeNode::convert(CodeGen& cg) const {
+const thorin::Type* PrimType::convert(CodeGen& cg) const {
     switch (primtype_kind()) {
 #define IMPALA_TYPE(itype, ttype) \
         case PrimType_##itype: return cg.world().type_##ttype();
@@ -119,22 +117,20 @@ const thorin::Type* PrimTypeNode::convert(CodeGen& cg) const {
     }
 }
 
-const thorin::Type* NoRetTypeNode::convert(CodeGen&) const { return nullptr; }
-
-const thorin::Type* FnTypeNode::convert(CodeGen& cg) const {
+const thorin::Type* FnType::convert(CodeGen& cg) const {
     std::vector<const thorin::Type*> nargs;
     nargs.push_back(cg.world().mem_type());
     convert_args(cg, nargs);
-    return cg.world().fn_type(nargs, num_type_vars());
+    return cg.world().fn_type(nargs, num_type_params());
 }
 
-const thorin::Type* TupleTypeNode::convert(CodeGen& cg) const {
+const thorin::Type* TupleType::convert(CodeGen& cg) const {
     std::vector<const thorin::Type*> nargs;
     convert_args(cg, nargs);
     return cg.world().tuple_type(nargs);
 }
 
-const thorin::Type* StructAbsTypeNode::convert(CodeGen& cg) const {
+const thorin::Type* StructAbsType::convert(CodeGen& cg) const {
     thorin_type_ = thorin_struct_abs_type_ = cg.world().struct_abs_type(num_args(), struct_decl()->symbol().str());
     size_t i = 0;
     for (auto arg : args())
@@ -143,39 +139,19 @@ const thorin::Type* StructAbsTypeNode::convert(CodeGen& cg) const {
     return thorin_struct_abs_type_;
 }
 
-const thorin::Type* StructAppTypeNode::convert(CodeGen& cg) const {
+const thorin::Type* StructAppType::convert(CodeGen& cg) const {
     std::vector<const thorin::Type*> nargs;
     convert_args(cg, nargs);
     return cg.world().struct_app_type(cg.convert(struct_abs_type())->as<thorin::StructAbsType>(), nargs);
 }
 
-const thorin::Type* TraitAbsNode::convert(CodeGen& cg) const {
-    std::vector<const thorin::Type*> args;
+const thorin::Type* PtrType::convert(CodeGen& cg) const { return cg.world().ptr_type(cg.convert(referenced_type()), 1, -1, thorin::AddrSpace(addr_space())); }
+const thorin::Type* DefiniteArrayType::convert(CodeGen& cg) const { return cg.world().definite_array_type(cg.convert(elem_type()), dim()); }
+const thorin::Type* IndefiniteArrayType::convert(CodeGen& cg) const { return cg.world().indefinite_array_type(cg.convert(elem_type())); }
 
-    for (auto super_trait : super_traits())
-        args.push_back(cg.convert(super_trait));
-
-    for (auto method : trait_decl()->methods())
-        args.push_back(cg.convert(method->type()));
-
-    return cg.world().tuple_type(args);
-}
-
-const thorin::Type* TraitAppNode::convert(CodeGen& cg) const {
-    Array<const thorin::Type*> nargs(num_args());
-    for (size_t i = 0, e = nargs.size(); i != e; ++i)
-        nargs[i] = cg.convert(arg(i));
-    return cg.convert(trait())->instantiate(nargs);
-}
-
-const thorin::Type* ImplNode::convert(CodeGen&) const { THORIN_UNREACHABLE; }
-const thorin::Type* PtrTypeNode::convert(CodeGen& cg) const { return cg.world().ptr_type(cg.convert(referenced_type()), 1, -1, thorin::AddressSpace(addr_space())); }
-const thorin::Type* DefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().definite_array_type(cg.convert(elem_type()), dim()); }
-const thorin::Type* IndefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().indefinite_array_type(cg.convert(elem_type())); }
-
-const thorin::Type* SimdTypeNode::convert(CodeGen& cg) const {
+const thorin::Type* SimdType::convert(CodeGen& cg) const {
     auto scalar = cg.convert(elem_type());
-    return cg.world().type(scalar->as<thorin::PrimType>()->primtype_kind(), size());
+    return cg.world().type(scalar->as<thorin::PrimType>()->primtype_kind(), dim());
 }
 
 /*
@@ -314,12 +290,8 @@ void StructDecl::emit_item(CodeGen& cg) const {
     cg.convert(type());
 }
 
-void TraitDecl::emit_item(CodeGen& cg) const {
-    cg.convert(trait_abs());
-}
-
-void Typedef::emit_item(CodeGen&) const {
-}
+void TraitDecl::emit_item(CodeGen& cg) const {}
+void Typedef::emit_item(CodeGen&) const {}
 
 /*
  * expressions
@@ -530,7 +502,7 @@ const Def* StructExpr::remit(CodeGen& cg) const {
 }
 
 Var MapExpr::lemit(CodeGen& cg) const {
-    if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<SimdType>()) {
+    if (lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<SimdType>()) {
         auto agg = cg.lemit(lhs());
         return Var::create_agg(agg, cg.remit(arg(0)));
     }
@@ -538,10 +510,10 @@ Var MapExpr::lemit(CodeGen& cg) const {
 }
 
 const Def* MapExpr::remit(CodeGen& cg) const {
-    if (auto fn_poly = lhs()->type().isa<FnType>()) {
-        assert(fn_poly->num_type_vars() == num_type_args());
+    if (auto fn_poly = lhs()->type()->isa<FnType>()) {
+        assert(fn_poly->num_type_params() == num_type_args());
 
-        Array<const thorin::Type*> type_args(fn_poly->num_type_vars());
+        Array<const thorin::Type*> type_args(fn_poly->num_type_params());
         for (size_t i = 0, e = type_args.size(); i != e; ++i)
             type_args[i] = cg.convert(type_arg(i));
 
@@ -558,7 +530,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         if (ret_type)
             cg.set_mem(cg.cur_bb->param(0));
         return ret;
-    } else if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<SimdType>()) {
+    } else if (lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<SimdType>()) {
         auto index = cg.remit(arg(0));
         return cg.extract(cg.remit(lhs()), index, loc());
     }

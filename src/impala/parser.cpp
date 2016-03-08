@@ -169,8 +169,8 @@ public:
     const PathElem* parse_path_elem();
 
     // parameters
-    void parse_type_params(AutoVector<const TypeParam*>&);
-    const TypeParam* parse_type_param();
+    void parse_ast_type_params(AutoVector<const ASTTypeParam*>&);
+    const ASTTypeParam* parse_ast_type_param();
     const Param* parse_param(int i, bool lambda);
     void parse_param_list(AutoVector<const Param*>& params, TokenKind delimiter, bool lambda);
     void parse_return_param(Fn* fn);
@@ -384,22 +384,22 @@ const Path* Parser::parse_path() {
  * parameters
  */
 
-void Parser::parse_type_params(AutoVector<const TypeParam*>& type_params) {
+void Parser::parse_ast_type_params(AutoVector<const ASTTypeParam*>& ast_type_params) {
     if (accept(Token::L_BRACKET))
-        parse_comma_list(Token::R_BRACKET, "type parameter list", [&] { type_params.push_back(parse_type_param()); });
+        parse_comma_list(Token::R_BRACKET, "type parameter list", [&] { ast_type_params.push_back(parse_ast_type_param()); });
 }
 
-const TypeParam* Parser::parse_type_param() {
-    auto type_param = loc(new TypeParam());
-    type_param->identifier_ = try_id("type parameter");
+const ASTTypeParam* Parser::parse_ast_type_param() {
+    auto ast_type_param = loc(new ASTTypeParam());
+    ast_type_param->identifier_ = try_id("type parameter");
 
     if (accept(Token::COLON)) {
         do
-            type_param->bounds_.push_back(parse_type());
+            ast_type_param->bounds_.push_back(parse_type());
         while (accept(Token::ADD));
     }
 
-    return type_param;
+    return ast_type_param;
 }
 
 void Parser::parse_param_list(AutoVector<const Param*>& params, TokenKind delimiter, bool lambda) {
@@ -527,7 +527,7 @@ FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
     if (la() == Token::LIT_str)
         fn_decl->export_name_ = new Identifier(lex());
     fn_decl->identifier_ = try_id("function name");
-    parse_type_params(fn_decl->type_params_);
+    parse_ast_type_params(fn_decl->ast_type_params_);
     expect(Token::L_PAREN, "function head");
     parse_param_list(fn_decl->params_, Token::R_PAREN, false);
     parse_return_param(fn_decl);
@@ -546,7 +546,7 @@ FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
 ImplItem* Parser::parse_impl() {
     auto impl = loc(new ImplItem());
     eat(Token::IMPL);
-    parse_type_params(impl->type_params_);
+    parse_ast_type_params(impl->ast_type_params_);
     auto type = parse_type();
     if (accept(Token::FOR)) {
         impl->trait_ = type;
@@ -565,7 +565,7 @@ ModDecl* Parser::parse_mod_decl() {
     auto mod_decl = loc(new ModDecl());
     eat(Token::MOD);
     mod_decl->identifier_ = try_id("module declaration");
-    parse_type_params(mod_decl->type_params_);
+    parse_ast_type_params(mod_decl->ast_type_params_);
     if (accept(Token::L_BRACE)) {
          mod_decl->mod_contents_ = parse_mod_contents();
         expect(Token::R_BRACE, "module");
@@ -592,7 +592,7 @@ StructDecl* Parser::parse_struct_decl() {
     auto struct_decl = loc(new StructDecl());
     eat(Token::STRUCT);
     struct_decl->identifier_ = try_id("struct declaration");
-    parse_type_params(struct_decl->type_params_);
+    parse_ast_type_params(struct_decl->ast_type_params_);
     expect(Token::L_BRACE, "struct declaration");
     int i = 0;
     parse_comma_list(Token::R_BRACE, "closing brace of struct declaration", [&] {
@@ -605,7 +605,7 @@ TraitDecl* Parser::parse_trait_decl() {
     auto trait_decl = loc(new TraitDecl);
     eat(Token::TRAIT);
     trait_decl->identifier_ = try_id("trait declaration");
-    parse_type_params(trait_decl->type_params_);
+    parse_ast_type_params(trait_decl->ast_type_params_);
 
     if (accept(Token::COLON)) {
         parse_comma_list(Token::L_BRACE, "trait declaration", [&] {
@@ -626,7 +626,7 @@ Typedef* Parser::parse_typedef() {
     auto type_def = loc(new Typedef());
     eat(Token::TYPEDEF);
     type_def->identifier_ = try_id("type definition");
-    parse_type_params(type_def->type_params_);
+    parse_ast_type_params(type_def->ast_type_params_);
     expect(Token::ASGN, "type definition");
     type_def->ast_type_ = parse_type();
     expect(Token::SEMICOLON, "type definition");
@@ -720,7 +720,7 @@ const ArrayASTType* Parser::parse_array_type() {
 const FnASTType* Parser::parse_fn_type() {
     auto fn_type = loc(new FnASTType());
     eat(Token::FN);
-    parse_type_params(fn_type->type_params_);
+    parse_ast_type_params(fn_type->ast_type_params_);
     expect(Token::L_PAREN, "function type");
     parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&] {
         fn_type->args_.push_back(parse_type());

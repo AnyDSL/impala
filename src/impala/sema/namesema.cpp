@@ -108,7 +108,7 @@ void NameSema::pop_scope() {
  * misc
  */
 
-void TypeParam::check(NameSema& sema) const {
+void ASTTypeParam::check(NameSema& sema) const {
     for (auto bound : bounds())
         bound->check(sema);
 }
@@ -126,15 +126,15 @@ void LocalDecl::check(NameSema& sema) const {
  * AST types
  */
 
-void TypeParamList::check_type_params(NameSema& sema) const {
+void ASTTypeParamList::check_ast_type_params(NameSema& sema) const {
     // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
     // first, insert names
-    for (auto type_param : type_params())
-        sema.insert(type_param);
+    for (auto ast_type_param : ast_type_params())
+        sema.insert(ast_type_param);
 
     // then, check bounds
-    for (auto type_param : type_params())
-        type_param->check(sema);
+    for (auto ast_type_param : ast_type_params())
+        ast_type_param->check(sema);
 }
 
 void ErrorASTType::check(NameSema&) const {}
@@ -158,7 +158,7 @@ void ASTTypeApp::check(NameSema& sema) const {
 
 void FnASTType::check(NameSema& sema) const {
     sema.push_scope();
-    check_type_params(sema);
+    check_ast_type_params(sema);
     for (auto arg : args())
         arg->check(sema);
     sema.pop_scope();
@@ -194,7 +194,7 @@ void ExternBlock::check(NameSema& sema) const {
 
 void Typedef::check(NameSema& sema) const {
     sema.push_scope();
-    check_type_params(sema);
+    check_ast_type_params(sema);
     ast_type()->check(sema);
     sema.pop_scope();
 }
@@ -210,7 +210,7 @@ void StaticItem::check(NameSema& sema) const {
 
 void Fn::fn_check(NameSema& sema) const {
     sema.push_scope();
-    check_type_params(sema);
+    check_ast_type_params(sema);
     for (auto param : params()) {
         sema.insert(param);
         if (param->ast_type())
@@ -231,7 +231,7 @@ void FnDecl::check(NameSema& sema) const {
 
 void StructDecl::check(NameSema& sema) const {
     sema.push_scope();
-    check_type_params(sema);
+    check_ast_type_params(sema);
     for (auto field_decl : field_decls()) {
         field_decl->check(sema);
         field_table_[field_decl->symbol()] = field_decl;
@@ -247,7 +247,7 @@ void FieldDecl::check(NameSema& sema) const {
 void TraitDecl::check(NameSema& sema) const {
     sema.push_scope();
     sema.insert(self_param());
-    check_type_params(sema);
+    check_ast_type_params(sema);
     for (auto t : super_traits())
         t->check(sema);
     for (auto method : methods()) {
@@ -259,7 +259,7 @@ void TraitDecl::check(NameSema& sema) const {
 
 void ImplItem::check(NameSema& sema) const {
     sema.push_scope();
-    check_type_params(sema);
+    check_ast_type_params(sema);
     if (trait())
         trait()->check(sema);
     ast_type()->check(sema);

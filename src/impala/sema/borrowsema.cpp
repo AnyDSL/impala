@@ -25,7 +25,7 @@ private:
  * misc
  */
 
-void TypeParam::check(BorrowSema& sema) const {
+void ASTTypeParam::check(BorrowSema& sema) const {
     for (auto bound : bounds())
         bound->check(sema);
 }
@@ -41,9 +41,9 @@ void LocalDecl::check(BorrowSema& sema) const {
  * AST types
  */
 
-void TypeParamList::check_type_params(BorrowSema& sema) const {
-    for (auto type_param : type_params())
-        type_param->check(sema);
+void ASTTypeParamList::check_ast_type_params(BorrowSema& sema) const {
+    for (auto ast_type_param : ast_type_params())
+        ast_type_param->check(sema);
 }
 
 void ErrorASTType::check(BorrowSema&) const {}
@@ -65,7 +65,7 @@ void ASTTypeApp::check(BorrowSema& sema) const {
 }
 
 void FnASTType::check(BorrowSema& sema) const {
-    check_type_params(sema);
+    check_ast_type_params(sema);
     for (auto arg : args())
         arg->check(sema);
 }
@@ -93,7 +93,7 @@ void ExternBlock::check(BorrowSema& sema) const {
 }
 
 void Typedef::check(BorrowSema& sema) const {
-    check_type_params(sema);
+    check_ast_type_params(sema);
     ast_type()->check(sema);
 }
 
@@ -107,7 +107,7 @@ void StaticItem::check(BorrowSema& sema) const {
 }
 
 void Fn::fn_check(BorrowSema& sema) const {
-    check_type_params(sema);
+    check_ast_type_params(sema);
     for (auto param : params()) {
         if (param->ast_type())
             param->ast_type()->check(sema);
@@ -125,7 +125,7 @@ void FnDecl::check(BorrowSema& sema) const {
 }
 
 void StructDecl::check(BorrowSema& sema) const {
-    check_type_params(sema);
+    check_ast_type_params(sema);
     for (auto field_decl : field_decls()) {
         field_decl->check(sema);
         field_table_[field_decl->symbol()] = field_decl;
@@ -137,7 +137,7 @@ void FieldDecl::check(BorrowSema& sema) const {
 }
 
 void TraitDecl::check(BorrowSema& sema) const {
-    check_type_params(sema);
+    check_ast_type_params(sema);
     for (auto t : super_traits())
         t->check(sema);
     for (auto method : methods()) {
@@ -147,7 +147,7 @@ void TraitDecl::check(BorrowSema& sema) const {
 }
 
 void ImplItem::check(BorrowSema& sema) const {
-    check_type_params(sema);
+    check_ast_type_params(sema);
     if (trait())
         trait()->check(sema);
     ast_type()->check(sema);

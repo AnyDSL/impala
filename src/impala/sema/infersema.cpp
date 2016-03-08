@@ -1,3 +1,4 @@
+#if 0
 #include <sstream>
 
 #include "thorin/util/array.h"
@@ -775,3 +776,4 @@ void LetStmt::check(InferSema& sema) const {
 //------------------------------------------------------------------------------
 
 }
+#endif

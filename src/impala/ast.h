@@ -13,7 +13,7 @@
 
 #include "impala/symbol.h"
 #include "impala/token.h"
-#include "impala/sema/unifiable.h"
+#include "impala/sema/type.h"
 
 namespace thorin {
     class Enter;
@@ -33,7 +33,7 @@ class Item;
 class MapExpr;
 class NamedItem;
 class Stmt;
-class TypeParam;
+class ASTTypeParam;
 
 class NameSema;
 class InferSema;
@@ -41,7 +41,6 @@ class BorrowSema;
 class TypeSema;
 class CodeGen;
 
-template<class T> using SafePtr    = thorin::SafePtr<T>;
 template<class T> using AutoPtr    = thorin::AutoPtr<T>;
 template<class T> using AutoVector = thorin::AutoVector<T>;
 
@@ -82,10 +81,10 @@ private:
 /// Mixin for all entities that have a type assigned.
 class Typeable {
 public:
-    Type type() const { return type_; }
+    const Type* type() const { return type_; }
 
 protected:
-    mutable Type type_;
+    mutable const Type* type_;
 
     friend class ForExpr;
     friend class InferSema;
@@ -93,19 +92,19 @@ protected:
 };
 
 /// Mixin for all entities which have a list of \p TypeParam%s: [T1, T2 : A + B[...], ...].
-class TypeParamList {
+class ASTTypeParamList {
 public:
-    const TypeParam* type_param(size_t i) const { return type_params_[i]; }
-    ArrayRef<const TypeParam*> type_params() const { return type_params_; }
-    std::ostream& stream_type_params(std::ostream&) const;
+    const ASTTypeParam* ast_type_param(size_t i) const { return ast_type_params_[i]; }
+    ArrayRef<const ASTTypeParam*> ast_type_params() const { return ast_type_params_; }
+    std::ostream& stream_ast_type_params(std::ostream&) const;
 
 protected:
-    void check_type_params(NameSema&) const;
-    void check_type_params(BorrowSema&) const;
-    void check_type_params(InferSema&) const;
-    void check_type_params(TypeSema&) const;
+    void check_ast_type_params(NameSema&) const;
+    void check_ast_type_params(BorrowSema&) const;
+    void check_ast_type_params(InferSema&) const;
+    void check_ast_type_params(TypeSema&) const;
 
-    AutoVector<const TypeParam*> type_params_;
+    AutoVector<const ASTTypeParam*> ast_type_params_;
 };
 
 //------------------------------------------------------------------------------
@@ -148,14 +147,14 @@ class PathElem : public ASTNode {
 public:
     const Identifier* identifier() const { return identifier_; }
     Symbol symbol() const { return identifier()->symbol(); }
-    SafePtr<const Decl> decl() const { return decl_; }
+    const Decl* decl() const { return decl_; }
     virtual std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const;
     void check(BorrowSema&) const;
 
 private:
     AutoPtr<const Identifier> identifier_;
-    mutable SafePtr<const Decl> decl_;
+    mutable const Decl* decl_ = nullptr;
 
     friend class Parser;
 };
@@ -169,7 +168,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const;
     void check(BorrowSema&) const;
-    SafePtr<const Decl> decl() const { return path_elems_.back()->decl(); }
+    const Decl* decl() const { return path_elems_.back()->decl(); }
 
 private:
     bool is_global_;
@@ -190,7 +189,7 @@ public:
     virtual void check(BorrowSema&) const = 0;
 
 private:
-    virtual Type check(InferSema&) const = 0;
+    virtual const Type* check(InferSema&) const = 0;
     virtual void check(TypeSema&) const = 0;
 
     friend class NameSema;
@@ -207,7 +206,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&) const override;
+    virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 };
 
@@ -225,7 +224,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&) const override;
+    virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 
     Kind kind_;
@@ -247,7 +246,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&) const override;
+    virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 
     Kind kind_;
@@ -274,7 +273,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&) const override;
+    virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 };
 
@@ -287,7 +286,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&) const override;
+    virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 
     thorin::u64 dim_;
@@ -314,7 +313,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&) const override;
+    virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 };
 
@@ -322,25 +321,24 @@ class ASTTypeApp : public CompoundASTType {
 public:
     const Identifier* identifier() const { return identifier_; }
     Symbol symbol() const { return identifier()->symbol(); }
-    SafePtr<const Decl> decl() const { return decl_; }
-    TraitApp trait_app(InferSema&, const Type) const;
+    const Decl* decl() const { return decl_; }
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&) const override;
+    virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 
     AutoPtr<const Identifier> identifier_;
-    mutable SafePtr<const Decl> decl_;
+    mutable const Decl* decl_ = nullptr;
 
     friend class Parser;
     friend class NameScope;
 };
 
-class FnASTType : public TypeParamList, public CompoundASTType {
+class FnASTType : public ASTTypeParamList, public CompoundASTType {
 public:
     FnASTType() {}
     FnASTType(const thorin::Location& loc) { set_loc(loc); }
@@ -352,7 +350,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&) const override;
+    virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 
     friend class Parser;
@@ -367,7 +365,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&) const override;
+    virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 
     AutoPtr<const Expr> expr_;
@@ -384,7 +382,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&) const override;
+    virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 
     thorin::u64 size_;
@@ -460,7 +458,7 @@ public:
     void check(BorrowSema&) const;
 
 private:
-    Type check(InferSema&) const;
+    const Type* check(InferSema&) const;
     void check(TypeSema&) const;
     virtual thorin::Var emit(CodeGen&, const thorin::Def* init) const override;
 
@@ -481,19 +479,19 @@ protected:
  * parameters and Fn
  */
 
-class TypeParam : public TypeDecl {
+class ASTTypeParam : public TypeDecl {
 public:
     size_t num_bounds() const { return bounds().size(); }
     const ASTTypes& bounds() const { return bounds_; }
-    TypeVar type_var() const { return type().as<TypeVar>(); }
+    const TypeParam* type_param() const { return type()->as<TypeParam>(); }
 
     void check(NameSema&) const;
-    TypeVar check(TypeSema&) const;
+    const TypeParam* check(TypeSema&) const;
     void check(BorrowSema&) const;
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    TypeVar check(InferSema&) const;
+    const TypeParam* check(InferSema&) const;
 
     ASTTypes bounds_;
 
@@ -502,7 +500,7 @@ private:
     friend class TypeSema;
 };
 
-class SelfParam : public TypeParam {
+class SelfParam : public ASTTypeParam {
 public:
     SelfParam(const thorin::Location&) {}
     void set_loc(const thorin::Location& loc) { loc_ = loc; set_identifier(loc); }
@@ -523,7 +521,7 @@ public:
     friend class Parser;
 };
 
-class Fn : public TypeParamList {
+class Fn : public ASTTypeParamList {
 public:
     const Param* param(size_t i) const { return params_[i]; }
     ArrayRef<const Param*> params() const { return params_; }
@@ -534,22 +532,22 @@ public:
     const thorin::Def* frame() const { return frame_; }
     std::ostream& stream_params(std::ostream& p, bool returning) const;
     void fn_check(NameSema&) const;
-    Type check_body(InferSema&, FnType) const;
-    Type check_body(TypeSema&) const;
+    const Type* check_body(InferSema&, const FnType*) const;
+    const Type* check_body(TypeSema&) const;
     void fn_check(BorrowSema&) const;
     thorin::Lambda* emit_head(CodeGen&, const thorin::Location&) const;
     void emit_body(CodeGen&, const thorin::Location& loc) const;
 
     bool is_continuation() const { return is_continuation_; }
 
-    virtual FnType fn_type() const = 0;
+    virtual const FnType* fn_type() const = 0;
     virtual Symbol fn_symbol() const = 0;
 
 protected:
     mutable thorin::Lambda* lambda_;
-    mutable SafePtr<const thorin::Param> ret_param_;
-    mutable const thorin::Def* frame_;
     AutoVector<const Param*> params_;
+    mutable const thorin::Param* ret_param_ = nullptr;
+    mutable const thorin::Def* frame_ = nullptr;
 
 private:
     AutoPtr<const Expr> body_;
@@ -614,7 +612,7 @@ public:
     Symbol item_symbol() const { return item_identifier()->symbol(); }
 };
 
-class TypeDeclItem : public NamedItem, public TypeDecl, public TypeParamList {
+class TypeDeclItem : public NamedItem, public TypeDecl, public ASTTypeParamList {
 public:
     virtual const Identifier* item_identifier() const override { return TypeDecl::identifier(); }
 
@@ -766,7 +764,7 @@ private:
 class FnDecl : public ValueItem, public Fn {
 public:
     bool is_extern() const { return is_extern_; }
-    virtual FnType fn_type() const override { return type().as<FnType>(); }
+    virtual const FnType* fn_type() const override { return type()->as<FnType>(); }
     virtual Symbol fn_symbol() const override { return export_name_ ? export_name_->symbol() : identifier()->symbol(); }
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
@@ -785,7 +783,7 @@ private:
     friend class TypeSema;
 };
 
-class TraitDecl : public NamedItem, public Decl, public TypeParamList {
+class TraitDecl : public NamedItem, public Decl, public ASTTypeParamList {
 public:
     TraitDecl()
         : self_param_(thorin::Location(loc().begin(), loc().begin()))
@@ -795,7 +793,6 @@ public:
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
     const MethodTable& method_table() const { return method_table_; }
     const SelfParam* self_param() const { return &self_param_; }
-    TraitAbs trait_abs() const { return trait_abs_; }
 
     virtual const Identifier* item_identifier() const override { return Decl::identifier(); }
 
@@ -812,12 +809,11 @@ private:
     AutoVector<const FnDecl*> methods_;
     AutoVector<const ASTTypeApp*> super_traits_;
     mutable MethodTable method_table_;
-    mutable TraitAbs trait_abs_;
 
     friend class Parser;
 };
 
-class ImplItem : public Item, public TypeParamList {
+class ImplItem : public Item, public ASTTypeParamList {
 public:
     /// May be nullptr as trait is optional.
     const ASTType* trait() const { return trait_; }
@@ -853,8 +849,8 @@ private:
 class Expr : public ASTNode, public Typeable {
 public:
     /// return the type before implicit casting (for example ~4 always has the actual_type ~int but its type could be &int due to subtyping)
-    Type actual_type() const { return actual_type_.empty() ? type() : actual_type_; }
-    bool needs_cast() const { return !actual_type_.empty(); }
+    const Type* actual_type() const { return actual_type_ ? actual_type_ : nullptr; }
+    bool needs_cast() const { return actual_type_ != nullptr; }
     const thorin::Def* extra() const { return extra_; }
 
     virtual bool is_lvalue() const { return false; }
@@ -866,14 +862,14 @@ public:
     virtual void check(BorrowSema&) const = 0;
 
 private:
-    virtual Type check(InferSema&, const Type) const = 0;
+    virtual const Type* check(InferSema&, const Type*) const = 0;
     virtual void check(TypeSema&) const = 0;
     virtual thorin::Var lemit(CodeGen&) const;
     virtual const thorin::Def* remit(CodeGen&) const;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
 
-    mutable Type actual_type_;
+    mutable const Type* actual_type_;
 
 protected:
     mutable const thorin::Def* extra_; ///< Needed to propagate extend of indefinite arrays.
@@ -891,15 +887,15 @@ public:
     const ASTTypes& ast_type_args() const { return ast_type_args_; }
     const ASTType* ast_type_arg(size_t i) const { assert(i < ast_type_args_.size()); return ast_type_args_[i]; }
     size_t num_ast_type_args() const { return ast_type_args().size(); }
-    ArrayRef<Type> type_args() const { return type_args_; }
-    Type& type_arg(size_t i) const { return type_args_[i]; }
+    Types type_args() const { return type_args_; }
+    const Type*& type_arg(size_t i) const { return type_args_[i]; }
     size_t num_type_args() const { return type_args_.size(); }
     std::ostream& stream_ast_type_args(std::ostream& p) const;
     std::ostream& stream_type_args(std::ostream& p) const;
 
 protected:
     ASTTypes ast_type_args_;
-    mutable std::vector<Type> type_args_;
+    mutable std::vector<const Type*> type_args_;
 };
 
 /// Use as mixin for anything which uses args: (expr_1, ..., expr_n)
@@ -923,7 +919,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 };
@@ -954,7 +950,7 @@ public:
     virtual const thorin::Def* remit(CodeGen&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
 
     Kind kind_;
@@ -978,7 +974,7 @@ public:
     virtual const thorin::Def* remit(CodeGen&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
 
     Symbol symbol_;
@@ -997,7 +993,7 @@ public:
     virtual const thorin::Def* remit(CodeGen&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
 
     std::vector<Symbol> symbols_;
@@ -1009,7 +1005,7 @@ private:
 
 class FnExpr : public Expr, public Fn {
 public:
-    virtual FnType fn_type() const override { return type().as<FnType>(); }
+    virtual const FnType* fn_type() const override { return type()->as<FnType>(); }
     virtual Symbol fn_symbol() const override { return Symbol("lambda"); }
 
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1017,7 +1013,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
@@ -1035,7 +1031,7 @@ public:
     }
 
     const Path* path() const { return path_; }
-    SafePtr<const ValueDecl> value_decl() const { return value_decl_; }
+    const ValueDecl* value_decl() const { return value_decl_; }
 
     virtual bool is_lvalue() const override;
     virtual void take_address() const override;
@@ -1045,12 +1041,12 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
 
     AutoPtr<const Path> path_;
-    mutable SafePtr<const ValueDecl> value_decl_; ///< Declaration of the variable in use.
+    mutable const ValueDecl* value_decl_ = nullptr; ///< Declaration of the variable in use.
 
     friend class Parser;
 };
@@ -1078,7 +1074,7 @@ public:
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
 
     Kind kind_;
@@ -1108,7 +1104,7 @@ public:
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
 
     Kind kind_;
@@ -1140,7 +1136,7 @@ public:
     virtual const thorin::Def* remit(CodeGen&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
 
     Kind kind_;
@@ -1163,11 +1159,11 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
 
-    Type check_as_struct(InferSema&, const Type) const;
-    Type check_as_struct(TypeSema&) const;
+    const Type* check_as_struct(InferSema&, const Type*) const;
+    const Type* check_as_struct(TypeSema&) const;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
@@ -1192,7 +1188,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
@@ -1209,7 +1205,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
@@ -1226,7 +1222,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
@@ -1246,7 +1242,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
@@ -1263,7 +1259,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
@@ -1277,7 +1273,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
@@ -1305,7 +1301,7 @@ public:
     private:
         const Identifier* identifier_;
         const Expr* expr_;
-        mutable SafePtr<const FieldDecl> field_decl_;
+        mutable const FieldDecl* field_decl_ = nullptr;
 
         friend class StructExpr;
     };
@@ -1326,7 +1322,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
@@ -1339,7 +1335,7 @@ private:
 class MapExpr : public Expr, public Args, public TypeArgs {
 public:
     const Expr* lhs() const { return lhs_; }
-    FnType fn_mono() const { return fn_mono_; }
+    const FnType* fn_mono() const { return fn_mono_; }
 
     virtual bool is_lvalue() const override;
     virtual bool has_side_effect() const override;
@@ -1348,19 +1344,19 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
 
-    Type check_as_map(InferSema&, const Type) const;
-    Type check_as_map(TypeSema&) const;
-    Type check_as_method_call(InferSema&, const Type) const;
-    Type check_as_method_call(TypeSema&) const;
+    const Type* check_as_map(InferSema&, const Type*) const;
+    const Type* check_as_map(TypeSema&) const;
+    const Type* check_as_method_call(InferSema&, const Type*) const;
+    const Type* check_as_method_call(TypeSema&) const;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
-    mutable FnType fn_mono_;
+    mutable const FnType* fn_mono_;
 
     friend class Parser;
     friend class ForExpr;
@@ -1386,7 +1382,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 protected:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
@@ -1434,7 +1430,7 @@ public:
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
 
     AutoPtr<const Expr> cond_;
@@ -1460,7 +1456,7 @@ public:
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
 
     AutoPtr<const Expr> cond_;
@@ -1484,7 +1480,7 @@ public:
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual Type check(InferSema&, const Type) const override;
+    virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 

@@ -82,7 +82,7 @@ bool PathExpr::is_lvalue() const {
 bool MapExpr::is_lvalue() const {
     if (!lhs()->type())
         return true; // prevent further errors
-    return (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<PtrType>()) && lhs()->is_lvalue();
+    return (lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<PtrType>()) && lhs()->is_lvalue();
 }
 
 bool PrefixExpr::is_lvalue() const { return (kind() == MUL || kind() == AND) && rhs()->is_lvalue(); }
@@ -104,7 +104,7 @@ bool InfixExpr::has_side_effect() const {
 }
 
 bool PostfixExpr::has_side_effect() const { return true; }
-bool MapExpr::has_side_effect() const { return bool(lhs()->type().isa<FnType>()); }
+bool MapExpr::has_side_effect() const { return bool(lhs()->type()->isa<FnType>()); }
 bool BlockExprBase::has_side_effect() const { return !stmts().empty() || expr()->has_side_effect(); }
 
 bool IfExpr::has_side_effect() const {

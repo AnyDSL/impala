@@ -19,11 +19,11 @@ SET ( SOURCES
     sema/borrowsema.cpp
     sema/infersema.cpp
     sema/namesema.cpp
+    sema/type.cpp
+    sema/type.h
     sema/typesema.cpp
     sema/typetable.cpp
     sema/typetable.h
-    sema/unifiable.cpp
-    sema/unifiable.h
     stream.cpp
     symbol.cpp
     symbol.h

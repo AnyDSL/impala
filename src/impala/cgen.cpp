@@ -15,26 +15,26 @@ class CGen {
 private:
     // Analyses a type to see if it mentions a structure somewhere
     template <typename F>
-    void struct_from_type(const Type type, const F& f) {
+    void struct_from_type(const Type* type, const F& f) {
         // If the type mentions a vector, then we need to include the intrinsics header
-        if (type.isa<SimdType>())
+        if (type->isa<SimdType>())
             needs_vectors = true;
 
         // Is the value a structure ?
-        if (auto app_type = type.isa<StructAppType>()) {
+        if (auto app_type = type->isa<StructAppType>()) {
             f(app_type->struct_abs_type()->struct_decl());
             return;
         }
 
         // Is the value a pointer ?
-        if (auto ptr_type = type.isa<PtrType>()) {
-            struct_from_type(ptr_type->referenced_type().node(), f);
+        if (auto ptr_type = type->isa<PtrType>()) {
+            struct_from_type(ptr_type->referenced_type(), f);
             return;
         }
 
         // Is the value an array ?
-        if (auto array_type = type.isa<ArrayType>()) {
-            struct_from_type(array_type->elem_type().node(), f);
+        if (auto array_type = type->isa<ArrayType>()) {
+            struct_from_type(array_type->elem_type(), f);
             return;
         }
     }
@@ -44,8 +44,8 @@ private:
     }
 
     // Generates a C type from an Impala type
-    static bool ctype_from_impala(const Type type, std::string& ctype_prefix, std::string& ctype_suffix) {
-        if (auto prim_type = type.isa<PrimType>()) {
+    static bool ctype_from_impala(const Type* type, std::string& ctype_prefix, std::string& ctype_suffix) {
+        if (auto prim_type = type->isa<PrimType>()) {
             switch (prim_type->primtype_kind()) {
                 case PrimType_i8:
                     ctype_prefix = "char"; ctype_suffix = "";
@@ -83,24 +83,24 @@ private:
             }
         }
 
-        if (auto vector_type = type.isa<SimdType>()) {
-            auto prim = vector_type->elem_type().as<PrimType>();
+        if (auto simd_type = type->isa<SimdType>()) {
+            auto prim = simd_type->elem_type()->as<PrimType>();
 
             ctype_suffix = "";
             switch (prim->primtype_kind()) {
                 case PrimType_i32:
-                    if (vector_type->size() == 4) ctype_prefix = "__m128i";
-                    else if (vector_type->size() == 8) ctype_prefix = "__m258i";
+                    if (simd_type->dim() == 4) ctype_prefix = "__m128i";
+                    else if (simd_type->dim() == 8) ctype_prefix = "__m258i";
                     else return false;
                     break;
                 case PrimType_f32:
-                    if (vector_type->size() == 4) ctype_prefix = "__m128";
-                    else if (vector_type->size() == 8) ctype_prefix = "__m258";
+                    if (simd_type->dim() == 4) ctype_prefix = "__m128";
+                    else if (simd_type->dim() == 8) ctype_prefix = "__m258";
                     else return false;
                     break;
                 case PrimType_f64:
-                    if (vector_type->size() == 4) ctype_prefix = "__m128d";
-                    else if (vector_type->size() == 8) ctype_prefix = "__m258d";
+                    if (simd_type->dim() == 4) ctype_prefix = "__m128d";
+                    else if (simd_type->dim() == 8) ctype_prefix = "__m258d";
                     else return false;
                     break;
                 default:
@@ -110,7 +110,7 @@ private:
         }
 
         // Structure types
-        if (auto struct_type = type.isa<StructAppType>()) {
+        if (auto struct_type = type->isa<StructAppType>()) {
             const StructDecl* decl = struct_type->struct_abs_type()->struct_decl();
             ctype_prefix = "struct " + std::string(decl->item_symbol().str());
             ctype_suffix = "";
@@ -118,20 +118,20 @@ private:
         }
 
         // C void type is represented as an empty tuple (other tuples are not supported for interface generation)
-        if (type.isa<TupleType>()) {
+        if (type->isa<TupleType>()) {
             ctype_prefix = "void";
             ctype_suffix = "";
             return true;
         }
 
         // Pointer types are defined recursively
-        if (auto ptr_type = type.isa<PtrType>()) {
+        if (auto ptr_type = type->isa<PtrType>()) {
             // Rules :
             // &[T] -> T*
             // &[T * N] -> T*
             // &T -> T*
 
-            if (auto array_type = ptr_type->referenced_type().isa<ArrayType>()) {
+            if (auto array_type = ptr_type->referenced_type()->isa<ArrayType>()) {
                 if (!ctype_from_impala(array_type->elem_type(), ctype_prefix, ctype_suffix))
                     return false;
             } else {
@@ -144,14 +144,14 @@ private:
             return true;
         }
 
-        if (auto darray_type = type.isa<DefiniteArrayType>()) {
+        if (auto darray_type = type->isa<DefiniteArrayType>()) {
             if (!ctype_from_impala(darray_type->elem_type(), ctype_prefix, ctype_suffix))
                 return false;
             ctype_suffix = "[" + std::to_string(darray_type->dim()) + "]";
             return true;
         }
 
-        if (auto iarray_type = type.isa<IndefiniteArrayType>()) {
+        if (auto iarray_type = type->isa<IndefiniteArrayType>()) {
             if (!ctype_from_impala(iarray_type->elem_type(), ctype_prefix, ctype_suffix))
                 return false;
             ctype_suffix = "[]";
@@ -175,7 +175,7 @@ private:
 
         // Go through each dependency and generate it
         for (auto field : cur_gen->field_decls()) {
-            struct_from_type(field->type().node(), [&] (const StructDecl* decl) {
+            struct_from_type(field->type(), [&] (const StructDecl* decl) {
                 auto it = struct_decls.find(decl);
                 if (it != struct_decls.end()) {
                     if (it->second == NOT_GEN) {
@@ -193,7 +193,7 @@ private:
     void process_struct_decl(const StructDecl* struct_decl) {
         // Add all the structures that are referenced in the fields
         for (auto field : struct_decl->field_decls()) {
-            struct_from_type(field->type().node(), [this] (const StructDecl* decl) {
+            struct_from_type(field->type(), [this] (const StructDecl* decl) {
                 export_structs.insert(decl);
             });
         }
@@ -205,7 +205,7 @@ private:
             return;
 
         // Read each argument in turn and record the structures that have to be exported
-        FnType fn_type = fn_decl->fn_type();
+        auto fn_type = fn_decl->fn_type();
         for (auto arg : fn_type->args()) {
             struct_from_type(arg, [this] (const StructDecl* decl) {
                 export_structs.insert(decl);
@@ -269,10 +269,10 @@ public:
         for (auto st : order) {
             o << "struct " << st->item_symbol().str() << " {\n";
             for (auto field : st->field_decls()) {
-                Type type = field->type();
+                auto type = field->type();
 
                 std::string ctype_pref, ctype_suf;
-                if (!ctype_from_impala(type.node(), ctype_pref, ctype_suf)) {
+                if (!ctype_from_impala(type, ctype_pref, ctype_suf)) {
                     cgen_error(field) << "structure field type not exportable\n";
                     return false;
                 }
@@ -287,10 +287,10 @@ public:
 
     bool generate_functions(std::ostream& o) const {
         for (auto fn : export_fns) {
-            const FnType fn_type = fn->fn_type();
+            const auto fn_type = fn->fn_type();
 
             std::string return_pref, return_suf;
-            if (!ctype_from_impala(fn_type->return_type().node(), return_pref, return_suf)) {
+            if (!ctype_from_impala(fn_type->return_type(), return_pref, return_suf)) {
                 cgen_error(fn) << "function return type not exportable\n";
                 return false;
             }
@@ -306,7 +306,7 @@ public:
             // Generate all arguments except the last one which is the implicit continuation
             for (size_t i = 0, e = fn_type->num_args() - 1; i != e; ++i) {
                 std::string ctype_pref, ctype_suf;
-                if (!ctype_from_impala(fn_type->arg(i).node(), ctype_pref, ctype_suf)) {
+                if (!ctype_from_impala(fn_type->arg(i), ctype_pref, ctype_suf)) {
                     cgen_error(fn) << "function argument type not exportable\n";
                     return false;
                 }
