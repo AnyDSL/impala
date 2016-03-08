@@ -35,7 +35,7 @@ public:
     }
 
     Lambda* create_continuation(const LocalDecl* decl) {
-        auto result = lambda(convert(decl->type()).as<thorin::FnType>(), decl->loc(), decl->symbol().str());
+        auto result = lambda(convert(decl->type())->as<thorin::FnType>(), decl->loc(), decl->symbol().str());
         result->param(0)->name = "mem";
         decl->var_ = Var::create_val(*this, result);
         return result;
@@ -81,20 +81,22 @@ public:
             decl->var_ = decl->emit(*this, init);
         return decl->var_;
     }
-    thorin::Type convert(const Unifiable* uni) {
+    const thorin::Type* convert(const Unifiable* uni) {
         auto unifiable = uni->unify();
         if (!unifiable->thorin_type_) {
             for (auto type_var : unifiable->type_vars())    // convert type vars
-                type_var->thorin_type_ = world().type_param();
+                type_var->thorin_type_ = world().type_param(type_var->name().str());
 
-            unifiable->thorin_type_ = unifiable->convert(*this);
+            auto thorin_type = unifiable->convert(*this);
 
-            for (auto type_var : unifiable->type_vars())    // bind type vars
-                unifiable->thorin_type_->bind(convert(type_var).as<thorin::TypeParam>());
+            Array<const thorin::TypeParam*> type_params(unifiable->num_type_vars());
+            for (size_t i = 0, e = type_params.size(); i != e; ++i)
+                type_params[i] = convert(unifiable->type_var(i))->as<thorin::TypeParam>();
+            unifiable->thorin_type_ = thorin_type->close(type_params);
         }
         return unifiable->thorin_type_;
     }
-    template<class T> thorin::Type convert(Proxy<T> type) { return convert(type->unify()); }
+    template<class T> const thorin::Type* convert(Proxy<T> type) { return convert(type->unify()); }
 
     const Fn* cur_fn = nullptr;
 };
@@ -103,12 +105,12 @@ public:
  * Type
  */
 
-void Unifiable::convert_args(CodeGen& cg, std::vector<thorin::Type>& nargs) const {
+void Unifiable::convert_args(CodeGen& cg, std::vector<const thorin::Type*>& nargs) const {
     for (auto arg : args())
         nargs.push_back(cg.convert(arg));
 }
 
-thorin::Type PrimTypeNode::convert(CodeGen& cg) const {
+const thorin::Type* PrimTypeNode::convert(CodeGen& cg) const {
     switch (primtype_kind()) {
 #define IMPALA_TYPE(itype, ttype) \
         case PrimType_##itype: return cg.world().type_##ttype();
@@ -117,38 +119,38 @@ thorin::Type PrimTypeNode::convert(CodeGen& cg) const {
     }
 }
 
-thorin::Type NoRetTypeNode::convert(CodeGen&) const { return thorin::Type(); }
+const thorin::Type* NoRetTypeNode::convert(CodeGen&) const { return nullptr; }
 
-thorin::Type FnTypeNode::convert(CodeGen& cg) const {
-    std::vector<thorin::Type> nargs;
+const thorin::Type* FnTypeNode::convert(CodeGen& cg) const {
+    std::vector<const thorin::Type*> nargs;
     nargs.push_back(cg.world().mem_type());
     convert_args(cg, nargs);
-    return cg.world().fn_type(nargs);
+    return cg.world().fn_type(nargs, num_type_vars());
 }
 
-thorin::Type TupleTypeNode::convert(CodeGen& cg) const {
-    std::vector<thorin::Type> nargs;
+const thorin::Type* TupleTypeNode::convert(CodeGen& cg) const {
+    std::vector<const thorin::Type*> nargs;
     convert_args(cg, nargs);
     return cg.world().tuple_type(nargs);
 }
 
-thorin::Type StructAbsTypeNode::convert(CodeGen& cg) const {
+const thorin::Type* StructAbsTypeNode::convert(CodeGen& cg) const {
     thorin_type_ = thorin_struct_abs_type_ = cg.world().struct_abs_type(num_args(), struct_decl()->symbol().str());
     size_t i = 0;
     for (auto arg : args())
         thorin_struct_abs_type_->set(i++, cg.convert(arg));
-    thorin_type_.clear();               // will be set again by CodeGen's wrapper
+    thorin_type_ = nullptr; // will be set again by CodeGen's wrapper
     return thorin_struct_abs_type_;
 }
 
-thorin::Type StructAppTypeNode::convert(CodeGen& cg) const {
-    std::vector<thorin::Type> nargs;
+const thorin::Type* StructAppTypeNode::convert(CodeGen& cg) const {
+    std::vector<const thorin::Type*> nargs;
     convert_args(cg, nargs);
-    return cg.world().struct_app_type(cg.convert(struct_abs_type()).as<thorin::StructAbsType>(), nargs);
+    return cg.world().struct_app_type(cg.convert(struct_abs_type())->as<thorin::StructAbsType>(), nargs);
 }
 
-thorin::Type TraitAbsNode::convert(CodeGen& cg) const {
-    std::vector<thorin::Type> args;
+const thorin::Type* TraitAbsNode::convert(CodeGen& cg) const {
+    std::vector<const thorin::Type*> args;
 
     for (auto super_trait : super_traits())
         args.push_back(cg.convert(super_trait));
@@ -159,21 +161,21 @@ thorin::Type TraitAbsNode::convert(CodeGen& cg) const {
     return cg.world().tuple_type(args);
 }
 
-thorin::Type TraitAppNode::convert(CodeGen& cg) const {
-    Array<thorin::Type> nargs(num_args());
+const thorin::Type* TraitAppNode::convert(CodeGen& cg) const {
+    Array<const thorin::Type*> nargs(num_args());
     for (size_t i = 0, e = nargs.size(); i != e; ++i)
         nargs[i] = cg.convert(arg(i));
     return cg.convert(trait())->instantiate(nargs);
 }
 
-thorin::Type ImplNode::convert(CodeGen&) const { THORIN_UNREACHABLE; }
-thorin::Type PtrTypeNode::convert(CodeGen& cg) const { return cg.world().ptr_type(cg.convert(referenced_type()), 1, -1, thorin::AddressSpace(addr_space())); }
-thorin::Type DefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().definite_array_type(cg.convert(elem_type()), dim()); }
-thorin::Type IndefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().indefinite_array_type(cg.convert(elem_type())); }
+const thorin::Type* ImplNode::convert(CodeGen&) const { THORIN_UNREACHABLE; }
+const thorin::Type* PtrTypeNode::convert(CodeGen& cg) const { return cg.world().ptr_type(cg.convert(referenced_type()), 1, -1, thorin::AddressSpace(addr_space())); }
+const thorin::Type* DefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().definite_array_type(cg.convert(elem_type()), dim()); }
+const thorin::Type* IndefiniteArrayTypeNode::convert(CodeGen& cg) const { return cg.world().indefinite_array_type(cg.convert(elem_type())); }
 
-thorin::Type SimdTypeNode::convert(CodeGen& cg) const {
+const thorin::Type* SimdTypeNode::convert(CodeGen& cg) const {
     auto scalar = cg.convert(elem_type());
-    return cg.world().type(scalar.as<thorin::PrimType>()->primtype_kind(), size());
+    return cg.world().type(scalar->as<thorin::PrimType>()->primtype_kind(), size());
 }
 
 /*
@@ -197,7 +199,7 @@ Var LocalDecl::emit(CodeGen& cg, const Def* init) const {
 }
 
 Lambda* Fn::emit_head(CodeGen& cg, const Location& loc) const {
-    return lambda_ = cg.lambda(cg.convert(fn_type()).as<thorin::FnType>(), loc, fn_symbol().remove_quotation());
+    return lambda_ = cg.lambda(cg.convert(fn_type())->as<thorin::FnType>(), loc, fn_symbol().remove_quotation());
 }
 
 void Fn::emit_body(CodeGen& cg, const Location& loc) const {
@@ -220,7 +222,7 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
         cg.emit(param, p);
     }
     assert(i == lambda()->num_params());
-    if (lambda()->num_params() != 0 && lambda()->params().back()->type().isa<thorin::FnType>())
+    if (lambda()->num_params() != 0 && lambda()->params().back()->type()->isa<thorin::FnType>())
         ret_param_ = lambda()->params().back();
 
     // descend into body
@@ -228,7 +230,7 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
     if (def) {
         const Def* mem = cg.get_mem();
 
-        if (auto tuple = def->type().isa<thorin::TupleType>()) {
+        if (auto tuple = def->type()->isa<thorin::TupleType>()) {
             std::vector<const Def*> args;
             args.push_back(mem);
             for (size_t i = 0, e = tuple->num_args(); i != e; ++i)
@@ -492,7 +494,7 @@ const Def* DefiniteArrayExpr::remit(CodeGen& cg) const {
     Array<const Def*> thorin_args(num_args());
     for (size_t i = 0, e = num_args(); i != e; ++i)
         thorin_args[i] = cg.remit(arg(i));
-    return cg.world().definite_array(cg.convert(type()).as<thorin::DefiniteArrayType>()->elem_type(), thorin_args, loc());
+    return cg.world().definite_array(cg.convert(type())->as<thorin::DefiniteArrayType>()->elem_type(), thorin_args, loc());
 }
 
 const Def* RepeatedDefiniteArrayExpr::remit(CodeGen& cg) const {
@@ -510,7 +512,7 @@ const Def* TupleExpr::remit(CodeGen& cg) const {
 
 const Def* IndefiniteArrayExpr::remit(CodeGen& cg) const {
     extra_ = cg.remit(dim());
-    return cg.world().indefinite_array(cg.convert(type()).as<thorin::IndefiniteArrayType>()->elem_type(), extra_, loc());
+    return cg.world().indefinite_array(cg.convert(type())->as<thorin::IndefiniteArrayType>()->elem_type(), extra_, loc());
 }
 
 const Def* SimdExpr::remit(CodeGen& cg) const {
@@ -524,7 +526,7 @@ const Def* StructExpr::remit(CodeGen& cg) const {
     Array<const Def*> defs(num_elems());
     for (const auto& elem : elems())
         defs[elem.field_decl()->index()] = cg.remit(elem.expr());
-    return cg.world().struct_agg(cg.convert(type()).as<thorin::StructAppType>(), defs, loc());
+    return cg.world().struct_agg(cg.convert(type())->as<thorin::StructAppType>(), defs, loc());
 }
 
 Var MapExpr::lemit(CodeGen& cg) const {
@@ -539,7 +541,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
     if (auto fn_poly = lhs()->type().isa<FnType>()) {
         assert(fn_poly->num_type_vars() == num_type_args());
 
-        Array<thorin::Type> type_args(fn_poly->num_type_vars());
+        Array<const thorin::Type*> type_args(fn_poly->num_type_vars());
         for (size_t i = 0, e = type_args.size(); i != e; ++i)
             type_args[i] = cg.convert(type_arg(i));
 
@@ -550,7 +552,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
             defs.push_back(cg.remit(arg));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
-        auto ret_type = args().size() == fn_mono()->num_args() ? thorin::Type() : cg.convert(fn_mono()->return_type());
+        auto ret_type = args().size() == fn_mono()->num_args() ? nullptr : cg.convert(fn_mono()->return_type());
 
         auto ret = cg.call(dst, type_args, defs, ret_type, loc());
         if (ret_type)
@@ -690,7 +692,7 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun, loc());
 
     defs.front() = cg.get_mem(); // now get the current memory monad
-    cg.call(fun, {}, defs, thorin::Type(), map_expr->loc());
+    cg.call(fun, {}, defs, nullptr, map_expr->loc());
 
     cg.set_continuation(break_lambda);
     if (break_lambda->num_params() == 2)
