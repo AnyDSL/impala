@@ -14,6 +14,7 @@
 
 #include "impala/symbol.h"
 #include "impala/token.h"
+#include "impala/sema/lvmap.h"
 #include "impala/sema/unifiable.h"
 
 namespace thorin {
@@ -40,8 +41,8 @@ class CodeGen;
 class NameSema;
 class TypeSema;
 
-template <class T> class LvMap;
-template <class T> class LvTree;
+class LvMap;
+class LvTree;
 class MoveSema;
 class BorrowSema;
 class LifetimeSema;
@@ -935,6 +936,7 @@ public:
     virtual void check(MoveSema&) const = 0;
 	virtual void check(BorrowSema&) const = 0;
 	virtual void check(LifetimeSema&) const = 0;
+    virtual const LvTree& getLvTree(const LvMap& map) const { assert(false); /* overwrite this */ }
 
 private:
     virtual Type check(TypeSema&, TypeExpectation) const = 0;
@@ -1111,8 +1113,7 @@ public:
     virtual void check(MoveSema&) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
-    template <class T>
-    const LvTree<T> getLvTree(const LvMap<T>&) const;
+    virtual const LvTree& getLvTree(const LvMap&) const override;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1142,8 +1143,7 @@ public:
     virtual void check(MoveSema&) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
-    template <class T>
-    const LvTree<T> getLvTree(const LvMap<T>&) const;
+    virtual const LvTree& getLvTree(const LvMap&) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
@@ -1206,8 +1206,6 @@ public:
     virtual void check(MoveSema&) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
-    template <class T>
-    const LvTree<T> getLvTree(const LvMap<T>&) const;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
 private:
@@ -1256,6 +1254,8 @@ public:
     virtual void check(MoveSema&) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
+    virtual const LvTree& getLvTree(const LvMap&) const override;
+
     virtual bool is_lvalue() const override;
 
 private:
@@ -1417,6 +1417,7 @@ public:
     virtual void check(MoveSema&) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
+    virtual const LvTree& getLvTree(const LvMap&) const override;
     Type check_as_map(TypeSema&, TypeExpectation) const;
     Type check_as_method_call(TypeSema&, TypeExpectation) const;
 

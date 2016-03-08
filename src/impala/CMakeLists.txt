@@ -19,6 +19,7 @@ SET ( SOURCES
     sema/movesema.cpp
     sema/borrowsema.cpp
     sema/lifetimesema.cpp
+    sema/lvmap.cpp
     sema/namesema.cpp
     sema/typesema.cpp
     sema/typetable.cpp
