@@ -89,8 +89,9 @@ protected:
     void set(size_t i, const Type* type) {
         args_[i] = type;
         order_ = std::max(order_, type->order());
-        closed_ &= type->is_closed();
+        closed_      &= type->is_closed();
         monomorphic_ &= type->is_monomorphic();
+        known_       &= type->is_known();
     }
 
 public:
@@ -110,6 +111,8 @@ public:
     bool is_closed() const { return closed_; }  ///< Are all @p TypeParam%s bound?
     bool is_monomorphic() const { return monomorphic_; }        ///< Does this @p Type not depend on any @p TypeParam%s?.
     bool is_polymorphic() const { return !is_monomorphic(); }   ///< Does this @p Type depend on any @p TypeParam%s?.
+    bool is_known() const { return known_; }
+    bool is_unknown() const { return !is_known(); }
     virtual const Type* instantiate(Types) const;
     const Type* instantiate(Type2Type&) const;
     const Type* specialize(Type2Type&) const;
@@ -140,6 +143,7 @@ protected:
     mutable bool hashed_ = false;
     mutable bool closed_ = true;
     mutable bool monomorphic_ = true;
+    mutable bool known_ = true;
 
 private:
     virtual const Type* vinstantiate(Type2Type&) const = 0;
