@@ -18,24 +18,60 @@ public:
         : nossa_(nossa)
     {}
 
+    // helpers
+
     bool nossa() const { return nossa_; }
+    thorin::u8 char_value(const Location& loc, const char*& p);
+    const Type* scalar_type(const Expr* expr) {
+        if (auto simd_type = expr->type()->isa<SimdType>())
+            return simd_type->elem_type();
+        return expr->type();
+    }
 
     // error handling
 
-    thorin::u8 char_value(const Location& loc, const char*& p);
-    bool expect_lvalue(const Expr* expr, const char* context = nullptr) {
-        if (!expr->is_lvalue()) {
-            error(expr) << "lvalue required " << (context ? context : "in assignment") << '\n';
-            return  false;
-        }
-        return true;
+    void expect_int(const Expr* expr) {
+        auto t = scalar_type(expr);
+        if (!t->is_error() && !t->is_int())
+            error(expr) << "expected integer type but found " << t << "\n";
     }
-    const Type* scalar_type(const Expr*);
-    bool expect_int(const Expr*);
-    bool expect_int_or_bool(const Expr*);
-    void expect_num(const Expr*);
-    const Type* expect_type(const Expr* expr,const Type* found, const Type* expected, const char* context = nullptr);
-    const Type* expect_type(const Expr* expr,const Type* expected, const char* context = nullptr) { return expect_type(expr, expr->type(), expected, context); }
+
+    void expect_int_or_bool(const Expr* expr) {
+        auto t = scalar_type(expr);
+        if (!t->is_error() && !t->is_bool() && !t->is_int())
+            error(expr) << "expected integer or boolean type but found " << t << "\n";
+    }
+
+    void expect_num(const Expr* expr) {
+        auto t = scalar_type(expr);
+        if (!t->is_error() && !t->is_int() && !t->is_float())
+            error(expr) << "expected number type but found " << t << "\n";
+    }
+
+    void expect_num_or_bool(const Expr* expr) {
+        auto t = scalar_type(expr);
+        if (!t->is_error() && !t->is_bool() && !t->is_int() && !t->is_float())
+            error(expr) << "expected integer or boolean type but found " << t << "\n";
+    }
+
+    const Type* expect_type(const Expr* expr, const Type* found_type, const Type* expected, const char* context = nullptr) {
+        if (found_type == expected)
+            return found_type;
+        if (found_type <= expected) {
+            expr->actual_type_ = found_type;
+            return expected;
+        }
+
+        error(expr->loc()) << "mismatched types: expected '" << expected << "' but found '" << found_type << (context ? std::string("' as ") + context : "'" ) << "\n";
+        return expected;
+    }
+
+    const Type* expect_type(const Expr* expr, const Type* expected, const char* context = nullptr) { return expect_type(expr, expr->type(), expected, context); }
+
+    void expect_lvalue(const Expr* expr, const char* context = nullptr) {
+        if (!expr->is_lvalue())
+            error(expr) << "lvalue required " << (context ? context : "in assignment") << '\n';
+    }
 
     // check wrappers
 
@@ -68,70 +104,6 @@ public:
 void type_analysis(const ModContents* mod, bool nossa) {
     TypeSema sema(nossa);
     sema.check(mod);
-}
-
-//------------------------------------------------------------------------------
-
-const Type* TypeSema::scalar_type(const Expr* e) {
-    auto t = e->type();
-    if (auto simd = t->isa<SimdType>()) {
-        return simd->elem_type();
-    }
-    return t;
-}
-
-bool TypeSema::expect_int(const Expr* expr) {
-    auto t = scalar_type(expr);
-
-    if (!t->is_error() && !t->is_int()) {
-        error(expr) << "expected integer type but found " << t << "\n";
-        return false;
-    }
-    return true;
-}
-
-bool TypeSema::expect_int_or_bool(const Expr* expr) {
-    auto t = scalar_type(expr);
-
-    if (!t->is_error() && !t->is_bool() && !t->is_int()) {
-        error(expr) << "expected integer or boolean type but found " << t << "\n";
-        return false;
-    }
-    return true;
-}
-
-void TypeSema::expect_num(const Expr* expr) {
-    auto t = scalar_type(expr);
-
-    if (!t->is_error() && !t->is_bool() && !t->is_int() && !t->is_float())
-        error(expr) << "expected number type but found " << t << "\n";
-}
-
-const Type* TypeSema::expect_type(const Expr* expr, const Type* found_type, const Type* expected, const char* context) {
-    if (found_type == expected)
-        return found_type;
-    if (found_type <= expected) {
-        expr->actual_type_ = found_type;
-        return expected;
-    }
-
-    // TODO noret
-    //if (expected.noret() && (found_type == type_noret()))
-        //return found_type;
-
-#if 0
-    if (found_type->is_polymorphic()) { // try to infer instantiations for this polymorphic type
-        std::vector<Type> type_args;
-        auto inst = instantiate_unknown(found_type, type_args);
-        if (inst == expected) {
-            check_bounds(expr->loc(), *found_type, type_args);
-            return expected;
-        }
-    }
-#endif
-
-    error(expr->loc()) << "mismatched types: expected '" << expected << "' but found '" << found_type << (context ? std::string("' as ") + context : "'" ) << "\n";
-    return expected;
 }
 
 //------------------------------------------------------------------------------
@@ -476,21 +448,18 @@ void InfixExpr::check(TypeSema& sema) const {
         case MUL_ASGN:
         case DIV_ASGN:
         case REM_ASGN:
-            if (sema.expect_lvalue(lhs())) {
-                sema.expect_num(lhs());
-                sema.expect_num(rhs());
-            }
+            sema.expect_lvalue(lhs());
+            sema.expect_num_or_bool(lhs());
+            sema.expect_num_or_bool(rhs());
             return;
         case AND_ASGN:
         case  OR_ASGN:
         case XOR_ASGN:
         case SHL_ASGN:
         case SHR_ASGN:  {
-            // TODO handle floats etc
-            if (sema.expect_lvalue(lhs())) {
-                sema.expect_int_or_bool(lhs());
-                sema.expect_int_or_bool(rhs());
-            }
+            sema.expect_lvalue(lhs());
+            sema.expect_int_or_bool(lhs());
+            sema.expect_int_or_bool(rhs());
             return;
         }
         default: THORIN_UNREACHABLE;
