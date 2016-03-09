@@ -473,9 +473,7 @@ void PostfixExpr::check(TypeSema& sema) const {
 }
 
 template <typename F, typename T>
-bool symmetric(F f, T a, T b) {
-    return f(a, b) || f(b, a);
-}
+bool symmetric(F f, T a, T b) { return f(a, b) || f(b, a); }
 
 void CastExpr::check(TypeSema& sema) const {
     auto src_type = sema.check(lhs());
@@ -498,10 +496,8 @@ void CastExpr::check(TypeSema& sema) const {
         symmetric(int_to_bool, src_type, dst_type) ||
         symmetric(float_to_bool, src_type, dst_type);
 
-    if (!valid_cast) {
-        error(this) << "invalid source and destination types for cast operator, got '"
-                    << src_type << "' and '" << dst_type << "'\n";
-    }
+    if (!valid_cast)
+        error(this) << "invalid source and destination types for cast operator, got '" << src_type << "' and '" << dst_type << "'\n";
 }
 
 void DefiniteArrayExpr::check(TypeSema& /*sema*/) const {
