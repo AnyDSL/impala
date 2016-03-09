@@ -290,7 +290,7 @@ void StructDecl::emit_item(CodeGen& cg) const {
     cg.convert(type());
 }
 
-void TraitDecl::emit_item(CodeGen& cg) const {}
+void TraitDecl::emit_item(CodeGen&) const {}
 void Typedef::emit_item(CodeGen&) const {}
 
 /*

@@ -82,24 +82,52 @@ public:
     const Type* check_call(const FnType*& fn_mono, const FnType* fn_poly, std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type* expected);
 
 private:
+    /*
+     * union/find - see https://en.wikipedia.org/wiki/Disjoint-set_data_structure#Disjoint-set_forests
+     */
+
     struct Representative {
         Representative() {}
-        Representative(const Type* parent)
-            : parent(parent)
+        Representative(const Type* type)
+            : parent(this)
+            , type(type)
         {}
 
-        const Type* parent = nullptr;
+        Representative* parent = nullptr;
+        const Type* type = nullptr;
         int rank = 0;
     };
 
-    Representative representative(const Type* type) {
+    Representative* representative(const Type* type) {
         auto i = representatives_.find(type);
         if (i == representatives_.end()) {
             auto p = representatives_.emplace(type, type);
             assert_unused(p.second);
-            return type;
+            i = p.first;
         }
-        return i->second;
+        return &i->second;
+    }
+
+    Representative* find(Representative* repr) {
+        if (repr->parent != repr)
+            repr->parent = find(repr.parent);
+        return repr.parent;
+    }
+
+    void unite(Representative* x, Representative* y) {
+        auto x_root = find(x);
+        auto y_root = find(y);
+
+        if (x_root != y_root) {
+            if (x_root->rank < y_root->rank)
+                x_root->parent = y_root;
+            else if (x_root->rank > y_root->rank)
+                y_root->parent = x_root;
+            else {
+                y_root->parent = x_root;
+                ++x_root->rank;
+            }
+        }
     }
 
     thorin::HashMap<const Expr*, const Type*> expr2expected_;
