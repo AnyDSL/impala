@@ -445,33 +445,6 @@ private:
     friend class TypeTable;
 };
 
-class UnknownType : public Type {
-private:
-    UnknownType(TypeTable& typetable)
-        : Type(typetable, Kind_unknown, {})
-    {
-        known_ = false;
-    }
-
-public:
-    virtual std::ostream& stream(std::ostream&) const override;
-
-private:
-    virtual bool equal(const Type*) const override;
-    virtual uint64_t vhash() const override;
-    virtual const Type* vinstantiate(Type2Type&) const;
-    virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
-
-    std::string name_;
-    mutable const Type* binder_;
-    mutable size_t index_;
-    mutable const TypeParam* equiv_ = nullptr;
-
-    friend bool Type::equal(const Type*) const;
-    friend const Type* Type::close(ArrayRef<const TypeParam*>) const;
-    friend class TypeTable;
-};
-
 class NoRetType : public Type {
 private:
     NoRetType(TypeTable& typetable)
@@ -501,6 +474,33 @@ private:
     virtual const Type* vinstantiate(Type2Type&) const;
     virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
 
+    friend class TypeTable;
+};
+
+class UnknownType : public Type {
+private:
+    UnknownType(TypeTable& typetable)
+        : Type(typetable, Kind_unknown, {})
+    {
+        known_ = false;
+    }
+
+public:
+    virtual std::ostream& stream(std::ostream&) const override;
+
+private:
+    virtual bool equal(const Type*) const override;
+    virtual uint64_t vhash() const override;
+    virtual const Type* vinstantiate(Type2Type&) const;
+    virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
+
+    std::string name_;
+    mutable const Type* binder_;
+    mutable size_t index_;
+    mutable const TypeParam* equiv_ = nullptr;
+
+    friend bool Type::equal(const Type*) const;
+    friend const Type* Type::close(ArrayRef<const TypeParam*>) const;
     friend class TypeTable;
 };
 
