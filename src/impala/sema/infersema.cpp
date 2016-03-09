@@ -110,8 +110,8 @@ private:
 
     Representative* find(Representative* repr) {
         if (repr->parent != repr)
-            repr->parent = find(repr.parent);
-        return repr.parent;
+            repr->parent = find(repr->parent);
+        return repr->parent;
     }
 
     void unite(Representative* x, Representative* y) {
