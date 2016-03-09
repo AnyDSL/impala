@@ -79,6 +79,40 @@ public:
     const Type* check_call(const FnType*& fn_mono, const FnType* fn_poly, std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type* expected);
 
 private:
+    const Type* unify(const Type* t, const Type* u) {
+        if (t == u)                                         return t;
+        if (t->isa<UnknownType>() && u->isa<UnknownType>()) return unify_by_rank(representative(t), representative(u))->type;
+        if (t->isa<UnknownType>())                          return unify        (representative(u), representative(t))->type;
+        if (u->isa<UnknownType>())                          return unify        (representative(t), representative(u))->type;
+
+        if (auto t_type_param = t->isa<TypeParam>()) {
+            if (auto u_type_param = u->isa<TypeParam>())
+                if (t_type_param->equiv_ == u_type_param->equiv_)
+                    return t_type_param;
+        }
+
+        if (t->kind() == u->kind() && t->num_args() == u->num_args() && t->num_type_params() == u->num_type_params()) {
+            Array<const TypeParam*> ntype_params(t->num_type_params());
+            for (size_t i = 0, e = t->num_type_params(); i != e; ++i) {
+                assert(t->type_param(i)->equiv_ == nullptr);
+                t->type_param(i)->equiv_ = u->type_param(i);
+                ntype_params[i] = type_param(t->type_param(i)->symbol());
+            }
+
+            Array<const Type*> nargs(t->num_args());
+            for (size_t i = 0, e = nargs.size(); i != e; ++i)
+                nargs[i] = unify(t->arg(i), u->arg(i));
+
+            for (size_t i = 0, e = t->num_type_params(); i != e; ++i)
+                t->type_param(i)->equiv_ = nullptr;
+
+            auto ntype = t->rebuild(nargs)->close(ntype_params);
+            ntype =  ntype->close(ntype_params);
+        }
+
+        return type_error();
+    }
+
     /*
      * union/find - see https://en.wikipedia.org/wiki/Disjoint-set_data_structure#Disjoint-set_forests
      */
@@ -111,19 +145,29 @@ private:
         return repr->parent;
     }
 
-    void unite(Representative* x, Representative* y) {
+    Representative* unify(Representative* x, Representative* y) {
         auto x_root = find(x);
         auto y_root = find(y);
 
-        if (x_root != y_root) {
-            if (x_root->rank < y_root->rank)
-                x_root->parent = y_root;
-            else if (x_root->rank > y_root->rank)
-                y_root->parent = x_root;
-            else {
-                y_root->parent = x_root;
-                ++x_root->rank;
-            }
+        if (x_root == y_root)
+            return x_root;
+        ++x_root->rank;
+        return y_root->parent = x_root;
+    }
+
+    Representative* unify_by_rank(Representative* x, Representative* y) {
+        auto x_root = find(x);
+        auto y_root = find(y);
+
+        if (x_root == y_root)
+            return x_root;
+        if (x_root->rank < y_root->rank)
+            return x_root->parent = y_root;
+        else if (x_root->rank > y_root->rank)
+            return y_root->parent = x_root;
+        else {
+            ++x_root->rank;
+            return y_root->parent = x_root;
         }
     }
 

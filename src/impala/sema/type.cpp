@@ -273,6 +273,43 @@ std::ostream& TupleType::stream(std::ostream& os) const {
 //------------------------------------------------------------------------------
 
 /*
+ * rebuild
+ */
+
+const Type* Type::rebuild(Types args) const {
+    assert(num_args() == args.size());
+    if (args.empty())
+        return this;
+    return vrebuild(args);
+}
+
+const Type* DefiniteArrayType  ::vrebuild(Types args) const { return typetable().definite_array_type(args[0], dim()); }
+const Type* FnType             ::vrebuild(Types args) const { return typetable().fn_type(args); }
+const Type* IndefiniteArrayType::vrebuild(Types args) const { return typetable().indefinite_array_type(args[0]); }
+const Type* PrimType           ::vrebuild(Types     ) const { return typetable().prim_type(primtype_kind()); }
+const Type* TupleType          ::vrebuild(Types args) const { return typetable().tuple_type(args); }
+const Type* TypeParam          ::vrebuild(Types     ) const { return typetable().type_param(symbol()); }
+const Type* BorrowedPtrType    ::vrebuild(Types args) const { return typetable().borrowed_ptr_type(args[0], addr_space()); }
+const Type* MutPtrType         ::vrebuild(Types args) const { return typetable().     mut_ptr_type(args[0], addr_space()); }
+const Type* OwnedPtrType       ::vrebuild(Types args) const { return typetable().   owned_ptr_type(args[0], addr_space()); }
+
+const Type* StructAbsType::vrebuild(Types /*args*/) const {
+    //// TODO how do we handle recursive types?
+    //auto ntype = typetable().struct_abs_type(args.size());
+    //for (size_t i = 0, e = args.size(); i != e; ++i)
+        //ntype->set(i, args[i]);
+    //return ntype;
+    return nullptr;
+}
+
+const Type* StructAppType::vrebuild(Types args) const {
+    return typetable().struct_app_type(args[0]->as<StructAbsType>(), args.skip_front());
+}
+
+
+//------------------------------------------------------------------------------
+
+/*
  * specialize and instantiate
  */
 

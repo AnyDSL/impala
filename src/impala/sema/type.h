@@ -117,6 +117,7 @@ public:
     const Type* instantiate(Type2Type&) const;
     const Type* specialize(Type2Type&) const;
     const thorin::Type* thorin_type() const { return thorin_type_; }
+    const Type* rebuild(Types) const;
 
 #define IMPALA_TYPE(itype, atype) bool is_##itype() const { return is(PrimType_##itype); }
 #include "impala/tokenlist.h"
@@ -145,6 +146,7 @@ protected:
     mutable bool known_ = true;
 
 private:
+    virtual const Type* vrebuild(Types) const = 0;
     virtual const Type* vinstantiate(Type2Type&) const = 0;
     virtual const thorin::Type* convert(CodeGen&) const = 0;
 
@@ -177,6 +179,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual const thorin::Type* convert(CodeGen&) const override;
 
@@ -217,6 +220,7 @@ public:
         : PtrType(typetable, Kind_borrowed_ptr, referenced_type, addr_space)
     {}
 
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual std::string prefix() const override { return "&"; }
 };
@@ -227,6 +231,7 @@ public:
         : PtrType(typetable, Kind_mut_ptr, referenced_type, addr_space)
     {}
 
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual std::string prefix() const override { return "&mut"; }
 };
@@ -237,6 +242,7 @@ public:
         : PtrType(typetable, Kind_owned_ptr, referenced_type, addr_space)
     {}
 
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual std::string prefix() const override { return "~"; }
 };
@@ -258,6 +264,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override { THORIN_UNREACHABLE; }
     virtual const thorin::Type* convert(CodeGen&) const override;
 
@@ -297,6 +304,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual const thorin::Type* convert(CodeGen&) const override;
 
@@ -313,6 +321,7 @@ private:
     {}
 
     virtual std::ostream& stream(std::ostream&) const override;
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual const thorin::Type* convert(CodeGen&) const override;
 
@@ -333,6 +342,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual const thorin::Type* convert(CodeGen&) const override;
 
@@ -358,6 +368,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual const thorin::Type* convert(CodeGen&) const override;
 
@@ -380,6 +391,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual const thorin::Type* convert(CodeGen&) const override;
 
@@ -404,6 +416,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual const thorin::Type* convert(CodeGen&) const override;
 
@@ -432,6 +445,7 @@ public:
 
 private:
     virtual uint64_t vhash() const override;
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
 
@@ -443,6 +457,7 @@ private:
     friend bool Type::equal(const Type*) const;
     friend const Type* Type::close(ArrayRef<const TypeParam*>) const;
     friend class TypeTable;
+    friend class InferSema;
 };
 
 class NoRetType : public Type {
@@ -455,6 +470,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const;
     virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
 
@@ -471,6 +487,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const;
     virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
 
@@ -491,6 +508,7 @@ public:
 private:
     virtual bool equal(const Type*) const override;
     virtual uint64_t vhash() const override { return thorin::hash_value(this->gid()); }
+    virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const;
     virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
 
