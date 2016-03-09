@@ -322,7 +322,6 @@ const Type* SimdType::vinstantiate(Type2Type& map) const {
     return map[this] = typetable().simd_type(elem_type()->specialize(map), dim());
 }
 
-
 const Type* IndefiniteArrayType::vinstantiate(Type2Type& map) const {
     return map[this] = typetable().indefinite_array_type(elem_type()->specialize(map));
 }
