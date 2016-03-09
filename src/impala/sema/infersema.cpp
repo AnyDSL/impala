@@ -71,12 +71,9 @@ public:
     }
 
     const Type* check(const ASTType* ast_type) {
-#if 0
         if (ast_type->type() && ast_type->type()->is_known())
             return ast_type->type();
         return constrain(ast_type, ast_type->check(*this));
-#endif
-        return nullptr;
     }
 
     const Type* check_call(const FnType*& fn_mono, const FnType* fn_poly, std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type* expected);

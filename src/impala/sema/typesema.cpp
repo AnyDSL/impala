@@ -714,13 +714,11 @@ void FieldExpr::check(TypeSema& /*sema*/) const {
 }
 
 void MapExpr::check(TypeSema& sema) const {
-#if 0
-    sema.check(lhs());
+    auto ltype = sema.check(lhs());
     for (auto arg : args())
         sema.check(arg);
 
-    auto ltype = sema.check(lhs());
-
+#if 0
     if (auto fn_poly = ltype->isa<FnType>()) {
         return sema.check_call(this, fn_poly, ast_type_args(), type_args_, args());
     } else if (auto array = ltype->isa<ArrayType>()) {

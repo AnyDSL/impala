@@ -78,6 +78,10 @@ const Type* Type::close(ArrayRef<const TypeParam*> type_params) const {
     return typetable().unify_base(this);
 }
 
+bool Type::is_noret() const { return isa<NoRetType>(); }
+bool Type::is_error() const { return isa<TypeError>(); }
+bool Type::is(PrimTypeKind kind) const { return isa<PrimType>() && as<PrimType>()->primtype_kind() == kind; }
+
 bool FnType::is_returning() const {
     bool ret = false;
     for (auto arg : args()) {
@@ -93,6 +97,17 @@ bool FnType::is_returning() const {
         }
     }
     return true;
+}
+
+const Type* FnType::return_type() const {
+    if (!empty()) {
+        if (auto fn = args().back()->isa<FnType>()) {
+            if (fn->num_args() == 1)
+                return fn->args().front();
+            return typetable().tuple_type(fn->args());
+        }
+    }
+    return typetable().type_noret();
 }
 
 static Type2Type type2type(const Type* type, Types args) {
@@ -299,16 +314,14 @@ Array<const Type*> Type::specialize_args(Type2Type& map) const {
     return result;
 }
 
-const Type* PrimType ::vinstantiate(Type2Type& map) const { return map[this] = this; }
-const Type* TypeParam::vinstantiate(Type2Type& map) const { return map[this] = this; }
-
 const Type* DefiniteArrayType::vinstantiate(Type2Type& map) const {
     return map[this] = typetable().definite_array_type(elem_type()->specialize(map), dim());
 }
 
-const Type* FnType::vinstantiate(Type2Type& map) const {
-    return map[this] = typetable().fn_type(specialize_args(map));
+const Type* SimdType::vinstantiate(Type2Type& map) const {
+    return map[this] = typetable().simd_type(elem_type()->specialize(map), dim());
 }
+
 
 const Type* IndefiniteArrayType::vinstantiate(Type2Type& map) const {
     return map[this] = typetable().indefinite_array_type(elem_type()->specialize(map));
@@ -326,9 +339,7 @@ const Type* OwnedPtrType::vinstantiate(Type2Type& map) const {
     return map[this] = typetable().owned_ptr_type(referenced_type()->specialize(map), addr_space());
 }
 
-const Type* StructAbsType::instantiate(Types args) const {
-    return typetable().struct_app_type(this, args);
-}
+const Type* StructAbsType::instantiate(Types args) const { return typetable().struct_app_type(this, args); }
 
 const Type* StructAppType::vinstantiate(Type2Type& map) const {
     Array<const Type*> nargs(num_type_args());
@@ -337,9 +348,13 @@ const Type* StructAppType::vinstantiate(Type2Type& map) const {
     return map[this] = typetable().struct_app_type(struct_abs_type(), nargs);
 }
 
-const Type* TupleType::vinstantiate(Type2Type& map) const {
-    return map[this] = typetable().tuple_type(specialize_args(map));
-}
+const Type* TupleType  ::vinstantiate(Type2Type& map) const { return map[this] = typetable().tuple_type(specialize_args(map)); }
+const Type* FnType     ::vinstantiate(Type2Type& map) const { return map[this] = typetable().fn_type(specialize_args(map)); }
+const Type* PrimType   ::vinstantiate(Type2Type& map) const { return map[this] = this; }
+const Type* TypeParam  ::vinstantiate(Type2Type& map) const { return map[this] = this; }
+const Type* NoRetType  ::vinstantiate(Type2Type& map) const { return map[this] = this; }
+const Type* TypeError  ::vinstantiate(Type2Type& map) const { return map[this] = this; }
+const Type* UnknownType::vinstantiate(Type2Type&    ) const { THORIN_UNREACHABLE; return nullptr; }
 
 //------------------------------------------------------------------------------
 

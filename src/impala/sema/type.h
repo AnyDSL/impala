@@ -129,7 +129,6 @@ public:
     uint64_t hash() const { return is_hashed() ? hash_ : hash_ = vhash(); }
     virtual uint64_t vhash() const;
     virtual bool equal(const Type*) const;
-    virtual std::ostream& stream(std::ostream&) const override;
 
     static size_t gid_counter() { return gid_counter_; }
 
@@ -434,6 +433,7 @@ public:
 private:
     virtual uint64_t vhash() const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
 
     Symbol symbol_;
     mutable const Type* binder_;
