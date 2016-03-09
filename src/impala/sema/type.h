@@ -490,7 +490,7 @@ public:
 
 private:
     virtual bool equal(const Type*) const override;
-    virtual uint64_t vhash() const override;
+    virtual uint64_t vhash() const override { return thorin::hash_value(this->gid()); }
     virtual const Type* vinstantiate(Type2Type&) const;
     virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
 
