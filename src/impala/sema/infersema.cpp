@@ -80,6 +80,8 @@ public:
 
 private:
     const Type* unify(const Type* t, const Type* u) {
+        assert(t->is_hashed() && u->is_hashed());
+
         if (t == u)                                         return t;
         if (t->isa<UnknownType>() && u->isa<UnknownType>()) return unify_by_rank(representative(t), representative(u))->type;
         if (t->isa<UnknownType>())                          return unify        (representative(u), representative(t))->type;
@@ -107,7 +109,11 @@ private:
                 t->type_param(i)->equiv_ = nullptr;
 
             auto ntype = t->rebuild(nargs)->close(ntype_params);
-            ntype =  ntype->close(ntype_params);
+            if (ntype->is_hashed()) {
+                unify(ntype, t);
+                unify(ntype, u);
+            }
+            return ntype;
         }
 
         return type_error();
