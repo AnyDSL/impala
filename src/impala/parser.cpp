@@ -306,7 +306,8 @@ bool Parser::expect(TokenKind tok, const std::string& context) {
 }
 
 void Parser::error(const std::string& what, const std::string& context, const Token& tok) {
-    impala::error(tok.loc(), "expected %, got '%'%", tok, context.empty() ? "" : context.c_str());
+    impala::error(tok.loc(), "expected %, got '%'%", what, tok,
+            context.empty() ? "" : std::string(" while parsing ") + context.c_str());
 }
 
 const Identifier* Parser::try_id(const std::string& what) {
