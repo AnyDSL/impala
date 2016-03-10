@@ -94,6 +94,7 @@ protected:
 /// Mixin for all entities which have a list of \p TypeParam%s: [T1, T2 : A + B[...], ...].
 class ASTTypeParamList {
 public:
+    size_t num_ast_type_params() const { return ast_type_params_.size(); }
     const ASTTypeParam* ast_type_param(size_t i) const { return ast_type_params_[i]; }
     ArrayRef<const ASTTypeParam*> ast_type_params() const { return ast_type_params_; }
     std::ostream& stream_ast_type_params(std::ostream&) const;
@@ -101,7 +102,7 @@ public:
 protected:
     void check_ast_type_params(NameSema&) const;
     void check_ast_type_params(BorrowSema&) const;
-    void check_ast_type_params(InferSema&) const;
+    Array<const TypeParam*> check_ast_type_params(InferSema&) const;
     void check_ast_type_params(TypeSema&) const;
 
     AutoVector<const ASTTypeParam*> ast_type_params_;

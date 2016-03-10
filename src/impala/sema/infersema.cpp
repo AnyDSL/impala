@@ -63,8 +63,9 @@ public:
 
     /// Unifies @p t and @p u. Does @attention { not } update @p todo_.
     const Type* unify(const Type* t, const Type* u) {
-        assert(t->is_hashed() && u->is_hashed());
+        assert(t && t->is_hashed() && THORIN_IMPLIES(u, u->is_hashed()));
 
+        if (u == nullptr)                                   return t;
         if (t == u)                                         return t;
         if (t->isa<TypeError>())                            return t;
         if (u->isa<TypeError>())                            return u;
@@ -93,6 +94,11 @@ public:
             for (size_t i = 0, e = t->num_type_params(); i != e; ++i)
                 t->type_param(i)->equiv_ = nullptr;
 
+            if (t->isa<FnType>()) {
+                auto ntype = fn_type(nargs, t->num_type_params());
+                return ntype->close(ntype_params);
+            }
+
             return t->rebuild(nargs)->close(ntype_params);
         }
 
@@ -102,7 +108,12 @@ public:
     // check wrappers
 
     void check(const ModContents* n) { n->check(*this); }
-    const Type* check(const LocalDecl* local) { return constrain(local, local->check(*this)); }
+    const Type* check(const LocalDecl* local) {
+        auto type = local->check(*this);
+        if (type->is_hashed())
+            constrain(local, type);
+        return type;
+    }
     void check(const Item* n) { n->check(*this); }
     void check(const Stmt* n) { n->check(*this); }
     const Type* check(const Expr* expr, const Type* expected) { return constrain(expr, expr->check(*this, expected)); }
@@ -117,16 +128,19 @@ public:
     }
 
     const TypeParam* check(const ASTTypeParam* ast_type_param) {
-        if (ast_type_param->type())
-            return ast_type_param->type_param();
-        todo_ = true;
         return (ast_type_param->type_ = ast_type_param->check(*this))->as<TypeParam>();
     }
 
     const Type* check(const ASTType* ast_type) {
         if (ast_type->type() && ast_type->type()->is_known())
             return ast_type->type();
-        return constrain(ast_type, ast_type->check(*this));
+
+        auto type = ast_type->check(*this);
+
+        if (type->is_hashed())
+            return constrain(ast_type, type);
+
+        return type;
     }
 
     const Type* check_call(const FnType*& fn_mono, const FnType* fn_poly, std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type* expected);
@@ -237,9 +251,11 @@ const Type* InferSema::instantiate(const Location& loc, const Type* type, ArrayR
 
 const TypeParam* ASTTypeParam::check(InferSema& sema) const { return sema.type_param(symbol()); }
 
-void ASTTypeParamList::check_ast_type_params(InferSema& sema) const {
-    for (auto ast_type_param : ast_type_params())
-        sema.check(ast_type_param);
+Array<const TypeParam*> ASTTypeParamList::check_ast_type_params(InferSema& sema) const {
+    Array<const TypeParam*> type_params(num_ast_type_params());
+    for (size_t i = 0, e = num_ast_type_params(); i != e; ++i)
+        type_params[i] = sema.check(ast_type_param(i));
+    return type_params;
 }
 
 const Type* LocalDecl::check(InferSema& sema) const {
@@ -293,19 +309,13 @@ const Type* TupleASTType::check(InferSema& sema) const {
 }
 
 const Type* FnASTType::check(InferSema& sema) const {
-    check_ast_type_params(sema);
+    auto type_params = check_ast_type_params(sema);
 
     Array<const Type*> types(num_args());
     for (size_t i = 0, e = num_args(); i != e; ++i)
         types[i] = sema.check(arg(i));
 
-    auto fn_type = sema.fn_type(types);
-    for (auto ast_type_param : ast_type_params()) {
-        sema.check(ast_type_param);
-        fn_type->close({ast_type_param->type_param()}); // TODO close correctly
-    }
-
-    return fn_type;
+    return sema.fn_type(types)->close(type_params);
 }
 
 const Type* Typeof::check(InferSema& sema) const { return sema.check(expr()); }
@@ -361,7 +371,7 @@ void Typedef::check(InferSema& sema) const {
 void EnumDecl::check(InferSema&) const { /*TODO*/ }
 
 void StructDecl::check(InferSema& sema) const {
-    check_ast_type_params(sema);
+    auto type_params = check_ast_type_params(sema);
 
     for (auto field : field_decls()) {
         if (auto field_type = sema.type(field)) {
@@ -375,25 +385,22 @@ void StructDecl::check(InferSema& sema) const {
     for (auto field : field_decls())
         struct_type->set(field->index(), sema.type(field));
 
-    for (auto ast_type_param : ast_type_params())
-        struct_type->close({ast_type_param->type_param()}); // TODO close correctly
-
-    type_ = struct_type;
+    type_ = struct_type->close(type_params);
 }
 
 void FieldDecl::check(InferSema& sema) const { sema.check(ast_type()); }
 
 void FnDecl::check(InferSema& sema) const {
-    check_ast_type_params(sema);
+    auto type_params = check_ast_type_params(sema);
 
     Array<const Type*> param_types(num_params());
     for (size_t i = 0, e = num_params(); i != e; ++i)
         param_types[i] = sema.check(param(i));
 
-    sema.constrain(this, sema.fn_type(param_types));
+    sema.constrain(this, sema.fn_type(param_types, num_ast_type_params())->close(type_params));
 
-    for (auto ast_type_param : ast_type_params())
-        fn_type()->close({ast_type_param->type_param()}); // TODO close correctly
+    for (size_t i = 0, e = num_params(); i != e; ++i)
+        sema.constrain(param(i), fn_type()->arg(i));
 
     if (body() != nullptr)
         check_body(sema, fn_type());

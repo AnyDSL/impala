@@ -439,12 +439,12 @@ public:
     Symbol symbol() const { return symbol_; }
     const Type* binder() const { return binder_; }
     size_t index() const { return index_; }
-    virtual bool equal(const Type*) const override;
 
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual uint64_t vhash() const override;
+    virtual bool equal(const Type*) const override;
     virtual const Type* vrebuild(Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
