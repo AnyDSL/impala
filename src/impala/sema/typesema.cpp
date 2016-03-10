@@ -30,33 +30,38 @@ public:
 
     // error handling
 
-    void expect_bool(const Expr* expr) {
+    void error_msg(const Expr* expr, const char* what, const Type* type, const char* context = nullptr) {
+        error(expr, "expected % (have '%')", what, type, context ? std::string(" for ") + context : "");
+    }
+
+    void expect_bool(const Expr* expr, const char* context = nullptr) {
         auto t = scalar_type(expr);
         if (!t->is_error() && !t->is_bool())
-            error(expr, "expected boolean type but found '%'", t);
+            error_msg(expr, "boolean type", t, context);
     }
-    void expect_int(const Expr* expr) {
+
+    void expect_int(const Expr* expr, const char* context = nullptr) {
         auto t = scalar_type(expr);
         if (!t->is_error() && !t->is_int())
-            error(expr, "expected integer type but found '%'", t);
+            error_msg(expr, "integer type", t, context);
     }
 
-    void expect_int_or_bool(const Expr* expr) {
+    void expect_int_or_bool(const Expr* expr, const char* context = nullptr) {
         auto t = scalar_type(expr);
         if (!t->is_error() && !t->is_bool() && !t->is_int())
-            error(expr, "expected integer or boolean type but found '%'", t);
+            error_msg(expr, "integer type or boolean type", t, context);
     }
 
-    void expect_num(const Expr* expr) {
+    void expect_num(const Expr* expr, const char* context = nullptr) {
         auto t = scalar_type(expr);
         if (!t->is_error() && !t->is_int() && !t->is_float())
-            error(expr, "expected number type but found '%'", t);
+            error_msg(expr, "number type", t, context);
     }
 
-    void expect_num_or_bool(const Expr* expr) {
+    void expect_num_or_bool(const Expr* expr, const char* context = nullptr) {
         auto t = scalar_type(expr);
         if (!t->is_error() && !t->is_bool() && !t->is_int() && !t->is_float())
-            error(expr, "expected integer or boolean type but found '%'", t);
+            error_msg(expr, "number or boolean type", t, context);
     }
 
     const Type* expect_type(const Expr* expr, const Type* found, const Type* expected, const char* context = nullptr) {
@@ -71,11 +76,18 @@ public:
         return expected;
     }
 
-    const Type* expect_type(const Expr* expr, const Type* expected, const char* context = nullptr) { return expect_type(expr, expr->type(), expected, context); }
+    const Type* expect_type(const Expr* expr, const Type* expected, const char* context = nullptr) {
+        return expect_type(expr, expr->type(), expected, context);
+    }
 
     void expect_lvalue(const Expr* expr, const char* context = nullptr) {
         if (!expr->is_lvalue())
             error(expr, "lvalue required %", context ? context : "in assignment");
+    }
+
+    void expect_known(const ValueDecl* value_decl) {
+        if (!value_decl->type()->is_known())
+            error(value_decl, "cannot infer type for '%'", value_decl->symbol());
     }
 
     // check wrappers
@@ -166,6 +178,7 @@ void Typeof::check(TypeSema& sema) const { sema.check(expr()); }
 void LocalDecl::check(TypeSema& sema) const {
     if (ast_type())
         sema.check(ast_type());
+    sema.expect_known(this);
 }
 
 const Type* Fn::check_body(TypeSema& sema) const {
@@ -233,6 +246,7 @@ void FnDecl::check(TypeSema& sema) const {
 void StaticItem::check(TypeSema& sema) const {
     if (init())
         sema.check(init());
+    sema.expect_known(this);
 }
 
 void TraitDecl::check(TypeSema& sema) const {
@@ -377,64 +391,41 @@ void InfixExpr::check(TypeSema& sema) const {
     auto rtype = sema.check(rhs());
 
     switch (kind()) {
-        case EQ:
-        case NE:
-            if (!ltype->isa<PtrType>() && !ltype->isa<PrimType>() && !ltype->isa<SimdType>())
-                error(this, "expected primitive type, pointer type or SIMD type for equality operator");
-            return;
-        case LT:
-        case LE:
-        case GT:
-        case GE:
-        case ADD:
-        case SUB:
-        case MUL:
-        case DIV:
-        case REM: {
+        case EQ: case NE:
+        case LT: case GT:
+        case LE: case GE:
+        case ADD: case SUB:
+        case MUL: case DIV: case REM:
             sema.expect_num(lhs());
             sema.expect_num(rhs());
             return;
-        }
-        case OROR:
-        case ANDAND:
-            //sema.expect_bool(lhs(), "left-hand side of logical boolean expression");
-            //sema.expect_bool(rhs(), "right-hand side of logical boolean expression");
+        case OROR: case ANDAND:
+            sema.expect_bool(lhs(), "left-hand side of logical boolean expression");
+            sema.expect_bool(rhs(), "right-hand side of logical boolean expression");
             return;
-        case SHL:
-        case SHR: {
+        case SHL: case SHR:
             sema.expect_int(lhs());
             sema.expect_int(rhs());
             return;
-        }
-        case OR:
-        case XOR:
-        case AND: {
+        case OR: case XOR: case AND:
             sema.expect_int_or_bool(lhs());
             sema.expect_int_or_bool(rhs());
             return;
-        }
         case ASGN:
             sema.expect_lvalue(lhs());
             return;
-        case ADD_ASGN:
-        case SUB_ASGN:
-        case MUL_ASGN:
-        case DIV_ASGN:
-        case REM_ASGN:
+        case ADD_ASGN: case SUB_ASGN:
+        case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
             sema.expect_lvalue(lhs());
             sema.expect_num_or_bool(lhs());
             sema.expect_num_or_bool(rhs());
             return;
-        case AND_ASGN:
-        case  OR_ASGN:
-        case XOR_ASGN:
-        case SHL_ASGN:
-        case SHR_ASGN:  {
+        case AND_ASGN: case  OR_ASGN: case XOR_ASGN:
+        case SHL_ASGN: case SHR_ASGN:
             sema.expect_lvalue(lhs());
             sema.expect_int_or_bool(lhs());
             sema.expect_int_or_bool(rhs());
             return;
-        }
         default: THORIN_UNREACHABLE;
     }
 }
