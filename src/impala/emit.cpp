@@ -87,12 +87,12 @@ public:
             for (auto type_var : unifiable->type_vars())    // convert type vars
                 type_var->thorin_type_ = world().type_param(type_var->name().str());
 
-            auto thorin_type = unifiable->convert(*this);
+            unifiable->thorin_type_ = unifiable->convert(*this);
 
             Array<const thorin::TypeParam*> type_params(unifiable->num_type_vars());
             for (size_t i = 0, e = type_params.size(); i != e; ++i)
                 type_params[i] = convert(unifiable->type_var(i))->as<thorin::TypeParam>();
-            unifiable->thorin_type_ = thorin_type->close(type_params);
+            thorin::close(unifiable->thorin_type_, type_params);
         }
         return unifiable->thorin_type_;
     }
