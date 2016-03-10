@@ -712,7 +712,7 @@ void ItemStmt::check(InferSema& sema) const { sema.check(item()); }
 void LetStmt::check(InferSema& sema) const {
     auto expected = sema.check(local());
     if (init())
-        sema.check(init(), expected);
+        sema.constrain(local(), sema.check(init(), expected));
 }
 
 //------------------------------------------------------------------------------
