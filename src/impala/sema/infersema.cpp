@@ -69,6 +69,8 @@ public:
         assert(t->is_hashed() && u->is_hashed());
 
         if (t == u)                                         return t;
+        if (t->isa<TypeError>())                            return t;
+        if (u->isa<TypeError>())                            return u;
         if (t->isa<UnknownType>() && u->isa<UnknownType>()) return unify_by_rank(representative(t), representative(u))->type;
         if (t->isa<UnknownType>())                          return unify        (representative(u), representative(t))->type;
         if (u->isa<UnknownType>())                          return unify        (representative(t), representative(u))->type;
