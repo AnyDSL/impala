@@ -201,6 +201,8 @@ bool TypeParam::equal(const Type* other) const {
     return false;
 }
 
+bool UnknownType::equal(const Type* other) const { return this == other; }
+
 //------------------------------------------------------------------------------
 
 /*

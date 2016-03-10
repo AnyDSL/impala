@@ -33,15 +33,32 @@ public:
 #endif
 
     void refine(const Type*&, const Type*);
-    //const Type*& constrain(const Type*& t, const Type* u) { todo_ |= t -= u; return t; }
-    const FnType*& constrain(const FnType*& t, const FnType* u);
-    const Type*& constrain(const Type*& t, const Type* u);
-    const Type*& constrain(const Type*& t, const Type* u, const Type* v) { return constrain(constrain(t, u), v); }
-    const Type*& constrain(const Typeable* t, const Type* u) { return constrain(t->type_, u); }
-    const Type*& constrain(const Typeable* t, const Type* u, const Type* v) { return constrain(constrain(t, u), v); }
+
+    const Type* type(const Typeable* typeable) {
+        if (typeable->type_ == nullptr) {
+            todo_ = true;
+            return typeable->type_ = unknown_type();
+        }
+
+        auto otype = typeable->type();
+        typeable->type_ = find(representative(otype))->type;
+        todo_ |= otype != typeable->type_;
+        return typeable->type_;
+    }
+
+    const Type*& constrain(const Type*& t, const Type* u) {
+        auto otype = t;
+        t = unify(t, u);
+        todo_ |= otype != t;
+        return t;
+    }
+
+    const Type*&   constrain(const    Type*& t,   const Type* u, const Type* v) { return constrain(constrain(t, u), v); }
+    const FnType*& constrain(const  FnType*& t, const FnType* u) { return (const FnType*&) constrain((const Type*&)t, (const Type*)u); }
+    const Type*&   constrain(const Typeable* t,   const Type* u) { return constrain(t->type_, u); }
+    const Type*&   constrain(const Typeable* t,   const Type* u, const Type* v) { return constrain(constrain(t, u), v); }
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, const Type* expected);
     const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->num_args() ? type->arg(i) : nullptr; }
-    const Type* type(const Typeable* typeable) { return typeable->type_ ? typeable->type_ : typeable->type_ = unknown_type(); }
 
     const Type* join(const Type*, const Type*);
 
