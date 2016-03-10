@@ -32,22 +32,22 @@ public:
     }
 #endif
 
-    void refine(const Type*&, const Type*);
-
-    const Type* type(const Typeable* typeable) {
-        if (typeable->type_ == nullptr) {
+    const Type* type(const Type*& type) {
+        if (type == nullptr) {
             todo_ = true;
-            return typeable->type_ = unknown_type();
+            return type = unknown_type();
         }
 
-        auto otype = typeable->type();
-        typeable->type_ = find(representative(otype))->type;
-        todo_ |= otype != typeable->type_;
-        return typeable->type_;
+        auto otype = type;
+        type = find(representative(otype))->type;
+        todo_ |= otype != type;
+        return type;
     }
 
+    const Type* type(const Typeable* typeable) { return type(typeable->type_); }
+
     const Type*& constrain(const Type*& t, const Type* u) {
-        auto otype = t;
+        auto otype = type(t);
         t = unify(t, u);
         todo_ |= otype != t;
         return t;
@@ -57,10 +57,9 @@ public:
     const FnType*& constrain(const  FnType*& t, const FnType* u) { return (const FnType*&) constrain((const Type*&)t, (const Type*)u); }
     const Type*&   constrain(const Typeable* t,   const Type* u) { return constrain(t->type_, u); }
     const Type*&   constrain(const Typeable* t,   const Type* u, const Type* v) { return constrain(constrain(t, u), v); }
+    void refine(const Type*& t, const Type* u) { t = unify(t, u); }
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, const Type* expected);
     const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->num_args() ? type->arg(i) : nullptr; }
-
-    const Type* join(const Type*, const Type*);
 
     // check wrappers
 
@@ -95,7 +94,6 @@ public:
 
     const Type* check_call(const FnType*& fn_mono, const FnType* fn_poly, std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type* expected);
 
-private:
     const Type* unify(const Type* t, const Type* u) {
         assert(t->is_hashed() && u->is_hashed());
 
@@ -125,17 +123,13 @@ private:
             for (size_t i = 0, e = t->num_type_params(); i != e; ++i)
                 t->type_param(i)->equiv_ = nullptr;
 
-            auto ntype = t->rebuild(nargs)->close(ntype_params);
-            if (ntype->is_hashed()) {
-                unify(ntype, t);
-                unify(ntype, u);
-            }
-            return ntype;
+            return t->rebuild(nargs)->close(ntype_params);
         }
 
         return type_error();
     }
 
+private:
     /*
      * union/find - see https://en.wikipedia.org/wiki/Disjoint-set_data_structure#Disjoint-set_forests
      */
@@ -484,7 +478,7 @@ const Type* InfixExpr::check(InferSema& sema, const Type* expected) const {
         case EQ: case NE:
         case LT: case LE:
         case GT: case GE:
-            sema.check(lhs(), sema.join(expected, sema.type(rhs())));
+            sema.check(lhs(), sema.type(rhs()));
             sema.check(rhs(), sema.type(lhs()));
             return sema.type_bool();
         case OROR:
@@ -496,7 +490,7 @@ const Type* InfixExpr::check(InferSema& sema, const Type* expected) const {
         case MUL: case DIV: case REM:
         case SHL: case SHR:
         case AND: case OR:  case XOR:
-            sema.check(lhs(), sema.join(expected, sema.type(rhs())));
+            sema.check(lhs(), sema.unify(expected, sema.type(rhs())));
             sema.check(rhs(), sema.type(lhs()));
             return sema.type(rhs());
         case ASGN:
@@ -605,7 +599,7 @@ const Type* InferSema::check_call(const FnType*& fn_mono, const FnType* fn_poly,
 
     if (is_returning && expected) {
         Array<const Type*> args(fn_mono->num_args());
-        *std::copy(fn_mono->args().begin(), fn_mono->args().end()-1, args.begin()) = expected;
+        *std::copy(fn_mono->args().begin(), fn_mono->args().end()-1, args.begin()) = fn_type({expected});
         constrain(fn_mono, fn_type(args));
     }
 

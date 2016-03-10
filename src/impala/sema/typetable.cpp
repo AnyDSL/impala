@@ -21,7 +21,25 @@ const PrimType* TypeTable::prim_type(const PrimTypeKind kind) {
 }
 
 const Type* TypeTable::unify_base(const Type* type) {
-    return type; // TODO
+    if (type->is_hashed() || !type->is_closed())
+        return type;
+
+    for (auto& arg : const_cast<Type*>(type)->args_)
+        arg = unify_base(arg);
+
+    auto i = types_.find(type);
+    if (i != types_.end()) {
+        delete type;
+        type = *i;
+        assert(type->is_hashed());
+        return type;
+    }
+
+    const auto& p = types_.insert(type);
+    assert_unused(p.second && "hash/equal broken");
+    assert(!type->is_hashed());
+    type->hashed_ = true;
+    return type;
 }
 
 }

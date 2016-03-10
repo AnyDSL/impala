@@ -84,7 +84,7 @@ public:
     const Type* type() const { return type_; }
 
 protected:
-    mutable const Type* type_;
+    mutable const Type* type_ = nullptr;
 
     friend class ForExpr;
     friend class InferSema;

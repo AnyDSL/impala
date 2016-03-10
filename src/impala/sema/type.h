@@ -480,7 +480,7 @@ private:
 class TypeError : public Type {
 private:
     TypeError(TypeTable& typetable)
-        : Type(typetable, Kind_noret, {})
+        : Type(typetable, Kind_error, {})
     {}
 
 public:
