@@ -78,8 +78,6 @@ const Type* Type::close(ArrayRef<const TypeParam*> type_params) const {
     return typetable().unify_base(this);
 }
 
-bool Type::is_noret() const { return isa<NoRetType>(); }
-bool Type::is_error() const { return isa<TypeError>(); }
 bool Type::is(PrimTypeKind kind) const { return isa<PrimType>() && as<PrimType>()->primtype_kind() == kind; }
 
 bool FnType::is_returning() const {
@@ -236,7 +234,7 @@ std::ostream& NoRetType::stream(std::ostream& os) const { return os << "<no-retu
 std::ostream& FnType::stream(std::ostream& os) const {
     stream_type_params(os << "fn");
     auto ret_type = return_type();
-    if (ret_type->is_noret())
+    if (ret_type->isa<NoRetType>())
         return stream_list(os, args(), [&](const Type* type) { os << type; }, "(", ")");
 
     return streamf(os, "(%) -> %", stream_list(args().skip_back(), [&](const Type* type) { os << type; }), ret_type);

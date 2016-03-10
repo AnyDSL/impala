@@ -644,20 +644,19 @@ const Type* MapExpr::check(InferSema& sema, const Type* expected) const {
         ltype = sema.check(lhs());
     }
 
-    if (auto fn_poly = ltype->isa<FnType>()) {
+    if (auto fn_poly = ltype->isa<FnType>())
         return sema.check_call(fn_mono_, fn_poly, type_args_, ast_type_args(), args(), expected);
-    } else {
+    else {
         if (num_args() == 1)
             sema.check(arg(0));
 
-        if (auto array = ltype->isa<ArrayType>()) {
+        if (auto array = ltype->isa<ArrayType>())
             return array->elem_type();
-        } else if (auto tuple_type = ltype->isa<TupleType>()) {
+        else if (auto tuple_type = ltype->isa<TupleType>()) {
             if (auto lit = arg(0)->isa<LiteralExpr>())
-                return tuple_type->arg(lit->get_u64());
-        } else if (auto simd_type = ltype->isa<SimdType>()) {
+                return sema.safe_get_arg(tuple_type, lit->get_u64());
+        } else if (auto simd_type = ltype->isa<SimdType>())
             return simd_type->elem_type();
-        }
     }
 
     return sema.type_error();

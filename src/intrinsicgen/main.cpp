@@ -41,7 +41,7 @@ int main() {
                 std::cout << "fn \"" << llvm_name << "\" " << name;
                 stream_list(std::cout, fn->args().skip_back(fn->num_args()-1), [&](const impala::Type* type) { std::cout << type; }, "(", ")");
                 std::cout << " -> ";
-                if (fn->return_type()->is_noret())
+                if (fn->return_type()->isa<impala::NoRetType>())
                     std::cout << "();";
                 else
                     std::cout << fn->return_type() << ';';

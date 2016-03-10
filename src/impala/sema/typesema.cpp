@@ -36,31 +36,31 @@ public:
 
     void expect_bool(const Expr* expr, const char* context = nullptr) {
         auto t = scalar_type(expr);
-        if (!t->is_error() && !t->is_bool())
+        if (!t->isa<TypeError>() && !t->is_bool())
             error_msg(expr, "boolean type", t, context);
     }
 
     void expect_int(const Expr* expr, const char* context = nullptr) {
         auto t = scalar_type(expr);
-        if (!t->is_error() && !t->is_int())
+        if (!t->isa<TypeError>() && !t->is_int())
             error_msg(expr, "integer type", t, context);
     }
 
     void expect_int_or_bool(const Expr* expr, const char* context = nullptr) {
         auto t = scalar_type(expr);
-        if (!t->is_error() && !t->is_bool() && !t->is_int())
+        if (!t->isa<TypeError>() && !t->is_bool() && !t->is_int())
             error_msg(expr, "integer type or boolean type", t, context);
     }
 
     void expect_num(const Expr* expr, const char* context = nullptr) {
         auto t = scalar_type(expr);
-        if (!t->is_error() && !t->is_int() && !t->is_float())
+        if (!t->isa<TypeError>() && !t->is_int() && !t->is_float())
             error_msg(expr, "number type", t, context);
     }
 
     void expect_num_or_bool(const Expr* expr, const char* context = nullptr) {
         auto t = scalar_type(expr);
-        if (!t->is_error() && !t->is_bool() && !t->is_int() && !t->is_float())
+        if (!t->isa<TypeError>() && !t->is_bool() && !t->is_int() && !t->is_float())
             error_msg(expr, "number or boolean type", t, context);
     }
 
@@ -828,7 +828,7 @@ void ForExpr::check(TypeSema& /*sema*/) const {
  */
 
 void ExprStmt::check(TypeSema& sema) const {
-    if (sema.check(expr())->is_noret())
+    if (sema.check(expr())->isa<NoRetType>())
         error(expr(), "expression does not return; subsequent statements are unreachable");
     if (!expr()->has_side_effect())
         warning(expr(), "statement with no effect");
