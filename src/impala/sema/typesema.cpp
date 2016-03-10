@@ -112,7 +112,7 @@ void type_analysis(const ModContents* mod, bool nossa) {
  * misc
  */
 
-//const TypeParam* TypeParam::check(TypeSema&) const { return type_param(); }
+const TypeParam* ASTTypeParam::check(TypeSema&) const { return type_param(); }
 
 void ASTTypeParamList::check_ast_type_params(TypeSema& sema) const {
     for (auto ast_type_param : ast_type_params()) {

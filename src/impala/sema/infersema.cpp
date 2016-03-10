@@ -332,11 +332,10 @@ void ExternBlock::check(InferSema& sema) const {
         sema.check(fn);
 }
 
-#if 0
 void Typedef::check(InferSema& sema) const {
-    // TODO this is broken
     check_ast_type_params(sema);
     sema.check(ast_type());
+#if 0
 
     if (ast_type_params().size() > 0) {
         auto abs = sema.typedef_abs(sema.type(ast_type())); // TODO might be nullptr
@@ -344,8 +343,8 @@ void Typedef::check(InferSema& sema) const {
             abs->bind(type_param->type_param());
     } else
         sema.constrain(this, sema.type(ast_type()));
-}
 #endif
+}
 
 void EnumDecl::check(InferSema&) const { /*TODO*/ }
 

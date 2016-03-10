@@ -283,15 +283,19 @@ const Type* Type::rebuild(Types args) const {
     return vrebuild(args);
 }
 
-const Type* DefiniteArrayType  ::vrebuild(Types args) const { return typetable().definite_array_type(args[0], dim()); }
-const Type* FnType             ::vrebuild(Types args) const { return typetable().fn_type(args); }
-const Type* IndefiniteArrayType::vrebuild(Types args) const { return typetable().indefinite_array_type(args[0]); }
 const Type* PrimType           ::vrebuild(Types     ) const { return typetable().prim_type(primtype_kind()); }
+const Type* FnType             ::vrebuild(Types args) const { return typetable().   fn_type(args); }
 const Type* TupleType          ::vrebuild(Types args) const { return typetable().tuple_type(args); }
-const Type* TypeParam          ::vrebuild(Types     ) const { return typetable().type_param(symbol()); }
+const Type* DefiniteArrayType  ::vrebuild(Types args) const { return typetable().  definite_array_type(args[0], dim()); }
+const Type* SimdType           ::vrebuild(Types args) const { return typetable().            simd_type(args[0], dim()); }
+const Type* IndefiniteArrayType::vrebuild(Types args) const { return typetable().indefinite_array_type(args[0]); }
 const Type* BorrowedPtrType    ::vrebuild(Types args) const { return typetable().borrowed_ptr_type(args[0], addr_space()); }
 const Type* MutPtrType         ::vrebuild(Types args) const { return typetable().     mut_ptr_type(args[0], addr_space()); }
 const Type* OwnedPtrType       ::vrebuild(Types args) const { return typetable().   owned_ptr_type(args[0], addr_space()); }
+const Type* TypeParam          ::vrebuild(Types     ) const { return this; }
+const Type* NoRetType          ::vrebuild(Types args) const { return this; }
+const Type* TypeError          ::vrebuild(Types args) const { return this; }
+const Type* UnknownType        ::vrebuild(Types args) const { return this; }
 
 const Type* StructAbsType::vrebuild(Types /*args*/) const {
     //// TODO how do we handle recursive types?
