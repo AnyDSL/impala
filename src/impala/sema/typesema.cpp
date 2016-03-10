@@ -703,6 +703,7 @@ const Type* TypeSema::check_call(const MapExpr* map_expr, const FnType* fn_poly,
 
     return type_error();
 #endif
+    return nullptr;
 }
 
 void BlockExprBase::check(TypeSema& sema) const {
