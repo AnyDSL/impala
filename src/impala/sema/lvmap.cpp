@@ -2,29 +2,40 @@
 
 #include "impala/ast.h"
 
+#include <iostream>
+
 namespace impala {
 
 //---------------------------------------------------------------
 
-LvComponentType LvTree::get_type() const { return LvComponentType::VAR; }
-
 const char* LvTree::get_name() const { return ""; }
-
-payload_t LvTree::get_payload() const { return 0; }
 
 std::vector<LvTree> LvTree::get_children() { return std::vector<LvTree>(); }
 
 //-------------------------------------------------------------
 
-LvMap::LvMap() {}
+LvMap::LvMap()
+    : varmap_(thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>>())
+    {}
 
-LvMap::~LvMap() {}
+LvMap::~LvMap() {
+    // TODO: delete the trees
+}
 
 LvTree& LvMap::lookup(const ValueDecl* decl) const {
-    LvTree* tree = thorin::find(varmap_, decl);
-    if (tree == nullptr)
-        // TODO: throw exception, assertion failure, etc.
+    // this code is copied from the find() function in thorin/util/hash.h because this function
+    // is not compatible with std::shared_ptr
+    auto i = varmap_.find(decl);
+    assert (i != varmap_.end()); // there has to be a declaration
+    std::shared_ptr<LvTree> tree = i->second;
     return *tree;
+}
+
+void LvMap::insert(const ValueDecl* decl, payload_t pl) {
+    assert (varmap_.find(decl) == varmap_.end());
+    LvTree* tree = new LvTree(LvComponentType::VAR);
+    tree->set_payload(pl);
+    varmap_[decl] = std::shared_ptr<LvTree>(tree);
 }
 
 //void LvMap::enter_scope() {}
@@ -38,25 +49,36 @@ LvTree& LvMap::lookup(const ValueDecl* decl) const {
 //-------------------------------------------------------
 
 payload_t Expr::lookup_payload(const LvMap& map) const {
-    assert(is_lvalue());
+    //assert(is_lvalue());
     const LvTree& tree = lookup_lv_tree(map);
     // TODO: do some kind of error checking here
     return tree.get_payload();
 }
 
 const LvTree& PathExpr::lookup_lv_tree(const LvMap& map) const {
-    auto decl = value_decl().get();
-    return map.lookup(decl);
+    return map.lookup(value_decl().get());
 }
     
 const LvTree& PrefixExpr::lookup_lv_tree(const LvMap& map) const {
-    LvTree rhs_tree = rhs()->lookup_lv_tree(map);
+    const LvTree& rhs_tree = rhs()->lookup_lv_tree(map);
 }
 
 const LvTree& CastExpr::lookup_lv_tree(const LvMap& map) const {
 }
 
 const LvTree& MapExpr::lookup_lv_tree(const LvMap& map) const {
+}
+
+void Expr::insert_payload(LvMap& map, payload_t pl) const {
+    insert_lv_payload(map, pl);
+}
+
+LvTree& PathExpr::insert_lv_payload(LvMap& map, payload_t pl) const {
+    const ValueDecl* decl = value_decl().get();
+    LvTree& tree = map.lookup(decl);
+    // TODO: maybe assert validity of tree here
+    tree.set_payload(pl);
+    return tree;
 }
 
 }

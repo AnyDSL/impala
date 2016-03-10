@@ -2,6 +2,8 @@
 #include "impala/impala.h"
 #include "impala/sema/lvmap.h"
 
+#include <iostream>
+
 namespace impala {
 
 //------------------------------------------------------------------------------
@@ -16,7 +18,7 @@ inline Liveness payload2ls(payload_t pl) {
 // TODO: maybe this should be a member function of Type
 bool type_copyable(const Type& type) {
     // TODO: this check is not good
-    return true;
+    return false;
 }
 
 //class MoveSema {
@@ -37,8 +39,7 @@ void TypeParam::check(MoveSema& sema) const {
 }
 
 void LocalDecl::check(MoveSema& sema) const {
-    if (ast_type())
-        ast_type()->check(sema);
+    sema.insert(this, (payload_t) Liveness::DEAD);
 }
 
 //------------------------------------------------------------------------------
@@ -175,7 +176,7 @@ void ImplItem::check(MoveSema& sema) const {
 
 Liveness validate(const ASTNode* loc, Liveness live) {
     if (live == Liveness::DEAD) {
-        error(loc);
+        error(loc) << "cannot use " << loc << ", it is not live\n";
         return Liveness::ERR;
     }
     return live;
@@ -183,8 +184,8 @@ Liveness validate(const ASTNode* loc, Liveness live) {
 
 Liveness check_lv(const Expr* lv, MoveSema& sema, bool assign_from) {
     Liveness live = payload2ls(lv->lookup_payload(sema));
+    live = validate(lv, live);
     if (assign_from && !type_copyable(lv->type()))
-        // TODO: produce error if live == DEAD here or in the assignment rule?
         // TODO: check owns value
         lv->insert_payload(sema, Liveness::DEAD);
     return live;
@@ -235,14 +236,38 @@ Liveness PrefixExpr::check(MoveSema& sema, bool assign_from) const  {
         default:
             // TODO: false makes the assumption that the other cases are copyable which is
             // currently ok, but maybe we should let this depend on the copyablility
-            return validate(rhs(), rhs()->check(sema, false));
+            return validate(rhs(), rhs()->check(sema, true));
     }
 }
 
 Liveness InfixExpr::check(MoveSema& sema, bool assign_from) const {
-    lhs()->check(sema, assign_from);
-    rhs()->check(sema, assign_from);
-    return Liveness::DEAD;
+    switch (kind()) {
+        // TODO: case this be simplified?
+        case ASGN:      // all assignments
+        case ADD_ASGN:
+        case SUB_ASGN:
+        case MUL_ASGN:
+        case DIV_ASGN:
+        case REM_ASGN:
+        case AND_ASGN:
+        case OR_ASGN:
+        case XOR_ASGN:
+        case SHL_ASGN:
+        case SHR_ASGN: {
+            assert(lhs()->is_lvalue());
+            Liveness right_live = rhs()->check(sema, true);
+            if (right_live == Liveness::DEAD) {
+                error(rhs()) << "The right side of an assignment must be live.";
+                right_live = Liveness::ERR;
+            }
+            lhs()->insert_payload(sema, Liveness::LIVE);
+            return right_live;
+        }
+        default:
+            validate(lhs(), lhs()->check(sema, true));
+            validate(rhs(), rhs()->check(sema, true));
+            return Liveness::LIVE;
+    }
 }
 
 Liveness PostfixExpr::check(MoveSema& sema, bool assign_from) const {
@@ -299,7 +324,7 @@ Liveness StructExpr::check(MoveSema& sema, bool assign_from) const {
 }
 
 Liveness MapExpr::check(MoveSema& sema, bool assign_from) const {
-    lhs()->check(sema, assign_from);
+    //lhs()->check(sema, assign_from);
     for (auto type_arg : type_args())
         type_arg->check(sema);
     for (auto arg : args())

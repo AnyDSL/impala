@@ -14,7 +14,6 @@
 
 #include "impala/symbol.h"
 #include "impala/token.h"
-#include "impala/sema/lvmap.h"
 #include "impala/sema/unifiable.h"
 
 namespace thorin {
@@ -40,6 +39,11 @@ class TypeParam;
 class CodeGen;
 class NameSema;
 class TypeSema;
+
+class LvMap;
+class LvTree;
+enum class LvComponentType: char;
+typedef int payload_t;
 
 typedef LvMap MoveSema;
 enum Liveness: char;
@@ -937,7 +941,8 @@ public:
 	virtual void check(LifetimeSema&) const = 0;
     virtual const LvTree& lookup_lv_tree(const LvMap& map) const { assert(false); /* overwrite this */ }
     payload_t lookup_payload(const LvMap& map) const;
-    void insert_payload(LvMap& map, payload_t) const {}
+    virtual LvTree& insert_lv_payload(LvMap& map, payload_t) const { assert(false); /* overwrite this */ }
+    virtual void insert_payload(LvMap&, payload_t) const;
 
 private:
     virtual Type check(TypeSema&, TypeExpectation) const = 0;
@@ -1115,6 +1120,7 @@ public:
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const LvTree& lookup_lv_tree(const LvMap&) const override;
+    virtual LvTree& insert_lv_payload(LvMap& map, payload_t) const override;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
