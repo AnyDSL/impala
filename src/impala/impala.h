@@ -1,10 +1,11 @@
 #ifndef IMPALA_IMPALA_H
 #define IMPALA_IMPALA_H
 
-#include <istream>
+#include <iostream>
 #include <string>
 
 #include "thorin/world.h"
+#include "thorin/util/stream.h"
 
 #include "impala/token.h"
 #include "impala/sema/typetable.h"
@@ -38,14 +39,6 @@ void type_analysis(const ModContents*, bool nossa);
 //void borrow_check(const ModContents*);
 void check(Init&, const ModContents*, bool nossa);
 void emit(thorin::World&, const ModContents*);
-
-std::ostream& warn(const ASTNode* n);            ///< Emit warning while using \p n as \p Location.
-std::ostream& warn(const thorin::Location& loc); ///< Emit warning at \p Location \p loc.
-std::ostream& error(const ASTNode* n);           ///< Emit error while using \p n as \p Location.
-std::ostream& error(const thorin::Location& loc);///< Emit error at \p Location \p loc.
-
-int num_warnings();
-int num_errors();
 
 enum Prec {
     BOTTOM,
@@ -91,6 +84,26 @@ private:
 
     friend void init();
 };
+
+extern int global_num_warnings;
+extern int global_num_errors;
+
+int num_warnings();
+int num_errors();
+
+template<typename... Args>
+std::ostream& warning(const thorin::Location& loc, const char* fmt, Args... args) {
+    ++global_num_warnings;
+    thorin::streamf(std::cerr, "%: warning: ", loc);
+    return thorin::streamf(std::cerr, fmt, args...) << std::endl;;
+}
+
+template<typename... Args>
+std::ostream& error(const thorin::Location& loc, const char* fmt, Args... args) {
+    ++global_num_errors;
+    thorin::streamf(std::cerr, "%: error: ", loc);
+    return thorin::streamf(std::cerr, fmt, args...) << std::endl;;
+}
 
 }
 

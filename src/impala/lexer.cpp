@@ -111,7 +111,7 @@ Token Lexer::lex() {
 #define IMPALA_WITHIN_COMMENT(delim) \
         while (true) { \
             if (accept(std::istream::traits_type::eof())) { \
-                error(loc_.begin()) << "unterminated comment\n"; \
+                error(loc_.begin(), "unterminated comment"); \
                 return Token(loc_, Token::END_OF_FILE); \
             } \
             if (delim) break; \
@@ -185,7 +185,7 @@ Token Lexer::lex() {
                 accept(str, '\\');
                 str += next();
                 if (peek() == std::istream::traits_type::eof()) {
-                    error(pos_) << "missing terminating ' character\n";
+                    error(pos_, "missing terminating ' character");
                     str += '\''; // artificially append closing '
                     break;
                 }
@@ -199,7 +199,7 @@ Token Lexer::lex() {
                 accept(str, '\\');
                 str += next();
                 if (peek() == std::istream::traits_type::eof()) {
-                    error(pos_) << "missing terminating \" character\n";
+                    error(pos_, "missing terminating \" character");
                     str += '\''; // artificially append closing "
                     break;
                 }
@@ -230,7 +230,7 @@ Token Lexer::lex() {
         }
 
         // invalid input char
-        error(pos_) << "invalid input character '" << (char) next() << "'\n";
+        error(pos_, "invalid input character '%'", (char) next());
         continue;
 
 l_dec:                                      // [0-9_]*
@@ -274,14 +274,14 @@ Token Lexer::lex_suffix(std::string& str, bool floating) {
         if (floating) {
             auto lit = Token::sym2flit(suffix);
             if (lit == Token::TYPE_error) {
-                error(loc_) << "invalid suffix on floating constant '" << suffix << "'\n";
+                error(loc_, "invalid suffix on floating constant '%'", suffix);
                 return Token(loc_, tok, str);
             }
             tok = lit;
         } else {
             auto lit = Token::sym2lit(suffix);
             if (lit == Token::TYPE_error) {
-                error(loc_) << "invalid suffix on constant '" << suffix << "'\n";
+                error(loc_, "invalid suffix on constant '%'", suffix);
                 return Token(loc_, tok, str);
             }
             tok = lit;
@@ -293,7 +293,7 @@ Token Lexer::lex_suffix(std::string& str, bool floating) {
 }
 
 Token Lexer::literal_error(std::string& str, bool floating) {
-    error(pos_) << "invalid constant '" << str << "'\n";
+    error(pos_, "invalid constant '%'", str);
     return lex_suffix(str, floating);
 }
 

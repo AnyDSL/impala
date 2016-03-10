@@ -11,6 +11,7 @@
 #include "thorin/util/location.h"
 #include "thorin/util/types.h"
 
+#include "impala/impala.h"
 #include "impala/symbol.h"
 #include "impala/token.h"
 #include "impala/sema/type.h"
@@ -116,6 +117,11 @@ public:
     virtual ~ASTNode() { assert(loc_.is_set()); }
 #endif
 };
+
+template<typename... Args>
+std::ostream& warning(const ASTNode* n, const char* fmt, Args... args) { return warning(n->loc(), fmt, args...); }
+template<typename... Args>
+std::ostream& error  (const ASTNode* n, const char* fmt, Args... args) { return error  (n->loc(), fmt, args...); }
 
 //------------------------------------------------------------------------------
 

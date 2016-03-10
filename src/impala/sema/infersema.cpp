@@ -18,7 +18,7 @@ class InferSema : public TypeTable {
 public:
     // helpers
 
-    const Type* instantiate(const Location& loc, const Type* type, ArrayRef<const ASTType*> args);
+    const Type* instantiate(const Type* type, ArrayRef<const ASTType*> args);
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
     const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->num_args() ? type->arg(i) : nullptr; }
 
@@ -236,17 +236,14 @@ void type_inference(Init& init, const ModContents* mod) {
 
 //------------------------------------------------------------------------------
 
-const Type* InferSema::instantiate(const Location& loc, const Type* type, ArrayRef<const ASTType*> args) {
+const Type* InferSema::instantiate(const Type* type, ArrayRef<const ASTType*> args) {
     if (args.size() == type->num_type_params()) {
         std::vector<const Type*> type_args;
         for (auto t : args)
             type_args.push_back(check(t));
 
-        // TODO
-        //stash_bound_check(loc, *type, type_args);
         return type->instantiate(type_args);
-    } else
-        error(loc) << "wrong number of instances for bound type variables: " << args.size() << " for " << type->num_type_params() << "\n";
+    }
 
     return type_error();
 }
@@ -332,7 +329,7 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
     if (decl()) {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
             if (auto type = sema.type(type_decl))
-                return sema.instantiate(loc(), type, args());
+                return sema.instantiate(type, args());
             else
                 return sema.unknown_type(); // TODO don't create a new thing here
         }

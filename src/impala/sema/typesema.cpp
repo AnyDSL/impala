@@ -33,41 +33,41 @@ public:
     void expect_bool(const Expr* expr) {
         auto t = scalar_type(expr);
         if (!t->is_error() && !t->is_bool())
-            error(expr) << "expected boolean type but found " << t << "\n";
+            error(expr, "expected boolean type but found '%'", t);
     }
     void expect_int(const Expr* expr) {
         auto t = scalar_type(expr);
         if (!t->is_error() && !t->is_int())
-            error(expr) << "expected integer type but found " << t << "\n";
+            error(expr, "expected integer type but found '%'", t);
     }
 
     void expect_int_or_bool(const Expr* expr) {
         auto t = scalar_type(expr);
         if (!t->is_error() && !t->is_bool() && !t->is_int())
-            error(expr) << "expected integer or boolean type but found " << t << "\n";
+            error(expr, "expected integer or boolean type but found '%'", t);
     }
 
     void expect_num(const Expr* expr) {
         auto t = scalar_type(expr);
         if (!t->is_error() && !t->is_int() && !t->is_float())
-            error(expr) << "expected number type but found " << t << "\n";
+            error(expr, "expected number type but found '%'", t);
     }
 
     void expect_num_or_bool(const Expr* expr) {
         auto t = scalar_type(expr);
         if (!t->is_error() && !t->is_bool() && !t->is_int() && !t->is_float())
-            error(expr) << "expected integer or boolean type but found " << t << "\n";
+            error(expr, "expected integer or boolean type but found '%'", t);
     }
 
-    const Type* expect_type(const Expr* expr, const Type* found_type, const Type* expected, const char* context = nullptr) {
-        if (found_type == expected)
-            return found_type;
-        if (found_type <= expected) {
-            expr->actual_type_ = found_type;
+    const Type* expect_type(const Expr* expr, const Type* found, const Type* expected, const char* context = nullptr) {
+        if (found == expected)
+            return found;
+        if (found <= expected) {
+            expr->actual_type_ = found;
             return expected;
         }
 
-        error(expr->loc()) << "mismatched types: expected '" << expected << "' but found '" << found_type << (context ? std::string("' as ") + context : "'" ) << "\n";
+        error(expr->loc(), "mismatched types: expected '%' but found '%'%", expected, found, context ? std::string(" as ") + context : "");
         return expected;
     }
 
@@ -75,7 +75,7 @@ public:
 
     void expect_lvalue(const Expr* expr, const char* context = nullptr) {
         if (!expr->is_lvalue())
-            error(expr) << "lvalue required " << (context ? context : "in assignment") << '\n';
+            error(expr, "lvalue required %", context ? context : "in assignment");
     }
 
     // check wrappers
@@ -140,7 +140,7 @@ void   DefiniteArrayASTType::check(TypeSema& sema) const { sema.check(elem_ast_t
 
 void SimdASTType::check(TypeSema& sema) const {
     if (!sema.check(elem_ast_type())->isa<PrimType>())
-        error(this) << "non primitive types forbidden in simd type\n";
+        error(this, "non primitive types forbidden in simd type");
 }
 
 void TupleASTType::check(TypeSema& sema) const {
@@ -156,7 +156,7 @@ void FnASTType::check(TypeSema& sema) const {
 
 void ASTTypeApp::check(TypeSema&) const {
     if (!decl() || !decl()->isa<TypeDecl>())
-        error(identifier()) << '\'' << symbol() << "' does not name a type\n";
+        error(identifier(), "'%' does not name a type", symbol());
 }
 
 void Typeof::check(TypeSema& sema) const { sema.check(expr()); }
@@ -173,7 +173,7 @@ const Type* Fn::check_body(TypeSema& sema) const {
 
     for (auto param : params()) {
         if (param->is_mut() && !param->is_written())
-            warn(param) << "parameter '" << param->symbol() << "' declared mutable but parameter is never written to\n";
+            warning(param, "parameter '%' declared mutable but parameter is never written to", param->symbol());
     }
 
     return body()->type();
@@ -198,7 +198,7 @@ void ModContents::check(TypeSema& sema) const {
 void ExternBlock::check(TypeSema& sema) const {
     if (!abi().empty()) {
         if (abi() != "\"C\"" && abi() != "\"device\"" && abi() != "\"thorin\"")
-            error(this) << "unknown extern specification\n";  // TODO: better location
+            error(this, "unknown extern specification");  // TODO: better location
     }
 
     for (auto fn : fns())
@@ -255,7 +255,7 @@ void ImplItem::check(TypeSema& sema) const {
             for (auto type_param : ast_type_params())
                 sema.check(type_param);
         } else
-            error(trait()) << "expected trait instance\n";
+            error(trait(), "expected trait instance");
     }
 }
 
@@ -279,7 +279,7 @@ thorin::u8 TypeSema::char_value(const Location& loc, const char*& p) {
             case '\"': value = '\"'; break;
             case '\\': value = '\\'; break;
             default:
-                error(loc) << "unknown escape sequence '\\" << *(p-1) << "'\n";
+                error(loc, "unknown escape sequence '\\%'", *(p-1));
         }
     } else
         value = thorin::u8(*(p-1));
@@ -295,11 +295,11 @@ void CharExpr::check(TypeSema& sema) const {
         value_ = sema.char_value(loc(), p);
 
         if (*p++ != '\'')
-            error(this) << "multi-character character constant\n";
+            error(this, "multi-character character constant");
         else
             assert(*p == '\0');
     } else
-        error(this) << "empty character constant\n";
+        error(this, "empty character constant");
 }
 
 void StrExpr::check(TypeSema& sema) const {
@@ -348,7 +348,7 @@ void PrefixExpr::check(TypeSema& sema) const {
             return;
         case MUL:
             if (!rtype->isa<PtrType>())
-                error(rhs()) << "expected pointer type for unary '*' (have ')" << rhs()->type() << "')\n";
+                error(rhs(), "expected pointer type for unary '*' (have '%')", rhs()->type());
             return;
         case INC:
         case DEC: {
@@ -380,7 +380,7 @@ void InfixExpr::check(TypeSema& sema) const {
         case EQ:
         case NE:
             if (!ltype->isa<PtrType>() && !ltype->isa<PrimType>() && !ltype->isa<SimdType>())
-                error(this) << "expected primitive type, pointer type or SIMD type for equality operator\n";
+                error(this, "expected primitive type, pointer type or SIMD type for equality operator");
             return;
         case LT:
         case LE:
@@ -470,7 +470,7 @@ void CastExpr::check(TypeSema& sema) const {
         symmetric(float_to_bool, src_type, dst_type);
 
     if (!valid_cast)
-        error(this) << "invalid source and destination types for cast operator, got '" << src_type << "' and '" << dst_type << "'\n";
+        error(this, "invalid source and destination types for cast operator, got '%' and '%'", src_type, dst_type);
 }
 
 void DefiniteArrayExpr::check(TypeSema& /*sema*/) const {
@@ -733,7 +733,7 @@ void BlockExprBase::check(TypeSema& sema) const {
 
     for (auto local : locals_) {
         if (local->is_mut() && !local->is_written())
-            warn(local) << "variable '" << local->symbol() << "' declared mutable but variable is never written to\n";
+            warning(local, "variable '%' declared mutable but variable is never written to", local->symbol());
     }
 }
 
@@ -838,9 +838,9 @@ void ForExpr::check(TypeSema& /*sema*/) const {
 
 void ExprStmt::check(TypeSema& sema) const {
     if (sema.check(expr())->is_noret())
-        error(expr()) << "expression does not return; subsequent statements are unreachable\n";
+        error(expr(), "expression does not return; subsequent statements are unreachable");
     if (!expr()->has_side_effect())
-        warn(expr()) << "statement with no effect\n";
+        warning(expr(), "statement with no effect");
 }
 
 void ItemStmt::check(TypeSema& sema) const {

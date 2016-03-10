@@ -100,7 +100,7 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
     if (err)
         switch (kind_) {
 #define IMPALA_LIT(itype, atype) \
-            case LIT_##itype: error(loc) << "literal out of range for type '" #itype "'\n"; return;
+            case LIT_##itype: error(loc, "literal out of range for type '%'," #itype); return;
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }

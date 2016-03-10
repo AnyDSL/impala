@@ -55,10 +55,10 @@ const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
     if (!symbol.is_anonymous()) {
         auto decl = thorin::find(symbol2decl_, symbol);
         if (decl == nullptr)
-            error(n) << '\'' << symbol << "' not found in current scope\n";
+            error(n, "'%' not found in current scope", symbol);
         return decl;
     } else {
-        error(n) << "identifier '_' is reverserved for anonymous declarations\n";
+        error(n, "identifier '_' is reverserved for anonymous declarations");
         return nullptr;
     }
 }
@@ -69,8 +69,8 @@ void NameSema::insert(const Decl* decl) {
 
     if (!symbol.is_anonymous()) {
         if (auto other = clash(symbol)) {
-            error(decl) << "symbol '" << symbol << "' already defined\n";
-            error(other) << "previous location here\n";
+            error(decl, "symbol '%' already defined", symbol);
+            error(other, "previous location here");
             return;
         }
 
@@ -307,7 +307,7 @@ void PathExpr::check(NameSema& sema) const {
     if (path()->decl()) {
         value_decl_ = path()->decl()->isa<ValueDecl>();
         if (!value_decl_)
-            error(this) << '\'' << path() << "' is not a value\n";
+            error(this, "'%' is not a value", path());
     }
 }
 

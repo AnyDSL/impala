@@ -39,10 +39,6 @@ private:
         }
     }
 
-    static std::ostream& cgen_error(const ASTNode* node) {
-        return error(node) << "cannot generate C interface : ";
-    }
-
     // Generates a C type from an Impala type
     static bool ctype_from_impala(const Type* type, std::string& ctype_prefix, std::string& ctype_suffix) {
         if (auto prim_type = type->isa<PrimType>()) {
@@ -273,7 +269,7 @@ public:
 
                 std::string ctype_pref, ctype_suf;
                 if (!ctype_from_impala(type, ctype_pref, ctype_suf)) {
-                    cgen_error(field) << "structure field type not exportable\n";
+                    error(field, "structure field type not exportable");
                     return false;
                 }
 
@@ -291,13 +287,13 @@ public:
 
             std::string return_pref, return_suf;
             if (!ctype_from_impala(fn_type->return_type(), return_pref, return_suf)) {
-                cgen_error(fn) << "function return type not exportable\n";
+                error(fn, "function return type not exportable");
                 return false;
             }
 
             // We cannot return definite or indefinite arrays from Impala
             if (return_suf != "") {
-                cgen_error(fn) << "function returning an array\n";
+                error(fn, "function returning an array");
                 return false;
             }
 
@@ -307,7 +303,7 @@ public:
             for (size_t i = 0, e = fn_type->num_args() - 1; i != e; ++i) {
                 std::string ctype_pref, ctype_suf;
                 if (!ctype_from_impala(fn_type->arg(i), ctype_pref, ctype_suf)) {
-                    cgen_error(fn) << "function argument type not exportable\n";
+                    error(fn, "function argument type not exportable");
                     return false;
                 }
 
