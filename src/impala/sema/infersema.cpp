@@ -162,8 +162,7 @@ private:
         return repr->parent;
     }
 
-    /// @p x will be the new representative.
-    /// Returns again @p x.
+    /// @p x will be the new representative. Returns again @p x.
     Representative* unify(Representative* x, Representative* y) {
         auto x_root = find(x);
         auto y_root = find(y);
@@ -174,8 +173,7 @@ private:
         return y_root->parent = x_root;
     }
 
-    /// Depending on the rank either @p x or @p y will be the new representative.
-    /// Returns the new representative.
+    /// Depending on the rank either @p x or @p y will be the new representative. Returns the new representative.
     Representative* unify_by_rank(Representative* x, Representative* y) {
         auto x_root = find(x);
         auto y_root = find(y);
