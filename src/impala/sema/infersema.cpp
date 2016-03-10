@@ -56,10 +56,10 @@ public:
         return t;
     }
 
-    const Type*&   constrain(const    Type*& t,   const Type* u, const Type* v) { return constrain(constrain(t, u), v); }
+    const   Type*& constrain(const    Type*& t, const   Type* u, const Type* v) { return constrain(constrain(t, u), v); }
+    const   Type*& constrain(const Typeable* t, const   Type* u, const Type* v) { return constrain(constrain(t, u), v); }
+    const   Type*& constrain(const Typeable* t, const   Type* u)                { return constrain(t->type_, u); }
     const FnType*& constrain(const  FnType*& t, const FnType* u) { return (const FnType*&) constrain((const Type*&)t, (const Type*)u); }
-    const Type*&   constrain(const Typeable* t,   const Type* u) { return constrain(t->type_, u); }
-    const Type*&   constrain(const Typeable* t,   const Type* u, const Type* v) { return constrain(constrain(t, u), v); }
 
     /// @c { t = unify(t, u) }. Does @attention { not } update @p todo_.
     void refine(const Type*& t, const Type* u) { t = unify(t, u); }
