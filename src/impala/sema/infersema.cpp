@@ -102,7 +102,7 @@ public:
             for (size_t i = 0, e = t->num_type_params(); i != e; ++i)
                 t->type_param(i)->equiv_ = nullptr;
 
-            if (t->isa<FnType>()) {
+            if (t->isa<FnType>()) { // TODO needed as long as we don't have explicit Lambdas
                 auto ntype = fn_type(nargs, t->num_type_params());
                 return ntype->close(ntype_params);
             }
