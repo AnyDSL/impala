@@ -30,6 +30,11 @@ public:
 
     // error handling
 
+    void expect_bool(const Expr* expr) {
+        auto t = scalar_type(expr);
+        if (!t->is_error() && !t->is_bool())
+            error(expr) << "expected boolean type but found " << t << "\n";
+    }
     void expect_int(const Expr* expr) {
         auto t = scalar_type(expr);
         if (!t->is_error() && !t->is_int())
@@ -87,7 +92,6 @@ public:
 
     static const Type* turn_cast_inside_out(const Expr* expr) {
         assert(expr->needs_cast());
-        expr->type_ = nullptr;
         expr->type_ = expr->actual_type_;
         expr->actual_type_ = nullptr;
         return expr->type();
@@ -156,15 +160,6 @@ void ASTTypeApp::check(TypeSema&) const {
 }
 
 void Typeof::check(TypeSema& sema) const { sema.check(expr()); }
-
-#if 0
-TraitApp ASTTypeApp::trait_app(TypeSema& sema, const Type* self) const {
-    if (decl()) {
-        if (!decl()->isa<TraitDecl>())
-            error(this) << '\'' << symbol() << "' does not name a trait\n";
-    }
-}
-#endif
 
 //------------------------------------------------------------------------------
 
@@ -341,38 +336,19 @@ void PathExpr::check(TypeSema& sema) const {
 }
 
 void PrefixExpr::check(TypeSema& sema) const {
-    /*auto rtype = */sema.check(rhs());
+    auto rtype = sema.check(rhs());
 
     switch (kind()) {
         case AND: {
             sema.expect_lvalue(rhs(), "as unary '&' operand");
-            if (rhs()->needs_cast()) {
-                //rtype.clear();
-                //rtype = TypeSema::turn_cast_inside_out(rhs()); // TODO reference?
-            }
-
             rhs()->take_address();
-            if (rhs()->needs_cast()) {
-                //rtype.clear();
-                /*rtype = */TypeSema::turn_cast_inside_out(rhs());
-            }
             return;
         }
+        case TILDE:
+            return;
         case MUL:
-            // TODO
-#if 0
-            auto type = sema.check(rhs());
-            // 'type' must be a pointer type (with any address space)
-            // and must reference the expected type.
-            if (auto ptr = type->isa<PtrType>()) {
-                sema.expect_type(rhs(), ptr->referenced_type(), expected);
-                return ptr->referenced_type();
-            } else {
-                auto ptr_type = sema.borrowd_ptr_type(expected);
-                sema.expect_type(rhs(), type));
-                return sema.type_error();
-            }
-#endif
+            if (!rtype->isa<PtrType>())
+                error(rhs()) << "expected pointer type for unary '*' (have ')" << rhs()->type() << "')\n";
             return;
         case INC:
         case DEC: {
@@ -398,7 +374,7 @@ void PrefixExpr::check(TypeSema& sema) const {
 
 void InfixExpr::check(TypeSema& sema) const {
     auto ltype = sema.check(lhs());
-    /*auto rtype =*/ sema.check(rhs());
+    auto rtype = sema.check(rhs());
 
     switch (kind()) {
         case EQ:
@@ -421,12 +397,9 @@ void InfixExpr::check(TypeSema& sema) const {
         }
         case OROR:
         case ANDAND:
-            // TODO
-#if 0
-            sema.check(lhs(), sema.type_bool(), "left-hand side of logical boolean expression");
-            sema.check(rhs(), sema.type_bool(), "right-hand side of logical boolean expression");
-            return sema.type_bool();
-#endif
+            //sema.expect_bool(lhs(), "left-hand side of logical boolean expression");
+            //sema.expect_bool(rhs(), "right-hand side of logical boolean expression");
+            return;
         case SHL:
         case SHR: {
             sema.expect_int(lhs());
