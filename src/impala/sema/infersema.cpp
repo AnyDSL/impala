@@ -61,9 +61,6 @@ public:
     const   Type*& constrain(const Typeable* t, const   Type* u)                { return constrain(t->type_, u); }
     const FnType*& constrain(const  FnType*& t, const FnType* u) { return (const FnType*&) constrain((const Type*&)t, (const Type*)u); }
 
-    /// @c { t = unify(t, u) }. Does @attention { not } update @p todo_.
-    void refine(const Type*& t, const Type* u) { t = unify(t, u); }
-
     /// Unifies @p t and @p u. Does @attention { not } update @p todo_.
     const Type* unify(const Type* t, const Type* u) {
         assert(t->is_hashed() && u->is_hashed());
@@ -508,13 +505,8 @@ const Type* CastExpr::check(InferSema& sema, const Type*) const {
 const Type* DefiniteArrayExpr::check(InferSema& sema, const Type* expected) const {
     auto expected_elem_type = sema.safe_get_arg(expected, 0);
 
-    for (size_t i = 0, e = num_args(); i != e; ++i) {
-        sema.refine(expected_elem_type, sema.type(arg((i+1) % e)));
-        sema.check(arg(i), expected_elem_type);
-    }
-
     for (auto arg : args())
-        sema.refine(expected_elem_type, sema.type(arg));
+        expected_elem_type = sema.unify(expected_elem_type, sema.type(arg));
 
     for (auto arg : args())
         sema.check(arg, expected_elem_type);
@@ -525,10 +517,11 @@ const Type* DefiniteArrayExpr::check(InferSema& sema, const Type* expected) cons
 const Type* SimdExpr::check(InferSema& sema, const Type* expected) const {
     auto expected_elem_type = sema.safe_get_arg(expected, 0);
 
-    for (size_t i = 0, e = num_args(); i != e; ++i) {
-        sema.refine(expected_elem_type, sema.type(arg((i+1)%e)));
-        sema.check(arg(i), expected_elem_type);
-    }
+    for (auto arg : args())
+        expected_elem_type = sema.unify(expected_elem_type, sema.type(arg));
+
+    for (auto arg : args())
+        sema.check(arg, expected_elem_type);
 
     return sema.simd_type(expected_elem_type, num_args());
 }
