@@ -19,7 +19,7 @@ public:
     // helpers
 
     const Type* instantiate(const Location& loc, const Type* type, ArrayRef<const ASTType*> args);
-    void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, const Type* expected);
+    void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
     const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->num_args() ? type->arg(i) : nullptr; }
 
     // unification related stuff
@@ -559,21 +559,21 @@ const Type* TupleExpr::check(InferSema& sema, const Type* expected) const {
     return sema.tuple_type(types);
 }
 
-void InferSema::fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, const Type* expected) {
+void InferSema::fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args) {
     for (size_t i = 0, e = type_args.size(); i != e; ++i) {
         if (i < ast_type_args.size())
-            constrain(type_args[i], check(ast_type_args[i]), safe_get_arg(expected, i));
+            constrain(type_args[i], check(ast_type_args[i]));
         else if (!type_args[i])
             type_args[i] = unknown_type();
     }
 }
 
-const Type* StructExpr::check(InferSema& sema, const Type* expected) const {
+const Type* StructExpr::check(InferSema& sema, const Type* /*expected*/) const {
     if (auto decl = path()->decl()) {
         if (auto typeable_decl = decl->isa<TypeableDecl>()) {
             if (auto decl_type = sema.type(typeable_decl)) {
                 type_args_.resize(decl_type->num_type_params());
-                sema.fill_type_args(type_args_, ast_type_args_, expected);
+                sema.fill_type_args(type_args_, ast_type_args_);
 
                 if (auto struct_app = decl_type->instantiate(type_args_))
                     return struct_app;
@@ -586,23 +586,35 @@ const Type* StructExpr::check(InferSema& sema, const Type* expected) const {
 
 const Type* InferSema::check_call(const FnType*& fn_mono, const FnType* fn_poly, std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type* expected) {
     type_args.resize(fn_poly->num_type_params());
-    fill_type_args(type_args, ast_type_args, expected);
+    fill_type_args(type_args, ast_type_args);
 
     constrain(fn_mono, fn_poly->instantiate(type_args)->as<FnType>());
+
+    bool is_returning = args.size()+1 == fn_mono->num_args();
+
+    if (is_returning) {
+        Array<const Type*> types(args.size()+1);
+        for (size_t i = 0, e = args.size(); i != e; ++i)
+            types[i] = type(args[i]);
+        types.back() = fn_type({expected}); // TODO nullptr check
+        constrain(fn_mono, fn_type(types));
+    } else {
+        Array<const Type*> types(args.size());
+        for (size_t i = 0, e = args.size(); i != e; ++i)
+            types[i] = type(args[i]);
+        constrain(fn_mono, fn_type(types));
+    }
+
     auto max_arg_index = std::min(args.size(), fn_mono->num_args());
-    bool is_returning  = args.size()+1 == fn_mono->num_args();
 
     for (size_t i = 0; i != max_arg_index; ++i)
         constrain(args[i], fn_mono->arg(i));
 
-    if (is_returning && expected) {
-        Array<const Type*> args(fn_mono->num_args());
-        *std::copy(fn_mono->args().begin(), fn_mono->args().end()-1, args.begin()) = fn_type({expected});
-        constrain(fn_mono, fn_type(args));
-    }
+    for (size_t i = 0; i != args.size(); ++i)
+        check(args[i], safe_get_arg(fn_mono, i));
 
-    for (size_t i = 0; i != max_arg_index; ++i)
-        check(args[i], fn_mono->arg(i));
+    for (auto& type_arg : type_args)
+        type_arg = find(representative(type_arg))->type;
 
     return fn_mono->return_type();
 }
