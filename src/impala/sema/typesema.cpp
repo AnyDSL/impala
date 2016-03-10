@@ -843,7 +843,6 @@ void LetStmt::check(TypeSema& sema) const {
     sema.check(local());
     if (init())
         sema.check(init());
-        //sema.check(init(), expected, "initialization type");
 }
 
 //------------------------------------------------------------------------------

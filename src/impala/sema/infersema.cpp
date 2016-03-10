@@ -459,8 +459,12 @@ const Type* PrefixExpr::check(InferSema& sema, const Type* expected) const {
         }
         case TILDE:
             return sema.owned_ptr_type(sema.check(rhs(), sema.safe_get_arg(expected, 0)));
-        case MUL:
-            return sema.check(rhs(), sema.borrowed_ptr_type(expected));
+        case MUL: {
+            auto type = sema.check(rhs(), sema.borrowed_ptr_type(expected));
+            if (auto ptr_type = type->isa<PtrType>())
+                return ptr_type->referenced_type();
+            return type;
+        }
         case INC: case DEC:
         case ADD: case SUB:
         case NOT:
