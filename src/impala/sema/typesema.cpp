@@ -100,7 +100,7 @@ public:
     void check(const Item* n) { n->check(*this); }
     const Type* check(const Expr* expr) { expr->check(*this); return expr->type(); }
     void check(const Stmt* n) { n->check(*this); }
-    const Type* check_call(const MapExpr* expr, FnType fn_poly, const std::vector<Type>& type_args, ArrayRef<const Expr*> args);
+    const Type* check_call(const MapExpr* expr, const FnType* fn_poly, Types type_args, ArrayRef<const Expr*> args);
 
     static const Type* turn_cast_inside_out(const Expr* expr) {
         assert(expr->needs_cast());
@@ -387,8 +387,8 @@ void PrefixExpr::check(TypeSema& sema) const {
 }
 
 void InfixExpr::check(TypeSema& sema) const {
-    auto ltype = sema.check(lhs());
-    auto rtype = sema.check(rhs());
+    sema.check(lhs());
+    sema.check(rhs());
 
     switch (kind()) {
         case EQ: case NE:
@@ -588,7 +588,71 @@ void StructExpr::check(TypeSema& /*sema*/) const {
 #endif
 }
 
-const Type* TypeSema::check_call(const MapExpr* /*expr*/, FnType /*fn_poly*/, const std::vector<Type>& /*type_args*/, ArrayRef<const Expr*> /*args*/) {
+#if 0
+void FieldExpr::check(TypeSema& /*sema*/) const {
+    if (auto type = check_as_struct(sema, expected))
+        return type;
+
+    if (!lhs()->type()->is_error())
+        error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << lhs()->type() << "', but no field with that name was found\n";
+    return sema.type_error();
+}
+#endif
+
+void FieldExpr::check(TypeSema& /*sema*/) const {
+#if 0
+    auto ltype = sema.check(lhs());
+    if (ltype->isa<PtrType>()) {
+        ltype.clear();
+        PrefixExpr::create_deref(lhs_);
+        ltype = sema.check(lhs());
+    }
+
+    if (auto struct_app = ltype->isa<StructAppType>()) {
+        if (auto field_decl = struct_app->struct_abs_type()->struct_decl()->field_decl(symbol())) {
+            index_ = field_decl->index();
+            // a struct cannot have fields of type noret, so we can check against expected (noret defaults to false)
+            sema.expect_type(this, struct_app->elem(index_), expected, "field expression type");
+            return expected;
+        }
+    }
+#endif
+}
+
+void MapExpr::check(TypeSema& sema) const {
+    auto ltype = sema.check(lhs());
+    for (auto arg : args())
+        sema.check(arg);
+
+    if (auto fn_poly = ltype->isa<FnType>()) {
+        sema.check_call(this, fn_poly, type_args_, args());
+    } else if (ltype->isa<ArrayType>()) {
+        if (num_args() == 1)
+            sema.expect_int(arg(0), "for array subscript");
+        else
+            error(this, "too many array subscripts");
+    } else if (ltype->isa<TupleType>()) {
+        if (num_args() == 1) {
+            sema.expect_int(arg(0), "for tuple subscript");
+            if (!arg(0)->isa<LiteralExpr>())
+                error(this, "require literal as tuple subscript");
+        } else
+            error(this, "too many tuple subscripts");
+    } else if(ltype->isa<SimdType>()) {
+        if (num_args() == 1)
+            sema.expect_int(arg(0), "require integer as vector subscript");
+        else
+            error(this, "too many simd vector subscripts");
+    } else
+        error(this, "incorrect type for map expression");
+}
+
+const Type* TypeSema::check_call(const MapExpr* map_expr, const FnType* fn_poly, Types type_args, ArrayRef<const Expr*> args) {
+    for (size_t i = 0, e = type_args.size(); i != e; ++i) {
+        if (!type_args[i]->is_known())
+           error(map_expr, "cannot infer type argument % for polymorphic function of type %", i, fn_poly);
+    }
+
 #if 0
     size_t num_ast_type_args = ast_type_args.size();
     size_t num_args = args.size();
@@ -638,80 +702,6 @@ const Type* TypeSema::check_call(const MapExpr* /*expr*/, FnType /*fn_poly*/, co
         error(expr->loc()) << "too many type arguments to function: " << num_ast_type_args << " for " << fn_poly->num_ast_type_params() << "\n";
 
     return type_error();
-#endif
-    return nullptr;
-}
-
-#if 0
-void FieldExpr::check(TypeSema& /*sema*/) const {
-    if (auto type = check_as_struct(sema, expected))
-        return type;
-
-    if (!lhs()->type()->is_error())
-        error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << lhs()->type() << "', but no field with that name was found\n";
-    return sema.type_error();
-}
-#endif
-
-void FieldExpr::check(TypeSema& /*sema*/) const {
-#if 0
-    auto ltype = sema.check(lhs());
-    if (ltype->isa<PtrType>()) {
-        ltype.clear();
-        PrefixExpr::create_deref(lhs_);
-        ltype = sema.check(lhs());
-    }
-
-    if (auto struct_app = ltype->isa<StructAppType>()) {
-        if (auto field_decl = struct_app->struct_abs_type()->struct_decl()->field_decl(symbol())) {
-            index_ = field_decl->index();
-            // a struct cannot have fields of type noret, so we can check against expected (noret defaults to false)
-            sema.expect_type(this, struct_app->elem(index_), expected, "field expression type");
-            return expected;
-        }
-    }
-#endif
-}
-
-void MapExpr::check(TypeSema& sema) const {
-    auto ltype = sema.check(lhs());
-    for (auto arg : args())
-        sema.check(arg);
-
-#if 0
-    if (auto fn_poly = ltype->isa<FnType>()) {
-        return sema.check_call(this, fn_poly, ast_type_args(), type_args_, args());
-    } else if (auto array = ltype->isa<ArrayType>()) {
-        if (num_args() == 1) {
-            sema.check(arg(0));
-            if (sema.expect_int(arg(0)))
-                return array->elem_type();
-            else
-                error(this) << "require integer as array subscript\n";
-        } else
-            error(this) << "too many array subscripts\n";
-    } else if (auto exp_tup = ltype->isa<TupleType>()) {
-        if (num_args() == 1) {
-            sema.check(arg(0));
-            if (sema.expect_int(arg(0))) {
-                if (auto lit = arg(0)->isa<LiteralExpr>())
-                    return exp_tup->arg(lit->get_u64());
-                else
-                    error(this) << "require literal as tuple subscript\n";
-            } else
-                error(this) << "require integer as tuple subscript\n";
-        } else
-            error(this) << "too many tuple subscripts\n";
-    } else if(auto simd = ltype->isa<SimdType>()) {
-        if (num_args() == 1) {
-            sema.check(arg(0));
-            if (!sema.expect_int(arg(0)))
-                error(this) << "require integer as vector subscript\n";
-            return simd->elem_type();
-        } else
-            error(this) << "too many simd vector subscripts\n";
-    } else
-        error(this) << "incorrect type for map expression\n";
 #endif
 }
 
