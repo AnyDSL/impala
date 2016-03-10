@@ -73,6 +73,13 @@ public:
     const Type* unify(const Type* t, const Type* u) {
         assert(t && t->is_hashed() && THORIN_IMPLIES(u, u->is_hashed()));
 
+        if (auto t_fn = t->isa<FnType>()) { // HACK needed as long as we have this stupid tuple problem
+            if (auto u_fn = u->isa<FnType>()) {
+                if (t_fn->empty() && u_fn->num_args() == 1 && u_fn->arg(0)->isa<UnknownType>()) return unify(representative(t), representative(u))->type;
+                if (u_fn->empty() && t_fn->num_args() == 1 && t_fn->arg(0)->isa<UnknownType>()) return unify(representative(u), representative(t))->type;
+            }
+        }
+
         if (u == nullptr)                                   return t;
         if (t == u)                                         return t;
         if (t->isa<TypeError>())                            return t;
