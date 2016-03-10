@@ -86,12 +86,12 @@ public:
             for (auto type_param : type->type_params())
                 type_param->thorin_type_ = world().type_param(type_param->symbol().str());
 
-            auto thorin_type = type->convert(*this);
+            type->thorin_type_ = type->convert(*this);
 
             Array<const thorin::TypeParam*> type_params(type->num_type_params());
             for (size_t i = 0, e = type_params.size(); i != e; ++i)
                 type_params[i] = convert(type->type_param(i))->as<thorin::TypeParam>();
-            type->thorin_type_ = thorin_type->close(type_params);
+            thorin::close(type->thorin_type_, type_params);
         }
         return type->thorin_type_;
     }
