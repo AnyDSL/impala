@@ -210,6 +210,13 @@ Liveness FnExpr::check(MoveSema& sema, bool assign_from) const {
     return Liveness::DEAD;
 }
 
+void PathElem::check(MoveSema&) const {}
+
+void Path::check(MoveSema& sema) const {
+    for (auto path_elem : path_elems())
+        path_elem->check(sema);
+}
+
 Liveness PathExpr::check(MoveSema& sema, bool assign_from) const {
     return check_lv(this, sema, assign_from);
 }
