@@ -870,10 +870,10 @@ private:
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
 
-    mutable const Type* actual_type_;
+    mutable const Type* actual_type_ = nullptr;
 
 protected:
-    mutable const thorin::Def* extra_; ///< Needed to propagate extend of indefinite arrays.
+    mutable const thorin::Def* extra_ = nullptr; ///< Needed to propagate extend of indefinite arrays.
 
     friend class CodeGen;
     friend class IfExpr;
