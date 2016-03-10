@@ -20,18 +20,6 @@ public:
 
     const Type* instantiate(const Location& loc, const Type* type, ArrayRef<const ASTType*> args);
 
-#if 0
-    int take_addr_space(const PrefixExpr* prefix) {
-        check(prefix->rhs());
-        if (prefix->kind() == PrefixExpr::MUL) {
-            auto type = prefix->rhs()->type();
-            if (auto ptr = type->isa<PtrType>())
-                return ptr->addr_space();
-        }
-        return 0;
-    }
-#endif
-
     const Type* type(const Type*& type) {
         if (type == nullptr) {
             todo_ = true;
@@ -71,8 +59,7 @@ public:
     const Type* check(const Expr* expr) {
         auto i = expr2expected_.find(expr);
         if (i == expr2expected_.end()) {
-            auto unknown = unknown_type();
-            auto p = expr2expected_.emplace(expr, unknown);
+            auto p = expr2expected_.emplace(expr, unknown_type());
             assert(p.second);
             i = p.first;
         }
@@ -188,8 +175,8 @@ private:
         }
     }
 
-    thorin::HashMap<const Expr*, const Type*> expr2expected_;
     TypeMap<Representative> representatives_;
+    thorin::HashMap<const Expr*, const Type*> expr2expected_;
     bool todo_ = true;
 
     friend void type_inference(Init&, const ModContents*);
@@ -441,21 +428,7 @@ const Type* PrefixExpr::check(InferSema& sema, const Type* expected) const {
         case AND: {
             auto expected_referenced_type = sema.safe_get_arg(expected, 0);
             auto rtype = sema.check(rhs(), expected_referenced_type);
-            int addr_space = 0;
-#if 0
-            // keep the address space of the original pointer, if possible
-            if (auto map = rhs()->isa<MapExpr>()) {
-                if (auto prefix = map->lhs()->isa<PrefixExpr>())
-                    addr_space = sema.take_addr_space(prefix);
-            } else if (auto field = rhs()->isa<FieldExpr>()) {
-                if (auto prefix = field->lhs()->isa<PrefixExpr>())
-                    addr_space = sema.take_addr_space(prefix);
-            } else if (auto prefix = rhs()->isa<PrefixExpr>()) {
-                addr_space = sema.take_addr_space(prefix);
-            }
-#endif
-
-            return sema.borrowed_ptr_type(rtype, addr_space);
+            return sema.borrowed_ptr_type(rtype, 0);
 
         }
         case TILDE:
