@@ -50,7 +50,15 @@ public:
      * Updates @p todo_ if something changed.
      */
     const Type*& constrain(const Type*& t, const Type* u) {
-        auto otype = type(t);
+        if (t == nullptr) {
+            if (u == nullptr)
+                return t;
+
+            todo_ = true;
+            return t = find(representative(u))->type;
+        }
+
+        auto otype = t;
         t = unify(t, u);
         todo_ |= otype != t;
         return t;
