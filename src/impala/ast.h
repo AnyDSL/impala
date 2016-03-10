@@ -41,9 +41,8 @@ class CodeGen;
 class NameSema;
 class TypeSema;
 
-class LvMap;
-class LvTree;
-class MoveSema;
+typedef LvMap MoveSema;
+enum Liveness: char;
 class BorrowSema;
 class LifetimeSema;
 
@@ -933,10 +932,12 @@ public:
     virtual bool has_side_effect() const { return false; }
     virtual void take_address() const {}
     virtual void check(NameSema&) const = 0;
-    virtual void check(MoveSema&) const = 0;
+    virtual Liveness check(MoveSema&, bool) const = 0;
 	virtual void check(BorrowSema&) const = 0;
 	virtual void check(LifetimeSema&) const = 0;
-    virtual const LvTree& getLvTree(const LvMap& map) const { assert(false); /* overwrite this */ }
+    virtual const LvTree& lookup_lv_tree(const LvMap& map) const { assert(false); /* overwrite this */ }
+    payload_t lookup_payload(const LvMap& map) const;
+    void insert_payload(LvMap& map, payload_t) const {}
 
 private:
     virtual Type check(TypeSema&, TypeExpectation) const = 0;
@@ -989,7 +990,7 @@ public:
     EmptyExpr(const thorin::Location& loc) { loc_ = loc; }
 
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
@@ -1019,7 +1020,7 @@ public:
     uint64_t get_u64() const;
     PrimTypeKind literal2type() const;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
@@ -1043,7 +1044,7 @@ public:
     Symbol symbol() const { return symbol_; }
     thorin::u8 value() const { return value_; }
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
@@ -1062,7 +1063,7 @@ public:
     const std::vector<thorin::u8>& values() const { return values_; }
     bool is_used_as_global() const { return is_used_as_global_; }
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
@@ -1082,7 +1083,7 @@ class FnExpr : public Expr, public Fn {
 public:
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual Symbol fn_symbol() const override { return Symbol("lambda"); }
@@ -1110,10 +1111,10 @@ public:
     virtual bool is_lvalue() const override;
     virtual void take_address() const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
-    virtual const LvTree& getLvTree(const LvMap&) const override;
+    virtual const LvTree& lookup_lv_tree(const LvMap&) const override;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1140,10 +1141,10 @@ public:
     virtual bool is_lvalue() const override;
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
-    virtual const LvTree& getLvTree(const LvMap&) const override;
+    virtual const LvTree& lookup_lv_tree(const LvMap&) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
@@ -1171,7 +1172,7 @@ public:
     const Expr* rhs() const { return rhs_; }
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
@@ -1203,7 +1204,7 @@ public:
     const Expr* lhs() const { return lhs_; }
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
@@ -1227,7 +1228,7 @@ public:
     virtual bool is_lvalue() const override;
     virtual void take_address() const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     Type check_as_struct(TypeSema&, Type) const;
@@ -1251,10 +1252,10 @@ public:
     const Expr* lhs() const { return lhs_; }
     const ASTType* ast_type() const { return ast_type_; }
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
-    virtual const LvTree& getLvTree(const LvMap&) const override;
+    virtual const LvTree& lookup_lv_tree(const LvMap&) const override;
 
     virtual bool is_lvalue() const override;
 
@@ -1272,7 +1273,7 @@ private:
 class DefiniteArrayExpr : public Expr, public Args {
 public:
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
@@ -1289,7 +1290,7 @@ public:
     const Expr* value() const { return value_; }
     thorin::u64 count() const { return count_; }
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
@@ -1309,7 +1310,7 @@ public:
     const Expr* dim() const { return dim_; }
     const ASTType* elem_type() const { return elem_type_; }
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
@@ -1327,7 +1328,7 @@ private:
 class TupleExpr : public Expr, public Args {
 public:
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
@@ -1342,7 +1343,7 @@ private:
 class SimdExpr : public Expr, public Args {
 public:
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
@@ -1391,7 +1392,7 @@ public:
     size_t num_elems() const { return elems_.size(); }
     const std::vector<Elem>& elems() const { return elems_; }
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
@@ -1414,10 +1415,10 @@ public:
     virtual bool has_side_effect() const override;
     virtual void take_address() const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
-    virtual const LvTree& getLvTree(const LvMap&) const override;
+    virtual const LvTree& lookup_lv_tree(const LvMap&) const override;
     Type check_as_map(TypeSema&, TypeExpectation) const;
     Type check_as_method_call(TypeSema&, TypeExpectation) const;
 
@@ -1447,7 +1448,7 @@ public:
     void add_local(const LocalDecl* local) const { locals_.push_back(local); }
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const char* prefix() const = 0;
@@ -1495,7 +1496,7 @@ public:
     bool has_else() const;
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
@@ -1520,7 +1521,7 @@ public:
     const LocalDecl* continue_decl() const { return continue_decl_; }
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
@@ -1545,7 +1546,7 @@ public:
     const LocalDecl* break_decl() const { return break_decl_; }
     virtual bool has_side_effect() const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
+    virtual Liveness check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
