@@ -10,7 +10,7 @@ namespace impala {
 class TypeTable {
 public:
     TypeTable();
-    ~TypeTable();
+    virtual ~TypeTable();
 
 #define IMPALA_TYPE(itype, atype) const PrimType* type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"

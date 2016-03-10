@@ -10,6 +10,8 @@ TypeTable::TypeTable()
 {}
 
 TypeTable::~TypeTable() {
+    for (auto type : types_)
+        delete type;
 }
 
 const PrimType* TypeTable::prim_type(const PrimTypeKind kind) {
