@@ -650,7 +650,7 @@ void MapExpr::check(TypeSema& sema) const {
 const Type* TypeSema::check_call(const MapExpr* map_expr, const FnType* fn_poly, Types type_args, ArrayRef<const Expr*> args) {
     for (size_t i = 0, e = type_args.size(); i != e; ++i) {
         if (!type_args[i]->is_known())
-           error(map_expr, "cannot infer type argument % for polymorphic function of type %", i, fn_poly);
+           error(map_expr, "cannot infer type argument % for polymorphic function of type %", i+1, fn_poly);
     }
 
 #if 0
