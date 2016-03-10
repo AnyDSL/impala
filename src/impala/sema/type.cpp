@@ -295,9 +295,9 @@ const Type* BorrowedPtrType    ::vrebuild(Types args) const { return typetable()
 const Type* MutPtrType         ::vrebuild(Types args) const { return typetable().     mut_ptr_type(args[0], addr_space()); }
 const Type* OwnedPtrType       ::vrebuild(Types args) const { return typetable().   owned_ptr_type(args[0], addr_space()); }
 const Type* TypeParam          ::vrebuild(Types     ) const { return this; }
-const Type* NoRetType          ::vrebuild(Types args) const { return this; }
-const Type* TypeError          ::vrebuild(Types args) const { return this; }
-const Type* UnknownType        ::vrebuild(Types args) const { return this; }
+const Type* NoRetType          ::vrebuild(Types     ) const { return this; }
+const Type* TypeError          ::vrebuild(Types     ) const { return this; }
+const Type* UnknownType        ::vrebuild(Types     ) const { return this; }
 
 const Type* StructAbsType::vrebuild(Types /*args*/) const {
     //// TODO how do we handle recursive types?
