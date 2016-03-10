@@ -19,7 +19,16 @@ public:
     // helpers
 
     const Type* instantiate(const Location& loc, const Type* type, ArrayRef<const ASTType*> args);
+    void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, const Type* expected);
+    const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->num_args() ? type->arg(i) : nullptr; }
 
+    // unification related stuff
+
+    /**
+     * Gets the representative of @p type.
+     * Initializes @p type with @p UnknownType if @p type is @c nullptr.
+     * Updates @p todo_ if something changed.
+     */
     const Type* type(const Type*& type) {
         if (type == nullptr) {
             todo_ = true;
@@ -32,8 +41,14 @@ public:
         return type;
     }
 
+    /// Invokes @c type(typeable->type_).
     const Type* type(const Typeable* typeable) { return type(typeable->type_); }
 
+    /**
+     * @c unify(t, u).
+     * Initializes @p t with @p UnknownType if @p type is @c nullptr.
+     * Updates @p todo_ if something changed.
+     */
     const Type*& constrain(const Type*& t, const Type* u) {
         auto otype = type(t);
         t = unify(t, u);
@@ -45,42 +60,11 @@ public:
     const FnType*& constrain(const  FnType*& t, const FnType* u) { return (const FnType*&) constrain((const Type*&)t, (const Type*)u); }
     const Type*&   constrain(const Typeable* t,   const Type* u) { return constrain(t->type_, u); }
     const Type*&   constrain(const Typeable* t,   const Type* u, const Type* v) { return constrain(constrain(t, u), v); }
+
+    /// @c { t = unify(t, u) }. Does @attention { not } update @p todo_.
     void refine(const Type*& t, const Type* u) { t = unify(t, u); }
-    void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, const Type* expected);
-    const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->num_args() ? type->arg(i) : nullptr; }
 
-    // check wrappers
-
-    void check(const ModContents* n) { n->check(*this); }
-    const Type* check(const LocalDecl* local) { return constrain(local, local->check(*this)); }
-    void check(const Item* n) { n->check(*this); }
-    void check(const Stmt* n) { n->check(*this); }
-    const Type* check(const Expr* expr, const Type* expected) { return constrain(expr, expr->check(*this, expected)); }
-    const Type* check(const Expr* expr) {
-        auto i = expr2expected_.find(expr);
-        if (i == expr2expected_.end()) {
-            auto p = expr2expected_.emplace(expr, unknown_type());
-            assert(p.second);
-            i = p.first;
-        }
-        return constrain(expr, expr->check(*this, i->second));
-    }
-
-    const TypeParam* check(const ASTTypeParam* ast_type_param) {
-        if (ast_type_param->type())
-            return ast_type_param->type_param();
-        todo_ = true;
-        return (ast_type_param->type_ = ast_type_param->check(*this))->as<TypeParam>();
-    }
-
-    const Type* check(const ASTType* ast_type) {
-        if (ast_type->type() && ast_type->type()->is_known())
-            return ast_type->type();
-        return constrain(ast_type, ast_type->check(*this));
-    }
-
-    const Type* check_call(const FnType*& fn_mono, const FnType* fn_poly, std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type* expected);
-
+    /// Unifies @p t and @p u. Does @attention { not } update @p todo_.
     const Type* unify(const Type* t, const Type* u) {
         assert(t->is_hashed() && u->is_hashed());
 
@@ -116,11 +100,40 @@ public:
         return type_error();
     }
 
-private:
-    /*
-     * union/find - see https://en.wikipedia.org/wiki/Disjoint-set_data_structure#Disjoint-set_forests
-     */
+    // check wrappers
 
+    void check(const ModContents* n) { n->check(*this); }
+    const Type* check(const LocalDecl* local) { return constrain(local, local->check(*this)); }
+    void check(const Item* n) { n->check(*this); }
+    void check(const Stmt* n) { n->check(*this); }
+    const Type* check(const Expr* expr, const Type* expected) { return constrain(expr, expr->check(*this, expected)); }
+    const Type* check(const Expr* expr) {
+        auto i = expr2expected_.find(expr);
+        if (i == expr2expected_.end()) {
+            auto p = expr2expected_.emplace(expr, unknown_type());
+            assert(p.second);
+            i = p.first;
+        }
+        return constrain(expr, expr->check(*this, i->second));
+    }
+
+    const TypeParam* check(const ASTTypeParam* ast_type_param) {
+        if (ast_type_param->type())
+            return ast_type_param->type_param();
+        todo_ = true;
+        return (ast_type_param->type_ = ast_type_param->check(*this))->as<TypeParam>();
+    }
+
+    const Type* check(const ASTType* ast_type) {
+        if (ast_type->type() && ast_type->type()->is_known())
+            return ast_type->type();
+        return constrain(ast_type, ast_type->check(*this));
+    }
+
+    const Type* check_call(const FnType*& fn_mono, const FnType* fn_poly, std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type* expected);
+
+private:
+    /// Used for union/find - see https://en.wikipedia.org/wiki/Disjoint-set_data_structure#Disjoint-set_forests .
     struct Representative {
         Representative() {}
         Representative(const Type* type)
@@ -149,6 +162,8 @@ private:
         return repr->parent;
     }
 
+    /// @p x will be the new representative.
+    /// Returns again @p x.
     Representative* unify(Representative* x, Representative* y) {
         auto x_root = find(x);
         auto y_root = find(y);
@@ -159,6 +174,8 @@ private:
         return y_root->parent = x_root;
     }
 
+    /// Depending on the rank either @p x or @p y will be the new representative.
+    /// Returns the new representative.
     Representative* unify_by_rank(Representative* x, Representative* y) {
         auto x_root = find(x);
         auto y_root = find(y);
