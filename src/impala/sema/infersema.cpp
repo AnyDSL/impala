@@ -36,7 +36,7 @@ public:
         }
 
         auto otype = type;
-        type = find(representative(otype))->type;
+        type = find(otype);
         todo_ |= otype != type;
         return type;
     }
@@ -55,7 +55,7 @@ public:
                 return t;
 
             todo_ = true;
-            return t = find(representative(u))->type;
+            return t = find(u);
         }
 
         auto otype = t;
@@ -182,6 +182,8 @@ private:
             repr->parent = find(repr->parent);
         return repr->parent;
     }
+
+    const Type* find(const Type* type) { return find(representative(type))->type; }
 
     /// @p x will be the new representative. Returns again @p x.
     Representative* unify(Representative* x, Representative* y) {
@@ -615,7 +617,7 @@ const Type* InferSema::check_call(const FnType*& fn_mono, const FnType* fn_poly,
         check(args[i], safe_get_arg(fn_mono, i));
 
     for (auto& type_arg : type_args)
-        type_arg = find(representative(type_arg))->type;
+        type_arg = find(type_arg);
 
     return fn_mono->return_type();
 }
