@@ -45,12 +45,12 @@ public:
             error_msg(expr, what, t, fmt, args...); \
     }
 
-    IMPALA_EXPECT(bool,        t->is_bool(),                                 "boolean type")
-    IMPALA_EXPECT(int,         t->is_int(),                                  "integer type")
-    IMPALA_EXPECT(int_or_bool, t->is_int()                  || t->is_bool(), "integer or boolean type")
-    IMPALA_EXPECT(num,         t->is_int() || t->is_float(),                 "number type")
-    IMPALA_EXPECT(num_or_bool, t->is_int() || t->is_float() || t->is_bool(), "number or boolean type")
-    IMPALA_EXPECT(ptr,         t->isa<PtrType>(),                            "pointer type")
+    IMPALA_EXPECT(bool,        is_bool(t),                             "boolean type")
+    IMPALA_EXPECT(int,         is_int(t),                              "integer type")
+    IMPALA_EXPECT(int_or_bool, is_int(t)                || is_bool(t), "integer or boolean type")
+    IMPALA_EXPECT(num,         is_int(t) || is_float(t),               "number type")
+    IMPALA_EXPECT(num_or_bool, is_int(t) || is_float(t) || is_bool(t), "number or boolean type")
+    IMPALA_EXPECT(ptr,         t->isa<PtrType>(),                      "pointer type")
 
     template<typename... Args>
     void expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
@@ -433,12 +433,12 @@ void CastExpr::check(TypeSema& sema) const {
     auto dst_type = sema.check(ast_type());
 
     auto ptr_to_ptr     = [&] (const Type* a, const Type* b) { return a->isa<PtrType>() && b->isa<PtrType>(); };
-    auto int_to_int     = [&] (const Type* a, const Type* b) { return a->is_int()       && b->is_int();       };
-    auto float_to_float = [&] (const Type* a, const Type* b) { return a->is_float()     && b->is_float();     };
-    auto int_to_ptr     = [&] (const Type* a, const Type* b) { return a->is_int()       && b->isa<PtrType>(); };
-    auto int_to_float   = [&] (const Type* a, const Type* b) { return a->is_int()       && b->is_float();     };
-    auto int_to_bool    = [&] (const Type* a, const Type* b) { return a->is_int()       && b->is_bool();      };
-    auto float_to_bool  = [&] (const Type* a, const Type* b) { return a->is_float()     && b->is_bool();      };
+    auto int_to_int     = [&] (const Type* a, const Type* b) { return is_int(a)         && is_int(b);         };
+    auto float_to_float = [&] (const Type* a, const Type* b) { return is_float(a)       && is_float(b);       };
+    auto int_to_ptr     = [&] (const Type* a, const Type* b) { return is_int(a)         && b->isa<PtrType>(); };
+    auto int_to_float   = [&] (const Type* a, const Type* b) { return is_int(a)         && is_float(b);       };
+    auto int_to_bool    = [&] (const Type* a, const Type* b) { return is_int(a)         && is_bool(b);        };
+    auto float_to_bool  = [&] (const Type* a, const Type* b) { return is_float(a)       && is_bool(b);        };
 
     bool valid_cast =
         ptr_to_ptr(src_type, dst_type) ||

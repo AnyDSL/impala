@@ -78,7 +78,9 @@ const Type* Type::close(ArrayRef<const TypeParam*> type_params) const {
     return typetable().unify_base(this);
 }
 
-bool Type::is(PrimTypeKind kind) const { return isa<PrimType>() && as<PrimType>()->primtype_kind() == kind; }
+bool is(const Type* type, PrimTypeKind kind) {
+    return type->isa<PrimType>() && type->as<PrimType>()->primtype_kind() == kind;
+}
 
 bool FnType::is_returning() const {
     bool ret = false;

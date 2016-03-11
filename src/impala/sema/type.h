@@ -119,12 +119,6 @@ public:
     const thorin::Type* thorin_type() const { return thorin_type_; }
     const Type* rebuild(Types) const;
 
-#define IMPALA_TYPE(itype, atype) bool is_##itype() const { return is(PrimType_##itype); }
-#include "impala/tokenlist.h"
-    bool is(PrimTypeKind kind) const;
-    bool is_int() const { return is_i8() || is_i16() || is_i32() || is_i64() || is_u8() || is_u16() || is_u32() || is_u64(); }
-    bool is_float() const { return is_f32() || is_f64(); }
-
     uint64_t hash() const { return is_hashed() ? hash_ : hash_ = vhash(); }
     virtual uint64_t vhash() const;
     virtual bool equal(const Type*) const;
@@ -183,6 +177,14 @@ private:
 
     friend class TypeTable;
 };
+
+bool is(const Type*, PrimTypeKind kind);
+#define IMPALA_TYPE(itype, atype) inline bool is_##itype(const Type* t) { return is(t, PrimType_##itype); }
+#include "impala/tokenlist.h"
+inline bool is_float(const Type* t) { return is_f32(t) || is_f64(t); }
+inline bool is_int(const Type* t) { return is_i8(t) || is_i16(t) || is_i32(t) || is_i64(t)
+                                        || is_u8(t) || is_u16(t) || is_u32(t) || is_u64(t); }
+
 
 //------------------------------------------------------------------------------
 
@@ -510,13 +512,6 @@ private:
     virtual const Type* vinstantiate(Type2Type&) const;
     virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
 
-    std::string name_;
-    mutable const Type* binder_;
-    mutable size_t index_;
-    mutable const TypeParam* equiv_ = nullptr;
-
-    friend bool Type::equal(const Type*) const;
-    friend const Type* Type::close(ArrayRef<const TypeParam*>) const;
     friend class TypeTable;
 };
 
