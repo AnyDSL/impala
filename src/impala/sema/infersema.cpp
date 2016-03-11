@@ -129,6 +129,7 @@ public:
             constrain(local, type);
         return type;
     }
+    const Type* check(const FieldDecl* f) { return constrain(f, f->check(*this)); }
     void check(const Item* n) { n->check(*this); }
     void check(const Stmt* n) { n->check(*this); }
     const Type* check(const Expr* expr, const Type* expected) { return constrain(expr, expr->check(*this, expected)); }
@@ -392,7 +393,7 @@ void StructDecl::check(InferSema& sema) const {
     auto type_params = check_ast_type_params(sema);
 
     for (auto field : field_decls()) {
-        if (auto field_type = sema.type(field)) {
+        if (auto field_type = sema.check(field)) {
             if (!field_type || field_type->is_unknown())
                 return; // bail out for now if we don't yet know all field types
         }
@@ -406,7 +407,7 @@ void StructDecl::check(InferSema& sema) const {
     type_ = struct_type->close(type_params);
 }
 
-void FieldDecl::check(InferSema& sema) const { sema.check(ast_type()); }
+const Type* FieldDecl::check(InferSema& sema) const { return sema.check(ast_type()); }
 
 void FnDecl::check(InferSema& sema) const {
     auto type_params = check_ast_type_params(sema);

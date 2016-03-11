@@ -703,7 +703,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    void check(InferSema&) const;
+    const Type* check(InferSema&) const;
     void check(TypeSema&) const;
 
     int index_;
