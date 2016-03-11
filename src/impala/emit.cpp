@@ -135,7 +135,7 @@ const thorin::Type* TupleTypeNode::convert(CodeGen& cg) const {
 }
 
 const thorin::Type* StructAbsTypeNode::convert(CodeGen& cg) const {
-    thorin_type_ = thorin_struct_abs_type_ = cg.world().struct_abs_type(num_args(), struct_decl()->symbol().str());
+    thorin_type_ = thorin_struct_abs_type_ = cg.world().struct_abs_type(num_args(), num_type_vars(), struct_decl()->symbol().str());
     size_t i = 0;
     for (auto arg : args())
         thorin_struct_abs_type_->set(i++, cg.convert(arg));
