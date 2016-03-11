@@ -52,7 +52,7 @@ public:
     IMPALA_EXPECT(num_or_bool, t->is_int() || t->is_float() || t->is_bool(), "number or boolean type")
     IMPALA_EXPECT(ptr,         t->isa<PtrType>(),                            "pointer type")
 
-    template<typename... Args> \
+    template<typename... Args>
     void expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
         std::ostringstream os;
         thorin::streamf(os, fmt, args...);
@@ -68,6 +68,14 @@ public:
     void expect_type(const Expr* expr, const Type* found, const char* context) {
         if (expr->type() != found)
             error(expr, "mismatched types: expected '%' but found '%' as %", expr->type(), found, context);
+    }
+
+    void match_type(const Expr* base, const Expr* e1, const Expr* e2) {
+        if (e1->type() != e2->type()) {
+            error(base, "both left-hand side and right-hand side of expression must agree on the same type");
+            error(e1,  "left-hand side type is '%'", e1->type());
+            error(e2, "right-hand side type is '%'", e2->type());
+        }
     }
 
     // check wrappers
@@ -365,6 +373,7 @@ void PrefixExpr::check(TypeSema& sema) const {
 void InfixExpr::check(TypeSema& sema) const {
     sema.check(lhs());
     sema.check(rhs());
+    sema.match_type(this, lhs(), rhs());
 
     switch (kind()) {
         case EQ: case NE:
