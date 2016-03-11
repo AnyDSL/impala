@@ -208,14 +208,15 @@ bool UnknownType::equal(const Type* other) const { return this == other; }
  */
 
 std::ostream& Type::stream_type_params(std::ostream& os) const {
-    if (num_type_params() != 0) {
-        return streamf(os, "[%]", stream_list(type_params(), [&](const TypeParam* type_param) {
+    if (num_type_params() == 0)
+        return os;
+
+    return streamf(os, "[%]", stream_list(type_params(), [&](const TypeParam* type_param) {
+        if (type_param)
             os << type_param;
-            //if (type_param->num_bounds() != 0)
-                //streamf(os, ": %", stream_list(type_param->bounds(), [&](TraitApp bound) { os << bound; }, " + "));
-        }));
-    }
-    return os;
+        else
+            os << "<null>";
+    }));
 }
 
 std::ostream& UnknownType::stream(std::ostream& os) const { return os << '?' << gid(); }
