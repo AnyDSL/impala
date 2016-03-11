@@ -131,7 +131,7 @@ const thorin::Type* TupleType::convert(CodeGen& cg) const {
 }
 
 const thorin::Type* StructAbsType::convert(CodeGen& cg) const {
-    thorin_type_ = thorin_struct_abs_type_ = cg.world().struct_abs_type(num_args(), struct_decl()->symbol().str());
+    thorin_type_ = thorin_struct_abs_type_ = cg.world().struct_abs_type(num_args(), num_type_params(), struct_decl()->symbol().str());
     size_t i = 0;
     for (auto arg : args())
         thorin_struct_abs_type_->set(i++, cg.convert(arg));
@@ -388,7 +388,7 @@ Var PrefixExpr::lemit(CodeGen& cg) const {
 }
 
 void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
-    if (kind() == NOT && cg.convert(type())->is_bool())
+    if (kind() == NOT && is_type_bool(cg.convert(type())))
         cg.emit_branch(rhs(), f, t);
     else
         cg.branch(cg.remit(rhs()), t, f, loc().end());
