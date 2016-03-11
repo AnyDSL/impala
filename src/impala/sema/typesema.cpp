@@ -70,14 +70,6 @@ public:
             error(expr, "mismatched types: expected '%' but found '%' as %", expr->type(), found, context);
     }
 
-    void match_type(const Expr* base, const Expr* e1, const Expr* e2) {
-        if (e1->type() != e2->type()) {
-            error(base, "both left-hand side and right-hand side of expression must agree on the same type");
-            error(e1,  "left-hand side type is '%'", e1->type());
-            error(e2, "right-hand side type is '%'", e2->type());
-        }
-    }
-
     // check wrappers
 
     const TypeParam* check(const ASTTypeParam* ast_type_param) { ast_type_param->check(*this); return ast_type_param->type_param(); }
@@ -373,12 +365,20 @@ void PrefixExpr::check(TypeSema& sema) const {
 void InfixExpr::check(TypeSema& sema) const {
     sema.check(lhs());
     sema.check(rhs());
-    sema.match_type(this, lhs(), rhs());
+
+    if (lhs()->type() != rhs()->type()) {
+        error(this, "both left-hand side and right-hand side of expression must agree on the same type");
+        error(lhs(),  "left-hand side type is '%'", lhs()->type());
+        error(rhs(), "right-hand side type is '%'", rhs()->type());
+    }
 
     switch (kind()) {
         case EQ: case NE:
         case LT: case GT:
         case LE: case GE:
+            sema.expect_num_or_bool(lhs(),  "left-hand side of binary '%'", tok2str(this));
+            sema.expect_num_or_bool(rhs(), "right-hand side of binary '%'", tok2str(this));
+            return;
         case ADD: case SUB:
         case MUL: case DIV: case REM:
             sema.expect_num(lhs(),  "left-hand side of binary '%'", tok2str(this));
@@ -392,7 +392,7 @@ void InfixExpr::check(TypeSema& sema) const {
             sema.expect_int(lhs(),  "left-hand side of binary '%'", tok2str(this));
             sema.expect_int(rhs(), "right-hand side of binary '%'", tok2str(this));
             return;
-        case OR: case XOR: case AND:
+        case  OR: case AND: case XOR:
             sema.expect_int_or_bool(lhs(),  "left-hand side of bitwise '%'", tok2str(this));
             sema.expect_int_or_bool(rhs(), "right-hand side of bitwise '%'", tok2str(this));
             return;
@@ -401,14 +401,18 @@ void InfixExpr::check(TypeSema& sema) const {
             return;
         case ADD_ASGN: case SUB_ASGN:
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
-            sema.expect_num_or_bool(lhs(),  "left-hand side of binary '%'", tok2str(this));
-            sema.expect_num_or_bool(rhs(), "right-hand side of binary '%'", tok2str(this));
+            sema.expect_num(lhs(),  "left-hand side of binary '%'", tok2str(this));
+            sema.expect_num(rhs(), "right-hand side of binary '%'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '%'", tok2str(this));
             return;
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN:
-        case SHL_ASGN: case SHR_ASGN:
             sema.expect_int_or_bool(lhs(),  "left-hand side of binary '%'", tok2str(this));
             sema.expect_int_or_bool(rhs(), "right-hand side of binary '%'", tok2str(this));
+            sema.expect_lvalue(lhs(), "assignment '%'", tok2str(this));
+            return;
+        case SHL_ASGN: case SHR_ASGN:
+            sema.expect_int(lhs(),  "left-hand side of binary '%'", tok2str(this));
+            sema.expect_int(rhs(), "right-hand side of binary '%'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '%'", tok2str(this));
             return;
         default: THORIN_UNREACHABLE;
