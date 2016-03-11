@@ -416,7 +416,7 @@ Var PrefixExpr::lemit(CodeGen& cg) const {
 }
 
 void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
-    if (kind() == NOT && cg.convert(type())->is_bool())
+    if (kind() == NOT && is_type_bool(cg.convert(type())))
         cg.emit_branch(rhs(), f, t);
     else
         cg.branch(cg.remit(rhs()), t, f, loc().end());
