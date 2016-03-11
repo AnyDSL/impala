@@ -35,7 +35,7 @@ public:
         return unify(new OwnedPtrType(*this, referenced_type, addr_space));
     }
     const PrimType* prim_type(PrimTypeKind kind);
-    const StructAbsType* struct_abs_type(const StructDecl* struct_decl) { return unify(new StructAbsType(*this, struct_decl)); }
+    const StructAbsType* struct_abs_type(const StructDecl*);
     const StructAppType* struct_app_type(const StructAbsType* struct_abs, Types args) {
         return unify(new StructAppType(struct_abs, args));
     }
