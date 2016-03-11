@@ -30,64 +30,44 @@ public:
 
     // error handling
 
-    void error_msg(const Expr* expr, const char* what, const Type* type, const char* context = nullptr) {
-        error(expr, "expected % (have '%')", what, type, context ? std::string(" for ") + context : "");
+    template<typename... Args>
+    void error_msg(const Expr* expr, const char* what, const Type* type, const char* fmt, Args... args) {
+        std::ostringstream os;
+        thorin::streamf(os, fmt, args...);
+        error(expr, "expected % (have '%') for %", what, type, os.str());
     }
 
-    void expect_bool(const Expr* expr, const char* context = nullptr) {
-        auto t = scalar_type(expr);
-        if (!t->isa<TypeError>() && !t->is_bool())
-            error_msg(expr, "boolean type", t, context);
+#define IMPALA_EXPECT(T, pred, what) \
+    template<typename... Args> \
+    void expect_##T(const Expr* expr, const char* fmt, Args... args) { \
+        auto t = scalar_type(expr); \
+        if (!t->isa<TypeError>() && !(pred)) \
+            error_msg(expr, what, t, fmt, args...); \
     }
 
-    void expect_int(const Expr* expr, const char* context = nullptr) {
-        auto t = scalar_type(expr);
-        if (!t->isa<TypeError>() && !t->is_int())
-            error_msg(expr, "integer type", t, context);
-    }
+    IMPALA_EXPECT(bool,        t->is_bool(),                                 "boolean type")
+    IMPALA_EXPECT(int,         t->is_int(),                                  "integer type")
+    IMPALA_EXPECT(int_or_bool, t->is_int()                  || t->is_bool(), "integer or boolean type")
+    IMPALA_EXPECT(num,         t->is_int() || t->is_float(),                 "number type")
+    IMPALA_EXPECT(num_or_bool, t->is_int() || t->is_float() || t->is_bool(), "number or boolean type")
+    IMPALA_EXPECT(ptr,         t->isa<PtrType>(),                            "pointer type")
 
-    void expect_int_or_bool(const Expr* expr, const char* context = nullptr) {
-        auto t = scalar_type(expr);
-        if (!t->isa<TypeError>() && !t->is_bool() && !t->is_int())
-            error_msg(expr, "integer type or boolean type", t, context);
-    }
-
-    void expect_num(const Expr* expr, const char* context = nullptr) {
-        auto t = scalar_type(expr);
-        if (!t->isa<TypeError>() && !t->is_int() && !t->is_float())
-            error_msg(expr, "number type", t, context);
-    }
-
-    void expect_num_or_bool(const Expr* expr, const char* context = nullptr) {
-        auto t = scalar_type(expr);
-        if (!t->isa<TypeError>() && !t->is_bool() && !t->is_int() && !t->is_float())
-            error_msg(expr, "number or boolean type", t, context);
-    }
-
-    const Type* expect_type(const Expr* expr, const Type* found, const Type* expected, const char* context = nullptr) {
-        if (found == expected)
-            return found;
-        if (found <= expected) {
-            expr->actual_type_ = found;
-            return expected;
-        }
-
-        error(expr->loc(), "mismatched types: expected '%' but found '%'%", expected, found, context ? std::string(" as ") + context : "");
-        return expected;
-    }
-
-    const Type* expect_type(const Expr* expr, const Type* expected, const char* context = nullptr) {
-        return expect_type(expr, expr->type(), expected, context);
-    }
-
-    void expect_lvalue(const Expr* expr, const char* context = nullptr) {
+    template<typename... Args> \
+    void expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
+        std::ostringstream os;
+        thorin::streamf(os, fmt, args...);
         if (!expr->is_lvalue())
-            error(expr, "lvalue required %", context ? context : "in assignment");
+            error(expr, "lvalue required for %", os.str());
     }
 
     void expect_known(const ValueDecl* value_decl) {
         if (!value_decl->type()->is_known())
             error(value_decl, "cannot infer type for '%'", value_decl->symbol());
+    }
+
+    void expect_type(const Expr* expr, const Type* found, const char* context) {
+        if (expr->type() != found)
+            error(expr, "mismatched types: expected '%' but found '%' as %", expr->type(), found, context);
     }
 
     // check wrappers
@@ -102,13 +82,6 @@ public:
     void check(const Stmt* n) { n->check(*this); }
     const Type* check_call(const MapExpr* expr, const FnType* fn_poly, Types type_args, ArrayRef<const Expr*> args);
 
-    static const Type* turn_cast_inside_out(const Expr* expr) {
-        assert(expr->needs_cast());
-        expr->type_ = expr->actual_type_;
-        expr->actual_type_ = nullptr;
-        return expr->type();
-    }
-
 private:
     bool nossa_;
 
@@ -122,20 +95,28 @@ void type_analysis(const ModContents* mod, bool nossa) {
     sema.check(mod);
 }
 
+template<class T>
+TokenKind token_kind(const T* expr) { return TokenKind(expr->kind()); }
+
+template<class T>
+const char* tok2str(const T* expr) { return Token::tok2str(token_kind(expr)); }
+
 //------------------------------------------------------------------------------
 
 /*
  * misc
  */
 
-const TypeParam* ASTTypeParam::check(TypeSema&) const { return type_param(); }
+const TypeParam* ASTTypeParam::check(TypeSema& sema) const {
+    for (auto bound : bounds())
+        sema.check(bound);
+
+    return type_param();
+}
 
 void ASTTypeParamList::check_ast_type_params(TypeSema& sema) const {
-    for (auto ast_type_param : ast_type_params()) {
+    for (auto ast_type_param : ast_type_params())
         sema.check(ast_type_param);
-        //[>auto ast_type_param = <]sema.check(ast_type_param);
-        //for (auto bound : ast_type_param->bounds()) { }
-    }
 }
 
 //------------------------------------------------------------------------------
@@ -350,35 +331,30 @@ void PathExpr::check(TypeSema& sema) const {
 }
 
 void PrefixExpr::check(TypeSema& sema) const {
-    auto rtype = sema.check(rhs());
+    sema.check(rhs());
 
     switch (kind()) {
-        case AND: {
+        case AND:
             sema.expect_lvalue(rhs(), "as unary '&' operand");
             rhs()->take_address();
             return;
-        }
         case TILDE:
             return;
         case MUL:
-            if (!rtype->isa<PtrType>())
-                error(rhs(), "expected pointer type for unary '*' (have '%')", rhs()->type());
+            sema.expect_ptr(rhs(), "unary '*'");
             return;
         case INC:
-        case DEC: {
-            sema.expect_num(rhs());
-            sema.expect_lvalue(rhs());
+        case DEC:
+            sema.expect_num(rhs(),    "prefix '%'", tok2str(this));
+            sema.expect_lvalue(rhs(), "prefix '%'", tok2str(this));
             return;
-        }
         case ADD:
-        case SUB: {
-            sema.expect_num(rhs());
+        case SUB:
+            sema.expect_num(rhs(), "unary '%'", tok2str(this));
             return;
-        }
-        case NOT: {
-            sema.expect_int(rhs()); // TODO or bool or simd type
+        case NOT:
+            sema.expect_int_or_bool(rhs(), "unary '!'");
             return;
-        }
         default:
             return;
     }
@@ -396,44 +372,44 @@ void InfixExpr::check(TypeSema& sema) const {
         case LE: case GE:
         case ADD: case SUB:
         case MUL: case DIV: case REM:
-            sema.expect_num(lhs());
-            sema.expect_num(rhs());
+            sema.expect_num(lhs(),  "left-hand side of binary '%'", tok2str(this));
+            sema.expect_num(rhs(), "right-hand side of binary '%'", tok2str(this));
             return;
         case OROR: case ANDAND:
-            sema.expect_bool(lhs(), "left-hand side of logical boolean expression");
-            sema.expect_bool(rhs(), "right-hand side of logical boolean expression");
+            sema.expect_bool(lhs(),  "left-hand side of logical '%'", tok2str(this));
+            sema.expect_bool(rhs(), "right-hand side of logical '%'", tok2str(this));
             return;
         case SHL: case SHR:
-            sema.expect_int(lhs());
-            sema.expect_int(rhs());
+            sema.expect_int(lhs(),  "left-hand side of binary '%'", tok2str(this));
+            sema.expect_int(rhs(), "right-hand side of binary '%'", tok2str(this));
             return;
         case OR: case XOR: case AND:
-            sema.expect_int_or_bool(lhs());
-            sema.expect_int_or_bool(rhs());
+            sema.expect_int_or_bool(lhs(),  "left-hand side of bitwise '%'", tok2str(this));
+            sema.expect_int_or_bool(rhs(), "right-hand side of bitwise '%'", tok2str(this));
             return;
         case ASGN:
-            sema.expect_lvalue(lhs());
+            sema.expect_lvalue(lhs(), "assignment");
             return;
         case ADD_ASGN: case SUB_ASGN:
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
-            sema.expect_lvalue(lhs());
-            sema.expect_num_or_bool(lhs());
-            sema.expect_num_or_bool(rhs());
+            sema.expect_num_or_bool(lhs(),  "left-hand side of binary '%'", tok2str(this));
+            sema.expect_num_or_bool(rhs(), "right-hand side of binary '%'", tok2str(this));
+            sema.expect_lvalue(lhs(), "assignment '%'", tok2str(this));
             return;
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN:
         case SHL_ASGN: case SHR_ASGN:
-            sema.expect_lvalue(lhs());
-            sema.expect_int_or_bool(lhs());
-            sema.expect_int_or_bool(rhs());
+            sema.expect_int_or_bool(lhs(),  "left-hand side of binary '%'", tok2str(this));
+            sema.expect_int_or_bool(rhs(), "right-hand side of binary '%'", tok2str(this));
+            sema.expect_lvalue(lhs(), "assignment '%'", tok2str(this));
             return;
         default: THORIN_UNREACHABLE;
     }
 }
 
 void PostfixExpr::check(TypeSema& sema) const {
-    // TODO check if operator supports the type
     sema.check(lhs());
-    sema.expect_lvalue(lhs());
+    sema.expect_num(lhs(),    "postfix '%'", tok2str(this));
+    sema.expect_lvalue(lhs(), "postfix '%'", tok2str(this));
 }
 
 template <typename F, typename T>
@@ -464,54 +440,40 @@ void CastExpr::check(TypeSema& sema) const {
         error(this, "invalid source and destination types for cast operator, got '%' and '%'", src_type, dst_type);
 }
 
-void DefiniteArrayExpr::check(TypeSema& /*sema*/) const {
-#if 0
+void TupleExpr::check(TypeSema& sema) const {
     for (auto arg : args())
-        sema.check(arg, elem_type, "element of definite array expression");
-#endif
+        sema.check(arg);
 }
 
-void RepeatedDefiniteArrayExpr::check(TypeSema& sema) const {
-    sema.check(value());
-}
+void RepeatedDefiniteArrayExpr::check(TypeSema& sema) const { sema.check(value()); }
 
 void IndefiniteArrayExpr::check(TypeSema& sema) const {
     sema.check(dim());
-    sema.expect_int(dim());
+    sema.expect_int(dim(), "dimensions in indefinite array expression");
     sema.check(elem_ast_type());
 }
 
-void TupleExpr::check(TypeSema& /*sema*/) const {
-#if 0
-    std::vector<Type> types;
-    if (auto exp_tup = expected->isa<TupleType>()) {
-        if (exp_tup->num_args() != num_args())
-            error(this) << "expected tuple with " << exp_tup->num_args() << " elements, but found tuple expression with " << num_args() << " elements\n";
+void DefiniteArrayExpr::check(TypeSema& sema) const {
+    const Type* elem_type = nullptr;
+    if (auto definite_array_type = type()->isa<DefiniteArrayType>())
+        elem_type = definite_array_type->elem_type();
 
-        size_t i = 0;
-        for (auto arg : args()) {
-            sema.check(arg, exp_tup->arg(i++));
-            types.push_back(arg->type());
-        }
-    } else {
-        for (auto arg : args()) {
-            sema.check(arg);
-            types.push_back(arg->type());
-        }
+    for (auto arg : args()) {
+        sema.check(arg);
+        if (elem_type)
+            sema.expect_type(arg, elem_type, "element of definite array expression");
     }
-    return sema.tuple_type(types);
-#endif
 }
 
 void SimdExpr::check(TypeSema& sema) const {
-    const Type* elem_type;
+    const Type* elem_type = nullptr;
+    if (auto simd_type = type()->isa<SimdType>())
+        elem_type = simd_type->elem_type();
+
     for (auto arg : args()) {
-        auto arg_type = sema.check(arg);
-        if (elem_type) {
-            if (elem_type != arg_type)
-                sema.expect_type(arg, arg_type, elem_type, "element of simd expression");
-        } else
-            elem_type = arg_type;
+        sema.check(arg);
+        if (elem_type)
+            sema.expect_type(arg, elem_type, "element of simd expression");
     }
 }
 

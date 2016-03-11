@@ -263,7 +263,11 @@ const Type* InferSema::instantiate(const Type* type, ArrayRef<const ASTType*> ar
  * misc
  */
 
-const TypeParam* ASTTypeParam::check(InferSema& sema) const { return sema.type_param(symbol()); }
+const TypeParam* ASTTypeParam::check(InferSema& sema) const {
+    for (auto bound : bounds())
+        sema.check(bound);
+    return sema.type_param(symbol());
+}
 
 Array<const TypeParam*> ASTTypeParamList::check_ast_type_params(InferSema& sema) const {
     Array<const TypeParam*> type_params(num_ast_type_params());
