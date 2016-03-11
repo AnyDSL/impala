@@ -4,5 +4,7 @@ fn get[T]() -> T {
 }
 
 fn main() -> int {
-    if get() // TODO true or false expected?
+    let mut x = get();
+    x = 0;
+    x
 }

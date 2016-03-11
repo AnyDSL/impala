@@ -17,7 +17,6 @@ def allTests():
       "codegen/cur_bb_bug.impala",
       "codegen/diderot.impala",
       "codegen/endless_mangling.impala",
-      "codegen/generic_get.impala",
       "codegen/parallel.impala",
       "codegen/poly_type_arg.impala",
       "codegen/range.impala",
