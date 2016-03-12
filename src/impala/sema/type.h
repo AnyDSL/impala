@@ -73,7 +73,7 @@ protected:
     Type(const Type&) = delete;
     Type& operator=(const Type&) = delete;
 
-    Type(TypeTable& typetable, Kind kind, Types args, size_t num_type_params = 0)
+    Type(TypeTable& typetable, int kind, Types args, size_t num_type_params = 0)
         : typetable_(typetable)
         , kind_(kind)
         , args_(args.size())
@@ -95,7 +95,7 @@ protected:
     }
 
 public:
-    Kind kind() const { return kind_; }
+    int kind() const { return kind_; }
     Types args() const { return args_; }
     ArrayRef<const TypeParam*> type_params() const { return type_params_; }
     size_t num_type_params() const { return type_params().size(); }
@@ -143,7 +143,7 @@ private:
     virtual const thorin::Type* convert(CodeGen&) const = 0;
 
     TypeTable& typetable_;
-    Kind kind_;
+    int kind_;
     Array<const Type*> args_;
     mutable Array<const TypeParam*> type_params_;
     mutable size_t gid_;
@@ -190,7 +190,7 @@ inline bool is_int(const Type* t) { return is_i8(t) || is_i16(t) || is_i32(t) ||
 
 class PtrType : public Type {
 protected:
-    PtrType(TypeTable& typetable, Kind kind, const Type* referenced_type, int addr_space)
+    PtrType(TypeTable& typetable, int kind, const Type* referenced_type, int addr_space)
         : Type(typetable, kind, {referenced_type})
         , addr_space_(addr_space)
     {}
@@ -351,7 +351,7 @@ private:
 
 class ArrayType : public Type {
 protected:
-    ArrayType(TypeTable& typetable, Kind kind, const Type* elem_type)
+    ArrayType(TypeTable& typetable, int kind, const Type* elem_type)
         : Type(typetable, kind, {elem_type})
     {}
 
