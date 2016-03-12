@@ -8,10 +8,10 @@
 #include "impala/ast.h"
 #include "impala/sema/typetable.h"
 
+
 namespace impala {
 
-using thorin::hash_begin;
-using thorin::hash_combine;
+#include "thorin/henk.cpp.h"
 
 //------------------------------------------------------------------------------
 
@@ -19,64 +19,12 @@ using thorin::hash_combine;
  * constructors
  */
 
-size_t Type::gid_counter_ = 1;
-
 StructAbsType::StructAbsType(TypeTable& typetable, const StructDecl* struct_decl)
     : Type(typetable, Kind_struct_abs, Array<const Type*>(struct_decl->num_field_decls()))
     , struct_decl_(struct_decl)
 {}
 
-//StructAppType::StructAppType(TypeTable& typetable, StructAbsType struct_abs_type, ArrayRef<Type> args)
-    //: KnownType(typetable, Kind_struct_app, args)
-    //, struct_abs_type_(struct_abs_type.unify())
-    //, elem_cache_(struct_abs_type->num_args())
-//{}
-
 //------------------------------------------------------------------------------
-
-const Type* Type::close(ArrayRef<const TypeParam*> type_params) const {
-    assert(num_type_params() == type_params.size());
-
-    for (size_t i = 0, e = num_type_params(); i != e; ++i) {
-        assert(!type_params[i]->is_closed());
-        type_params_[i] = type_params[i];
-        type_params_[i]->binder_ = this;
-        type_params_[i]->closed_ = true;
-        type_params_[i]->index_ = i;
-    }
-
-    std::stack<const Type*> stack;
-    TypeSet done;
-
-    auto push = [&](const Type* type) {
-        if (!type->is_closed() && !done.contains(type) && !type->isa<TypeParam>()) {
-            done.insert(type);
-            stack.push(type);
-            return true;
-        }
-        return false;
-    };
-
-    push(this);
-
-    // TODO this is potentially quadratic when closing n types
-    while (!stack.empty()) {
-        auto type = stack.top();
-
-        bool todo = false;
-        for (auto arg : type->args())
-            todo |= push(arg);
-
-        if (!todo) {
-            stack.pop();
-            type->closed_ = true;
-            for (size_t i = 0, e = type->num_args(); i != e && type->closed_; ++i)
-                type->closed_ &= type->arg(i)->is_closed();
-        }
-    }
-
-    return typetable().unify_base(this);
-}
 
 bool is(const Type* type, PrimTypeKind kind) {
     return type->isa<PrimType>() && type->as<PrimType>()->primtype_kind() == kind;
@@ -141,20 +89,8 @@ Types StructAppType::elems() const {
  * hash
  */
 
-uint64_t Type::vhash() const {
-    uint64_t seed = hash_combine(hash_combine(hash_begin((int) kind()), num_args()), num_type_params());
-    for (auto arg : args_)
-        seed = hash_combine(seed, arg->hash());
-    return seed;
-}
-
 uint64_t PtrType::vhash() const {
-    return hash_combine(Type::vhash(), (uint64_t)addr_space());
-}
-
-uint64_t TypeParam::vhash() const {
-    auto seed = hash_combine(hash_combine(hash_begin(int(kind())), index()), int(binder()->kind()));
-    return hash_combine(hash_combine(seed, binder()->num_type_params()), binder()->num_args());
+    return thorin::hash_combine(Type::vhash(), (uint64_t)addr_space());
 }
 
 //------------------------------------------------------------------------------
@@ -163,42 +99,11 @@ uint64_t TypeParam::vhash() const {
  * equal
  */
 
-bool Type::equal(const Type* other) const {
-    bool result =  this->kind() == other->kind()     &&  this->is_monomorphic() == other->is_monomorphic()
-            && this->num_args() == other->num_args() && this->num_type_params() == other->num_type_params();
-
-    if (result) {
-        if (is_monomorphic()) {
-            for (size_t i = 0, e = num_args(); result && i != e; ++i)
-                result &= this->args_[i] == other->args_[i];
-        } else {
-            for (size_t i = 0, e = num_type_params(); result && i != e; ++i) {
-                assert(this->type_param(i)->equiv_ == nullptr);
-                this->type_param(i)->equiv_ = other->type_param(i);
-            }
-
-            for (size_t i = 0, e = num_args(); result && i != e; ++i)
-                result &= this->args_[i]->equal(other->args_[i]);
-
-            for (auto type_param : type_params())
-                type_param->equiv_ = nullptr;
-        }
-    }
-
-    return result;
-}
-
 bool PtrType::equal(const Type* other) const {
     if (!Type::equal(other))
         return false;
     auto ptr = other->as<PtrType>();
     return ptr->addr_space() == addr_space();
-}
-
-bool TypeParam::equal(const Type* other) const {
-    if (auto type_param = other->isa<TypeParam>())
-        return this->equiv_ == type_param;
-    return false;
 }
 
 bool UnknownType::equal(const Type* other) const { return this == other; }
@@ -209,11 +114,11 @@ bool UnknownType::equal(const Type* other) const { return this == other; }
  * stream
  */
 
-std::ostream& Type::stream_type_params(std::ostream& os) const {
-    if (num_type_params() == 0)
+std::ostream& stream_type_params(std::ostream& os, const Type* type) {
+    if (type->num_type_params() == 0)
         return os;
 
-    return streamf(os, "[%]", stream_list(type_params(), [&](const TypeParam* type_param) {
+    return streamf(os, "[%]", stream_list(type->type_params(), [&](const TypeParam* type_param) {
         if (type_param)
             os << type_param;
         else
@@ -235,7 +140,7 @@ std::ostream& TypeError::stream(std::ostream& os) const { return os << "<type er
 std::ostream& NoRetType::stream(std::ostream& os) const { return os << "<no-return>"; }
 
 std::ostream& FnType::stream(std::ostream& os) const {
-    stream_type_params(os << "fn");
+    stream_type_params(os << "fn", this);
     auto ret_type = return_type();
     if (ret_type->isa<NoRetType>())
         return stream_list(os, args(), [&](const Type* type) { os << type; }, "(", ")");
@@ -243,7 +148,7 @@ std::ostream& FnType::stream(std::ostream& os) const {
     return streamf(os, "(%) -> %", stream_list(args().skip_back(), [&](const Type* type) { os << type; }), ret_type);
 }
 
-std::ostream& TypeParam::stream(std::ostream& os) const { return os << symbol().str(); }
+std::ostream& TypeParam::stream(std::ostream& os) const { return os << name(); }
 
 std::ostream& PtrType::stream(std::ostream& os) const {
     os << prefix();
@@ -270,7 +175,7 @@ std::ostream& StructAppType::stream(std::ostream& os) const {
 //}
 
 std::ostream& TupleType::stream(std::ostream& os) const {
-    return stream_list(stream_type_params(os), args(), [&](const Type* type) { os << type; }, "(", ")");
+    return stream_list(stream_type_params(os, this), args(), [&](const Type* type) { os << type; }, "(", ")");
 }
 
 //------------------------------------------------------------------------------
@@ -343,12 +248,13 @@ const Type* Type::specialize(Type2Type& map) const {
     Array<const TypeParam*> ntype_params(num_type_params());
     for (size_t i = 0, e = num_type_params(); i != e; ++i) {
         assert(!map.contains(type_param(i)));
-        auto ntype_param = typetable().type_param(type_param(i)->symbol());
+        auto ntype_param = typetable().type_param(type_param(i)->name());
         map[type_param(i)] = ntype_param;
         ntype_params[i] = ntype_param;
     }
 
-    return instantiate(map)->close(ntype_params);;
+    auto open = instantiate(map);
+    return close(open, ntype_params);
 }
 
 Array<const Type*> Type::specialize_args(Type2Type& map) const {

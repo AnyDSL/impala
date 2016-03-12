@@ -84,7 +84,7 @@ public:
     const thorin::Type* convert(const Type* type) {
         if (thorin_type(type) == nullptr) {
             for (auto type_param : type->type_params())
-                thorin_type(type_param) = world().type_param(type_param->symbol().str());
+                thorin_type(type_param) = world().type_param(type_param->name());
 
             thorin_type(type) = convert_rec(type);
 

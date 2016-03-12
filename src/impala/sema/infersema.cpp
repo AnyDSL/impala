@@ -99,7 +99,7 @@ public:
             for (size_t i = 0, e = t->num_type_params(); i != e; ++i) {
                 assert(t->type_param(i)->equiv_ == nullptr);
                 t->type_param(i)->equiv_ = u->type_param(i);
-                ntype_params[i] = type_param(t->type_param(i)->symbol());
+                ntype_params[i] = type_param(t->type_param(i)->name());
             }
 
             Array<const Type*> nargs(t->num_args());
@@ -111,10 +111,11 @@ public:
 
             if (t->isa<FnType>()) { // TODO needed as long as we don't have explicit Lambdas
                 auto ntype = fn_type(nargs, t->num_type_params());
-                return ntype->close(ntype_params);
+                return close(ntype, ntype_params);
             }
 
-            return t->rebuild(nargs)->close(ntype_params);
+            t = t->rebuild(nargs);
+            return close(t, ntype_params);
         }
 
         return type_error();
@@ -267,7 +268,7 @@ const Type* InferSema::instantiate(const Type* type, ArrayRef<const ASTType*> ar
 const TypeParam* ASTTypeParam::check(InferSema& sema) const {
     for (auto bound : bounds())
         sema.check(bound);
-    return sema.type_param(symbol());
+    return sema.type_param(symbol().str());
 }
 
 Array<const TypeParam*> ASTTypeParamList::check_ast_type_params(InferSema& sema) const {
@@ -334,7 +335,8 @@ const Type* FnASTType::check(InferSema& sema) const {
     for (size_t i = 0, e = num_args(); i != e; ++i)
         types[i] = sema.check(arg(i));
 
-    return sema.fn_type(types)->close(type_params);
+    auto fn_type = sema.fn_type(types);
+    return close(fn_type, type_params);
 }
 
 const Type* Typeof::check(InferSema& sema) const { return sema.check(expr()); }
@@ -394,7 +396,7 @@ void StructDecl::check(InferSema& sema) const {
 
     for (auto field : field_decls()) {
         if (auto field_type = sema.check(field)) {
-            if (!field_type || field_type->is_unknown())
+            if (!field_type || !field_type->is_known())
                 return; // bail out for now if we don't yet know all field types
         }
     }
@@ -404,7 +406,7 @@ void StructDecl::check(InferSema& sema) const {
     for (auto field : field_decls())
         struct_type->set(field->index(), sema.type(field));
 
-    type_ = struct_type->close(type_params);
+    type_ = close(struct_type, type_params);
 }
 
 const Type* FieldDecl::check(InferSema& sema) const { return sema.check(ast_type()); }
@@ -416,7 +418,8 @@ void FnDecl::check(InferSema& sema) const {
     for (size_t i = 0, e = num_params(); i != e; ++i)
         param_types[i] = sema.check(param(i));
 
-    sema.constrain(this, sema.fn_type(param_types, num_ast_type_params())->close(type_params));
+    auto open_fn_type = sema.fn_type(param_types, num_ast_type_params());
+    sema.constrain(this, close(open_fn_type, type_params));
 
     for (size_t i = 0, e = num_params(); i != e; ++i)
         sema.constrain(param(i), fn_type()->arg(i));

@@ -7,10 +7,9 @@
 
 namespace impala {
 
-class TypeTable {
+class TypeTable : public TypeTableBase<TypeTable> {
 public:
     TypeTable();
-    virtual ~TypeTable();
 
 #define IMPALA_TYPE(itype, atype) const PrimType* type_##itype() { return itype##_; }
 #include "impala/tokenlist.h"
@@ -40,25 +39,10 @@ public:
         return unify(new StructAppType(struct_abs, args));
     }
     //TypedefAbs          typedef_abs(const Type* t) { return unify(new TypedefAbsNode(*this, t)); }
-    const TupleType* tuple_type(Types args) { return unify(new TupleType(*this, args)); }
-    const TupleType* unit() { return tuple_type({}); }
     const TypeError* type_error() { return type_error_; }
     const UnknownType* unknown_type() { return unify(new UnknownType(*this)); }
-    const TypeParam* type_param(Symbol symbol) { return unify(new TypeParam(*this, symbol)); }
-
-    /// Unify a type and return its representative.
-    template<class T> const T* unify(const T* type) { return unify_base(type)->template as<T>(); }
-    const Type* unify_base(const Type*);
 
 private:
-    struct TypeHash {
-        uint64_t operator () (const Type* type) const { return type->hash(); }
-    };
-    struct TypeEqual {
-        bool operator () (const Type* t1, const Type* t2) const { return t1->equal(t2); }
-    };
-
-    thorin::HashSet<const Type*, TypeHash, TypeEqual> types_;
     const TypeError* type_error_;
     const NoRetType* type_noret_;
 #define IMPALA_TYPE(itype, atype) const PrimType* itype##_;

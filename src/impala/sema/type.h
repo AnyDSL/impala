@@ -8,38 +8,7 @@
 
 #include "impala/symbol.h"
 
-#if 0
-#define HENK_TABLE_NAME  typetable
-#define HENK_TABLE_NAME_ typetable_
-#define HENK_TABLE_TYPE  TypeTable
-#define HENK_NAME_SPACE  impala
-
-#include "thorin/henk.h"
-#endif
-
 namespace impala {
-
-//------------------------------------------------------------------------------
-
-class CodeGen;
-class StructDecl;
-class Type;
-class TypeParam;
-class TypeTable;
-
-template<class T> using ArrayRef = thorin::ArrayRef<T>;
-template<class T> using Array    = thorin::Array<T>;
-
-struct TypeHash {
-    uint64_t operator()(const Type* type) const;
-};
-
-template<class Value>
-using TypeMap    = thorin::HashMap<const Type*, Value, TypeHash>;
-using TypeSet    = thorin::HashSet<const Type*, TypeHash>;
-using Type2Type  = TypeMap<const Type*>;
-
-typedef ArrayRef<const Type*> Types;
 
 enum Kind {
 #define IMPALA_TYPE(itype, atype) Kind_##itype,
@@ -69,93 +38,21 @@ enum PrimTypeKind {
 #include "impala/tokenlist.h"
 };
 
+static const int Node_TypeParam = impala::Kind_type_param;
+static const int Node_TupleType = impala::Kind_tuple;
+
+#define HENK_TABLE_NAME  typetable
+#define HENK_TABLE_TYPE  TypeTable
+#include "thorin/henk.h"
+
 //------------------------------------------------------------------------------
 
-/// Base class for all \p Type%s.
-class Type : public thorin::Streamable, public thorin::MagicCast<Type> {
-protected:
-    Type(const Type&) = delete;
-    Type& operator=(const Type&) = delete;
+class StructDecl;
 
-    Type(TypeTable& typetable, int kind, Types args, size_t num_type_params = 0)
-        : typetable_(typetable)
-        , kind_(kind)
-        , args_(args.size())
-        , type_params_(num_type_params)
-        , gid_(gid_counter_++)
-    {
-        for (size_t i = 0, e = num_args(); i != e; ++i) {
-            if (auto arg = args[i])
-                set(i, arg);
-        }
-    }
+template<class T> using ArrayRef = thorin::ArrayRef<T>;
+template<class T> using Array    = thorin::Array<T>;
 
-    void set(size_t i, const Type* type) {
-        args_[i] = type;
-        order_ = std::max(order_, type->order());
-        closed_      &= type->is_closed();
-        monomorphic_ &= type->is_monomorphic();
-        known_       &= type->is_known();
-    }
-
-public:
-    int kind() const { return kind_; }
-    Types args() const { return args_; }
-    ArrayRef<const TypeParam*> type_params() const { return type_params_; }
-    size_t num_type_params() const { return type_params().size(); }
-    const Type* arg(size_t i) const { assert(i < args().size()); return args()[i]; }
-    const TypeParam* type_param(size_t i) const { assert(i < type_params().size()); return type_params()[i]; }
-    const Type* close(ArrayRef<const TypeParam*>) const;
-    size_t num_args() const { return args_.size(); }
-    bool is_hashed() const { return hashed_; }          ///< This @p Type is already recorded inside of @p TypeTable.
-    bool empty() const { return args_.empty(); }
-    TypeTable& typetable() const { return typetable_; }
-    size_t gid() const { return gid_; }
-    int order() const { return order_; }
-    bool is_closed() const { return closed_; }  ///< Are all @p TypeParam%s bound?
-    bool is_monomorphic() const { return monomorphic_; }        ///< Does this @p Type not depend on any @p TypeParam%s?.
-    bool is_polymorphic() const { return !is_monomorphic(); }   ///< Does this @p Type depend on any @p TypeParam%s?.
-    bool is_known() const { return known_; }
-    bool is_unknown() const { return !is_known(); }
-    virtual const Type* instantiate(Types) const;
-    const Type* instantiate(Type2Type&) const;
-    const Type* specialize(Type2Type&) const;
-    const Type* rebuild(TypeTable&, Types) const;
-    const Type* rebuild(Types types) const { return rebuild(typetable(), types); }
-
-    uint64_t hash() const { return is_hashed() ? hash_ : hash_ = vhash(); }
-    virtual uint64_t vhash() const;
-    virtual bool equal(const Type*) const;
-
-    static size_t gid_counter() { return gid_counter_; }
-
-protected:
-    std::ostream& stream_type_params(std::ostream&) const;
-    Array<const Type*> specialize_args(Type2Type&) const;
-
-    int order_ = 0;
-    mutable uint64_t hash_ = 0;
-    mutable bool hashed_ = false;
-    mutable bool closed_ = true;
-    mutable bool monomorphic_ = true;
-    mutable bool known_ = true;
-
-private:
-    virtual const Type* vrebuild(TypeTable&, Types) const = 0;
-    virtual const Type* vinstantiate(Type2Type&) const = 0;
-
-    TypeTable& typetable_;
-    int kind_;
-    Array<const Type*> args_;
-    mutable Array<const TypeParam*> type_params_;
-    mutable size_t gid_;
-    static size_t gid_counter_;
-
-    friend class CodeGen;
-    friend class TypeTable;
-};
-
-inline uint64_t TypeHash::operator()(const Type* type) const { return type->gid(); }
+//------------------------------------------------------------------------------
 
 /// Primitive type.
 class PrimType : public Type {
@@ -306,19 +203,6 @@ private:
     friend class TypeTable;
 };
 
-class TupleType : public Type {
-private:
-    TupleType(TypeTable& typetable, Types args)
-        : Type(typetable, Kind_tuple, args)
-    {}
-
-    virtual std::ostream& stream(std::ostream&) const override;
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vinstantiate(Type2Type&) const override;
-
-    friend class TypeTable;
-};
-
 class FnType : public Type {
 private:
     FnType(TypeTable& typetable, Types args, size_t num_type_params)
@@ -410,40 +294,6 @@ private:
     uint64_t dim_;
 
     friend class TypeTable;
-};
-
-class TypeParam : public Type {
-private:
-    TypeParam(TypeTable& typetable, Symbol symbol)
-        : Type(typetable, Kind_type_param, {})
-        , symbol_(symbol)
-    {
-        closed_ = false;
-        monomorphic_ = false;
-    }
-
-public:
-    Symbol symbol() const { return symbol_; }
-    const Type* binder() const { return binder_; }
-    size_t index() const { return index_; }
-
-    virtual std::ostream& stream(std::ostream&) const override;
-
-private:
-    virtual uint64_t vhash() const override;
-    virtual bool equal(const Type*) const override;
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vinstantiate(Type2Type&) const override;
-
-    Symbol symbol_;
-    mutable const Type* binder_;
-    mutable size_t index_;
-    mutable const TypeParam* equiv_ = nullptr;
-
-    friend bool Type::equal(const Type*) const;
-    friend const Type* Type::close(ArrayRef<const TypeParam*>) const;
-    friend class TypeTable;
-    friend class InferSema;
 };
 
 class NoRetType : public Type {
