@@ -279,28 +279,28 @@ std::ostream& TupleType::stream(std::ostream& os) const {
  * rebuild
  */
 
-const Type* Type::rebuild(Types args) const {
+const Type* Type::rebuild(TypeTable& to, Types args) const {
     assert(num_args() == args.size());
     if (args.empty())
         return this;
-    return vrebuild(args);
+    return vrebuild(to, args);
 }
 
-const Type* PrimType           ::vrebuild(Types     ) const { return typetable().prim_type(primtype_kind()); }
-const Type* FnType             ::vrebuild(Types args) const { return typetable().   fn_type(args); }
-const Type* TupleType          ::vrebuild(Types args) const { return typetable().tuple_type(args); }
-const Type* DefiniteArrayType  ::vrebuild(Types args) const { return typetable().  definite_array_type(args[0], dim()); }
-const Type* SimdType           ::vrebuild(Types args) const { return typetable().            simd_type(args[0], dim()); }
-const Type* IndefiniteArrayType::vrebuild(Types args) const { return typetable().indefinite_array_type(args[0]); }
-const Type* BorrowedPtrType    ::vrebuild(Types args) const { return typetable().borrowed_ptr_type(args[0], addr_space()); }
-const Type* MutPtrType         ::vrebuild(Types args) const { return typetable().     mut_ptr_type(args[0], addr_space()); }
-const Type* OwnedPtrType       ::vrebuild(Types args) const { return typetable().   owned_ptr_type(args[0], addr_space()); }
-const Type* TypeParam          ::vrebuild(Types     ) const { return this; }
-const Type* NoRetType          ::vrebuild(Types     ) const { return this; }
-const Type* TypeError          ::vrebuild(Types     ) const { return this; }
-const Type* UnknownType        ::vrebuild(Types     ) const { return this; }
+const Type* PrimType           ::vrebuild(TypeTable& to, Types     ) const { return to.prim_type(primtype_kind()); }
+const Type* FnType             ::vrebuild(TypeTable& to, Types args) const { return to.   fn_type(args); }
+const Type* TupleType          ::vrebuild(TypeTable& to, Types args) const { return to.tuple_type(args); }
+const Type* DefiniteArrayType  ::vrebuild(TypeTable& to, Types args) const { return to.  definite_array_type(args[0], dim()); }
+const Type* SimdType           ::vrebuild(TypeTable& to, Types args) const { return to.            simd_type(args[0], dim()); }
+const Type* IndefiniteArrayType::vrebuild(TypeTable& to, Types args) const { return to.indefinite_array_type(args[0]); }
+const Type* BorrowedPtrType    ::vrebuild(TypeTable& to, Types args) const { return to.borrowed_ptr_type(args[0], addr_space()); }
+const Type* MutPtrType         ::vrebuild(TypeTable& to, Types args) const { return to.     mut_ptr_type(args[0], addr_space()); }
+const Type* OwnedPtrType       ::vrebuild(TypeTable& to, Types args) const { return to.   owned_ptr_type(args[0], addr_space()); }
+const Type* TypeParam          ::vrebuild(TypeTable& to, Types     ) const { return this; }
+const Type* NoRetType          ::vrebuild(TypeTable& to, Types     ) const { return this; }
+const Type* TypeError          ::vrebuild(TypeTable& to, Types     ) const { return this; }
+const Type* UnknownType        ::vrebuild(TypeTable& to, Types     ) const { return this; }
 
-const Type* StructAbsType::vrebuild(Types /*args*/) const {
+const Type* StructAbsType::vrebuild(TypeTable& to, Types /*args*/) const {
     //// TODO how do we handle recursive types?
     //auto ntype = typetable().struct_abs_type(args.size());
     //for (size_t i = 0, e = args.size(); i != e; ++i)
@@ -309,8 +309,8 @@ const Type* StructAbsType::vrebuild(Types /*args*/) const {
     return nullptr;
 }
 
-const Type* StructAppType::vrebuild(Types args) const {
-    return typetable().struct_app_type(args[0]->as<StructAbsType>(), args.skip_front());
+const Type* StructAppType::vrebuild(TypeTable& to, Types args) const {
+    return to.struct_app_type(args[0]->as<StructAbsType>(), args.skip_front());
 }
 
 

@@ -8,10 +8,14 @@
 
 #include "impala/symbol.h"
 
-namespace thorin {
-    class StructAbsType;
-    class Type;
-}
+#if 0
+#define HENK_TABLE_NAME  typetable
+#define HENK_TABLE_NAME_ typetable_
+#define HENK_TABLE_TYPE  TypeTable
+#define HENK_NAME_SPACE  impala
+
+#include "thorin/henk.h"
+#endif
 
 namespace impala {
 
@@ -116,8 +120,8 @@ public:
     virtual const Type* instantiate(Types) const;
     const Type* instantiate(Type2Type&) const;
     const Type* specialize(Type2Type&) const;
-    const thorin::Type* thorin_type() const { return thorin_type_; }
-    const Type* rebuild(Types) const;
+    const Type* rebuild(TypeTable&, Types) const;
+    const Type* rebuild(Types types) const { return rebuild(typetable(), types); }
 
     uint64_t hash() const { return is_hashed() ? hash_ : hash_ = vhash(); }
     virtual uint64_t vhash() const;
@@ -128,7 +132,6 @@ public:
 protected:
     std::ostream& stream_type_params(std::ostream&) const;
     Array<const Type*> specialize_args(Type2Type&) const;
-    void convert_args(CodeGen&, std::vector<const thorin::Type*>&) const;
 
     int order_ = 0;
     mutable uint64_t hash_ = 0;
@@ -138,9 +141,8 @@ protected:
     mutable bool known_ = true;
 
 private:
-    virtual const Type* vrebuild(Types) const = 0;
+    virtual const Type* vrebuild(TypeTable&, Types) const = 0;
     virtual const Type* vinstantiate(Type2Type&) const = 0;
-    virtual const thorin::Type* convert(CodeGen&) const = 0;
 
     TypeTable& typetable_;
     int kind_;
@@ -148,9 +150,6 @@ private:
     mutable Array<const TypeParam*> type_params_;
     mutable size_t gid_;
     static size_t gid_counter_;
-
-protected:
-    mutable const thorin::Type* thorin_type_ = nullptr;
 
     friend class CodeGen;
     friend class TypeTable;
@@ -171,9 +170,8 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
-    virtual const thorin::Type* convert(CodeGen&) const override;
 
     friend class TypeTable;
 };
@@ -207,8 +205,6 @@ public:
     virtual std::string prefix() const = 0;
 
 private:
-    virtual const thorin::Type* convert(CodeGen&) const override;
-
     int addr_space_;
 
     friend class TypeTable;
@@ -220,7 +216,7 @@ public:
         : PtrType(typetable, Kind_borrowed_ptr, referenced_type, addr_space)
     {}
 
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual std::string prefix() const override { return "&"; }
 };
@@ -231,7 +227,7 @@ public:
         : PtrType(typetable, Kind_mut_ptr, referenced_type, addr_space)
     {}
 
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual std::string prefix() const override { return "&mut"; }
 };
@@ -242,7 +238,7 @@ public:
         : PtrType(typetable, Kind_owned_ptr, referenced_type, addr_space)
     {}
 
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
     virtual std::string prefix() const override { return "~"; }
 };
@@ -255,7 +251,6 @@ private:
 
 public:
     const StructDecl* struct_decl() const { return struct_decl_; }
-    const thorin::StructAbsType* thorin_struct_abs_type() const { return thorin_struct_abs_type_; }
     void set(size_t i, const Type* type) const { const_cast<StructAbsType*>(this)->Type::set(i, type); }
     virtual uint64_t vhash() const override { return thorin::hash_value(this->gid()); }
     virtual bool equal(const Type* other) const override { return this == other; }
@@ -264,12 +259,10 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override { THORIN_UNREACHABLE; }
-    virtual const thorin::Type* convert(CodeGen&) const override;
 
     const StructDecl* struct_decl_;
-    mutable const thorin::StructAbsType* thorin_struct_abs_type_;
 
     friend class TypeTable;
 };
@@ -304,9 +297,8 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
-    virtual const thorin::Type* convert(CodeGen&) const override;
 
     const StructAbsType* struct_abs_type_;
     mutable Array<const Type*> elem_cache_;
@@ -321,9 +313,8 @@ private:
     {}
 
     virtual std::ostream& stream(std::ostream&) const override;
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
-    virtual const thorin::Type* convert(CodeGen&) const override;
 
     friend class TypeTable;
 };
@@ -342,9 +333,8 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
-    virtual const thorin::Type* convert(CodeGen&) const override;
 
     friend class TypeTable;
 };
@@ -368,9 +358,8 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
-    virtual const thorin::Type* convert(CodeGen&) const override;
 
     friend class TypeTable;
 };
@@ -391,9 +380,8 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
-    virtual const thorin::Type* convert(CodeGen&) const override;
 
     uint64_t dim_;
 
@@ -416,9 +404,8 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
-    virtual const thorin::Type* convert(CodeGen&) const override;
 
     uint64_t dim_;
 
@@ -445,9 +432,8 @@ public:
 private:
     virtual uint64_t vhash() const override;
     virtual bool equal(const Type*) const override;
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const override;
-    virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
 
     Symbol symbol_;
     mutable const Type* binder_;
@@ -470,9 +456,8 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const;
-    virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
 
     friend class TypeTable;
 };
@@ -487,9 +472,8 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const;
-    virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
 
     friend class TypeTable;
 };
@@ -508,9 +492,8 @@ public:
 private:
     virtual bool equal(const Type*) const override;
     virtual uint64_t vhash() const override { return thorin::hash_value(this->gid()); }
-    virtual const Type* vrebuild(Types) const override;
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vinstantiate(Type2Type&) const;
-    virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; return nullptr; }
 
     friend class TypeTable;
 };

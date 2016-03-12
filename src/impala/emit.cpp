@@ -82,76 +82,81 @@ public:
         return decl->var_;
     }
     const thorin::Type* convert(const Type* type) {
-        if (!type->thorin_type_) {
+        if (thorin_type(type) == nullptr) {
             for (auto type_param : type->type_params())
-                type_param->thorin_type_ = world().type_param(type_param->symbol().str());
+                thorin_type(type_param) = world().type_param(type_param->symbol().str());
 
-            type->thorin_type_ = type->convert(*this);
+            thorin_type(type) = convert_rec(type);
 
             Array<const thorin::TypeParam*> type_params(type->num_type_params());
             for (size_t i = 0, e = type_params.size(); i != e; ++i)
                 type_params[i] = convert(type->type_param(i))->as<thorin::TypeParam>();
-            thorin::close(type->thorin_type_, type_params);
+            thorin::close(thorin_type(type), type_params);
         }
-        return type->thorin_type_;
+        return thorin_type(type);
     }
 
+    void convert_args(const Type*, std::vector<const thorin::Type*>& nargs);
+    const thorin::Type* convert_rec(const Type*);
+
+    const thorin::Type*& thorin_type(const Type* type) { return impala2thorin_[type]; }
+    const thorin::StructAbsType*& thorin_struct_abs_type(const StructAbsType* type) { return struct_abs_type_impala2thorin_[type]; }
+
     const Fn* cur_fn = nullptr;
+    TypeMap<const thorin::Type*> impala2thorin_;
+    GIDMap<StructAbsType, const thorin::StructAbsType*> struct_abs_type_impala2thorin_;
 };
 
 /*
  * Type
  */
 
-void Type::convert_args(CodeGen& cg, std::vector<const thorin::Type*>& nargs) const {
-    for (auto arg : args())
-        nargs.push_back(cg.convert(arg));
+void CodeGen::convert_args(const Type* type, std::vector<const thorin::Type*>& nargs) {
+    for (auto arg : type->args())
+        nargs.push_back(convert(arg));
 }
 
-const thorin::Type* PrimType::convert(CodeGen& cg) const {
-    switch (primtype_kind()) {
+const thorin::Type* CodeGen::convert_rec(const Type* type) {
+    if (auto prim_type = type->isa<PrimType>()) {
+        switch (prim_type->primtype_kind()) {
 #define IMPALA_TYPE(itype, ttype) \
-        case PrimType_##itype: return cg.world().type_##ttype();
+            case PrimType_##itype: return world().type_##ttype();
 #include "impala/tokenlist.h"
-        default: THORIN_UNREACHABLE;
+            default: THORIN_UNREACHABLE;
+        }
+    } else if (auto fn_type = type->isa<FnType>()) {
+        std::vector<const thorin::Type*> nargs;
+        nargs.push_back(world().mem_type());
+        convert_args(fn_type, nargs);
+        return world().fn_type(nargs, fn_type->num_type_params());
+    } else if (auto tuple_type = type->isa<TupleType>()) {
+        std::vector<const thorin::Type*> nargs;
+        convert_args(tuple_type, nargs);
+        return world().tuple_type(nargs);
+    } else if (auto struct_abs_type = type->isa<StructAbsType>()) {
+        thorin_struct_abs_type(struct_abs_type) = world().struct_abs_type(struct_abs_type->num_args(),
+                                                                          struct_abs_type->num_type_params(),
+                                                                          struct_abs_type->struct_decl()->symbol().str());
+        thorin_type(type) = thorin_struct_abs_type(struct_abs_type);
+        size_t i = 0;
+        for (auto arg : struct_abs_type->args())
+            thorin_struct_abs_type(struct_abs_type)->set(i++, convert(arg));
+        thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
+        return thorin_struct_abs_type(struct_abs_type);
+    } else if (auto struct_app_type = type->isa<StructAppType>()) {
+        std::vector<const thorin::Type*> nargs;
+        convert_args(struct_app_type, nargs);
+        return world().struct_app_type(convert(struct_app_type->struct_abs_type())->as<thorin::StructAbsType>(), nargs);
+    } else if (auto ptr_type = type->isa<PtrType>()) {
+        return world().ptr_type(convert(ptr_type->referenced_type()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
+    } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
+        return world().definite_array_type(convert(definite_array_type->elem_type()), definite_array_type->dim());
+    } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {
+        return world().indefinite_array_type(convert(indefinite_array_type->elem_type()));
+    } else if (auto simd_type = type->isa<SimdType>()) {
+        return world().type(convert(simd_type->elem_type())->as<thorin::PrimType>()->primtype_kind(), simd_type->dim());
     }
-}
-
-const thorin::Type* FnType::convert(CodeGen& cg) const {
-    std::vector<const thorin::Type*> nargs;
-    nargs.push_back(cg.world().mem_type());
-    convert_args(cg, nargs);
-    return cg.world().fn_type(nargs, num_type_params());
-}
-
-const thorin::Type* TupleType::convert(CodeGen& cg) const {
-    std::vector<const thorin::Type*> nargs;
-    convert_args(cg, nargs);
-    return cg.world().tuple_type(nargs);
-}
-
-const thorin::Type* StructAbsType::convert(CodeGen& cg) const {
-    thorin_type_ = thorin_struct_abs_type_ = cg.world().struct_abs_type(num_args(), num_type_params(), struct_decl()->symbol().str());
-    size_t i = 0;
-    for (auto arg : args())
-        thorin_struct_abs_type_->set(i++, cg.convert(arg));
-    thorin_type_ = nullptr; // will be set again by CodeGen's wrapper
-    return thorin_struct_abs_type_;
-}
-
-const thorin::Type* StructAppType::convert(CodeGen& cg) const {
-    std::vector<const thorin::Type*> nargs;
-    convert_args(cg, nargs);
-    return cg.world().struct_app_type(cg.convert(struct_abs_type())->as<thorin::StructAbsType>(), nargs);
-}
-
-const thorin::Type* PtrType::convert(CodeGen& cg) const { return cg.world().ptr_type(cg.convert(referenced_type()), 1, -1, thorin::AddrSpace(addr_space())); }
-const thorin::Type* DefiniteArrayType::convert(CodeGen& cg) const { return cg.world().definite_array_type(cg.convert(elem_type()), dim()); }
-const thorin::Type* IndefiniteArrayType::convert(CodeGen& cg) const { return cg.world().indefinite_array_type(cg.convert(elem_type())); }
-
-const thorin::Type* SimdType::convert(CodeGen& cg) const {
-    auto scalar = cg.convert(elem_type());
-    return cg.world().type(scalar->as<thorin::PrimType>()->primtype_kind(), dim());
+    THORIN_UNREACHABLE;
 }
 
 /*
