@@ -11,6 +11,7 @@
 
 namespace impala {
 
+#define HENK_TABLE_NAME typetable
 #include "thorin/henk.cpp.h"
 
 //------------------------------------------------------------------------------
