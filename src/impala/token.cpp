@@ -2,10 +2,11 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <cstdlib>
+#include <limits>
 
 #include "thorin/util/assert.h"
 #include "thorin/util/cast.h"
-#include "thorin/util/stdlib.h"
 
 #include "impala/impala.h"
 
