@@ -96,11 +96,23 @@ LvTree& LvTree::get_field_child(Symbol field, bool create) {
 //-------------------------------------------------------------
 
 /*
+ * LvMapComparator
+ */
+
+Relation LvMapComparator::compare(payload_t p1, payload_t p2) const {
+    assert(p1 >= 0 && p2 >= 0); // TODO: remove this restriction
+    return p1 > p2 ? Relation::LESS : p1 < p2 ? Relation::GREATER : Relation::EQUAL;
+}
+
+//-------------------------------------------------------------
+
+/*
  * LvMap
  */
 
-LvMap::LvMap()
+LvMap::LvMap(LvMapComparator comparator)
     : varmap_(thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>>())
+    , comparator_(comparator) // TODO: eliminate copy
     {}
 
 LvMap::~LvMap() {

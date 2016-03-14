@@ -31,13 +31,25 @@ struct LvTreeLookupRes {
     } value_;
 };
 
+enum class Relation { LESS, GREATER, EQUAL, INCOMPARABLE };
+class LvMapComparator {
+public:
+    // TODO: extend this
+    //public void add_relation(payload_t, payload_t, Relation);
+
+    /// returns LESS if p1 < p2, GREATER if p1 > p2 and EQUAL if p1 == p2
+    Relation compare(payload_t p1, payload_t p2) const;
+};
+
 class LvMap {
 public:
-    LvMap();
+    LvMap(LvMapComparator);
     ~LvMap();
 
     LvTree& lookup(const ValueDecl*) const;
     void insert(const ValueDecl*, payload_t);
+
+    const LvMapComparator& get_comparator(void) const { return comparator_; };
 
     //void enter_scope();
     //void leave_scope();
@@ -48,6 +60,7 @@ public:
 
 private:
     thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>> varmap_;
+    LvMapComparator comparator_;
 };
 
 inline bool payload2bool(payload_t pl) { assert(pl == 0 || pl == 1); return (bool) pl; }
