@@ -48,7 +48,7 @@ public:
 
     void jump_to_continuation(Lambda* lambda, const thorin::Location& loc) {
         if (is_reachable())
-            cur_bb->jump(lambda, lambda->type_args(), {get_mem()}, loc);
+            cur_bb->jump(lambda, {get_mem()}, loc);
         set_continuation(lambda);
     }
 
@@ -82,17 +82,8 @@ public:
         return decl->var_;
     }
     const thorin::Type* convert(const Type* type) {
-        if (thorin_type(type) == nullptr) {
-            for (auto type_param : type->type_params())
-                thorin_type(type_param) = world().type_param(type_param->name());
-
+        if (thorin_type(type) == nullptr)
             thorin_type(type) = convert_rec(type);
-
-            Array<const thorin::TypeParam*> type_params(type->num_type_params());
-            for (size_t i = 0, e = type_params.size(); i != e; ++i)
-                type_params[i] = convert(type->type_param(i))->as<thorin::TypeParam>();
-            thorin::close(thorin_type(type), type_params);
-        }
         return thorin_type(type);
     }
 
@@ -100,11 +91,11 @@ public:
     const thorin::Type* convert_rec(const Type*);
 
     const thorin::Type*& thorin_type(const Type* type) { return impala2thorin_[type]; }
-    const thorin::StructAbsType*& thorin_struct_abs_type(const StructAbsType* type) { return struct_abs_type_impala2thorin_[type]; }
+    const thorin::StructType*& thorin_struct_type(const StructType* type) { return struct_type_impala2thorin_[type]; }
 
     const Fn* cur_fn = nullptr;
     TypeMap<const thorin::Type*> impala2thorin_;
-    GIDMap<StructAbsType, const thorin::StructAbsType*> struct_abs_type_impala2thorin_;
+    GIDMap<StructType, const thorin::StructType*> struct_type_impala2thorin_;
 };
 
 /*
@@ -117,7 +108,11 @@ void CodeGen::convert_args(const Type* type, std::vector<const thorin::Type*>& n
 }
 
 const thorin::Type* CodeGen::convert_rec(const Type* type) {
-    if (auto prim_type = type->isa<PrimType>()) {
+    if (auto type_abs = type->isa<TypeAbs>()) {
+        auto thorin_type_param = world().type_param(type_abs->type_param()->name());
+        thorin_type(type_abs->type_param()) = thorin_type_param;
+        return thorin_type(type_abs) = world().type_abs(thorin_type_param, convert(type_abs->body()));
+    } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_kind()) {
 #define IMPALA_TYPE(itype, ttype) \
             case PrimType_##itype: return world().type_##ttype();
@@ -128,25 +123,19 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         std::vector<const thorin::Type*> nargs;
         nargs.push_back(world().mem_type());
         convert_args(fn_type, nargs);
-        return world().fn_type(nargs, fn_type->num_type_params());
+        return world().fn_type(nargs);
     } else if (auto tuple_type = type->isa<TupleType>()) {
         std::vector<const thorin::Type*> nargs;
         convert_args(tuple_type, nargs);
         return world().tuple_type(nargs);
-    } else if (auto struct_abs_type = type->isa<StructAbsType>()) {
-        thorin_struct_abs_type(struct_abs_type) = world().struct_abs_type(struct_abs_type->num_args(),
-                                                                          struct_abs_type->num_type_params(),
-                                                                          struct_abs_type->struct_decl()->symbol().str());
-        thorin_type(type) = thorin_struct_abs_type(struct_abs_type);
+    } else if (auto struct_type = type->isa<StructType>()) {
+        thorin_struct_type(struct_type) = world().struct_type(struct_type->struct_decl()->symbol().str(), struct_type->size());
+        thorin_type(type) = thorin_struct_type(struct_type);
         size_t i = 0;
-        for (auto arg : struct_abs_type->args())
-            thorin_struct_abs_type(struct_abs_type)->set(i++, convert(arg));
+        for (auto arg : struct_type->args())
+            thorin_struct_type(struct_type)->set(i++, convert(arg));
         thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
-        return thorin_struct_abs_type(struct_abs_type);
-    } else if (auto struct_app_type = type->isa<StructAppType>()) {
-        std::vector<const thorin::Type*> nargs;
-        convert_args(struct_app_type, nargs);
-        return world().struct_app_type(convert(struct_app_type->struct_abs_type())->as<thorin::StructAbsType>(), nargs);
+        return thorin_struct_type(struct_type);
     } else if (auto ptr_type = type->isa<PtrType>()) {
         return world().ptr_type(convert(ptr_type->referenced_type()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
@@ -214,11 +203,11 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
         if (auto tuple = def->type()->isa<thorin::TupleType>()) {
             std::vector<const Def*> args;
             args.push_back(mem);
-            for (size_t i = 0, e = tuple->num_args(); i != e; ++i)
+            for (size_t i = 0, e = tuple->size(); i != e; ++i)
                 args.push_back(cg.extract(def, i, loc));
-            cg.cur_bb->jump(ret_param(), {}, args, loc.end());
+            cg.cur_bb->jump(ret_param(), args, loc.end());
         } else
-            cg.cur_bb->jump(ret_param(), {}, {mem, def}, loc.end());
+            cg.cur_bb->jump(ret_param(), {mem, def}, loc.end());
     }
 }
 
@@ -503,7 +492,7 @@ const Def* StructExpr::remit(CodeGen& cg) const {
     Array<const Def*> defs(num_elems());
     for (const auto& elem : elems())
         defs[elem.field_decl()->index()] = cg.remit(elem.expr());
-    return cg.world().struct_agg(cg.convert(type())->as<thorin::StructAppType>(), defs, loc());
+    return cg.world().struct_agg(cg.convert(type())->as<thorin::StructType>(), defs, loc());
 }
 
 Var MapExpr::lemit(CodeGen& cg) const {
@@ -515,23 +504,18 @@ Var MapExpr::lemit(CodeGen& cg) const {
 }
 
 const Def* MapExpr::remit(CodeGen& cg) const {
-    if (auto fn_poly = lhs()->type()->isa<FnType>()) {
-        assert(fn_poly->num_type_params() == num_type_args());
-
-        Array<const thorin::Type*> type_args(fn_poly->num_type_params());
-        for (size_t i = 0, e = type_args.size(); i != e; ++i)
-            type_args[i] = cg.convert(type_arg(i));
-
-        const Def* dst = cg.remit(lhs());
+    // TODO
+    if (/*auto fn_poly = */lhs()->type()->isa<FnType>()) {
+        auto dst = cg.remit(lhs());
         std::vector<const Def*> defs;
         defs.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
         for (auto arg : args())
             defs.push_back(cg.remit(arg));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
-        auto ret_type = args().size() == fn_mono()->num_args() ? nullptr : cg.convert(fn_mono()->return_type());
+        auto ret_type = args().size() == fn_mono()->size() ? nullptr : cg.convert(fn_mono()->return_type());
 
-        auto ret = cg.call(dst, type_args, defs, ret_type, loc());
+        auto ret = cg.call(dst, defs, ret_type, loc());
         if (ret_type)
             cg.set_mem(cg.cur_bb->param(0));
         return ret;
@@ -563,14 +547,14 @@ const Def* RunBlockExpr::remit(CodeGen& cg) const {
         auto lrun  = w.lambda(w.fn_type({w.mem_type(), fn_mem}), loc(), "run_block");
         auto run = w.run(lrun, loc());
         auto old_bb = cg.cur_bb;
-        cg.cur_bb->jump(run, {}, {cg.get_mem(), w.bottom(fn_mem, loc())}, loc());
+        cg.cur_bb->jump(run, {cg.get_mem(), w.bottom(fn_mem, loc())}, loc());
         cg.cur_bb = lrun;
         cg.set_mem(cg.cur_bb->param(0));
         auto res = BlockExprBase::remit(cg);
         if (cg.is_reachable()) {
             assert(res);
             auto next = w.lambda(fn_mem, loc(), "run_next");
-            cg.cur_bb->jump(lrun->param(1), {}, {cg.get_mem()}, loc());
+            cg.cur_bb->jump(lrun->param(1), {cg.get_mem()}, loc());
             old_bb->update_arg(1, next);
             cg.cur_bb = next;
             cg.set_mem(cg.cur_bb->param(0));
@@ -669,7 +653,7 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun, loc());
 
     defs.front() = cg.get_mem(); // now get the current memory monad
-    cg.call(fun, {}, defs, nullptr, map_expr->loc());
+    cg.call(fun, defs, nullptr, map_expr->loc());
 
     cg.set_continuation(break_lambda);
     if (break_lambda->num_params() == 2)

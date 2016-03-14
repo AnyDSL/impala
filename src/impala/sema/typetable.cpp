@@ -17,13 +17,4 @@ const PrimType* TypeTable::prim_type(const PrimTypeKind kind) {
     }
 }
 
-const StructAbsType* TypeTable::struct_abs_type(const StructDecl* struct_decl) {
-    auto struct_abs_type = new StructAbsType(*this, struct_decl);
-    // just put it into the types_ set due to nominal typing
-    auto p = types_.insert(struct_abs_type);
-    assert_unused(p.second && "hash/equal broken");
-    struct_abs_type->hashed_ = true;
-    return struct_abs_type;
-}
-
 }

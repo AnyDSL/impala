@@ -19,9 +19,7 @@ public:
     const DefiniteArrayType* definite_array_type(const Type* elem_type, uint64_t dim) {
         return unify(new DefiniteArrayType(*this, elem_type, dim));
     }
-    const FnType* fn_type(Types params, size_t num_type_params = 0) {
-        return unify(new FnType(*this, params, num_type_params));
-    }
+    const FnType* fn_type(Types params) { return unify(new FnType(*this, params)); }
     const IndefiniteArrayType* indefinite_array_type(const Type* elem_type) {
         return unify(new IndefiniteArrayType(*this, elem_type));
     }
@@ -34,11 +32,6 @@ public:
         return unify(new OwnedPtrType(*this, referenced_type, addr_space));
     }
     const PrimType* prim_type(PrimTypeKind kind);
-    const StructAbsType* struct_abs_type(const StructDecl*);
-    const StructAppType* struct_app_type(const StructAbsType* struct_abs, Types args) {
-        return unify(new StructAppType(struct_abs, args));
-    }
-    //TypedefAbs          typedef_abs(const Type* t) { return unify(new TypedefAbsNode(*this, t)); }
     const TypeError* type_error() { return type_error_; }
     const UnknownType* unknown_type() { return unify(new UnknownType(*this)); }
 

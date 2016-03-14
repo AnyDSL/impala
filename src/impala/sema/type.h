@@ -23,11 +23,9 @@ enum Kind {
     Kind_noret,
     Kind_owned_ptr,
     Kind_simd,
-    Kind_struct_abs,
-    Kind_struct_app,
-    Kind_trait_abs,
-    Kind_trait_app,
+    Kind_struct,
     Kind_tuple,
+    Kind_type_abs,
     Kind_type_param,
     Kind_typedef_abs,
     Kind_unknown,
@@ -38,19 +36,20 @@ enum PrimTypeKind {
 #include "impala/tokenlist.h"
 };
 
-static const int Node_TypeParam = impala::Kind_type_param;
-static const int Node_TupleType = impala::Kind_tuple;
+class StructDecl;
+template<class T> using ArrayRef = thorin::ArrayRef<T>;
+template<class T> using Array    = thorin::Array<T>;
 
+static const int Node_StructType = impala::Kind_struct;
+static const int Node_TypeAbs    = impala::Kind_type_abs;
+static const int Node_TypeParam  = impala::Kind_type_param;
+static const int Node_TupleType  = impala::Kind_tuple;
+
+#define HENK_STRUCT_UNIFIER_NAME  struct_decl
+#define HENK_STRUCT_UNIFIER_TYPE  const StructDecl*
 #define HENK_TABLE_NAME  typetable
 #define HENK_TABLE_TYPE  TypeTable
 #include "thorin/henk.h"
-
-//------------------------------------------------------------------------------
-
-class StructDecl;
-
-template<class T> using ArrayRef = thorin::ArrayRef<T>;
-template<class T> using Array    = thorin::Array<T>;
 
 //------------------------------------------------------------------------------
 
@@ -142,71 +141,10 @@ public:
 
 //------------------------------------------------------------------------------
 
-class StructAbsType : public Type {
-private:
-    StructAbsType(TypeTable& typetable, const StructDecl* struct_decl);
-
-public:
-    const StructDecl* struct_decl() const { return struct_decl_; }
-    void set(size_t i, const Type* type) const { const_cast<StructAbsType*>(this)->Type::set(i, type); }
-    virtual uint64_t vhash() const override { return thorin::hash_value(this->gid()); }
-    virtual bool equal(const Type* other) const override { return this == other; }
-    virtual const Type* instantiate(Types args) const override;
-
-    virtual std::ostream& stream(std::ostream&) const override;
-
-private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vinstantiate(Type2Type&) const override { THORIN_UNREACHABLE; }
-
-    const StructDecl* struct_decl_;
-
-    friend class TypeTable;
-};
-
-/**
- * @brief A struct application.
- *
- * A concrete instantiation of a struct abstraction is a struct application.
- * @see StructAbsType.
- */
-class StructAppType : public Type {
-private:
-    StructAppType(const StructAbsType* struct_abs_type, Types args)
-        : Type(struct_abs_type->typetable(), Kind_struct_app, Array<const Type*>(args.size() + 1))
-        , struct_abs_type_(struct_abs_type)
-        , elem_cache_(struct_abs_type->num_args())
-    {
-        set(0, struct_abs_type);
-        for (size_t i = 0, e = args.size(); i != e; ++i)
-            set(i+1, args[i]);
-    }
-
-public:
-    const StructAbsType* struct_abs_type() const { return arg(0)->as<StructAbsType>(); }
-    Types type_args() const { return args().skip_front(); }
-    const Type* type_arg(size_t i) const { return type_args()[i]; }
-    size_t num_type_args() const { return type_args().size(); }
-    const Type* elem(size_t i) const;
-    Types elems() const;
-    size_t num_elems() const { return struct_abs_type()->num_args(); }
-
-    virtual std::ostream& stream(std::ostream&) const override;
-
-private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vinstantiate(Type2Type&) const override;
-
-    const StructAbsType* struct_abs_type_;
-    mutable Array<const Type*> elem_cache_;
-
-    friend class TypeTable;
-};
-
 class FnType : public Type {
 private:
-    FnType(TypeTable& typetable, Types args, size_t num_type_params)
-        : Type(typetable, Kind_fn, args, num_type_params)
+    FnType(TypeTable& typetable, Types args)
+        : Type(typetable, Kind_fn, args)
     {
         ++order_;
     }
@@ -348,7 +286,7 @@ private:
     friend class TypeTable;
 };
 
-std::ostream& stream_type_params(std::ostream& os, const Type* type);
+const Type* stream_type_params(std::ostream& os, const Type* type);
 
 //------------------------------------------------------------------------------
 

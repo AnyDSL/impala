@@ -20,7 +20,7 @@ public:
 
     const Type* instantiate(const Type* type, ArrayRef<const ASTType*> args);
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
-    const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->num_args() ? type->arg(i) : nullptr; }
+    const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->size() ? type->arg(i) : nullptr; }
 
     // unification related stuff
 
@@ -75,8 +75,8 @@ public:
 
         if (auto t_fn = t->isa<FnType>()) { // HACK needed as long as we have this stupid tuple problem
             if (auto u_fn = u->isa<FnType>()) {
-                if (t_fn->empty() && u_fn->num_args() == 1 && u_fn->arg(0)->isa<UnknownType>()) return unify(representative(t), representative(u))->type;
-                if (u_fn->empty() && t_fn->num_args() == 1 && t_fn->arg(0)->isa<UnknownType>()) return unify(representative(u), representative(t))->type;
+                if (t_fn->empty() && u_fn->size() == 1 && u_fn->arg(0)->isa<UnknownType>()) return unify(representative(t), representative(u))->type;
+                if (u_fn->empty() && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) return unify(representative(u), representative(t))->type;
             }
         }
 
@@ -94,28 +94,12 @@ public:
                     return t_type_param;
         }
 
-        if (t->kind() == u->kind() && t->num_args() == u->num_args() && t->num_type_params() == u->num_type_params()) {
-            Array<const TypeParam*> ntype_params(t->num_type_params());
-            for (size_t i = 0, e = t->num_type_params(); i != e; ++i) {
-                assert(t->type_param(i)->equiv_ == nullptr);
-                t->type_param(i)->equiv_ = u->type_param(i);
-                ntype_params[i] = type_param(t->type_param(i)->name());
-            }
-
-            Array<const Type*> nargs(t->num_args());
+        if (t->kind() == u->kind() && t->size() == u->size()) {
+            Array<const Type*> nargs(t->size());
             for (size_t i = 0, e = nargs.size(); i != e; ++i)
                 nargs[i] = unify(t->arg(i), u->arg(i));
 
-            for (size_t i = 0, e = t->num_type_params(); i != e; ++i)
-                t->type_param(i)->equiv_ = nullptr;
-
-            if (t->isa<FnType>()) { // TODO needed as long as we don't have explicit Lambdas
-                auto ntype = fn_type(nargs, t->num_type_params());
-                return close(ntype, ntype_params);
-            }
-
-            t = t->rebuild(nargs);
-            return close(t, ntype_params);
+            return t->rebuild(nargs);
         }
 
         return type_error();
@@ -247,6 +231,7 @@ void type_inference(Init& init, const ModContents* mod) {
 
 //------------------------------------------------------------------------------
 
+#if 0
 const Type* InferSema::instantiate(const Type* type, ArrayRef<const ASTType*> args) {
     if (args.size() == type->num_type_params()) {
         std::vector<const Type*> type_args;
@@ -258,6 +243,7 @@ const Type* InferSema::instantiate(const Type* type, ArrayRef<const ASTType*> ar
 
     return type_error();
 }
+#endif
 
 //------------------------------------------------------------------------------
 
@@ -335,8 +321,7 @@ const Type* FnASTType::check(InferSema& sema) const {
     for (size_t i = 0, e = num_args(); i != e; ++i)
         types[i] = sema.check(arg(i));
 
-    auto fn_type = sema.fn_type(types);
-    return close(fn_type, type_params);
+    return sema.fn_type(types);
 }
 
 const Type* Typeof::check(InferSema& sema) const { return sema.check(expr()); }
@@ -401,12 +386,10 @@ void StructDecl::check(InferSema& sema) const {
         }
     }
 
-    auto struct_type = sema.struct_abs_type(this);
+    auto struct_type = sema.struct_type(this, num_field_decls());
 
     for (auto field : field_decls())
         struct_type->set(field->index(), sema.type(field));
-
-    type_ = close(struct_type, type_params);
 }
 
 const Type* FieldDecl::check(InferSema& sema) const { return sema.check(ast_type()); }
@@ -418,8 +401,8 @@ void FnDecl::check(InferSema& sema) const {
     for (size_t i = 0, e = num_params(); i != e; ++i)
         param_types[i] = sema.check(param(i));
 
-    auto open_fn_type = sema.fn_type(param_types, num_ast_type_params());
-    sema.constrain(this, close(open_fn_type, type_params));
+    auto open_fn_type = sema.fn_type(param_types);
+    sema.constrain(this, open_fn_type);
 
     for (size_t i = 0, e = num_params(); i != e; ++i)
         sema.constrain(param(i), fn_type()->arg(i));
@@ -587,22 +570,26 @@ void InferSema::fill_type_args(std::vector<const Type*>& type_args, const ASTTyp
 }
 
 const Type* StructExpr::check(InferSema& sema, const Type* /*expected*/) const {
+#if 0
     if (auto decl = path()->decl()) {
         if (auto typeable_decl = decl->isa<TypeableDecl>()) {
             if (auto decl_type = sema.type(typeable_decl)) {
                 type_args_.resize(decl_type->num_type_params());
                 sema.fill_type_args(type_args_, ast_type_args_);
 
-                if (auto struct_app = decl_type->instantiate(type_args_))
-                    return struct_app;
+                if (auto struct_type = decl_type->instantiate(type_args_))
+                    return struct_type;
             }
         }
     }
 
     return sema.type_error();
+#endif
+    return nullptr;
 }
 
 const Type* InferSema::check_call(const FnType*& fn_mono, const FnType* fn_poly, std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type* expected) {
+#if 0
     type_args.resize(fn_poly->num_type_params());
     fill_type_args(type_args, ast_type_args);
 
@@ -635,6 +622,8 @@ const Type* InferSema::check_call(const FnType*& fn_mono, const FnType* fn_poly,
         type_arg = find(type_arg);
 
     return fn_mono->return_type();
+#endif
+    return nullptr;
 }
 
 const Type* FieldExpr::check(InferSema& sema, const Type* /*TODO expected*/) const {
@@ -644,9 +633,9 @@ const Type* FieldExpr::check(InferSema& sema, const Type* /*TODO expected*/) con
         ltype = sema.check(lhs());
     }
 
-    if (auto struct_app = ltype->isa<StructAppType>()) {
-        if (auto field_decl = struct_app->struct_abs_type()->struct_decl()->field_decl(symbol()))
-            return struct_app->elem(field_decl->index());
+    if (auto struct_type = ltype->isa<StructType>()) {
+        if (auto field_decl = struct_type->struct_decl()->field_decl(symbol()))
+            return struct_type->arg(field_decl->index());
     }
 
     return sema.type_error();
@@ -713,7 +702,7 @@ const Type* ForExpr::check(InferSema& sema, const Type* expected) const {
         auto ltype = sema.check(map->lhs());
 
         if (auto fn_for = ltype->isa<FnType>()) {
-            if (fn_for->num_args() != 0) {
+            if (fn_for->size() != 0) {
                 if (auto fn_ret = fn_for->args().back()->isa<FnType>()) {
                     sema.constrain(break_decl_->type_, fn_ret); // inherit the type for break
 

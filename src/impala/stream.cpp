@@ -418,7 +418,7 @@ std::ostream& FnExpr::stream(std::ostream& os) const {
         auto ret = params().back();
         if (ret->type()) {
             auto rettype = ret->type()->as<FnType>();
-            if (rettype->num_args() == 1)
+            if (rettype->size() == 1)
                 os << rettype->arg(0);
             else
                 stream_list(os, rettype->args(), [&](const Type* type) { os << type; }, "(", ")", ", ");

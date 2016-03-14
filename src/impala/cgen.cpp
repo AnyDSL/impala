@@ -16,27 +16,15 @@ private:
     // Analyses a type to see if it mentions a structure somewhere
     template <typename F>
     void struct_from_type(const Type* type, const F& f) {
-        // If the type mentions a vector, then we need to include the intrinsics header
         if (type->isa<SimdType>())
-            needs_vectors = true;
+            needs_vectors = true; // if the type mentions a vector, then we need to include the intrinsics header
 
-        // Is the value a structure ?
-        if (auto app_type = type->isa<StructAppType>()) {
-            f(app_type->struct_abs_type()->struct_decl());
-            return;
-        }
-
-        // Is the value a pointer ?
-        if (auto ptr_type = type->isa<PtrType>()) {
+        if (auto struct_type = type->isa<StructType>())
+            f(struct_type->struct_decl());
+        else if (auto ptr_type = type->isa<PtrType>())
             struct_from_type(ptr_type->referenced_type(), f);
-            return;
-        }
-
-        // Is the value an array ?
-        if (auto array_type = type->isa<ArrayType>()) {
+        else if (auto array_type = type->isa<ArrayType>())
             struct_from_type(array_type->elem_type(), f);
-            return;
-        }
     }
 
     // Generates a C type from an Impala type
@@ -106,8 +94,8 @@ private:
         }
 
         // Structure types
-        if (auto struct_type = type->isa<StructAppType>()) {
-            const StructDecl* decl = struct_type->struct_abs_type()->struct_decl();
+        if (auto struct_type = type->isa<StructType>()) {
+            const StructDecl* decl = struct_type->struct_decl();
             ctype_prefix = "struct " + std::string(decl->item_symbol().str());
             ctype_suffix = "";
             return true;
@@ -300,7 +288,7 @@ public:
             o << return_pref << ' ' << fn->item_symbol().str() << '(';
 
             // Generate all arguments except the last one which is the implicit continuation
-            for (size_t i = 0, e = fn_type->num_args() - 1; i != e; ++i) {
+            for (size_t i = 0, e = fn_type->size() - 1; i != e; ++i) {
                 std::string ctype_pref, ctype_suf;
                 if (!ctype_from_impala(fn_type->arg(i), ctype_pref, ctype_suf)) {
                     error(fn, "function argument type not exportable");
@@ -309,12 +297,12 @@ public:
 
                 o << ctype_pref << ' ' << fn->param(i)->symbol().str() << ctype_suf;
 
-                if (i < fn_type->num_args() - 2)
+                if (i < fn_type->size() - 2)
                     o << ", ";
             }
 
             // Generate void functions when the function takes no argument to be C89 compatible
-            if (fn_type->num_args() == 1) {
+            if (fn_type->size() == 1) {
                 o << "void";
             }
 

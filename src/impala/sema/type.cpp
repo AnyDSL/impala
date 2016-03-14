@@ -11,19 +11,10 @@
 
 namespace impala {
 
+#define HENK_STRUCT_UNIFIER_NAME struct_decl
+#define HENK_TABLE_TYPE TypeTable
 #define HENK_TABLE_NAME typetable
 #include "thorin/henk.cpp.h"
-
-//------------------------------------------------------------------------------
-
-/*
- * constructors
- */
-
-StructAbsType::StructAbsType(TypeTable& typetable, const StructDecl* struct_decl)
-    : Type(typetable, Kind_struct_abs, Array<const Type*>(struct_decl->num_field_decls()))
-    , struct_decl_(struct_decl)
-{}
 
 //------------------------------------------------------------------------------
 
@@ -51,7 +42,7 @@ bool FnType::is_returning() const {
 const Type* FnType::return_type() const {
     if (!empty()) {
         if (auto fn = args().back()->isa<FnType>()) {
-            if (fn->num_args() == 1)
+            if (fn->size() == 1)
                 return fn->args().front();
             return typetable().tuple_type(fn->args());
         }
@@ -59,6 +50,7 @@ const Type* FnType::return_type() const {
     return typetable().type_noret();
 }
 
+#if 0
 static Type2Type type2type(const Type* type, Types args) {
     assert(type->num_type_params() == args.size());
     Type2Type map;
@@ -67,22 +59,7 @@ static Type2Type type2type(const Type* type, Types args) {
     assert(map.size() == args.size());
     return map;
 }
-
-const Type* StructAppType::elem(size_t i) const {
-    if (auto type = elem_cache_[i])
-        return type;
-
-    assert(i < struct_abs_type()->num_args());
-    auto type = struct_abs_type()->arg(i);
-    auto map = type2type(struct_abs_type(), type_args());
-    return elem_cache_[i] = type->specialize(map);
-}
-
-Types StructAppType::elems() const {
-    for (size_t i = 0; i < num_elems(); ++i)
-        elem(i);
-    return elem_cache_;
-}
+#endif
 
 //------------------------------------------------------------------------------
 
@@ -115,16 +92,21 @@ bool UnknownType::equal(const Type* other) const { return this == other; }
  * stream
  */
 
-std::ostream& stream_type_params(std::ostream& os, const Type* type) {
-    if (type->num_type_params() == 0)
-        return os;
+const Type* stream_type_params(std::ostream& os, const Type* type) {
+    std::vector<const TypeParam*> type_params;
+    while (auto type_abs = type->isa<TypeAbs>()) {
+        type_params.push_back(type_abs->type_param());
+        type = type_abs->body();
+    }
 
-    return streamf(os, "[%]", stream_list(type->type_params(), [&](const TypeParam* type_param) {
+    streamf(os, "[%]", stream_list(type_params, [&](const TypeParam* type_param) {
         if (type_param)
             os << type_param;
         else
             os << "<null>";
     }));
+
+    return type;
 }
 
 std::ostream& UnknownType::stream(std::ostream& os) const { return os << '?' << gid(); }
@@ -161,14 +143,7 @@ std::ostream& PtrType::stream(std::ostream& os) const {
 std::ostream& DefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[% * %]", elem_type(), dim()); }
 std::ostream& IndefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[%]", elem_type()); }
 std::ostream& SimdType::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_type(), dim()); }
-std::ostream& StructAbsType::stream(std::ostream& os) const { return os << struct_decl_->symbol(); }
-
-std::ostream& StructAppType::stream(std::ostream& os) const {
-    os << struct_abs_type()->struct_decl()->symbol();
-    if (num_args() != 0)
-        return stream_list(os, args(), [&](const Type* type) { os << type; }, "[", "]");
-    return os;
-}
+std::ostream& StructType::stream(std::ostream& os) const { return os << struct_decl()->symbol(); }
 
 //std::ostream& TypedefAbsNode::stream(std::ostream& os) const {
     //assert(num_type_params() > 0); // otherwise no TypedefAbsNode should have been used in the first place
@@ -176,7 +151,7 @@ std::ostream& StructAppType::stream(std::ostream& os) const {
 //}
 
 std::ostream& TupleType::stream(std::ostream& os) const {
-    return stream_list(stream_type_params(os, this), args(), [&](const Type* type) { os << type; }, "(", ")");
+    return stream_list(os, stream_type_params(os, this)->args(), [&](const Type* type) { os << type; }, "(", ")");
 }
 
 //------------------------------------------------------------------------------
@@ -186,7 +161,7 @@ std::ostream& TupleType::stream(std::ostream& os) const {
  */
 
 const Type* Type::rebuild(TypeTable& to, Types args) const {
-    assert(num_args() == args.size());
+    assert(size() == args.size());
     if (args.empty())
         return this;
     return vrebuild(to, args);
@@ -206,25 +181,13 @@ const Type* NoRetType          ::vrebuild(TypeTable& to, Types     ) const { ret
 const Type* TypeError          ::vrebuild(TypeTable& to, Types     ) const { return this; }
 const Type* UnknownType        ::vrebuild(TypeTable& to, Types     ) const { return this; }
 
-const Type* StructAbsType::vrebuild(TypeTable& to, Types /*args*/) const {
-    //// TODO how do we handle recursive types?
-    //auto ntype = typetable().struct_abs_type(args.size());
-    //for (size_t i = 0, e = args.size(); i != e; ++i)
-        //ntype->set(i, args[i]);
-    //return ntype;
-    return nullptr;
-}
-
-const Type* StructAppType::vrebuild(TypeTable& to, Types args) const {
-    return to.struct_app_type(args[0]->as<StructAbsType>(), args.skip_front());
-}
-
-
 //------------------------------------------------------------------------------
 
 /*
  * specialize and instantiate
  */
+
+#if 0
 
 const Type* Type::instantiate(Types types) const {
     assert(types.size() == num_type_params());
@@ -305,6 +268,8 @@ const Type* TypeParam  ::vinstantiate(Type2Type& map) const { return map[this] =
 const Type* NoRetType  ::vinstantiate(Type2Type& map) const { return map[this] = this; }
 const Type* TypeError  ::vinstantiate(Type2Type& map) const { return map[this] = this; }
 const Type* UnknownType::vinstantiate(Type2Type&    ) const { THORIN_UNREACHABLE; return nullptr; }
+
+#endif
 
 //------------------------------------------------------------------------------
 
