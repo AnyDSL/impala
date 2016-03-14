@@ -8,10 +8,10 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-enum Liveness: char { DEAD, LIVE, ERR };
+enum Liveness: char { DEAD, LIVE, ERROR };
 
 inline Liveness payload2ls(payload_t pl) {
-    assert(pl == DEAD || pl == LIVE || pl == ERR);
+    assert(pl == DEAD || pl == LIVE || pl == ERROR);
     return (Liveness) pl;
 }
 
@@ -19,6 +19,11 @@ inline Liveness payload2ls(payload_t pl) {
 bool type_copyable(const Type& type) {
     // TODO: this check is not good
     return false;
+}
+
+// TODO: this is the same code as in one place in lvmap.cpp, deduplicate
+bool is_reference_type(const Type& type) {
+    return type->kind() == Kind_borrowed_ptr || type->kind() == Kind_mut_ptr;
 }
 
 //class MoveSema {
@@ -113,18 +118,12 @@ void Typedef::check(MoveSema& sema) const {
 void EnumDecl::check(MoveSema&) const {}
 
 void StaticItem::check(MoveSema& sema) const {
-    if (ast_type())
-        ast_type()->check(sema);
     if (init())
         init()->check(sema, false);
 }
 
 void Fn::fn_check(MoveSema& sema) const {
     check_type_params(sema);
-    for (auto param : params()) {
-        if (param->ast_type())
-            param->ast_type()->check(sema);
-    }
     if (body() != nullptr)
         body()->check(sema, false);
 }
@@ -174,41 +173,40 @@ void ImplItem::check(MoveSema& sema) const {
  * expressions
  */
 
-Liveness validate(const ASTNode* loc, Liveness live) {
-    if (live == Liveness::DEAD) {
+inline void validate(const ASTNode* loc, Liveness live) {
+    if (live == Liveness::DEAD)
         error(loc) << "cannot use " << loc << ", it is not live\n";
-        return Liveness::ERR;
-    }
-    return live;
 }
 
-Liveness check_lv(const Expr* lv, MoveSema& sema, bool assign_from) {
+void check_lv(const Expr* lv, MoveSema& sema) {
+    assert(lv->is_lvalue());
     Liveness live = payload2ls(lv->lookup_payload(sema));
-    live = validate(lv, live);
-    if (assign_from && !type_copyable(lv->type()))
-        // TODO: check owns value
-        lv->insert_payload(sema, Liveness::DEAD);
-    return live;
+    validate(lv, live);
+    if (!type_copyable(lv->type())) {
+        // TODO: except for creating borrows which is not handled here, can there ever be a case
+        // where a non-copyable lvalue is used without beeing assigned?
+        if (!lv->owns_value())
+            error(lv) << "cannot move out of lvalue " << lv << " because it does not own its value\n";
+        else
+            lv->insert_payload(sema, Liveness::DEAD);
+    }
 }
 
 
-Liveness EmptyExpr::check(MoveSema&, bool assign_from) const {
-    return Liveness::LIVE;
-}
+void EmptyExpr::check(MoveSema&, bool assign_to) const {}
 
-Liveness BlockExprBase::check(MoveSema& sema, bool assign_from) const {
+void BlockExprBase::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to);
     for (auto stmt : stmts())
         stmt->check(sema);
-    expr()->check(sema, assign_from);
-    return Liveness::DEAD;
+    expr()->check(sema, false);
 }
 
-Liveness LiteralExpr::check(MoveSema&, bool) const { return Liveness::LIVE; }
-Liveness CharExpr::check(MoveSema&, bool) const { return Liveness::LIVE; };
-Liveness StrExpr::check(MoveSema&, bool) const { return Liveness::LIVE; }
-Liveness FnExpr::check(MoveSema& sema, bool assign_from) const {
+void LiteralExpr::check(MoveSema&, bool) const {}
+void CharExpr::check(MoveSema&, bool) const {};
+void StrExpr::check(MoveSema&, bool) const {}
+void FnExpr::check(MoveSema& sema, bool) const {
     fn_check(sema);
-    return Liveness::DEAD;
 }
 
 void PathElem::check(MoveSema&) const {}
@@ -218,31 +216,49 @@ void Path::check(MoveSema& sema) const {
         path_elem->check(sema);
 }
 
-Liveness PathExpr::check(MoveSema& sema, bool assign_from) const {
-    return check_lv(this, sema, assign_from);
+void PathExpr::check(MoveSema& sema, bool assign_to) const {
+    if (!assign_to)
+        check_lv(this, sema);
+    // if assign_to is true the variable is the target of an assignment and does not need to be live
 }
 
-Liveness PrefixExpr::check(MoveSema& sema, bool assign_from) const  {
+void PrefixExpr::check(MoveSema& sema, bool assign_to) const  {
     switch (kind()) {
         case Token::MUL: // *
-            return check_lv(this, sema, assign_from);
+            if (assign_to) {
+                // for an assignment target it suffices that the first ancestor of the first dereference
+                // is live
+                assert(rhs()->is_lvalue());
+                check_lv(this, sema);
+            } else {
+                if (is_reference_type(rhs()->type()))
+                    // since the liveness of a reference depends on the liveness of the owner of
+                    // the reference, it suffices to check that
+                    // This allows us to handle something like *&x
+                    rhs()->check(sema, false);
+                else {
+                    assert(rhs()->type()->kind() == Kind_owned_ptr);
+                    // values behind owned pointers may be moved
+                    check_lv(this, sema);
+                }
+            }
+            break;
         case Token::AND: // &
             assert(rhs()->is_lvalue());
-            return validate(rhs(), payload2ls(rhs()->lookup_payload(sema)));
+            validate(rhs(), payload2ls(rhs()->lookup_payload(sema)));
             break;
         case Token::TILDE: // ~
-            return validate(rhs(), rhs()->check(sema, true));
+            rhs()->check(sema, false);
             break;
         default:
-            // TODO: false makes the assumption that the other cases are copyable which is
-            // currently ok, but maybe we should let this depend on the copyablility
-            return validate(rhs(), rhs()->check(sema, true));
+            rhs()->check(sema, false);
     }
 }
 
-Liveness InfixExpr::check(MoveSema& sema, bool assign_from) const {
+void InfixExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to);
     switch (kind()) {
-        // TODO: case this be simplified?
+        // TODO: can this be simplified?
         case ASGN:      // all assignments
         case ADD_ASGN:
         case SUB_ASGN:
@@ -253,105 +269,99 @@ Liveness InfixExpr::check(MoveSema& sema, bool assign_from) const {
         case OR_ASGN:
         case XOR_ASGN:
         case SHL_ASGN:
-        case SHR_ASGN: {
+        case SHR_ASGN:
             assert(lhs()->is_lvalue());
-            Liveness right_live = rhs()->check(sema, true);
-            if (right_live == Liveness::DEAD) {
-                error(rhs()) << "The right side of an assignment must be live.";
-                right_live = Liveness::ERR;
-            }
+            rhs()->check(sema, false);
+            lhs()->check(sema, true);
             lhs()->insert_payload(sema, Liveness::LIVE);
-            return right_live;
-        }
+            break;
         default:
-            validate(lhs(), lhs()->check(sema, true));
-            validate(rhs(), rhs()->check(sema, true));
-            return Liveness::LIVE;
+            lhs()->check(sema, false);
+            rhs()->check(sema, false);
     }
 }
 
-Liveness PostfixExpr::check(MoveSema& sema, bool assign_from) const {
-    lhs()->check(sema, assign_from);
-    return Liveness::DEAD;
+void PostfixExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to);
+    lhs()->check(sema, false);
 }
 
-Liveness FieldExpr::check(MoveSema& sema, bool assign_from) const {
-    lhs()->check(sema, assign_from);
-    // don't infer symbol here as it depends on lhs' type - must be done in TypeSema
-    return Liveness::DEAD;
+void FieldExpr::check(MoveSema& sema, bool assign_to) const {
+    if (assign_to)
+        lhs()->check(sema, true);
+    else
+        check_lv(this, sema);
 }
 
-Liveness CastExpr::check(MoveSema& sema, bool assign_from) const {
-    lhs()->check(sema, assign_from);
-    ast_type()->check(sema);
-    return Liveness::DEAD;
+void CastExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(false); //TODO: implement stuff
+    lhs()->check(sema, assign_to);
 }
 
-Liveness DefiniteArrayExpr::check(MoveSema& sema, bool assign_from) const {
+void DefiniteArrayExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to);
     for (auto arg : args())
-        arg->check(sema, assign_from);
-    return Liveness::DEAD;
+        arg->check(sema, false);
 }
 
-Liveness RepeatedDefiniteArrayExpr::check(MoveSema& sema, bool assign_from) const {
-    value()->check(sema, assign_from);
-    return Liveness::DEAD;
+void RepeatedDefiniteArrayExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to);
+    value()->check(sema, false);
 }
 
-Liveness IndefiniteArrayExpr::check(MoveSema& sema, bool assign_from) const {
-    dim()->check(sema, assign_from);
-    elem_type()->check(sema);
-    return Liveness::DEAD;
+void IndefiniteArrayExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to);
+    dim()->check(sema, false);
 }
 
-Liveness TupleExpr::check(MoveSema& sema, bool assign_from) const {
+void TupleExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to);
     for (auto arg : args())
-        arg->check(sema, assign_from);
-    return Liveness::DEAD;
+        arg->check(sema, false);
 }
 
-Liveness SimdExpr::check(MoveSema& sema, bool assign_from) const {
+void SimdExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to);
     for (auto arg : args())
-        arg->check(sema, assign_from);
-    return Liveness::DEAD;
+        arg->check(sema, false);
 }
 
-Liveness StructExpr::check(MoveSema& sema, bool assign_from) const {
+void StructExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to);
     path()->check(sema);
     for (const auto& elem : elems())
-        elem.expr()->check(sema, assign_from);
-    return Liveness::DEAD;
+        elem.expr()->check(sema, false);
 }
 
-Liveness MapExpr::check(MoveSema& sema, bool assign_from) const {
-    //lhs()->check(sema, assign_from);
-    for (auto type_arg : type_args())
-        type_arg->check(sema);
+void MapExpr::check(MoveSema& sema, bool assign_to) const {
+    std::cout << "map expr: " << this << "\n"; // TODO: when called?
+    if (is_lvalue())
+        assert(false);
+    //lhs()->check(sema, assign_to);
     for (auto arg : args())
-        arg->check(sema, assign_from);
-    return Liveness::DEAD;
+        arg->check(sema, assign_to);
 }
 
-Liveness IfExpr::check(MoveSema& sema, bool assign_from) const {
-    cond()->check(sema, assign_from);
-    then_expr()->check(sema, assign_from);
-    else_expr()->check(sema, assign_from);
-    return Liveness::DEAD;
+void IfExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to);
+    cond()->check(sema, false);
+    then_expr()->check(sema, false);
+    else_expr()->check(sema, false);
 }
 
-Liveness WhileExpr::check(MoveSema& sema, bool assign_from) const {
-    cond()->check(sema, assign_from);
+void WhileExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to);
+    cond()->check(sema, false);
     break_decl()->check(sema);
     continue_decl()->check(sema);
-    body()->check(sema, assign_from);
-    return Liveness::DEAD;
+    body()->check(sema, false);
 }
 
-Liveness ForExpr::check(MoveSema& sema, bool assign_from) const {
-    expr()->check(sema, assign_from);
+void ForExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to);
+    expr()->check(sema, false);
     break_decl()->check(sema);
-    fn_expr()->check(sema, assign_from);
-    return Liveness::DEAD;
+    fn_expr()->check(sema, false);
 }
 
 //------------------------------------------------------------------------------
@@ -371,11 +381,10 @@ void LetStmt::check(MoveSema& sema) const {
 //------------------------------------------------------------------------------
 
 void move_analysis(const ModContents* mod) {
-    // TODO: why do we need to say new here?
-    auto sema = new MoveSema();
-    mod->check(*sema);
+    auto sema = MoveSema();
+    mod->check(sema);
 #ifndef NDEBUG
-    //TODO: verify something? like in type sema?
+    // TODO: verify something? like in type sema?
 #endif
 }
 

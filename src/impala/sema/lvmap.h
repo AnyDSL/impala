@@ -8,29 +8,27 @@
 namespace impala {
 
 class ValueDecl;
+class LvTree;
 
-typedef uint32_t varid;
 typedef int payload_t;
 
-enum class LvComponentType: char { VAR, STRUCTFIELD, DEREF, ERROR, NOT_PRESENT};
+const payload_t ERROR_PAYLOAD = -1;
 
-class LvTree {
-public:
-    LvTree(LvComponentType type)
-        : type_(type)
-        {}
-    ~LvTree() {}
-    LvComponentType get_type() const { return type_; }
-    const char* get_name() const;
-    payload_t get_payload() const { return payload_; }
-    void set_payload(payload_t pl) { payload_ = pl; }
-    // TODO: use ArrayRef ?
-    std::vector<LvTree> get_children();
+enum class LvTreeLookupResType { TREE, NOT_EXPLICIT, ERROR };
 
-private:
-    std::vector<LvTree> children_;
-    payload_t payload_ = 0;
-    LvComponentType type_;
+struct LvTreeLookupRes {
+    LvTreeLookupRes(LvTree& tree): type_(LvTreeLookupResType::TREE), value_(tree) {};
+    LvTreeLookupRes(payload_t pl): type_(LvTreeLookupResType::NOT_EXPLICIT), value_(pl) {};
+    LvTreeLookupRes(void): type_(LvTreeLookupResType::ERROR), value_(ERROR_PAYLOAD) {};
+
+    LvTreeLookupResType type_;
+    union LvTreeLookupResValue {
+        LvTreeLookupResValue(LvTree& tree): tree_(tree) {};
+        LvTreeLookupResValue(payload_t pl): implicit_payload_(pl) {}
+
+        LvTree& tree_;
+        payload_t implicit_payload_;
+    } value_;
 };
 
 class LvMap {

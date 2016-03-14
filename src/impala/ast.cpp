@@ -73,9 +73,15 @@ bool IfExpr::has_else() const {
 
 bool PathExpr::is_lvalue() const {
     if (value_decl()) {
+        // TODO: this seems to me somewhat implicit, should be done explicitly
+        // TODO: it should be possible to handle this in the borrow- or movesema,
+        // then there is no need for this call anymore
+        // TODO: this will probably be broken by the movesema
         value_decl()->write();
-        return value_decl()->is_mut();
+        //return value_decl()->is_mut();
+        return true;
     }
+    assert(false); // TODO: when can this happen?
     return false;
 }
 
@@ -131,5 +137,39 @@ void MapExpr::take_address() const { lhs()->take_address(); }
 void FieldExpr::take_address() const { lhs()->take_address(); }
 
 //------------------------------------------------------------------------------
+
+/*
+ * owns_value
+ */
+
+bool PathExpr::owns_value(void) const {
+    return true;
+}
+
+bool PrefixExpr::owns_value(void) const {
+    assert(is_lvalue());
+    if (kind() == impala::PrefixExpr::Kind::MUL)
+        return type()->kind() != Kind_borrowed_ptr
+            && type()->kind() != Kind_mut_ptr
+            && rhs()->owns_value();
+    assert(false); // should be unreachable
+}
+
+bool CastExpr::owns_value(void) const {
+    assert(is_lvalue());
+    return lhs()->owns_value();
+}
+
+bool MapExpr::owns_value(void) const {
+    assert(is_lvalue());
+    return lhs()->owns_value();
+}
+
+bool FieldExpr::owns_value(void) const {
+    assert(is_lvalue());
+    return lhs()->owns_value();
+}
+
+//-----------------------------------------------------------
 
 }
