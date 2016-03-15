@@ -15,7 +15,7 @@ typedef int payload_t;
 
 const payload_t ERROR_PAYLOAD = -1;
 
-//enum class LvTreeLookupResType { TREE, NOT_EXPLICIT, ERROR };
+enum class LvTreeLookupResType { TREE, NOT_EXPLICIT, ERROR };
 
 struct LvTreeLookupRes {
     LvTreeLookupRes(LvTree& tree): type_(LvTreeLookupResType::TREE), value_(tree) {};
