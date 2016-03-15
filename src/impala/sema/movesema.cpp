@@ -8,7 +8,7 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-enum Liveness: char { DEAD, LIVE, ERROR };
+enum Liveness: char { LIVE = 0, DEAD = 1, ERROR = 2};
 
 inline Liveness payload2ls(payload_t pl) {
     assert(pl == DEAD || pl == LIVE || pl == ERROR);
@@ -180,7 +180,7 @@ inline void validate(const ASTNode* loc, Liveness live) {
 
 void check_lv(const Expr* lv, MoveSema& sema) {
     assert(lv->is_lvalue());
-    Liveness live = payload2ls(lv->lookup_payload(sema));
+    Liveness live = payload2ls(lookup_payload(*lv, sema));
     validate(lv, live);
     if (!type_copyable(lv->type())) {
         // TODO: except for creating borrows which is not handled here, can there ever be a case
@@ -188,7 +188,7 @@ void check_lv(const Expr* lv, MoveSema& sema) {
         if (!lv->owns_value())
             error(lv) << "cannot move out of lvalue " << lv << " because it does not own its value\n";
         else
-            lv->insert_payload(sema, Liveness::DEAD);
+            insert(*lv, sema, Liveness::DEAD);
     }
 }
 
@@ -245,7 +245,7 @@ void PrefixExpr::check(MoveSema& sema, bool assign_to) const  {
             break;
         case Token::AND: // &
             assert(rhs()->is_lvalue());
-            validate(rhs(), payload2ls(rhs()->lookup_payload(sema)));
+            validate(rhs(), payload2ls(lookup_payload(*rhs(), sema)));
             break;
         case Token::TILDE: // ~
             rhs()->check(sema, false);
@@ -273,7 +273,7 @@ void InfixExpr::check(MoveSema& sema, bool assign_to) const {
             assert(lhs()->is_lvalue());
             rhs()->check(sema, false);
             lhs()->check(sema, true);
-            lhs()->insert_payload(sema, Liveness::LIVE);
+            insert(*lhs(), sema, Liveness::LIVE);
             break;
         default:
             lhs()->check(sema, false);

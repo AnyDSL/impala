@@ -8,13 +8,14 @@
 namespace impala {
 
 class ValueDecl;
+class Expr;
 class LvTree;
 
 typedef int payload_t;
 
 const payload_t ERROR_PAYLOAD = -1;
 
-enum class LvTreeLookupResType { TREE, NOT_EXPLICIT, ERROR };
+//enum class LvTreeLookupResType { TREE, NOT_EXPLICIT, ERROR };
 
 struct LvTreeLookupRes {
     LvTreeLookupRes(LvTree& tree): type_(LvTreeLookupResType::TREE), value_(tree) {};
@@ -64,6 +65,10 @@ private:
 };
 
 inline bool payload2bool(payload_t pl) { assert(pl == 0 || pl == 1); return (bool) pl; }
+
+payload_t lookup_payload(const Expr&, LvMap&);
+
+void insert(const Expr&, LvMap&, payload_t);
 
 }
 
