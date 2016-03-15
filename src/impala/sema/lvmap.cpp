@@ -145,11 +145,7 @@ void LvMap::insert(const ValueDecl* decl, payload_t pl) {
 payload_t lookup_payload(const Expr& expr, LvMap& map) {
     assert(expr.is_lvalue());
     auto res = expr.lookup_lv_tree(map, false);
-    switch (res.type_) {
-        case LvTreeLookupResType::TREE:          return res.value_.tree_.get_payload();
-        case LvTreeLookupResType::NOT_EXPLICIT:  return res.value_.implicit_payload_;
-    }
-    return 0;
+    return res.is_tree_ ? res.value_.tree_.get_payload() : res.value_.implicit_payload_;
 }
 
 //---------------------------------------------------------
@@ -168,27 +164,24 @@ LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent, bool 
     const Symbol& symbol) {
 
     LvTreeLookupRes parent_res = parent.lookup_lv_tree(map, create);
-    assert(!create || parent_res.type_ == LvTreeLookupResType::TREE);
-    switch (parent_res.type_) {
-        case LvTreeLookupResType::TREE: {
-            LvTree* this_tree = lookup_pointer ? parent_res.value_.tree_.get_pointer_child(create)
-                : parent_res.value_.tree_.get_field_child(symbol, create);
-            if (this_tree == nullptr)
-                return LvTreeLookupRes(parent_res.value_.tree_.get_payload());
-            switch (this_tree->get_type()) {
-                case LvComponentType::DEREF:
-                case LvComponentType::FIELD:
-                    // TODO: assert type of this_tree
-                    assert(map.get_comparator().compare(parent_res.value_.tree_.get_payload(),
-                        this_tree->get_payload()) == Relation::LESS);
-                    return LvTreeLookupRes(*this_tree);
-                default:
-                    //std::cout << "this tree type: " << (int) parent_res.type_ << "\n";
-                    assert(false); // should not happen
-            }
-        }
-        default:
-            return parent_res;
+    assert(!create || parent_res.is_tree_);
+    if (!parent_res.is_tree_)
+        return parent_res;
+
+    LvTree* this_tree = lookup_pointer ? parent_res.value_.tree_.get_pointer_child(create)
+        : parent_res.value_.tree_.get_field_child(symbol, create);
+    if (this_tree == nullptr)
+        return LvTreeLookupRes(parent_res.value_.tree_.get_payload());
+    switch (this_tree->get_type()) {
+        case LvComponentType::DEREF:
+        case LvComponentType::FIELD:
+            // TODO: assert type of this_tree
+            assert(map.get_comparator().compare(parent_res.value_.tree_.get_payload(),
+                this_tree->get_payload()) == Relation::LESS);
+            return LvTreeLookupRes(*this_tree);
+        default: // VAR
+            //std::cout << "this tree type: " << (int) parent_res.type_ << "\n";
+            assert(false); // should not happen
     }
 }
     
@@ -203,12 +196,10 @@ const LvTreeLookupRes FieldExpr::lookup_lv_tree(LvMap& map, bool create) const {
 
 const LvTreeLookupRes CastExpr::lookup_lv_tree(LvMap& map, bool) const {
     assert(false);
-    return LvTreeLookupRes();
 }
 
 const LvTreeLookupRes MapExpr::lookup_lv_tree(LvMap& map, bool) const {
     assert(false);
-    return LvTreeLookupRes();
 }
 
 //-------------------------------------------------------------------
@@ -219,7 +210,7 @@ const LvTreeLookupRes MapExpr::lookup_lv_tree(LvMap& map, bool) const {
 
 void insert(const Expr& expr, LvMap& map, payload_t pl) {
     LvTreeLookupRes res = expr.lookup_lv_tree(map, true);
-    assert(res.type_ == LvTreeLookupResType::TREE);
+    assert(res.is_tree_);
     if (res.value_.tree_.get_payload() != pl)
         expr.insert_payload(res.value_.tree_, pl);
 }

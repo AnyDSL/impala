@@ -15,14 +15,13 @@ typedef int payload_t;
 
 const payload_t ERROR_PAYLOAD = -1;
 
-enum class LvTreeLookupResType { TREE, NOT_EXPLICIT, ERROR };
+//enum class LvTreeLookupResType { TREE, NOT_EXPLICIT, ERROR };
 
 struct LvTreeLookupRes {
-    LvTreeLookupRes(LvTree& tree): type_(LvTreeLookupResType::TREE), value_(tree) {};
-    LvTreeLookupRes(payload_t pl): type_(LvTreeLookupResType::NOT_EXPLICIT), value_(pl) {};
-    LvTreeLookupRes(void): type_(LvTreeLookupResType::ERROR), value_(ERROR_PAYLOAD) {};
+    LvTreeLookupRes(LvTree& tree): is_tree_(true), value_(tree) {};
+    LvTreeLookupRes(payload_t pl): is_tree_(false), value_(pl) {};
 
-    LvTreeLookupResType type_;
+    bool is_tree_;
     union LvTreeLookupResValue {
         LvTreeLookupResValue(LvTree& tree): tree_(tree) {};
         LvTreeLookupResValue(payload_t pl): implicit_payload_(pl) {}
