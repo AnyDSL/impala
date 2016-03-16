@@ -387,6 +387,21 @@ std::ostream& StructExpr::stream(std::ostream& os) const {
     return stream_list(os, elems(), [&](const Elem& elem) { os << elem.symbol() << ": " << elem.expr(); }, "{", "}");
 }
 
+std::ostream& TypeAppExpr::stream(std::ostream& os) const {
+    Prec l = PrecTable::postfix_l[Token::L_BRACKET];
+    Prec old = prec;
+    bool paren = !fancy() || prec > l;
+    if (paren) os << "(";
+
+    prec = l;
+    os << lhs();
+    stream_list(os, ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "[", "]");
+
+    prec = old;
+    if (paren) os << ")";
+    return os;
+}
+
 std::ostream& MapExpr::stream(std::ostream& os) const {
     Prec l = PrecTable::postfix_l[Token::L_PAREN];
     Prec old = prec;

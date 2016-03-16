@@ -1333,6 +1333,7 @@ private:
 
 class TypeAppExpr : public Expr {
 public:
+    const Expr* lhs() const { return lhs_; }
     const ASTTypes& ast_type_args() const { return ast_type_args_; }
     const ASTType* ast_type_arg(size_t i) const { assert(i < ast_type_args_.size()); return ast_type_args_[i]; }
     size_t num_ast_type_args() const { return ast_type_args().size(); }

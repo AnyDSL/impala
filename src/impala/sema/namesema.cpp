@@ -355,6 +355,12 @@ void StructExpr::check(NameSema& sema) const {
         elem.expr()->check(sema);
 }
 
+void TypeAppExpr::check(NameSema& sema) const {
+    lhs()->check(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
+}
+
 void MapExpr::check(NameSema& sema) const {
     lhs()->check(sema);
     for (auto arg : args())

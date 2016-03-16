@@ -594,6 +594,9 @@ void FieldExpr::check(TypeSema& /*sema*/) const {
 #endif
 }
 
+void TypeAppExpr::check(TypeSema& /*sema*/) const {
+}
+
 void MapExpr::check(TypeSema& sema) const {
     auto ltype = sema.check(lhs());
     for (auto arg : args())

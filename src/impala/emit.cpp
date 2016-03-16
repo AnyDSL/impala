@@ -506,12 +506,19 @@ const Def* StructExpr::remit(CodeGen& cg) const {
     return cg.world().struct_agg(cg.convert(type())->as<thorin::StructType>(), defs, loc());
 }
 
+Var TypeAppExpr::lemit(CodeGen& cg) const { THORIN_UNREACHABLE; }
+
+const Def* TypeAppExpr::remit(CodeGen& cg) const {
+    assert(false && "TODO");
+    return nullptr;
+}
+
 Var MapExpr::lemit(CodeGen& cg) const {
     if (lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<SimdType>()) {
         auto agg = cg.lemit(lhs());
         return Var::create_agg(agg, cg.remit(arg(0)));
     }
-    throw std::logic_error("cannot emit lvalue");
+    THORIN_UNREACHABLE;
 }
 
 const Def* MapExpr::remit(CodeGen& cg) const {

@@ -18,7 +18,7 @@ class InferSema : public TypeTable {
 public:
     // helpers
 
-    const Type* instantiate(const Type* type, ArrayRef<const ASTType*> args);
+    const Type* instantiate(const TypeAbs*, ArrayRef<const ASTType*>);
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
     const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->size() ? type->arg(i) : nullptr; }
 
@@ -231,19 +231,19 @@ void type_inference(Init& init, const ModContents* mod) {
 
 //------------------------------------------------------------------------------
 
+const Type* InferSema::instantiate(const TypeAbs* type_abs, ArrayRef<const ASTType*> ast_type_args) {
 #if 0
-const Type* InferSema::instantiate(const Type* type, ArrayRef<const ASTType*> args) {
-    if (args.size() == type->num_type_params()) {
-        std::vector<const Type*> type_args;
-        for (auto t : args)
-            type_args.push_back(check(t));
+    if (ast_type_args.size() == type->num_type_params()) {
+        Array<const Type*> type_args(args.size());
+        for (size_t i = 0, e = args.size(); i != e; ++i)
+            type_args[i] = check(ast_type_args[i];
 
         return type->instantiate(type_args);
     }
 
+#endif
     return type_error();
 }
-#endif
 
 //------------------------------------------------------------------------------
 
@@ -329,9 +329,12 @@ const Type* Typeof::check(InferSema& sema) const { return sema.check(expr()); }
 const Type* ASTTypeApp::check(InferSema& sema) const {
     if (decl()) {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
-            if (auto type = sema.type(type_decl))
-                return sema.instantiate(type, ast_type_args());
-            else
+            if (auto type = sema.type(type_decl)) {
+                if (auto type_abs = type->isa<TypeAbs>())
+                    return sema.instantiate(type_abs, ast_type_args());
+                else
+                    return type;
+            } else
                 return sema.type_error();
         }
     }
@@ -638,6 +641,14 @@ const Type* FieldExpr::check(InferSema& sema, const Type* /*TODO expected*/) con
             return struct_type->arg(field_decl->index());
     }
 
+    return sema.type_error();
+}
+
+const Type* TypeAppExpr::check(InferSema& sema, const Type* expected) const {
+    if (auto type = sema.check(lhs())) {
+        if (auto type_abs = type->isa<TypeAbs>())
+            return sema.instantiate(type_abs, ast_type_args());
+    }
     return sema.type_error();
 }
 

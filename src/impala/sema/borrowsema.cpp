@@ -229,6 +229,12 @@ void StructExpr::check(BorrowSema& sema) const {
         elem.expr()->check(sema);
 }
 
+void TypeAppExpr::check(BorrowSema& sema) const {
+    lhs()->check(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
+}
+
 void MapExpr::check(BorrowSema& sema) const {
     lhs()->check(sema);
     for (auto arg : args())
