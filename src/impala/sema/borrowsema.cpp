@@ -200,7 +200,7 @@ void CastExpr::check(BorrowSema& sema) const {
 }
 
 void DefiniteArrayExpr::check(BorrowSema& sema) const {
-    for (auto arg : args())
+    for (const auto& arg : args())
         arg->check(sema);
 }
 
@@ -214,12 +214,12 @@ void IndefiniteArrayExpr::check(BorrowSema& sema) const {
 }
 
 void TupleExpr::check(BorrowSema& sema) const {
-    for (auto arg : args())
+    for (const auto& arg : args())
         arg->check(sema);
 }
 
 void SimdExpr::check(BorrowSema& sema) const {
-    for (auto arg : args())
+    for (const auto& arg : args())
         arg->check(sema);
 }
 
@@ -237,7 +237,7 @@ void TypeAppExpr::check(BorrowSema& sema) const {
 
 void MapExpr::check(BorrowSema& sema) const {
     lhs()->check(sema);
-    for (auto arg : args())
+    for (const auto& arg : args())
         arg->check(sema);
 }
 

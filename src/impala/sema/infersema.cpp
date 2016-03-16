@@ -144,7 +144,11 @@ public:
         return type;
     }
 
-    const Type* check_call(const FnType*, ArrayRef<const Expr*> args, const Type* expected);
+    const Type* check_call(const FnType* fn_type, ArrayRef<const Expr*> args, const Type* expected);
+    const Type* check_call(const FnType* fn_type, const std::deque<AutoPtr<const Expr>>& args, const Type* expected) {
+        Array<const Expr*> array(args.begin(), args.end());
+        return check_call(fn_type, array, expected);
+    }
 
 private:
     /// Used for union/find - see https://en.wikipedia.org/wiki/Disjoint-set_data_structure#Disjoint-set_forests .
@@ -524,10 +528,10 @@ const Type* CastExpr::check(InferSema& sema, const Type*) const {
 const Type* DefiniteArrayExpr::check(InferSema& sema, const Type* expected) const {
     auto expected_elem_type = sema.safe_get_arg(expected, 0);
 
-    for (auto arg : args())
+    for (const auto& arg : args())
         expected_elem_type = sema.unify(expected_elem_type, sema.type(arg));
 
-    for (auto arg : args())
+    for (const auto& arg : args())
         sema.check(arg, expected_elem_type);
 
     return sema.definite_array_type(expected_elem_type, num_args());
@@ -536,10 +540,10 @@ const Type* DefiniteArrayExpr::check(InferSema& sema, const Type* expected) cons
 const Type* SimdExpr::check(InferSema& sema, const Type* expected) const {
     auto expected_elem_type = sema.safe_get_arg(expected, 0);
 
-    for (auto arg : args())
+    for (const auto& arg : args())
         expected_elem_type = sema.unify(expected_elem_type, sema.type(arg));
 
-    for (auto arg : args())
+    for (const auto& arg : args())
         sema.check(arg, expected_elem_type);
 
     return sema.simd_type(expected_elem_type, num_args());

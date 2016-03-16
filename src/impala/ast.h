@@ -46,7 +46,6 @@ template<class T> using AutoPtr    = thorin::AutoPtr<T>;
 template<class T> using AutoVector = thorin::AutoVector<T>;
 
 typedef AutoVector<const ASTType*> ASTTypes;
-typedef AutoVector<const Expr*> Exprs;
 typedef thorin::HashMap<Symbol, const FnDecl*> MethodTable;
 
 //------------------------------------------------------------------------------
@@ -867,6 +866,10 @@ private:
 
 class Expr : public ASTNode, public Typeable {
 public:
+#ifndef NDEBUG
+    virtual ~Expr() { assert(docker_ != nullptr); }
+#endif
+
     /// return the type before implicit casting (for example ~4 always has the actual_type ~int but its type could be &int due to subtyping)
     const Type* actual_type() const { return actual_type_ ? actual_type_ : nullptr; }
     bool needs_cast() const { return actual_type_ != nullptr; }
@@ -892,6 +895,13 @@ private:
 
 protected:
     mutable const thorin::Def* extra_ = nullptr; ///< Needed to propagate extend of indefinite arrays.
+    mutable const AutoPtr<const Expr>* docker_ = nullptr;
+
+    friend void dock(AutoPtr<const Expr>& dst, const Expr* src) {
+        assert(src->docker_ == nullptr);
+        dst = src;
+        src->docker_ = &dst;
+    }
 
     friend class CodeGen;
     friend class IfExpr;
@@ -903,13 +913,17 @@ protected:
 /// Use as mixin for anything which uses args: (expr_1, ..., expr_n)
 class Args {
 public:
-    const Exprs& args() const { return args_; }
+    const std::deque<AutoPtr<const Expr>>& args() const { return args_; }
     const Expr* arg(size_t i) const { assert(i < args_.size()); return args_[i]; }
     size_t num_args() const { return args_.size(); }
     std::ostream& stream_args(std::ostream& p) const;
+    void append(const Expr* expr) {
+        args_.emplace_back(nullptr);
+        dock(args_.back(), expr);
+    }
 
 protected:
-    Exprs args_;
+    std::deque<AutoPtr<const Expr>> args_;
 };
 
 class EmptyExpr : public Expr {
@@ -1283,14 +1297,14 @@ class StructExpr : public Expr {
 public:
     class Elem {
     public:
-        Elem(const Elem& elem)
-            : identifier_(elem.identifier())
-            , expr_(elem.expr())
-        {}
+        Elem(const Elem&) = delete;
+        Elem& operator=(Elem) = delete;
+
         Elem(const Identifier* identifier, const Expr* expr)
             : identifier_(identifier)
-            , expr_(expr)
-        {}
+        {
+            dock(expr_, expr);
+        }
 
         const Identifier* identifier() const { return identifier_; }
         Symbol symbol() const { return identifier()->symbol(); }
@@ -1298,23 +1312,16 @@ public:
         const FieldDecl* field_decl() const { return field_decl_; }
 
     private:
-        const Identifier* identifier_;
-        const Expr* expr_;
+        AutoPtr<const Identifier> identifier_;
+        AutoPtr<const Expr> expr_;
         mutable const FieldDecl* field_decl_ = nullptr;
 
         friend class StructExpr;
     };
 
-    virtual ~StructExpr() {
-        for (auto elem : elems()) {
-            delete elem.identifier_;
-            delete elem.expr_;
-        }
-    }
-
     const ASTTypeApp* ast_type_app() const { return ast_type_app_; }
     size_t num_elems() const { return elems_.size(); }
-    const std::vector<Elem>& elems() const { return elems_; }
+    const std::deque<Elem>& elems() const { return elems_; }
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
@@ -1326,7 +1333,7 @@ private:
     virtual const thorin::Def* remit(CodeGen&) const override;
 
     AutoPtr<const ASTTypeApp> ast_type_app_;
-    std::vector<Elem> elems_;
+    std::deque<Elem> elems_;
 
     friend class Parser;
 };
@@ -1464,7 +1471,7 @@ private:
 class WhileExpr : public StmtLikeExpr {
 public:
     const Expr* cond() const { return cond_; }
-    const BlockExprBase* body() const { return body_; }
+    const BlockExprBase* body() const { return body_->as<BlockExprBase>(); }
     const LocalDecl* break_decl() const { return break_decl_; }
     const LocalDecl* continue_decl() const { return continue_decl_; }
 
@@ -1481,7 +1488,7 @@ private:
     virtual void check(TypeSema&) const override;
 
     AutoPtr<const Expr> cond_;
-    AutoPtr<const BlockExprBase> body_;
+    AutoPtr<const Expr> body_;
     AutoPtr<const LocalDecl> break_decl_;
     AutoPtr<const LocalDecl> continue_decl_;
 
@@ -1490,7 +1497,7 @@ private:
 
 class ForExpr : public StmtLikeExpr {
 public:
-    const FnExpr* fn_expr() const { return fn_expr_; }
+    const FnExpr* fn_expr() const { return fn_expr_->as<FnExpr>(); }
     const Expr* expr() const { return expr_; }
     const LocalDecl* break_decl() const { return break_decl_; }
 
@@ -1505,7 +1512,7 @@ private:
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
-    AutoPtr<const FnExpr> fn_expr_;
+    AutoPtr<const Expr> fn_expr_;
     AutoPtr<const Expr> expr_;
     AutoPtr<const LocalDecl> break_decl_;
 

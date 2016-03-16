@@ -526,7 +526,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         auto dst = cg.remit(lhs());
         std::vector<const Def*> defs;
         defs.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
-        for (auto arg : args())
+        for (const auto& arg : args())
             defs.push_back(cg.remit(arg));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
@@ -661,7 +661,7 @@ const Def* ForExpr::remit(CodeGen& cg) const {
 
     // emit call
     auto map_expr = forexpr->as<MapExpr>();
-    for (auto arg : map_expr->args())
+    for (const auto& arg : map_expr->args())
         defs.push_back(cg.remit(arg));
     defs.push_back(cg.remit(fn_expr()));
     defs.push_back(break_lambda);

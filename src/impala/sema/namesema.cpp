@@ -326,7 +326,7 @@ void CastExpr::check(NameSema& sema) const {
 }
 
 void DefiniteArrayExpr::check(NameSema& sema) const {
-    for (auto arg : args())
+    for (const auto& arg : args())
         arg->check(sema);
 }
 
@@ -340,12 +340,12 @@ void IndefiniteArrayExpr::check(NameSema& sema) const {
 }
 
 void TupleExpr::check(NameSema& sema) const {
-    for (auto arg : args())
+    for (const auto& arg : args())
         arg->check(sema);
 }
 
 void SimdExpr::check(NameSema& sema) const {
-    for (auto arg : args())
+    for (const auto& arg : args())
         arg->check(sema);
 }
 
@@ -363,7 +363,7 @@ void TypeAppExpr::check(NameSema& sema) const {
 
 void MapExpr::check(NameSema& sema) const {
     lhs()->check(sema);
-    for (auto arg : args())
+    for (const auto& arg : args())
         arg->check(sema);
 }
 

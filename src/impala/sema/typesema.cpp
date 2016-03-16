@@ -81,6 +81,10 @@ public:
     const Type* check(const Expr* expr) { expr->check(*this); return expr->type(); }
     void check(const Stmt* n) { n->check(*this); }
     const Type* check_call(const MapExpr* expr, ArrayRef<const Expr*> args);
+    const Type* check_call(const MapExpr* expr, const std::deque<AutoPtr<const Expr>>& args) {
+        Array<const Expr*> array(args.begin(), args.end());
+        return check_call(expr, array);
+    }
 
 private:
     bool nossa_;
@@ -454,7 +458,7 @@ void CastExpr::check(TypeSema& sema) const {
 }
 
 void TupleExpr::check(TypeSema& sema) const {
-    for (auto arg : args())
+    for (const auto& arg : args())
         sema.check(arg);
 }
 
@@ -471,7 +475,7 @@ void DefiniteArrayExpr::check(TypeSema& sema) const {
     if (auto definite_array_type = type()->isa<DefiniteArrayType>())
         elem_type = definite_array_type->elem_type();
 
-    for (auto arg : args()) {
+    for (const auto& arg : args()) {
         sema.check(arg);
         if (elem_type)
             sema.expect_type(arg, elem_type, "element of definite array expression");
@@ -483,7 +487,7 @@ void SimdExpr::check(TypeSema& sema) const {
     if (auto simd_type = type()->isa<SimdType>())
         elem_type = simd_type->elem_type();
 
-    for (auto arg : args()) {
+    for (const auto& arg : args()) {
         sema.check(arg);
         if (elem_type)
             sema.expect_type(arg, elem_type, "element of simd expression");
@@ -599,7 +603,7 @@ void TypeAppExpr::check(TypeSema& /*sema*/) const {
 
 void MapExpr::check(TypeSema& sema) const {
     auto ltype = sema.check(lhs());
-    for (auto arg : args())
+    for (const auto& arg : args())
         sema.check(arg);
 
     if (ltype->isa<FnType>()) {
