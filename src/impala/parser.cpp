@@ -214,6 +214,8 @@ public:
     const Expr*             parse_prefix_expr();
     const Expr*             parse_infix_expr(const Expr* lhs);
     const Expr*             parse_postfix_expr(const Expr* lhs);
+    const MapExpr*          parse_map_expr(const Expr* lhs);
+    const TypeAppExpr*      parse_type_app_expr(const Expr* lhs);
     const Expr*             parse_primary_expr();
     const LiteralExpr*      parse_literal_expr();
     const CharExpr*         parse_char_expr();
@@ -897,19 +899,28 @@ const Expr* Parser::parse_infix_expr(const Expr* lhs) {
     return expr;
 }
 
+const MapExpr* Parser::parse_map_expr(const Expr* lhs) {
+    eat(Token::L_PAREN);
+    auto map = new MapExpr();
+    map->lhs_ = lhs;
+    parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
+    map->set_loc(lhs->loc().begin(), prev_loc().end());
+    return map;
+}
+
+const TypeAppExpr* Parser::parse_type_app_expr(const Expr* lhs) {
+    eat(Token::L_BRACKET);
+    auto type_app_expr = new TypeAppExpr();
+    type_app_expr->lhs_ = lhs;
+    parse_comma_list(Token::R_BRACKET, "type arguments of a map expression", [&] { type_app_expr->ast_type_args_.push_back(parse_type()); });
+    type_app_expr->set_loc(lhs->loc().begin(), prev_loc().end());
+    return type_app_expr;
+}
+
 const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
     switch (la()) {
-        case Token::L_BRACKET:
-        case Token::L_PAREN: {
-            auto map = new MapExpr();
-            map->lhs_ = lhs;
-            if (accept(Token::L_BRACKET))
-                parse_comma_list(Token::R_BRACKET, "type arguments of a map expression", [&] { map->ast_type_args_.push_back(parse_type()); });
-            if (accept(Token::L_PAREN))
-                parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
-            map->set_loc(lhs->loc().begin(), prev_loc().end());
-            return map;
-        }
+        case Token::L_BRACKET: return parse_type_app_expr(lhs);
+        case Token::L_PAREN:   return parse_map_expr(lhs);
         case Token::DEC:
         case Token::INC: {
             auto expr = new PostfixExpr();

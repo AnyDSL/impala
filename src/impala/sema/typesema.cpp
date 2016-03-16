@@ -80,7 +80,7 @@ public:
     void check(const Item* n) { n->check(*this); }
     const Type* check(const Expr* expr) { expr->check(*this); return expr->type(); }
     void check(const Stmt* n) { n->check(*this); }
-    const Type* check_call(const MapExpr* expr, const FnType* fn_poly, Types type_args, ArrayRef<const Expr*> args);
+    const Type* check_call(const MapExpr* expr, ArrayRef<const Expr*> args);
 
 private:
     bool nossa_;
@@ -599,8 +599,8 @@ void MapExpr::check(TypeSema& sema) const {
     for (auto arg : args())
         sema.check(arg);
 
-    if (auto fn_poly = ltype->isa<FnType>()) {
-        sema.check_call(this, fn_poly, type_args_, args());
+    if (ltype->isa<FnType>()) {
+        sema.check_call(this, args());
     } else if (ltype->isa<ArrayType>()) {
         if (num_args() == 1)
             sema.expect_int(arg(0), "for array subscript");

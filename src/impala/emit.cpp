@@ -504,8 +504,7 @@ Var MapExpr::lemit(CodeGen& cg) const {
 }
 
 const Def* MapExpr::remit(CodeGen& cg) const {
-    // TODO
-    if (/*auto fn_poly = */lhs()->type()->isa<FnType>()) {
+    if (auto fn_type = lhs()->type()->isa<FnType>()) {
         auto dst = cg.remit(lhs());
         std::vector<const Def*> defs;
         defs.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
@@ -513,7 +512,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
             defs.push_back(cg.remit(arg));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
-        auto ret_type = args().size() == fn_mono()->size() ? nullptr : cg.convert(fn_mono()->return_type());
+        auto ret_type = args().size() == fn_type->size() ? nullptr : cg.convert(fn_type->return_type());
 
         auto ret = cg.call(dst, defs, ret_type, loc());
         if (ret_type)

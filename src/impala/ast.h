@@ -888,23 +888,6 @@ protected:
     friend class TypeSema;
 };
 
-/// Use as mixin for anything which uses type args: [T1, ..., Tn]
-class TypeArgs {
-public:
-    const ASTTypes& ast_type_args() const { return ast_type_args_; }
-    const ASTType* ast_type_arg(size_t i) const { assert(i < ast_type_args_.size()); return ast_type_args_[i]; }
-    size_t num_ast_type_args() const { return ast_type_args().size(); }
-    Types type_args() const { return type_args_; }
-    const Type*& type_arg(size_t i) const { return type_args_[i]; }
-    size_t num_type_args() const { return type_args_.size(); }
-    std::ostream& stream_ast_type_args(std::ostream& p) const;
-    std::ostream& stream_type_args(std::ostream& p) const;
-
-protected:
-    ASTTypes ast_type_args_;
-    mutable std::vector<const Type*> type_args_;
-};
-
 /// Use as mixin for anything which uses args: (expr_1, ..., expr_n)
 class Args {
 public:
@@ -1284,7 +1267,7 @@ private:
     friend class Parser;
 };
 
-class StructExpr : public Expr, public TypeArgs {
+class StructExpr : public Expr {
 public:
     class Elem {
     public:
@@ -1317,7 +1300,7 @@ public:
         }
     }
 
-    const Path* path() const { return path_; }
+    const ASTTypeApp* ast_type_app() const { return ast_type_app_; }
     size_t num_elems() const { return elems_.size(); }
     const std::vector<Elem>& elems() const { return elems_; }
 
@@ -1330,16 +1313,43 @@ private:
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
-    AutoPtr<const Path> path_;
+    AutoPtr<const ASTTypeApp> ast_type_app_;
     std::vector<Elem> elems_;
 
     friend class Parser;
 };
 
-class MapExpr : public Expr, public Args, public TypeArgs {
+class TypeAppExpr : public Expr {
+public:
+    const ASTTypes& ast_type_args() const { return ast_type_args_; }
+    const ASTType* ast_type_arg(size_t i) const { assert(i < ast_type_args_.size()); return ast_type_args_[i]; }
+    size_t num_ast_type_args() const { return ast_type_args().size(); }
+    Types type_args() const { return type_args_; }
+    const Type*& type_arg(size_t i) const { return type_args_[i]; }
+    size_t num_type_args() const { return type_args_.size(); }
+    std::ostream& stream_ast_type_args(std::ostream& p) const;
+    std::ostream& stream_type_args(std::ostream& p) const;
+
+    virtual std::ostream& stream(std::ostream&) const override;
+    virtual void check(NameSema&) const override;
+    virtual void check(BorrowSema&) const override;
+
+private:
+    virtual const Type* check(InferSema&, const Type*) const override;
+    virtual void check(TypeSema&) const override;
+    virtual thorin::Var lemit(CodeGen&) const override;
+    virtual const thorin::Def* remit(CodeGen&) const override;
+
+    AutoPtr<const Expr> lhs_;
+    ASTTypes ast_type_args_;
+    mutable std::vector<const Type*> type_args_;
+
+    friend class Parser;
+};
+
+class MapExpr : public Expr, public Args {
 public:
     const Expr* lhs() const { return lhs_; }
-    const FnType* fn_mono() const { return fn_mono_; }
 
     virtual bool is_lvalue() const override;
     virtual bool has_side_effect() const override;
@@ -1355,7 +1365,6 @@ private:
     virtual const thorin::Def* remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
-    mutable const FnType* fn_mono_;
 
     friend class Parser;
     friend class ForExpr;
