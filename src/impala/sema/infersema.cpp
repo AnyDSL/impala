@@ -332,7 +332,7 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
             if (auto type = sema.type(type_decl))
                 return sema.instantiate(type, ast_type_args());
             else
-                return sema.unknown_type(); // TODO don't create a new thing here
+                return sema.type_error();
         }
     }
 

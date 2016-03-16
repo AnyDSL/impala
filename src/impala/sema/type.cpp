@@ -160,23 +160,14 @@ std::ostream& TupleType::stream(std::ostream& os) const {
  * rebuild
  */
 
-const Type* Type::rebuild(TypeTable& to, Types args) const {
-    assert(size() == args.size());
-    if (args.empty())
-        return this;
-    return vrebuild(to, args);
-}
-
 const Type* PrimType           ::vrebuild(TypeTable& to, Types     ) const { return to.prim_type(primtype_kind()); }
 const Type* FnType             ::vrebuild(TypeTable& to, Types args) const { return to.   fn_type(args); }
-const Type* TupleType          ::vrebuild(TypeTable& to, Types args) const { return to.tuple_type(args); }
 const Type* DefiniteArrayType  ::vrebuild(TypeTable& to, Types args) const { return to.  definite_array_type(args[0], dim()); }
 const Type* SimdType           ::vrebuild(TypeTable& to, Types args) const { return to.            simd_type(args[0], dim()); }
 const Type* IndefiniteArrayType::vrebuild(TypeTable& to, Types args) const { return to.indefinite_array_type(args[0]); }
 const Type* BorrowedPtrType    ::vrebuild(TypeTable& to, Types args) const { return to.borrowed_ptr_type(args[0], addr_space()); }
 const Type* MutPtrType         ::vrebuild(TypeTable& to, Types args) const { return to.     mut_ptr_type(args[0], addr_space()); }
 const Type* OwnedPtrType       ::vrebuild(TypeTable& to, Types args) const { return to.   owned_ptr_type(args[0], addr_space()); }
-const Type* TypeParam          ::vrebuild(TypeTable& to, Types     ) const { return this; }
 const Type* NoRetType          ::vrebuild(TypeTable& to, Types     ) const { return this; }
 const Type* TypeError          ::vrebuild(TypeTable& to, Types     ) const { return this; }
 const Type* UnknownType        ::vrebuild(TypeTable& to, Types     ) const { return this; }
@@ -184,92 +175,38 @@ const Type* UnknownType        ::vrebuild(TypeTable& to, Types     ) const { ret
 //------------------------------------------------------------------------------
 
 /*
- * specialize and instantiate
+ * specialize
  */
 
-#if 0
-
-const Type* Type::instantiate(Types types) const {
-    assert(types.size() == num_type_params());
-    Type2Type map;
-    for (size_t i = 0, e = types.size(); i != e; ++i)
-        map[type_param(i)] = types[i];
-    return instantiate(map);
-}
-
-const Type* Type::instantiate(Type2Type& map) const {
-#ifndef NDEBUG
-    for (auto type_param : type_params())
-        assert(map.contains(type_param));
-#endif
-    return vinstantiate(map);
-}
-
-const Type* Type::specialize(Type2Type& map) const {
-    if (auto result = find(map, this))
-        return result;
-
-    Array<const TypeParam*> ntype_params(num_type_params());
-    for (size_t i = 0, e = num_type_params(); i != e; ++i) {
-        assert(!map.contains(type_param(i)));
-        auto ntype_param = typetable().type_param(type_param(i)->name());
-        map[type_param(i)] = ntype_param;
-        ntype_params[i] = ntype_param;
-    }
-
-    auto open = instantiate(map);
-    return close(open, ntype_params);
-}
-
-Array<const Type*> Type::specialize_args(Type2Type& map) const {
-    Array<const Type*> result(num_args());
-    for (size_t i = 0, e = num_args(); i != e; ++i)
-        result[i] = arg(i)->specialize(map);
-    return result;
-}
-
-const Type* DefiniteArrayType::vinstantiate(Type2Type& map) const {
+const Type* DefiniteArrayType::vspecialize(Type2Type& map) const {
     return map[this] = typetable().definite_array_type(elem_type()->specialize(map), dim());
 }
 
-const Type* SimdType::vinstantiate(Type2Type& map) const {
+const Type* SimdType::vspecialize(Type2Type& map) const {
     return map[this] = typetable().simd_type(elem_type()->specialize(map), dim());
 }
 
-const Type* IndefiniteArrayType::vinstantiate(Type2Type& map) const {
+const Type* IndefiniteArrayType::vspecialize(Type2Type& map) const {
     return map[this] = typetable().indefinite_array_type(elem_type()->specialize(map));
 }
 
-const Type* BorrowedPtrType::vinstantiate(Type2Type& map) const {
+const Type* BorrowedPtrType::vspecialize(Type2Type& map) const {
     return map[this] = typetable().borrowed_ptr_type(referenced_type()->specialize(map), addr_space());
 }
 
-const Type* MutPtrType::vinstantiate(Type2Type& map) const {
+const Type* MutPtrType::vspecialize(Type2Type& map) const {
     return map[this] = typetable().mut_ptr_type(referenced_type()->specialize(map), addr_space());
 }
 
-const Type* OwnedPtrType::vinstantiate(Type2Type& map) const {
+const Type* OwnedPtrType::vspecialize(Type2Type& map) const {
     return map[this] = typetable().owned_ptr_type(referenced_type()->specialize(map), addr_space());
 }
 
-const Type* StructAbsType::instantiate(Types args) const { return typetable().struct_app_type(this, args); }
-
-const Type* StructAppType::vinstantiate(Type2Type& map) const {
-    Array<const Type*> nargs(num_type_args());
-    for (size_t i = 0, e = num_type_args(); i != e; ++i)
-        nargs[i] = type_arg(i)->specialize(map);
-    return map[this] = typetable().struct_app_type(struct_abs_type(), nargs);
-}
-
-const Type* TupleType  ::vinstantiate(Type2Type& map) const { return map[this] = typetable().tuple_type(specialize_args(map)); }
-const Type* FnType     ::vinstantiate(Type2Type& map) const { return map[this] = typetable().fn_type(specialize_args(map)); }
-const Type* PrimType   ::vinstantiate(Type2Type& map) const { return map[this] = this; }
-const Type* TypeParam  ::vinstantiate(Type2Type& map) const { return map[this] = this; }
-const Type* NoRetType  ::vinstantiate(Type2Type& map) const { return map[this] = this; }
-const Type* TypeError  ::vinstantiate(Type2Type& map) const { return map[this] = this; }
-const Type* UnknownType::vinstantiate(Type2Type&    ) const { THORIN_UNREACHABLE; return nullptr; }
-
-#endif
+const Type* FnType     ::vspecialize(Type2Type& map) const { return map[this] = typetable().fn_type(specialize_args(map)); }
+const Type* PrimType   ::vspecialize(Type2Type& map) const { return map[this] = this; }
+const Type* NoRetType  ::vspecialize(Type2Type& map) const { return map[this] = this; }
+const Type* TypeError  ::vspecialize(Type2Type& map) const { return map[this] = this; }
+const Type* UnknownType::vspecialize(Type2Type& map) const { return map[this] = this; }
 
 //------------------------------------------------------------------------------
 
