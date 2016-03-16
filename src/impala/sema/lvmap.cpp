@@ -25,6 +25,8 @@ public:
     LvTree* get_pointer_child(bool create);
     LvTree* get_field_child(Symbol field, bool create);
     LvTree* get_parent(void) const { return parent_; }
+    void remove_subtree(Symbol field);
+    void clear_subtrees(void);
 
 private:
     const LvComponentType type_;
@@ -93,6 +95,14 @@ LvTree* LvTree::get_field_child(Symbol field, bool create) {
         return t;
     }
     return find_tree<Symbol>(children_, field, LvComponentType::FIELD);
+}
+
+void LvTree::remove_subtree(Symbol field) {
+    children_.erase(field);
+}
+
+void LvTree::clear_subtrees(void) {
+    children_.clear();
 }
 
 //-------------------------------------------------------------
@@ -209,7 +219,7 @@ void insert(const Expr& expr, LvMap& map, payload_t pl) {
     LvTreeLookupRes res = expr.lookup_lv_tree(map, true);
     assert(res.is_tree_);
     if (res.value_.tree_.get_payload() != pl)
-        expr.insert_payload(res.value_.tree_, pl);
+        expr.insert_payload(res.value_.tree_, map.get_comparator(), pl);
 }
 
 //-------------------------------------------------------------------
@@ -218,29 +228,106 @@ void insert(const Expr& expr, LvMap& map, payload_t pl) {
  * insert_payload
  */
 
-void PathExpr::insert_payload(LvTree& tree, payload_t pl) const {
+void PathExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl) const {
     // TODO: maybe assert validity of tree here
     assert(tree.get_type() == LvComponentType::VAR);
     assert(tree.get_parent() == nullptr);
     tree.set_payload(pl);
 }
 
-void PrefixExpr::insert_payload(LvTree& tree, payload_t) const {
+void PrefixExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl) const {
+    assert(kind() == PrefixExpr::MUL);
+    assert(tree.get_type() == LvComponentType::DEREF);
+    LvTree* parent = tree.get_parent();
+    assert(parent != nullptr);
+
+    tree.clear_subtrees();
+    
+    switch (comp.compare(pl, parent->get_payload())) {
+        case Relation::LESS:
+            parent->remove_subtree(get_deref_symbol());
+            rhs()->insert_payload(*parent, comp, pl);
+            break;
+        case Relation::GREATER:
+            tree.set_payload(pl);
+            break;
+        case Relation::EQUAL:
+            parent->remove_subtree(get_deref_symbol());
+            break;
+        case Relation::INCOMPARABLE:
+            assert(false);
+    }
 }
 
-void FieldExpr::insert_payload(LvTree& tree, payload_t) const {
-    assert(tree.get_type() == LvComponentType::FIELD);
-    assert(tree.get_parent() != nullptr);
-    LvTree& parent = *tree.get_parent();
+const StructDecl* get_decl(const Type type) {
     // TODO: what is the difference between struct_abs and struct_app?
-    assert(lhs()->type()->kind() == Kind_struct_abs); //|| lhs()->type()->kind() == Kind_struct_app);
-
+    //assert(lhs()->type()->kind() == Kind_struct_abs || lhs()->type()->kind() == Kind_struct_app);
+    assert(type->kind() == Kind_struct_abs);
+    const TypeNode* node = type.node();
+    const StructAbsTypeNode* struct_node = dynamic_cast<const StructAbsTypeNode*>(node);
+    //StructAbsType t = dynamic_cast<StructAbsType>(type);
+    const StructDecl* decl = struct_node->struct_decl();
+    return decl;
 }
 
-void CastExpr::insert_payload(LvTree& tree, payload_t) const {
+void FieldExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl) const {
+    assert(tree.get_type() == LvComponentType::FIELD);
+    LvTree* parent = tree.get_parent();
+    assert(parent != nullptr);
+
+    // All children inherit the payload set for a subtree, so they can be deleted
+    tree.clear_subtrees();
+
+    switch (comp.compare(pl, parent->get_payload())) {
+        case Relation::LESS: {
+            const StructDecl* decl = get_decl(lhs()->type());
+            payload_t parent_pl = parent->get_payload();
+            for (auto i : decl->field_decls()) {
+                Symbol s = i->symbol();
+                LvTree* sibling = parent->get_field_child(s, false);
+                if (sibling == nullptr) {
+                    sibling = parent->get_field_child(s, true);
+                    sibling->set_payload(parent_pl);
+                }
+                parent->remove_subtree(symbol());
+                lhs()->insert_payload(*parent, comp, pl);
+            }
+            break;
+        }
+        case Relation::GREATER: {
+            const StructDecl* decl = get_decl(lhs()->type());
+            bool all_siblings_same_payload = true;
+            for (auto i : decl->field_decls()) {
+                Symbol s = i->symbol();
+                LvTree* sibling = parent->get_field_child(s, false);
+
+                // TODO: shouldn't this also check that the siblings have no children?
+                if (sibling == nullptr || sibling->get_payload() != pl) {
+                    all_siblings_same_payload = false;
+                    break;
+                }
+            }
+            if (all_siblings_same_payload) {
+                parent->clear_subtrees();
+                lhs()->insert_payload(*parent, comp, pl);
+            } else
+                tree.set_payload(pl);
+            break;
+        }
+        case Relation::EQUAL:
+            parent->remove_subtree(symbol());
+            break;
+        case Relation::INCOMPARABLE:
+            assert(false); // must not happen
+    }
 }
 
-void MapExpr::insert_payload(LvTree& tree, payload_t) const {
+void CastExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t) const {
+    assert(false);
+}
+
+void MapExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t) const {
+    assert(false);
 }
 
 //--------------------------------------------------------------------
