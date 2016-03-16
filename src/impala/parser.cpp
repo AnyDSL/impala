@@ -166,7 +166,7 @@ public:
 
     // paths
     const Path* parse_path();
-    const PathElem* parse_path_elem();
+    const Path::Elem* parse_path_elem();
 
     // parameters
     void parse_ast_type_params(AutoVector<const ASTTypeParam*>&);
@@ -185,7 +185,8 @@ public:
     const PtrASTType*   parse_ptr_type();
     const TupleASTType* parse_tuple_type();
     const SimdASTType*  parse_simd_type();
-    const ASTTypeApp*   parse_type_app();
+    const ASTTypeApp*   parse_ast_type_app();
+    const ASTTypeApp*   parse_ast_type_app(const Path*);
 
     enum class BodyMode { None, Optional, Mandatory };
 
@@ -365,17 +366,17 @@ int Parser::parse_addr_space() {
  * paths
  */
 
-const PathElem* Parser::parse_path_elem() {
-    auto path_elem = loc(new PathElem());
-    path_elem->identifier_ = try_id("path");
-    return path_elem;
+const Path::Elem* Parser::parse_path_elem() {
+    auto elem = loc(new Path::Elem());
+    elem->identifier_ = try_id("path");
+    return elem;
 }
 
 const Path* Parser::parse_path() {
     auto path = loc(new Path());
     path->is_global_ = accept(Token::DOUBLE_COLON);
     do {
-        path->path_elems_.push_back(parse_path_elem());
+        path->elems_.push_back(parse_path_elem());
     } while (accept(Token::DOUBLE_COLON));
     return path;
 }
@@ -441,7 +442,7 @@ const Param* Parser::parse_param(int i, bool lambda) {
             // we assume that the identifier refers to a type
             auto type_app = new ASTTypeApp();
             type_app->set_loc(tok.loc());
-            type_app->identifier_ = identifier;
+            type_app->path_ = new Path(identifier);
             type = type_app;
         }
         param->ast_type_ = type;
@@ -609,7 +610,7 @@ TraitDecl* Parser::parse_trait_decl() {
 
     if (accept(Token::COLON)) {
         parse_comma_list(Token::L_BRACE, "trait declaration", [&] {
-            trait_decl->super_traits_.push_back(parse_type_app());
+            trait_decl->super_traits_.push_back(parse_ast_type_app());
         });
     } else
         expect(Token::L_BRACE, "trait declaration");
@@ -681,7 +682,7 @@ const ASTType* Parser::parse_type() {
                                 return parse_prim_type();
         case Token::FN:         return parse_fn_type();
         case Token::L_PAREN:    return parse_tuple_type();
-        case Token::ID:         return parse_type_app();
+        case Token::ID:         return parse_ast_type_app();
         case Token::L_BRACKET:  return parse_array_type();
         case Token::TYPEOF:     return parse_typeof();
         case Token::TILDE:
@@ -723,12 +724,12 @@ const FnASTType* Parser::parse_fn_type() {
     parse_ast_type_params(fn_type->ast_type_params_);
     expect(Token::L_PAREN, "function type");
     parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&] {
-        fn_type->args_.push_back(parse_type());
+        fn_type->ast_type_args_.push_back(parse_type());
     });
 
     bool unused;
     if (auto ret_type = parse_return_type(unused, true))
-        fn_type->args_.push_back(ret_type);
+        fn_type->ast_type_args_.push_back(ret_type);
 
     return fn_type;
 }
@@ -744,12 +745,12 @@ const ASTType* Parser::parse_return_type(bool& is_continuation, bool mandatory) 
         auto ret_type = loc(new FnASTType());
         if (accept(Token::L_PAREN)) {                   // in-place tuple
             parse_comma_list(Token::R_PAREN, "closing parenthesis of return type list", [&] {
-                ret_type->args_.push_back(parse_type());
+                ret_type->ast_type_args_.push_back(parse_type());
             });
         } else {
             auto type = parse_type();
             assert(!type->isa<TupleASTType>());
-            ret_type->args_.push_back(type);
+            ret_type->ast_type_args_.push_back(type);
         }
         return ret_type;
     }
@@ -801,20 +802,25 @@ const TupleASTType* Parser::parse_tuple_type() {
     auto tuple_type = loc(new TupleASTType());
     eat(Token::L_PAREN);
     parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple type", [&] {
-        tuple_type->args_.push_back(parse_type());
+        tuple_type->ast_type_args_.push_back(parse_type());
     });
     return tuple_type;
 }
 
-const ASTTypeApp* Parser::parse_type_app() {
-    auto type_app = loc(new ASTTypeApp());
-    type_app->identifier_ = new Identifier(lex());
+const ASTTypeApp* Parser::parse_ast_type_app() {
+    return parse_ast_type_app(parse_path());
+}
+
+const ASTTypeApp* Parser::parse_ast_type_app(const Path* path) {
+    auto ast_type_app = loc(new ASTTypeApp());
+    ast_type_app->set_begin(path->loc().begin());
+    ast_type_app->path_ = path;
     if (accept(Token::L_BRACKET)) {
         parse_comma_list(Token::R_BRACKET, "type arguments for type application", [&] {
-            type_app->args_.push_back(parse_type());
+            ast_type_app->ast_type_args_.push_back(parse_type());
         });
     }
-    return type_app;
+    return ast_type_app;
 }
 
 const Typeof* Parser::parse_typeof() {
@@ -1013,36 +1019,55 @@ const Expr* Parser::parse_primary_expr() {
             if (accept(Token::L_BRACKET)) {     // struct or map expression
                 parse_comma_list(Token::R_BRACKET, "type arguments", [&] { ast_type_args.push_back(parse_type()); });
 
-                if (accept(Token::L_PAREN)) {   // map expression
+                if (accept(Token::L_PAREN)) {   // type app expression + map expression
+                    auto type_app_expr = new TypeAppExpr();
+                    type_app_expr->lhs_ = new PathExpr(path);
+                    swap(type_app_expr->ast_type_args_, ast_type_args);
+
                     auto map = new MapExpr();
-                    map->lhs_ = new PathExpr(path);
-                    swap(map->ast_type_args_, ast_type_args);
+                    map->lhs_ = type_app_expr;
                     parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
+
+                    type_app_expr->set_loc(path->loc().begin(), prev_loc().end());
                     map->set_loc(path->loc().begin(), prev_loc().end());
+
                     return map;
                 } else if (accept(Token::L_BRACE)) {
+                    auto ast_type_app = new ASTTypeApp();
+                    ast_type_app->path_ = path;
+                    swap(ast_type_app->ast_type_args_, ast_type_args);
+
                     auto struct_expr = new StructExpr();
-                    struct_expr->path_ = path;
-                    swap(struct_expr->ast_type_args_, ast_type_args);
+                    struct_expr->ast_type_app_ = ast_type_app;
                     parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
                         auto symbol = try_id("identifier in struct expression");
                         expect(Token::COLON, "struct expression");
                         struct_expr->elems_.emplace_back(symbol, parse_expr());
                     });
+
+                    ast_type_app->set_loc(path->loc().begin(), prev_loc().end());
                     struct_expr->set_loc(path->loc().begin(), prev_loc().end());
+
                     return struct_expr;
                 }
             }
             if (la(0) == Token::L_BRACE && (la(1) == Token::ID && la(2) == Token::COLON)) {
                 eat(Token::L_BRACE);
+
+                auto ast_type_app = new ASTTypeApp();
+                ast_type_app->path_ = path;
+
                 auto struct_expr = new StructExpr();
-                struct_expr->path_ = path;
+                struct_expr->ast_type_app_ = ast_type_app;
                 parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
                     auto symbol = try_id("identifier in struct expression");
                     expect(Token::COLON, "struct expression");
                     struct_expr->elems_.emplace_back(symbol, parse_expr());
                 });
+
+                ast_type_app->set_loc(path->loc().begin(), prev_loc().end());
                 struct_expr->set_loc(path->loc().begin(), prev_loc().end());
+
                 return struct_expr;
             }
             return new PathExpr(path);

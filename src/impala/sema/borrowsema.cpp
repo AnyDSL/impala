@@ -55,19 +55,19 @@ void SimdASTType::check(BorrowSema& sema) const { elem_ast_type()->check(sema); 
 void Typeof::check(BorrowSema& sema) const { expr()->check(sema); }
 
 void TupleASTType::check(BorrowSema& sema) const {
-    for (auto arg : args())
-        arg->check(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
 }
 
 void ASTTypeApp::check(BorrowSema& sema) const {
-    for (auto arg : args())
-        arg->check(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
 }
 
 void FnASTType::check(BorrowSema& sema) const {
     check_ast_type_params(sema);
-    for (auto arg : args())
-        arg->check(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
 }
 
 //------------------------------------------------------------------------------
@@ -174,11 +174,11 @@ void CharExpr::check(BorrowSema&) const {}
 void StrExpr::check(BorrowSema&) const {}
 void FnExpr::check(BorrowSema& sema) const { fn_check(sema); }
 
-void PathElem::check(BorrowSema&) const {}
+void Path::Elem::check(BorrowSema&) const {}
 
 void Path::check(BorrowSema& sema) const {
-    for (auto path_elem : path_elems())
-        path_elem->check(sema);
+    for (auto elem : elems())
+        elem->check(sema);
 }
 
 void PathExpr::check(BorrowSema& sema) const {
@@ -224,15 +224,13 @@ void SimdExpr::check(BorrowSema& sema) const {
 }
 
 void StructExpr::check(BorrowSema& sema) const {
-    path()->check(sema);
+    ast_type_app()->check(sema);
     for (const auto& elem : elems())
         elem.expr()->check(sema);
 }
 
 void MapExpr::check(BorrowSema& sema) const {
     lhs()->check(sema);
-    for (auto ast_type_arg : ast_type_args())
-        ast_type_arg->check(sema);
     for (auto arg : args())
         arg->check(sema);
 }

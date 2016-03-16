@@ -137,14 +137,14 @@ void SimdASTType::check(TypeSema& sema) const {
 }
 
 void TupleASTType::check(TypeSema& sema) const {
-    for (auto arg : args())
-        sema.check(arg);
+    for (auto ast_type_arg : ast_type_args())
+        sema.check(ast_type_arg);
 }
 
 void FnASTType::check(TypeSema& sema) const {
     check_ast_type_params(sema);
-    for (auto arg : args())
-        sema.check(arg);
+    for (auto ast_type_arg : ast_type_args())
+        sema.check(ast_type_arg);
 }
 
 void ASTTypeApp::check(TypeSema&) const {
@@ -622,12 +622,7 @@ void MapExpr::check(TypeSema& sema) const {
         error(this, "incorrect type for map expression");
 }
 
-const Type* TypeSema::check_call(const MapExpr* map_expr, const FnType* fn_poly, Types type_args, ArrayRef<const Expr*> args) {
-    for (size_t i = 0, e = type_args.size(); i != e; ++i) {
-        if (!type_args[i]->is_known())
-           error(map_expr, "cannot infer type argument % for polymorphic function of type %", i+1, fn_poly);
-    }
-
+const Type* TypeSema::check_call(const MapExpr* map_expr, ArrayRef<const Expr*> args) {
 #if 0
     size_t num_ast_type_args = ast_type_args.size();
     size_t num_args = args.size();

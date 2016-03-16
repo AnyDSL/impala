@@ -40,8 +40,8 @@ std::string PtrASTType::prefix() const {
 }
 
 const FnASTType* FnASTType::ret_fn_type() const {
-    if (num_args() != 0) {
-        if (auto fn_type = args().back()->isa<FnASTType>())
+    if (num_ast_type_args() != 0) {
+        if (auto fn_type = ast_type_args().back()->isa<FnASTType>())
             return fn_type;
     }
     return nullptr;

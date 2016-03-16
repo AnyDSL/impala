@@ -150,36 +150,46 @@ private:
  * paths
  */
 
-class PathElem : public ASTNode {
-public:
-    const Identifier* identifier() const { return identifier_; }
-    Symbol symbol() const { return identifier()->symbol(); }
-    const Decl* decl() const { return decl_; }
-    virtual std::ostream& stream(std::ostream&) const override;
-    void check(NameSema&) const;
-    void check(BorrowSema&) const;
-
-private:
-    AutoPtr<const Identifier> identifier_;
-    mutable const Decl* decl_ = nullptr;
-
-    friend class Parser;
-};
-
-typedef AutoVector<const PathElem*> PathElems;
-
 class Path : public ASTNode {
 public:
+    class Elem : public ASTNode {
+    public:
+        const Identifier* identifier() const { return identifier_; }
+        Symbol symbol() const { return identifier()->symbol(); }
+        const Decl* decl() const { return decl_; }
+        virtual std::ostream& stream(std::ostream&) const override;
+        void check(NameSema&) const;
+        void check(BorrowSema&) const;
+
+    private:
+        AutoPtr<const Identifier> identifier_;
+        mutable const Decl* decl_ = nullptr;
+
+        friend class Parser;
+        friend class Path;
+    };
+
+    typedef AutoVector<const Elem*> Elems;
+
+    Path() {}
+    Path(const Identifier* identifier) { // HACK
+        auto elem = new Elem();
+        elem->identifier_ = identifier;
+        elems_.push_back(elem);
+        elem->set_loc(identifier->loc());
+        set_loc(identifier->loc());
+    }
+
     bool is_global() const { return is_global_; }
-    const PathElems& path_elems() const { return path_elems_; }
+    const Elems& elems() const { return elems_; }
+    const Decl* decl() const { return elems().back()->decl(); }
     virtual std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const;
     void check(BorrowSema&) const;
-    const Decl* decl() const { return path_elems_.back()->decl(); }
 
 private:
     bool is_global_;
-    PathElems path_elems_;
+    Elems elems_;
 
     friend class Parser;
 };
@@ -303,12 +313,12 @@ private:
 
 class CompoundASTType : public ASTType {
 public:
-    size_t num_args() const { return args_.size(); }
-    ArrayRef<const ASTType*> args() const { return args_; }
-    const ASTType* arg(size_t i) const { return args_[i]; }
+    size_t num_ast_type_args() const { return ast_type_args_.size(); }
+    ArrayRef<const ASTType*> ast_type_args() const { return ast_type_args_; }
+    const ASTType* ast_type_arg(size_t i) const { return ast_type_args_[i]; }
 
 protected:
-    ASTTypes args_;
+    ASTTypes ast_type_args_;
 
     friend class Parser;
 };
@@ -326,9 +336,10 @@ private:
 
 class ASTTypeApp : public CompoundASTType {
 public:
-    const Identifier* identifier() const { return identifier_; }
+    const Path* path() const { return path_; }
+    const Identifier* identifier() const { return path()->elems().back()->identifier(); }
     Symbol symbol() const { return identifier()->symbol(); }
-    const Decl* decl() const { return decl_; }
+    const Decl* decl() const { return path()->decl(); }
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
@@ -338,7 +349,7 @@ private:
     virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 
-    AutoPtr<const Identifier> identifier_;
+    AutoPtr<const Path> path_;
     mutable const Decl* decl_ = nullptr;
 
     friend class Parser;

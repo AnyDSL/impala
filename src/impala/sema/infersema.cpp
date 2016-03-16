@@ -144,7 +144,7 @@ public:
         return type;
     }
 
-    const Type* check_call(const FnType*& fn_mono, const FnType* fn_poly, std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type* expected);
+    const Type* check_call(const FnType*, ArrayRef<const Expr*> args, const Type* expected);
 
 private:
     /// Used for union/find - see https://en.wikipedia.org/wiki/Disjoint-set_data_structure#Disjoint-set_forests .
@@ -307,9 +307,9 @@ const Type* DefiniteArrayASTType::check(InferSema& sema) const { return sema.def
 const Type* SimdASTType::check(InferSema& sema) const { return sema.simd_type(sema.check(elem_ast_type()), size()); }
 
 const Type* TupleASTType::check(InferSema& sema) const {
-    Array<const Type*> types(num_args());
-    for (size_t i = 0, e = num_args(); i != e; ++i)
-        types[i] = sema.check(arg(i));
+    Array<const Type*> types(num_ast_type_args());
+    for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
+        types[i] = sema.check(ast_type_arg(i));
 
     return sema.tuple_type(types);
 }
@@ -317,9 +317,9 @@ const Type* TupleASTType::check(InferSema& sema) const {
 const Type* FnASTType::check(InferSema& sema) const {
     auto type_params = check_ast_type_params(sema);
 
-    Array<const Type*> types(num_args());
-    for (size_t i = 0, e = num_args(); i != e; ++i)
-        types[i] = sema.check(arg(i));
+    Array<const Type*> types(num_ast_type_args());
+    for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
+        types[i] = sema.check(ast_type_arg(i));
 
     return sema.fn_type(types);
 }
@@ -330,7 +330,7 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
     if (decl()) {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
             if (auto type = sema.type(type_decl))
-                return sema.instantiate(type, args());
+                return sema.instantiate(type, ast_type_args());
             else
                 return sema.unknown_type(); // TODO don't create a new thing here
         }
@@ -588,7 +588,7 @@ const Type* StructExpr::check(InferSema& sema, const Type* /*expected*/) const {
     return nullptr;
 }
 
-const Type* InferSema::check_call(const FnType*& fn_mono, const FnType* fn_poly, std::vector<const Type*>& type_args, const ASTTypes& ast_type_args, ArrayRef<const Expr*> args, const Type* expected) {
+const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> args, const Type* expected) {
 #if 0
     type_args.resize(fn_poly->num_type_params());
     fill_type_args(type_args, ast_type_args);
@@ -648,8 +648,8 @@ const Type* MapExpr::check(InferSema& sema, const Type* expected) const {
         ltype = sema.check(lhs());
     }
 
-    if (auto fn_poly = ltype->isa<FnType>())
-        return sema.check_call(fn_mono_, fn_poly, type_args_, ast_type_args(), args(), expected);
+    if (auto fn_type = ltype->isa<FnType>())
+        return sema.check_call(fn_type, args(), expected);
     else {
         if (num_args() == 1)
             sema.check(arg(0));
@@ -709,7 +709,7 @@ const Type* ForExpr::check(InferSema& sema, const Type* expected) const {
                     // copy over args and check call
                     Array<const Expr*> args(map->args().size()+1);
                     *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
-                    return sema.check_call(map->fn_mono_, fn_for, map->type_args_, map->ast_type_args(), args, expected);
+                    return sema.check_call(fn_for, args, expected);
                 }
             }
         }

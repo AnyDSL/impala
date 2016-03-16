@@ -25,27 +25,27 @@ std::ostream& IndefiniteArrayASTType::stream(std::ostream& os) const { return st
 std::ostream& SimdASTType::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_ast_type(), size()); }
 
 std::ostream& TupleASTType::stream(std::ostream& os) const {
-    return stream_list(os, args(), [&](const ASTType* type) { os << type; }, "(", ")");
+    return stream_list(os, ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "(", ")");
 }
 
 std::ostream& FnASTType::stream(std::ostream& os) const {
     auto ret = ret_fn_type();
     stream_ast_type_params(os << "fn");
-    stream_list(os, ret != nullptr ? args().skip_back() : args(), [&](const ASTType* arg) { os << arg; }, "(", ")");
+    stream_list(os, ret != nullptr ? ast_type_args().skip_back() : ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "(", ")");
     if (ret != nullptr) {
         os << " -> ";
-        if (ret->num_args() == 1)
-            os << ret->args().front();
+        if (ret->num_ast_type_args() == 1)
+            os << ret->ast_type_args().front();
         else
-            stream_list(os, ret->args(), [&](const ASTType* arg) { os << arg; }, "(", ")");
+            stream_list(os, ret->ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "(", ")");
     }
     return os;
 }
 
 std::ostream& ASTTypeApp::stream(std::ostream& os) const {
     os << symbol();
-    if (num_args() != 0)
-        stream_list(os, args(), [&](const ASTType* arg) { os << arg; }, "[", "]");
+    if (num_ast_type_args() != 0)
+        stream_list(os, ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "[", "]");
     return os;
 }
 
@@ -66,10 +66,10 @@ std::ostream& Typeof::stream(std::ostream& os) const {
  */
 
 std::ostream& Identifier::stream(std::ostream& os) const { return os << symbol(); }
-std::ostream& PathElem::stream(std::ostream& os) const { return os << symbol(); }
+std::ostream& Path::Elem::stream(std::ostream& os) const { return os << symbol(); }
 std::ostream& Path::stream(std::ostream& os) const {
     os << (is_global() ? "::" : "");
-    return stream_list(os, path_elems(), [&](const PathElem* path_elem) { os << path_elem; }, "", "", "::");
+    return stream_list(os, elems(), [&](const Path::Elem* elem) { os << elem; }, "", "", "::");
 }
 
 /*
@@ -160,10 +160,10 @@ std::ostream& FnDecl::stream(std::ostream& os) const {
 
     if (ret) {
         os << " -> ";
-        if (ret->num_args() == 1)
-            os << ret->arg(0);
+        if (ret->num_ast_type_args() == 1)
+            os << ret->ast_type_arg(0);
         else
-            stream_list(os, ret->args(), [&](const ASTType* type) { os << type; }, "(", ")", ", ");
+            stream_list(os, ret->ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "(", ")", ", ");
     }
 
     if (body()) {
@@ -368,6 +368,7 @@ std::ostream& CastExpr::stream(std::ostream& os) const {
     return close(os, open_state);
 }
 
+#if 0
 std::ostream& TypeArgs::stream_ast_type_args(std::ostream& os) const {
     if (num_ast_type_args() != 0)
         return stream_list(os, ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "[", "]");
@@ -379,13 +380,10 @@ std::ostream& TypeArgs::stream_type_args(std::ostream& os) const {
         return stream_list(os, type_args(), [&](const Type* type) { os << type; }, "[", "]", ", ", false);
     return os;
 }
+#endif
 
 std::ostream& StructExpr::stream(std::ostream& os) const {
-    path()->stream(os);
-    if (num_type_args() == 0)
-        stream_ast_type_args(os);
-    else
-        stream_type_args(os);
+    ast_type_app()->stream(os);
     return stream_list(os, elems(), [&](const Elem& elem) { os << elem.symbol() << ": " << elem.expr(); }, "{", "}");
 }
 
@@ -397,10 +395,6 @@ std::ostream& MapExpr::stream(std::ostream& os) const {
 
     prec = l;
     os << lhs();
-    if (num_type_args() == 0)
-        stream_ast_type_args(os);
-    else
-        stream_type_args(os);
     stream_list(os, args(), [&](const Expr* expr) { os << expr; }, "(", ")");
     prec = old;
     if (paren) os << ")";
@@ -424,10 +418,10 @@ std::ostream& FnExpr::stream(std::ostream& os) const {
                 stream_list(os, rettype->args(), [&](const Type* type) { os << type; }, "(", ")", ", ");
         } else if (ret->ast_type()) {
             auto rettype = ret->ast_type()->as<FnASTType>();
-            if (rettype->num_args() == 1)
-                os << rettype->arg(0);
+            if (rettype->num_ast_type_args() == 1)
+                os << rettype->ast_type_arg(0);
             else
-                stream_list(os, rettype->args(), [&](const ASTType* type) { os << type; }, "(", ")", ", ");
+                stream_list(os, rettype->ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "(", ")", ", ");
         }
         os << " ";
     }

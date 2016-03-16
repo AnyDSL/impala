@@ -146,21 +146,21 @@ void SimdASTType::check(NameSema& sema) const { elem_ast_type()->check(sema); }
 void Typeof::check(NameSema& sema) const { expr()->check(sema); }
 
 void TupleASTType::check(NameSema& sema) const {
-    for (auto arg : args())
-        arg->check(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
 }
 
 void ASTTypeApp::check(NameSema& sema) const {
     decl_ = sema.lookup(this, symbol());
-    for (auto arg : args())
-        arg->check(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
 }
 
 void FnASTType::check(NameSema& sema) const {
     sema.push_scope();
     check_ast_type_params(sema);
-    for (auto arg : args())
-        arg->check(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
     sema.pop_scope();
 }
 
@@ -293,13 +293,13 @@ void CharExpr::check(NameSema&) const {}
 void StrExpr::check(NameSema&) const {}
 void FnExpr::check(NameSema& sema) const { fn_check(sema); }
 
-void PathElem::check(NameSema& sema) const {
+void Path::Elem::check(NameSema& sema) const {
     decl_ = sema.lookup(this, symbol());
 }
 
 void Path::check(NameSema& sema) const {
-    for (auto path_elem : path_elems())
-        path_elem->check(sema);
+    for (auto elem : elems())
+        elem->check(sema);
 }
 
 void PathExpr::check(NameSema& sema) const {
@@ -350,15 +350,13 @@ void SimdExpr::check(NameSema& sema) const {
 }
 
 void StructExpr::check(NameSema& sema) const {
-    path()->check(sema);
+    ast_type_app()->check(sema);
     for (const auto& elem : elems())
         elem.expr()->check(sema);
 }
 
 void MapExpr::check(NameSema& sema) const {
     lhs()->check(sema);
-    for (auto ast_type_arg : ast_type_args())
-        ast_type_arg->check(sema);
     for (auto arg : args())
         arg->check(sema);
 }
