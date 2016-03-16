@@ -592,6 +592,28 @@ const Type* StructExpr::check(InferSema& sema, const Type* /*expected*/) const {
 }
 
 const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> args, const Type* expected) {
+    bool is_returning = args.size()+1 == fn_type->size();
+
+    if (is_returning) {
+        Array<const Type*> types(args.size()+1);
+        for (size_t i = 0, e = args.size(); i != e; ++i)
+            types[i] = type(args[i]);
+        types.back() = this->fn_type({expected}); // TODO nullptr check
+    } else {
+        Array<const Type*> types(args.size());
+        for (size_t i = 0, e = args.size(); i != e; ++i)
+            types[i] = type(args[i]);
+    }
+
+    auto max_arg_index = std::min(args.size(), fn_type->size());
+
+    for (size_t i = 0; i != max_arg_index; ++i)
+        constrain(args[i], fn_type->arg(i));
+
+    for (size_t i = 0; i != args.size(); ++i)
+        check(args[i], safe_get_arg(fn_type, i));
+
+    return fn_type->return_type();
 #if 0
     type_args.resize(fn_poly->num_type_params());
     fill_type_args(type_args, ast_type_args);
@@ -626,7 +648,6 @@ const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> a
 
     return fn_mono->return_type();
 #endif
-    return nullptr;
 }
 
 const Type* FieldExpr::check(InferSema& sema, const Type* /*TODO expected*/) const {
