@@ -24,7 +24,7 @@ struct LvTreeLookupRes {
     bool is_tree_;
     union LvTreeLookupResValue {
         LvTreeLookupResValue(LvTree& tree): tree_(tree) {};
-        LvTreeLookupResValue(payload_t pl): implicit_payload_(pl) {}
+        LvTreeLookupResValue(payload_t pl): implicit_payload_(pl) {};
 
         LvTree& tree_;
         payload_t implicit_payload_;

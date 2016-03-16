@@ -48,7 +48,7 @@ inline const Symbol& get_deref_symbol(void) {
 }
 
 template <class Key>
-LvTree* find_tree(const thorin::HashMap<Key, std::shared_ptr<LvTree>> map, Key key,
+LvTree* find_tree(const thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key,
     LvComponentType expected_type) {
     // this code is copied from the find() function in thorin/util/hash.h because this function
     // is not compatible with std::shared_ptr
@@ -61,8 +61,8 @@ LvTree* find_tree(const thorin::HashMap<Key, std::shared_ptr<LvTree>> map, Key k
 }
 
 template <class Key>
-LvTree* create_tree(thorin::HashMap<Key, std::shared_ptr<LvTree>> map, Key key,
-    LvTree* parent, LvComponentType type) {
+LvTree* create_tree(thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key,
+    LvComponentType type, LvTree* parent) {
     assert(!map.contains(key));
     auto new_tree = std::shared_ptr<LvTree>(new LvTree(type, parent));
     map[key] = new_tree;
@@ -77,7 +77,7 @@ LvTree::LvTree(LvComponentType type, LvTree* parent)
 LvTree* LvTree::get_pointer_child(bool create) {
     if (children_.size() == 0) {
         if (create)
-            return create_tree<Symbol>(children_, get_deref_symbol(), this, LvComponentType::DEREF);
+            return create_tree<Symbol>(children_, get_deref_symbol(), LvComponentType::DEREF, this);
         else
             return nullptr;
     }
@@ -88,8 +88,10 @@ LvTree* LvTree::get_pointer_child(bool create) {
 }
 
 LvTree* LvTree::get_field_child(Symbol field, bool create) {
-    if (create && !children_.contains(field))
-        return create_tree<Symbol>(children_, field, this, LvComponentType::FIELD);
+    if (create && !children_.contains(field)) {
+        LvTree* t = create_tree<Symbol>(children_, field, LvComponentType::FIELD, this);
+        return t;
+    }
     return find_tree<Symbol>(children_, field, LvComponentType::FIELD);
 }
 
@@ -172,17 +174,12 @@ LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent, bool 
         : parent_res.value_.tree_.get_field_child(symbol, create);
     if (this_tree == nullptr)
         return LvTreeLookupRes(parent_res.value_.tree_.get_payload());
-    switch (this_tree->get_type()) {
-        case LvComponentType::DEREF:
-        case LvComponentType::FIELD:
-            // TODO: assert type of this_tree
-            assert(map.get_comparator().compare(parent_res.value_.tree_.get_payload(),
-                this_tree->get_payload()) == Relation::LESS);
-            return LvTreeLookupRes(*this_tree);
-        default: // VAR
-            //std::cout << "this tree type: " << (int) parent_res.type_ << "\n";
-            assert(false); // should not happen
-    }
+
+    assert(this_tree->get_type() != LvComponentType::VAR);
+    // TODO: assert type of this_tree
+    assert(map.get_comparator().compare(parent_res.value_.tree_.get_payload(),
+        this_tree->get_payload()) == Relation::LESS);
+    return LvTreeLookupRes(*this_tree);
 }
     
 const LvTreeLookupRes PrefixExpr::lookup_lv_tree(LvMap& map, bool create) const {
