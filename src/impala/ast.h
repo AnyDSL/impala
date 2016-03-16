@@ -501,15 +501,16 @@ class ASTTypeParam : public TypeDecl {
 public:
     size_t num_bounds() const { return bounds().size(); }
     const ASTTypes& bounds() const { return bounds_; }
-    const TypeParam* type_param() const { return type()->as<TypeParam>(); }
+    const TypeAbs* type_abs() const { return type()->as<TypeAbs>(); }
+    const TypeParam* type_param() const { return type_abs()->type_param(); }
 
     void check(NameSema&) const;
-    const TypeParam* check(TypeSema&) const;
+    const TypeAbs* check(TypeSema&) const;
     void check(BorrowSema&) const;
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    const TypeParam* check(InferSema&) const;
+    const TypeAbs* check(InferSema&) const;
 
     ASTTypes bounds_;
 

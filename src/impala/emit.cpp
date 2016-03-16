@@ -109,9 +109,20 @@ void CodeGen::convert_args(const Type* type, std::vector<const thorin::Type*>& n
 
 const thorin::Type* CodeGen::convert_rec(const Type* type) {
     if (auto type_abs = type->isa<TypeAbs>()) {
-        auto thorin_type_param = world().type_param(type_abs->type_param()->name());
-        thorin_type(type_abs->type_param()) = thorin_type_param;
-        return thorin_type(type_abs) = world().type_abs(thorin_type_param, convert(type_abs->body()));
+        auto thorin_type_abs = world().type_abs(type_abs->name(), type_abs->type_param()->name());
+
+        thorin_type(type_abs)               = thorin_type_abs;
+        thorin_type(type_abs->type_param()) = thorin_type_abs->type_param();
+        auto body = convert(type_abs->body());
+
+        // remove: due to closing these things might not exists anymore
+        impala2thorin_.erase(impala2thorin_.find(type_abs));
+        impala2thorin_.erase(impala2thorin_.find(type_abs->type_param()));
+        close(thorin_type_abs, body);
+
+        thorin_type(type_abs) = thorin_type_abs;
+        thorin_type(type_abs->type_param()) = thorin_type_abs->type_param();
+        return thorin_type_abs;
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_kind()) {
 #define IMPALA_TYPE(itype, ttype) \

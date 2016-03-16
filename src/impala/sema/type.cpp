@@ -109,6 +109,11 @@ const Type* stream_type_params(std::ostream& os, const Type* type) {
     return type;
 }
 
+std::ostream& TypeAbs::stream(std::ostream& os) const {
+    // TODO
+    return os << "type_ab";
+}
+
 std::ostream& UnknownType::stream(std::ostream& os) const { return os << '?' << gid(); }
 
 std::ostream& PrimType::stream(std::ostream& os) const {
