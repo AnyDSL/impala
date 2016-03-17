@@ -186,7 +186,7 @@ void check_lv(const Expr* lv, MoveSema& sema, bool assigned_to) {
 }
 
 
-void EmptyExpr::check(MoveSema&, bool assign_to) const {}
+void EmptyExpr::check(MoveSema&, bool assign_to) const { assert(!assign_to); }
 
 void BlockExprBase::check(MoveSema& sema, bool assign_to) const {
     assert(!assign_to);
@@ -195,10 +195,11 @@ void BlockExprBase::check(MoveSema& sema, bool assign_to) const {
     expr()->check(sema, false);
 }
 
-void LiteralExpr::check(MoveSema&, bool) const {}
-void CharExpr::check(MoveSema&, bool) const {};
-void StrExpr::check(MoveSema&, bool) const {}
-void FnExpr::check(MoveSema& sema, bool) const {
+void LiteralExpr::check(MoveSema&, bool assign_to) const { assert(!assign_to); }
+void CharExpr::check(MoveSema&, bool assign_to) const { assert(!assign_to); };
+void StrExpr::check(MoveSema&, bool assign_to) const { assert(!assign_to); }
+void FnExpr::check(MoveSema& sema, bool assign_to) const {
+    assert(!assign_to); 
     fn_check(sema);
 }
 
@@ -366,9 +367,12 @@ void ForExpr::check(MoveSema& sema, bool assign_to) const {
 void ExprStmt::check(MoveSema& sema) const { expr()->check(sema, false); }
 void ItemStmt::check(MoveSema& sema) const { item()->check(sema); }
 void LetStmt::check(MoveSema& sema) const {
-    if (init())
-        init()->check(sema, true);
-    local()->check(sema);
+    if (init()) {
+        init()->check(sema, false);
+        sema.insert(local(), Liveness::LIVE); 
+    } else
+        // TODO: can we get rid of the rule for local declarations alltogether or is it used somewhere else?
+        local()->check(sema);
 }
 
 //------------------------------------------------------------------------------
