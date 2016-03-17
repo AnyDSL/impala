@@ -318,6 +318,7 @@ public:
 
 protected:
     ASTTypes ast_type_args_;
+    mutable std::vector<const Type*> type_args_;
 
     friend class Parser;
 };

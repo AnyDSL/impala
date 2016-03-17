@@ -19,7 +19,21 @@ class InferSema : public TypeTable {
 public:
     // helpers
 
-    const Type* instantiate(const TypeAbs*, ArrayRef<const ASTType*>);
+    const Type* instantiate(const TypeAbs* type_abs, ArrayRef<const ASTType*> ast_type_args, std::vector<const Type*>& type_args) {
+        auto num = num_type_params(type_abs);
+        if (ast_type_args.size() <= num) {
+            for (size_t i = 0, e = ast_type_args.size(); i != e; ++i)
+                constrain(type_args[i], check(ast_type_args[i]));
+
+            while (type_args.size() < num)
+                type_args.push_back(unknown_type());
+
+            return type_abs->reduce(type_args);
+        }
+
+        return type_error();
+    }
+
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
     const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->size() ? type->arg(i) : nullptr; }
 
@@ -27,6 +41,15 @@ public:
         for (auto& type_abs : thorin::reverse_range(type_abses))
             body = impala::close(const_cast<const TypeAbs*&>(type_abs), body);
         return body;
+    }
+
+    size_t num_type_params(const TypeAbs* type_abs) {
+        size_t num = 0;
+        while (type_abs) {
+            type_abs = type_abs->body()->isa<TypeAbs>();
+            ++num;
+        }
+        return num;
     }
 
     // unification related stuff
@@ -242,22 +265,6 @@ void type_inference(Init& init, const ModContents* mod) {
 
 //------------------------------------------------------------------------------
 
-const Type* InferSema::instantiate(const TypeAbs* type_abs, ArrayRef<const ASTType*> ast_type_args) {
-#if 0
-    if (ast_type_args.size() == type->num_type_params()) {
-        Array<const Type*> type_args(args.size());
-        for (size_t i = 0, e = args.size(); i != e; ++i)
-            type_args[i] = check(ast_type_args[i];
-
-        return type->instantiate(type_args);
-    }
-
-#endif
-    return type_error();
-}
-
-//------------------------------------------------------------------------------
-
 /*
  * misc
  */
@@ -342,7 +349,7 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
             if (auto type = sema.type(type_decl)) {
                 if (auto type_abs = type->isa<TypeAbs>())
-                    return sema.instantiate(type_abs, ast_type_args());
+                    return sema.instantiate(type_abs, ast_type_args(), type_args_);
                 else
                     return type;
             } else
@@ -678,8 +685,18 @@ const Type* FieldExpr::check(InferSema& sema, const Type* /*TODO expected*/) con
 
 const Type* TypeAppExpr::check(InferSema& sema, const Type* expected) const {
     if (auto type = sema.check(lhs())) {
-        if (auto type_abs = type->isa<TypeAbs>())
-            return sema.instantiate(type_abs, ast_type_args());
+        if (auto type_abs = type->isa<TypeAbs>()) {
+            auto num = sema.num_type_params(type_abs);
+            if (num_ast_type_args() <= num) {
+                for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
+                    sema.constrain(type_args_[i], sema.check(ast_type_arg(i)));
+
+                while (num_type_args() < num)
+                    type_args_.push_back(sema.unknown_type());
+
+                return sema.instantiate(type_abs, ast_type_args(), type_args_);
+            }
+        }
     }
     return sema.type_error();
 }
