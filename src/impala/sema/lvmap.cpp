@@ -251,8 +251,7 @@ void PathExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload
     tree.set_payload(pl);
 }
 
-void PrefixExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl) const {
-    assert(kind() == PrefixExpr::MUL);
+void handle_ptr_insert(const Expr* parent_expr, LvTree& tree, const LvMapComparator& comp, payload_t pl) {
     assert(tree.get_type() == LvComponentType::DEREF);
     LvTree* parent = tree.get_parent();
     assert(parent != nullptr);
@@ -262,7 +261,7 @@ void PrefixExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, paylo
     switch (comp.compare(pl, parent->get_payload())) {
         case Relation::LESS:
             parent->remove_subtree(get_deref_symbol());
-            rhs()->insert_payload(*parent, comp, pl);
+            parent_expr->insert_payload(*parent, comp, pl);
             break;
         case Relation::GREATER:
             tree.set_payload(pl);
@@ -273,6 +272,11 @@ void PrefixExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, paylo
         case Relation::INCOMPARABLE:
             assert(false);
     }
+}
+
+void PrefixExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl) const {
+    assert(kind() == PrefixExpr::MUL);
+    handle_ptr_insert(rhs(), tree, comp, pl);
 }
 
 const StructDecl* get_decl(const Type type) {
@@ -342,12 +346,13 @@ void FieldExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payloa
     }
 }
 
-void CastExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t) const {
-    assert(false);
+void CastExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl) const {
+    lhs()->insert_payload(tree, comp, pl);
 }
 
-void MapExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t) const {
-    assert(false);
+void MapExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl) const {
+    assert(is_lvalue());
+    handle_ptr_insert(lhs(), tree, comp, pl);
 }
 
 //--------------------------------------------------------------------

@@ -225,7 +225,7 @@ void PrefixExpr::check(MoveSema& sema, bool assign_to) const  {
                 // for an assignment target it suffices that the first ancestor of the first dereference
                 // is live
                 assert(rhs()->is_lvalue());
-                check_lv(this, sema, true);
+                check_lv(rhs(), sema, true);
             } else {
                 if (is_reference_type(rhs()->type()))
                     // since the liveness of a reference depends on the liveness of the owner of
@@ -290,7 +290,6 @@ void FieldExpr::check(MoveSema& sema, bool assign_to) const {
 }
 
 void CastExpr::check(MoveSema& sema, bool assign_to) const {
-    assert(false); //TODO: implement stuff
     lhs()->check(sema, assign_to);
 }
 
@@ -330,12 +329,16 @@ void StructExpr::check(MoveSema& sema, bool assign_to) const {
 }
 
 void MapExpr::check(MoveSema& sema, bool assign_to) const {
-    std::cout << "map expr: " << this << "\n"; // TODO: when called?
-    if (is_lvalue())
-        assert(false);
+    if (is_lvalue()) {
+        // handled like the * case of Prefix expr
+        if (assign_to)
+            check_lv(lhs(), sema, true);
+        else
+            check_lv(this, sema, false);
+    }
     //lhs()->check(sema, assign_to);
     for (auto arg : args())
-        arg->check(sema, assign_to);
+        arg->check(sema, false);
 }
 
 void IfExpr::check(MoveSema& sema, bool assign_to) const {
