@@ -395,7 +395,10 @@ std::ostream& TypeAppExpr::stream(std::ostream& os) const {
 
     prec = l;
     os << lhs();
-    stream_list(os, ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "[", "]");
+    if (num_type_args() == 0)
+        stream_list(os, ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "[", "]");
+    else
+        stream_list(os, type_args(), [&](const Type* type) { os << type; }, "[", "]");
 
     prec = old;
     if (paren) os << ")";

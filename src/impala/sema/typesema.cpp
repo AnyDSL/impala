@@ -111,11 +111,11 @@ const char* tok2str(const T* expr) { return Token::tok2str(token_kind(expr)); }
  * misc
  */
 
-const TypeAbs* ASTTypeParam::check(TypeSema& sema) const {
+const TypeParam* ASTTypeParam::check(TypeSema& sema) const {
     for (auto bound : bounds())
         sema.check(bound);
 
-    return type_abs();
+    return type_param();
 }
 
 void ASTTypeParamList::check_ast_type_params(TypeSema& sema) const {

@@ -103,7 +103,8 @@ public:
     const Type* unify(const Type* t, const Type* u) {
         assert(t && t->is_hashed() && THORIN_IMPLIES(u, u->is_hashed()));
 
-        if (auto t_fn = t->isa<FnType>()) { // HACK needed as long as we have this stupid tuple problem
+        // HACK needed as long as we have this stupid tuple problem
+        if (auto t_fn = t->isa<FnType>()) {
             if (auto u_fn = u->isa<FnType>()) {
                 if (t_fn->empty() && u_fn->size() == 1 && u_fn->arg(0)->isa<UnknownType>()) return unify(representative(t), representative(u))->type;
                 if (u_fn->empty() && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) return unify(representative(u), representative(t))->type;
@@ -118,20 +119,37 @@ public:
         if (t->isa<UnknownType>())                          return unify        (representative(u), representative(t))->type;
         if (u->isa<UnknownType>())                          return unify        (representative(t), representative(u))->type;
 
-        if (auto t_type_param = t->isa<TypeParam>()) {
-            if (auto u_type_param = u->isa<TypeParam>())
-                if (t_type_param->equiv_ == u_type_param->equiv_)
-                    return t_type_param;
-        }
-
         if (t->kind() == u->kind() && t->size() == u->size()) {
-            Array<const Type*> nargs(t->size());
-            for (size_t i = 0, e = nargs.size(); i != e; ++i)
-                nargs[i] = unify(t->arg(i), u->arg(i));
+            if (auto t_type_param = t->isa<TypeParam>()) {
+                if (t_type_param->equiv_ == u->as<TypeParam>()->equiv_)
+                    return t_type_param->repl_;
+            } else if (auto t_type_abs = t->isa<TypeAbs>()) {
+                auto u_type_abs = u->as<TypeAbs>();
+                auto n_type_abs = this->type_abs(t_type_abs->name(), t_type_abs->type_param()->name());
 
-            return t->rebuild(nargs);
+                assert(t_type_abs->type_param()->equiv_ == nullptr);
+                assert(t_type_abs->type_param()->repl_  == nullptr);
+                t_type_abs->type_param()->equiv_ = u_type_abs->type_param();
+                t_type_abs->type_param()->repl_  = n_type_abs->type_param();
+
+                auto n_body = unify(t_type_abs->body(), u_type_abs->body());
+
+                assert(t_type_abs->type_param()->equiv_ == u_type_abs->type_param());
+                assert(t_type_abs->type_param()->repl_  == n_type_abs->type_param());
+                t_type_abs->type_param()->equiv_ = nullptr;
+                t_type_abs->type_param()->repl_  = nullptr;
+
+                return impala::close(n_type_abs, n_body);
+            } else {
+                Array<const Type*> nargs(t->size());
+                for (size_t i = 0, e = nargs.size(); i != e; ++i)
+                    nargs[i] = unify(t->arg(i), u->arg(i));
+
+                return t->rebuild(nargs);
+            }
         }
 
+        assert(false && "TODO");
         return type_error();
     }
 
@@ -158,8 +176,8 @@ public:
         return constrain(expr, expr->check(*this, i->second));
     }
 
-    const TypeAbs* check(const ASTTypeParam* ast_type_param) {
-        return (ast_type_param->type_ = ast_type_param->check(*this))->as<TypeAbs>();
+    const TypeParam* check(const ASTTypeParam* ast_type_param) {
+        return (ast_type_param->type_ = ast_type_param->check(*this))->as<TypeParam>();
     }
 
     const Type* check(const ASTType* ast_type) {
@@ -195,6 +213,7 @@ private:
     };
 
     Representative* representative(const Type* type) {
+        assert(type->is_hashed());
         auto i = representatives_.find(type);
         if (i == representatives_.end()) {
             auto p = representatives_.emplace(type, type);
@@ -210,7 +229,11 @@ private:
         return repr->parent;
     }
 
-    const Type* find(const Type* type) { return find(representative(type))->type; }
+    const Type* find(const Type* type) {
+        if (type->is_hashed())
+            return find(representative(type))->type;
+        return type;
+    }
 
     /// @p x will be the new representative. Returns again @p x.
     Representative* unify(Representative* x, Representative* y) {
@@ -269,16 +292,16 @@ void type_inference(Init& init, const ModContents* mod) {
  * misc
  */
 
-const TypeAbs* ASTTypeParam::check(InferSema& sema) const {
+const TypeParam* ASTTypeParam::check(InferSema& sema) const {
     for (auto bound : bounds())
         sema.check(bound);
-    return sema.type_abs("", symbol().str());
+    return sema.type_abs("", symbol().str())->type_param();
 }
 
 Array<const TypeAbs*> ASTTypeParamList::check_ast_type_params(InferSema& sema) const {
     Array<const TypeAbs*> type_abses(num_ast_type_params());
     for (size_t i = 0, e = num_ast_type_params(); i != e; ++i)
-        type_abses[i] = sema.check(ast_type_param(i));
+        type_abses[i] = sema.check(ast_type_param(i))->type_abs();
     return type_abses;
 }
 
@@ -348,12 +371,14 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
     if (decl()) {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
             if (auto type = sema.type(type_decl)) {
-                if (auto type_abs = type->isa<TypeAbs>())
-                    return sema.instantiate(type_abs, ast_type_args(), type_args_);
-                else
-                    return type;
-            } else
-                return nullptr;
+                if (type->is_hashed()) {
+                    if (auto type_abs = type->isa<TypeAbs>())
+                        return sema.instantiate(type_abs, ast_type_args(), type_args_);
+                    else
+                        return type;
+                }
+            }
+            return sema.type(type_);
         }
     }
 
@@ -425,8 +450,14 @@ void FnDecl::check(InferSema& sema) const {
     auto open_fn_type = sema.fn_type(param_types);
     sema.constrain(this, sema.close(type_abses, open_fn_type));
 
-    for (size_t i = 0, e = num_params(); i != e; ++i)
+    for (size_t i = 0, e = num_params(); i != e; ++i) {
+        auto param_type = sema.check(param(i));
+        param_type->dump();
         sema.constrain(param(i), fn_type()->arg(i));
+    }
+
+    std::cout << "FnDecl" << std::endl;
+    type()->dump();
 
     if (body() != nullptr)
         check_body(sema, fn_type());
@@ -617,10 +648,12 @@ const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> a
         for (size_t i = 0, e = args.size(); i != e; ++i)
             types[i] = type(args[i]);
         types.back() = this->fn_type({expected}); // TODO nullptr check
+        fn_type = unify(fn_type, this->fn_type(types))->as<FnType>();
     } else {
         Array<const Type*> types(args.size());
         for (size_t i = 0, e = args.size(); i != e; ++i)
             types[i] = type(args[i]);
+        fn_type = unify(fn_type, this->fn_type(types))->as<FnType>();
     }
 
     auto max_arg_index = std::min(args.size(), fn_type->size());
@@ -694,6 +727,9 @@ const Type* TypeAppExpr::check(InferSema& sema, const Type* expected) const {
                 while (num_type_args() < num)
                     type_args_.push_back(sema.unknown_type());
 
+                for (auto& type_arg : type_args_)
+                    type_arg = sema.type(type_arg);
+
                 return sema.instantiate(type_abs, ast_type_args(), type_args_);
             }
         }
@@ -714,9 +750,11 @@ const Type* MapExpr::check(InferSema& sema, const Type* expected) const {
         ltype = sema.check(lhs());
     }
 
-    if (auto fn_type = ltype->isa<FnType>())
-        return sema.check_call(fn_type, args(), expected);
-    else {
+    if (auto fn_type = ltype->isa<FnType>()) {
+        auto f = sema.check_call(fn_type, args(), expected);
+        //f->dump();
+        return f;
+    } else {
         if (num_args() == 1)
             sema.check(arg(0));
 

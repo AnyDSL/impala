@@ -8,8 +8,9 @@
 #include "impala/ast.h"
 #include "impala/sema/typetable.h"
 
-
 namespace impala {
+
+using thorin::streamf;
 
 #define HENK_STRUCT_UNIFIER_NAME struct_decl
 #define HENK_TABLE_TYPE TypeTable
@@ -110,8 +111,16 @@ const Type* stream_type_params(std::ostream& os, const Type* type) {
 }
 
 std::ostream& TypeAbs::stream(std::ostream& os) const {
-    // TODO
-    return os << "type_ab";
+    streamf(os, "type %", name());
+
+    const Type* type = this;
+    std::vector<const TypeParam*> type_params;
+    while (auto type_abs = type->isa<TypeAbs>()) {
+        type_params.emplace_back(type_abs->type_param());
+        type = type_abs->body();
+    }
+
+    return streamf(os, "(type %[%] = %)", name(), stream_list(type_params, [&](const TypeParam* type_param) { os << type_param; }), type);
 }
 
 std::ostream& UnknownType::stream(std::ostream& os) const { return os << '?' << gid(); }
@@ -128,7 +137,8 @@ std::ostream& TypeError::stream(std::ostream& os) const { return os << "<type er
 std::ostream& NoRetType::stream(std::ostream& os) const { return os << "<no-return>"; }
 
 std::ostream& FnType::stream(std::ostream& os) const {
-    stream_type_params(os << "fn", this);
+    //stream_type_params(os << "fn", this);
+    os << "fn";
     auto ret_type = return_type();
     if (ret_type->isa<NoRetType>())
         return stream_list(os, args(), [&](const Type* type) { os << type; }, "(", ")");
