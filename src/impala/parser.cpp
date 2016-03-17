@@ -40,6 +40,7 @@
     case Token::LIT_u16: \
     case Token::LIT_u32: \
     case Token::LIT_u64: \
+    case Token::LIT_f16: \
     case Token::LIT_f32: \
     case Token::LIT_f64: \
     case Token::LIT_char: \
@@ -91,6 +92,7 @@
     case Token::TYPE_u16: \
     case Token::TYPE_u32: \
     case Token::TYPE_u64: \
+    case Token::TYPE_f16: \
     case Token::TYPE_f32: \
     case Token::TYPE_f64:  \
     case Token::TYPE_bool: \
