@@ -2,6 +2,7 @@
 #define IMPALA_SEMA_LVMAP_H
 
 #include <memory>
+#include <stack>
 
 #include "thorin/util/hash.h"
 
@@ -51,8 +52,8 @@ public:
 
     const LvMapComparator& get_comparator(void) const { return comparator_; };
 
-    //void enter_scope();
-    //void leave_scope();
+    void enter_scope();
+    void leave_scope();
 
     // TODO: rather use copy constructor?
     //LvMap duplicate() const;
@@ -61,6 +62,7 @@ public:
 private:
     thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>> varmap_;
     LvMapComparator comparator_;
+    std::stack<const ValueDecl*> scope_stack_;
 };
 
 inline bool payload2bool(payload_t pl) { assert(pl == 0 || pl == 1); return (bool) pl; }

@@ -125,6 +125,7 @@ Relation LvMapComparator::compare(payload_t p1, payload_t p2) const {
 LvMap::LvMap(LvMapComparator comparator)
     : varmap_(thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>>())
     , comparator_(comparator) // TODO: eliminate copy
+    , scope_stack_(std::stack<const ValueDecl*>())
     {}
 
 LvMap::~LvMap() {
@@ -142,11 +143,22 @@ void LvMap::insert(const ValueDecl* decl, payload_t pl) {
     LvTree* tree = new LvTree(LvComponentType::VAR, nullptr);
     tree->set_payload(pl);
     varmap_[decl] = std::shared_ptr<LvTree>(tree);
+    scope_stack_.push(decl);
 }
 
-//void LvMap::enter_scope() {}
-//
-//void LvMap::leave_scope() {}
+void LvMap::enter_scope() {
+    scope_stack_.push(nullptr);
+}
+
+void LvMap::leave_scope() {
+    assert(!scope_stack_.empty());
+    const ValueDecl* decl;
+    do {
+        decl = scope_stack_.top();
+        scope_stack_.pop();
+        varmap_.erase(decl);
+    } while (decl != nullptr);
+}
 
 //LvMap LvMap::duplicate() const { return LvMap() }
 //
@@ -202,12 +214,14 @@ const LvTreeLookupRes FieldExpr::lookup_lv_tree(LvMap& map, bool create) const {
     return lookup_shared(map, create, *lhs(), false, symbol());
 }
 
-const LvTreeLookupRes CastExpr::lookup_lv_tree(LvMap& map, bool) const {
-    assert(false);
+const LvTreeLookupRes CastExpr::lookup_lv_tree(LvMap& map, bool create) const {
+    return lhs()->lookup_lv_tree(map, create);
 }
 
-const LvTreeLookupRes MapExpr::lookup_lv_tree(LvMap& map, bool) const {
-    assert(false);
+const LvTreeLookupRes MapExpr::lookup_lv_tree(LvMap& map, bool create) const {
+    assert(is_lvalue());
+    // handled like a deref expr
+    return lookup_shared(map, create, *lhs(), true, get_deref_symbol());
 }
 
 //-------------------------------------------------------------------
