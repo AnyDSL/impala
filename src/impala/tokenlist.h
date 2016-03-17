@@ -77,9 +77,6 @@ IMPALA_INFIX(   REM,  "%",    MUL,  UNARY)
 #define IMPALA_KEY(tok, str)
 #endif
 
-// Windows workaround for MSVC18
-#undef IN
-
 IMPALA_KEY(AS,        "as")
 IMPALA_KEY(DO,        "do")
 IMPALA_KEY(ELSE,      "else")
