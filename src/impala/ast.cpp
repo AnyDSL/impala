@@ -142,17 +142,25 @@ void FieldExpr::take_address() const { lhs()->take_address(); }
  * owns_value
  */
 
+inline bool is_reference(const Type* type) {
+    return type()->kind() == Kind_borrowed_ptr || type()->kind() == Kind_mut_ptr;
+}
+
 bool PathExpr::owns_value(void) const {
     return true;
 }
 
 bool PrefixExpr::owns_value(void) const {
     assert(is_lvalue());
-    if (kind() == impala::PrefixExpr::Kind::MUL)
-        return type()->kind() != Kind_borrowed_ptr
-            && type()->kind() != Kind_mut_ptr
-            && rhs()->owns_value();
-    assert(false); // should be unreachable
+    assert(kind() == impala::PrefixExpr::Kind::MUL);
+    // TODO: do they assert the same?
+
+    return !is_reference(type()) && rhs()->owns_value();
+}
+
+bool FieldExpr::owns_value(void) const {
+    assert(is_lvalue());
+    return lhs()->owns_value();
 }
 
 bool CastExpr::owns_value(void) const {
@@ -161,11 +169,6 @@ bool CastExpr::owns_value(void) const {
 }
 
 bool MapExpr::owns_value(void) const {
-    assert(is_lvalue());
-    return lhs()->owns_value();
-}
-
-bool FieldExpr::owns_value(void) const {
     assert(is_lvalue());
     return lhs()->owns_value();
 }
