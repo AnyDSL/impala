@@ -102,7 +102,7 @@ public:
 protected:
     void check_ast_type_params(NameSema&) const;
     void check_ast_type_params(BorrowSema&) const;
-    Array<const TypeParam*> check_ast_type_params(InferSema&) const;
+    Array<const TypeAbs*> check_ast_type_params(InferSema&) const;
     void check_ast_type_params(TypeSema&) const;
 
     AutoVector<const ASTTypeParam*> ast_type_params_;
@@ -782,7 +782,12 @@ private:
 class FnDecl : public ValueItem, public Fn {
 public:
     bool is_extern() const { return is_extern_; }
-    virtual const FnType* fn_type() const override { return type()->as<FnType>(); }
+    virtual const FnType* fn_type() const override {
+        auto t = type();
+        while (auto type_abs = t->isa<TypeAbs>())
+            t = type_abs->body();
+        return t->as<FnType>();
+    }
     virtual Symbol fn_symbol() const override { return export_name_ ? export_name_->symbol() : identifier()->symbol(); }
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
@@ -870,9 +875,6 @@ public:
     virtual ~Expr() { assert(docker_ != nullptr); }
 #endif
 
-    /// return the type before implicit casting (for example ~4 always has the actual_type ~int but its type could be &int due to subtyping)
-    const Type* actual_type() const { return actual_type_ ? actual_type_ : nullptr; }
-    bool needs_cast() const { return actual_type_ != nullptr; }
     const thorin::Def* extra() const { return extra_; }
 
     virtual bool is_lvalue() const { return false; }
@@ -891,8 +893,6 @@ private:
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
 
-    mutable const Type* actual_type_ = nullptr;
-
 protected:
     mutable const thorin::Def* extra_ = nullptr; ///< Needed to propagate extend of indefinite arrays.
     mutable const AutoPtr<const Expr>* docker_ = nullptr;
@@ -901,6 +901,11 @@ protected:
         assert(src->docker_ == nullptr);
         dst = src;
         src->docker_ = &dst;
+    }
+
+    friend void barge(const Expr* nexpr, AutoPtr<const Expr>& child, const AutoPtr<const Expr>& dropped) {
+        child = nexpr;
+        swap(child, const_cast<AutoPtr<const Expr>&>(dropped));
     }
 
     friend class CodeGen;
@@ -1074,7 +1079,7 @@ public:
 #include "impala/tokenlist.h"
     };
 
-    static const PrefixExpr* create_deref(const AutoPtr<const Expr>& dock);
+    static void create_deref(const AutoPtr<const Expr>& dock);
 
     const Expr* rhs() const { return rhs_; }
     Kind kind() const { return kind_; }
@@ -1340,6 +1345,8 @@ private:
 
 class TypeAppExpr : public Expr {
 public:
+    static void create(const AutoPtr<const Expr>& parent);
+
     const Expr* lhs() const { return lhs_; }
     const ASTTypes& ast_type_args() const { return ast_type_args_; }
     const ASTType* ast_type_arg(size_t i) const { assert(i < ast_type_args_.size()); return ast_type_args_[i]; }

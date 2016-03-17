@@ -1,6 +1,7 @@
 #include <sstream>
 
 #include "thorin/util/array.h"
+#include "thorin/util/iterator.h"
 #include "thorin/util/log.h"
 #include "thorin/util/push.h"
 
@@ -21,6 +22,12 @@ public:
     const Type* instantiate(const TypeAbs*, ArrayRef<const ASTType*>);
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
     const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->size() ? type->arg(i) : nullptr; }
+
+    const Type* close(ArrayRef<const TypeAbs*> type_abses, const Type* body) {
+        for (auto& type_abs : thorin::reverse_range(type_abses))
+            body = impala::close(const_cast<const TypeAbs*&>(type_abs), body);
+        return body;
+    }
 
     // unification related stuff
 
@@ -128,8 +135,8 @@ public:
         return constrain(expr, expr->check(*this, i->second));
     }
 
-    const TypeParam* check(const ASTTypeParam* ast_type_param) {
-        return (ast_type_param->type_ = ast_type_param->check(*this))->as<TypeParam>();
+    const TypeAbs* check(const ASTTypeParam* ast_type_param) {
+        return (ast_type_param->type_ = ast_type_param->check(*this))->as<TypeAbs>();
     }
 
     const Type* check(const ASTType* ast_type) {
@@ -261,11 +268,11 @@ const TypeAbs* ASTTypeParam::check(InferSema& sema) const {
     return sema.type_abs("", symbol().str());
 }
 
-Array<const TypeParam*> ASTTypeParamList::check_ast_type_params(InferSema& sema) const {
-    Array<const TypeParam*> type_params(num_ast_type_params());
+Array<const TypeAbs*> ASTTypeParamList::check_ast_type_params(InferSema& sema) const {
+    Array<const TypeAbs*> type_abses(num_ast_type_params());
     for (size_t i = 0, e = num_ast_type_params(); i != e; ++i)
-        type_params[i] = sema.check(ast_type_param(i));
-    return type_params;
+        type_abses[i] = sema.check(ast_type_param(i));
+    return type_abses;
 }
 
 const Type* LocalDecl::check(InferSema& sema) const {
@@ -319,13 +326,13 @@ const Type* TupleASTType::check(InferSema& sema) const {
 }
 
 const Type* FnASTType::check(InferSema& sema) const {
-    auto type_params = check_ast_type_params(sema);
+    auto type_abses = check_ast_type_params(sema);
 
     Array<const Type*> types(num_ast_type_args());
     for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
         types[i] = sema.check(ast_type_arg(i));
 
-    return sema.fn_type(types);
+    return sema.close(type_abses, sema.fn_type(types));
 }
 
 const Type* Typeof::check(InferSema& sema) const { return sema.check(expr()); }
@@ -339,7 +346,7 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
                 else
                     return type;
             } else
-                return sema.type_error();
+                return nullptr;
         }
     }
 
@@ -402,14 +409,14 @@ void StructDecl::check(InferSema& sema) const {
 const Type* FieldDecl::check(InferSema& sema) const { return sema.check(ast_type()); }
 
 void FnDecl::check(InferSema& sema) const {
-    auto type_params = check_ast_type_params(sema);
+    auto type_abses = check_ast_type_params(sema);
 
     Array<const Type*> param_types(num_params());
     for (size_t i = 0, e = num_params(); i != e; ++i)
         param_types[i] = sema.check(param(i));
 
     auto open_fn_type = sema.fn_type(param_types);
-    sema.constrain(this, open_fn_type);
+    sema.constrain(this, sema.close(type_abses, open_fn_type));
 
     for (size_t i = 0, e = num_params(); i != e; ++i)
         sema.constrain(param(i), fn_type()->arg(i));
@@ -679,6 +686,12 @@ const Type* TypeAppExpr::check(InferSema& sema, const Type* expected) const {
 
 const Type* MapExpr::check(InferSema& sema, const Type* expected) const {
     auto ltype = sema.check(lhs());
+
+    if (ltype->isa<TypeAbs>()) {
+        TypeAppExpr::create(lhs_);
+        ltype = sema.check(lhs());
+    }
+
     if (ltype->isa<PtrType>()) {
         PrefixExpr::create_deref(lhs_);
         ltype = sema.check(lhs());

@@ -151,7 +151,7 @@ void TupleASTType::check(NameSema& sema) const {
 }
 
 void ASTTypeApp::check(NameSema& sema) const {
-    decl_ = sema.lookup(this, symbol());
+    path()->check(sema);
     for (auto ast_type_arg : ast_type_args())
         ast_type_arg->check(sema);
 }
