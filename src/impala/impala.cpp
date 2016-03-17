@@ -20,6 +20,8 @@ void destroy() { Symbol::destroy(); }
 void check(Init& init, const ModContents* mod, bool nossa) {
     name_analysis(mod);
     type_analysis(init, mod, nossa);
+    if (num_errors() > 0)
+        return;
     move_analysis(mod);
     borrow_analysis(mod);
     lifetime_analysis(mod);
