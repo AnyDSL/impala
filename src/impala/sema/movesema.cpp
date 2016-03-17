@@ -178,16 +178,17 @@ inline void validate(const ASTNode* loc, Liveness live) {
         error(loc) << "cannot use " << loc << ", it is not live\n";
 }
 
-void check_lv(const Expr* lv, MoveSema& sema) {
+void check_lv(const Expr* lv, MoveSema& sema, bool assigned_to) {
     assert(lv->is_lvalue());
     Liveness live = payload2ls(lookup_payload(*lv, sema));
     validate(lv, live);
-    if (!type_copyable(lv->type())) {
+    if (!assigned_to && !type_copyable(lv->type())) {
         // TODO: except for creating borrows which is not handled here, can there ever be a case
         // where a non-copyable lvalue is used without beeing assigned?
         if (!lv->owns_value())
             error(lv) << "cannot move out of lvalue " << lv << " because it does not own its value\n";
         else
+            // TODO: only do this if lv is used as an rvalue
             insert(*lv, sema, Liveness::DEAD);
     }
 }
@@ -218,7 +219,7 @@ void Path::check(MoveSema& sema) const {
 
 void PathExpr::check(MoveSema& sema, bool assign_to) const {
     if (!assign_to)
-        check_lv(this, sema);
+        check_lv(this, sema, false);
     // if assign_to is true the variable is the target of an assignment and does not need to be live
 }
 
@@ -229,7 +230,7 @@ void PrefixExpr::check(MoveSema& sema, bool assign_to) const  {
                 // for an assignment target it suffices that the first ancestor of the first dereference
                 // is live
                 assert(rhs()->is_lvalue());
-                check_lv(this, sema);
+                check_lv(this, sema, true);
             } else {
                 if (is_reference_type(rhs()->type()))
                     // since the liveness of a reference depends on the liveness of the owner of
@@ -239,7 +240,7 @@ void PrefixExpr::check(MoveSema& sema, bool assign_to) const  {
                 else {
                     assert(rhs()->type()->kind() == Kind_owned_ptr);
                     // values behind owned pointers may be moved
-                    check_lv(this, sema);
+                    check_lv(this, sema, false);
                 }
             }
             break;
@@ -290,7 +291,7 @@ void FieldExpr::check(MoveSema& sema, bool assign_to) const {
     if (assign_to)
         lhs()->check(sema, true);
     else
-        check_lv(this, sema);
+        check_lv(this, sema, false);
 }
 
 void CastExpr::check(MoveSema& sema, bool assign_to) const {

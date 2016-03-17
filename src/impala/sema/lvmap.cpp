@@ -182,13 +182,14 @@ LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent, bool 
 
     LvTree* this_tree = lookup_pointer ? parent_res.value_.tree_.get_pointer_child(create)
         : parent_res.value_.tree_.get_field_child(symbol, create);
+    assert(!create || this_tree != nullptr);
     if (this_tree == nullptr)
         return LvTreeLookupRes(parent_res.value_.tree_.get_payload());
 
     assert(this_tree->get_type() != LvComponentType::VAR);
-    // TODO: assert type of this_tree
-    assert(map.get_comparator().compare(parent_res.value_.tree_.get_payload(),
-        this_tree->get_payload()) == Relation::LESS);
+    Relation comp_res = map.get_comparator().compare(parent_res.value_.tree_.get_payload(),
+        this_tree->get_payload());
+    assert(comp_res == Relation::LESS || (comp_res == Relation::EQUAL && create));
     return LvTreeLookupRes(*this_tree);
 }
     
@@ -216,10 +217,11 @@ const LvTreeLookupRes MapExpr::lookup_lv_tree(LvMap& map, bool) const {
  */
 
 void insert(const Expr& expr, LvMap& map, payload_t pl) {
+    // TODO: this is not super optimal because we might build up the tree only to tear it down
+    // afterwards in the insertion
     LvTreeLookupRes res = expr.lookup_lv_tree(map, true);
     assert(res.is_tree_);
-    if (res.value_.tree_.get_payload() != pl)
-        expr.insert_payload(res.value_.tree_, map.get_comparator(), pl);
+    expr.insert_payload(res.value_.tree_, map.get_comparator(), pl);
 }
 
 //-------------------------------------------------------------------
@@ -262,11 +264,13 @@ void PrefixExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, paylo
 const StructDecl* get_decl(const Type type) {
     // TODO: what is the difference between struct_abs and struct_app?
     //assert(lhs()->type()->kind() == Kind_struct_abs || lhs()->type()->kind() == Kind_struct_app);
-    assert(type->kind() == Kind_struct_abs);
-    const TypeNode* node = type.node();
-    const StructAbsTypeNode* struct_node = dynamic_cast<const StructAbsTypeNode*>(node);
-    //StructAbsType t = dynamic_cast<StructAbsType>(type);
-    const StructDecl* decl = struct_node->struct_decl();
+    assert(type->kind() == Kind_struct_app);
+    const TypeNode* node = *type;
+    const StructAppTypeNode* app_node = dynamic_cast<const StructAppTypeNode*>(node);
+    assert(app_node != nullptr);
+    //const StructAbsTypeNode* struct_node = app_node->struct_abs_type().node();
+    //const StructDecl* decl = struct_node->struct_decl();
+    const StructDecl* decl = app_node->struct_abs_type().node()->struct_decl();
     return decl;
 }
 
@@ -299,6 +303,8 @@ void FieldExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payloa
             bool all_siblings_same_payload = true;
             for (auto i : decl->field_decls()) {
                 Symbol s = i->symbol();
+                if (s == symbol())
+                    continue;
                 LvTree* sibling = parent->get_field_child(s, false);
 
                 // TODO: shouldn't this also check that the siblings have no children?
