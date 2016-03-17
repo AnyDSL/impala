@@ -408,6 +408,21 @@ found:;
     return true;
 }
 
+//-----------------------------------------------------------------------------
+
+/*
+ * is_copyable
+ */
+
+bool StructAbsTypeNode::is_copyable(void) const {
+    for (auto i : struct_decl()->field_decls()) {
+        if (!i->type()->is_copyable())
+            return false;
+    }
+    return true;
+}
+
+
 //------------------------------------------------------------------------------
 
 /*
