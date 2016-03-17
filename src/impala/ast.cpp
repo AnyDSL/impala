@@ -142,8 +142,8 @@ void FieldExpr::take_address() const { lhs()->take_address(); }
  * owns_value
  */
 
-inline bool is_reference(const Type* type) {
-    return type()->kind() == Kind_borrowed_ptr || type()->kind() == Kind_mut_ptr;
+inline bool is_reference(Type type) {
+    return type->kind() == Kind_borrowed_ptr || type->kind() == Kind_mut_ptr;
 }
 
 bool PathExpr::owns_value(void) const {
