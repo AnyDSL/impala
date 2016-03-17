@@ -15,12 +15,6 @@ inline Liveness payload2ls(payload_t pl) {
     return (Liveness) pl;
 }
 
-// TODO: maybe this should be a member function of Type
-bool type_copyable(const Type& type) {
-    // TODO: this check is not good
-    return false;
-}
-
 // TODO: this is the same code as in one place in lvmap.cpp, deduplicate
 bool is_reference_type(const Type& type) {
     return type->kind() == Kind_borrowed_ptr || type->kind() == Kind_mut_ptr;
@@ -182,9 +176,7 @@ void check_lv(const Expr* lv, MoveSema& sema, bool assigned_to) {
     assert(lv->is_lvalue());
     Liveness live = payload2ls(lookup_payload(*lv, sema));
     validate(lv, live);
-    if (!assigned_to && !type_copyable(lv->type())) {
-        // TODO: except for creating borrows which is not handled here, can there ever be a case
-        // where a non-copyable lvalue is used without beeing assigned?
+    if (!assigned_to && !lv->type()->is_copyable()) {
         if (!lv->owns_value())
             error(lv) << "cannot move out of lvalue " << lv << " because it does not own its value\n";
         else
