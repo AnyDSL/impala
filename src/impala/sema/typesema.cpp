@@ -149,7 +149,7 @@ bool TypeSema::is_int(Type t) {
 }
 
 bool TypeSema::is_float(Type t) {
-    return t->is_f32() || t->is_f64();
+    return t->is_f16() || t->is_f32() || t->is_f64();
 }
 
 bool TypeSema::expect_int(const Expr* expr) {

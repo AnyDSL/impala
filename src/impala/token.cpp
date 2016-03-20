@@ -43,6 +43,7 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
     , kind_(kind)
 {
     using namespace std;
+    using thorin::half;
 
     if (kind_ == LIT_str || kind_ == LIT_char)
         return;
@@ -72,13 +73,14 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
     auto nptr = &literal.front();
 
     bool err = 0;
-    int64_t ival; uint64_t uval; float fval; double dval;
+    int64_t ival; uint64_t uval; half hval; float fval; double dval;
 
     switch (kind_) {
         case LIT_i8: case LIT_i16: case LIT_i32: case LIT_i64:
                       ival = strtoll (nptr, 0, base);  err = errno; break;
         case LIT_u8: case LIT_u16: case LIT_u32: case LIT_u64:
                       uval = strtoull(nptr, 0, base);  err = errno; break;
+        case LIT_f16: hval = strtof(symbol_.str(), 0); err = errno; break; // TODO: errno for half not correctly set
         case LIT_f32: fval = strtof(symbol_.str(), 0); err = errno; break;
         case LIT_f64: dval = strtod(symbol_.str(), 0); err = errno; break;
         default: THORIN_UNREACHABLE;
@@ -93,6 +95,7 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
         case LIT_u16: box_ = uint16_t(uval); err |= !inrange<uint16_t>(uval); break;
         case LIT_u32: box_ = uint32_t(uval); err |= !inrange<uint32_t>(uval); break;
         case LIT_u64: box_ = uint64_t(uval); err |= !inrange<uint64_t>(uval); break;
+        case LIT_f16: box_ =     half(hval); err |= !inrange<    half>(hval); break;
         case LIT_f32: box_ =    float(fval); err |= !inrange<   float>(fval); break;
         case LIT_f64: box_ =   double(dval); err |= !inrange<  double>(dval); break;
         default: THORIN_UNREACHABLE;
@@ -212,6 +215,7 @@ void Token::init() {
     // type aliases
     insert_key(TYPE_i32, "int");
     insert_key(TYPE_u32, "uint");
+    insert_key(TYPE_f16, "half");
     insert_key(TYPE_f32, "float");
     insert_key(TYPE_f64, "double");
 
@@ -222,6 +226,8 @@ void Token::init() {
     sym2lit_["i32"] = LIT_i32; sym2lit_["u32"] = LIT_u32;
     sym2lit_["i64"] = LIT_i64; sym2lit_["u64"] = LIT_u64;
 
+    sym2lit_["h"]   = LIT_f16; sym2flit_["h"]   = LIT_f16;
+    sym2lit_["f16"] = LIT_f16; sym2flit_["f16"] = LIT_f16;
     sym2lit_["f"]   = LIT_f32; sym2flit_["f"]   = LIT_f32;
     sym2lit_["f32"] = LIT_f32; sym2flit_["f32"] = LIT_f32;
     sym2lit_["f64"] = LIT_f64; sym2flit_["f64"] = LIT_f64;
