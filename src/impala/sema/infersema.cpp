@@ -40,6 +40,9 @@ public:
     const Type* close(ArrayRef<const TypeAbs*> type_abses, const Type* body) {
         for (auto& type_abs : thorin::reverse_range(type_abses))
             body = impala::close(const_cast<const TypeAbs*&>(type_abs), body);
+
+        //assert(closing_);
+        closing_ = false;
         return body;
     }
 
@@ -176,8 +179,10 @@ public:
         return constrain(expr, expr->check(*this, i->second));
     }
 
-    const TypeParam* check(const ASTTypeParam* ast_type_param) {
-        return (ast_type_param->type_ = ast_type_param->check(*this))->as<TypeParam>();
+    const TypeAbs* check(const ASTTypeParam* ast_type_param) {
+        if (closing_)
+            ast_type_param->type_ = ast_type_param->check(*this);
+        return ast_type_param->type_abs();
     }
 
     const Type* check(const ASTType* ast_type) {
@@ -266,6 +271,8 @@ private:
     TypeMap<Representative> representatives_;
     thorin::HashMap<const Expr*, const Type*> expr2expected_;
     bool todo_ = true;
+public: // HACK
+    bool closing_ = false;
 
     friend void type_inference(Init&, const ModContents*);
 };
@@ -298,11 +305,12 @@ const TypeParam* ASTTypeParam::check(InferSema& sema) const {
     return sema.type_abs("", symbol().str())->type_param();
 }
 
-Array<const TypeAbs*> ASTTypeParamList::check_ast_type_params(InferSema& sema) const {
-    Array<const TypeAbs*> type_abses(num_ast_type_params());
+Array<const TypeAbs*> ASTTypeParamList::open_ast_type_params(InferSema& sema) const {
+    sema.closing_ = true;
+    Array<const TypeAbs*> type_params(num_ast_type_params());
     for (size_t i = 0, e = num_ast_type_params(); i != e; ++i)
-        type_abses[i] = sema.check(ast_type_param(i))->type_abs();
-    return type_abses;
+        type_params[i] = sema.check(ast_type_param(i));
+    return type_params;
 }
 
 const Type* LocalDecl::check(InferSema& sema) const {
@@ -356,7 +364,7 @@ const Type* TupleASTType::check(InferSema& sema) const {
 }
 
 const Type* FnASTType::check(InferSema& sema) const {
-    auto type_abses = check_ast_type_params(sema);
+    auto type_abses = open_ast_type_params(sema);
 
     Array<const Type*> types(num_ast_type_args());
     for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
@@ -370,7 +378,9 @@ const Type* Typeof::check(InferSema& sema) const { return sema.check(expr()); }
 const Type* ASTTypeApp::check(InferSema& sema) const {
     if (decl()) {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
-            if (auto type = sema.type(type_decl)) {
+            if (auto ast_type_param = type_decl->isa<ASTTypeParam>())
+                return ast_type_param->type_param();
+            else if (auto type = sema.type(type_decl)) {
                 if (type->is_hashed()) {
                     if (auto type_abs = type->isa<TypeAbs>())
                         return sema.instantiate(type_abs, ast_type_args(), type_args_);
@@ -378,7 +388,6 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
                         return type;
                 }
             }
-            return sema.type(type_);
         }
     }
 
@@ -407,7 +416,7 @@ void ExternBlock::check(InferSema& sema) const {
 }
 
 void Typedef::check(InferSema& sema) const {
-    check_ast_type_params(sema);
+    open_ast_type_params(sema);
     sema.check(ast_type());
 #if 0
 
@@ -423,7 +432,7 @@ void Typedef::check(InferSema& sema) const {
 void EnumDecl::check(InferSema&) const { /*TODO*/ }
 
 void StructDecl::check(InferSema& sema) const {
-    auto type_params = check_ast_type_params(sema);
+    auto type_abses = open_ast_type_params(sema);
 
     for (auto field : field_decls()) {
         if (auto field_type = sema.check(field)) {
@@ -441,14 +450,18 @@ void StructDecl::check(InferSema& sema) const {
 const Type* FieldDecl::check(InferSema& sema) const { return sema.check(ast_type()); }
 
 void FnDecl::check(InferSema& sema) const {
-    auto type_abses = check_ast_type_params(sema);
+    auto type_abses = open_ast_type_params(sema);
 
     Array<const Type*> param_types(num_params());
     for (size_t i = 0, e = num_params(); i != e; ++i)
         param_types[i] = sema.check(param(i));
 
     auto open_fn_type = sema.fn_type(param_types);
-    sema.constrain(this, sema.close(type_abses, open_fn_type));
+    auto new_fn_type = sema.close(type_abses, open_fn_type);
+
+    sema.closing_ = false;
+
+    sema.constrain(this, new_fn_type);
 
     for (size_t i = 0, e = num_params(); i != e; ++i) {
         auto param_type = sema.check(param(i));

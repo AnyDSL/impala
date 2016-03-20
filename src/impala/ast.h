@@ -102,7 +102,8 @@ public:
 protected:
     void check_ast_type_params(NameSema&) const;
     void check_ast_type_params(BorrowSema&) const;
-    Array<const TypeAbs*> check_ast_type_params(InferSema&) const;
+    Array<const TypeAbs*> open_ast_type_params(InferSema&) const;
+    void close_ast_type_params(InferSema&) const;
     void check_ast_type_params(TypeSema&) const;
 
     AutoVector<const ASTTypeParam*> ast_type_params_;
@@ -501,8 +502,8 @@ class ASTTypeParam : public TypeDecl {
 public:
     size_t num_bounds() const { return bounds().size(); }
     const ASTTypes& bounds() const { return bounds_; }
-    const TypeAbs* type_abs() const { return type_param()->type_abs(); }
     const TypeParam* type_param() const { return type()->as<TypeParam>(); }
+    const TypeAbs* type_abs() const { return type_param()->type_abs(); }
 
     void check(NameSema&) const;
     const TypeParam* check(TypeSema&) const;
@@ -858,7 +859,7 @@ private:
 class Expr : public ASTNode, public Typeable {
 public:
 #ifndef NDEBUG
-    virtual ~Expr() { assert(docker_ != nullptr); }
+    //virtual ~Expr() { assert(docker_ != nullptr); }
 #endif
 
     const thorin::Def* extra() const { return extra_; }
