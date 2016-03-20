@@ -193,8 +193,8 @@ void BlockExprBase::check(MoveSema& sema, bool assign_to) const {
     sema.enter_scope();
     for (auto stmt : stmts())
         stmt->check(sema);
-    sema.leave_scope();
     expr()->check(sema, false);
+    sema.leave_scope();
 }
 
 void LiteralExpr::check(MoveSema&, bool assign_to) const { assert(!assign_to); }
