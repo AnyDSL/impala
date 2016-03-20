@@ -235,7 +235,6 @@ void StaticItem::check(TypeSema& sema) const {
 }
 
 void TraitDecl::check(TypeSema& sema) const {
-    sema.check(self_param());
     check_ast_type_params(sema);
 
     for (auto type_app : super_traits())

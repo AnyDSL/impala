@@ -519,15 +519,6 @@ private:
     friend class TypeSema;
 };
 
-class SelfParam : public ASTTypeParam {
-public:
-    SelfParam(const thorin::Location&) {}
-    void set_loc(const thorin::Location& loc) { loc_ = loc; set_identifier(loc); }
-
-private:
-    void set_identifier(const thorin::Location& loc) { identifier_ = new Identifier("Self", loc); }
-};
-
 class Param : public LocalDecl {
 public:
     Param(size_t handle)
@@ -809,14 +800,9 @@ private:
 
 class TraitDecl : public NamedItem, public Decl, public ASTTypeParamList {
 public:
-    TraitDecl()
-        : self_param_(thorin::Location(loc().begin(), loc().begin()))
-    {}
-
     const AutoVector<const ASTTypeApp*>& super_traits() const { return super_traits_; }
     const AutoVector<const FnDecl*>& methods() const { return methods_; }
     const MethodTable& method_table() const { return method_table_; }
-    const SelfParam* self_param() const { return &self_param_; }
 
     virtual const Identifier* item_identifier() const override { return Decl::identifier(); }
 
@@ -829,7 +815,6 @@ private:
     virtual void check(TypeSema&) const override;
     virtual void emit_item(CodeGen&) const override;
 
-    const SelfParam self_param_;
     AutoVector<const FnDecl*> methods_;
     AutoVector<const ASTTypeApp*> super_traits_;
     mutable MethodTable method_table_;

@@ -246,7 +246,6 @@ void FieldDecl::check(NameSema& sema) const {
 
 void TraitDecl::check(NameSema& sema) const {
     sema.push_scope();
-    sema.insert(self_param());
     check_ast_type_params(sema);
     for (auto t : super_traits())
         t->check(sema);
