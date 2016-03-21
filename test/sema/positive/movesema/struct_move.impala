@@ -1,0 +1,19 @@
+struct Pair {
+    x1: ~int,
+    x2: ~float
+}
+
+fn f() -> ~float {
+    let mut p1 = Pair { x1: ~4, x2: ~2.3f };
+    let a1 = p1.x1;
+    let a2 = p1.x2;
+    p1 = Pair { x1: ~5, x2: ~1.2f };
+    let p2 = p1;
+
+    let mut p3: Pair;
+    p3.x1 = ~1;
+    p3.x2 = ~120.3f;
+    let p4 = p3;
+
+    p4.x2
+}

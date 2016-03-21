@@ -1,0 +1,20 @@
+struct Pair {
+    x1: int,
+    x2: float
+}
+
+fn f() -> Pair {
+    let s1 = Pair { x1: 5, x2: 0.2f };
+
+    // copying struct fields is ok
+    let a1 = s1.x1;
+    let a2 = s1.x2;
+    let s2 = s1;
+
+    // can still use fields after copying the struct
+    let s3 = s1;
+    let a3 = s1.x2;
+    let a4 = s2.x1;
+
+    s1
+}

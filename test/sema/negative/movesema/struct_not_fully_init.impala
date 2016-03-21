@@ -1,0 +1,10 @@
+struct Pair {
+    x1: int,
+    x2: int
+}
+
+fn f() -> Pair {
+    let p: Pair;
+    p.x2 = 4;
+    p
+}

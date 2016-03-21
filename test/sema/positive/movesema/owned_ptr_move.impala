@@ -1,0 +1,6 @@
+fn foo() -> () {
+    let a = ~4;
+    let b = a;
+    let c = *b;
+    let d = b;
+}

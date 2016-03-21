@@ -1,0 +1,10 @@
+struct Pair {
+    x1: ~int,
+    x2: ~float
+}
+
+fn f() -> () {
+    let p1 = Pair { x1: ~8, x2: ~23.1f };
+    let a = p1.x1;
+    let p2 = p1;
+}

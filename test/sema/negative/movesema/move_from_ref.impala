@@ -1,0 +1,5 @@
+fn f() -> () {
+    let a = ~15;
+    let b: &~int = &a;
+    let c = *b;
+}

@@ -1,0 +1,9 @@
+fn f() -> i32 {
+    let a = 3;
+    let b = a;
+    let c = a;
+
+    let d: i32;
+    d = 1;
+    d
+}
