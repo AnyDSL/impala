@@ -12,14 +12,11 @@ namespace impala {
  * LvTree
  */
 
-enum class LvComponentType: char { VAR, FIELD, DEREF };
-
 class LvTree {
 public:
-    LvTree(LvComponentType, LvTree*);
+    LvTree(LvTree*);
     ~LvTree() {}
 
-    //LvComponentType get_type() const { return type_; }
     payload_t get_payload() const { return payload_; }
     void set_payload(payload_t pl) { payload_ = pl; }
     LvTree* get_pointer_child(bool create);
@@ -29,15 +26,10 @@ public:
     void clear_subtrees(void);
 
 private:
-    const LvComponentType type_;
     LvTree* parent_;
     payload_t payload_ = 0; // TODO: check for collisions
     thorin::HashMap<Symbol, std::shared_ptr<LvTree>> children_;
 };
-
-// effectively const, since the field we care about cannot be modified
-//LvTree ERROR_TREE = LvTree(LvComponentType::ERROR, nullptr);
-//LvTree NOT_PRESENT_TREE = LvTree(LvComponentType::NOT_PRESENT, nullptr);
 
 std::unique_ptr<Symbol> DEREF_SYMBOL = nullptr;
 
@@ -50,51 +42,47 @@ inline const Symbol& get_deref_symbol(void) {
 }
 
 template <class Key>
-LvTree* find_tree(const thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key,
-    LvComponentType expected_type) {
+LvTree* find_tree(const thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key) {
     // this code is copied from the find() function in thorin/util/hash.h because this function
     // is not compatible with std::shared_ptr
     auto i = map.find(key);
     if (i == map.end())
         return nullptr;
     std::shared_ptr<LvTree> tree = i->second;
-    //assert(tree->get_type() == expected_type);
     return tree.get();
 }
 
 template <class Key>
-LvTree* create_tree(thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key,
-    LvComponentType type, LvTree* parent) {
+LvTree* create_tree(thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key, LvTree* parent) {
     assert(!map.contains(key));
-    auto new_tree = std::shared_ptr<LvTree>(new LvTree(type, parent));
+    auto new_tree = std::shared_ptr<LvTree>(new LvTree(parent));
     map[key] = new_tree;
     return new_tree.get();
 }
 
-LvTree::LvTree(LvComponentType type, LvTree* parent)
-    : type_(type)
-    , parent_(parent)
+LvTree::LvTree(LvTree* parent)
+    : parent_(parent)
     {}
 
 LvTree* LvTree::get_pointer_child(bool create) {
     if (children_.size() == 0) {
         if (create)
-            return create_tree<Symbol>(children_, get_deref_symbol(), LvComponentType::DEREF, this);
+            return create_tree<Symbol>(children_, get_deref_symbol(), this);
         else
             return nullptr;
     }
     assert(children_.size() == 1);
-    LvTree* tree = find_tree<Symbol>(children_, get_deref_symbol(), LvComponentType::DEREF);
+    LvTree* tree = find_tree<Symbol>(children_, get_deref_symbol());
     assert(tree != nullptr);
     return tree;
 }
 
 LvTree* LvTree::get_field_child(Symbol field, bool create) {
     if (create && !children_.contains(field)) {
-        LvTree* t = create_tree<Symbol>(children_, field, LvComponentType::FIELD, this);
+        LvTree* t = create_tree<Symbol>(children_, field, this);
         return t;
     }
-    return find_tree<Symbol>(children_, field, LvComponentType::FIELD);
+    return find_tree<Symbol>(children_, field);
 }
 
 void LvTree::remove_subtree(Symbol field) {
@@ -133,14 +121,14 @@ LvMap::~LvMap() {
 }
 
 LvTree& LvMap::lookup(const ValueDecl* decl) const {
-    LvTree* tree = find_tree<const ValueDecl*>(varmap_, decl, LvComponentType::VAR);
+    LvTree* tree = find_tree<const ValueDecl*>(varmap_, decl);
     assert(tree != nullptr);
     return *tree;
 }
 
 void LvMap::insert(const ValueDecl* decl, payload_t pl) {
     assert (!varmap_.contains(decl));
-    LvTree* tree = new LvTree(LvComponentType::VAR, nullptr);
+    LvTree* tree = new LvTree(nullptr);
     tree->set_payload(pl);
     varmap_[decl] = std::shared_ptr<LvTree>(tree);
     scope_stack_.push(decl);
@@ -197,7 +185,6 @@ LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent, bool 
     if (this_tree == nullptr)
         return LvTreeLookupRes(parent_res.value_.tree_.get_payload());
 
-    //assert(this_tree->get_type() != LvComponentType::VAR);
     Relation comp_res = map.get_comparator().compare(parent_res.value_.tree_.get_payload(),
         this_tree->get_payload());
     assert(comp_res == Relation::LESS || (comp_res == Relation::EQUAL && create));
@@ -259,13 +246,11 @@ void insert(const Expr& expr, LvMap& map, payload_t pl) {
 
 void PathExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl) const {
     // TODO: maybe assert validity of tree here
-    //assert(tree.get_type() == LvComponentType::VAR);
     assert(tree.get_parent() == nullptr);
     tree.set_payload(pl);
 }
 
 void handle_ptr_insert(const Expr* parent_expr, LvTree& tree, const LvMapComparator& comp, payload_t pl) {
-    //assert(tree.get_type() == LvComponentType::DEREF);
     LvTree* parent = tree.get_parent();
     assert(parent != nullptr);
 
@@ -293,8 +278,6 @@ void PrefixExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, paylo
 }
 
 const StructDecl* get_decl(const Type type) {
-    // TODO: what is the difference between struct_abs and struct_app?
-    //assert(lhs()->type()->kind() == Kind_struct_abs || lhs()->type()->kind() == Kind_struct_app);
     assert(type->kind() == Kind_struct_app);
     const TypeNode* node = *type;
     const StructAppTypeNode* app_node = dynamic_cast<const StructAppTypeNode*>(node);
@@ -306,7 +289,6 @@ const StructDecl* get_decl(const Type type) {
 }
 
 void FieldExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl) const {
-    //assert(tree.get_type() == LvComponentType::FIELD);
     LvTree* parent = tree.get_parent();
     assert(parent != nullptr);
 
