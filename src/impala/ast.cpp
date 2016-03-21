@@ -152,10 +152,10 @@ bool PathExpr::owns_value(void) const {
 
 bool PrefixExpr::owns_value(void) const {
     assert(is_lvalue());
-    assert(kind() == impala::PrefixExpr::Kind::MUL);
+    assert(kind() == PrefixExpr::Kind::MUL);
     // TODO: do they assert the same?
 
-    return !is_reference(type()) && rhs()->owns_value();
+    return !is_reference(rhs()->type()) && rhs()->owns_value();
 }
 
 bool FieldExpr::owns_value(void) const {

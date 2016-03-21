@@ -19,7 +19,7 @@ public:
     LvTree(LvComponentType, LvTree*);
     ~LvTree() {}
 
-    LvComponentType get_type() const { return type_; }
+    //LvComponentType get_type() const { return type_; }
     payload_t get_payload() const { return payload_; }
     void set_payload(payload_t pl) { payload_ = pl; }
     LvTree* get_pointer_child(bool create);
@@ -58,7 +58,7 @@ LvTree* find_tree(const thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key 
     if (i == map.end())
         return nullptr;
     std::shared_ptr<LvTree> tree = i->second;
-    assert(tree->get_type() == expected_type);
+    //assert(tree->get_type() == expected_type);
     return tree.get();
 }
 
@@ -167,7 +167,6 @@ void LvMap::leave_scope() {
 //-------------------------------------------------------
 
 payload_t lookup_payload(const Expr& expr, LvMap& map) {
-    assert(expr.is_lvalue());
     auto res = expr.lookup_lv_tree(map, false);
     return res.is_tree_ ? res.value_.tree_.get_payload() : res.value_.implicit_payload_;
 }
@@ -198,7 +197,7 @@ LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent, bool 
     if (this_tree == nullptr)
         return LvTreeLookupRes(parent_res.value_.tree_.get_payload());
 
-    assert(this_tree->get_type() != LvComponentType::VAR);
+    //assert(this_tree->get_type() != LvComponentType::VAR);
     Relation comp_res = map.get_comparator().compare(parent_res.value_.tree_.get_payload(),
         this_tree->get_payload());
     assert(comp_res == Relation::LESS || (comp_res == Relation::EQUAL && create));
@@ -206,8 +205,22 @@ LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent, bool 
 }
     
 const LvTreeLookupRes PrefixExpr::lookup_lv_tree(LvMap& map, bool create) const {
-    assert(kind() == PrefixExpr::MUL);
-    return lookup_shared(map, create, *rhs(), true, get_deref_symbol());
+    switch (kind()) {
+        case PrefixExpr::MUL:
+            return lookup_shared(map, create, *rhs(), true, get_deref_symbol());
+        case PrefixExpr::AND: {
+            assert(!create);
+            // TODO: support create and build a separate tree with a new root whose 
+            // only deref child is the lookup res of the parent expr (rhs)
+            LvTreeLookupRes parent_res = rhs()->lookup_lv_tree(map, create);
+            if (!parent_res.is_tree_)
+                return parent_res;
+            else
+                return LvTreeLookupRes(parent_res.value_.tree_.get_payload());
+        }
+        default:
+            assert(false);
+    }
 }
 
 const LvTreeLookupRes FieldExpr::lookup_lv_tree(LvMap& map, bool create) const {
@@ -246,13 +259,13 @@ void insert(const Expr& expr, LvMap& map, payload_t pl) {
 
 void PathExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl) const {
     // TODO: maybe assert validity of tree here
-    assert(tree.get_type() == LvComponentType::VAR);
+    //assert(tree.get_type() == LvComponentType::VAR);
     assert(tree.get_parent() == nullptr);
     tree.set_payload(pl);
 }
 
 void handle_ptr_insert(const Expr* parent_expr, LvTree& tree, const LvMapComparator& comp, payload_t pl) {
-    assert(tree.get_type() == LvComponentType::DEREF);
+    //assert(tree.get_type() == LvComponentType::DEREF);
     LvTree* parent = tree.get_parent();
     assert(parent != nullptr);
 
@@ -293,7 +306,7 @@ const StructDecl* get_decl(const Type type) {
 }
 
 void FieldExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl) const {
-    assert(tree.get_type() == LvComponentType::FIELD);
+    //assert(tree.get_type() == LvComponentType::FIELD);
     LvTree* parent = tree.get_parent();
     assert(parent != nullptr);
 

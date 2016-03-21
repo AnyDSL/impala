@@ -169,20 +169,30 @@ void ImplItem::check(MoveSema& sema) const {
 
 inline void validate(const ASTNode* loc, Liveness live) {
     if (live == Liveness::DEAD)
-        error(loc) << "cannot use " << loc << ", it is not live\n";
+        error(loc) << "cannot use '" << loc << "', it is not live\n";
 }
 
-void check_lv(const Expr* lv, MoveSema& sema, bool assigned_to) {
-    assert(lv->is_lvalue());
+inline bool check_owns_value(const Expr* expr) {
+    if (expr->owns_value())
+        return true;
+    error(expr) << "cannot move out of expression '" << expr << "' because it does not own its value\n";
+    return false;
+
+}
+
+void check_lv(const Expr* lv, MoveSema& sema, bool assign_to) {
     Liveness live = payload2ls(lookup_payload(*lv, sema));
-    validate(lv, live);
-    if (!assigned_to && !lv->type()->is_copyable()) {
-        if (!lv->owns_value())
-            error(lv) << "cannot move out of lvalue " << lv << " because it does not own its value\n";
-        else
-            // TODO: only do this if lv is used as an rvalue
-            insert(*lv, sema, Liveness::DEAD);
+
+    if (assign_to) {
+        if (live == Liveness::DEAD)
+            error(lv) << "cannot assign to pointer or reference owned by '" << lv << "' because '" << lv << "' is not live\n";
+        return;
     }
+
+    validate(lv, live);
+    //assert(lv->type()->is_copyable());
+    if (!lv->type()->is_copyable() && check_owns_value(lv))
+        insert(*lv, sema, Liveness::DEAD);
 }
 
 
@@ -224,27 +234,26 @@ void PrefixExpr::check(MoveSema& sema, bool assign_to) const  {
             if (assign_to) {
                 // for an assignment target it suffices that the first ancestor of the first dereference
                 // is live
-                assert(rhs()->is_lvalue());
                 check_lv(rhs(), sema, true);
             } else {
-                if (is_reference_type(rhs()->type()))
-                    // since the liveness of a reference depends on the liveness of the owner of
-                    // the reference, it suffices to check that
-                    // This allows us to handle something like *&x
-                    rhs()->check(sema, false);
-                else {
-                    assert(rhs()->type()->kind() == Kind_owned_ptr);
+                //if (is_reference_type(rhs()->type()))
+                //    // since the liveness of a reference depends on the liveness of the owner of
+                //    // the reference, it suffices to check that
+                //    // This allows us to handle something like *&x
+                //    // However owership still needs to be checked
+                //    // TODO: this could result in a lot of owns_value calls, can 
+                //    if (check_owns_value(rhs()))
+                //        rhs()->check(sema, false);
+                //else {
+                //    assert(rhs()->type()->kind() == Kind_owned_ptr);
                     // values behind owned pointers may be moved
                     check_lv(this, sema, false);
-                }
+                //}
             }
             break;
         case Token::AND: // &
             assert(rhs()->is_lvalue());
             validate(rhs(), payload2ls(lookup_payload(*rhs(), sema)));
-            break;
-        case Token::TILDE: // ~
-            rhs()->check(sema, false);
             break;
         default:
             rhs()->check(sema, false);
