@@ -25,7 +25,7 @@ void Payload::set_payload(payload_t pl, const thorin::Location& loc) {
 
 class LvTree {
 public:
-    LvTree(LvTree*);
+    LvTree(LvTree* parent): parent_(parent) {}
     ~LvTree() {}
 
     const Payload& get_payload() const { return payload_; }
@@ -71,10 +71,6 @@ LvTree* create_tree(thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key,
     map[key] = new_tree;
     return new_tree.get();
 }
-
-LvTree::LvTree(LvTree* parent)
-    : parent_(parent)
-    {}
 
 LvTreeLookupTree LvTree::get_pointer_child(bool create) {
     if (children_.size() == 0) {
@@ -257,8 +253,7 @@ void insert(const Expr& expr, LvMap& map, payload_t pl, const thorin::Location& 
     // afterwards in the insertion
     LvTreeLookupRes res = expr.lookup_lv_tree(map, true);
     assert(res.is_tree_);
-    expr.insert_payload(res.value_.tree_res_.tree_, res.value_.tree_res_.multi_ref_,
-        map.get_comparator(), pl, loc);
+    expr.insert_payload(res.value_.tree_res_.tree_, res.value_.tree_res_.multi_ref_, map, pl, loc);
 }
 
 //-------------------------------------------------------------------
@@ -267,7 +262,7 @@ void insert(const Expr& expr, LvMap& map, payload_t pl, const thorin::Location& 
  * insert_payload
  */
 
-void PathExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparator& comp, payload_t pl,
+void PathExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload_t pl,
     const thorin::Location& loc) const {
 
     // TODO: maybe assert validity of tree here
@@ -275,17 +270,17 @@ void PathExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparato
     tree->set_payload(pl, loc);
 }
 
-void handle_ptr_insert(const Expr* parent_expr, LvTree* tree, bool multi_ref, const LvMapComparator& comp,
+void handle_ptr_insert(const Expr* parent_expr, LvTree* tree, bool multi_ref, LvMap& map,
     payload_t pl, const thorin::Location& loc) {
     LvTree* parent = tree->get_parent();
     assert(parent != nullptr);
 
     tree->clear_subtrees();
     
-    switch (comp.compare(pl, parent->get_payload().get_value())) {
+    switch (map.get_comparator().compare(pl, parent->get_payload().get_value())) {
         case Relation::LESS:
             parent->remove_subtree(get_deref_symbol());
-            parent_expr->insert_payload(parent, multi_ref, comp, pl, loc);
+            parent_expr->insert_payload(parent, multi_ref, map, pl, loc);
             break;
         case Relation::GREATER:
             tree->set_payload(pl, loc);
@@ -298,10 +293,10 @@ void handle_ptr_insert(const Expr* parent_expr, LvTree* tree, bool multi_ref, co
     }
 }
 
-void PrefixExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparator& comp, payload_t pl,
+void PrefixExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload_t pl,
     const thorin::Location& loc) const {
     assert(kind() == PrefixExpr::MUL);
-    handle_ptr_insert(rhs(), tree, multi_ref, comp, pl, loc);
+    handle_ptr_insert(rhs(), tree, multi_ref, map, pl, loc);
 }
 
 const StructDecl* get_decl(const Type type) {
@@ -315,7 +310,7 @@ const StructDecl* get_decl(const Type type) {
     return decl;
 }
 
-void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparator& comp, payload_t pl,
+void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload_t pl,
     const thorin::Location& loc) const {
     LvTree* parent = tree->get_parent();
     assert(parent != nullptr);
@@ -324,7 +319,7 @@ void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparat
     tree->clear_subtrees();
 
     payload_t parent_pl = parent->get_payload().get_value();
-    switch (comp.compare(pl, parent_pl)) {
+    switch (map.get_comparator().compare(pl, parent_pl)) {
         case Relation::LESS: {
             const StructDecl* decl = get_decl(lhs()->type());
             for (auto i : decl->field_decls()) {
@@ -335,7 +330,7 @@ void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparat
                     sibling.tree_->set_payload(parent_pl, loc);
                 }
                 parent->remove_subtree(symbol());
-                lhs()->insert_payload(parent, multi_ref, comp, pl, loc);
+                lhs()->insert_payload(parent, multi_ref, map, pl, loc);
             }
             break;
         }
@@ -356,7 +351,7 @@ void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparat
             }
             if (all_siblings_same_payload) {
                 parent->clear_subtrees();
-                lhs()->insert_payload(parent, multi_ref, comp, pl, loc);
+                lhs()->insert_payload(parent, multi_ref, map, pl, loc);
             } else
                 tree->set_payload(pl, loc);
             break;
@@ -369,15 +364,15 @@ void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparat
     }
 }
 
-void CastExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparator& comp, payload_t pl,
+void CastExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload_t pl,
     const thorin::Location& loc) const {
-    lhs()->insert_payload(tree, multi_ref, comp, pl, loc);
+    lhs()->insert_payload(tree, multi_ref, map, pl, loc);
 }
 
-void MapExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparator& comp, payload_t pl,
+void MapExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload_t pl,
     const thorin::Location& loc) const {
     assert(is_lvalue());
-    handle_ptr_insert(lhs(), tree, multi_ref, comp, pl, loc);
+    handle_ptr_insert(lhs(), tree, multi_ref, map, pl, loc);
 }
 
 //--------------------------------------------------------------------
