@@ -82,34 +82,8 @@ bool UnknownType::equal(const Type* other) const { return this == other; }
  * stream
  */
 
-const Type* stream_type_params(std::ostream& os, const Type* type) {
-    std::vector<const TypeParam*> type_params;
-    while (auto lambda = type->isa<Lambda>()) {
-        type_params.push_back(lambda->type_param());
-        type = lambda->body();
-    }
-
-    streamf(os, "[%]", stream_list(type_params, [&](const TypeParam* type_param) {
-        if (type_param)
-            os << type_param;
-        else
-            os << "<null>";
-    }));
-
-    return type;
-}
-
 std::ostream& Lambda::stream(std::ostream& os) const {
-    streamf(os, "type %", name());
-
-    const Type* type = this;
-    std::vector<const TypeParam*> type_params;
-    while (auto lambda = type->isa<Lambda>()) {
-        type_params.emplace_back(lambda->type_param());
-        type = lambda->body();
-    }
-
-    return streamf(os, "(type %[%] = %)", name(), stream_list(type_params, [&](const TypeParam* type_param) { os << type_param; }), type);
+    return streamf(os, "[%].%", name(), body());
 }
 
 std::ostream& UnknownType::stream(std::ostream& os) const { return os << '?' << gid(); }
@@ -126,7 +100,6 @@ std::ostream& TypeError::stream(std::ostream& os) const { return os << "<type er
 std::ostream& NoRetType::stream(std::ostream& os) const { return os << "<no-return>"; }
 
 std::ostream& FnType::stream(std::ostream& os) const {
-    //stream_type_params(os << "fn", this);
     os << "fn";
     auto ret_type = return_type();
     if (ret_type->isa<NoRetType>())
@@ -135,7 +108,7 @@ std::ostream& FnType::stream(std::ostream& os) const {
     return streamf(os, "(%) -> %", stream_list(args().skip_back(), [&](const Type* type) { os << type; }), ret_type);
 }
 
-std::ostream& TypeParam::stream(std::ostream& os) const { return os << name(); }
+std::ostream& DeBruijn::stream(std::ostream& os) const { return os << lambda()->name(); }
 
 std::ostream& PtrType::stream(std::ostream& os) const {
     os << prefix();
@@ -155,7 +128,7 @@ std::ostream& StructType::stream(std::ostream& os) const { return os << struct_d
 //}
 
 std::ostream& TupleType::stream(std::ostream& os) const {
-    return stream_list(os, stream_type_params(os, this)->args(), [&](const Type* type) { os << type; }, "(", ")");
+    return stream_list(os, args(), [&](const Type* type) { os << type; }, "(", ")");
 }
 
 //------------------------------------------------------------------------------

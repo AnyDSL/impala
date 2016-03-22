@@ -26,7 +26,7 @@ enum Kind {
     Kind_struct,
     Kind_tuple,
     Kind_lambda,
-    Kind_type_param,
+    Kind_de_bruijn,
     Kind_typedef_abs,
     Kind_unknown,
 };
@@ -40,9 +40,9 @@ class StructDecl;
 template<class T> using ArrayRef = thorin::ArrayRef<T>;
 template<class T> using Array    = thorin::Array<T>;
 
-static const int Node_StructType = impala::Kind_struct;
+static const int Node_DeBruijn   = impala::Kind_de_bruijn;
 static const int Node_Lambda     = impala::Kind_lambda;
-static const int Node_TypeParam  = impala::Kind_type_param;
+static const int Node_StructType = impala::Kind_struct;
 static const int Node_TupleType  = impala::Kind_tuple;
 
 #define HENK_STRUCT_UNIFIER_NAME  struct_decl
@@ -290,8 +290,6 @@ private:
 
     friend class TypeTable;
 };
-
-const Type* stream_type_params(std::ostream& os, const Type* type);
 
 //------------------------------------------------------------------------------
 

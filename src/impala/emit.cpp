@@ -101,20 +101,18 @@ void CodeGen::convert_args(const Type* type, std::vector<const thorin::Type*>& n
 
 const thorin::Type* CodeGen::convert_rec(const Type* type) {
     if (auto lambda = type->isa<Lambda>()) {
-        auto thorin_lambda = world().lambda(lambda->name(), lambda->type_param()->name());
+        auto thorin_lambda = world().lambda(lambda->name());
 
         thorin_type(lambda)               = thorin_lambda;
-        thorin_type(lambda->type_param()) = thorin_lambda->type_param();
         auto body = convert(lambda->body());
 
         // remove: due to closing these things might not exists anymore
         impala2thorin_.erase(impala2thorin_.find(lambda));
-        impala2thorin_.erase(impala2thorin_.find(lambda->type_param()));
         close(thorin_lambda, body);
 
-        thorin_type(lambda) = thorin_lambda;
-        thorin_type(lambda->type_param()) = thorin_lambda->type_param();
-        return thorin_lambda;
+        return thorin_type(lambda) = thorin_lambda;
+    } else if (auto de_bruijn = type->isa<DeBruijn>()) {
+        return world().de_bruijn(convert(de_bruijn->lambda())->as<thorin::Lambda>());
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_kind()) {
 #define IMPALA_TYPE(itype, ttype) \
