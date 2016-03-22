@@ -13,6 +13,7 @@ namespace impala {
 enum Kind {
 #define IMPALA_TYPE(itype, atype) Kind_##itype,
 #include "impala/tokenlist.h"
+    Kind_app,
     Kind_borrowed_ptr,
     Kind_definite_array,
     Kind_error,
@@ -40,6 +41,7 @@ class StructDecl;
 template<class T> using ArrayRef = thorin::ArrayRef<T>;
 template<class T> using Array    = thorin::Array<T>;
 
+static const int Node_App        = impala::Kind_app;
 static const int Node_DeBruijn   = impala::Kind_de_bruijn;
 static const int Node_Lambda     = impala::Kind_lambda;
 static const int Node_StructType = impala::Kind_struct;

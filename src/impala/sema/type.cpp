@@ -108,6 +108,7 @@ std::ostream& FnType::stream(std::ostream& os) const {
     return streamf(os, "(%) -> %", stream_list(args().skip_back(), [&](const Type* type) { os << type; }), ret_type);
 }
 
+std::ostream& App::stream(std::ostream& os) const { return streamf(os, "%[%]", callee(), arg()); }
 std::ostream& DeBruijn::stream(std::ostream& os) const { return os << lambda()->name(); }
 
 std::ostream& PtrType::stream(std::ostream& os) const {
