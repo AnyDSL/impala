@@ -126,19 +126,21 @@ public:
                 auto u_de_brujin = u-> as<DeBruijn>();
                 if (       t_de_bruijn->index() == u_de_brujin->index()
                         && t_de_bruijn->depth() == u_de_brujin->depth()
-                        && t_de_bruijn->lambda()->kind() == u_de_brujin->lambda()->kind())
-                    return de_bruijn(t_de_bruijn->lambda()->repl_);
+                        && t_de_bruijn->lambda()->kind() == u_de_brujin->lambda()->kind()) {
+                    return de_bruijn(old2new_[t_de_bruijn->lambda()]);
+                }
             } else if (auto t_lambda = t->isa<Lambda>()) {
                 auto u_lambda = u->as<Lambda>();
                 auto n_lambda = this->lambda(t_lambda->name());
 
-                assert(t_lambda->repl_  == nullptr);
-                t_lambda->repl_ = n_lambda;
+                assert(!old2new_.contains(t_lambda));
+                old2new_[t_lambda] = n_lambda;
 
                 auto n_body = unify(t_lambda->body(), u_lambda->body());
 
-                assert(t_lambda->repl_  == n_lambda);
-                t_lambda->repl_ = nullptr;
+                auto i = old2new_.find(t_lambda);
+                assert(i != old2new_.end() && i->second == n_lambda);
+                old2new_.erase(i);
 
                 return impala::close(n_lambda, n_body);
             } else {
@@ -270,6 +272,7 @@ private:
 
     TypeMap<Representative> representatives_;
     thorin::HashMap<const Expr*, const Type*> expr2expected_;
+    GIDMap<Lambda, const Lambda*> old2new_;
     bool todo_ = true;
 public: // hack
     bool closing_ = false;
