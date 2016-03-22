@@ -25,7 +25,7 @@ enum Kind {
     Kind_simd,
     Kind_struct,
     Kind_tuple,
-    Kind_type_abs,
+    Kind_lambda,
     Kind_type_param,
     Kind_typedef_abs,
     Kind_unknown,
@@ -41,7 +41,7 @@ template<class T> using ArrayRef = thorin::ArrayRef<T>;
 template<class T> using Array    = thorin::Array<T>;
 
 static const int Node_StructType = impala::Kind_struct;
-static const int Node_TypeAbs    = impala::Kind_type_abs;
+static const int Node_Lambda     = impala::Kind_lambda;
 static const int Node_TypeParam  = impala::Kind_type_param;
 static const int Node_TupleType  = impala::Kind_tuple;
 

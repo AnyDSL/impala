@@ -100,21 +100,21 @@ void CodeGen::convert_args(const Type* type, std::vector<const thorin::Type*>& n
 }
 
 const thorin::Type* CodeGen::convert_rec(const Type* type) {
-    if (auto type_abs = type->isa<TypeAbs>()) {
-        auto thorin_type_abs = world().type_abs(type_abs->name(), type_abs->type_param()->name());
+    if (auto lambda = type->isa<Lambda>()) {
+        auto thorin_lambda = world().lambda(lambda->name(), lambda->type_param()->name());
 
-        thorin_type(type_abs)               = thorin_type_abs;
-        thorin_type(type_abs->type_param()) = thorin_type_abs->type_param();
-        auto body = convert(type_abs->body());
+        thorin_type(lambda)               = thorin_lambda;
+        thorin_type(lambda->type_param()) = thorin_lambda->type_param();
+        auto body = convert(lambda->body());
 
         // remove: due to closing these things might not exists anymore
-        impala2thorin_.erase(impala2thorin_.find(type_abs));
-        impala2thorin_.erase(impala2thorin_.find(type_abs->type_param()));
-        close(thorin_type_abs, body);
+        impala2thorin_.erase(impala2thorin_.find(lambda));
+        impala2thorin_.erase(impala2thorin_.find(lambda->type_param()));
+        close(thorin_lambda, body);
 
-        thorin_type(type_abs) = thorin_type_abs;
-        thorin_type(type_abs->type_param()) = thorin_type_abs->type_param();
-        return thorin_type_abs;
+        thorin_type(lambda) = thorin_lambda;
+        thorin_type(lambda->type_param()) = thorin_lambda->type_param();
+        return thorin_lambda;
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_kind()) {
 #define IMPALA_TYPE(itype, ttype) \
@@ -498,9 +498,9 @@ const Def* StructExpr::remit(CodeGen& cg) const {
     return cg.world().struct_agg(cg.convert(type())->as<thorin::StructType>(), defs, loc());
 }
 
-Var TypeAppExpr::lemit(CodeGen& cg) const { THORIN_UNREACHABLE; }
+Var TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
 
-const Def* TypeAppExpr::remit(CodeGen& cg) const {
+const Def* TypeAppExpr::remit(CodeGen&) const {
     assert(false && "TODO");
     return nullptr;
 }

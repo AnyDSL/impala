@@ -102,7 +102,7 @@ public:
 protected:
     void check_ast_type_params(NameSema&) const;
     void check_ast_type_params(BorrowSema&) const;
-    Array<const TypeAbs*> open_ast_type_params(InferSema&) const;
+    Array<const Lambda*> open_ast_type_params(InferSema&) const;
     void close_ast_type_params(InferSema&) const;
     void check_ast_type_params(TypeSema&) const;
 
@@ -503,7 +503,7 @@ public:
     size_t num_bounds() const { return bounds().size(); }
     const ASTTypes& bounds() const { return bounds_; }
     const TypeParam* type_param() const { return type()->as<TypeParam>(); }
-    const TypeAbs* type_abs() const { return type_param()->type_abs(); }
+    const Lambda* lambda() const { return type_param()->lambda(); }
 
     void check(NameSema&) const;
     const TypeParam* check(TypeSema&) const;
@@ -777,8 +777,8 @@ public:
     bool is_extern() const { return is_extern_; }
     virtual const FnType* fn_type() const override {
         auto t = type();
-        while (auto type_abs = t->isa<TypeAbs>())
-            t = type_abs->body();
+        while (auto lambda = t->isa<Lambda>())
+            t = lambda->body();
         return t->as<FnType>();
     }
     virtual Symbol fn_symbol() const override { return export_name_ ? export_name_->symbol() : identifier()->symbol(); }

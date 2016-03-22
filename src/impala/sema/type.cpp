@@ -84,9 +84,9 @@ bool UnknownType::equal(const Type* other) const { return this == other; }
 
 const Type* stream_type_params(std::ostream& os, const Type* type) {
     std::vector<const TypeParam*> type_params;
-    while (auto type_abs = type->isa<TypeAbs>()) {
-        type_params.push_back(type_abs->type_param());
-        type = type_abs->body();
+    while (auto lambda = type->isa<Lambda>()) {
+        type_params.push_back(lambda->type_param());
+        type = lambda->body();
     }
 
     streamf(os, "[%]", stream_list(type_params, [&](const TypeParam* type_param) {
@@ -99,14 +99,14 @@ const Type* stream_type_params(std::ostream& os, const Type* type) {
     return type;
 }
 
-std::ostream& TypeAbs::stream(std::ostream& os) const {
+std::ostream& Lambda::stream(std::ostream& os) const {
     streamf(os, "type %", name());
 
     const Type* type = this;
     std::vector<const TypeParam*> type_params;
-    while (auto type_abs = type->isa<TypeAbs>()) {
-        type_params.emplace_back(type_abs->type_param());
-        type = type_abs->body();
+    while (auto lambda = type->isa<Lambda>()) {
+        type_params.emplace_back(lambda->type_param());
+        type = lambda->body();
     }
 
     return streamf(os, "(type %[%] = %)", name(), stream_list(type_params, [&](const TypeParam* type_param) { os << type_param; }), type);

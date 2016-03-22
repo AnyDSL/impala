@@ -19,8 +19,8 @@ class InferSema : public TypeTable {
 public:
     // helpers
 
-    const Type* instantiate(const TypeAbs* type_abs, ArrayRef<const ASTType*> ast_type_args, std::vector<const Type*>& type_args) {
-        auto num = num_type_params(type_abs);
+    const Type* instantiate(const Lambda* lambda, ArrayRef<const ASTType*> ast_type_args, std::vector<const Type*>& type_args) {
+        auto num = num_type_params(lambda);
         if (ast_type_args.size() <= num) {
             for (size_t i = 0, e = ast_type_args.size(); i != e; ++i)
                 constrain(type_args[i], check(ast_type_args[i]));
@@ -28,7 +28,7 @@ public:
             while (type_args.size() < num)
                 type_args.push_back(unknown_type());
 
-            return type_abs->reduce(type_args);
+            return lambda->reduce(type_args);
         }
 
         return type_error();
@@ -37,16 +37,16 @@ public:
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
     const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->size() ? type->arg(i) : nullptr; }
 
-    const Type* close(ArrayRef<const TypeAbs*> type_abses, const Type* body) {
-        for (auto& type_abs : thorin::reverse_range(type_abses))
-            body = impala::close(const_cast<const TypeAbs*&>(type_abs), body);
+    const Type* close(ArrayRef<const Lambda*> lambdas, const Type* body) {
+        for (auto& lambda : thorin::reverse_range(lambdas))
+            body = impala::close(const_cast<const Lambda*&>(lambda), body);
         return body;
     }
 
-    size_t num_type_params(const TypeAbs* type_abs) {
+    size_t num_type_params(const Lambda* lambda) {
         size_t num = 0;
-        while (type_abs) {
-            type_abs = type_abs->body()->isa<TypeAbs>();
+        while (lambda) {
+            lambda = lambda->body()->isa<Lambda>();
             ++num;
         }
         return num;
@@ -123,23 +123,23 @@ public:
             if (auto t_type_param = t->isa<TypeParam>()) {
                 if (t_type_param->equiv_ == u->as<TypeParam>()->equiv_)
                     return t_type_param->repl_;
-            } else if (auto t_type_abs = t->isa<TypeAbs>()) {
-                auto u_type_abs = u->as<TypeAbs>();
-                auto n_type_abs = this->type_abs(t_type_abs->name(), t_type_abs->type_param()->name());
+            } else if (auto t_lambda = t->isa<Lambda>()) {
+                auto u_lambda = u->as<Lambda>();
+                auto n_lambda = this->lambda(t_lambda->name(), t_lambda->type_param()->name());
 
-                assert(t_type_abs->type_param()->equiv_ == nullptr);
-                assert(t_type_abs->type_param()->repl_  == nullptr);
-                t_type_abs->type_param()->equiv_ = u_type_abs->type_param();
-                t_type_abs->type_param()->repl_  = n_type_abs->type_param();
+                assert(t_lambda->type_param()->equiv_ == nullptr);
+                assert(t_lambda->type_param()->repl_  == nullptr);
+                t_lambda->type_param()->equiv_ = u_lambda->type_param();
+                t_lambda->type_param()->repl_  = n_lambda->type_param();
 
-                auto n_body = unify(t_type_abs->body(), u_type_abs->body());
+                auto n_body = unify(t_lambda->body(), u_lambda->body());
 
-                assert(t_type_abs->type_param()->equiv_ == u_type_abs->type_param());
-                assert(t_type_abs->type_param()->repl_  == n_type_abs->type_param());
-                t_type_abs->type_param()->equiv_ = nullptr;
-                t_type_abs->type_param()->repl_  = nullptr;
+                assert(t_lambda->type_param()->equiv_ == u_lambda->type_param());
+                assert(t_lambda->type_param()->repl_  == n_lambda->type_param());
+                t_lambda->type_param()->equiv_ = nullptr;
+                t_lambda->type_param()->repl_  = nullptr;
 
-                return impala::close(n_type_abs, n_body);
+                return impala::close(n_lambda, n_body);
             } else {
                 Array<const Type*> nargs(t->size());
                 for (size_t i = 0, e = nargs.size(); i != e; ++i)
@@ -176,9 +176,9 @@ public:
         return constrain(expr, expr->check(*this, i->second));
     }
 
-    const TypeAbs* check(const ASTTypeParam* ast_type_param) {
+    const Lambda* check(const ASTTypeParam* ast_type_param) {
         ast_type_param->type_ = ast_type_param->check(*this);
-        return ast_type_param->type_abs();
+        return ast_type_param->lambda();
     }
 
     const Type* check(const ASTType* ast_type) {
@@ -293,11 +293,11 @@ void type_inference(Init& init, const ModContents* mod) {
 const TypeParam* ASTTypeParam::check(InferSema& sema) const {
     for (auto bound : bounds())
         sema.check(bound);
-    return sema.type_abs("", symbol().str())->type_param();
+    return sema.lambda("", symbol().str())->type_param();
 }
 
-Array<const TypeAbs*> ASTTypeParamList::open_ast_type_params(InferSema& sema) const {
-    Array<const TypeAbs*> type_params(num_ast_type_params());
+Array<const Lambda*> ASTTypeParamList::open_ast_type_params(InferSema& sema) const {
+    Array<const Lambda*> type_params(num_ast_type_params());
     for (size_t i = 0, e = num_ast_type_params(); i != e; ++i)
         type_params[i] = sema.check(ast_type_param(i));
     return type_params;
@@ -354,13 +354,13 @@ const Type* TupleASTType::check(InferSema& sema) const {
 }
 
 const Type* FnASTType::check(InferSema& sema) const {
-    auto type_abses = open_ast_type_params(sema);
+    auto lambdas = open_ast_type_params(sema);
 
     Array<const Type*> types(num_ast_type_args());
     for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
         types[i] = sema.check(ast_type_arg(i));
 
-    return sema.close(type_abses, sema.fn_type(types));
+    return sema.close(lambdas, sema.fn_type(types));
 }
 
 const Type* Typeof::check(InferSema& sema) const { return sema.check(expr()); }
@@ -372,8 +372,8 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
                 return ast_type_param->type_param();
             else if (auto type = sema.type(type_decl)) {
                 if (type->is_hashed()) {
-                    if (auto type_abs = type->isa<TypeAbs>())
-                        return sema.instantiate(type_abs, ast_type_args(), type_args_);
+                    if (auto lambda = type->isa<Lambda>())
+                        return sema.instantiate(lambda, ast_type_args(), type_args_);
                     else
                         return type;
                 }
@@ -422,7 +422,7 @@ void Typedef::check(InferSema& sema) const {
 void EnumDecl::check(InferSema&) const { /*TODO*/ }
 
 void StructDecl::check(InferSema& sema) const {
-    auto type_abses = open_ast_type_params(sema);
+    auto lambdas = open_ast_type_params(sema);
 
     for (auto field : field_decls()) {
         if (auto field_type = sema.check(field)) {
@@ -440,14 +440,14 @@ void StructDecl::check(InferSema& sema) const {
 const Type* FieldDecl::check(InferSema& sema) const { return sema.check(ast_type()); }
 
 void FnDecl::check(InferSema& sema) const {
-    auto type_abses = open_ast_type_params(sema);
+    auto lambdas = open_ast_type_params(sema);
 
     Array<const Type*> param_types(num_params());
     for (size_t i = 0, e = num_params(); i != e; ++i)
         param_types[i] = sema.check(param(i));
 
     auto open_fn_type = sema.fn_type(param_types);
-    auto new_fn_type = sema.close(type_abses, open_fn_type);
+    auto new_fn_type = sema.close(lambdas, open_fn_type);
 
     sema.constrain(this, new_fn_type);
 
@@ -715,8 +715,8 @@ const Type* FieldExpr::check(InferSema& sema, const Type* /*TODO expected*/) con
 
 const Type* TypeAppExpr::check(InferSema& sema, const Type* expected) const {
     if (auto type = sema.check(lhs())) {
-        if (auto type_abs = type->isa<TypeAbs>()) {
-            auto num = sema.num_type_params(type_abs);
+        if (auto lambda = type->isa<Lambda>()) {
+            auto num = sema.num_type_params(lambda);
             if (num_ast_type_args() <= num) {
                 for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
                     sema.constrain(type_args_[i], sema.check(ast_type_arg(i)));
@@ -727,7 +727,7 @@ const Type* TypeAppExpr::check(InferSema& sema, const Type* expected) const {
                 for (auto& type_arg : type_args_)
                     type_arg = sema.type(type_arg);
 
-                return sema.instantiate(type_abs, ast_type_args(), type_args_);
+                return sema.instantiate(lambda, ast_type_args(), type_args_);
             }
         }
     }
@@ -737,7 +737,7 @@ const Type* TypeAppExpr::check(InferSema& sema, const Type* expected) const {
 const Type* MapExpr::check(InferSema& sema, const Type* expected) const {
     auto ltype = sema.check(lhs());
 
-    if (ltype->isa<TypeAbs>()) {
+    if (ltype->isa<Lambda>()) {
         TypeAppExpr::create(lhs_);
         ltype = sema.check(lhs());
     }
