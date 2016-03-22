@@ -172,9 +172,9 @@ const Type* IndefiniteArrayType::vrebuild(TypeTable& to, Types args) const { ret
 const Type* BorrowedPtrType    ::vrebuild(TypeTable& to, Types args) const { return to.borrowed_ptr_type(args[0], addr_space()); }
 const Type* MutPtrType         ::vrebuild(TypeTable& to, Types args) const { return to.     mut_ptr_type(args[0], addr_space()); }
 const Type* OwnedPtrType       ::vrebuild(TypeTable& to, Types args) const { return to.   owned_ptr_type(args[0], addr_space()); }
-const Type* NoRetType          ::vrebuild(TypeTable& to, Types     ) const { return this; }
-const Type* TypeError          ::vrebuild(TypeTable& to, Types     ) const { return this; }
-const Type* UnknownType        ::vrebuild(TypeTable& to, Types     ) const { return this; }
+const Type* NoRetType          ::vrebuild(TypeTable&,    Types     ) const { return this; }
+const Type* TypeError          ::vrebuild(TypeTable&,    Types     ) const { return this; }
+const Type* UnknownType        ::vrebuild(TypeTable&,    Types     ) const { return this; }
 
 //------------------------------------------------------------------------------
 

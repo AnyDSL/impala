@@ -546,7 +546,7 @@ public:
     const Type* check_body(InferSema&, const FnType*) const;
     const Type* check_body(TypeSema&) const;
     void fn_check(BorrowSema&) const;
-    thorin::Lambda* emit_head(CodeGen&, const thorin::Location&) const;
+    thorin::Continuation* emit_head(CodeGen&, const thorin::Location&) const;
     void emit_body(CodeGen&, const thorin::Location& loc) const;
 
     bool is_continuation() const { return is_continuation_; }
@@ -555,7 +555,7 @@ public:
     virtual Symbol fn_symbol() const = 0;
 
 protected:
-    mutable thorin::Lambda* lambda_;
+    mutable thorin::Continuation* continuation_;
     AutoVector<const Param*> params_;
     mutable const thorin::Param* ret_param_ = nullptr;
     mutable const thorin::Def* frame_ = nullptr;

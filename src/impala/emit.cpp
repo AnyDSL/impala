@@ -48,8 +48,8 @@ public:
 
     void jump_to_continuation(Continuation* continuation, const thorin::Location& loc) {
         if (is_reachable())
-            cur_bb->jump(lambda, {get_mem()}, loc);
-        set_continuation(lambda);
+            cur_bb->jump(continuation, {get_mem()}, loc);
+        set_continuation(continuation);
     }
 
     Var lemit(const Expr* expr) { return expr->lemit(*this); }
@@ -562,7 +562,7 @@ const Def* RunBlockExpr::remit(CodeGen& cg) const {
         auto res = BlockExprBase::remit(cg);
         if (cg.is_reachable()) {
             assert(res);
-            auto next = w.lambda(fn_mem, loc(), "run_next");
+            auto next = w.continuation(fn_mem, loc(), "run_next");
             cg.cur_bb->jump(lrun->param(1), {cg.get_mem()}, loc());
             old_bb->update_arg(1, next);
             cg.cur_bb = next;
