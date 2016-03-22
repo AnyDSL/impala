@@ -60,8 +60,12 @@ public:
 };
 
 class LvMap {
+private:
+    LvMap& operator= (const LvMap &);
+
 public:
-    LvMap(LvMapComparator);
+    LvMap(const LvMapComparator&);
+    LvMap(const LvMap&);
     ~LvMap();
 
     LvTree& lookup(const ValueDecl*) const;
@@ -72,13 +76,11 @@ public:
     void enter_scope();
     void leave_scope();
 
-    // TODO: rather use copy constructor?
-    //LvMap duplicate() const;
-    //void merge(const LvMap& other);
+    void merge(const LvMap& other);
 
 private:
     thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>> varmap_;
-    LvMapComparator comparator_;
+    const LvMapComparator& comparator_;
     std::stack<const ValueDecl*> scope_stack_;
 };
 

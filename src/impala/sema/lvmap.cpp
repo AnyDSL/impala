@@ -122,9 +122,9 @@ Relation LvMapComparator::compare(payload_t p1, payload_t p2) const {
  * LvMap
  */
 
-LvMap::LvMap(LvMapComparator comparator)
+LvMap::LvMap(const LvMapComparator& comparator)
     : varmap_(thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>>())
-    , comparator_(comparator) // TODO: eliminate copy
+    , comparator_(comparator) // TODO: maybe change this to be a pointer
     , scope_stack_(std::stack<const ValueDecl*>())
     {}
 
@@ -160,9 +160,15 @@ void LvMap::leave_scope() {
     } while (decl != nullptr);
 }
 
-//LvMap LvMap::duplicate() const { return LvMap() }
-//
-//void LvMap::merge(const LvMap& other) {}
+LvMap::LvMap(const LvMap& map)
+    // TODO: check that shared pointers get copied correctly
+    : varmap_(map.varmap_)
+    , comparator_(map.comparator_)
+    , scope_stack_(map.scope_stack_)
+    {}
+
+void LvMap::merge(const LvMap& other) {}
+
 
 //-------------------------------------------------------
 
