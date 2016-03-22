@@ -453,12 +453,8 @@ void FnDecl::check(InferSema& sema) const {
 
     for (size_t i = 0, e = num_params(); i != e; ++i) {
         auto param_type = sema.check(param(i));
-        param_type->dump();
         sema.constrain(param(i), fn_type()->arg(i));
     }
-
-    std::cout << "FnDecl" << std::endl;
-    type()->dump();
 
     if (body() != nullptr)
         check_body(sema, fn_type());
@@ -752,9 +748,7 @@ const Type* MapExpr::check(InferSema& sema, const Type* expected) const {
     }
 
     if (auto fn_type = ltype->isa<FnType>()) {
-        auto f = sema.check_call(fn_type, args(), expected);
-        //f->dump();
-        return f;
+        return sema.check_call(fn_type, args(), expected);
     } else {
         if (num_args() == 1)
             sema.check(arg(0));
