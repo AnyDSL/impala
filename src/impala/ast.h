@@ -19,7 +19,7 @@
 namespace thorin {
     class Enter;
     class JumpTarget;
-    class Lambda;
+    class Continuation;
     class Param;
 }
 
@@ -538,7 +538,7 @@ public:
     ArrayRef<const Param*> params() const { return params_; }
     size_t num_params() const { return params_.size(); }
     const Expr* body() const { return body_; }
-    thorin::Lambda* lambda() const { return lambda_; }
+    thorin::Continuation* continuation() const { return continuation_; }
     const thorin::Param* ret_param() const { return ret_param_; }
     const thorin::Def* frame() const { return frame_; }
     std::ostream& stream_params(std::ostream& p, bool returning) const;
