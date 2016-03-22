@@ -51,17 +51,6 @@ const Type* FnType::return_type() const {
     return typetable().type_noret();
 }
 
-#if 0
-static Type2Type type2type(const Type* type, Types args) {
-    assert(type->num_type_params() == args.size());
-    Type2Type map;
-    for (size_t i = 0, e = args.size(); i != e; ++i)
-        map[type->type_param(i)] = args[i];
-    assert(map.size() == args.size());
-    return map;
-}
-#endif
-
 //------------------------------------------------------------------------------
 
 /*

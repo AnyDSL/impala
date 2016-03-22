@@ -40,9 +40,6 @@ public:
     const Type* close(ArrayRef<const TypeAbs*> type_abses, const Type* body) {
         for (auto& type_abs : thorin::reverse_range(type_abses))
             body = impala::close(const_cast<const TypeAbs*&>(type_abs), body);
-
-        //assert(closing_);
-        closing_ = false;
         return body;
     }
 
@@ -180,8 +177,7 @@ public:
     }
 
     const TypeAbs* check(const ASTTypeParam* ast_type_param) {
-        if (closing_)
-            ast_type_param->type_ = ast_type_param->check(*this);
+        ast_type_param->type_ = ast_type_param->check(*this);
         return ast_type_param->type_abs();
     }
 
@@ -271,8 +267,6 @@ private:
     TypeMap<Representative> representatives_;
     thorin::HashMap<const Expr*, const Type*> expr2expected_;
     bool todo_ = true;
-public: // HACK
-    bool closing_ = false;
 
     friend void type_inference(Init&, const ModContents*);
 };
@@ -299,14 +293,13 @@ void type_inference(Init& init, const ModContents* mod) {
  * misc
  */
 
-const TypeParam* ASTTypeParam::check(InferSema& sema) const {
+const TypeAbs* ASTTypeParam::check(InferSema& sema) const {
     for (auto bound : bounds())
         sema.check(bound);
-    return sema.type_abs("", symbol().str())->type_param();
+    return sema.type_abs("", symbol().str());
 }
 
 Array<const TypeAbs*> ASTTypeParamList::open_ast_type_params(InferSema& sema) const {
-    sema.closing_ = true;
     Array<const TypeAbs*> type_params(num_ast_type_params());
     for (size_t i = 0, e = num_ast_type_params(); i != e; ++i)
         type_params[i] = sema.check(ast_type_param(i));
@@ -459,18 +452,10 @@ void FnDecl::check(InferSema& sema) const {
     auto open_fn_type = sema.fn_type(param_types);
     auto new_fn_type = sema.close(type_abses, open_fn_type);
 
-    sema.closing_ = false;
-
     sema.constrain(this, new_fn_type);
 
-    for (size_t i = 0, e = num_params(); i != e; ++i) {
-        auto param_type = sema.check(param(i));
-        param_type->dump();
+    for (size_t i = 0, e = num_params(); i != e; ++i)
         sema.constrain(param(i), fn_type()->arg(i));
-    }
-
-    std::cout << "FnDecl" << std::endl;
-    type()->dump();
 
     if (body() != nullptr)
         check_body(sema, fn_type());
@@ -764,9 +749,7 @@ const Type* MapExpr::check(InferSema& sema, const Type* expected) const {
     }
 
     if (auto fn_type = ltype->isa<FnType>()) {
-        auto f = sema.check_call(fn_type, args(), expected);
-        //f->dump();
-        return f;
+        return sema.check_call(fn_type, args(), expected);
     } else {
         if (num_args() == 1)
             sema.check(arg(0));
