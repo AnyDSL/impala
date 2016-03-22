@@ -411,21 +411,6 @@ found:;
 //-----------------------------------------------------------------------------
 
 /*
- * is_copyable
- */
-
-bool StructAbsTypeNode::is_copyable(void) const {
-    for (auto i : struct_decl()->field_decls()) {
-        if (!i->type()->is_copyable())
-            return false;
-    }
-    return true;
-}
-
-
-//------------------------------------------------------------------------------
-
-/*
  * specialize and instantiate
  */
 
@@ -737,6 +722,28 @@ FnType TraitAppNode::find_method(Symbol name) const {
     }
 
     return FnType();
+}
+
+//------------------------------------------------------------------------------
+
+bool is_copyable(const Type& t) {
+    switch (t->kind()) {
+#define IMPALA_TYPE(itype, atype) case Kind_##itype:
+#include "impala/tokenlist.h"
+        case Kind_borrowed_ptr:
+            return true;
+        case Kind_mut_ptr:
+        case Kind_owned_ptr:
+            return false;
+        // TODO: other non-movable cases?
+        default:
+            for (auto type_arg : t->args()) {
+                if (!is_copyable(type_arg))
+                    return false;
+            }
+            return true;
+        // TODO: how to handle error types, etc?
+    }
 }
 
 //------------------------------------------------------------------------------

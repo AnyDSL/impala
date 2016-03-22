@@ -142,10 +142,6 @@ void FieldExpr::take_address() const { lhs()->take_address(); }
  * owns_value
  */
 
-inline bool is_reference(Type type) {
-    return type->kind() == Kind_borrowed_ptr || type->kind() == Kind_mut_ptr;
-}
-
 bool PathExpr::owns_value(void) const {
     return true;
 }
@@ -155,7 +151,7 @@ bool PrefixExpr::owns_value(void) const {
     assert(kind() == PrefixExpr::Kind::MUL);
     // TODO: do they assert the same?
 
-    return !is_reference(rhs()->type()) && rhs()->owns_value();
+    return !is_ref_type(rhs()->type()) && rhs()->owns_value();
 }
 
 bool FieldExpr::owns_value(void) const {

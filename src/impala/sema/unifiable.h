@@ -299,9 +299,6 @@ public:
      */
     virtual bool is_sane() const = 0;
 
-    // TODO: comment
-    virtual bool is_copyable(void) const { return false; }
-
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const = 0;
@@ -393,7 +390,6 @@ private:
 public:
     PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
     virtual std::ostream& stream(std::ostream&) const override;
-    virtual bool is_copyable(void) const override { return true; }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -448,7 +444,6 @@ public:
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override { THORIN_UNREACHABLE; }
-    virtual bool is_copyable(void) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override { THORIN_UNREACHABLE; }
@@ -471,7 +466,6 @@ public:
     virtual bool equal(const Unifiable*) const override;
     virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode* other) const override;
-    virtual bool is_copyable(void) const override { return struct_abs_type()->is_copyable(); }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -573,7 +567,6 @@ public:
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override;
-    virtual bool is_copyable(void) const override { return true; }
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -772,6 +765,14 @@ private:
 
     friend class TypeTable;
 };
+
+//------------------------------------------------------------------------------
+
+bool is_copyable(const Type&);
+
+inline bool is_ref_type(const Type& t) {
+    return t->kind() == Kind_borrowed_ptr || t->kind() == Kind_mut_ptr;
+}
 
 //------------------------------------------------------------------------------
 

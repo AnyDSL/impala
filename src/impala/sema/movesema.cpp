@@ -15,11 +15,6 @@ inline Liveness payload2ls(payload_t pl) {
     return (Liveness) pl;
 }
 
-// TODO: this is the same code as in one place in lvmap.cpp, deduplicate
-bool is_reference_type(const Type& type) {
-    return type->kind() == Kind_borrowed_ptr || type->kind() == Kind_mut_ptr;
-}
-
 //class MoveSema {
 //public:
 //    
@@ -137,7 +132,7 @@ void check_lv(const Expr* lv, MoveSema& sema, bool assign_to) {
     }
 
     validate(lv, pl);
-    if (!lv->type()->is_copyable() && check_owns_value(lv))
+    if (!is_copyable(lv->type()) && check_owns_value(lv))
         insert(*lv, sema, Liveness::DEAD, lv->loc());
 }
 
@@ -177,25 +172,12 @@ void PathExpr::check(MoveSema& sema, bool assign_to) const {
 void PrefixExpr::check(MoveSema& sema, bool assign_to) const  {
     switch (kind()) {
         case Token::MUL: // *
-            if (assign_to) {
+            if (assign_to)
                 // for an assignment target it suffices that the first ancestor of the first dereference
                 // is live
                 check_lv(rhs(), sema, true);
-            } else {
-                //if (is_reference_type(rhs()->type()))
-                //    // since the liveness of a reference depends on the liveness of the owner of
-                //    // the reference, it suffices to check that
-                //    // This allows us to handle something like *&x
-                //    // However owership still needs to be checked
-                //    // TODO: this could result in a lot of owns_value calls, can 
-                //    if (check_owns_value(rhs()))
-                //        rhs()->check(sema, false);
-                //else {
-                //    assert(rhs()->type()->kind() == Kind_owned_ptr);
-                    // values behind owned pointers may be moved
-                    check_lv(this, sema, false);
-                //}
-            }
+            else
+                check_lv(this, sema, false);
             break;
         case Token::AND: // &
             assert(rhs()->is_lvalue());
