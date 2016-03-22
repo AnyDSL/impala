@@ -737,7 +737,13 @@ bool is_copyable(const Type& t) {
             return false;
         // TODO: other non-movable cases?
         default:
-            for (auto type_arg : t->args()) {
+            
+            // TODO: this is dirty, change it
+            const StructAppTypeNode* app_node = dynamic_cast<const StructAppTypeNode*>(*t);
+            assert(app_node != nullptr);
+            StructAbsType type = app_node->struct_abs_type();
+
+            for (auto type_arg : type->args()) {
                 if (!is_copyable(type_arg))
                     return false;
             }
