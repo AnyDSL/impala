@@ -30,8 +30,8 @@ public:
 
     const Payload& get_payload() const { return payload_; }
     void set_payload(payload_t pl, const thorin::Location& loc) { payload_.set_payload(pl, loc); }
-    LvTree* get_pointer_child(bool create);
-    LvTree* get_field_child(Symbol field, bool create);
+    LvTreeLookupTree get_pointer_child(bool create);
+    LvTreeLookupTree get_field_child(Symbol field, bool create);
     LvTree* get_parent(void) const { return parent_; }
     void remove_subtree(Symbol field);
     void clear_subtrees(void);
@@ -54,14 +54,14 @@ inline const Symbol& get_deref_symbol(void) {
 }
 
 template <class Key>
-LvTree* find_tree(const thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key) {
+LvTreeLookupTree find_tree(const thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key) {
     // this code is copied from the find() function in thorin/util/hash.h because this function
     // is not compatible with std::shared_ptr
     auto i = map.find(key);
     if (i == map.end())
-        return nullptr;
+        return LvTreeLookupTree(nullptr, false);
     std::shared_ptr<LvTree> tree = i->second;
-    return tree.get();
+    return LvTreeLookupTree(tree.get(), tree.unique());
 }
 
 template <class Key>
@@ -76,23 +76,23 @@ LvTree::LvTree(LvTree* parent)
     : parent_(parent)
     {}
 
-LvTree* LvTree::get_pointer_child(bool create) {
+LvTreeLookupTree LvTree::get_pointer_child(bool create) {
     if (children_.size() == 0) {
         if (create)
-            return create_tree<Symbol>(children_, get_deref_symbol(), this);
+            return LvTreeLookupTree(create_tree<Symbol>(children_, get_deref_symbol(), this), false);
         else
-            return nullptr;
+            return LvTreeLookupTree(nullptr, false);
     }
     assert(children_.size() == 1);
-    LvTree* tree = find_tree<Symbol>(children_, get_deref_symbol());
-    assert(tree != nullptr);
+    LvTreeLookupTree tree = find_tree<Symbol>(children_, get_deref_symbol());
+    assert(tree.tree_ != nullptr);
     return tree;
 }
 
-LvTree* LvTree::get_field_child(Symbol field, bool create) {
+LvTreeLookupTree LvTree::get_field_child(Symbol field, bool create) {
     if (create && !children_.contains(field)) {
         LvTree* t = create_tree<Symbol>(children_, field, this);
-        return t;
+        return LvTreeLookupTree(t, false);
     }
     return find_tree<Symbol>(children_, field);
 }
@@ -132,10 +132,10 @@ LvMap::~LvMap() {
     // TODO: delete the trees
 }
 
-LvTree& LvMap::lookup(const ValueDecl* decl) const {
-    LvTree* tree = find_tree<const ValueDecl*>(varmap_, decl);
-    assert(tree != nullptr);
-    return *tree;
+LvTreeLookupTree LvMap::lookup(const ValueDecl* decl) const {
+    auto tree = find_tree<const ValueDecl*>(varmap_, decl);
+    assert(tree.tree_ != nullptr);
+    return tree;
 }
 
 void LvMap::insert(const ValueDecl* decl, payload_t pl, const thorin::Location& loc) {
@@ -174,7 +174,7 @@ void LvMap::merge(const LvMap& other) {}
 
 const Payload& lookup_payload(const Expr& expr, LvMap& map) {
     auto res = expr.lookup_lv_tree(map, false);
-    return res.is_tree_ ? res.value_.tree_.get_payload() : res.value_.implicit_payload_;
+    return res.is_tree_ ? res.value_.tree_res_.tree_->get_payload() : res.value_.implicit_payload_;
 }
 
 //---------------------------------------------------------
@@ -186,7 +186,7 @@ const Payload& lookup_payload(const Expr& expr, LvMap& map) {
 const LvTreeLookupRes PathExpr::lookup_lv_tree(LvMap& map, bool create) const {
     // TODO: are there valid cases where there is no mapping for the corresponding declaration?
     // TODO: check for invalid returned trees
-    return LvTreeLookupRes(map.lookup(value_decl().get()));
+    return map.lookup(value_decl().get());
 }
 
 LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent, bool lookup_pointer,
@@ -197,16 +197,20 @@ LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent, bool 
     if (!parent_res.is_tree_)
         return parent_res;
 
-    LvTree* this_tree = lookup_pointer ? parent_res.value_.tree_.get_pointer_child(create)
-        : parent_res.value_.tree_.get_field_child(symbol, create);
-    assert(!create || this_tree != nullptr);
-    if (this_tree == nullptr)
-        return LvTreeLookupRes(parent_res.value_.tree_.get_payload());
+    LvTreeLookupTree this_tree = lookup_pointer ?
+        parent_res.value_.tree_res_.tree_->get_pointer_child(create)
+        : parent_res.value_.tree_res_.tree_->get_field_child(symbol, create);
+    assert(!create || this_tree.tree_ != nullptr);
+    if (this_tree.tree_ == nullptr)
+        return LvTreeLookupRes(parent_res.value_.tree_res_.tree_->get_payload());
 
-    Relation comp_res = map.get_comparator().compare(parent_res.value_.tree_.get_payload().get_value(),
-        this_tree->get_payload().get_value());
+    Relation comp_res = map.get_comparator().compare(
+        parent_res.value_.tree_res_.tree_->get_payload().get_value(),
+        this_tree.tree_->get_payload().get_value());
     assert(comp_res == Relation::LESS || (comp_res == Relation::EQUAL && create));
-    return LvTreeLookupRes(*this_tree);
+
+    this_tree.multi_ref_ |= parent_res.value_.tree_res_.multi_ref_;
+    return LvTreeLookupRes(this_tree);
 }
     
 const LvTreeLookupRes PrefixExpr::lookup_lv_tree(LvMap& map, bool create) const {
@@ -221,7 +225,7 @@ const LvTreeLookupRes PrefixExpr::lookup_lv_tree(LvMap& map, bool create) const 
             if (!parent_res.is_tree_)
                 return parent_res;
             else
-                return LvTreeLookupRes(parent_res.value_.tree_.get_payload());
+                return LvTreeLookupRes(parent_res.value_.tree_res_.tree_->get_payload());
         }
         default:
             assert(false);
@@ -253,7 +257,8 @@ void insert(const Expr& expr, LvMap& map, payload_t pl, const thorin::Location& 
     // afterwards in the insertion
     LvTreeLookupRes res = expr.lookup_lv_tree(map, true);
     assert(res.is_tree_);
-    expr.insert_payload(res.value_.tree_, map.get_comparator(), pl, loc);
+    expr.insert_payload(res.value_.tree_res_.tree_, res.value_.tree_res_.multi_ref_,
+        map.get_comparator(), pl, loc);
 }
 
 //-------------------------------------------------------------------
@@ -262,28 +267,28 @@ void insert(const Expr& expr, LvMap& map, payload_t pl, const thorin::Location& 
  * insert_payload
  */
 
-void PathExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl,
+void PathExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparator& comp, payload_t pl,
     const thorin::Location& loc) const {
 
     // TODO: maybe assert validity of tree here
-    assert(tree.get_parent() == nullptr);
-    tree.set_payload(pl, loc);
+    assert(tree->get_parent() == nullptr);
+    tree->set_payload(pl, loc);
 }
 
-void handle_ptr_insert(const Expr* parent_expr, LvTree& tree, const LvMapComparator& comp,
+void handle_ptr_insert(const Expr* parent_expr, LvTree* tree, bool multi_ref, const LvMapComparator& comp,
     payload_t pl, const thorin::Location& loc) {
-    LvTree* parent = tree.get_parent();
+    LvTree* parent = tree->get_parent();
     assert(parent != nullptr);
 
-    tree.clear_subtrees();
+    tree->clear_subtrees();
     
     switch (comp.compare(pl, parent->get_payload().get_value())) {
         case Relation::LESS:
             parent->remove_subtree(get_deref_symbol());
-            parent_expr->insert_payload(*parent, comp, pl, loc);
+            parent_expr->insert_payload(parent, multi_ref, comp, pl, loc);
             break;
         case Relation::GREATER:
-            tree.set_payload(pl, loc);
+            tree->set_payload(pl, loc);
             break;
         case Relation::EQUAL:
             parent->remove_subtree(get_deref_symbol());
@@ -293,10 +298,10 @@ void handle_ptr_insert(const Expr* parent_expr, LvTree& tree, const LvMapCompara
     }
 }
 
-void PrefixExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl,
+void PrefixExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparator& comp, payload_t pl,
     const thorin::Location& loc) const {
     assert(kind() == PrefixExpr::MUL);
-    handle_ptr_insert(rhs(), tree, comp, pl, loc);
+    handle_ptr_insert(rhs(), tree, multi_ref, comp, pl, loc);
 }
 
 const StructDecl* get_decl(const Type type) {
@@ -310,13 +315,13 @@ const StructDecl* get_decl(const Type type) {
     return decl;
 }
 
-void FieldExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl,
+void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparator& comp, payload_t pl,
     const thorin::Location& loc) const {
-    LvTree* parent = tree.get_parent();
+    LvTree* parent = tree->get_parent();
     assert(parent != nullptr);
 
     // All children inherit the payload set for a subtree, so they can be deleted
-    tree.clear_subtrees();
+    tree->clear_subtrees();
 
     payload_t parent_pl = parent->get_payload().get_value();
     switch (comp.compare(pl, parent_pl)) {
@@ -324,13 +329,13 @@ void FieldExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payloa
             const StructDecl* decl = get_decl(lhs()->type());
             for (auto i : decl->field_decls()) {
                 Symbol s = i->symbol();
-                LvTree* sibling = parent->get_field_child(s, false);
-                if (sibling == nullptr) {
+                LvTreeLookupTree sibling = parent->get_field_child(s, false);
+                if (sibling.tree_ == nullptr) {
                     sibling = parent->get_field_child(s, true);
-                    sibling->set_payload(parent_pl, loc);
+                    sibling.tree_->set_payload(parent_pl, loc);
                 }
                 parent->remove_subtree(symbol());
-                lhs()->insert_payload(*parent, comp, pl, loc);
+                lhs()->insert_payload(parent, multi_ref, comp, pl, loc);
             }
             break;
         }
@@ -341,19 +346,19 @@ void FieldExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payloa
                 Symbol s = i->symbol();
                 if (s == symbol())
                     continue;
-                LvTree* sibling = parent->get_field_child(s, false);
+                LvTreeLookupTree sibling = parent->get_field_child(s, false);
 
                 // TODO: shouldn't this also check that the siblings have no children?
-                if (sibling == nullptr || sibling->get_payload().get_value() != pl) {
+                if (sibling.tree_ == nullptr || sibling.tree_->get_payload().get_value() != pl) {
                     all_siblings_same_payload = false;
                     break;
                 }
             }
             if (all_siblings_same_payload) {
                 parent->clear_subtrees();
-                lhs()->insert_payload(*parent, comp, pl, loc);
+                lhs()->insert_payload(parent, multi_ref, comp, pl, loc);
             } else
-                tree.set_payload(pl, loc);
+                tree->set_payload(pl, loc);
             break;
         }
         case Relation::EQUAL:
@@ -364,15 +369,15 @@ void FieldExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payloa
     }
 }
 
-void CastExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl,
+void CastExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparator& comp, payload_t pl,
     const thorin::Location& loc) const {
-    lhs()->insert_payload(tree, comp, pl, loc);
+    lhs()->insert_payload(tree, multi_ref, comp, pl, loc);
 }
 
-void MapExpr::insert_payload(LvTree& tree, const LvMapComparator& comp, payload_t pl,
+void MapExpr::insert_payload(LvTree* tree, bool multi_ref, const LvMapComparator& comp, payload_t pl,
     const thorin::Location& loc) const {
     assert(is_lvalue());
-    handle_ptr_insert(lhs(), tree, comp, pl, loc);
+    handle_ptr_insert(lhs(), tree, multi_ref, comp, pl, loc);
 }
 
 //--------------------------------------------------------------------

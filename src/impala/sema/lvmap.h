@@ -35,19 +35,33 @@ class Payload: public thorin::HasLocation {
         const thorin::Location& loc_;
 };
 
+//-----------------------------------------------------------------------
+
+struct LvTreeLookupTree {
+    LvTreeLookupTree(LvTree* tree, bool multi_ref): tree_(tree), multi_ref_(multi_ref) {}
+
+    LvTree* tree_;
+    bool multi_ref_;
+};
+
 struct LvTreeLookupRes {
-    LvTreeLookupRes(LvTree& tree): is_tree_(true), value_(tree) {};
+    LvTreeLookupRes(LvTree* tree, bool multi_ref): is_tree_(true), value_(tree, multi_ref) {};
+    LvTreeLookupRes(LvTreeLookupTree tree): is_tree_(true), value_(tree) {};
     LvTreeLookupRes(const Payload& pl): is_tree_(false), value_(pl) {};
 
     bool is_tree_;
+
     union LvTreeLookupResValue {
-        LvTreeLookupResValue(LvTree& tree): tree_(tree) {};
+        LvTreeLookupResValue(LvTree* tree, bool multi_ref): tree_res_(tree, multi_ref) {};
+        LvTreeLookupResValue(LvTreeLookupTree tree): tree_res_(tree) {};
         LvTreeLookupResValue(const Payload& pl): implicit_payload_(pl) {};
 
-        LvTree& tree_;
+        LvTreeLookupTree tree_res_;
         const Payload& implicit_payload_;
     } value_;
 };
+
+//---------------------------------------------------------------------------------
 
 enum class Relation { LESS, GREATER, EQUAL, INCOMPARABLE };
 class LvMapComparator {
@@ -59,6 +73,8 @@ public:
     Relation compare(payload_t p1, payload_t p2) const;
 };
 
+//---------------------------------------------------------------------------------
+
 class LvMap {
 private:
     LvMap& operator= (const LvMap &);
@@ -68,7 +84,7 @@ public:
     LvMap(const LvMap&);
     ~LvMap();
 
-    LvTree& lookup(const ValueDecl*) const;
+    LvTreeLookupTree lookup(const ValueDecl*) const;
     void insert(const ValueDecl*, payload_t, const thorin::Location&);
 
     const LvMapComparator& get_comparator(void) const { return comparator_; };
