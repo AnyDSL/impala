@@ -1008,7 +1008,7 @@ public:
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
-    virtual Symbol fn_symbol() const override { return Symbol("continuation"); }
+    virtual Symbol fn_symbol() const override { return Symbol("lambda"); }
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
