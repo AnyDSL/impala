@@ -248,6 +248,7 @@ std::ostream& LiteralExpr::stream(std::ostream& os) const {
         case LIT_u16: return os << box().get_s16() << "u16";
         case LIT_u32: return os << box().get_s32() << "u";
         case LIT_u64: return os << box().get_s64() << "u64";
+        case LIT_f16: return os << box().get_f16() << "h";
         case LIT_f32: return os << box().get_f32() << "f";
         case LIT_f64: return os << box().get_f64() << "f64";
         case LIT_bool: return os << (box().get_bool() ? "true" : "false");

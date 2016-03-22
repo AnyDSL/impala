@@ -1,0 +1,14 @@
+fn power(a: half, mut b: int) -> half {
+    let mut result = 1f16;
+    while (b != 0) {
+        result *= a;
+        --b;
+    }
+
+    result
+}
+
+fn main() -> int {
+    let power4 = |a: half| -> half @power(a, 4);
+    if @power(3h, 4) == 81h { 0 } else { 1 }
+}

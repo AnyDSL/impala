@@ -55,6 +55,9 @@ private:
                 case PrimType_u64:
                     ctype_prefix = "unsigned long long"; ctype_suffix = "";
                     return true;
+                case PrimType_f16:
+                    ctype_prefix = "half"; ctype_suffix = "";
+                    return true;
                 case PrimType_f32:
                     ctype_prefix = "float"; ctype_suffix = "";
                     return true;
@@ -77,6 +80,8 @@ private:
                     else if (simd_type->dim() == 8) ctype_prefix = "__m258i";
                     else return false;
                     break;
+                case PrimType_f16:
+                    THORIN_UNREACHABLE;
                 case PrimType_f32:
                     if (simd_type->dim() == 4) ctype_prefix = "__m128";
                     else if (simd_type->dim() == 8) ctype_prefix = "__m258";
