@@ -40,9 +40,6 @@ public:
     const Type* close(ArrayRef<const TypeAbs*> type_abses, const Type* body) {
         for (auto& type_abs : thorin::reverse_range(type_abses))
             body = impala::close(const_cast<const TypeAbs*&>(type_abs), body);
-
-        //assert(closing_);
-        closing_ = false;
         return body;
     }
 
@@ -180,8 +177,7 @@ public:
     }
 
     const TypeAbs* check(const ASTTypeParam* ast_type_param) {
-        if (closing_)
-            ast_type_param->type_ = ast_type_param->check(*this);
+        ast_type_param->type_ = ast_type_param->check(*this);
         return ast_type_param->type_abs();
     }
 
@@ -306,7 +302,6 @@ const TypeParam* ASTTypeParam::check(InferSema& sema) const {
 }
 
 Array<const TypeAbs*> ASTTypeParamList::open_ast_type_params(InferSema& sema) const {
-    sema.closing_ = true;
     Array<const TypeAbs*> type_params(num_ast_type_params());
     for (size_t i = 0, e = num_ast_type_params(); i != e; ++i)
         type_params[i] = sema.check(ast_type_param(i));
@@ -458,8 +453,6 @@ void FnDecl::check(InferSema& sema) const {
 
     auto open_fn_type = sema.fn_type(param_types);
     auto new_fn_type = sema.close(type_abses, open_fn_type);
-
-    sema.closing_ = false;
 
     sema.constrain(this, new_fn_type);
 
