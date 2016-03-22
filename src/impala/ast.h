@@ -937,7 +937,7 @@ public:
 
     // lvalue functions
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const { assert(false); /* overwrite this */ }
-    virtual void insert_payload(LvTree&, const LvMapComparator&, payload_t) const { assert(false); /* overwrite this */ };
+    virtual void insert_payload(LvTree&, const LvMapComparator&, payload_t, const thorin::Location&) const { assert(false); /* overwrite this */ };
     /// return whether an lvalue owns its value (in case it does not contain references) or not
     virtual bool owns_value(void) const { assert(false); /* overwrite this */ }
 
@@ -1117,7 +1117,7 @@ public:
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
-    virtual void insert_payload(LvTree&, const LvMapComparator&, payload_t) const override;
+    virtual void insert_payload(LvTree&, const LvMapComparator&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
 
 private:
@@ -1149,7 +1149,7 @@ public:
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
-    virtual void insert_payload(LvTree&, const LvMapComparator&, payload_t) const override;
+    virtual void insert_payload(LvTree&, const LvMapComparator&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
     virtual thorin::Var lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
@@ -1238,7 +1238,7 @@ public:
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
-    virtual void insert_payload(LvTree&, const LvMapComparator&, payload_t) const override;
+    virtual void insert_payload(LvTree&, const LvMapComparator&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
     Type check_as_struct(TypeSema&, Type) const;
 
@@ -1265,7 +1265,7 @@ public:
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
-    virtual void insert_payload(LvTree&, const LvMapComparator&, payload_t) const override;
+    virtual void insert_payload(LvTree&, const LvMapComparator&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
 
     virtual bool is_lvalue() const override;
@@ -1430,7 +1430,7 @@ public:
 	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
-    virtual void insert_payload(LvTree&, const LvMapComparator&, payload_t) const override;
+    virtual void insert_payload(LvTree&, const LvMapComparator&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
     Type check_as_map(TypeSema&, TypeExpectation) const;
     Type check_as_method_call(TypeSema&, TypeExpectation) const;

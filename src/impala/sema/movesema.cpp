@@ -38,7 +38,7 @@ void TypeParam::check(MoveSema& sema) const {
 }
 
 void LocalDecl::check(MoveSema& sema) const {
-    sema.insert(this, (payload_t) Liveness::DEAD);
+    sema.insert(this, (payload_t) Liveness::DEAD, UNSET_LOCATION);
 }
 
 //------------------------------------------------------------------------------
@@ -167,9 +167,16 @@ void ImplItem::check(MoveSema& sema) const {
  * expressions
  */
 
-inline void validate(const ASTNode* loc, Liveness live) {
-    if (live == Liveness::DEAD)
-        error(loc) << "cannot use '" << loc << "', it is not live\n";
+inline void validate(const ASTNode* node, const Payload& pl) {
+    Liveness live = payload2ls(pl.get_value());
+    if (live == Liveness::DEAD) {
+        error(node) << "cannot use '" << node << "', it is not live\n";
+        if (pl.loc().is_set())
+            warn(node) << "note: the value moved here: " << pl.loc() << "\n";
+        else
+            warn(node) << "note: the value was not initialized\n";
+        // TODO: use something like note() instead of warn()
+    }
 }
 
 inline bool check_owns_value(const Expr* expr) {
@@ -177,22 +184,22 @@ inline bool check_owns_value(const Expr* expr) {
         return true;
     error(expr) << "cannot move out of expression '" << expr << "' because it does not own its value\n";
     return false;
-
 }
 
 void check_lv(const Expr* lv, MoveSema& sema, bool assign_to) {
-    Liveness live = payload2ls(lookup_payload(*lv, sema));
+    const Payload& pl = lookup_payload(*lv, sema);
+    Liveness live = payload2ls(pl.get_value());
 
     if (assign_to) {
         if (live == Liveness::DEAD)
+            // TODO: display move location
             error(lv) << "cannot assign to pointer or reference owned by '" << lv << "' because '" << lv << "' is not live\n";
         return;
     }
 
-    validate(lv, live);
-    //assert(lv->type()->is_copyable());
+    validate(lv, pl);
     if (!lv->type()->is_copyable() && check_owns_value(lv))
-        insert(*lv, sema, Liveness::DEAD);
+        insert(*lv, sema, Liveness::DEAD, lv->loc());
 }
 
 
@@ -253,7 +260,7 @@ void PrefixExpr::check(MoveSema& sema, bool assign_to) const  {
             break;
         case Token::AND: // &
             assert(rhs()->is_lvalue());
-            validate(rhs(), payload2ls(lookup_payload(*rhs(), sema)));
+            validate(rhs(), lookup_payload(*rhs(), sema));
             break;
         default:
             rhs()->check(sema, false);
@@ -278,7 +285,7 @@ void InfixExpr::check(MoveSema& sema, bool assign_to) const {
             assert(lhs()->is_lvalue());
             rhs()->check(sema, false);
             lhs()->check(sema, true);
-            insert(*lhs(), sema, Liveness::LIVE);
+            insert(*lhs(), sema, Liveness::LIVE, loc());
             break;
         default:
             lhs()->check(sema, false);
@@ -383,7 +390,7 @@ void ItemStmt::check(MoveSema& sema) const { item()->check(sema); }
 void LetStmt::check(MoveSema& sema) const {
     if (init()) {
         init()->check(sema, false);
-        sema.insert(local(), Liveness::LIVE); 
+        sema.insert(local(), Liveness::LIVE, loc()); 
     } else
         // TODO: can we get rid of the rule for local declarations alltogether or is it used somewhere else?
         local()->check(sema);

@@ -5,6 +5,7 @@
 #include <stack>
 
 #include "thorin/util/hash.h"
+#include "thorin/util/location.h"
 
 namespace impala {
 
@@ -16,19 +17,35 @@ typedef int payload_t;
 
 const payload_t ERROR_PAYLOAD = -1;
 
-//enum class LvTreeLookupResType { TREE, NOT_EXPLICIT, ERROR };
+const thorin::Location UNSET_LOCATION = thorin::Location();
+
+class Payload: public thorin::HasLocation {
+    public:
+        // TODO: the loc_ init is not good, maybe use a pointer instead
+        Payload(): payload_val_(0), loc_(UNSET_LOCATION) {}
+        payload_t get_value() const { return payload_val_; }
+
+    protected:
+        void set_payload(payload_t, const thorin::Location&);
+
+        friend class LvTree;
+
+    private:
+        payload_t payload_val_;
+        const thorin::Location& loc_;
+};
 
 struct LvTreeLookupRes {
     LvTreeLookupRes(LvTree& tree): is_tree_(true), value_(tree) {};
-    LvTreeLookupRes(payload_t pl): is_tree_(false), value_(pl) {};
+    LvTreeLookupRes(const Payload& pl): is_tree_(false), value_(pl) {};
 
     bool is_tree_;
     union LvTreeLookupResValue {
         LvTreeLookupResValue(LvTree& tree): tree_(tree) {};
-        LvTreeLookupResValue(payload_t pl): implicit_payload_(pl) {};
+        LvTreeLookupResValue(const Payload& pl): implicit_payload_(pl) {};
 
         LvTree& tree_;
-        payload_t implicit_payload_;
+        const Payload& implicit_payload_;
     } value_;
 };
 
@@ -48,7 +65,7 @@ public:
     ~LvMap();
 
     LvTree& lookup(const ValueDecl*) const;
-    void insert(const ValueDecl*, payload_t);
+    void insert(const ValueDecl*, payload_t, const thorin::Location&);
 
     const LvMapComparator& get_comparator(void) const { return comparator_; };
 
@@ -67,9 +84,9 @@ private:
 
 inline bool payload2bool(payload_t pl) { assert(pl == 0 || pl == 1); return (bool) pl; }
 
-payload_t lookup_payload(const Expr&, LvMap&);
+const Payload& lookup_payload(const Expr&, LvMap&);
 
-void insert(const Expr&, LvMap&, payload_t);
+void insert(const Expr&, LvMap&, payload_t, const thorin::Location& loc);
 
 }
 
