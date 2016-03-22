@@ -19,7 +19,7 @@
 namespace thorin {
     class Enter;
     class JumpTarget;
-    class Lambda;
+    class Continuation;
     class Param;
 }
 
@@ -562,14 +562,14 @@ public:
     ArrayRef<const Param*> params() const { return params_; }
     size_t num_params() const { return params_.size(); }
     const Expr* body() const { return body_; }
-    thorin::Lambda* lambda() const { return lambda_; }
+    thorin::Continuation* continuation() const { return continuation_; }
     const thorin::Param* ret_param() const { return ret_param_; }
     const thorin::Def* frame() const { return frame_; }
     std::ostream& stream_params(std::ostream& p, bool returning) const;
     void fn_check(NameSema&) const;
     void fn_check(BorrowSema&) const;
     void check_body(TypeSema&, FnType) const;
-    thorin::Lambda* emit_head(CodeGen&, const thorin::Location&) const;
+    thorin::Continuation* emit_head(CodeGen&, const thorin::Location&) const;
     void emit_body(CodeGen&, const thorin::Location& loc) const;
 
     bool is_continuation() const { return cont_; }
@@ -578,7 +578,7 @@ public:
     virtual Symbol fn_symbol() const = 0;
 
 protected:
-    mutable thorin::Lambda* lambda_;
+    mutable thorin::Continuation* continuation_;
     mutable SafePtr<const thorin::Param> ret_param_;
     mutable const thorin::Def* frame_;
     AutoVector<const Param*> params_;
@@ -1008,7 +1008,7 @@ public:
     virtual FnType fn_type() const override { return type().as<FnType>(); }
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
-    virtual Symbol fn_symbol() const override { return Symbol("lambda"); }
+    virtual Symbol fn_symbol() const override { return Symbol("continuation"); }
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
