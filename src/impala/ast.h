@@ -103,8 +103,6 @@ public:
 
 protected:
     void check_type_params(NameSema&) const;
-    void check_type_params(MoveSema&) const;
-    void check_type_params(BorrowSema&) const;
     void check_type_params(LifetimeSema&) const;
     void check_type_params(TypeSema&) const;
 
@@ -238,8 +236,6 @@ private:
 class ASTType : public ASTNode, public Typeable {
 public:
     virtual void check(NameSema&) const = 0;
-    virtual void check(MoveSema&) const = 0;
-	virtual void check(BorrowSema&) const = 0;
 	virtual void check(LifetimeSema&) const = 0;
 
 private:
@@ -255,8 +251,6 @@ public:
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
-	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
 private:
@@ -274,8 +268,6 @@ public:
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
-	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
 private:
@@ -297,8 +289,6 @@ public:
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
-	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
 private:
@@ -325,8 +315,6 @@ class IndefiniteArrayASTType : public ArrayASTType {
 public:
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
-	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
 private:
@@ -339,8 +327,6 @@ public:
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
-	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
 private:
@@ -367,8 +353,6 @@ class TupleASTType : public CompoundASTType {
 public:
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
-	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
 private:
@@ -384,8 +368,6 @@ public:
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
-	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
 private:
@@ -407,8 +389,6 @@ public:
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
-	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
 private:
@@ -423,8 +403,6 @@ public:
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
-	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
 private:
@@ -441,8 +419,6 @@ public:
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
-    virtual void check(MoveSema&) const override;
-	virtual void check(BorrowSema&) const override;
 	virtual void check(LifetimeSema&) const override;
 
 private:
@@ -529,7 +505,6 @@ public:
     const Expr* fn() const { return fn_; }
     void take_address() const { is_address_taken_ = true; }
     void check(NameSema&) const;
-    void check(MoveSema&) const;
     void check(BorrowSema&) const;
     void check(LifetimeSema&) const;
 
@@ -558,8 +533,6 @@ public:
     TypeVar type_var() const { return type().as<TypeVar>(); }
     TypeVar type_var(TypeSema&) const;
     virtual void check(NameSema&) const;
-    virtual void check(MoveSema&) const;
-    virtual void check(BorrowSema&) const;
     virtual void check(LifetimeSema&) const;
     virtual std::ostream& stream(std::ostream&) const override;
 
@@ -585,6 +558,7 @@ public:
     Param(size_t handle)
         : LocalDecl(handle)
     {}
+    void check(MoveSema&) const;
 
     static const Param* create(size_t var_handle, const Identifier*, const thorin::Location&, const ASTType* fn_type);
 
@@ -764,7 +738,6 @@ public:
     const ASTType* ast_type() const { return ast_type_; } ///< Original \p ASTType.
     Visibility visibility() const { return  visibility_; }
     void check(NameSema&) const;
-    void check(MoveSema&) const;
     void check(BorrowSema&) const;
     void check(LifetimeSema&) const;
     virtual std::ostream& stream(std::ostream&) const override;

@@ -32,58 +32,11 @@ bool is_reference_type(const Type& type) {
  * misc
  */
 
-void TypeParam::check(MoveSema& sema) const {
-    for (auto bound : bounds())
-        bound->check(sema);
-}
-
-void LocalDecl::check(MoveSema& sema) const {
-    sema.insert(this, (payload_t) Liveness::DEAD, UNSET_LOCATION);
+void Param::check(MoveSema& sema) const {
+    sema.insert(this, (payload_t) Liveness::LIVE, loc());
 }
 
 //------------------------------------------------------------------------------
-
-/*
- * AST types
- */
-
-void TypeParamList::check_type_params(MoveSema& sema) const {
-    for (auto type_param : type_params())
-        type_param->check(sema);
-}
-
-void ErrorASTType::check(MoveSema&) const {}
-void PrimASTType::check(MoveSema&) const {}
-void PtrASTType::check(MoveSema& sema) const { referenced_type()->check(sema); }
-void IndefiniteArrayASTType::check(MoveSema& sema) const { elem_type()->check(sema); }
-void DefiniteArrayASTType::check(MoveSema& sema) const { elem_type()->check(sema); }
-
-void TupleASTType::check(MoveSema& sema) const {
-    for (auto arg : args())
-        arg->check(sema);
-}
-
-void ASTTypeApp::check(MoveSema& sema) const {
-    for (auto arg : args())
-        arg->check(sema);
-}
-
-void FnASTType::check(MoveSema& sema) const {
-    check_type_params(sema);
-    for (auto arg : args())
-        arg->check(sema);
-}
-
-void Typeof::check(MoveSema& sema) const {
-    expr()->check(sema, false);
-}
-
-void SimdASTType::check(MoveSema& sema) const {
-    elem_type()->check(sema);
-}
-
-//------------------------------------------------------------------------------
-
 
 /*
  * items
@@ -105,8 +58,6 @@ void ExternBlock::check(MoveSema& sema) const {
 }
 
 void Typedef::check(MoveSema& sema) const {
-    check_type_params(sema);
-    ast_type()->check(sema);
 }
 
 void EnumDecl::check(MoveSema&) const {}
@@ -117,7 +68,8 @@ void StaticItem::check(MoveSema& sema) const {
 }
 
 void Fn::fn_check(MoveSema& sema) const {
-    check_type_params(sema);
+    for (auto param : params())
+        param->check(sema);
     if (body() != nullptr)
         body()->check(sema, false);
 }
@@ -131,21 +83,12 @@ void FnDecl::check(MoveSema& sema) const {
 }
 
 void StructDecl::check(MoveSema& sema) const {
-    check_type_params(sema);
     for (auto field_decl : field_decls()) {
-        field_decl->check(sema);
         field_table_[field_decl->symbol()] = field_decl;
     }
 }
 
-void FieldDecl::check(MoveSema& sema) const {
-    ast_type()->check(sema);
-}
-
 void TraitDecl::check(MoveSema& sema) const {
-    check_type_params(sema);
-    for (auto t : super_traits())
-        t->check(sema);
     for (auto method : methods()) {
         method->check(sema);
         method_table_[method->symbol()] = method;
@@ -153,10 +96,6 @@ void TraitDecl::check(MoveSema& sema) const {
 }
 
 void ImplItem::check(MoveSema& sema) const {
-    check_type_params(sema);
-    if (trait())
-        trait()->check(sema);
-    ast_type()->check(sema);
     for (auto fn : methods())
         fn->check(sema);
 }
@@ -367,15 +306,16 @@ void IfExpr::check(MoveSema& sema, bool assign_to) const {
 void WhileExpr::check(MoveSema& sema, bool assign_to) const {
     assert(!assign_to);
     cond()->check(sema, false);
-    break_decl()->check(sema);
-    continue_decl()->check(sema);
+    // TODO: do we need break and continue decl?
+    //break_decl()->check(sema);
+    //continue_decl()->check(sema);
     body()->check(sema, false);
 }
 
 void ForExpr::check(MoveSema& sema, bool assign_to) const {
     assert(!assign_to);
     expr()->check(sema, false);
-    break_decl()->check(sema);
+    //break_decl()->check(sema);
     fn_expr()->check(sema, false);
 }
 
@@ -392,8 +332,7 @@ void LetStmt::check(MoveSema& sema) const {
         init()->check(sema, false);
         sema.insert(local(), Liveness::LIVE, loc()); 
     } else
-        // TODO: can we get rid of the rule for local declarations alltogether or is it used somewhere else?
-        local()->check(sema);
+        sema.insert(local(), Liveness::DEAD, UNSET_LOCATION); 
 }
 
 //------------------------------------------------------------------------------
