@@ -267,26 +267,21 @@ private:
     TypeMap<Representative> representatives_;
     thorin::HashMap<const Expr*, const Type*> expr2expected_;
     bool todo_ = true;
-public: // HACK
-    bool closing_ = false;
 
     friend void type_inference(Init&, const ModContents*);
 };
 
 void type_inference(Init& init, const ModContents* mod) {
-    static const int max_runs = 100;
     auto sema = new InferSema();
     init.typetable = sema;
 
     int i = 0;
-    for (; sema->todo_ && i < max_runs; ++i) {
+    for (;sema->todo_; ++i) {
         sema->todo_ = false;
         sema->check(mod);
     }
 
-    WLOG("iterations needed for type inference: %", i);
-    if (i == max_runs)
-        WLOG("needed max number of runs");
+    DLOG("iterations needed for type inference: %", i);
 }
 
 //------------------------------------------------------------------------------
