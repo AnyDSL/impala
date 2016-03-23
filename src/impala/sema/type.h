@@ -13,6 +13,7 @@ namespace impala {
 enum Kind {
 #define IMPALA_TYPE(itype, atype) Kind_##itype,
 #include "impala/tokenlist.h"
+    Kind_app,
     Kind_borrowed_ptr,
     Kind_definite_array,
     Kind_error,
@@ -25,8 +26,8 @@ enum Kind {
     Kind_simd,
     Kind_struct,
     Kind_tuple,
-    Kind_type_abs,
-    Kind_type_param,
+    Kind_lambda,
+    Kind_de_bruijn,
     Kind_typedef_abs,
     Kind_unknown,
 };
@@ -40,9 +41,10 @@ class StructDecl;
 template<class T> using ArrayRef = thorin::ArrayRef<T>;
 template<class T> using Array    = thorin::Array<T>;
 
+static const int Node_App        = impala::Kind_app;
+static const int Node_DeBruijn   = impala::Kind_de_bruijn;
+static const int Node_Lambda     = impala::Kind_lambda;
 static const int Node_StructType = impala::Kind_struct;
-static const int Node_TypeAbs    = impala::Kind_type_abs;
-static const int Node_TypeParam  = impala::Kind_type_param;
 static const int Node_TupleType  = impala::Kind_tuple;
 
 #define HENK_STRUCT_UNIFIER_NAME  struct_decl
@@ -75,8 +77,8 @@ private:
 bool is(const Type*, PrimTypeKind kind);
 #define IMPALA_TYPE(itype, atype) inline bool is_##itype(const Type* t) { return is(t, PrimType_##itype); }
 #include "impala/tokenlist.h"
-inline bool is_float(const Type* t) { return is_f32(t) || is_f64(t); }
-inline bool is_int(const Type* t) { return is_i8(t) || is_i16(t) || is_i32(t) || is_i64(t)
+inline bool is_float(const Type* t) { return             is_f16(t) || is_f32(t) || is_f64(t); }
+inline bool is_int  (const Type* t) { return is_i8(t) || is_i16(t) || is_i32(t) || is_i64(t)
                                         || is_u8(t) || is_u16(t) || is_u32(t) || is_u64(t); }
 
 //------------------------------------------------------------------------------
@@ -290,8 +292,6 @@ private:
 
     friend class TypeTable;
 };
-
-const Type* stream_type_params(std::ostream& os, const Type* type);
 
 //------------------------------------------------------------------------------
 

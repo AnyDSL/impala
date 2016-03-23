@@ -1,7 +1,7 @@
 #include "impala/ast.h"
 
 #include "thorin/irbuilder.h"
-#include "thorin/lambda.h"
+#include "thorin/continuation.h"
 #include "thorin/primop.h"
 #include "thorin/type.h"
 #include "thorin/util/array.h"
@@ -34,22 +34,22 @@ public:
         }
     }
 
-    Lambda* create_continuation(const LocalDecl* decl) {
-        auto result = lambda(convert(decl->type())->as<thorin::FnType>(), decl->loc(), decl->symbol().str());
+    Continuation* create_continuation(const LocalDecl* decl) {
+        auto result = continuation(convert(decl->type())->as<thorin::FnType>(), decl->loc(), decl->symbol().str());
         result->param(0)->name = "mem";
         decl->var_ = Var::create_val(*this, result);
         return result;
     }
 
-    void set_continuation(Lambda* lambda) {
-        cur_bb = lambda;
-        set_mem(lambda->param(0));
+    void set_continuation(Continuation* continuation) {
+        cur_bb = continuation;
+        set_mem(continuation->param(0));
     }
 
-    void jump_to_continuation(Lambda* lambda, const thorin::Location& loc) {
+    void jump_to_continuation(Continuation* continuation, const thorin::Location& loc) {
         if (is_reachable())
-            cur_bb->jump(lambda, {get_mem()}, loc);
-        set_continuation(lambda);
+            cur_bb->jump(continuation, {get_mem()}, loc);
+        set_continuation(continuation);
     }
 
     Var lemit(const Expr* expr) { return expr->lemit(*this); }
@@ -100,21 +100,19 @@ void CodeGen::convert_args(const Type* type, std::vector<const thorin::Type*>& n
 }
 
 const thorin::Type* CodeGen::convert_rec(const Type* type) {
-    if (auto type_abs = type->isa<TypeAbs>()) {
-        auto thorin_type_abs = world().type_abs(type_abs->name(), type_abs->type_param()->name());
+    if (auto lambda = type->isa<Lambda>()) {
+        auto thorin_lambda = world().lambda(lambda->name());
 
-        thorin_type(type_abs)               = thorin_type_abs;
-        thorin_type(type_abs->type_param()) = thorin_type_abs->type_param();
-        auto body = convert(type_abs->body());
+        thorin_type(lambda)               = thorin_lambda;
+        auto body = convert(lambda->body());
 
         // remove: due to closing these things might not exists anymore
-        impala2thorin_.erase(impala2thorin_.find(type_abs));
-        impala2thorin_.erase(impala2thorin_.find(type_abs->type_param()));
-        close(thorin_type_abs, body);
+        impala2thorin_.erase(impala2thorin_.find(lambda));
+        close(thorin_lambda, body);
 
-        thorin_type(type_abs) = thorin_type_abs;
-        thorin_type(type_abs->type_param()) = thorin_type_abs->type_param();
-        return thorin_type_abs;
+        return thorin_type(lambda) = thorin_lambda;
+    } else if (auto de_bruijn = type->isa<DeBruijn>()) {
+        return world().de_bruijn(convert(de_bruijn->lambda())->as<thorin::Lambda>());
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_kind()) {
 #define IMPALA_TYPE(itype, ttype) \
@@ -171,32 +169,32 @@ Var LocalDecl::emit(CodeGen& cg, const Def* init) const {
     return var_;
 }
 
-Lambda* Fn::emit_head(CodeGen& cg, const Location& loc) const {
-    return lambda_ = cg.lambda(cg.convert(fn_type())->as<thorin::FnType>(), loc, fn_symbol().remove_quotation());
+Continuation* Fn::emit_head(CodeGen& cg, const Location& loc) const {
+    return continuation_ = cg.continuation(cg.convert(fn_type())->as<thorin::FnType>(), loc, fn_symbol().remove_quotation());
 }
 
 void Fn::emit_body(CodeGen& cg, const Location& loc) const {
     // setup function nest
-    lambda()->set_parent(cg.cur_bb);
+    continuation()->set_parent(cg.cur_bb);
     THORIN_PUSH(cg.cur_fn, this);
-    THORIN_PUSH(cg.cur_bb, lambda());
+    THORIN_PUSH(cg.cur_bb, continuation());
 
     // setup memory + frame
     size_t i = 0;
-    const Def* mem_param = lambda()->param(i++);
+    const Def* mem_param = continuation()->param(i++);
     mem_param->name = "mem";
     cg.set_mem(mem_param);
     frame_ = cg.create_frame(loc);
 
     // name params and setup store locations
     for (auto param : params()) {
-        auto p = lambda()->param(i++);
+        auto p = continuation()->param(i++);
         p->name = param->symbol().str();
         cg.emit(param, p);
     }
-    assert(i == lambda()->num_params());
-    if (lambda()->num_params() != 0 && lambda()->params().back()->type()->isa<thorin::FnType>())
-        ret_param_ = lambda()->params().back();
+    assert(i == continuation()->num_params());
+    if (continuation()->num_params() != 0 && continuation()->params().back()->type()->isa<thorin::FnType>())
+        ret_param_ = continuation()->params().back();
 
     // descend into body
     auto def = cg.remit(body());
@@ -231,11 +229,11 @@ Var FnDecl::emit(CodeGen& cg, const Def*) const {
     // create thorin function
     var_ = Var::create_val(cg, emit_head(cg, loc()));
     if (is_extern())
-        lambda_->make_external();
+        continuation_->make_external();
 
     // handle main function
     if (symbol() == "main") {
-        lambda()->make_external();
+        continuation()->make_external();
     }
 
     if (body())
@@ -246,13 +244,13 @@ Var FnDecl::emit(CodeGen& cg, const Def*) const {
 void ExternBlock::emit_item(CodeGen& cg) const {
     for (auto fn : fns()) {
         cg.emit(static_cast<const ValueDecl*>(fn), nullptr); // TODO use init
-        auto lambda = fn->lambda();
+        auto continuation = fn->continuation();
         if (abi() == "\"C\"")
-            lambda->cc() = thorin::CC::C;
+            continuation->cc() = thorin::CC::C;
         else if (abi() == "\"device\"")
-            lambda->cc() = thorin::CC::Device;
+            continuation->cc() = thorin::CC::Device;
         else if (abi() == "\"thorin\"")
-            lambda->set_intrinsic();
+            continuation->set_intrinsic();
     }
 }
 
@@ -266,7 +264,7 @@ void ImplItem::emit_item(CodeGen& cg) const {
     Array<const Def*> args(num_methods());
     for (size_t i = 0, e = args.size(); i != e; ++i) {
         cg.emit(static_cast<const ValueDecl*>(method(i)), nullptr); // TODO use init
-        args[i] = method(i)->lambda();
+        args[i] = method(i)->continuation();
     }
 
     for (size_t i = 0, e = args.size(); i != e; ++i)
@@ -498,9 +496,9 @@ const Def* StructExpr::remit(CodeGen& cg) const {
     return cg.world().struct_agg(cg.convert(type())->as<thorin::StructType>(), defs, loc());
 }
 
-Var TypeAppExpr::lemit(CodeGen& cg) const { THORIN_UNREACHABLE; }
+Var TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
 
-const Def* TypeAppExpr::remit(CodeGen& cg) const {
+const Def* TypeAppExpr::remit(CodeGen&) const {
     assert(false && "TODO");
     return nullptr;
 }
@@ -553,7 +551,7 @@ const Def* RunBlockExpr::remit(CodeGen& cg) const {
     if (cg.is_reachable()) {
         World& w = cg.world();
         auto fn_mem = w.fn_type({w.mem_type()});
-        auto lrun  = w.lambda(w.fn_type({w.mem_type(), fn_mem}), loc(), "run_block");
+        auto lrun  = w.continuation(w.fn_type({w.mem_type(), fn_mem}), loc(), "run_block");
         auto run = w.run(lrun, loc());
         auto old_bb = cg.cur_bb;
         cg.cur_bb->jump(run, {cg.get_mem(), w.bottom(fn_mem, loc())}, loc());
@@ -562,7 +560,7 @@ const Def* RunBlockExpr::remit(CodeGen& cg) const {
         auto res = BlockExprBase::remit(cg);
         if (cg.is_reachable()) {
             assert(res);
-            auto next = w.lambda(fn_mem, loc(), "run_next");
+            auto next = w.continuation(fn_mem, loc(), "run_next");
             cg.cur_bb->jump(lrun->param(1), {cg.get_mem()}, loc());
             old_bb->update_arg(1, next);
             cg.cur_bb = next;
@@ -579,7 +577,7 @@ const Def* RunBlockExpr::remit(CodeGen& cg) const {
     if (cg.is_reachable()) {
         World& w = cg.world();
         auto fn_mem = w.fn_type({w.mem_type()});
-        auto lrun  = w.lambda(fn_mem, "run_block");
+        auto lrun  = w.continuation(fn_mem, "run_block");
         auto run = w.run(lrun);
         cg.cur_bb->jump(run, {cg.get_mem()});
         cg.cur_bb = lrun;
@@ -587,7 +585,7 @@ const Def* RunBlockExpr::remit(CodeGen& cg) const {
         auto res = BlockExprBase::remit(cg);
         if (cg.is_reachable()) {
             assert(res);
-            auto next = w.lambda(fn_mem, "run_next");
+            auto next = w.continuation(fn_mem, "run_next");
             cg.cur_bb->jump(next, {cg.get_mem()});
             cg.cur_bb = next;
             cg.set_mem(cg.cur_bb->param(0));
@@ -616,23 +614,23 @@ const Def* IfExpr::remit(CodeGen& cg) const {
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
     JumpTarget x(loc().end(), "next");
-    auto break_lambda = cg.create_continuation(break_decl());
+    auto break_continuation = cg.create_continuation(break_decl());
 
     cg.emit_jump(this, x);
-    cg.jump_to_continuation(break_lambda, loc().end());
+    cg.jump_to_continuation(break_continuation, loc().end());
     return cg.world().tuple({}, loc());
 }
 
 void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
     JumpTarget head_bb(cond()->loc().begin(), "while_head"), body_bb(body()->loc().begin(), "while_body");
-    auto continue_lambda = cg.create_continuation(continue_decl());
+    auto continue_continuation = cg.create_continuation(continue_decl());
 
     cg.jump(head_bb, cond()->loc().end());
     cg.enter_unsealed(head_bb);
     cg.emit_branch(cond(), body_bb, exit_bb);
     if (cg.enter(body_bb)) {
         cg.remit(body());
-        cg.jump_to_continuation(continue_lambda, cond()->loc().end());
+        cg.jump_to_continuation(continue_continuation, cond()->loc().end());
     }
     cg.jump(head_bb, cond()->loc().end());
     head_bb.seal();
@@ -643,7 +641,7 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     std::vector<const Def*> defs;
     defs.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
 
-    auto break_lambda = cg.create_continuation(break_decl());
+    auto break_continuation = cg.create_continuation(break_decl());
 
     // peel off run and halt
     auto forexpr = expr();
@@ -656,7 +654,7 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     for (const auto& arg : map_expr->args())
         defs.push_back(cg.remit(arg));
     defs.push_back(cg.remit(fn_expr()));
-    defs.push_back(break_lambda);
+    defs.push_back(break_continuation);
     auto fun = cg.remit(map_expr->lhs());
     if (prefix && prefix->kind() == PrefixExpr::RUN) fun = cg.world().run(fun, loc());
     if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun, loc());
@@ -664,21 +662,21 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     defs.front() = cg.get_mem(); // now get the current memory monad
     cg.call(fun, defs, nullptr, map_expr->loc());
 
-    cg.set_continuation(break_lambda);
-    if (break_lambda->num_params() == 2)
-        return break_lambda->param(1);
+    cg.set_continuation(break_continuation);
+    if (break_continuation->num_params() == 2)
+        return break_continuation->param(1);
     else {
-        Array<const Def*> defs(break_lambda->num_params()-1);
+        Array<const Def*> defs(break_continuation->num_params()-1);
         for (size_t i = 0, e = defs.size(); i != e; ++i)
-            defs[i] = break_lambda->param(i+1);
+            defs[i] = break_continuation->param(i+1);
         return cg.world().tuple(defs, loc());
     }
 }
 
 const Def* FnExpr::remit(CodeGen& cg) const {
-    auto lambda = emit_head(cg, loc());
+    auto continuation = emit_head(cg, loc());
     emit_body(cg, loc());
-    return lambda;
+    return continuation;
 }
 
 /*

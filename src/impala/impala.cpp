@@ -13,7 +13,7 @@ bool& fancy() { return fancy_output; }
 
 void init() { PrecTable::init(); Token::init(); }
 void destroy() { Symbol::destroy(); }
-void check(Init& init, const ModContents* mod, bool nossa) {
+void check(Init& init, const ModContents* mod, bool) {
     name_analysis(mod);
     type_inference(init, mod);
     //type_analysis(mod, nossa);

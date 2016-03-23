@@ -19,7 +19,7 @@
 namespace thorin {
     class Enter;
     class JumpTarget;
-    class Lambda;
+    class Continuation;
     class Param;
 }
 
@@ -102,7 +102,7 @@ public:
 protected:
     void check_ast_type_params(NameSema&) const;
     void check_ast_type_params(BorrowSema&) const;
-    Array<const TypeAbs*> open_ast_type_params(InferSema&) const;
+    Array<const Lambda*> open_ast_type_params(InferSema&) const;
     void close_ast_type_params(InferSema&) const;
     void check_ast_type_params(TypeSema&) const;
 
@@ -502,16 +502,15 @@ class ASTTypeParam : public TypeDecl {
 public:
     size_t num_bounds() const { return bounds().size(); }
     const ASTTypes& bounds() const { return bounds_; }
-    const TypeParam* type_param() const { return type_abs()->type_param(); }
-    const TypeAbs* type_abs() const { return type()->as<TypeAbs>(); }
+    const Lambda* lambda() const { return type()->as<Lambda>(); }
 
     void check(NameSema&) const;
-    const TypeAbs* check(TypeSema&) const;
+    const Lambda* check(TypeSema&) const;
     void check(BorrowSema&) const;
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    const TypeAbs* check(InferSema&) const;
+    const Lambda* check(InferSema&) const;
 
     ASTTypes bounds_;
 
@@ -538,7 +537,7 @@ public:
     ArrayRef<const Param*> params() const { return params_; }
     size_t num_params() const { return params_.size(); }
     const Expr* body() const { return body_; }
-    thorin::Lambda* lambda() const { return lambda_; }
+    thorin::Continuation* continuation() const { return continuation_; }
     const thorin::Param* ret_param() const { return ret_param_; }
     const thorin::Def* frame() const { return frame_; }
     std::ostream& stream_params(std::ostream& p, bool returning) const;
@@ -546,7 +545,7 @@ public:
     const Type* check_body(InferSema&, const FnType*) const;
     const Type* check_body(TypeSema&) const;
     void fn_check(BorrowSema&) const;
-    thorin::Lambda* emit_head(CodeGen&, const thorin::Location&) const;
+    thorin::Continuation* emit_head(CodeGen&, const thorin::Location&) const;
     void emit_body(CodeGen&, const thorin::Location& loc) const;
 
     bool is_continuation() const { return is_continuation_; }
@@ -555,7 +554,7 @@ public:
     virtual Symbol fn_symbol() const = 0;
 
 protected:
-    mutable thorin::Lambda* lambda_;
+    mutable thorin::Continuation* continuation_;
     AutoVector<const Param*> params_;
     mutable const thorin::Param* ret_param_ = nullptr;
     mutable const thorin::Def* frame_ = nullptr;
@@ -777,8 +776,8 @@ public:
     bool is_extern() const { return is_extern_; }
     virtual const FnType* fn_type() const override {
         auto t = type();
-        while (auto type_abs = t->isa<TypeAbs>())
-            t = type_abs->body();
+        while (auto lambda = t->isa<Lambda>())
+            t = lambda->body();
         return t->as<FnType>();
     }
     virtual Symbol fn_symbol() const override { return export_name_ ? export_name_->symbol() : identifier()->symbol(); }

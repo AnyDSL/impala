@@ -12,6 +12,9 @@ def allTests():
     """
     
     optionals = [
+      "codegen/ldg.impala",
+      "codegen/runblock_bug.impala",
+      "codegen/spir_phi_bug.impala",
       "codegen/alloc_definite_array.impala",
       "codegen/conversion_trait.impala",
       "codegen/cur_bb_bug.impala",
