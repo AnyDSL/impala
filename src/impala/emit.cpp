@@ -52,7 +52,7 @@ public:
         set_continuation(continuation);
     }
 
-    Var lemit(const Expr* expr) { return expr->lemit(*this); }
+    Value lemit(const Expr* expr) { return expr->lemit(*this); }
     const Def* remit(const Expr* expr) { return expr->remit(*this); }
     void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
@@ -496,14 +496,14 @@ const Def* StructExpr::remit(CodeGen& cg) const {
     return cg.world().struct_agg(cg.convert(type())->as<thorin::StructType>(), defs, loc());
 }
 
-Var TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
+Value TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
 
 const Def* TypeAppExpr::remit(CodeGen&) const {
     assert(false && "TODO");
     return nullptr;
 }
 
-Var MapExpr::lemit(CodeGen& cg) const {
+Value MapExpr::lemit(CodeGen& cg) const {
     if (lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<SimdType>()) {
         auto agg = cg.lemit(lhs());
         return Value::create_agg(agg, cg.remit(arg(0)));

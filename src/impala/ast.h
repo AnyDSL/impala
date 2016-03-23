@@ -450,7 +450,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual thorin::Var emit(CodeGen&, const thorin::Def* init) const = 0;
+    virtual thorin::Value emit(CodeGen&, const thorin::Def* init) const = 0;
 
 protected:
     AutoPtr<const ASTType> ast_type_;
@@ -479,7 +479,7 @@ public:
 private:
     const Type* check(InferSema&) const;
     void check(TypeSema&) const;
-    virtual thorin::Var emit(CodeGen&, const thorin::Def* init) const override;
+    virtual thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
 protected:
     size_t handle_;
@@ -764,7 +764,7 @@ public:
 private:
     virtual void check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
-    virtual thorin::Var emit(CodeGen&, const thorin::Def* init) const override;
+    virtual thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
     AutoPtr<const Expr> init_;
 
@@ -788,7 +788,7 @@ public:
 private:
     virtual void check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
-    virtual thorin::Var emit(CodeGen&, const thorin::Def* init) const override;
+    virtual thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
     AutoPtr<const Identifier> export_name_;
     bool is_extern_ = false;
@@ -874,7 +874,7 @@ public:
 private:
     virtual const Type* check(InferSema&, const Type*) const = 0;
     virtual void check(TypeSema&) const = 0;
-    virtual thorin::Var lemit(CodeGen&) const;
+    virtual thorin::Value lemit(CodeGen&) const;
     virtual const thorin::Def* remit(CodeGen&) const;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
@@ -1050,7 +1050,7 @@ public:
 private:
     virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
-    virtual thorin::Var lemit(CodeGen&) const override;
+    virtual thorin::Value lemit(CodeGen&) const override;
 
     AutoPtr<const Path> path_;
     mutable const ValueDecl* value_decl_ = nullptr; ///< Declaration of the variable in use.
@@ -1169,7 +1169,7 @@ public:
 private:
     virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
-    virtual thorin::Var lemit(CodeGen&) const override;
+    virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
@@ -1350,7 +1350,7 @@ public:
 private:
     virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
-    virtual thorin::Var lemit(CodeGen&) const override;
+    virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
@@ -1374,7 +1374,7 @@ public:
 private:
     virtual const Type* check(InferSema&, const Type*) const override;
     virtual void check(TypeSema&) const override;
-    virtual thorin::Var lemit(CodeGen&) const override;
+    virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
