@@ -20,16 +20,17 @@ enum Kind {
     Kind_fn,
     Kind_impl,
     Kind_indefinite_array,
+    Kind_lambda,
     Kind_mut_ptr,
     Kind_noret,
     Kind_owned_ptr,
+    Kind_pi,
     Kind_simd,
     Kind_struct,
     Kind_tuple,
-    Kind_lambda,
-    Kind_var,
     Kind_typedef_abs,
     Kind_unknown,
+    Kind_var,
 };
 
 enum PrimTypeKind {
@@ -42,10 +43,11 @@ template<class T> using ArrayRef = thorin::ArrayRef<T>;
 template<class T> using Array    = thorin::Array<T>;
 
 static const int Node_Application= impala::Kind_application;
-static const int Node_Var        = impala::Kind_var;
 static const int Node_Lambda     = impala::Kind_lambda;
+static const int Node_Pi         = impala::Kind_pi;
 static const int Node_StructType = impala::Kind_struct;
 static const int Node_TupleType  = impala::Kind_tuple;
+static const int Node_Var        = impala::Kind_var;
 
 #define HENK_STRUCT_UNIFIER_NAME  struct_decl
 #define HENK_STRUCT_UNIFIER_TYPE  const StructDecl*

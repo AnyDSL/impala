@@ -100,7 +100,8 @@ void CodeGen::convert_args(const Type* type, std::vector<const thorin::Type*>& n
 }
 
 const thorin::Type* CodeGen::convert_rec(const Type* type) {
-    if (auto lambda = type->isa<Lambda>()) {
+    if (/*auto lambda = */type->isa<Lambda>()) {
+#if 0
         auto thorin_lambda = world().lambda(lambda->name());
 
         thorin_type(lambda)               = thorin_lambda;
@@ -111,6 +112,8 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         close(thorin_lambda, body);
 
         return thorin_type(lambda) = thorin_lambda;
+#endif
+        return nullptr;
     } else if (/*auto var = */type->isa<Var>()) {
         // TODO
         return nullptr;
