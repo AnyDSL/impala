@@ -109,7 +109,7 @@ std::ostream& FnType::stream(std::ostream& os) const {
 }
 
 std::ostream& Application::stream(std::ostream& os) const { return streamf(os, "%[%]", callee(), arg()); }
-std::ostream& DeBruijn::stream(std::ostream& os) const { return os << lambda()->name(); }
+std::ostream& Var::stream(std::ostream& os) const { return os << lambda()->name(); }
 
 std::ostream& PtrType::stream(std::ostream& os) const {
     os << prefix();

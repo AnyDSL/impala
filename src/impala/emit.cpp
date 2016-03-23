@@ -111,8 +111,8 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         close(thorin_lambda, body);
 
         return thorin_type(lambda) = thorin_lambda;
-    } else if (auto de_bruijn = type->isa<DeBruijn>()) {
-        return world().de_bruijn(convert(de_bruijn->lambda())->as<thorin::Lambda>());
+    } else if (auto var = type->isa<Var>()) {
+        return world().var(convert(var->lambda())->as<thorin::Lambda>());
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_kind()) {
 #define IMPALA_TYPE(itype, ttype) \

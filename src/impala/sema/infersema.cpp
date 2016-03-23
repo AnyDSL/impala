@@ -122,10 +122,10 @@ public:
         if (u->isa<UnknownType>())                          return unify        (representative(t), representative(u))->type;
 
         if (t->kind() == u->kind() && t->size() == u->size()) {
-            if (auto t_de_bruijn = t->isa<DeBruijn>()) {
-                auto u_de_brujin = u-> as<DeBruijn>();
-                if (t_de_bruijn->depth() == u_de_brujin->depth() && t_de_bruijn->lambda()->kind() == u_de_brujin->lambda()->kind())
-                    return de_bruijn(old2new_[t_de_bruijn->lambda()]);
+            if (auto t_var = t->isa<Var>()) {
+                auto u_var = u-> as<Var>();
+                if (t_var->depth() == u_var->depth() && t_var->lambda()->kind() == u_var->lambda()->kind())
+                    return var(old2new_[t_var->lambda()]);
             } else if (auto t_lambda = t->isa<Lambda>()) {
                 auto u_lambda = u->as<Lambda>();
                 auto n_lambda = this->lambda(t_lambda->name());
@@ -376,7 +376,7 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
     if (decl()) {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
             if (auto ast_type_param = type_decl->isa<ASTTypeParam>())
-                return sema.de_bruijn(ast_type_param->lambda());
+                return sema.var(ast_type_param->lambda());
             else if (auto type = sema.type(type_decl)) {
                 if (type->is_hashed()) {
                     if (auto lambda = type->isa<Lambda>())
