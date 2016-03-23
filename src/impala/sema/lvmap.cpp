@@ -35,6 +35,7 @@ public:
     LvTree* get_parent(void) const { return parent_; }
     void remove_subtree(Symbol field);
     void clear_subtrees(void);
+    LvTree* merge(LvTree*, bool, const LvMapComparator&);
 
 private:
     LvTree* parent_;
@@ -61,7 +62,7 @@ LvTreeLookupTree find_tree(const thorin::HashMap<Key, std::shared_ptr<LvTree>>& 
     if (i == map.end())
         return LvTreeLookupTree(nullptr, false);
     std::shared_ptr<LvTree> tree = i->second;
-    return LvTreeLookupTree(tree.get(), tree.unique());
+    return LvTreeLookupTree(tree.get(), !tree.unique());
 }
 
 template <class Key>
@@ -101,6 +102,64 @@ void LvTree::clear_subtrees(void) {
     children_.clear();
 }
 
+LvTree* LvTree::merge(LvTree* other, bool multi_ref, const LvMapComparator& comp) {
+    if (this == other)
+        // we are merging together the same trees, no need to do anything
+        return nullptr;
+    // TODO: assert something about the children like both pointer or struct field
+  
+    bool has_changed = false;
+    // TODO: this is not so great because there might be different trees with equal structure and
+    // payloads, in this case we create a new one but we actually wouldn't need to do that
+   
+    // TODO: is reinserting ok? i.e. not a multimap? 
+    LvTree* res_tree = multi_ref ? new LvTree(nullptr) : this;
+    for (auto i : children_) {
+        if (!other->children_.contains(i.first))
+            res_tree->children_[i.first] = i.second;
+        else {
+            auto other_child = other->children_[i.first];
+            bool child_multi_ref = multi_ref || !i.second.unique();
+            LvTree* child_res = i.second->merge(other->children_[i.first].get(), child_multi_ref, comp);
+            if (child_res == nullptr)
+                res_tree->children_[i.first] = i.second;
+            else {
+                child_res->parent_ = res_tree;
+                res_tree->children_[i.first] = std::shared_ptr<LvTree>(child_res);
+                has_changed = true;
+            }
+        }
+    }
+    for (auto i : other->children_) {
+        if (!children_.contains(i.first)) {
+            res_tree->children_[i.first] = i.second;
+            has_changed = true;
+        }
+    }
+
+    payload_t infimum = comp.infimum(payload_.get_value(), other->payload_.get_value());
+    has_changed |= infimum != payload_.get_value();
+
+    // TODO: run simplification steps on the new children
+    
+    if (multi_ref && !has_changed) {
+        // we inserted everything into a new tree but there were no changes, so we do not
+        // need a new tree
+        children_ = res_tree->children_;
+        delete res_tree;
+        res_tree = this;
+    }
+
+    const thorin::Location& loc = infimum == payload_.get_value() ?
+        payload_.loc() : other->payload_.loc();
+    // TODO: change location computation once the infimum is not the minimum anymore
+    res_tree->set_payload(infimum, loc);
+
+    if (multi_ref && has_changed) 
+        return res_tree;
+    return nullptr;
+}
+
 //-------------------------------------------------------------
 
 /*
@@ -110,6 +169,19 @@ void LvTree::clear_subtrees(void) {
 Relation LvMapComparator::compare(payload_t p1, payload_t p2) const {
     assert(p1 >= 0 && p2 >= 0); // TODO: remove this restriction
     return p1 > p2 ? Relation::LESS : p1 < p2 ? Relation::GREATER : Relation::EQUAL;
+}
+
+payload_t LvMapComparator::infimum(payload_t p1, payload_t p2) const {
+    switch (compare(p1, p2)) {
+        case Relation::LESS:
+            return p1;
+        case Relation::GREATER:
+        case Relation::EQUAL:
+            return p2;
+        default:
+            // TODO: support this
+            assert(false);
+    }
 }
 
 //-------------------------------------------------------------
@@ -163,7 +235,18 @@ LvMap::LvMap(const LvMap& map)
     , scope_stack_(map.scope_stack_)
     {}
 
-void LvMap::merge(const LvMap& other) {}
+void LvMap::merge(LvMap& other) {
+    // TODO: other could be const, but doesn't matter really
+    assert(varmap_.size() == other.varmap_.size() && scope_stack_.size() == other.scope_stack_.size());
+    // TODO: assert same comparator
+    for (auto i : varmap_) {
+        assert(other.varmap_.contains(i.first));
+        LvTree* new_tree = i.second->merge(other.varmap_[i.first].get(), !i.second.unique(),
+            get_comparator());
+        if (new_tree != nullptr)
+            varmap_[i.first] = std::shared_ptr<LvTree>(new_tree);
+    }
+}
 
 
 //-------------------------------------------------------

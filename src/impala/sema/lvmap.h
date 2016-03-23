@@ -22,7 +22,7 @@ const thorin::Location UNSET_LOCATION = thorin::Location();
 class Payload: public thorin::HasLocation {
     public:
         // TODO: the loc_ init is not good, maybe use a pointer instead
-        Payload(): payload_val_(0), loc_(UNSET_LOCATION) {}
+        Payload(): HasLocation(UNSET_LOCATION), payload_val_(0) {}
         payload_t get_value() const { return payload_val_; }
 
     protected:
@@ -32,7 +32,6 @@ class Payload: public thorin::HasLocation {
 
     private:
         payload_t payload_val_;
-        const thorin::Location& loc_;
 };
 
 //-----------------------------------------------------------------------
@@ -70,7 +69,8 @@ public:
     //public void add_relation(payload_t, payload_t, Relation);
 
     /// returns LESS if p1 < p2, GREATER if p1 > p2 and EQUAL if p1 == p2
-    Relation compare(payload_t p1, payload_t p2) const;
+    Relation compare(payload_t, payload_t) const;
+    payload_t infimum(payload_t, payload_t) const;
 };
 
 //---------------------------------------------------------------------------------
@@ -92,7 +92,7 @@ public:
     void enter_scope();
     void leave_scope();
 
-    void merge(const LvMap& other);
+    void merge(LvMap& other);
 
 private:
     thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>> varmap_;
