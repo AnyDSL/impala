@@ -456,7 +456,7 @@ protected:
     AutoPtr<const ASTType> ast_type_;
     bool is_mut_ = false;
     mutable bool is_written_ = false;
-    mutable thorin::Var var_;
+    mutable thorin::Value value_;
 
     friend class Parser;
     friend class CodeGen;
@@ -1076,7 +1076,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
-    virtual thorin::Var lemit(CodeGen&) const override;
+    virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
 

@@ -37,7 +37,7 @@ public:
     Continuation* create_continuation(const LocalDecl* decl) {
         auto result = continuation(convert(decl->type())->as<thorin::FnType>(), decl->loc(), decl->symbol().str());
         result->param(0)->name = "mem";
-        decl->var_ = Var::create_val(*this, result);
+        decl->value_ = Value::create_val(*this, result);
         return result;
     }
 
@@ -64,14 +64,14 @@ public:
         item->done_ = true;
 #endif
     }
-    Var emit(const ValueDecl* decl) {
-        assert(decl->var_.kind() != thorin::Var::Empty);
-        return decl->var_;
+    Value emit(const ValueDecl* decl) {
+        assert(decl->value_.kind() != thorin::Value::Empty);
+        return decl->value_;
     }
-    Var emit(const ValueDecl* decl, const Def* init) {
-        if (!decl->var_)
-            decl->var_ = decl->emit(*this, init);
-        return decl->var_;
+    Value emit(const ValueDecl* decl, const Def* init) {
+        if (!decl->value_)
+            decl->value_ = decl->emit(*this, init);
+        return decl->value_;
     }
     const thorin::Type* convert(const Type* type) {
         if (thorin_type(type) == nullptr)
@@ -153,20 +153,20 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
  * Decls and Function
  */
 
-Var LocalDecl::emit(CodeGen& cg, const Def* init) const {
+Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
     auto thorin_type = cg.convert(type());
     if (!init)
         init = cg.world().bottom(thorin_type, loc());
     if (!is_mut())
-        return var_ = Var::create_val(cg, init);
+        return value_ = Value::create_val(cg, init);
 
     if (is_address_taken())
-        var_ = Var::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), handle(), loc(), symbol().str()));
+        value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), handle(), loc(), symbol().str()));
     else
-        var_ = Var::create_mut(cg, handle(), thorin_type, symbol().str()); // TODO
+        value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str()); // TODO
 
-    var_.store(init, loc());
-    return var_;
+    value_.store(init, loc());
+    return value_;
 }
 
 Continuation* Fn::emit_head(CodeGen& cg, const Location& loc) const {
@@ -225,9 +225,9 @@ void ModContents::emit(CodeGen& cg) const {
         cg.emit(item);
 }
 
-Var FnDecl::emit(CodeGen& cg, const Def*) const {
+Value FnDecl::emit(CodeGen& cg, const Def*) const {
     // create thorin function
-    var_ = Var::create_val(cg, emit_head(cg, loc()));
+    value_ = Value::create_val(cg, emit_head(cg, loc()));
     if (is_extern())
         continuation_->make_external();
 
@@ -238,7 +238,7 @@ Var FnDecl::emit(CodeGen& cg, const Def*) const {
 
     if (body())
         emit_body(cg, loc());
-    return var_;
+    return value_;
 }
 
 void ExternBlock::emit_item(CodeGen& cg) const {
@@ -273,12 +273,12 @@ void ImplItem::emit_item(CodeGen& cg) const {
     def_ = cg.world().tuple(args, loc());
 }
 
-Var StaticItem::emit(CodeGen& cg, const Def* init) const {
+Value StaticItem::emit(CodeGen& cg, const Def* init) const {
     assert(!init);
     init = !this->init() ? cg.world().bottom(cg.convert(type()), loc()) : cg.remit(this->init());
     if (!is_mut())
-        return Var::create_val(cg, init);
-    return Var::create_ptr(cg, cg.world().global(init, loc(), true, symbol().str()));
+        return Value::create_val(cg, init);
+    return Value::create_ptr(cg, cg.world().global(init, loc(), true, symbol().str()));
 }
 
 void StructDecl::emit_item(CodeGen& cg) const {
@@ -292,7 +292,7 @@ void Typedef::emit_item(CodeGen&) const {}
  * expressions
  */
 
-Var Expr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
+Value Expr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
 const Def* Expr::remit(CodeGen& cg) const { return lemit(cg).load(loc()); }
 void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     if (auto def = cg.remit(this)) {
@@ -341,7 +341,7 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     return cg.world().convert(thorin_type, def, loc());
 }
 
-Var PathExpr::lemit(CodeGen& cg) const {
+Value PathExpr::lemit(CodeGen& cg) const {
     return cg.emit(value_decl(), nullptr);
 }
 
@@ -367,7 +367,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
         }
         case AND: {
             auto var = cg.lemit(rhs());
-            assert(var.kind() == Var::PtrRef);
+            assert(var.kind() == Value::PtrRef);
             return var.def();
         }
         case RUN: return cg.world().run(cg.remit(rhs()), loc());
@@ -376,9 +376,9 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
     }
 }
 
-Var PrefixExpr::lemit(CodeGen& cg) const {
+Value PrefixExpr::lemit(CodeGen& cg) const {
     if (kind() == MUL)
-        return Var::create_ptr(cg, cg.remit(rhs()));
+        return Value::create_ptr(cg, cg.remit(rhs()));
     THORIN_UNREACHABLE; // TODO
 }
 
@@ -431,7 +431,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             const TokenKind op = (TokenKind) kind();
 
             if (Token::is_assign(op)) {
-                Var lvar = cg.lemit(lhs());
+                Value lvar = cg.lemit(lhs());
                 const Def* rdef = cg.remit(rhs());
 
                 if (op != Token::ASGN) {
@@ -450,7 +450,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 }
 
 const Def* PostfixExpr::remit(CodeGen& cg) const {
-    Var var = cg.lemit(lhs());
+    Value var = cg.lemit(lhs());
     const Def* def = var.load(loc());
     const Def* one = cg.world().one(def->type(), loc());
     var.store(cg.world().arithop(Token::to_arithop((TokenKind) kind()), def, one, loc()), loc());
@@ -506,7 +506,7 @@ const Def* TypeAppExpr::remit(CodeGen&) const {
 Var MapExpr::lemit(CodeGen& cg) const {
     if (lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<SimdType>()) {
         auto agg = cg.lemit(lhs());
-        return Var::create_agg(agg, cg.remit(arg(0)));
+        return Value::create_agg(agg, cg.remit(arg(0)));
     }
     THORIN_UNREACHABLE;
 }
@@ -533,8 +533,8 @@ const Def* MapExpr::remit(CodeGen& cg) const {
     THORIN_UNREACHABLE;
 }
 
-Var FieldExpr::lemit(CodeGen& cg) const {
-    return Var::create_agg(cg.lemit(lhs()), cg.world().literal_qu32(index(), loc()));
+Value FieldExpr::lemit(CodeGen& cg) const {
+    return Value::create_agg(cg.lemit(lhs()), cg.world().literal_qu32(index(), loc()));
 }
 
 const Def* FieldExpr::remit(CodeGen& cg) const {
