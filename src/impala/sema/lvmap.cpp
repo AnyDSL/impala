@@ -33,6 +33,7 @@ public:
     LvTreeLookupTree get_pointer_child(bool create);
     LvTreeLookupTree get_field_child(Symbol field, bool create);
     LvTree* get_parent(void) const { return parent_; }
+    void set_parent(LvTree* parent) { parent_ = parent; };
     void remove_subtree(Symbol field);
     void clear_subtrees(void);
     LvTree* merge(LvTree*, bool, const LvMapComparator&);
@@ -265,7 +266,9 @@ const Payload& lookup_payload(const Expr& expr, LvMap& map) {
 const LvTreeLookupRes PathExpr::lookup_lv_tree(LvMap& map, bool create) const {
     // TODO: are there valid cases where there is no mapping for the corresponding declaration?
     // TODO: check for invalid returned trees
-    return map.lookup(value_decl().get());
+    LvTreeLookupTree res = map.lookup(value_decl().get());
+    assert(res.tree_->get_parent() == nullptr);
+    return res;
 }
 
 LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent, bool lookup_pointer,
@@ -288,6 +291,8 @@ LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent, bool 
         this_tree.tree_->get_payload().get_value());
     assert(comp_res == Relation::LESS || (comp_res == Relation::EQUAL && create));
 
+    // set the parent for this lookup, necessary because of COW pattern that results in a DAG
+    this_tree.tree_->set_parent(parent_res.value_.tree_res_.tree_);
     this_tree.multi_ref_ |= parent_res.value_.tree_res_.multi_ref_;
     return LvTreeLookupRes(this_tree);
 }
