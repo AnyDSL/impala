@@ -124,11 +124,8 @@ public:
         if (t->kind() == u->kind() && t->size() == u->size()) {
             if (auto t_de_bruijn = t->isa<DeBruijn>()) {
                 auto u_de_brujin = u-> as<DeBruijn>();
-                if (       t_de_bruijn->index() == u_de_brujin->index()
-                        && t_de_bruijn->depth() == u_de_brujin->depth()
-                        && t_de_bruijn->lambda()->kind() == u_de_brujin->lambda()->kind()) {
+                if (t_de_bruijn->depth() == u_de_brujin->depth() && t_de_bruijn->lambda()->kind() == u_de_brujin->lambda()->kind())
                     return de_bruijn(old2new_[t_de_bruijn->lambda()]);
-                }
             } else if (auto t_lambda = t->isa<Lambda>()) {
                 auto u_lambda = u->as<Lambda>();
                 auto n_lambda = this->lambda(t_lambda->name());
