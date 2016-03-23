@@ -628,7 +628,7 @@ void MapExpr::check(TypeSema& sema) const {
         error(this, "incorrect type for map expression");
 }
 
-const Type* TypeSema::check_call(const MapExpr* map_expr, ArrayRef<const Expr*> args) {
+const Type* TypeSema::check_call(const MapExpr* /*map_expr*/, ArrayRef<const Expr*> /*args*/) {
 #if 0
     size_t num_ast_type_args = ast_type_args.size();
     size_t num_args = args.size();

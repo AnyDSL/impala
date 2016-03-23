@@ -19,7 +19,7 @@ class InferSema : public TypeTable {
 public:
     // helpers
 
-    const Type* instantiate(const Lambda* lambda, ArrayRef<const ASTType*> ast_type_args, std::vector<const Type*>& type_args) {
+    const Type* reduce(const Lambda* lambda, ArrayRef<const ASTType*> ast_type_args, std::vector<const Type*>& type_args) {
         auto num = num_lambdas(lambda);
         if (ast_type_args.size() <= num) {
             for (size_t i = 0, e = ast_type_args.size(); i != e; ++i)
@@ -28,7 +28,12 @@ public:
             while (type_args.size() < num)
                 type_args.push_back(unknown_type());
 
-            return lambda->reduce(type_args);
+            size_t i = 0;
+            const Type* type = lambda;
+            while (auto lambda = type->isa<Lambda>())
+                type = application(lambda, type_args[i++]);
+
+            return type;
         }
 
         return type_error();
@@ -122,31 +127,11 @@ public:
         if (u->isa<UnknownType>())                          return unify        (representative(t), representative(u))->type;
 
         if (t->kind() == u->kind() && t->size() == u->size()) {
-            if (auto t_var = t->isa<Var>()) {
-                auto u_var = u-> as<Var>();
-                if (t_var->depth() == u_var->depth() && t_var->lambda()->kind() == u_var->lambda()->kind())
-                    return var(old2new_[t_var->lambda()]);
-            } else if (auto t_lambda = t->isa<Lambda>()) {
-                auto u_lambda = u->as<Lambda>();
-                auto n_lambda = this->lambda(t_lambda->name());
+            Array<const Type*> nargs(t->size());
+            for (size_t i = 0, e = nargs.size(); i != e; ++i)
+                nargs[i] = unify(t->arg(i), u->arg(i));
 
-                assert(!old2new_.contains(t_lambda));
-                old2new_[t_lambda] = n_lambda;
-
-                auto n_body = unify(t_lambda->body(), u_lambda->body());
-
-                auto i = old2new_.find(t_lambda);
-                assert(i != old2new_.end() && i->second == n_lambda);
-                old2new_.erase(i);
-
-                return impala::close(n_lambda, n_body);
-            } else {
-                Array<const Type*> nargs(t->size());
-                for (size_t i = 0, e = nargs.size(); i != e; ++i)
-                    nargs[i] = unify(t->arg(i), u->arg(i));
-
-                return t->rebuild(nargs);
-            }
+            return t->rebuild(nargs);
         }
 
         assert(false && "TODO");
@@ -380,7 +365,7 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
             else if (auto type = sema.type(type_decl)) {
                 if (type->is_hashed()) {
                     if (auto lambda = type->isa<Lambda>())
-                        return sema.instantiate(lambda, ast_type_args(), type_args_);
+                        return sema.reduce(lambda, ast_type_args(), type_args_);
                     else
                         return type;
                 }
@@ -633,7 +618,7 @@ const Type* StructExpr::check(InferSema&, const Type* /*expected*/) const {
                 type_args_.resize(decl_type->num_lambdas());
                 sema.fill_type_args(type_args_, ast_type_args_);
 
-                if (auto struct_type = decl_type->instantiate(type_args_))
+                if (auto struct_type = decl_type->reduce(type_args_))
                     return struct_type;
             }
         }
@@ -673,7 +658,7 @@ const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> a
     type_args.resize(fn_poly->num_lambdas());
     fill_type_args(type_args, ast_type_args);
 
-    constrain(fn_mono, fn_poly->instantiate(type_args)->as<FnType>());
+    constrain(fn_mono, fn_poly->reduce(type_args)->as<FnType>());
 
     bool is_returning = args.size()+1 == fn_mono->num_args();
 
@@ -720,7 +705,7 @@ const Type* FieldExpr::check(InferSema& sema, const Type* /*TODO expected*/) con
     return sema.type_error();
 }
 
-const Type* TypeAppExpr::check(InferSema& sema, const Type* expected) const {
+const Type* TypeAppExpr::check(InferSema& sema, const Type* /*expected*/) const {
     if (auto type = sema.check(lhs())) {
         if (auto lambda = type->isa<Lambda>()) {
             auto num = sema.num_lambdas(lambda);
@@ -734,7 +719,7 @@ const Type* TypeAppExpr::check(InferSema& sema, const Type* expected) const {
                 for (auto& type_arg : type_args_)
                     type_arg = sema.type(type_arg);
 
-                return sema.instantiate(lambda, ast_type_args(), type_args_);
+                return sema.reduce(lambda, ast_type_args(), type_args_);
             }
         }
     }

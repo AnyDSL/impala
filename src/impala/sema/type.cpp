@@ -101,15 +101,18 @@ std::ostream& NoRetType::stream(std::ostream& os) const { return os << "<no-retu
 
 std::ostream& FnType::stream(std::ostream& os) const {
     os << "fn";
-    auto ret_type = return_type();
-    if (ret_type->isa<NoRetType>())
+    //auto ret_type = return_type();
+    //if (ret_type->isa<NoRetType>())
         return stream_list(os, args(), [&](const Type* type) { os << type; }, "(", ")");
 
-    return streamf(os, "(%) -> %", stream_list(args().skip_back(), [&](const Type* type) { os << type; }), ret_type);
+    //return streamf(os, "(%) -> %", stream_list(args().skip_back(), [&](const Type* type) { os << type; }), ret_type);
+}
+
+std::ostream& Var::stream(std::ostream& os) const {
+    return is_closed() ? streamf(os, "<%>", depth()) : streamf(os, "<%>", lambda()->name());
 }
 
 std::ostream& Application::stream(std::ostream& os) const { return streamf(os, "%[%]", callee(), arg()); }
-std::ostream& Var::stream(std::ostream& os) const { return os << lambda()->name(); }
 
 std::ostream& PtrType::stream(std::ostream& os) const {
     os << prefix();
@@ -153,38 +156,41 @@ const Type* UnknownType        ::vrebuild(TypeTable&,    Types     ) const { ret
 //------------------------------------------------------------------------------
 
 /*
- * specialize
+ * reduce
  */
 
-const Type* DefiniteArrayType::vspecialize(Type2Type& map) const {
-    return map[this] = typetable().definite_array_type(elem_type()->specialize(map), dim());
+const Type* DefiniteArrayType::vreduce(int depth, const Type* type, Type2Type& map) const {
+    return map.emplace(this, typetable().definite_array_type(elem_type()->reduce(depth, type, map), dim())).first->second;
 }
 
-const Type* SimdType::vspecialize(Type2Type& map) const {
-    return map[this] = typetable().simd_type(elem_type()->specialize(map), dim());
+const Type* SimdType::vreduce(int depth, const Type* type, Type2Type& map) const {
+    return map.emplace(this, typetable().simd_type(elem_type()->reduce(depth, type, map), dim())).first->second;
 }
 
-const Type* IndefiniteArrayType::vspecialize(Type2Type& map) const {
-    return map[this] = typetable().indefinite_array_type(elem_type()->specialize(map));
+const Type* IndefiniteArrayType::vreduce(int depth, const Type* type, Type2Type& map) const {
+    return map.emplace(this, typetable().indefinite_array_type(elem_type()->reduce(depth, type, map))).first->second;
 }
 
-const Type* BorrowedPtrType::vspecialize(Type2Type& map) const {
-    return map[this] = typetable().borrowed_ptr_type(referenced_type()->specialize(map), addr_space());
+const Type* BorrowedPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {
+    return map.emplace(this, typetable().borrowed_ptr_type(referenced_type()->reduce(depth, type, map), addr_space())).first->second;
 }
 
-const Type* MutPtrType::vspecialize(Type2Type& map) const {
-    return map[this] = typetable().mut_ptr_type(referenced_type()->specialize(map), addr_space());
+const Type* MutPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {
+    return map.emplace(this, typetable().mut_ptr_type(referenced_type()->reduce(depth, type, map), addr_space())).first->second;
 }
 
-const Type* OwnedPtrType::vspecialize(Type2Type& map) const {
-    return map[this] = typetable().owned_ptr_type(referenced_type()->specialize(map), addr_space());
+const Type* OwnedPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {
+    return map.emplace(this, typetable().owned_ptr_type(referenced_type()->reduce(depth, type, map), addr_space())).first->second;
 }
 
-const Type* FnType     ::vspecialize(Type2Type& map) const { return map[this] = typetable().fn_type(specialize_args(map)); }
-const Type* PrimType   ::vspecialize(Type2Type& map) const { return map[this] = this; }
-const Type* NoRetType  ::vspecialize(Type2Type& map) const { return map[this] = this; }
-const Type* TypeError  ::vspecialize(Type2Type& map) const { return map[this] = this; }
-const Type* UnknownType::vspecialize(Type2Type& map) const { return map[this] = this; }
+const Type* FnType::vreduce(int depth, const Type* type, Type2Type& map) const {
+    return map.emplace(this, typetable().fn_type(reduce_args(depth, type, map))).first->second;
+}
+
+const Type* PrimType   ::vreduce(int, const Type*, Type2Type& map) const { return map[this] = this; }
+const Type* NoRetType  ::vreduce(int, const Type*, Type2Type& map) const { return map[this] = this; }
+const Type* TypeError  ::vreduce(int, const Type*, Type2Type& map) const { return map[this] = this; }
+const Type* UnknownType::vreduce(int, const Type*, Type2Type& map) const { return map[this] = this; }
 
 //------------------------------------------------------------------------------
 
