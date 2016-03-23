@@ -160,37 +160,37 @@ const Type* UnknownType        ::vrebuild(TypeTable&,    Types     ) const { ret
  */
 
 const Type* DefiniteArrayType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return map.emplace(this, typetable().definite_array_type(elem_type()->reduce(depth, type, map), dim())).first->second;
+    return typetable().definite_array_type(elem_type()->reduce(depth, type, map), dim());
 }
 
 const Type* SimdType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return map.emplace(this, typetable().simd_type(elem_type()->reduce(depth, type, map), dim())).first->second;
+    return typetable().simd_type(elem_type()->reduce(depth, type, map), dim());
 }
 
 const Type* IndefiniteArrayType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return map.emplace(this, typetable().indefinite_array_type(elem_type()->reduce(depth, type, map))).first->second;
+    return typetable().indefinite_array_type(elem_type()->reduce(depth, type, map));
 }
 
 const Type* BorrowedPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return map.emplace(this, typetable().borrowed_ptr_type(referenced_type()->reduce(depth, type, map), addr_space())).first->second;
+    return typetable().borrowed_ptr_type(referenced_type()->reduce(depth, type, map), addr_space());
 }
 
 const Type* MutPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return map.emplace(this, typetable().mut_ptr_type(referenced_type()->reduce(depth, type, map), addr_space())).first->second;
+    return typetable().mut_ptr_type(referenced_type()->reduce(depth, type, map), addr_space());
 }
 
 const Type* OwnedPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return map.emplace(this, typetable().owned_ptr_type(referenced_type()->reduce(depth, type, map), addr_space())).first->second;
+    return typetable().owned_ptr_type(referenced_type()->reduce(depth, type, map), addr_space());
 }
 
 const Type* FnType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return map.emplace(this, typetable().fn_type(reduce_args(depth, type, map))).first->second;
+    return typetable().fn_type(reduce_args(depth, type, map));
 }
 
-const Type* PrimType   ::vreduce(int, const Type*, Type2Type& map) const { return map[this] = this; }
-const Type* NoRetType  ::vreduce(int, const Type*, Type2Type& map) const { return map[this] = this; }
-const Type* TypeError  ::vreduce(int, const Type*, Type2Type& map) const { return map[this] = this; }
-const Type* UnknownType::vreduce(int, const Type*, Type2Type& map) const { return map[this] = this; }
+const Type* PrimType   ::vreduce(int, const Type*, Type2Type&) const { return this; }
+const Type* NoRetType  ::vreduce(int, const Type*, Type2Type&) const { return this; }
+const Type* TypeError  ::vreduce(int, const Type*, Type2Type&) const { return this; }
+const Type* UnknownType::vreduce(int, const Type*, Type2Type&) const { return this; }
 
 //------------------------------------------------------------------------------
 
