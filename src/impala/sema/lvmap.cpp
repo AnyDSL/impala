@@ -115,27 +115,28 @@ LvTree* LvTree::merge(LvTree* other, bool multi_ref, const LvMapComparator& comp
    
     // TODO: is reinserting ok? i.e. not a multimap? 
     LvTree* res_tree = multi_ref ? new LvTree(nullptr) : this;
-    for (auto i : children_) {
-        if (!other->children_.contains(i.first))
-            res_tree->children_[i.first] = i.second;
-        else {
-            auto other_child = other->children_[i.first];
-            bool child_multi_ref = multi_ref || !i.second.unique();
-            LvTree* child_res = i.second->merge(other->children_[i.first].get(), child_multi_ref, comp);
-            if (child_res == nullptr)
-                res_tree->children_[i.first] = i.second;
+
+    // iterate over other to avoid changing this children_ map while we iterate over it
+    for (auto i : other->children_) {
+        if (children_.contains(i.first)) {
+            auto child = children_[i.first];
+            bool child_multi_ref = multi_ref || !child.unique();
+            LvTree* child_res = child->merge(i.second.get(), child_multi_ref, comp);
+            if (child_res == nullptr && multi_ref)
+                res_tree->children_[i.first] = child;
             else {
                 child_res->parent_ = res_tree;
                 res_tree->children_[i.first] = std::shared_ptr<LvTree>(child_res);
                 has_changed = true;
             }
-        }
-    }
-    for (auto i : other->children_) {
-        if (!children_.contains(i.first)) {
+        } else {
             res_tree->children_[i.first] = i.second;
             has_changed = true;
         }
+    }
+    for (auto i : children_) {
+        if (!other->children_.contains(i.first) && multi_ref)
+            res_tree->children_[i.first] = i.second;
     }
 
     payload_t infimum = comp.infimum(payload_.get_value(), other->payload_.get_value());
@@ -146,7 +147,7 @@ LvTree* LvTree::merge(LvTree* other, bool multi_ref, const LvMapComparator& comp
     if (multi_ref && !has_changed) {
         // we inserted everything into a new tree but there were no changes, so we do not
         // need a new tree
-        children_ = res_tree->children_;
+        //children_ = res_tree->children_;
         delete res_tree;
         res_tree = this;
     }
@@ -156,7 +157,7 @@ LvTree* LvTree::merge(LvTree* other, bool multi_ref, const LvMapComparator& comp
     // TODO: change location computation once the infimum is not the minimum anymore
     res_tree->set_payload(infimum, loc);
 
-    if (multi_ref && has_changed) 
+    if (multi_ref && has_changed)
         return res_tree;
     return nullptr;
 }
@@ -256,16 +257,26 @@ void LvMap::leave_scope() {
 }
 
 void LvMap::merge(LvMap& other) {
-    // TODO: other could be const, but doesn't matter really
     assert(varmap_.size() == other.varmap_.size() && scope_stack_.size() == other.scope_stack_.size());
     // TODO: assert same comparator
-    for (auto i : varmap_) {
-        assert(other.varmap_.contains(i.first));
-        LvTree* new_tree = i.second->merge(other.varmap_[i.first].get(), !i.second.unique(),
+
+    //std::cout << "this map:\n" << this << "\n";
+    //std::cout << "other map:\n" << &other << "\n";
+
+    for (auto i : other.varmap_) {
+        assert(varmap_.contains(i.first));
+        auto tree = varmap_[i.first];
+        LvTree* new_tree = tree->merge(i.second.get(), !tree.unique(),
             get_comparator());
-        if (new_tree != nullptr)
+        if (new_tree != nullptr) {
             varmap_[i.first] = std::shared_ptr<LvTree>(new_tree);
+        }
     }
+
+    // make other unusable
+    other.varmap_.clear();
+
+    //std::cout << "after merge:\n" << this << "\n";
 }
 
 std::ostream& LvMap::stream(std::ostream& os) const {
@@ -377,8 +388,12 @@ void insert(const Expr& expr, LvMap& map, payload_t pl, const thorin::Location& 
     //std::cout << "map: " << &map << "\n";
 
     LvTree* tree = res.value_.tree_res_.tree_;
+    bool multi_ref = res.value_.tree_res_.multi_ref_;
+    if (multi_ref)
+        // TODO: and change
+        tree = new LvTree(*tree);
     tree->clear_subtrees();
-    expr.insert_payload(tree, res.value_.tree_res_.multi_ref_, map, pl, loc);
+    expr.insert_payload(tree, multi_ref, map, pl, loc);
 }
 
 //-------------------------------------------------------------------
