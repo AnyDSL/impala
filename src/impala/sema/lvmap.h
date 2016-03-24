@@ -81,11 +81,12 @@ private:
 
 public:
     LvMap(const LvMapComparator&);
-    LvMap(const LvMap&);
+    //LvMap(const LvMap&);
     ~LvMap();
 
     LvTreeLookupTree lookup(const ValueDecl*) const;
     void insert(const ValueDecl*, payload_t, const thorin::Location&);
+    void update(const ValueDecl*, LvTree*);
 
     const LvMapComparator& get_comparator(void) const { return comparator_; };
 

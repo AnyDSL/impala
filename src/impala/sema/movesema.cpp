@@ -281,8 +281,16 @@ void MapExpr::check(MoveSema& sema, bool assign_to) const {
 void IfExpr::check(MoveSema& sema, bool assign_to) const {
     assert(!assign_to);
     cond()->check(sema, false);
+
+    sema.enter_scope();
+    MoveSema else_sema(sema);
+
     then_expr()->check(sema, false);
-    else_expr()->check(sema, false);
+    else_expr()->check(else_sema, false);
+
+    sema.leave_scope();
+    else_sema.leave_scope();
+    //sema.merge(else_sema);
 }
 
 void WhileExpr::check(MoveSema& sema, bool assign_to) const {
