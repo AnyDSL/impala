@@ -104,11 +104,12 @@ void ImplItem::check(MoveSema& sema) const {
 inline void validate(const ASTNode* node, const Payload& pl) {
     Liveness live = payload2ls(pl.get_value());
     if (live == Liveness::DEAD) {
-        error(node) << "cannot use '" << node << "', it is not live\n";
+        std::ostream& es = error(node);
+        es << "cannot use '" << node << "', it is not live\n";
         if (pl.loc().is_set())
-            warn(node) << "note: the value moved here: " << pl.loc() << "\n";
+            es << "note: the value moved here: " << pl.loc() << "\n";
         else
-            warn(node) << "note: the value was not initialized\n";
+            es << "note: the value was not initialized\n";
         // TODO: use something like note() instead of warn()
     }
 }

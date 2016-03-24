@@ -23,7 +23,7 @@ void Payload::set_payload(payload_t pl, const thorin::Location& loc) {
  * LvTree
  */
 
-class LvTree {
+class LvTree : public thorin::Streamable {
 public:
     LvTree(LvTree* parent): parent_(parent) {}
     ~LvTree() = default;
@@ -38,6 +38,7 @@ public:
     void remove_subtree(Symbol field);
     void clear_subtrees(void);
     LvTree* merge(LvTree*, bool, const LvMapComparator&);
+    std::ostream& stream(std::ostream&) const;
 
 private:
     LvTree* parent_;
@@ -160,6 +161,17 @@ LvTree* LvTree::merge(LvTree* other, bool multi_ref, const LvMapComparator& comp
     return nullptr;
 }
 
+std::ostream& LvTree::stream(std::ostream& os) const {
+    os << payload_.get_value() << "[";
+    for (auto i : children_) {
+        os << "(s:" << i.first << ",c:" << i.second.use_count() << ",p:";
+        LvTree* tree = i.second.get();
+        os << tree << "),";
+    }
+    os << "]";
+    return os;
+}
+
 //-------------------------------------------------------------
 
 /*
@@ -229,6 +241,7 @@ void LvMap::leave_scope() {
     do {
         decl = scope_stack_.top();
         scope_stack_.pop();
+        assert(varmap_.contains(decl));
         varmap_.erase(decl);
     } while (decl != nullptr);
 }
@@ -251,6 +264,17 @@ void LvMap::merge(LvMap& other) {
         if (new_tree != nullptr)
             varmap_[i.first] = std::shared_ptr<LvTree>(new_tree);
     }
+}
+
+std::ostream& LvMap::stream(std::ostream& os) const {
+    os << "[";
+    for (auto i : varmap_) {
+        os << "(s:" << i.first->symbol() << ",c:" << i.second.use_count() << ",p:";
+        LvTree* tree = i.second.get();
+        os << tree << "),";
+    }
+    os << "]";
+    return os;
 }
 
 
@@ -346,6 +370,10 @@ void insert(const Expr& expr, LvMap& map, payload_t pl, const thorin::Location& 
     // afterwards in the insertion
     LvTreeLookupRes res = expr.lookup_lv_tree(map, true);
     assert(res.is_tree_);
+    
+    //std::cout << "insert into " << &expr << " pl " << pl << "\n";
+    //std::cout << "map: " << &map << "\n";
+
     LvTree* tree = res.value_.tree_res_.tree_;
     tree->clear_subtrees();
     expr.insert_payload(tree, res.value_.tree_res_.multi_ref_, map, pl, loc);

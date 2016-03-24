@@ -6,6 +6,7 @@
 
 #include "thorin/util/hash.h"
 #include "thorin/util/location.h"
+#include "thorin/util/stream.h"
 
 namespace impala {
 
@@ -75,7 +76,7 @@ public:
 
 //---------------------------------------------------------------------------------
 
-class LvMap {
+class LvMap : public thorin::Streamable {
 private:
     LvMap& operator= (const LvMap &);
 
@@ -94,6 +95,8 @@ public:
     void leave_scope();
 
     void merge(LvMap& other);
+
+    std::ostream& stream(std::ostream&) const;
 
 private:
     thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>> varmap_;
