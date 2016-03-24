@@ -329,8 +329,8 @@ void LetStmt::check(MoveSema& sema) const {
 //------------------------------------------------------------------------------
 
 void move_analysis(const ModContents* mod) {
-    auto comparator = LvMapComparator();
-    auto sema = MoveSema(comparator);
+    LvMapComparator comparator = LvMapComparator();
+    MoveSema sema(comparator);
     mod->check(sema);
 #ifndef NDEBUG
     // TODO: verify something? like in type sema?

@@ -208,6 +208,13 @@ LvMap::LvMap(const LvMapComparator& comparator)
     , scope_stack_(std::stack<const ValueDecl*>())
     {}
 
+LvMap::LvMap(const LvMap& map)
+    // TODO: check that shared pointers get copied correctly
+    : varmap_(map.varmap_)
+    , comparator_(map.comparator_)
+    , scope_stack_(map.scope_stack_)
+    {}
+
 LvMap::~LvMap() {
     // TODO: delete the trees
 }
@@ -241,17 +248,12 @@ void LvMap::leave_scope() {
     do {
         decl = scope_stack_.top();
         scope_stack_.pop();
-        assert(varmap_.contains(decl));
-        varmap_.erase(decl);
+        if (decl != nullptr) {
+            assert(varmap_.contains(decl));
+            varmap_.erase(decl);
+        }
     } while (decl != nullptr);
 }
-
-//LvMap::LvMap(const LvMap& map)
-//    // TODO: check that shared pointers get copied correctly
-//    : varmap_(map.varmap_)
-//    , comparator_(map.comparator_)
-//    , scope_stack_(map.scope_stack_)
-//    {}
 
 void LvMap::merge(LvMap& other) {
     // TODO: other could be const, but doesn't matter really

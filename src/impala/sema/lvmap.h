@@ -82,7 +82,7 @@ private:
 
 public:
     LvMap(const LvMapComparator&);
-    //LvMap(const LvMap&);
+    LvMap(const LvMap&);
     ~LvMap();
 
     LvTreeLookupTree lookup(const ValueDecl*) const;
