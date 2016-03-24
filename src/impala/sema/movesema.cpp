@@ -15,12 +15,6 @@ inline Liveness payload2ls(payload_t pl) {
     return (Liveness) pl;
 }
 
-//class MoveSema {
-//public:
-//    
-//private:
-//};
-
 //------------------------------------------------------------------------------
 
 /*
@@ -63,10 +57,12 @@ void StaticItem::check(MoveSema& sema) const {
 }
 
 void Fn::fn_check(MoveSema& sema) const {
+    sema.enter_scope();
     for (auto param : params())
         param->check(sema);
     if (body() != nullptr)
         body()->check(sema, false);
+    sema.leave_scope();
 }
 
 void FnDecl::check(MoveSema& sema) const {
@@ -304,18 +300,31 @@ void IfExpr::check(MoveSema& sema, bool assign_to) const {
 
 void WhileExpr::check(MoveSema& sema, bool assign_to) const {
     assert(!assign_to);
-    cond()->check(sema, false);
     // TODO: do we need break and continue decl?
     //break_decl()->check(sema);
     //continue_decl()->check(sema);
-    body()->check(sema, false);
+
+    MoveSema body_sema(sema);
+    body_sema.enter_scope();
+    body()->check(body_sema, false);
+    body_sema.leave_scope();
+
+    sema.merge(body_sema);
+    // check the condition after the body because the body might move things the condition needs
+    cond()->check(sema, false);
 }
 
 void ForExpr::check(MoveSema& sema, bool assign_to) const {
     assert(!assign_to);
-    expr()->check(sema, false);
     //break_decl()->check(sema);
-    fn_expr()->check(sema, false);
+
+    MoveSema body_sema(sema);
+    //body_sema.enter_scope();
+    fn_expr()->check(body_sema, false);
+    //body_sema.leave_scope();
+
+    sema.merge(body_sema);
+    expr()->check(sema, false);
 }
 
 //------------------------------------------------------------------------------
