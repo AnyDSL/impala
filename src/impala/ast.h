@@ -20,7 +20,7 @@
 namespace thorin {
     class Enter;
     class JumpTarget;
-    class Lambda;
+    class Continuation;
     class Param;
 }
 
@@ -480,13 +480,13 @@ public:
 private:
     virtual Type check(TypeSema& sema) const override;
     Type check(TypeSema&, Type) const;
-    virtual thorin::Var emit(CodeGen&, const thorin::Def* init) const = 0;
+    virtual thorin::Value emit(CodeGen&, const thorin::Def* init) const = 0;
 
 protected:
     AutoPtr<const ASTType> ast_type_;
     bool is_mut_ = false;
     mutable bool is_written_ = false;
-    mutable thorin::Var var_;
+    mutable thorin::Value value_;
 
     friend class Parser;
     friend class TypeSema;
@@ -509,7 +509,7 @@ public:
     void check(LifetimeSema&) const;
 
 private:
-    virtual thorin::Var emit(CodeGen&, const thorin::Def* init) const override;
+    virtual thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
 protected:
     size_t handle_;
@@ -572,7 +572,7 @@ public:
     ArrayRef<const Param*> params() const { return params_; }
     size_t num_params() const { return params_.size(); }
     const Expr* body() const { return body_; }
-    thorin::Lambda* lambda() const { return lambda_; }
+    thorin::Continuation* continuation() const { return continuation_; }
     const thorin::Param* ret_param() const { return ret_param_; }
     const thorin::Def* frame() const { return frame_; }
     std::ostream& stream_params(std::ostream& p, bool returning) const;
@@ -581,7 +581,7 @@ public:
     void fn_check(BorrowSema&) const;
     void fn_check(LifetimeSema&) const;
     void check_body(TypeSema&, FnType) const;
-    thorin::Lambda* emit_head(CodeGen&, const thorin::Location&) const;
+    thorin::Continuation* emit_head(CodeGen&, const thorin::Location&) const;
     void emit_body(CodeGen&, const thorin::Location& loc) const;
 
     bool is_continuation() const { return cont_; }
@@ -590,7 +590,7 @@ public:
     virtual Symbol fn_symbol() const = 0;
 
 protected:
-    mutable thorin::Lambda* lambda_;
+    mutable thorin::Continuation* continuation_;
     mutable SafePtr<const thorin::Param> ret_param_;
     mutable const thorin::Def* frame_;
     AutoVector<const Param*> params_;
@@ -744,7 +744,7 @@ public:
 
 private:
     virtual Type check(TypeSema&) const override;
-    //virtual thorin::Var emit(CodeGen&) const override;
+    //virtual thorin::Value emit(CodeGen&) const override;
 
     int index_;
     AutoPtr<const ASTType> ast_type_;
@@ -801,7 +801,7 @@ public:
 private:
     virtual Type check(TypeSema&) const override;
     virtual void check_item(TypeSema&) const override;
-    virtual thorin::Var emit(CodeGen&, const thorin::Def* init) const override;
+    virtual thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
     AutoPtr<const Expr> init_;
 
@@ -822,7 +822,7 @@ public:
 private:
     virtual Type check(TypeSema&) const override;
     virtual void check_item(TypeSema&) const override;
-    virtual thorin::Var emit(CodeGen&, const thorin::Def* init) const override;
+    virtual thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
     AutoPtr<const Identifier> export_name_;
     bool is_extern_ = false;
@@ -916,7 +916,7 @@ public:
 
 private:
     virtual Type check(TypeSema&, TypeExpectation) const = 0;
-    virtual thorin::Var lemit(CodeGen&) const;
+    virtual thorin::Value lemit(CodeGen&) const;
     virtual const thorin::Def* remit(CodeGen&) const;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
@@ -1096,7 +1096,7 @@ public:
 private:
     virtual std::ostream& stream(std::ostream&) const override;
     virtual Type check(TypeSema&, TypeExpectation) const override;
-    virtual thorin::Var lemit(CodeGen&) const override;
+    virtual thorin::Value lemit(CodeGen&) const override;
 
     AutoPtr<const Path> path_;
     mutable SafePtr<const ValueDecl> value_decl_; ///< Declaration of the variable in use.
@@ -1124,7 +1124,7 @@ public:
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
     virtual void insert_payload(LvTree*, bool multi_ref, LvMap&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
-    virtual thorin::Var lemit(CodeGen&) const override;
+    virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
 
@@ -1218,7 +1218,7 @@ public:
 private:
     virtual std::ostream& stream(std::ostream&) const override;
     virtual Type check(TypeSema&, TypeExpectation) const override;
-    virtual thorin::Var lemit(CodeGen&) const override;
+    virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
@@ -1411,7 +1411,7 @@ public:
 private:
     virtual std::ostream& stream(std::ostream&) const override;
     virtual Type check(TypeSema&, TypeExpectation) const override;
-    virtual thorin::Var lemit(CodeGen&) const override;
+    virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
     AutoPtr<const Expr> lhs_;
