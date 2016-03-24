@@ -1,0 +1,6 @@
+fn f() -> () {
+    let a = ~12;
+    while *a > 0 {
+        let b = a;
+    }
+}

@@ -1,0 +1,16 @@
+fn range(mut a: int, b: int, body: fn(int) -> ()) -> () {
+    while a < b {
+        body(a);
+        a++;
+    }
+}
+
+fn f() -> int {
+    let mut acc = ~0;
+    for i in range(0, 42) {
+        let mut k = acc;
+        k = ~(2 * *k + i);
+        acc = k;
+    }
+    *acc
+}

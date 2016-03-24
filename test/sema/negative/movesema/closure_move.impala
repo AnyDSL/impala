@@ -1,0 +1,9 @@
+fn f() -> () {
+    let foo =
+        |x: ~int| -> int
+            *x;
+    
+    let a = ~6;
+    let b = foo(a);
+    let c = a;
+}

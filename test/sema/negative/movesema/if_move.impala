@@ -1,0 +1,7 @@
+fn f() -> () {
+    let a = ~10;
+    if 8 < 0 {
+        let b = a;
+    }
+    let c = a;
+}

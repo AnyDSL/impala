@@ -1,0 +1,9 @@
+fn foo(a: ~int) -> () {
+    let b = a;
+}
+
+fn f() -> () {
+    let a = ~5;
+    foo(a);
+    let b = a;
+}

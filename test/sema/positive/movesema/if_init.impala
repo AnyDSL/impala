@@ -1,0 +1,9 @@
+fn f() -> () {
+    let mut a: int;
+    if 5 < 4 {
+        a = 3;
+    } else {
+        a = 2;
+    }
+    let b = a;
+}

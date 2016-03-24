@@ -1,0 +1,7 @@
+fn f() -> () {
+    let mut a: i32;
+    if 42 != 0 {
+        a = 3;
+    }
+    let b = a;
+}

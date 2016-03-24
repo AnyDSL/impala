@@ -1,0 +1,19 @@
+fn f() -> () {
+    let foo =
+        |x: int, y: ~int| -> ~int
+            if x > 4 {
+                y
+            } else {
+                let z = y;
+                y = ~x;
+                if x < 2 {
+                    z
+                } else {
+                    y
+                }
+            };
+
+    let a = ~11;
+    let b = foo(3, a);
+    let c = b;
+}

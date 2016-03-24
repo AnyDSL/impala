@@ -1,0 +1,9 @@
+fn f() -> () {
+    // TODO: do we want to support moving back into pointers?
+    //let mut a = [~6, ~12, ~4];
+    //let b = a(2);
+    //a(2) = ~7;
+    //let c = a(0);
+    //a(0) = ~9;
+    //let d = a;
+}

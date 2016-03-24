@@ -1,0 +1,10 @@
+fn foo(a: ~float) -> ~float {
+    let b = a;
+    b
+}
+
+fn f() -> () {
+    let a = ~1.3f;
+    let b = foo(a);
+    let c = b;
+}
