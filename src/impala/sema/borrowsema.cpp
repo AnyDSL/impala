@@ -73,13 +73,13 @@ Payload BorrowSema::lookup_borrow(const Expr* expr) {
     const ValueDecl* decl = expr->get_decl();
     for (auto i = borrow_maps_.rbegin(); i != borrow_maps_.rend(); i++) {
         if ((*i)->contains(decl))
-            return lookup_payload(*expr, **i);
+            return lookup(expr, **i);
     }
     assert(false);
 }
 
 InitState BorrowSema::lookup_init(const Expr* expr) {
-    Payload pl = lookup_payload(*expr, init_map_);
+    Payload pl = lookup(expr, init_map_);
     return pl2is(pl.get_value());
 }
 
@@ -117,7 +117,7 @@ void BorrowSema::add_borrow(const Expr* expr, BorrowState bs, size_t target_scop
     assert(target_scope < borrow_maps_.size());
 
     BorrowMap& bmap = get_borrow_map_for_insert(borrow_maps_, target_scope);
-    insert(*expr, bmap, bs2pl(bs), expr->loc());
+    insert(expr, bmap, bs2pl(bs), expr->loc());
 }
 
 void BorrowSema::enter_scope() {

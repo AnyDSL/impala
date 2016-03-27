@@ -107,9 +107,9 @@ private:
 
 inline bool payload2bool(payload_t pl) { assert(pl == 0 || pl == 1); return (bool) pl; }
 
-const Payload& lookup_payload(const Expr&, LvMap&);
+const Payload& lookup(const Expr*, LvMap&);
 
-void insert(const Expr&, LvMap&, payload_t, const thorin::Location& loc);
+void insert(const Expr*, LvMap&, payload_t, const thorin::Location& loc);
 
 }
 

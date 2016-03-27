@@ -118,7 +118,7 @@ inline bool check_owns_value(const Expr* expr) {
 }
 
 void check_lv(const Expr* lv, MoveSema& sema, bool assign_to) {
-    const Payload& pl = lookup_payload(*lv, sema);
+    const Payload& pl = lookup(lv, sema);
     Liveness live = payload2ls(pl.get_value());
 
     if (assign_to) {
@@ -130,7 +130,7 @@ void check_lv(const Expr* lv, MoveSema& sema, bool assign_to) {
 
     validate(lv, pl);
     if (!is_copyable(lv->type()) && check_owns_value(lv))
-        insert(*lv, sema, Liveness::DEAD, lv->loc());
+        insert(lv, sema, Liveness::DEAD, lv->loc());
 }
 
 
@@ -178,7 +178,7 @@ void PrefixExpr::check(MoveSema& sema, bool assign_to) const  {
             break;
         case Token::AND: // &
             assert(rhs()->is_lvalue());
-            validate(rhs(), lookup_payload(*rhs(), sema));
+            validate(rhs(), lookup(rhs(), sema));
             break;
         default:
             rhs()->check(sema, false);
@@ -203,7 +203,7 @@ void InfixExpr::check(MoveSema& sema, bool assign_to) const {
             assert(lhs()->is_lvalue());
             rhs()->check(sema, false);
             lhs()->check(sema, true);
-            insert(*lhs(), sema, Liveness::LIVE, loc());
+            insert(lhs(), sema, Liveness::LIVE, loc());
             break;
         default:
             lhs()->check(sema, false);

@@ -288,8 +288,8 @@ std::ostream& LvMap::stream(std::ostream& os) const {
 
 //-------------------------------------------------------
 
-const Payload& lookup_payload(const Expr& expr, LvMap& map) {
-    auto res = expr.lookup_lv_tree(map, false);
+const Payload& lookup(const Expr* expr, LvMap& map) {
+    auto res = expr->lookup_lv_tree(map, false);
     return res.is_tree_ ? res.value_.tree_res_.tree_->get_payload() : res.value_.implicit_payload_;
 }
 
@@ -373,10 +373,10 @@ const LvTreeLookupRes MapExpr::lookup_lv_tree(LvMap& map, bool create) const {
  * insert
  */
 
-void insert(const Expr& expr, LvMap& map, payload_t pl, const thorin::Location& loc) {
+void insert(const Expr* expr, LvMap& map, payload_t pl, const thorin::Location& loc) {
     // TODO: this is not super optimal because we might build up the tree only to tear it down
     // afterwards in the insertion
-    LvTreeLookupRes res = expr.lookup_lv_tree(map, true);
+    LvTreeLookupRes res = expr->lookup_lv_tree(map, true);
     assert(res.is_tree_);
     
     LvTree* tree = res.value_.tree_res_.tree_;
@@ -385,7 +385,7 @@ void insert(const Expr& expr, LvMap& map, payload_t pl, const thorin::Location& 
         // TODO: and change
         tree = new LvTree(*tree);
     tree->clear_subtrees();
-    expr.insert_payload(tree, multi_ref, map, pl, loc);
+    expr->insert_payload(tree, multi_ref, map, pl, loc);
 }
 
 //-------------------------------------------------------------------
