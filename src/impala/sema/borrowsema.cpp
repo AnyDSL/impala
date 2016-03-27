@@ -106,7 +106,7 @@ void BorrowSema::add_borrow(const Expr* expr, BorrowState bs, size_t target_scop
 }
 
 void BorrowSema::enter_scope() {
-    borrow_maps_.push_back(BorrowMap(DEFAULT_COMPARATOR));
+    borrow_maps_.push_back(borrow_maps_.back());
     init_map_.enter_scope();
     scope_stack_.push(nullptr);
 }
