@@ -279,19 +279,11 @@ void IfExpr::check(MoveSema& sema, bool assign_to) const {
     assert(!assign_to);
     cond()->check(sema, false);
 
-    //std::cout << "sema 1:\n" << &sema << "\n";
-
     sema.enter_scope();
     MoveSema else_sema(sema);
 
-    //std::cout << "sema:\n" << &sema << "\n";
-    //std::cout << "else_sema:\n" << &sema << "\n";
-
     then_expr()->check(sema, false);
     else_expr()->check(else_sema, false);
-
-    //std::cout << "sema:\n" << &sema << "\n";
-    //std::cout << "else_sema:\n" << &sema << "\n";
 
     sema.leave_scope();
     else_sema.leave_scope();

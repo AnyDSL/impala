@@ -260,9 +260,6 @@ void LvMap::merge(LvMap& other) {
     assert(varmap_.size() == other.varmap_.size() && scope_stack_.size() == other.scope_stack_.size());
     // TODO: assert same comparator
 
-    //std::cout << "this map:\n" << this << "\n";
-    //std::cout << "other map:\n" << &other << "\n";
-
     for (auto i : other.varmap_) {
         assert(varmap_.contains(i.first));
         auto tree = varmap_[i.first];
@@ -275,8 +272,6 @@ void LvMap::merge(LvMap& other) {
 
     // make other unusable
     other.varmap_.clear();
-
-    //std::cout << "after merge:\n" << this << "\n";
 }
 
 std::ostream& LvMap::stream(std::ostream& os) const {
@@ -384,9 +379,6 @@ void insert(const Expr& expr, LvMap& map, payload_t pl, const thorin::Location& 
     LvTreeLookupRes res = expr.lookup_lv_tree(map, true);
     assert(res.is_tree_);
     
-    //std::cout << "insert into " << &expr << " pl " << pl << "\n";
-    //std::cout << "map: " << &map << "\n";
-
     LvTree* tree = res.value_.tree_res_.tree_;
     bool multi_ref = res.value_.tree_res_.multi_ref_;
     if (multi_ref)
