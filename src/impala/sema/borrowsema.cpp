@@ -257,6 +257,23 @@ inline BorrowState type_expectation(Type t) {
     return is_copyable(t) ? BorrowState::FREEZED : BorrowState::MUT;
 }
 
+inline const char* bs2str(BorrowState bs) {
+    assert(bs != BorrowState::MUT);
+    return bs == BorrowState::FREEZED ? "immutably" : "mutably";
+}
+
+inline void print_loc_msg(std::ostream& os, const thorin::Location& loc) {
+    os << "Note: the borrow occured here: " << loc << "\n";
+}
+
+inline const char* borrow_str(BorrowExpectation expectation) {
+    switch(expectation) {
+        case BorrowExpectation::BORROW_MUT: return "mutably";
+        case BorrowExpectation::BORROW_FREEZED: return "immutably";
+        default: assert(false);
+    }
+}
+
 // If this function returns true, the structure of the lvalue needs to be checked for mutablility.
 // Else no check should be performed.
 bool initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expectation) {
@@ -268,13 +285,18 @@ bool initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expe
         case BorrowExpectation::ASSIGN_FROM: {
             Type t = expr->type();
             BorrowState type_state = type_expectation(t);
-            if (DEFAULT_COMPARATOR.compare(borrowed, type_state) == Relation::LESS)
-                error(expr) << "cannot use " << expr << " because it is borrowed\n";
+            if (DEFAULT_COMPARATOR.compare(borrowed, type_state) == Relation::LESS) {
+                std::ostream& os = error(expr);
+                os << "Cannot use " << expr << " because it is borrowed " << bs2str(borrowed) << ".\n";
+                print_loc_msg(os, pl.loc());
+            }
             break;
         }
         case BorrowExpectation::ASSIGN_TO: {
             if (DEFAULT_COMPARATOR.compare(borrowed, BorrowState::MUT) == Relation::LESS) {
-                error(expr) << "cannot assign to " << expr << " because it is borrowed\n";
+                std::ostream& os = error(expr);
+                os << "Cannot assign to " << expr << " because it is borrowed " << bs2str(borrowed) << ".\n";
+                print_loc_msg(os, pl.loc());
                 return false;
             }
             if (expr->owns_value() && sema.lookup_init(expr) == InitState::UNINIT)
@@ -288,7 +310,10 @@ bool initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expe
             BorrowState exp_state = expectation == BorrowExpectation::BORROW_MUT ?
                 BorrowState::MUT : BorrowState::FREEZED;
             if (DEFAULT_COMPARATOR.compare(borrowed, exp_state) == Relation::LESS) {
-                error(expr) << "cannot borrow " << expr << " because it is already borrowed\n";
+                std::ostream& os = error(expr);
+                os << "Cannot borrow " << expr << " " << borrow_str(expectation);
+                os << " because it is already borrowed " << bs2str(borrowed) << ".\n";
+                print_loc_msg(os, pl.loc());
                 return false;
             }
             if (expectation == BorrowExpectation::BORROW_MUT)
@@ -334,7 +359,7 @@ void PathExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t tar
         return;
 
     if (!value_decl()->is_mut())
-        error(this) << "cannot use " << this << " because it is not declared mutable\n";
+        error(this) << "Cannot use " << this << " because it is not declared mutable.\n";
 }
 
 void pointer_check(const Expr* this_expr, BorrowSema& sema, BorrowExpectation expectation,
@@ -345,7 +370,7 @@ void pointer_check(const Expr* this_expr, BorrowSema& sema, BorrowExpectation ex
 
     Type parent_t = parent->type();
     if (!ptr_type_permits_mutability(parent_t)) {
-        error(this_expr) << "cannot use " << this_expr << " because it is an immutable reference\n";
+        error(this_expr) << "Cannot use " << this_expr << " because it is an immutable reference.\n";
         return;
     }
     if (!parent->owns_value())
