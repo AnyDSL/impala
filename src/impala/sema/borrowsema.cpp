@@ -8,33 +8,134 @@ namespace impala {
 enum BorrowState { MUT = 0, FREEZED = 1, CLAIMED = 2 };
 enum InitState { UNINIT = 0, INIT = 1 };
 
-typedef LvMap BorrowMap;
-typedef LvMap InitMap;
+inline payload_t bs2pl(BorrowState bs) { return (payload_t) bs; }
+inline payload_t is2pl(InitState is) { return (payload_t) is; }
+inline BorrowState pl2bs(payload_t pl) { return (BorrowState) pl; }
+inline InitState pl2is(payload_t pl) { return (InitState) pl; }
 
-class BorrowSema {
+typedef LvBaseMap BorrowMap;
+typedef LvBaseMap InitMap;
+
+const LvMapComparator DEFAULT_COMPARATOR = LvMapComparator();
+
+//------------------------------------------------------------------------------
+
+/*
+ * BorrowSema
+ */
+
+class BorrowSema : public LvMap {
+private:
+    BorrowSema& operator= (const BorrowSema&);
+
 public:
     BorrowSema();
-    
-    BorrowState lookup(const Expr*) const { return BorrowState::CLAIMED; }
-    InitState lookup_init(const Expr*) const { return InitState::INIT; }
-    const LvMapComparator& comparator() const { return comp_; }
-    void insert(const ValueDecl*, BorrowState) {}
+    ~BorrowSema();
+
+    virtual LvTreeLookupTree lookup(const ValueDecl*) const override;
+    virtual void insert(const ValueDecl*, payload_t, const thorin::Location&) override;
+    virtual void update(const ValueDecl*, LvTree*) override;
+
+    virtual void add_decl(const ValueDecl*, InitState, const thorin::Location&);
+    InitState lookup_init(const Expr*) const;
+
+    virtual void enter_scope() override;
+    virtual void leave_scope() override;
+
+    virtual void merge(LvMap& other) override;
+
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    LvMapComparator comp_;
     std::vector<BorrowMap> borrow_maps_;
     InitMap init_map_;
     unsigned scope_level_ = 0;
     thorin::HashMap<const ValueDecl*, unsigned> decl_scope_map_;
+    std::stack<const ValueDecl*> scope_stack_;
 };
 
+
 BorrowSema::BorrowSema()
-    : comp_(LvMapComparator())
+    : LvMap(DEFAULT_COMPARATOR)
     , borrow_maps_(std::vector<BorrowMap>())
-    , init_map_(LvMap(comp_))
+    , init_map_(InitMap(DEFAULT_COMPARATOR))
     , scope_level_(0)
     , decl_scope_map_(thorin::HashMap<const ValueDecl*, unsigned>())
-    {}
+    , scope_stack_(std::stack<const ValueDecl*>())
+    {
+        //TODO: add first scope level?
+    }
+
+BorrowSema::~BorrowSema() {}
+
+LvTreeLookupTree BorrowSema::lookup(const ValueDecl*) const {
+    assert(false);
+}
+
+void BorrowSema::insert(const ValueDecl* decl, payload_t pl, const thorin::Location& loc) {
+    assert(false);
+    // do not use this function
+}
+
+void BorrowSeam::add_decl(const ValueDecl* decl, InitState is, const thorin::Location& loc) {
+    assert(scope_level_ + 1 == borrow_maps_.size());
+    assert(!decl_scope_map_.contains(decl));
+
+    borrow_maps_.back().insert(decl, bs2pl(BorrowState::MUT), loc);
+    init_map_.insert(decl, is2pl(is));
+    decl_scope_map_[decl] = scope_level_;
+    scope_stack_.push(decl);
+}
+
+void BorrowSema::update(const ValueDecl* decl, LvTree* tree) {
+    assert(scope_level_ + 1 == borrow_maps_.size());
+    assert(decl_scope_map_.contains(decl));
+
+    unsigned scope_level = decl_scope_map_[decl];
+    assert(scope_level < borrow_maps_.size());
+    borrow_maps[scope_level].update(decl, tree);
+}
+
+InitState BorrowSema::lookup_init(const Expr* expr) const {
+    return pl2is(lookup(expr, init_map_));
+}
+
+void BorrowSema::enter_scope() {
+    scope_level_++;
+    borrow_maps_.push_back(BorrowMap(DEFAULT_COMPARATOR));
+    init_map_.enter_scope();
+    scope_stack_.push(nullptr);
+}
+
+void BorrowSema::leave_scope() {
+    assert(scope_level_ > 0);
+    assert(!scope_stack_.empty());
+    assert(!borrow_maps_.empty());
+
+    scope_level_--;
+    borrow_maps_.pop_back();
+    init_map_.leave_scope();
+
+    // TODO: same code as in LvBaseMap, can this be deduplicated?
+    const ValueDecl* decl;
+    do {
+        decl = scope_stack_.top();
+        scope_stack_.pop();
+        if (decl != nullptr) {
+            assert(decl_scope_map_.contains(decl);
+            decl_scope_map_.erase(decl);
+        }
+    } while (decl != nullptr);
+}
+
+void BorrowSema::merge(LvMap& other) {
+    assert(false);
+}
+
+std::ostream& BorrowSema::stream(std::ostream&) const {
+    assert(false);
+}
+
 
 //------------------------------------------------------------------------------
 
@@ -43,7 +144,7 @@ BorrowSema::BorrowSema()
  */
 
 void LocalDecl::check(BorrowSema& sema) const {
-    sema.insert(this, BorrowState::MUT);
+    sema.insert(this, bs2pl(BorrowState::MUT), loc());
 }
 
 //------------------------------------------------------------------------------
@@ -128,13 +229,14 @@ inline BorrowState type_expectation(Type t) {
 
 void initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expectation) {
     assert(expr->is_lvalue());
-    
-    BorrowState borrowed = sema.lookup(expr);
+   
+    Payload pl = lookup_payload(*expr, sema);
+    BorrowState borrowed = pl2bs(pl.get_value());
     switch (expectation) {
         case BorrowExpectation::ASSIGN_FROM: {
             Type t = expr->type();
             BorrowState type_state = type_expectation(t);
-            if (sema.comparator().compare(borrowed, type_state) == Relation::LESS) {
+            if (sema.get_comparator().compare(borrowed, type_state) == Relation::LESS) {
                 error(expr) << "cannot use " << expr << " because it is borrowed\n";
                 return;
             }
@@ -144,7 +246,7 @@ void initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expe
             break;
         }
         case BorrowExpectation::ASSIGN_TO: {
-            if (sema.comparator().compare(borrowed, BorrowState::MUT) == Relation::LESS) {
+            if (sema.get_comparator().compare(borrowed, BorrowState::MUT) == Relation::LESS) {
                 error(expr) << "cannot assign to " << expr << " because it is borrowed\n";
                 return;
             }
@@ -157,7 +259,7 @@ void initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expe
         case BorrowExpectation::BORROW_FREEZED: {
             BorrowState exp_state = expectation == BorrowExpectation::BORROW_MUT ?
                 BorrowState::MUT : BorrowState::FREEZED;
-            if (sema.comparator().compare(borrowed, exp_state) == Relation::LESS) {
+            if (sema.get_comparator().compare(borrowed, exp_state) == Relation::LESS) {
                 error(expr) << "cannot borrow " << expr << " because it is already borrowed\n";
                 return;
             }
@@ -210,7 +312,7 @@ void PathExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
             BorrowState structural_state = value_decl()->is_mut() ?
                 BorrowState::MUT : BorrowState::FREEZED;
             BorrowState exp_state = expected_state(expectation);
-            if (sema.comparator().compare(structural_state, exp_state) == Relation::LESS)
+            if (sema.get_comparator().compare(structural_state, exp_state) == Relation::LESS)
                 error(this) << "state not sufficient\n";
     }
 }

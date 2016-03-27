@@ -41,7 +41,7 @@ class CodeGen;
 class NameSema;
 class TypeSema;
 
-typedef LvMap MoveSema;
+typedef LvBaseMap MoveSema;
 enum class BorrowExpectation { CHECK_MUT, CHECK_FREEZED, ASSIGN_TO, BORROW_MUT, BORROW_FREEZED, ASSIGN_FROM};
 class BorrowSema;
 class LifetimeSema;

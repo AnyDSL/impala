@@ -203,30 +203,30 @@ payload_t LvMapComparator::infimum(payload_t p1, payload_t p2) const {
  * LvMap
  */
 
-LvMap::LvMap(const LvMapComparator& comparator)
-    : varmap_(thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>>())
-    , comparator_(comparator) // TODO: maybe change this to be a pointer
+LvBaseMap::LvBaseMap(const LvMapComparator& comparator)
+    : LvMap(comparator)
+    , varmap_(thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>>())
     , scope_stack_(std::stack<const ValueDecl*>())
     {}
 
-LvMap::LvMap(const LvMap& map)
+LvBaseMap::LvBaseMap(const LvBaseMap& map)
     // TODO: check that shared pointers get copied correctly
-    : varmap_(map.varmap_)
-    , comparator_(map.comparator_)
+    : LvMap(map.get_comparator())
+    , varmap_(map.varmap_)
     , scope_stack_(map.scope_stack_)
     {}
 
-LvMap::~LvMap() {
+LvBaseMap::~LvBaseMap() {
     // TODO: delete the trees
 }
 
-LvTreeLookupTree LvMap::lookup(const ValueDecl* decl) const {
+LvTreeLookupTree LvBaseMap::lookup(const ValueDecl* decl) const {
     auto tree = find_tree<const ValueDecl*>(varmap_, decl);
     assert(tree.tree_ != nullptr);
     return tree;
 }
 
-void LvMap::insert(const ValueDecl* decl, payload_t pl, const thorin::Location& loc) {
+void LvBaseMap::insert(const ValueDecl* decl, payload_t pl, const thorin::Location& loc) {
     assert (!varmap_.contains(decl));
     LvTree* tree = new LvTree(nullptr);
     tree->set_payload(pl, loc);
@@ -234,16 +234,16 @@ void LvMap::insert(const ValueDecl* decl, payload_t pl, const thorin::Location& 
     scope_stack_.push(decl);
 }
 
-void LvMap::update(const ValueDecl* decl, LvTree* tree) {
+void LvBaseMap::update(const ValueDecl* decl, LvTree* tree) {
     assert(varmap_.contains(decl));
     varmap_[decl] = std::shared_ptr<LvTree>(tree);
 }
 
-void LvMap::enter_scope() {
+void LvBaseMap::enter_scope() {
     scope_stack_.push(nullptr);
 }
 
-void LvMap::leave_scope() {
+void LvBaseMap::leave_scope() {
     assert(!scope_stack_.empty());
     const ValueDecl* decl;
     do {
@@ -256,7 +256,9 @@ void LvMap::leave_scope() {
     } while (decl != nullptr);
 }
 
-void LvMap::merge(LvMap& other) {
+void LvBaseMap::merge(LvMap& other_map) {
+    // TODO: can we avoid the cast?
+    LvBaseMap& other = dynamic_cast<LvBaseMap&>(other_map);
     assert(varmap_.size() == other.varmap_.size() && scope_stack_.size() == other.scope_stack_.size());
     // TODO: assert same comparator
 
@@ -279,7 +281,7 @@ void LvMap::merge(LvMap& other) {
     //std::cout << "after merge:\n" << this << "\n";
 }
 
-std::ostream& LvMap::stream(std::ostream& os) const {
+std::ostream& LvBaseMap::stream(std::ostream& os) const {
     os << "[";
     for (auto i : varmap_) {
         os << "(s:" << i.first->symbol() << ",c:" << i.second.use_count() << ",p:";

@@ -76,36 +76,72 @@ public:
 
 //---------------------------------------------------------------------------------
 
+/*
+ * LvMap
+ */
+
 class LvMap : public thorin::Streamable {
 private:
-    LvMap& operator= (const LvMap &);
+    LvMap& operator= (const LvMap&);
 
 public:
-    LvMap(const LvMapComparator&);
-    LvMap(const LvMap&);
-    ~LvMap();
+    LvMap(const LvMapComparator& comp): comparator_(comp) {}
+    //LvMap(const LvMap& other): comparator_(other.comparator_) {}
+    ~LvMap() {}
 
-    LvTreeLookupTree lookup(const ValueDecl*) const;
-    void insert(const ValueDecl*, payload_t, const thorin::Location&);
-    void update(const ValueDecl*, LvTree*);
+    const LvMapComparator& get_comparator(void) const { return comparator_; }
 
-    const LvMapComparator& get_comparator(void) const { return comparator_; };
+    virtual LvTreeLookupTree lookup(const ValueDecl*) const = 0;
+    virtual void insert(const ValueDecl*, payload_t, const thorin::Location&) = 0;
+    virtual void update(const ValueDecl*, LvTree*) = 0;
 
-    void enter_scope();
-    void leave_scope();
+    virtual void enter_scope() = 0;
+    virtual void leave_scope() = 0;
 
-    void merge(LvMap& other);
+    virtual void merge(LvMap& other) = 0;
 
-    std::ostream& stream(std::ostream&) const;
+    virtual std::ostream& stream(std::ostream&) const = 0;
+
+private:
+    const LvMapComparator& comparator_;
+};
+
+//---------------------------------------------------------------------------------
+
+/*
+ * LvBaseMap
+ */
+
+class LvBaseMap : public LvMap {
+private:
+    LvBaseMap& operator= (const LvMap&);
+
+public:
+    LvBaseMap(const LvMapComparator&);
+    LvBaseMap(const LvBaseMap&);
+    ~LvBaseMap();
+
+    virtual LvTreeLookupTree lookup(const ValueDecl*) const override;
+    virtual void insert(const ValueDecl*, payload_t, const thorin::Location&) override;
+    virtual void update(const ValueDecl*, LvTree*) override;
+
+    virtual void enter_scope() override;
+    virtual void leave_scope() override;
+
+    virtual void merge(LvMap& other) override;
+
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>> varmap_;
-    const LvMapComparator& comparator_;
     std::stack<const ValueDecl*> scope_stack_;
 };
 
+//---------------------------------------------------------------------------------
+
 inline bool payload2bool(payload_t pl) { assert(pl == 0 || pl == 1); return (bool) pl; }
 
+//TODO: change Expr references to Expr pointers
 const Payload& lookup_payload(const Expr&, LvMap&);
 
 void insert(const Expr&, LvMap&, payload_t, const thorin::Location& loc);
