@@ -172,9 +172,8 @@ void BorrowSema::merge(BorrowSema& other) {
  * misc
  */
 
-void LocalDecl::check(BorrowSema& sema) const {
-    // TODO:
-    sema.add_decl(this, InitState::UNINIT);
+void Param::check(BorrowSema& sema) const {
+    sema.add_decl(this, InitState::INIT);
 }
 
 //------------------------------------------------------------------------------
@@ -210,9 +209,8 @@ void StaticItem::check(BorrowSema& sema) const {
 }
 
 void Fn::fn_check(BorrowSema& sema) const {
-    // TODO: check params
-    //for (auto param : params())
-    //    param->check(sema);
+    for (auto param : params())
+        param->check(sema);
     if (body() != nullptr)
         body()->check(sema, BorrowExpectation::ASSIGN_FROM, sema.current_scope());
 }
@@ -316,6 +314,19 @@ BorrowState expected_state(BorrowExpectation expectation) {
     }
 }
 
+BorrowState ptr_type_permitted_state(Type t) {
+    switch(t->kind()) {
+        case Kind_borrowed_ptr:
+            return BorrowState::FREEZED;
+        case Kind_mut_ptr:
+        case Kind_owned_ptr:
+            return BorrowState::MUT;
+        default:
+            assert(false);
+            // only call this function on pointer types
+    }
+}
+
 void EmptyExpr::check(BorrowSema&, BorrowExpectation, size_t) const {}
 
 void BlockExprBase::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
@@ -345,11 +356,27 @@ void PathExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t tar
         error(this) << "state not sufficient\n";
 }
 
+bool pointer_check(const Expr* this_expr, BorrowSema& sema, BorrowExpectation expectation,
+    size_t target_scope, const Expr* parent) {
+
+    if (initial_lv_check(this_expr, sema, expectation))
+        return true;
+    Type parent_t = parent->type();
+    BorrowState type_permitted_state = ptr_type_permitted_state(parent_t);
+    BorrowState required_state = expected_state(expectation);
+    if (DEFAULT_COMPARATOR.compare(type_permitted_state, required_state) == Relation::LESS) {
+        error(this_expr) << "cannot use " << this_expr << " because its pointer type does not permit it\n";
+        return false;
+    }
+    if (!parent->owns_value())
+        parent->check(sema, expectation, target_scope);
+    return false;
+}
+
 void PrefixExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const  {
     switch (kind()) {
         case Token::MUL: // *
-            if (initial_lv_check(this, sema, expectation))
-                return;
+            pointer_check(this, sema, expectation, target_scope, rhs());
             break;
         case Token::AND: // &
         // TODO: & mut missing
@@ -393,7 +420,9 @@ void PostfixExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t 
 }
 
 void FieldExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
-    assert(false);
+    if (initial_lv_check(this, sema, expectation))
+        return;
+    lhs()->check(sema, expectation, target_scope);
 }
 
 void CastExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
@@ -416,31 +445,32 @@ void IndefiniteArrayExpr::check(BorrowSema& sema, BorrowExpectation expectation,
 }
 
 void TupleExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
-    assert(false);
-
-    //for (auto arg : args())
-    //    arg->check(sema);
+    for (auto arg : args())
+        arg->check(sema, expectation, target_scope);
 }
 
 void SimdExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
-    assert(false);
-
-    //for (auto arg : args())
-    //    arg->check(sema);
+    for (auto arg : args())
+        arg->check(sema, expectation, target_scope);
 }
 
 void StructExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
-    //path()->check(sema); // TODO: check this?
+    //path()->check(sema, expectation, target_scope); // TODO: check this?
     for (const auto& elem : elems())
         elem.expr()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
 void MapExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
-    assert(false); // TODO
+    if (is_lvalue() && pointer_check(this, sema, expectation, target_scope, lhs()))
+        // return here because pointer_check will call initial_lv_check and that will call this method
+        // in this case
+        return;
 
+    // TODO: should we check lhs() if this is a function call?
     //lhs()->check(sema, assign_to, true, expected_state);
-    //for (auto arg : args())
-    //    arg->check(sema);
+
+    for (auto arg : args())
+        arg->check(sema, expectation, target_scope);
 }
 
 void IfExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
@@ -497,9 +527,11 @@ void ExprStmt::check(BorrowSema& sema) const { expr()->check(sema, BorrowExpecta
 void ItemStmt::check(BorrowSema& sema) const { item()->check(sema); }
 
 void LetStmt::check(BorrowSema& sema) const {
-    if (init())
+    if (init()) {
         init()->check(sema, BorrowExpectation::ASSIGN_FROM, sema.current_scope());
-    local()->check(sema);
+        sema.add_decl(local(), InitState::INIT);
+    } else
+        sema.add_decl(local(), InitState::UNINIT);
 }
 
 //------------------------------------------------------------------------------

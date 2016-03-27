@@ -504,7 +504,6 @@ public:
     const Expr* fn() const { return fn_; }
     void take_address() const { is_address_taken_ = true; }
     void check(NameSema&) const;
-    void check(BorrowSema&) const;
     void check(LifetimeSema&) const;
 
 private:
@@ -558,6 +557,7 @@ public:
         : LocalDecl(handle)
     {}
     void check(MoveSema&) const;
+    void check(BorrowSema&) const;
 
     static const Param* create(size_t var_handle, const Identifier*, const thorin::Location&, const ASTType* fn_type);
 
