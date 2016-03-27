@@ -209,10 +209,12 @@ void StaticItem::check(BorrowSema& sema) const {
 }
 
 void Fn::fn_check(BorrowSema& sema) const {
+    sema.enter_scope();
     for (auto param : params())
         param->check(sema);
     if (body() != nullptr)
         body()->check(sema, BorrowExpectation::ASSIGN_FROM, sema.current_scope());
+    sema.leave_scope();
 }
 
 void FnDecl::check(BorrowSema& sema) const {
@@ -268,10 +270,6 @@ bool initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expe
                 error(expr) << "cannot use " << expr << " because it is borrowed\n";
                 return true;
             }
-            BorrowExpectation check_expectation = type_state == BorrowState::MUT ?
-                BorrowExpectation::CHECK_MUT : BorrowExpectation::CHECK_FREEZED;
-            // TODO: 0's as target_scope should not matter here
-            expr->check(sema, check_expectation, 0);
             break;
         }
         case BorrowExpectation::ASSIGN_TO: {
@@ -281,6 +279,7 @@ bool initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expe
             }
             if (sema.lookup_init(expr) == InitState::UNINIT)
                 return true;
+            // TODO: 0's as target_scope should not matter here
             expr->check(sema, BorrowExpectation::CHECK_MUT, 0);
             break;
         }
@@ -292,9 +291,8 @@ bool initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expe
                 error(expr) << "cannot borrow " << expr << " because it is already borrowed\n";
                 return true;
             }
-            BorrowExpectation check_expectation = expectation == BorrowExpectation::BORROW_MUT ?
-                BorrowExpectation::CHECK_MUT : BorrowExpectation::CHECK_FREEZED;
-            expr->check(sema, check_expectation, 0);
+            if (expectation == BorrowExpectation::BORROW_MUT)
+                expr->check(sema, BorrowExpectation::CHECK_MUT, 0);
             break;
         }
         default:
