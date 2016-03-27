@@ -32,11 +32,14 @@ public:
     BorrowSema();
     ~BorrowSema();
 
+    // TODO: make those functions const
     Payload lookup_borrow(const Expr*);
-    void update(const ValueDecl*, LvTree*);
-
-    void add_decl(const ValueDecl*, InitState, const thorin::Location&);
     InitState lookup_init(const Expr*);
+    size_t current_scope() const { return borrow_maps_.size() - 1; }
+    size_t get_target_scope(const Expr*);
+
+    void add_decl(const ValueDecl*, InitState);
+    void add_borrow(const Expr*, BorrowState, size_t);
 
     void enter_scope();
     void leave_scope();
@@ -48,7 +51,7 @@ public:
 private:
     std::vector<BorrowMap> borrow_maps_;
     InitMap init_map_;
-    thorin::HashMap<const ValueDecl*, unsigned> decl_scope_map_;
+    thorin::HashMap<const ValueDecl*, size_t> decl_scope_map_;
     std::stack<const ValueDecl*> scope_stack_;
 };
 
@@ -57,7 +60,7 @@ private:
 BorrowSema::BorrowSema()
     : borrow_maps_(std::vector<BorrowMap>())
     , init_map_(InitMap(DEFAULT_COMPARATOR))
-    , decl_scope_map_(thorin::HashMap<const ValueDecl*, unsigned>())
+    , decl_scope_map_(thorin::HashMap<const ValueDecl*, size_t>())
     , scope_stack_(std::stack<const ValueDecl*>())
     {
         borrow_maps_.push_back(BorrowMap(DEFAULT_COMPARATOR));
@@ -74,26 +77,31 @@ Payload BorrowSema::lookup_borrow(const Expr* expr) {
     assert(false);
 }
 
-void BorrowSema::add_decl(const ValueDecl* decl, InitState is, const thorin::Location& loc) {
-    assert(!decl_scope_map_.contains(decl));
-
-    borrow_maps_.back().insert(decl, bs2pl(BorrowState::MUT), loc);
-    init_map_.insert(decl, is2pl(is), loc);
-    decl_scope_map_[decl] = borrow_maps_.size() - 1;
-    scope_stack_.push(decl);
-}
-
-void BorrowSema::update(const ValueDecl* decl, LvTree* tree) {
-    assert(decl_scope_map_.contains(decl));
-
-    unsigned scope_level = decl_scope_map_[decl];
-    assert(scope_level < borrow_maps_.size());
-    borrow_maps_[scope_level].update(decl, tree);
-}
-
 InitState BorrowSema::lookup_init(const Expr* expr) {
     Payload pl = lookup_payload(*expr, init_map_);
     return pl2is(pl.get_value());
+}
+
+size_t BorrowSema::get_target_scope(const Expr* expr) {
+    const ValueDecl* decl = expr->get_decl();
+    assert(decl_scope_map_.contains(decl));
+
+    return decl_scope_map_[decl];
+}
+
+void BorrowSema::add_decl(const ValueDecl* decl, InitState is) {
+    assert(!decl_scope_map_.contains(decl));
+
+    borrow_maps_.back().insert(decl, bs2pl(BorrowState::MUT), decl->loc());
+    init_map_.insert(decl, is2pl(is), decl->loc());
+    decl_scope_map_[decl] = current_scope();
+    scope_stack_.push(decl);
+}
+
+void BorrowSema::add_borrow(const Expr* expr, BorrowState bs, size_t target_scope) {
+    assert(target_scope < borrow_maps_.size());
+
+    insert(*expr, borrow_maps_[target_scope], bs2pl(bs), expr->loc());
 }
 
 void BorrowSema::enter_scope() {
@@ -138,7 +146,7 @@ std::ostream& BorrowSema::stream(std::ostream&) const {
 
 void LocalDecl::check(BorrowSema& sema) const {
     // TODO:
-    sema.add_decl(this, InitState::UNINIT, loc());
+    sema.add_decl(this, InitState::UNINIT);
 }
 
 //------------------------------------------------------------------------------
@@ -170,7 +178,7 @@ void EnumDecl::check(BorrowSema&) const {}
 
 void StaticItem::check(BorrowSema& sema) const {
     if (init())
-        init()->check(sema, BorrowExpectation::ASSIGN_FROM);
+        init()->check(sema, BorrowExpectation::ASSIGN_FROM, sema.current_scope());
 }
 
 void Fn::fn_check(BorrowSema& sema) const {
@@ -178,7 +186,7 @@ void Fn::fn_check(BorrowSema& sema) const {
     //for (auto param : params())
     //    param->check(sema);
     if (body() != nullptr)
-        body()->check(sema, BorrowExpectation::ASSIGN_FROM);
+        body()->check(sema, BorrowExpectation::ASSIGN_FROM, sema.current_scope());
 }
 
 void FnDecl::check(BorrowSema& sema) const {
@@ -221,7 +229,7 @@ inline BorrowState type_expectation(Type t) {
     return is_copyable(t) ? BorrowState::FREEZED : BorrowState::MUT;
 }
 
-void initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expectation) {
+bool initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expectation) {
     assert(expr->is_lvalue());
     
     Payload pl = sema.lookup_borrow(expr);
@@ -232,21 +240,22 @@ void initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expe
             BorrowState type_state = type_expectation(t);
             if (DEFAULT_COMPARATOR.compare(borrowed, type_state) == Relation::LESS) {
                 error(expr) << "cannot use " << expr << " because it is borrowed\n";
-                return;
+                return true;
             }
             BorrowExpectation check_expectation = type_state == BorrowState::MUT ?
                 BorrowExpectation::CHECK_MUT : BorrowExpectation::CHECK_FREEZED;
-            expr->check(sema, check_expectation);
+            // TODO: 0's as target_scope should not matter here
+            expr->check(sema, check_expectation, 0);
             break;
         }
         case BorrowExpectation::ASSIGN_TO: {
             if (DEFAULT_COMPARATOR.compare(borrowed, BorrowState::MUT) == Relation::LESS) {
                 error(expr) << "cannot assign to " << expr << " because it is borrowed\n";
-                return;
+                return true;
             }
             if (sema.lookup_init(expr) == InitState::UNINIT)
-                return;
-            expr->check(sema, BorrowExpectation::CHECK_MUT);
+                return true;
+            expr->check(sema, BorrowExpectation::CHECK_MUT, 0);
             break;
         }
         case BorrowExpectation::BORROW_MUT:
@@ -255,16 +264,17 @@ void initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expe
                 BorrowState::MUT : BorrowState::FREEZED;
             if (DEFAULT_COMPARATOR.compare(borrowed, exp_state) == Relation::LESS) {
                 error(expr) << "cannot borrow " << expr << " because it is already borrowed\n";
-                return;
+                return true;
             }
             BorrowExpectation check_expectation = expectation == BorrowExpectation::BORROW_MUT ?
                 BorrowExpectation::CHECK_MUT : BorrowExpectation::CHECK_FREEZED;
-            expr->check(sema, check_expectation);
+            expr->check(sema, check_expectation, 0);
             break;
         }
         default:
-            assert(false);
+            return false;
     }
+    return true;
 }
 
 BorrowState expected_state(BorrowExpectation expectation) {
@@ -278,53 +288,52 @@ BorrowState expected_state(BorrowExpectation expectation) {
     }
 }
 
-void EmptyExpr::check(BorrowSema&, BorrowExpectation) const {}
+void EmptyExpr::check(BorrowSema&, BorrowExpectation, size_t) const {}
 
-void BlockExprBase::check(BorrowSema& sema, BorrowExpectation expectation) const {
+void BlockExprBase::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     for (auto stmt : stmts())
         stmt->check(sema);
-    expr()->check(sema, BorrowExpectation::ASSIGN_FROM);
+    expr()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
-void LiteralExpr::check(BorrowSema&, BorrowExpectation) const {}
-void CharExpr::check(BorrowSema&, BorrowExpectation) const {}
-void StrExpr::check(BorrowSema&, BorrowExpectation) const {}
+void LiteralExpr::check(BorrowSema&, BorrowExpectation, size_t) const {}
+void CharExpr::check(BorrowSema&, BorrowExpectation, size_t) const {}
+void StrExpr::check(BorrowSema&, BorrowExpectation, size_t) const {}
 
-void FnExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
+void FnExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     fn_check(sema);
 }
 
-void PathExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
-    switch (expectation) {
-        case BorrowExpectation::ASSIGN_FROM:
-        case BorrowExpectation::ASSIGN_TO:
-        case BorrowExpectation::BORROW_MUT:
-        case BorrowExpectation::BORROW_FREEZED:
-            initial_lv_check(this, sema, expectation);
-            break;
-        default:
-            BorrowState structural_state = value_decl()->is_mut() ?
-                BorrowState::MUT : BorrowState::FREEZED;
-            BorrowState exp_state = expected_state(expectation);
-            if (DEFAULT_COMPARATOR.compare(structural_state, exp_state) == Relation::LESS)
-                error(this) << "state not sufficient\n";
-    }
+void PathExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
+    if (initial_lv_check(this, sema, expectation))
+        return;
+
+    BorrowState structural_state = value_decl()->is_mut() ?
+        BorrowState::MUT : BorrowState::FREEZED;
+    BorrowState exp_state = expected_state(expectation);
+    if (DEFAULT_COMPARATOR.compare(structural_state, exp_state) == Relation::LESS)
+        error(this) << "state not sufficient\n";
 }
 
-void PrefixExpr::check(BorrowSema& sema, BorrowExpectation expectation) const  {
+void PrefixExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const  {
     switch (kind()) {
         case Token::MUL: // *
+            if (initial_lv_check(this, sema, expectation))
+                return;
             break;
         case Token::AND: // &
-            assert(rhs()->is_lvalue());
-            break;
         // TODO: & mut missing
+            assert(expectation == BorrowExpectation::ASSIGN_FROM);
+            rhs()->check(sema, BorrowExpectation::BORROW_FREEZED, target_scope);
+            // TODO: only do this if there were no errors?
+            sema.add_borrow(rhs(), BorrowState::FREEZED, target_scope);
+            break;
         default:
-            rhs()->check(sema, BorrowExpectation::ASSIGN_FROM);
+            rhs()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
     }
 }
 
-void InfixExpr::check(BorrowSema& sema, BorrowExpectation expectation) const   {
+void InfixExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const   {
     switch (kind()) {
         // TODO: can this be simplified?
         case ASGN:      // all assignments
@@ -339,63 +348,64 @@ void InfixExpr::check(BorrowSema& sema, BorrowExpectation expectation) const   {
         case SHL_ASGN:
         case SHR_ASGN:
             assert(lhs()->is_lvalue());
-            rhs()->check(sema, BorrowExpectation::ASSIGN_FROM);
-            lhs()->check(sema, BorrowExpectation::ASSIGN_TO);
+            target_scope = sema.get_target_scope(lhs());
+            rhs()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
+            lhs()->check(sema, BorrowExpectation::ASSIGN_TO, target_scope);
             break;
         default:
-            lhs()->check(sema, BorrowExpectation::ASSIGN_FROM);
-            rhs()->check(sema, BorrowExpectation::ASSIGN_FROM);
+            lhs()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
+            rhs()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
     }
 }
 
-void PostfixExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
-    lhs()->check(sema, BorrowExpectation::ASSIGN_FROM);
+void PostfixExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
+    lhs()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
-void FieldExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
+void FieldExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     assert(false);
 }
 
-void CastExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
+void CastExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     assert(false);
 
     //lhs()->check(sema);
 }
 
-void DefiniteArrayExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
+void DefiniteArrayExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     for (auto arg : args())
-        arg->check(sema, BorrowExpectation::ASSIGN_FROM);
+        arg->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
-void RepeatedDefiniteArrayExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
-    value()->check(sema, BorrowExpectation::ASSIGN_FROM);
+void RepeatedDefiniteArrayExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
+    value()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
-void IndefiniteArrayExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
-    dim()->check(sema, BorrowExpectation::ASSIGN_FROM);
+void IndefiniteArrayExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
+    dim()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
-void TupleExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
+void TupleExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     assert(false);
 
     //for (auto arg : args())
     //    arg->check(sema);
 }
 
-void SimdExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
+void SimdExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     assert(false);
 
     //for (auto arg : args())
     //    arg->check(sema);
 }
 
-void StructExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
+void StructExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     //path()->check(sema); // TODO: check this?
     for (const auto& elem : elems())
-        elem.expr()->check(sema, BorrowExpectation::ASSIGN_FROM);
+        elem.expr()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
-void MapExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
+void MapExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     assert(false); // TODO
 
     //lhs()->check(sema, assign_to, true, expected_state);
@@ -403,29 +413,29 @@ void MapExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
     //    arg->check(sema);
 }
 
-void IfExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
+void IfExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     assert(expectation == BorrowExpectation::ASSIGN_FROM);
 
-    cond()->check(sema, BorrowExpectation::ASSIGN_FROM);
-    then_expr()->check(sema, BorrowExpectation::ASSIGN_FROM);
-    else_expr()->check(sema, BorrowExpectation::ASSIGN_FROM);
+    cond()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
+    then_expr()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
+    else_expr()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
-void WhileExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
+void WhileExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     assert(expectation == BorrowExpectation::ASSIGN_FROM);
 
-    cond()->check(sema, BorrowExpectation::ASSIGN_FROM);
+    cond()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
     //break_decl()->check(sema);
     //continue_decl()->check(sema);
-    body()->check(sema, BorrowExpectation::ASSIGN_FROM);
+    body()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
-void ForExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
+void ForExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     assert(expectation == BorrowExpectation::ASSIGN_FROM);
 
-    expr()->check(sema, BorrowExpectation::ASSIGN_FROM);
+    expr()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
     //break_decl()->check(sema);
-    fn_expr()->check(sema, BorrowExpectation::ASSIGN_FROM);
+    fn_expr()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
 //------------------------------------------------------------------------------
@@ -434,13 +444,13 @@ void ForExpr::check(BorrowSema& sema, BorrowExpectation expectation) const {
  * statements
  */
 
-void ExprStmt::check(BorrowSema& sema) const { expr()->check(sema, BorrowExpectation::ASSIGN_FROM); }
+void ExprStmt::check(BorrowSema& sema) const { expr()->check(sema, BorrowExpectation::ASSIGN_FROM, sema.current_scope()); }
 
 void ItemStmt::check(BorrowSema& sema) const { item()->check(sema); }
 
 void LetStmt::check(BorrowSema& sema) const {
     if (init())
-        init()->check(sema, BorrowExpectation::ASSIGN_FROM);
+        init()->check(sema, BorrowExpectation::ASSIGN_FROM, sema.current_scope());
     local()->check(sema);
 }
 
