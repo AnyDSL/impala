@@ -1,6 +1,6 @@
 fn f() -> () {
     let foo =
-        |x: int, y: ~int| -> ~int
+        |x: int, mut y: ~int| -> ~int
             if x > 4 {
                 y
             } else {
