@@ -203,30 +203,30 @@ payload_t LvMapComparator::infimum(payload_t p1, payload_t p2) const {
  * LvMap
  */
 
-LvBaseMap::LvBaseMap(const LvMapComparator& comparator)
-    : LvMap(comparator)
-    , varmap_(thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>>())
+LvMap::LvMap(const LvMapComparator& comparator)
+    : varmap_(thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>>())
+    , comparator_(comparator) // TODO: maybe change this to be a pointer
     , scope_stack_(std::stack<const ValueDecl*>())
     {}
 
-LvBaseMap::LvBaseMap(const LvBaseMap& map)
+LvMap::LvMap(const LvMap& map)
     // TODO: check that shared pointers get copied correctly
-    : LvMap(map.get_comparator())
-    , varmap_(map.varmap_)
+    : varmap_(map.varmap_)
+    , comparator_(map.comparator_)
     , scope_stack_(map.scope_stack_)
     {}
 
-LvBaseMap::~LvBaseMap() {
+LvMap::~LvMap() {
     // TODO: delete the trees
 }
 
-LvTreeLookupTree LvBaseMap::lookup(const ValueDecl* decl) const {
+LvTreeLookupTree LvMap::lookup(const ValueDecl* decl) const {
     auto tree = find_tree<const ValueDecl*>(varmap_, decl);
     assert(tree.tree_ != nullptr);
     return tree;
 }
 
-void LvBaseMap::insert(const ValueDecl* decl, payload_t pl, const thorin::Location& loc) {
+void LvMap::insert(const ValueDecl* decl, payload_t pl, const thorin::Location& loc) {
     assert (!varmap_.contains(decl));
     LvTree* tree = new LvTree(nullptr);
     tree->set_payload(pl, loc);
@@ -234,16 +234,16 @@ void LvBaseMap::insert(const ValueDecl* decl, payload_t pl, const thorin::Locati
     scope_stack_.push(decl);
 }
 
-void LvBaseMap::update(const ValueDecl* decl, LvTree* tree) {
+void LvMap::update(const ValueDecl* decl, LvTree* tree) {
     assert(varmap_.contains(decl));
     varmap_[decl] = std::shared_ptr<LvTree>(tree);
 }
 
-void LvBaseMap::enter_scope() {
+void LvMap::enter_scope() {
     scope_stack_.push(nullptr);
 }
 
-void LvBaseMap::leave_scope() {
+void LvMap::leave_scope() {
     assert(!scope_stack_.empty());
     const ValueDecl* decl;
     do {
@@ -256,9 +256,7 @@ void LvBaseMap::leave_scope() {
     } while (decl != nullptr);
 }
 
-void LvBaseMap::merge(LvMap& other_map) {
-    // TODO: can we avoid the cast?
-    LvBaseMap& other = dynamic_cast<LvBaseMap&>(other_map);
+void LvMap::merge(LvMap& other) {
     assert(varmap_.size() == other.varmap_.size() && scope_stack_.size() == other.scope_stack_.size());
     // TODO: assert same comparator
 
@@ -281,7 +279,7 @@ void LvBaseMap::merge(LvMap& other_map) {
     //std::cout << "after merge:\n" << this << "\n";
 }
 
-std::ostream& LvBaseMap::stream(std::ostream& os) const {
+std::ostream& LvMap::stream(std::ostream& os) const {
     os << "[";
     for (auto i : varmap_) {
         os << "(s:" << i.first->symbol() << ",c:" << i.second.use_count() << ",p:";
@@ -463,7 +461,7 @@ void PrefixExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payloa
     handle_ptr_insert(rhs(), tree, multi_ref, map, pl, loc);
 }
 
-const StructDecl* get_decl(const Type type) {
+const StructDecl* get_struct_decl(const Type type) {
     assert(type->kind() == Kind_struct_app);
     const TypeNode* node = *type;
     const StructAppTypeNode* app_node = dynamic_cast<const StructAppTypeNode*>(node);
@@ -482,7 +480,7 @@ void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload
     payload_t parent_pl = parent->get_payload().get_value();
     switch (map.get_comparator().compare(pl, parent_pl)) {
         case Relation::LESS: {
-            const StructDecl* decl = get_decl(lhs()->type());
+            const StructDecl* decl = get_struct_decl(lhs()->type());
             for (auto i : decl->field_decls()) {
                 Symbol s = i->symbol();
                 LvTreeLookupTree sibling = parent->get_child(s, false);
@@ -497,7 +495,7 @@ void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload
             break;
         }
         case Relation::GREATER: {
-            const StructDecl* decl = get_decl(lhs()->type());
+            const StructDecl* decl = get_struct_decl(lhs()->type());
             bool all_siblings_same_payload = true;
             for (auto i : decl->field_decls()) {
                 Symbol s = i->symbol();

@@ -41,7 +41,7 @@ class CodeGen;
 class NameSema;
 class TypeSema;
 
-typedef LvBaseMap MoveSema;
+typedef LvMap MoveSema;
 enum class BorrowExpectation { CHECK_MUT, CHECK_FREEZED, ASSIGN_TO, BORROW_MUT, BORROW_FREEZED, ASSIGN_FROM};
 class BorrowSema;
 class LifetimeSema;
@@ -912,6 +912,7 @@ public:
     virtual void insert_payload(LvTree*, bool multi_ref, LvMap&, payload_t, const thorin::Location&) const { assert(false); /* overwrite this */ };
     /// return whether an lvalue owns its value (in case it does not contain references) or not
     virtual bool owns_value(void) const { assert(false); /* overwrite this */ }
+    virtual const ValueDecl* get_decl() const { assert(false); /* overwrite this */ }
 
 private:
     virtual Type check(TypeSema&, TypeExpectation) const = 0;
@@ -1091,6 +1092,7 @@ public:
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
     virtual void insert_payload(LvTree*, bool multi_ref, LvMap&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
+    virtual const ValueDecl* get_decl() const override { return value_decl(); }
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1123,6 +1125,7 @@ public:
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
     virtual void insert_payload(LvTree*, bool multi_ref, LvMap&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
+    virtual const ValueDecl* get_decl() const override { assert(is_lvalue()); return rhs()->get_decl(); }
     virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
@@ -1212,6 +1215,7 @@ public:
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
     virtual void insert_payload(LvTree*, bool multi_ref, LvMap&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
+    virtual const ValueDecl* get_decl() const override { assert(is_lvalue()); return lhs()->get_decl(); }
     Type check_as_struct(TypeSema&, Type) const;
 
 private:
@@ -1404,6 +1408,7 @@ public:
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
     virtual void insert_payload(LvTree*, bool multi_ref, LvMap&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
+    virtual const ValueDecl* get_decl() const override { assert(is_lvalue()); return lhs()->get_decl(); }
     Type check_as_map(TypeSema&, TypeExpectation) const;
     Type check_as_method_call(TypeSema&, TypeExpectation) const;
 
