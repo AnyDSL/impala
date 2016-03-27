@@ -257,6 +257,8 @@ inline BorrowState type_expectation(Type t) {
     return is_copyable(t) ? BorrowState::FREEZED : BorrowState::MUT;
 }
 
+// If this function returns true, the structure of the lvalue needs to be checked for mutablility.
+// Else no check should be performed.
 bool initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expectation) {
     assert(expr->is_lvalue());
     
@@ -266,22 +268,20 @@ bool initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expe
         case BorrowExpectation::ASSIGN_FROM: {
             Type t = expr->type();
             BorrowState type_state = type_expectation(t);
-            if (DEFAULT_COMPARATOR.compare(borrowed, type_state) == Relation::LESS) {
+            if (DEFAULT_COMPARATOR.compare(borrowed, type_state) == Relation::LESS)
                 error(expr) << "cannot use " << expr << " because it is borrowed\n";
-                return true;
-            }
             break;
         }
         case BorrowExpectation::ASSIGN_TO: {
             if (DEFAULT_COMPARATOR.compare(borrowed, BorrowState::MUT) == Relation::LESS) {
                 error(expr) << "cannot assign to " << expr << " because it is borrowed\n";
-                return true;
+                return false;
             }
-            if (sema.lookup_init(expr) == InitState::UNINIT)
-                return true;
-            // TODO: 0's as target_scope should not matter here
-            expr->check(sema, BorrowExpectation::CHECK_MUT, 0);
-            break;
+            if (expr->owns_value() && sema.lookup_init(expr) == InitState::UNINIT)
+                // an uninitialized owned value can be written to, even if the owner is
+                // not declared mutable
+                return false;
+            return true;
         }
         case BorrowExpectation::BORROW_MUT:
         case BorrowExpectation::BORROW_FREEZED: {
@@ -289,40 +289,26 @@ bool initial_lv_check(const Expr* expr, BorrowSema& sema, BorrowExpectation expe
                 BorrowState::MUT : BorrowState::FREEZED;
             if (DEFAULT_COMPARATOR.compare(borrowed, exp_state) == Relation::LESS) {
                 error(expr) << "cannot borrow " << expr << " because it is already borrowed\n";
-                return true;
+                return false;
             }
             if (expectation == BorrowExpectation::BORROW_MUT)
-                expr->check(sema, BorrowExpectation::CHECK_MUT, 0);
+                return true;
             break;
         }
         default:
-            return false;
+            // someone else already determined that we need for mutability so we forward this request
+            return true;
     }
+    // the structure of every lvalue permits operations that require it to be freezed, hence we
+    // only need to check the structure if mutablility is required
+    return false;
+}
+
+bool ptr_type_permits_mutability(Type t) {
+    if (t->kind() == Kind_borrowed_ptr)
+        return false;
+    // TODO: can mutability be forbidden any other way?
     return true;
-}
-
-BorrowState expected_state(BorrowExpectation expectation) {
-    switch (expectation) {
-        case BorrowExpectation::CHECK_MUT:
-            return BorrowState::MUT;
-        case BorrowExpectation::CHECK_FREEZED:
-            return BorrowState::FREEZED;
-        default:
-            assert(false);
-    }
-}
-
-BorrowState ptr_type_permitted_state(Type t) {
-    switch(t->kind()) {
-        case Kind_borrowed_ptr:
-            return BorrowState::FREEZED;
-        case Kind_mut_ptr:
-        case Kind_owned_ptr:
-            return BorrowState::MUT;
-        default:
-            assert(false);
-            // only call this function on pointer types
-    }
 }
 
 void EmptyExpr::check(BorrowSema&, BorrowExpectation, size_t) const {}
@@ -344,31 +330,26 @@ void FnExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t targe
 }
 
 void PathExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
-    if (initial_lv_check(this, sema, expectation))
+    if (!initial_lv_check(this, sema, expectation))
         return;
 
-    BorrowState structural_state = value_decl()->is_mut() ?
-        BorrowState::MUT : BorrowState::FREEZED;
-    BorrowState exp_state = expected_state(expectation);
-    if (DEFAULT_COMPARATOR.compare(structural_state, exp_state) == Relation::LESS)
-        error(this) << "state not sufficient\n";
+    if (!value_decl()->is_mut())
+        error(this) << "cannot use " << this << " because it is not declared mutable\n";
 }
 
-bool pointer_check(const Expr* this_expr, BorrowSema& sema, BorrowExpectation expectation,
+void pointer_check(const Expr* this_expr, BorrowSema& sema, BorrowExpectation expectation,
     size_t target_scope, const Expr* parent) {
 
-    if (initial_lv_check(this_expr, sema, expectation))
-        return true;
+    if (!initial_lv_check(this_expr, sema, expectation))
+        return;
+
     Type parent_t = parent->type();
-    BorrowState type_permitted_state = ptr_type_permitted_state(parent_t);
-    BorrowState required_state = expected_state(expectation);
-    if (DEFAULT_COMPARATOR.compare(type_permitted_state, required_state) == Relation::LESS) {
-        error(this_expr) << "cannot use " << this_expr << " because its pointer type does not permit it\n";
-        return false;
+    if (!ptr_type_permits_mutability(parent_t)) {
+        error(this_expr) << "cannot use " << this_expr << " because it is an immutable reference\n";
+        return;
     }
     if (!parent->owns_value())
-        parent->check(sema, expectation, target_scope);
-    return false;
+        parent->check(sema, BorrowExpectation::CHECK_MUT, target_scope);
 }
 
 void PrefixExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const  {
@@ -459,10 +440,8 @@ void StructExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t t
 }
 
 void MapExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
-    if (is_lvalue() && pointer_check(this, sema, expectation, target_scope, lhs()))
-        // return here because pointer_check will call initial_lv_check and that will call this method
-        // in this case
-        return;
+    if (is_lvalue())
+        pointer_check(this, sema, expectation, target_scope, lhs());
 
     // TODO: should we check lhs() if this is a function call?
     //lhs()->check(sema, assign_to, true, expected_state);
