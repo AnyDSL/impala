@@ -44,9 +44,9 @@ public:
     void enter_scope();
     void leave_scope();
 
-    void merge(LvMap& other);
+    void merge(BorrowSema& other);
 
-    std::ostream& stream(std::ostream&) const;
+    //std::ostream& stream(std::ostream&) const;
 
 private:
     std::vector<BorrowMap> borrow_maps_;
@@ -101,6 +101,7 @@ void BorrowSema::add_decl(const ValueDecl* decl, InitState is) {
 void BorrowSema::add_borrow(const Expr* expr, BorrowState bs, size_t target_scope) {
     assert(target_scope < borrow_maps_.size());
 
+    // TODO: maybe use the COW style also here
     insert(*expr, borrow_maps_[target_scope], bs2pl(bs), expr->loc());
 }
 
@@ -129,13 +130,23 @@ void BorrowSema::leave_scope() {
     } while (decl != nullptr);
 }
 
-void BorrowSema::merge(LvMap& other) {
-    assert(false);
+void BorrowSema::merge(BorrowSema& other) {
+    assert(borrow_maps_.size() == other.borrow_maps_.size());
+
+    init_map_.merge(other.init_map_);
+    for (size_t i = 0; i < borrow_maps_.size(); i++) {
+        BorrowMap this_map = borrow_maps_[i];
+        BorrowMap other_map = other.borrow_maps_[i];
+        this_map.merge(other_map);
+    }
+    // make other unusable
+    other.borrow_maps_.clear();
+    // TODO: should not be necessary to merge decl_scope_map_
 }
 
-std::ostream& BorrowSema::stream(std::ostream&) const {
-    assert(false);
-}
+//std::ostream& BorrowSema::stream(std::ostream&) const {
+//    assert(false);
+//}
 
 
 //------------------------------------------------------------------------------
@@ -291,9 +302,11 @@ BorrowState expected_state(BorrowExpectation expectation) {
 void EmptyExpr::check(BorrowSema&, BorrowExpectation, size_t) const {}
 
 void BlockExprBase::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
+    sema.enter_scope();
     for (auto stmt : stmts())
         stmt->check(sema);
     expr()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
+    sema.leave_scope();
 }
 
 void LiteralExpr::check(BorrowSema&, BorrowExpectation, size_t) const {}
@@ -417,25 +430,43 @@ void IfExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t targe
     assert(expectation == BorrowExpectation::ASSIGN_FROM);
 
     cond()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
+
+    sema.enter_scope();
+    BorrowSema else_sema(sema);
+
     then_expr()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
-    else_expr()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
+    else_expr()->check(else_sema, BorrowExpectation::ASSIGN_FROM, target_scope);
+
+    sema.leave_scope();
+    else_sema.leave_scope();
+    sema.merge(else_sema);
 }
 
 void WhileExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     assert(expectation == BorrowExpectation::ASSIGN_FROM);
 
-    cond()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
     //break_decl()->check(sema);
     //continue_decl()->check(sema);
-    body()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
+
+    BorrowSema body_sema(sema);
+    body_sema.enter_scope();
+    body()->check(body_sema, BorrowExpectation::ASSIGN_FROM, target_scope);
+    body_sema.leave_scope();
+
+    sema.merge(body_sema);
+    // TODO: can the condition introduce borrows? If so we might need to check it twice
+    cond()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
 void ForExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     assert(expectation == BorrowExpectation::ASSIGN_FROM);
 
+    BorrowSema body_sema(sema);
+    fn_expr()->check(body_sema, BorrowExpectation::ASSIGN_FROM, target_scope);
+
+    sema.merge(body_sema);
     expr()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
     //break_decl()->check(sema);
-    fn_expr()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
 //------------------------------------------------------------------------------
