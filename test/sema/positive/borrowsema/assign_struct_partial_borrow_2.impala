@@ -1,0 +1,12 @@
+struct S {
+    x1: int,
+    x2: &int
+}
+
+fn f() -> () {
+    let a = 4;
+    let mut b = S { x1: 4, x2: &a };
+    let c = &*b.x2;
+    let d = *b.x2;
+    b.x1 = 6;
+}

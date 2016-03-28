@@ -1,0 +1,10 @@
+fn f() -> () {
+    let mut a = 4;
+    let b: &int;
+
+    if a > 5 {
+        b = &a;
+    }
+
+    a = 9;
+}

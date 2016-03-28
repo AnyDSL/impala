@@ -1,0 +1,10 @@
+struct S {
+    x1: int,
+    x2: int
+}
+
+fn f() -> () {
+    let mut a = S { x1: 1, x2: 2 };
+    let b = &a.x1;
+    a = S { x1: 3, x2: 4 };
+}

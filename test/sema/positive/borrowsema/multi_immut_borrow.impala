@@ -1,0 +1,13 @@
+fn f() -> () {
+    let a = 3;
+    let b = &a;
+    let c = &a;
+
+    if a < 4 {
+        let d = &a;
+    } else {
+        let d = &*b;
+    }
+
+    let e = &*c;
+}
