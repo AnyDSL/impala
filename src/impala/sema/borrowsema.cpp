@@ -40,6 +40,7 @@ public:
 
     void add_decl(const ValueDecl*, InitState);
     void add_borrow(const Expr*, BorrowState, size_t);
+    void set_init(const Expr*);
 
     void enter_scope();
     void leave_scope();
@@ -51,6 +52,7 @@ public:
 private:
     std::vector<std::shared_ptr<BorrowMap>> borrow_maps_;
     InitMap init_map_;
+    // TODO: can this be shared so that it does not need to be duplicated?
     ScopedMap<size_t> decl_scope_map_;
 };
 
@@ -114,6 +116,10 @@ void BorrowSema::add_borrow(const Expr* expr, BorrowState bs, size_t target_scop
 
     BorrowMap& bmap = get_borrow_map_for_insert(borrow_maps_, target_scope);
     insert(expr, bmap, bs2pl(bs), expr->loc());
+}
+
+void BorrowSema::set_init(const Expr* expr) {
+    insert(expr, init_map_, is2pl(InitState::INIT), expr->loc());
 }
 
 void BorrowSema::enter_scope() {
@@ -397,6 +403,7 @@ void InfixExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t ta
             target_scope = sema.get_target_scope(lhs());
             rhs()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
             lhs()->check(sema, BorrowExpectation::ASSIGN_TO, target_scope);
+            sema.set_init(lhs());
             break;
         default:
             lhs()->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
@@ -409,9 +416,9 @@ void PostfixExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t 
 }
 
 void FieldExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
-    if (initial_lv_check(this, sema, expectation))
+    if (!initial_lv_check(this, sema, expectation))
         return;
-    lhs()->check(sema, expectation, target_scope);
+    lhs()->check(sema, BorrowExpectation::CHECK_MUT, target_scope);
 }
 
 void CastExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
@@ -435,12 +442,12 @@ void IndefiniteArrayExpr::check(BorrowSema& sema, BorrowExpectation expectation,
 
 void TupleExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     for (auto arg : args())
-        arg->check(sema, expectation, target_scope);
+        arg->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
 void SimdExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     for (auto arg : args())
-        arg->check(sema, expectation, target_scope);
+        arg->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
 void StructExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
@@ -451,13 +458,13 @@ void StructExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t t
 
 void MapExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
     if (is_lvalue())
-        pointer_check(this, sema, expectation, target_scope, lhs());
+        pointer_check(this, sema, BorrowExpectation::CHECK_MUT, target_scope, lhs());
 
     // TODO: should we check lhs() if this is a function call?
     //lhs()->check(sema, assign_to, true, expected_state);
 
     for (auto arg : args())
-        arg->check(sema, expectation, target_scope);
+        arg->check(sema, BorrowExpectation::ASSIGN_FROM, target_scope);
 }
 
 void IfExpr::check(BorrowSema& sema, BorrowExpectation expectation, size_t target_scope) const {
