@@ -51,17 +51,15 @@ public:
 private:
     std::vector<std::shared_ptr<BorrowMap>> borrow_maps_;
     InitMap init_map_;
-    thorin::HashMap<const ValueDecl*, size_t> decl_scope_map_;
-    std::stack<const ValueDecl*> scope_stack_;
+    std::shared_ptr<ScopedMap<size_t>> decl_scope_map_;
 };
-
 
 
 BorrowSema::BorrowSema()
     : borrow_maps_(std::vector<std::shared_ptr<BorrowMap>>())
     , init_map_(InitMap(DEFAULT_COMPARATOR))
-    , decl_scope_map_(thorin::HashMap<const ValueDecl*, size_t>())
-    , scope_stack_(std::stack<const ValueDecl*>())
+    , decl_scope_map_(std::shared_ptr<ScopedMap<size_t>>(
+        new ScopedMap<size_t>()))
     {
         BorrowMap* inital_map = new BorrowMap(DEFAULT_COMPARATOR);
         borrow_maps_.push_back(std::shared_ptr<BorrowMap>(inital_map));
@@ -85,9 +83,9 @@ InitState BorrowSema::lookup_init(const Expr* expr) {
 
 size_t BorrowSema::get_target_scope(const Expr* expr) {
     const ValueDecl* decl = expr->get_decl();
-    assert(decl_scope_map_.contains(decl));
+    assert(decl_scope_map_->contains(decl));
 
-    return decl_scope_map_[decl];
+    return (*decl_scope_map_)[decl];
 }
 
 BorrowMap& get_borrow_map_for_insert(std::vector<std::shared_ptr<BorrowMap>>& borrow_maps,
@@ -104,13 +102,12 @@ BorrowMap& get_borrow_map_for_insert(std::vector<std::shared_ptr<BorrowMap>>& bo
 }
 
 void BorrowSema::add_decl(const ValueDecl* decl, InitState is) {
-    assert(!decl_scope_map_.contains(decl));
+    assert(!decl_scope_map_->contains(decl));
 
     BorrowMap& bmap = get_borrow_map_for_insert(borrow_maps_, current_scope());
     bmap.insert(decl, bs2pl(BorrowState::MUT), decl->loc());
     init_map_.insert(decl, is2pl(is), decl->loc());
-    decl_scope_map_[decl] = current_scope();
-    scope_stack_.push(decl);
+    decl_scope_map_->add_mapping(decl, current_scope());
 }
 
 void BorrowSema::add_borrow(const Expr* expr, BorrowState bs, size_t target_scope) {
@@ -123,30 +120,20 @@ void BorrowSema::add_borrow(const Expr* expr, BorrowState bs, size_t target_scop
 void BorrowSema::enter_scope() {
     borrow_maps_.push_back(borrow_maps_.back());
     init_map_.enter_scope();
-    scope_stack_.push(nullptr);
+    decl_scope_map_->enter_scope();
 }
 
 void BorrowSema::leave_scope() {
-    assert(!scope_stack_.empty());
     assert(!borrow_maps_.empty());
 
     borrow_maps_.pop_back();
     init_map_.leave_scope();
-
-    // TODO: same code as in LvMap, can this be deduplicated?
-    const ValueDecl* decl;
-    do {
-        decl = scope_stack_.top();
-        scope_stack_.pop();
-        if (decl != nullptr) {
-            assert(decl_scope_map_.contains(decl));
-            decl_scope_map_.erase(decl);
-        }
-    } while (decl != nullptr);
+    decl_scope_map_->leave_scope();
 }
 
 void BorrowSema::merge(BorrowSema& other) {
     assert(borrow_maps_.size() == other.borrow_maps_.size());
+    assert(decl_scope_map_ == other.decl_scope_map_);
 
     init_map_.merge(other.init_map_);
     for (size_t i = 0; i < borrow_maps_.size(); i++) {
@@ -157,8 +144,7 @@ void BorrowSema::merge(BorrowSema& other) {
     }
     // make other unusable
     other.borrow_maps_.clear();
-
-    // TODO: should not be necessary to merge decl_scope_map_
+    other.decl_scope_map_ = nullptr;
 }
 
 //std::ostream& BorrowSema::stream(std::ostream&) const {

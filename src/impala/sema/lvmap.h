@@ -76,6 +76,44 @@ public:
 
 //---------------------------------------------------------------------------------
 
+/*
+ * ScopedMap
+ */
+
+template <class Value>
+class ScopedMap : public thorin::HashMap<const ValueDecl*, Value> {
+public:
+    // TODO: prohibit other ways to add mappings
+    // TODO: pass Value by value?
+    void add_mapping (const ValueDecl* k, Value v) {
+        assert(!(thorin::HashMap<const ValueDecl*, Value>::contains)(k));
+        scope_stack_.push(k);
+        thorin::HashMap<const ValueDecl*, Value>::operator[](k) = v;
+    }
+
+    void enter_scope() {
+        scope_stack_.push(nullptr);
+    }
+
+    void leave_scope() {
+        assert(!scope_stack_.empty());
+        const ValueDecl* k;
+        do {
+            k = scope_stack_.top();
+            scope_stack_.pop();
+            if (k != nullptr) {
+                assert((thorin::HashMap<const ValueDecl*, Value>::contains)(k));
+                thorin::HashMap<const ValueDecl*, Value>::erase(k);
+            }
+        } while (k != nullptr);
+    }
+
+private:
+    std::stack<const ValueDecl*> scope_stack_;
+};
+
+//---------------------------------------------------------------------------------
+
 class LvMap : public thorin::Streamable {
 private:
     LvMap& operator= (const LvMap &);
@@ -100,10 +138,11 @@ public:
     std::ostream& stream(std::ostream&) const;
 
 private:
-    thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>> varmap_;
+    ScopedMap<std::shared_ptr<LvTree>> varmap_;
     const LvMapComparator& comparator_;
-    std::stack<const ValueDecl*> scope_stack_;
 };
+
+//--------------------------------------------------------------------------------
 
 inline bool payload2bool(payload_t pl) { assert(pl == 0 || pl == 1); return (bool) pl; }
 

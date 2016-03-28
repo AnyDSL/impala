@@ -204,16 +204,14 @@ payload_t LvMapComparator::infimum(payload_t p1, payload_t p2) const {
  */
 
 LvMap::LvMap(const LvMapComparator& comparator)
-    : varmap_(thorin::HashMap<const ValueDecl*, std::shared_ptr<LvTree>>())
+    : varmap_(ScopedMap<std::shared_ptr<LvTree>>())
     , comparator_(comparator) // TODO: maybe change this to be a pointer
-    , scope_stack_(std::stack<const ValueDecl*>())
     {}
 
 LvMap::LvMap(const LvMap& map)
     // TODO: check that shared pointers get copied correctly
     : varmap_(map.varmap_)
     , comparator_(map.comparator_)
-    , scope_stack_(map.scope_stack_)
     {}
 
 LvMap::~LvMap() {
@@ -230,8 +228,7 @@ void LvMap::insert(const ValueDecl* decl, payload_t pl, const thorin::Location& 
     assert (!varmap_.contains(decl));
     LvTree* tree = new LvTree(nullptr);
     tree->set_payload(pl, loc);
-    varmap_[decl] = std::shared_ptr<LvTree>(tree);
-    scope_stack_.push(decl);
+    varmap_.add_mapping(decl, std::shared_ptr<LvTree>(tree));
 }
 
 void LvMap::update(const ValueDecl* decl, LvTree* tree) {
@@ -240,24 +237,15 @@ void LvMap::update(const ValueDecl* decl, LvTree* tree) {
 }
 
 void LvMap::enter_scope() {
-    scope_stack_.push(nullptr);
+    varmap_.enter_scope();
 }
 
 void LvMap::leave_scope() {
-    assert(!scope_stack_.empty());
-    const ValueDecl* decl;
-    do {
-        decl = scope_stack_.top();
-        scope_stack_.pop();
-        if (decl != nullptr) {
-            assert(varmap_.contains(decl));
-            varmap_.erase(decl);
-        }
-    } while (decl != nullptr);
+    varmap_.leave_scope();
 }
 
 void LvMap::merge(LvMap& other) {
-    assert(varmap_.size() == other.varmap_.size() && scope_stack_.size() == other.scope_stack_.size());
+    assert(varmap_.size() == other.varmap_.size());
     // TODO: assert same comparator
 
     for (auto i : other.varmap_) {
