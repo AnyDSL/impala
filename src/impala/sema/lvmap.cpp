@@ -162,12 +162,15 @@ LvTree* LvTree::merge(LvTree* other, bool multi_ref, const LvMapComparator& comp
     return nullptr;
 }
 
+inline void print_tree(std::ostream& os, Symbol sym, std::shared_ptr<LvTree> tree) {
+    os << "(" << sym << ", " << tree->get_payload().get_value() << ", <";
+    os << tree.use_count() << ">, " << tree.get() << "), ";
+}
+
 std::ostream& LvTree::stream(std::ostream& os) const {
-    os << payload_.get_value() << "[";
+    os << "[";
     for (auto i : children_) {
-        os << "(s:" << i.first << ",c:" << i.second.use_count() << ",p:";
-        LvTree* tree = i.second.get();
-        os << tree << "),";
+        print_tree(os, i.first, i.second);
     }
     os << "]";
     return os;
@@ -265,11 +268,10 @@ void LvMap::merge(LvMap& other) {
 std::ostream& LvMap::stream(std::ostream& os) const {
     os << "[";
     for (auto i : varmap_) {
-        os << "(s:" << i.first->symbol() << ",c:" << i.second.use_count() << ",p:";
-        LvTree* tree = i.second.get();
-        os << tree << "),";
+        os << "\n\t";
+        print_tree(os, i.first->symbol(), i.second);
     }
-    os << "]";
+    os << "\n]";
     return os;
 }
 
@@ -314,7 +316,8 @@ LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent, bool 
     Relation comp_res = map.get_comparator().compare(
         parent_res.value_.tree_res_.tree_->get_payload().get_value(),
         this_tree.tree_->get_payload().get_value());
-    assert(comp_res == Relation::LESS || (comp_res == Relation::EQUAL && create));
+    assert(comp_res == Relation::LESS || (comp_res == Relation::EQUAL
+        && (create || this_tree.tree_->has_children())));
 
     // set the parent for this lookup, necessary because of COW pattern that results in a DAG
     this_tree.tree_->set_parent(parent_res.value_.tree_res_.tree_);
@@ -374,6 +377,9 @@ void insert(const Expr* expr, LvMap& map, payload_t pl, const thorin::Location& 
         tree = new LvTree(*tree);
     tree->clear_subtrees();
     expr->insert_payload(tree, multi_ref, map, pl, loc);
+
+    //std::cout << "map after insert of " << expr << "\n";
+    //std::cout << &map << "\n";
 }
 
 //-------------------------------------------------------------------
@@ -471,6 +477,8 @@ void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload
             }
             if (!tree->has_children())
                 parent->remove_subtree(symbol());
+            else
+                tree->set_payload(pl, loc);
             lhs()->insert_payload(parent, multi_ref, map, pl, loc);
             break;
         }
@@ -485,11 +493,13 @@ void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload
 
                 if (sibling.tree_ == nullptr || sibling.tree_->get_payload().get_value() != pl
                         || sibling.tree_->has_children()) {
+                    // TODO: do not set to false if siblings have children
                     all_siblings_same_payload = false;
                     break;
                 }
             }
             if (all_siblings_same_payload) {
+                // TODO: remove only those children that don't have children
                 parent->clear_subtrees();
                 lhs()->insert_payload(parent, multi_ref, map, pl, loc);
             } else {
@@ -501,6 +511,8 @@ void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload
         case Relation::EQUAL:
             if (!tree->has_children())
                 parent->remove_subtree(symbol());
+            else if (tree->get_payload().get_value() != pl)
+                tree->set_payload(pl, loc);
             propagate_change(lhs(), parent, multi_ref, map);
             break;
         case Relation::INCOMPARABLE:
