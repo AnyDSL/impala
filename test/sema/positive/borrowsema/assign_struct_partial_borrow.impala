@@ -1,0 +1,17 @@
+struct S1 {
+    x1: int,
+    x2: float
+}
+
+struct S2 {
+    x3: S1,
+    x4: S1
+}
+
+fn f() -> () {
+    let mut a = S2 { x3: S1 { x1: 3, x2: 5.6f }, x4: S1 { x1: 9, x2: 7.8f } };
+    let b = &a.x3.x2;
+    let c = &a.x4.x1;
+    a.x3.x1 = 7;
+    a.x4.x2 = 9.1f;
+}

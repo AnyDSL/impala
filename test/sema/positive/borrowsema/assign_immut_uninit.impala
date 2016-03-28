@@ -1,0 +1,15 @@
+struct S {
+    x1: int,
+    x2: int
+}
+
+fn f() -> () {
+    let a: S;
+    a.x1 = 4;
+    a.x2 = 5;
+    let b = a;
+
+    let c: i32;
+    c = 4;
+    let d = c;
+}

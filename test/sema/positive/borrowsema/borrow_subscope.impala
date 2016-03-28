@@ -1,0 +1,10 @@
+fn f() -> () {
+    let mut a = 4;
+
+    {
+        let b = &a;
+        let c = *b;
+    }
+
+    a = 5;
+}
