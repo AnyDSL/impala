@@ -62,7 +62,7 @@ public:
             def = world().convert(convert(expr->type()), def, def->loc());
         return def;
     }
-    Def remit(const Expr* expr, MapExpr::State state, Location eval_loc) {
+    const Def* remit(const Expr* expr, MapExpr::State state, Location eval_loc) {
         assert(!expr->needs_cast());
         return expr->as<MapExpr>()->remit(*this, state, eval_loc);
     }
@@ -533,15 +533,15 @@ const Def* StructExpr::remit(CodeGen& cg) const {
     return cg.world().struct_agg(cg.convert(type())->as<thorin::StructAppType>(), defs, loc());
 }
 
-Var MapExpr::lemit(CodeGen& cg) const {
+Value MapExpr::lemit(CodeGen& cg) const {
     assert(lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<SimdType>());
     auto agg = cg.lemit(lhs());
-    return Var::create_agg(agg, cg.remit(arg(0)));
+    return Value::create_agg(agg, cg.remit(arg(0)));
 }
 
-Def MapExpr::remit(CodeGen& cg) const { return remit(cg, None, Location()); }
+const Def* MapExpr::remit(CodeGen& cg) const { return remit(cg, None, Location()); }
 
-Def MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
+const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
     if (auto fn_poly = lhs()->type().isa<FnType>()) {
         assert(fn_poly->num_type_vars() == num_inferred_args());
 
@@ -556,16 +556,16 @@ Def MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
             defs.push_back(cg.remit(arg));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
-        auto ret_type = args().size() == fn_mono()->num_args() ? thorin::Type() : cg.convert(fn_mono()->return_type());
+        auto ret_type = args().size() == fn_mono()->num_args() ? nullptr : cg.convert(fn_mono()->return_type());
         auto old_bb = cg.cur_bb;
-        auto ret = cg.call(dst, type_args, defs, ret_type);
+        auto ret = cg.call(dst, type_args, defs, ret_type, loc());
         if (ret_type)
             cg.set_mem(cg.cur_bb->param(0));
 
         if (state != None) {
             auto eval = state == Run ? &thorin::World::run : &thorin::World::hlt;
             auto cont = old_bb->args().back();
-            old_bb->update_to((cg.world().*eval)(old_bb->to(), cont, eval_loc, ""));
+            old_bb->update_callee((cg.world().*eval)(old_bb->callee(), cont, eval_loc, ""));
         }
 
         return ret;
@@ -596,18 +596,18 @@ const Def* RunBlockExpr::remit(CodeGen& cg) const {
         auto lrun = w.basicblock(loc(), "run_block");
         auto next = w.basicblock(loc(), "run_next");
         auto old_bb = cg.cur_bb;
-        cg.cur_bb->jump(lrun, {}, {});
+        cg.cur_bb->jump(lrun, {}, {}, loc());
         cg.enter(lrun);
         auto res = BlockExprBase::remit(cg);
         if (cg.is_reachable()) {
             assert(res);
-            cg.cur_bb->jump(next, {}, {});
+            cg.cur_bb->jump(next, {}, {}, loc());
             cg.enter(next);
-            old_bb->update_to(w.run(lrun, next, loc()));
+            old_bb->update_callee(w.run(lrun, next, loc()));
             return res;
         }
 
-        old_bb->update_to(w.run(lrun, w.bottom(w.fn_type(), loc()), loc()));
+        old_bb->update_callee(w.run(lrun, w.bottom(w.fn_type(), loc()), loc()));
     }
     return nullptr;
 }
@@ -671,8 +671,8 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     defs.push_back(cg.remit(fn_expr()));
     defs.push_back(break_continuation);
     auto fun = cg.remit(map_expr->lhs());
-    if (prefix && prefix->kind() == PrefixExpr::RUN) fun = cg.world().run(fun, break_lambda, loc());
-    if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun, break_lambda, loc());
+    if (prefix && prefix->kind() == PrefixExpr::RUN) fun = cg.world().run(fun, break_continuation, loc());
+    if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun, break_continuation, loc());
 
     defs.front() = cg.get_mem(); // now get the current memory monad
     cg.call(fun, {}, defs, nullptr, map_expr->loc());

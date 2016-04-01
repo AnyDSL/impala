@@ -1320,9 +1320,9 @@ public:
 private:
     virtual std::ostream& stream(std::ostream&) const override;
     virtual Type check(TypeSema&, TypeExpectation) const override;
-    virtual thorin::Var lemit(CodeGen&) const override;
-    virtual thorin::Def remit(CodeGen&) const override;
-    thorin::Def remit(CodeGen&, State, thorin::Location) const;
+    virtual thorin::Value lemit(CodeGen&) const override;
+    virtual const thorin::Def* remit(CodeGen&) const override;
+    const thorin::Def* remit(CodeGen&, State, thorin::Location) const;
 
     AutoPtr<const Expr> lhs_;
     mutable FnType fn_mono_;
