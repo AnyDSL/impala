@@ -72,7 +72,7 @@ public:
 
     // check wrappers
 
-    const Lambda* check(const ASTTypeParam* ast_type_param) { ast_type_param->check(*this); return ast_type_param->lambda(); }
+    const Var* check(const ASTTypeParam* ast_type_param) { ast_type_param->check(*this); return ast_type_param->var(); }
     void check(const ModContents* n) { n->check(*this); }
     const Type* check(const FieldDecl* n) { n->check(*this); return n->type(); }
     const Type* check(const LocalDecl* local) { local->check(*this); return local->type(); }
@@ -111,11 +111,11 @@ const char* tok2str(const T* expr) { return Token::tok2str(token_kind(expr)); }
  * misc
  */
 
-const Lambda* ASTTypeParam::check(TypeSema& sema) const {
+const Var* ASTTypeParam::check(TypeSema& sema) const {
     for (auto bound : bounds())
         sema.check(bound);
 
-    return lambda();
+    return var();
 }
 
 void ASTTypeParamList::check_ast_type_params(TypeSema& sema) const {

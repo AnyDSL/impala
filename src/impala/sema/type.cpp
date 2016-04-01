@@ -108,7 +108,7 @@ std::ostream& FnType::stream(std::ostream& os) const {
 }
 
 std::ostream& Var::stream(std::ostream& os) const {
-    return is_closed() ? streamf(os, "<%>", depth()) : streamf(os, "<%>", abstraction()->name());
+    return streamf(os, "<%>", depth());
 }
 
 std::ostream& Application::stream(std::ostream& os) const { return streamf(os, "%[%]", callee(), arg()); }

@@ -102,8 +102,7 @@ public:
 protected:
     void check_ast_type_params(NameSema&) const;
     void check_ast_type_params(BorrowSema&) const;
-    Array<const Lambda*> open_ast_type_params(InferSema&) const;
-    void close_ast_type_params(InferSema&) const;
+    void check_ast_type_params(InferSema&) const;
     void check_ast_type_params(TypeSema&) const;
 
     AutoVector<const ASTTypeParam*> ast_type_params_;
@@ -502,17 +501,21 @@ class ASTTypeParam : public TypeDecl {
 public:
     size_t num_bounds() const { return bounds().size(); }
     const ASTTypes& bounds() const { return bounds_; }
-    const Lambda* lambda() const { return type()->as<Lambda>(); }
+    int lambda_depth() const { return lambda_depth_; }
+    const Var* var() const { return type()->as<Var>(); }
 
     void check(NameSema&) const;
-    const Lambda* check(TypeSema&) const;
+    const Var* check(TypeSema&) const;
     void check(BorrowSema&) const;
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    const Lambda* check(InferSema&) const;
+    const Var* check(InferSema&) const;
 
     ASTTypes bounds_;
+
+public: // HACK
+    mutable int lambda_depth_ = -1;
 
     friend class InferSema;
     friend class Parser;

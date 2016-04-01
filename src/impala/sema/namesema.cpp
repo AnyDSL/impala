@@ -45,6 +45,9 @@ private:
     thorin::HashMap<Symbol, const Decl*> symbol2decl_;
     std::vector<const Decl*> decl_stack_;
     std::vector<size_t> levels_;
+
+public: // HACK
+    int lambda_depth_ = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -128,9 +131,11 @@ void LocalDecl::check(NameSema& sema) const {
 
 void ASTTypeParamList::check_ast_type_params(NameSema& sema) const {
     // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
-    // first, insert names
-    for (auto ast_type_param : ast_type_params())
+    // first, insert names and generate De Bruijn index
+    for (auto ast_type_param : ast_type_params()) {
         sema.insert(ast_type_param);
+        ast_type_param->lambda_depth_ = ++sema.lambda_depth_;
+    }
 
     // then, check bounds
     for (auto ast_type_param : ast_type_params())
@@ -161,6 +166,7 @@ void FnASTType::check(NameSema& sema) const {
     check_ast_type_params(sema);
     for (auto ast_type_arg : ast_type_args())
         ast_type_arg->check(sema);
+    sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
 
@@ -196,6 +202,7 @@ void Typedef::check(NameSema& sema) const {
     sema.push_scope();
     check_ast_type_params(sema);
     ast_type()->check(sema);
+    sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
 
@@ -218,6 +225,7 @@ void Fn::fn_check(NameSema& sema) const {
     }
     if (body() != nullptr)
         body()->check(sema);
+    sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
 
@@ -236,6 +244,7 @@ void StructDecl::check(NameSema& sema) const {
         field_decl->check(sema);
         field_table_[field_decl->symbol()] = field_decl;
     }
+    sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
 
@@ -253,6 +262,7 @@ void TraitDecl::check(NameSema& sema) const {
         method->check(sema);
         method_table_[method->symbol()] = method;
     }
+    sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
 
@@ -264,6 +274,7 @@ void ImplItem::check(NameSema& sema) const {
     ast_type()->check(sema);
     for (auto fn : methods())
         fn->check(sema);
+    sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
 
