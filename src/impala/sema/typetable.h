@@ -32,6 +32,9 @@ public:
     SimdType simd_type(Type elem_type, uint64_t size) {
         return join(new SimdTypeNode(*this, elem_type, size));
     }
+    MutPtrType          mut_ptr_type(Type referenced_type, int addr_space = 0) {
+        return join(new MutPtrTypeNode(*this, referenced_type, addr_space));
+    }
     NoRetType           type_noret() { return type_noret_; }
     OwnedPtrType        owned_ptr_type(Type referenced_type, int addr_space = 0) {
         return join(new OwnedPtrTypeNode(*this, referenced_type, addr_space));

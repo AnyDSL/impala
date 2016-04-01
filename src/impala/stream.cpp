@@ -65,15 +65,16 @@ std::ostream& TraitAppNode::stream(std::ostream& os) const {
 }
 
 template <typename T>
-std::ostream& stream_ptr_type(std::ostream& os, char prefix, int addr_space, T ref_type) {
+std::ostream& stream_ptr_type(std::ostream& os, std::string prefix, int addr_space, T ref_type) {
     os << prefix;
     if (addr_space != 0)
         os << '[' << addr_space << ']';
     return os << ref_type;
 }
 
-std::ostream& OwnedPtrTypeNode::stream(std::ostream& os)    const { return stream_ptr_type(os, '~', addr_space(), referenced_type()); }
-std::ostream& BorrowedPtrTypeNode::stream(std::ostream& os) const { return stream_ptr_type(os, '&', addr_space(), referenced_type()); }
+std::ostream& OwnedPtrTypeNode::stream(std::ostream& os)    const { return stream_ptr_type(os, "~",    addr_space(), referenced_type()); }
+std::ostream& BorrowedPtrTypeNode::stream(std::ostream& os) const { return stream_ptr_type(os, "&",    addr_space(), referenced_type()); }
+std::ostream& MutPtrTypeNode::stream(std::ostream& os)      const { return stream_ptr_type(os, "&mut", addr_space(), referenced_type()); }
 std::ostream& DefiniteArrayTypeNode::stream(std::ostream& os) const { return streamf(os, "[% * %]", elem_type(), dim()); }
 std::ostream& IndefiniteArrayTypeNode::stream(std::ostream& os) const { return streamf(os, "[%]", elem_type()); }
 std::ostream& SimdTypeNode::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_type(), size()); }
@@ -108,7 +109,7 @@ std::ostream& ImplNode::stream(std::ostream& os) const {
 std::ostream& ErrorASTType::stream(std::ostream& os) const { return os << "<error>"; }
 
 std::ostream& PtrASTType::stream(std::ostream& os) const {
-    return stream_ptr_type(os, kind(), addr_space(), referenced_type());
+    return stream_ptr_type(os, prefix(), addr_space(), referenced_type());
 }
 
 std::ostream& DefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[% * %]", elem_type(), dim()); }
@@ -339,6 +340,7 @@ std::ostream& LiteralExpr::stream(std::ostream& os) const {
         case LIT_u16: return os << box().get_s16() << "u16";
         case LIT_u32: return os << box().get_s32() << "u";
         case LIT_u64: return os << box().get_s64() << "u64";
+        case LIT_f16: return os << box().get_f16() << "h";
         case LIT_f32: return os << box().get_f32() << "f";
         case LIT_f64: return os << box().get_f64() << "f64";
         case LIT_bool: return os << (box().get_bool() ? "true" : "false");

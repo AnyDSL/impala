@@ -35,21 +35,22 @@ class DefiniteArrayTypeNode;    typedef Proxy<DefiniteArrayTypeNode>    Definite
 class FnTypeNode;               typedef Proxy<FnTypeNode>               FnType;
 class ImplNode;                 typedef Proxy<ImplNode>                 Impl;
 class IndefiniteArrayTypeNode;  typedef Proxy<IndefiniteArrayTypeNode>  IndefiniteArrayType;
-class SimdTypeNode;             typedef Proxy<SimdTypeNode>             SimdType;
 class KnownTypeNode;            typedef Proxy<KnownTypeNode>            KnownType;
+class MutPtrTypeNode;           typedef Proxy<MutPtrTypeNode>           MutPtrType;
 class NoRetTypeNode;            typedef Proxy<NoRetTypeNode>            NoRetType;
 class OwnedPtrTypeNode;         typedef Proxy<OwnedPtrTypeNode>         OwnedPtrType;
 class PrimTypeNode;             typedef Proxy<PrimTypeNode>             PrimType;
 class PtrTypeNode;              typedef Proxy<PtrTypeNode>              PtrType;
+class SimdTypeNode;             typedef Proxy<SimdTypeNode>             SimdType;
 class StructAbsTypeNode;        typedef Proxy<StructAbsTypeNode>        StructAbsType;
 class StructAppTypeNode;        typedef Proxy<StructAppTypeNode>        StructAppType;
-class TypedefAbsNode;           typedef Proxy<TypedefAbsNode>           TypedefAbs;
 class TraitAbsNode;             typedef Proxy<TraitAbsNode>             TraitAbs;
 class TraitAppNode;             typedef Proxy<TraitAppNode>             TraitApp;
 class TupleTypeNode;            typedef Proxy<TupleTypeNode>            TupleType;
 class TypeErrorNode;            typedef Proxy<TypeErrorNode>            TypeError;
 class TypeNode;                 typedef Proxy<TypeNode>                 Type;
 class TypeVarNode;              typedef Proxy<TypeVarNode>              TypeVar;
+class TypedefAbsNode;           typedef Proxy<TypedefAbsNode>           TypedefAbs;
 class Unifiable;                typedef Proxy<Unifiable>                Uni;
 class UnknownTypeNode;          typedef Proxy<UnknownTypeNode>          UnknownType;
 
@@ -157,6 +158,7 @@ enum Kind {
     Kind_fn,
     Kind_impl,
     Kind_indefinite_array,
+    Kind_mut_ptr,
     Kind_noret,
     Kind_owned_ptr,
     Kind_simd,
@@ -185,7 +187,7 @@ protected:
 
     void set(size_t i, Type t) { args_[i] = t; }
     Array<Type> specialize_args(SpecializeMap&) const;
-    void convert_args(CodeGen& world, std::vector<thorin::Type>&) const;
+    void convert_args(CodeGen& world, std::vector<const thorin::Type*>&) const;
 
 public:
     TypeTable& typetable() const { return typetable_; }
@@ -220,7 +222,7 @@ protected:
     std::ostream& stream_type_vars(std::ostream&) const;
 
 private:
-    virtual thorin::Type convert(CodeGen&) const = 0;
+    virtual const thorin::Type* convert(CodeGen&) const = 0;
 
     static int counter_;
 
@@ -232,7 +234,7 @@ private:
     std::vector<Type> args_; ///< The operands of this type constructor.
 
 protected:
-    mutable thorin::Type thorin_type_;
+    mutable const thorin::Type* thorin_type_ = nullptr;
 
     friend class CodeGen;
     friend class TypeTable;
@@ -320,7 +322,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
-    virtual thorin::Type convert(CodeGen&) const override { THORIN_UNREACHABLE; }
+    virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; }
 
     friend class TypeTable;
 };
@@ -358,7 +360,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
-    virtual thorin::Type convert(CodeGen&) const override { assert(false); return thorin::Type(); }
+    virtual const thorin::Type* convert(CodeGen&) const override { assert(false); return nullptr; }
 
     friend class TypeTable;
 };
@@ -374,7 +376,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 
     friend class TypeTable;
 };
@@ -391,7 +393,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 
     friend class TypeTable;
 };
@@ -408,7 +410,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 
     friend class TypeTable;
 };
@@ -424,7 +426,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 
     friend class TypeTable;
 };
@@ -436,7 +438,7 @@ private:
 public:
     void set(size_t i, Type t) const { const_cast<StructAbsTypeNode*>(this)->KnownTypeNode::set(i, t); }
     const StructDecl* struct_decl() const { return struct_decl_; }
-    thorin::StructAbsType thorin_struct_abs_type() const { return thorin_struct_abs_type_; }
+    const thorin::StructAbsType* thorin_struct_abs_type() const { return thorin_struct_abs_type_; }
     virtual Type instantiate(ArrayRef<Type>) const override;
     virtual uint64_t hash() const override;
     virtual bool equal(const Unifiable*) const override;
@@ -445,10 +447,10 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override { THORIN_UNREACHABLE; }
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 
     const StructDecl* struct_decl_;
-    mutable thorin::StructAbsType thorin_struct_abs_type_;
+    mutable const thorin::StructAbsType* thorin_struct_abs_type_;
 
     friend class TypeTable;
 };
@@ -467,7 +469,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 
     StructAbsType struct_abs_type_;
     mutable Array<Type> elem_cache_;
@@ -489,7 +491,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override { THORIN_UNREACHABLE; }
-    virtual thorin::Type convert(CodeGen&) const override { THORIN_UNREACHABLE; }
+    virtual const thorin::Type* convert(CodeGen&) const override { THORIN_UNREACHABLE; }
 
     friend class TypeTable;
 };
@@ -512,6 +514,7 @@ public:
     size_t num_bounds() const { return bounds_.size(); }
     const Unifiable* bound_at() const { return bound_at_; }
     void add_bound(TraitApp) const;
+    const Symbol& name() const { return name_; }
 
     virtual bool is_closed() const override { return bound_at_ != nullptr; }
     virtual bool is_sane() const override { return is_closed(); }
@@ -523,7 +526,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
-    virtual thorin::Type convert(CodeGen&) const override { assert(false); return thorin::Type(); }
+    virtual const thorin::Type* convert(CodeGen&) const override { assert(false); return nullptr; }
 
     Symbol name_;
     mutable std::vector<TraitApp> bounds_; ///< All traits that restrict the instantiation of this variable.
@@ -551,21 +554,9 @@ public:
     virtual bool is_subtype(const TypeNode*) const override;
 
 private:
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 
     int addr_space_;
-};
-
-class OwnedPtrTypeNode : public PtrTypeNode {
-public:
-    OwnedPtrTypeNode(TypeTable& typetable, Type referenced_type, int addr_space)
-        : PtrTypeNode(typetable, Kind_owned_ptr, referenced_type, addr_space)
-    {}
-
-    virtual std::ostream& stream(std::ostream&) const override;
-
-private:
-    virtual Type vinstantiate(SpecializeMap&) const override;
 };
 
 class BorrowedPtrTypeNode : public PtrTypeNode {
@@ -576,6 +567,30 @@ public:
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const override;
+};
+
+class MutPtrTypeNode : public PtrTypeNode {
+public:
+    MutPtrTypeNode(TypeTable& typetable, Type referenced_type, int addr_space)
+        : PtrTypeNode(typetable, Kind_mut_ptr, referenced_type, addr_space)
+    {}
+
+    virtual std::ostream& stream(std::ostream&) const override;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const override;
+};
+
+class OwnedPtrTypeNode : public PtrTypeNode {
+public:
+    OwnedPtrTypeNode(TypeTable& typetable, Type referenced_type, int addr_space)
+        : PtrTypeNode(typetable, Kind_owned_ptr, referenced_type, addr_space)
+    {}
+
+    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
@@ -606,7 +621,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 
     const uint64_t dim_;
 };
@@ -621,7 +636,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 };
 
 //------------------------------------------------------------------------------
@@ -641,7 +656,7 @@ public:
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 
     const uint64_t size_;
 };
@@ -685,7 +700,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 
     const TraitDecl* const trait_decl_;
     mutable SuperTraits super_traits_;
@@ -715,7 +730,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 
     const TraitAbs trait_; // TODO rename
     mutable thorin::HashMap<Symbol, FnType> method_cache_;
@@ -742,7 +757,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual thorin::Type convert(CodeGen&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
 
     const ImplItem* const impl_item_;
     TraitApp trait_app_;
