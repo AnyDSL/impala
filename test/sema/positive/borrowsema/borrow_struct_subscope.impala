@@ -1,0 +1,13 @@
+struct pairMut {
+    y1: ~i32,
+    y2: ~i32
+}
+
+fn f() -> () {
+    let mut p = pairMut { y1: ~6, y2: ~8 };
+    {
+        let k = &p.y1;
+    }
+    p.y2 = ~7;
+    p = pairMut { y1: ~6, y2: ~8 };
+}

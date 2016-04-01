@@ -164,7 +164,8 @@ LvTree* LvTree::merge(LvTree* other, bool multi_ref, const LvMapComparator& comp
 
 inline void print_tree(std::ostream& os, Symbol sym, std::shared_ptr<LvTree> tree) {
     os << "(" << sym << ", " << tree->get_payload().get_value() << ", <";
-    os << tree.use_count() << ">, " << tree.get() << "), ";
+    os << tree.use_count() - 2 << ">, " << tree.get() << "), ";
+    // -2 for the ref count because there are two copies of the shared pointer for printing
 }
 
 std::ostream& LvTree::stream(std::ostream& os) const {
@@ -461,7 +462,7 @@ const StructDecl* get_struct_decl(const Type type) {
 void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload_t pl,
     const thorin::Location& loc) const {
 
-    LvTree* parent = init_parent(tree, multi_ref, get_deref_symbol());
+    LvTree* parent = init_parent(tree, multi_ref, symbol());
 
     payload_t parent_pl = parent->get_payload().get_value();
     switch (map.get_comparator().compare(pl, parent_pl)) {
