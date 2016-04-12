@@ -135,6 +135,9 @@ public:
             return t->rebuild(nargs);
         }
 
+        if (u->isa<NoRetType>()) return unify(representative(t), representative(u))->type;
+        if (t->isa<NoRetType>()) return unify(representative(u), representative(t))->type;
+
         assert(false && "TODO");
         return type_error();
     }
@@ -754,10 +757,10 @@ const Type* BlockExprBase::check(InferSema& sema, const Type* expected) const {
 
 const Type* IfExpr::check(InferSema& sema, const Type* expected) const {
     sema.check(cond(), sema.type_bool());
-    sema.constrain(then_expr(), sema.type(else_expr()), expected);
-    sema.constrain(else_expr(), sema.type(then_expr()), expected);
     sema.check(then_expr(), expected);
     sema.check(else_expr(), expected);
+    sema.constrain(then_expr(), sema.type(else_expr()), expected);
+    sema.constrain(else_expr(), sema.type(then_expr()), expected);
     return sema.constrain(this, sema.type(then_expr()), sema.type(else_expr()));
 }
 

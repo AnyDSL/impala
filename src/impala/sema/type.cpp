@@ -23,6 +23,12 @@ bool is(const Type* type, PrimTypeKind kind) {
     return type->isa<PrimType>() && type->as<PrimType>()->primtype_kind() == kind;
 }
 
+bool is_void(const Type* type) {
+    if (auto t = type->isa<TupleType>())
+        return t->empty();
+    return false;
+}
+
 bool FnType::is_returning() const {
     bool ret = false;
     for (auto arg : args()) {
