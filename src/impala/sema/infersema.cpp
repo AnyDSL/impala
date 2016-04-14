@@ -135,8 +135,9 @@ public:
             return t->rebuild(nargs);
         }
 
-        if (u->isa<NoRetType>()) return unify(representative(t), representative(u))->type;
-        if (t->isa<NoRetType>()) return unify(representative(u), representative(t))->type;
+        // don't unify - just return the other type
+        if (t->isa<NoRetType>()) return u;
+        if (u->isa<NoRetType>()) return t;
 
         assert(false && "TODO");
         return type_error();
