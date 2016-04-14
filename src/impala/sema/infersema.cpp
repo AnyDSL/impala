@@ -135,6 +135,10 @@ public:
             return t->rebuild(nargs);
         }
 
+        // don't unify - just return the other type
+        if (t->isa<NoRetType>()) return u;
+        if (u->isa<NoRetType>()) return t;
+
         assert(false && "TODO");
         return type_error();
     }
@@ -754,10 +758,10 @@ const Type* BlockExprBase::check(InferSema& sema, const Type* expected) const {
 
 const Type* IfExpr::check(InferSema& sema, const Type* expected) const {
     sema.check(cond(), sema.type_bool());
-    sema.constrain(then_expr(), sema.type(else_expr()), expected);
-    sema.constrain(else_expr(), sema.type(then_expr()), expected);
     sema.check(then_expr(), expected);
     sema.check(else_expr(), expected);
+    sema.constrain(then_expr(), sema.type(else_expr()), expected);
+    sema.constrain(else_expr(), sema.type(then_expr()), expected);
     return sema.constrain(this, sema.type(then_expr()), sema.type(else_expr()));
 }
 
