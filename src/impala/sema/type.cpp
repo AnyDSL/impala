@@ -89,8 +89,6 @@ bool UnknownType::equal(const Type* other) const { return this == other; }
  */
 
 std::ostream& Lambda::stream(std::ostream& os) const { return streamf(os, "[%].%", name(), body()); }
-std::ostream& Pi::stream(std::ostream& os) const { return streamf(os, "pi[%].%", name(), body()); }
-
 std::ostream& UnknownType::stream(std::ostream& os) const { return os << '?' << gid(); }
 
 std::ostream& PrimType::stream(std::ostream& os) const {
