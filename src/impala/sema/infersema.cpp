@@ -19,55 +19,18 @@ class InferSema : public TypeTable {
 public:
     // helpers
 
-    const Type* reduce(const Lambda* lambda, ArrayRef<const ASTType*> ast_type_args, std::vector<const Type*>& type_args) {
-        auto num = num_lambdas(lambda);
-        if (ast_type_args.size() <= num) {
-            for (size_t i = 0, e = ast_type_args.size(); i != e; ++i)
-                constrain(type_args[i], check(ast_type_args[i]));
-
-            while (type_args.size() < num)
-                type_args.push_back(unknown_type());
-
-            size_t i = 0;
-            const Type* type = lambda;
-            while (auto lambda = type->isa<Lambda>())
-                type = application(lambda, type_args[i++]);
-
-            return type;
-        }
-
-        return type_error();
-    }
-
+    const Type* reduce(const Lambda* lambda, ArrayRef<const ASTType*> ast_type_args, std::vector<const Type*>& type_args);
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
+    const Type* close(int num_lambdas, const Type* body);
+    size_t num_lambdas(const Lambda* lambda);
 
-    const Type* arg(const Type* type, size_t i) {
-        return i < type->size() ? type->arg(i) : type_error();
-    }
+    const Type* arg(const Type* type, size_t i) { return i < type->size() ? type->arg(i) : type_error(); }
 
     template<class T>
     const Type* arg(const Expr* expr, const Type* expected, size_t i) {
         if (auto type = expected->template isa<T>())
             return arg(type, i);
         return expr2expected(expr);
-    }
-
-    size_t num_lambdas(const Lambda* lambda) {
-        size_t num = 0;
-        while (lambda) {
-            lambda = lambda->body()->isa<Lambda>();
-            ++num;
-        }
-        return num;
-    }
-
-    const Type* close(int num_lambdas, const Type* body) {
-        auto result = body;
-        while (num_lambdas-- != 0) {
-            result = lambda(result, "TODO");
-        }
-
-        return result;
     }
 
     // unification related stuff
@@ -77,19 +40,7 @@ public:
      * Initializes @p type with @p UnknownType if @p type is @c nullptr.
      * Updates @p todo_ if something changed.
      */
-    const Type* type(const Type*& type) {
-        if (type == nullptr) {
-            todo_ = true;
-            return type = unknown_type();
-        }
-
-        auto otype = type;
-        type = find(otype);
-        todo_ |= otype != type;
-        return type;
-    }
-
-    /// Invokes @c type(typeable->type_).
+    const Type* type(const Type*& type);
     const Type* type(const Typeable* typeable) { return type(typeable->type_); }
 
     /**
@@ -97,63 +48,14 @@ public:
      * Initializes @p t with @p UnknownType if @p type is @c nullptr.
      * Updates @p todo_ if something changed.
      */
-    const Type*& constrain(const Type*& t, const Type* u) {
-        if (t == nullptr) {
-            if (u == nullptr)
-                return t;
-
-            todo_ = true;
-            return t = find(u);
-        }
-
-        auto otype = t;
-        t = unify(t, u);
-        todo_ |= otype != t;
-        return t;
-    }
-
+    const   Type*& constrain(const    Type*& t, const   Type* u);
     const   Type*& constrain(const    Type*& t, const   Type* u, const Type* v) { return constrain(constrain(t, u), v); }
     const   Type*& constrain(const Typeable* t, const   Type* u, const Type* v) { return constrain(constrain(t, u), v); }
     const   Type*& constrain(const Typeable* t, const   Type* u)                { return constrain(t->type_, u); }
     const FnType*& constrain(const  FnType*& t, const FnType* u) { return (const FnType*&) constrain((const Type*&)t, (const Type*)u); }
 
     /// Unifies @p t and @p u. Does @attention { not } update @p todo_.
-    const Type* unify(const Type* t, const Type* u) {
-        assert(t && t->is_hashed() && THORIN_IMPLIES(u, u->is_hashed()));
-        assert(t != nullptr && u != nullptr);
-
-        // HACK needed as long as we have this stupid tuple problem
-        if (auto t_fn = t->isa<FnType>()) {
-            if (auto u_fn = u->isa<FnType>()) {
-                if (t_fn->empty() && u_fn->size() == 1 && u_fn->arg(0)->isa<UnknownType>()) return unify(representative(t), representative(u))->type;
-                if (u_fn->empty() && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) return unify(representative(u), representative(t))->type;
-            }
-        }
-
-        if (u == nullptr)        return t;
-        if (t == u)              return t;
-        if (t->isa<TypeError>()) return t;
-        if (u->isa<TypeError>()) return u;
-        if (t->isa<NoRetType>()) return u;
-        if (u->isa<NoRetType>()) return t;
-
-        if (t->isa<UnknownType>() && u->isa<UnknownType>())
-            return unify_by_rank(representative(t), representative(u))->type;
-
-        if (t->isa<UnknownType>()) return unify(representative(u), representative(t))->type;
-        if (u->isa<UnknownType>()) return unify(representative(t), representative(u))->type;
-
-        if (t->kind() == u->kind() && t->size() == u->size()) {
-            Array<const Type*> nargs(t->size());
-            for (size_t i = 0, e = nargs.size(); i != e; ++i)
-                nargs[i] = unify(t->arg(i), u->arg(i));
-
-            return t->rebuild(nargs);
-        }
-
-        assert(false && "TODO");
-        return type_error();
-    }
+    const Type* unify(const Type* t, const Type* u);
 
     // check wrappers
 
@@ -220,56 +122,21 @@ private:
         int rank = 0;
     };
 
-    Representative* representative(const Type* type) {
-        assert(type->is_hashed());
-        auto i = representatives_.find(type);
-        if (i == representatives_.end()) {
-            auto p = representatives_.emplace(type, type);
-            assert_unused(p.second);
-            i = p.first;
-        }
-        return &i->second;
-    }
+    Representative* representative(const Type* type);
+    Representative* find(Representative* repr);
+    const Type* find(const Type* type);
 
-    Representative* find(Representative* repr) {
-        if (repr->parent != repr)
-            repr->parent = find(repr->parent);
-        return repr->parent;
-    }
+    /**
+     * @p x will be the new representative.
+     * Returns again @p x.
+     */
+    Representative* unify(Representative* x, Representative* y);
 
-    const Type* find(const Type* type) {
-        if (type->is_hashed())
-            return find(representative(type))->type;
-        return type;
-    }
-
-    /// @p x will be the new representative. Returns again @p x.
-    Representative* unify(Representative* x, Representative* y) {
-        auto x_root = find(x);
-        auto y_root = find(y);
-
-        if (x_root == y_root)
-            return x_root;
-        ++x_root->rank;
-        return y_root->parent = x_root;
-    }
-
-    /// Depending on the rank either @p x or @p y will be the new representative. Returns the new representative.
-    Representative* unify_by_rank(Representative* x, Representative* y) {
-        auto x_root = find(x);
-        auto y_root = find(y);
-
-        if (x_root == y_root)
-            return x_root;
-        if (x_root->rank < y_root->rank)
-            return x_root->parent = y_root;
-        else if (x_root->rank > y_root->rank)
-            return y_root->parent = x_root;
-        else {
-            ++x_root->rank;
-            return y_root->parent = x_root;
-        }
-    }
+    /**
+     * Depending on the rank either @p x or @p y will be the new representative.
+     * Returns the new representative.
+     */
+    Representative* unify_by_rank(Representative* x, Representative* y);
 
     TypeMap<Representative> representatives_;
     thorin::HashMap<const Expr*, const Type*> expr2expected_;
@@ -278,6 +145,181 @@ private:
 
     friend void type_inference(Init&, const ModContents*);
 };
+
+//------------------------------------------------------------------------------
+
+/*
+ * helpers
+ */
+
+const Type* InferSema::reduce(const Lambda* lambda, ArrayRef<const ASTType*> ast_type_args, std::vector<const Type*>& type_args) {
+    auto num = num_lambdas(lambda);
+    if (ast_type_args.size() <= num) {
+        for (size_t i = 0, e = ast_type_args.size(); i != e; ++i)
+            constrain(type_args[i], check(ast_type_args[i]));
+
+        while (type_args.size() < num)
+            type_args.push_back(unknown_type());
+
+        size_t i = 0;
+        const Type* type = lambda;
+        while (auto lambda = type->isa<Lambda>())
+            type = application(lambda, type_args[i++]);
+
+        return type;
+    }
+
+    return type_error();
+}
+
+void InferSema::fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args) {
+    for (size_t i = 0, e = type_args.size(); i != e; ++i) {
+        if (i < ast_type_args.size())
+            constrain(type_args[i], check(ast_type_args[i]));
+        else if (!type_args[i])
+            type_args[i] = unknown_type();
+    }
+}
+
+size_t InferSema::num_lambdas(const Lambda* lambda) {
+    size_t num = 0;
+    while (lambda) {
+        lambda = lambda->body()->isa<Lambda>();
+        ++num;
+    }
+    return num;
+}
+
+const Type* InferSema::close(int num_lambdas, const Type* body) {
+    auto result = body;
+    while (num_lambdas-- != 0) {
+        result = lambda(result, "TODO");
+    }
+
+    return result;
+}
+
+//------------------------------------------------------------------------------
+
+/*
+ * unification
+ */
+
+const Type* InferSema::type(const Type*& type) {
+    if (type == nullptr) {
+        todo_ = true;
+        return type = unknown_type();
+    }
+
+    auto otype = type;
+    type = find(otype);
+    todo_ |= otype != type;
+    return type;
+}
+
+const Type*& InferSema::constrain(const Type*& t, const Type* u) {
+    if (t == nullptr) {
+        todo_ = true;
+        return t = find(u);
+    }
+
+    auto otype = t;
+    t = unify(t, u);
+    todo_ |= otype != t;
+    return t;
+}
+
+const Type* InferSema::unify(const Type* t, const Type* u) {
+    assert(t->is_hashed() && u->is_hashed());
+
+    // HACK needed as long as we have this stupid tuple problem
+    if (auto t_fn = t->isa<FnType>()) {
+        if (auto u_fn = u->isa<FnType>()) {
+            if (t_fn->empty() && u_fn->size() == 1 && u_fn->arg(0)->isa<UnknownType>()) return unify(representative(t), representative(u))->type;
+            if (u_fn->empty() && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) return unify(representative(u), representative(t))->type;
+        }
+    }
+
+    if (t == u)              return t;
+    if (t->isa<TypeError>()) return t;
+    if (u->isa<TypeError>()) return u;
+    if (t->isa<NoRetType>()) return u;
+    if (u->isa<NoRetType>()) return t;
+
+    if (t->isa<UnknownType>() && u->isa<UnknownType>())
+        return unify_by_rank(representative(t), representative(u))->type;
+
+    if (t->isa<UnknownType>()) return unify(representative(u), representative(t))->type;
+    if (u->isa<UnknownType>()) return unify(representative(t), representative(u))->type;
+
+    if (t->kind() == u->kind() && t->size() == u->size()) {
+        Array<const Type*> nargs(t->size());
+        for (size_t i = 0, e = nargs.size(); i != e; ++i)
+            nargs[i] = unify(t->arg(i), u->arg(i));
+
+        return t->rebuild(nargs);
+    }
+
+    assert(false && "TODO");
+    return type_error();
+}
+
+//------------------------------------------------------------------------------
+
+/*
+ * union-find
+ */
+
+auto InferSema::representative(const Type* type) -> Representative* {
+    assert(type->is_hashed());
+    auto i = representatives_.find(type);
+    if (i == representatives_.end()) {
+        auto p = representatives_.emplace(type, type);
+        assert_unused(p.second);
+        i = p.first;
+    }
+    return &i->second;
+}
+
+auto InferSema::find(Representative* repr) -> Representative* {
+    if (repr->parent != repr)
+        repr->parent = find(repr->parent);
+    return repr->parent;
+}
+
+const Type* InferSema::find(const Type* type) {
+    if (type->is_hashed())
+        return find(representative(type))->type;
+    return type;
+}
+
+auto InferSema::unify(Representative* x, Representative* y) -> Representative* {
+    auto x_root = find(x);
+    auto y_root = find(y);
+
+    if (x_root == y_root)
+        return x_root;
+    ++x_root->rank;
+    return y_root->parent = x_root;
+}
+
+auto InferSema::unify_by_rank(Representative* x, Representative* y) -> Representative* {
+    auto x_root = find(x);
+    auto y_root = find(y);
+
+    if (x_root == y_root)
+        return x_root;
+    if (x_root->rank < y_root->rank)
+        return x_root->parent = y_root;
+    else if (x_root->rank > y_root->rank)
+        return y_root->parent = x_root;
+    else {
+        ++x_root->rank;
+        return y_root->parent = x_root;
+    }
+}
+
+//------------------------------------------------------------------------------
 
 void type_inference(Init& init, const ModContents* mod) {
     auto sema = new InferSema();
@@ -604,15 +646,6 @@ const Type* TupleExpr::check(InferSema& sema, const Type* expected) const {
         types[i] = sema.check(arg(i), sema.arg<TupleType>(this, expected, i));
 
     return sema.tuple_type(types);
-}
-
-void InferSema::fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args) {
-    for (size_t i = 0, e = type_args.size(); i != e; ++i) {
-        if (i < ast_type_args.size())
-            constrain(type_args[i], check(ast_type_args[i]));
-        else if (!type_args[i])
-            type_args[i] = unknown_type();
-    }
 }
 
 const Type* StructExpr::check(InferSema&, const Type* /*expected*/) const {
