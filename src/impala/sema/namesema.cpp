@@ -8,21 +8,20 @@ namespace impala {
 class NameSema {
 public:
     /**
-     * @brief Looks up the current definition of \p symbol.
+     * Looks up the current definition of \p symbol.
      * Reports an error at location of \p n if was \p symbol was not found.
      * @return Returns nullptr on failure.
      */
     const Decl* lookup(const ASTNode* n, Symbol);
 
     /**
-     * @brief Maps \p decl's symbol to \p decl.
-     *
+     * Maps \p decl's symbol to \p decl.
      * If \p decl's symbol already has a definition in the current scope, an error will be emitted.
      */
     void insert(const Decl* decl);
 
     /**
-     * @brief Checks whether there already exists a \p Symbol \p symbol in the \em current scope.
+     * Checks whether there already exists a \p Symbol \p symbol in the \em current scope.
      * @param symbol The \p Symbol to check.
      * @return The current mapping if the lookup succeeds, nullptr otherwise.
      */
