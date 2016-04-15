@@ -117,6 +117,8 @@ private:
             , type(type)
         {}
 
+        bool is_root() const { return parent != nullptr; }
+
         Representative* parent = nullptr;
         const Type* type = nullptr;
         int rank = 0;
@@ -231,12 +233,16 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
 
 const Type* InferSema::unify(const Type* t, const Type* u) {
     assert(t->is_hashed() && u->is_hashed());
+    auto t_repr = find(representative(t));
+    auto u_repr = find(representative(u));
+    t = t_repr->type;
+    u = u_repr->type;
 
     // HACK needed as long as we have this stupid tuple problem
     if (auto t_fn = t->isa<FnType>()) {
         if (auto u_fn = u->isa<FnType>()) {
-            if (t_fn->empty() && u_fn->size() == 1 && u_fn->arg(0)->isa<UnknownType>()) return unify(representative(t), representative(u))->type;
-            if (u_fn->empty() && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) return unify(representative(u), representative(t))->type;
+            if (t_fn->empty() && u_fn->size() == 1 && u_fn->arg(0)->isa<UnknownType>()) return unify(t_repr, u_repr)->type;
+            if (u_fn->empty() && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) return unify(t_repr, u_repr)->type;
         }
     }
 
@@ -249,8 +255,8 @@ const Type* InferSema::unify(const Type* t, const Type* u) {
     if (t->isa<UnknownType>() && u->isa<UnknownType>())
         return unify_by_rank(representative(t), representative(u))->type;
 
-    if (t->isa<UnknownType>()) return unify(representative(u), representative(t))->type;
-    if (u->isa<UnknownType>()) return unify(representative(t), representative(u))->type;
+    if (t->isa<UnknownType>()) return unify(u_repr, t_repr)->type;
+    if (u->isa<UnknownType>()) return unify(t_repr, u_repr)->type;
 
     if (t->kind() == u->kind() && t->size() == u->size()) {
         Array<const Type*> nargs(t->size());
@@ -294,28 +300,26 @@ const Type* InferSema::find(const Type* type) {
 }
 
 auto InferSema::unify(Representative* x, Representative* y) -> Representative* {
-    auto x_root = find(x);
-    auto y_root = find(y);
+    assert(x->is_root() && y->is_root());
 
-    if (x_root == y_root)
-        return x_root;
-    ++x_root->rank;
-    return y_root->parent = x_root;
+    if (x == y)
+        return x;
+    ++x->rank;
+    return y->parent = x;
 }
 
 auto InferSema::unify_by_rank(Representative* x, Representative* y) -> Representative* {
-    auto x_root = find(x);
-    auto y_root = find(y);
+    assert(x->is_root() && y->is_root());
 
-    if (x_root == y_root)
-        return x_root;
-    if (x_root->rank < y_root->rank)
-        return x_root->parent = y_root;
-    else if (x_root->rank > y_root->rank)
-        return y_root->parent = x_root;
+    if (x == y)
+        return x;
+    if (x->rank < y->rank)
+        return x->parent = y;
+    else if (x->rank > y->rank)
+        return y->parent = x;
     else {
-        ++x_root->rank;
-        return y_root->parent = x_root;
+        ++x->rank;
+        return y->parent = x;
     }
 }
 
