@@ -23,7 +23,7 @@ public:
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
     const Type* close(int num_lambdas, const Type* body);
     size_t num_lambdas(const Lambda* lambda);
-
+    const Type* expr2expected(const Expr* expr);
     const Type* arg(const Type* type, size_t i) { return i < type->size() ? type->arg(i) : type_error(); }
 
     template<class T>
@@ -71,18 +71,6 @@ public:
     void check(const Stmt* n) { n->check(*this); }
     const Type* check(const Expr* expr, const Type* expected) { return constrain(expr, expr->check(*this, expected)); }
     const Type* check(const Expr* expr) { return constrain(expr, expr->check(*this, expr2expected(expr))); }
-
-    const Type* expr2expected(const Expr* expr) {
-        auto i = expr2expected_.find(expr);
-        if (i == expr2expected_.end()) {
-            auto type = unknown_type();
-            auto p = expr2expected_.emplace(expr, type);
-            assert(p.second);
-            return type;
-        }
-
-        return find(i->second);
-    }
 
     const Var* check(const ASTTypeParam* ast_type_param) {
         if (!ast_type_param->type())
@@ -199,6 +187,18 @@ const Type* InferSema::close(int num_lambdas, const Type* body) {
     }
 
     return result;
+}
+
+const Type* InferSema::expr2expected(const Expr* expr) {
+    auto i = expr2expected_.find(expr);
+    if (i == expr2expected_.end()) {
+        auto type = unknown_type();
+        auto p = expr2expected_.emplace(expr, type);
+        assert(p.second);
+        return type;
+    }
+
+    return i->second;
 }
 
 //------------------------------------------------------------------------------
