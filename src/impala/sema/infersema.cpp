@@ -40,7 +40,17 @@ public:
     }
 
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
-    const Type* safe_get_arg(const Type* type, size_t i) { return type && i < type->size() ? type->arg(i) : nullptr; }
+
+    const Type* arg(const Type* type, size_t i) {
+        return i < type->size() ? type->arg(i) : type_error();
+    }
+
+    template<class T>
+    const Type* arg(const Expr* expr, const Type* expected, size_t i) {
+        if (auto type = expected->template isa<T>())
+            return arg(type, i);
+        return expr2expected(expr);
+    }
 
     size_t num_lambdas(const Lambda* lambda) {
         size_t num = 0;
@@ -110,6 +120,7 @@ public:
     /// Unifies @p t and @p u. Does @attention { not } update @p todo_.
     const Type* unify(const Type* t, const Type* u) {
         assert(t && t->is_hashed() && THORIN_IMPLIES(u, u->is_hashed()));
+        assert(t != nullptr && u != nullptr);
 
         // HACK needed as long as we have this stupid tuple problem
         if (auto t_fn = t->isa<FnType>()) {
@@ -157,14 +168,18 @@ public:
     void check(const Item* n) { n->check(*this); }
     void check(const Stmt* n) { n->check(*this); }
     const Type* check(const Expr* expr, const Type* expected) { return constrain(expr, expr->check(*this, expected)); }
-    const Type* check(const Expr* expr) {
+    const Type* check(const Expr* expr) { return constrain(expr, expr->check(*this, expr2expected(expr))); }
+
+    const Type* expr2expected(const Expr* expr) {
         auto i = expr2expected_.find(expr);
         if (i == expr2expected_.end()) {
-            auto p = expr2expected_.emplace(expr, unknown_type());
+            auto type = unknown_type();
+            auto p = expr2expected_.emplace(expr, type);
             assert(p.second);
-            i = p.first;
+            return type;
         }
-        return constrain(expr, expr->check(*this, i->second));
+
+        return find(i->second);
     }
 
     const Var* check(const ASTTypeParam* ast_type_param) {
@@ -467,7 +482,7 @@ const Type* FnExpr::check(InferSema& sema, const Type* expected) const {
 
     Array<const Type*> param_types(num_params());
     for (size_t i = 0, e = num_params(); i != e; ++i)
-        param_types[i] = sema.constrain(param(i), sema.safe_get_arg(expected, i));
+        param_types[i] = sema.constrain(param(i), sema.arg<FnType>(this, expected, i));
 
     auto fn_type = sema.fn_type(param_types);
     assert(body() != nullptr);
@@ -484,13 +499,12 @@ const Type* PathExpr::check(InferSema& sema, const Type* expected) const {
 const Type* PrefixExpr::check(InferSema& sema, const Type* expected) const {
     switch (kind()) {
         case AND: {
-            auto expected_referenced_type = sema.safe_get_arg(expected, 0);
+            auto expected_referenced_type = sema.arg<PtrType>(this, expected, 0);
             auto rtype = sema.check(rhs(), expected_referenced_type);
             return sema.borrowed_ptr_type(rtype, 0);
-
         }
         case TILDE:
-            return sema.owned_ptr_type(sema.check(rhs(), sema.safe_get_arg(expected, 0)));
+            return sema.owned_ptr_type(sema.check(rhs(), sema.arg<PtrType>(this, expected, 0)));
         case MUL: {
             auto type = sema.check(rhs(), sema.borrowed_ptr_type(expected));
             if (auto ptr_type = type->isa<PtrType>())
@@ -551,7 +565,7 @@ const Type* CastExpr::check(InferSema& sema, const Type*) const {
 }
 
 const Type* DefiniteArrayExpr::check(InferSema& sema, const Type* expected) const {
-    auto expected_elem_type = sema.safe_get_arg(expected, 0);
+    auto expected_elem_type = sema.arg<ArrayType>(this, expected, 0);
 
     for (const auto& arg : args())
         expected_elem_type = sema.unify(expected_elem_type, sema.type(arg));
@@ -563,7 +577,7 @@ const Type* DefiniteArrayExpr::check(InferSema& sema, const Type* expected) cons
 }
 
 const Type* SimdExpr::check(InferSema& sema, const Type* expected) const {
-    auto expected_elem_type = sema.safe_get_arg(expected, 0);
+    auto expected_elem_type = sema.arg<SimdType>(this, expected, 0);
 
     for (const auto& arg : args())
         expected_elem_type = sema.unify(expected_elem_type, sema.type(arg));
@@ -575,7 +589,7 @@ const Type* SimdExpr::check(InferSema& sema, const Type* expected) const {
 }
 
 const Type* RepeatedDefiniteArrayExpr::check(InferSema& sema, const Type* expected) const {
-    auto expected_elem_type = sema.safe_get_arg(expected, 0);
+    auto expected_elem_type = sema.arg<ArrayType>(this, expected, 0);
     return sema.definite_array_type(sema.check(value(), expected_elem_type), count());
 }
 
@@ -587,7 +601,7 @@ const Type* IndefiniteArrayExpr::check(InferSema& sema, const Type*) const {
 const Type* TupleExpr::check(InferSema& sema, const Type* expected) const {
     Array<const Type*> types(num_args());
     for (size_t i = 0, e = types.size(); i != e; ++i)
-        types[i] = sema.check(arg(i), sema.safe_get_arg(expected, i));
+        types[i] = sema.check(arg(i), sema.arg<TupleType>(this, expected, i));
 
     return sema.tuple_type(types);
 }
@@ -642,7 +656,7 @@ const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> a
         constrain(args[i], fn_type->arg(i));
 
     for (size_t i = 0; i != args.size(); ++i)
-        check(args[i], safe_get_arg(fn_type, i));
+        check(args[i], arg(fn_type, i));
 
     return fn_type->return_type();
 #if 0
@@ -672,7 +686,7 @@ const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> a
         constrain(args[i], fn_mono->arg(i));
 
     for (size_t i = 0; i != args.size(); ++i)
-        check(args[i], safe_get_arg(fn_mono, i));
+        check(args[i], arg(fn_mono, i));
 
     for (auto& type_arg : type_args)
         type_arg = find(type_arg);
@@ -740,7 +754,7 @@ const Type* MapExpr::check(InferSema& sema, const Type* expected) const {
             return array->elem_type();
         else if (auto tuple_type = ltype->isa<TupleType>()) {
             if (auto lit = arg(0)->isa<LiteralExpr>())
-                return sema.safe_get_arg(tuple_type, lit->get_u64());
+                return sema.arg(tuple_type, lit->get_u64());
         } else if (auto simd_type = ltype->isa<SimdType>())
             return simd_type->elem_type();
     }
