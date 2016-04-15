@@ -233,6 +233,7 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
 
 const Type* InferSema::unify(const Type* t, const Type* u) {
     assert(t->is_hashed() && u->is_hashed());
+
     auto t_repr = find(representative(t));
     auto u_repr = find(representative(u));
     t = t_repr->type;
@@ -253,7 +254,7 @@ const Type* InferSema::unify(const Type* t, const Type* u) {
     if (u->isa<NoRetType>()) return t;
 
     if (t->isa<UnknownType>() && u->isa<UnknownType>())
-        return unify_by_rank(representative(t), representative(u))->type;
+        return unify_by_rank(t_repr, u_repr)->type;
 
     if (t->isa<UnknownType>()) return unify(u_repr, t_repr)->type;
     if (u->isa<UnknownType>()) return unify(t_repr, u_repr)->type;
@@ -266,7 +267,7 @@ const Type* InferSema::unify(const Type* t, const Type* u) {
         return t->rebuild(nargs);
     }
 
-    assert(false && "TODO");
+    assert(false && "TODO: this assert is currently only here in order to debug incorrect type error during type inference");
     return type_error();
 }
 
