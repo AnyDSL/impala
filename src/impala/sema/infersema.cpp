@@ -119,13 +119,18 @@ public:
             }
         }
 
-        if (u == nullptr)                                   return t;
-        if (t == u)                                         return t;
-        if (t->isa<TypeError>())                            return t;
-        if (u->isa<TypeError>())                            return u;
-        if (t->isa<UnknownType>() && u->isa<UnknownType>()) return unify_by_rank(representative(t), representative(u))->type;
-        if (t->isa<UnknownType>())                          return unify        (representative(u), representative(t))->type;
-        if (u->isa<UnknownType>())                          return unify        (representative(t), representative(u))->type;
+        if (u == nullptr)        return t;
+        if (t == u)              return t;
+        if (t->isa<TypeError>()) return t;
+        if (u->isa<TypeError>()) return u;
+        if (t->isa<NoRetType>()) return u;
+        if (u->isa<NoRetType>()) return t;
+
+        if (t->isa<UnknownType>() && u->isa<UnknownType>())
+            return unify_by_rank(representative(t), representative(u))->type;
+
+        if (t->isa<UnknownType>()) return unify(representative(u), representative(t))->type;
+        if (u->isa<UnknownType>()) return unify(representative(t), representative(u))->type;
 
         if (t->kind() == u->kind() && t->size() == u->size()) {
             Array<const Type*> nargs(t->size());
@@ -134,10 +139,6 @@ public:
 
             return t->rebuild(nargs);
         }
-
-        // don't unify - just return the other type
-        if (t->isa<NoRetType>()) return u;
-        if (u->isa<NoRetType>()) return t;
 
         assert(false && "TODO");
         return type_error();
