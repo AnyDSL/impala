@@ -494,7 +494,8 @@ void FnDecl::check(InferSema& sema) const {
 }
 
 void StaticItem::check(InferSema& sema) const {
-    sema.constrain(this, sema.type(init()));
+    if (init())
+        sema.constrain(this, sema.check(init()));
 }
 
 void TraitDecl::check(InferSema& /*sema*/) const {}
