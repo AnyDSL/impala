@@ -518,7 +518,7 @@ void StructExpr::check(TypeSema& sema) const {
                     error(this, "missing field '%'", p.first);
             }
         }
-    } else
+    } else if (!type->isa<TypeError>())
         error(ast_type_app(), "'%' is not a structure", type);
 }
 
