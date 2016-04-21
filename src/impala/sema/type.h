@@ -255,7 +255,7 @@ public:
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const;
+    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     friend class TypeTable;
 };
@@ -271,7 +271,7 @@ public:
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const;
+    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     friend class TypeTable;
 };
@@ -291,7 +291,7 @@ private:
     virtual bool equal(const Type*) const override;
     virtual uint64_t vhash() const override { return thorin::hash_value(this->gid()); }
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const;
+    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     friend class TypeTable;
 };
