@@ -726,6 +726,7 @@ public:
     size_t num_field_decls() const { return field_decls_.size(); }
     const AutoVector<const FieldDecl*>& field_decls() const { return field_decls_; }
     const thorin::HashMap<Symbol, const FieldDecl*>& field_table() const { return field_table_; }
+    const FieldDecl* field_decl(size_t i) const { return field_decls_[i]; }
     const FieldDecl* field_decl(Symbol symbol) const { return thorin::find(field_table_, symbol); }
     const FieldDecl* field_decl(const Identifier* ident) const { return field_decl(ident->symbol()); }
 

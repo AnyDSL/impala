@@ -13,6 +13,7 @@ namespace impala {
 using thorin::streamf;
 
 #define HENK_STRUCT_UNIFIER_NAME struct_decl
+#define HENK_STRUCT_UNIFIER_TYPE  const StructDecl*
 #define HENK_TABLE_TYPE TypeTable
 #define HENK_TABLE_NAME typetable
 #include "thorin/henk.cpp.h"

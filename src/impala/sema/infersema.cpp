@@ -81,13 +81,7 @@ public:
     const Type* check(const ASTType* ast_type) {
         if (ast_type->type() && ast_type->type()->is_known())
             return ast_type->type();
-
-        auto type = ast_type->check(*this);
-
-        if (type->is_hashed())
-            return constrain(ast_type, type);
-
-        return type;
+        return constrain(ast_type, ast_type->check(*this));
     }
 
     const Type* check_call(const FnType* fn_type, ArrayRef<const Expr*> args, const Type* expected);
@@ -423,13 +417,10 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
             if (auto ast_type_param = type_decl->isa<ASTTypeParam>())
                 return sema.var(ast_type_param->lambda_depth_);
-            else if (auto type = sema.type(type_decl)) {
-                if (type->is_hashed()) {
-                    if (auto lambda = type->isa<Lambda>())
-                        return sema.reduce(lambda, ast_type_args(), type_args_);
-                    else
-                        return type;
-                }
+            if (auto type = sema.type(type_decl)) {
+                if (auto lambda = type->isa<Lambda>())
+                    return sema.reduce(lambda, ast_type_args(), type_args_);
+                return type;
             }
         }
     }
@@ -475,19 +466,16 @@ void Typedef::check(InferSema& sema) const {
 void EnumDecl::check(InferSema&) const { /*TODO*/ }
 
 void StructDecl::check(InferSema& sema) const {
-    check_ast_type_params(sema);
-
-    for (auto field : field_decls()) {
-        if (auto field_type = sema.check(field)) {
-            if (!field_type || !field_type->is_known())
-                return; // bail out for now if we don't yet know all field types
-        }
-    }
+    if (type_ && type_->is_known())
+        return;
 
     auto struct_type = sema.struct_type(this, num_field_decls());
+    check_ast_type_params(sema);
 
-    for (auto field : field_decls())
-        struct_type->set(field->index(), sema.type(field));
+    for (size_t i = 0, e = num_field_decls(); i != e; ++i)
+        struct_type->set(i, sema.check(field_decl(i)));
+
+    sema.constrain(this, struct_type);
 }
 
 const Type* FieldDecl::check(InferSema& sema) const { return sema.check(ast_type()); }
