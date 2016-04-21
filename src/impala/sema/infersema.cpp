@@ -641,23 +641,9 @@ const Type* TupleExpr::check(InferSema& sema, const Type* expected) const {
     return sema.tuple_type(types);
 }
 
-const Type* StructExpr::check(InferSema&, const Type* /*expected*/) const {
-#if 0
-    if (auto decl = path()->decl()) {
-        if (auto typeable_decl = decl->isa<TypeableDecl>()) {
-            if (auto decl_type = sema.type(typeable_decl)) {
-                type_args_.resize(decl_type->num_lambdas());
-                sema.fill_type_args(type_args_, ast_type_args_);
-
-                if (auto struct_type = decl_type->reduce(type_args_))
-                    return struct_type;
-            }
-        }
-    }
-
-    return sema.type_error();
-#endif
-    return nullptr;
+const Type* StructExpr::check(InferSema& sema, const Type* /*expected*/) const {
+    // TODO use fields to constrain type
+    return sema.check(ast_type_app());
 }
 
 const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> args, const Type* expected) {
