@@ -49,8 +49,8 @@ static const int Node_StructType = impala::Kind_struct;
 static const int Node_TupleType  = impala::Kind_tuple;
 static const int Node_Var        = impala::Kind_var;
 
-#define HENK_STRUCT_UNIFIER_NAME  struct_decl
-#define HENK_STRUCT_UNIFIER_TYPE  const StructDecl*
+#define HENK_STRUCT_EXTRA_NAME  struct_decl
+#define HENK_STRUCT_EXTRA_TYPE  const StructDecl*
 #define HENK_TABLE_NAME  typetable
 #define HENK_TABLE_TYPE  TypeTable
 #include "thorin/henk.h"

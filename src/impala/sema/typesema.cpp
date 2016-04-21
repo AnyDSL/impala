@@ -499,12 +499,14 @@ void StructExpr::check(TypeSema& sema) const {
         auto struct_decl = struct_type->struct_decl();
         thorin::HashSet<const FieldDecl*> done;
         for (const auto& elem : elems()) {
+            sema.check(elem.expr());
+
             if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
                 elem.field_decl_ = field_decl;
-                if (!thorin::visit(done, field_decl)) {
-                    sema.check(elem.expr());
+
+                if (!thorin::visit(done, field_decl))
                     sema.expect_type(elem.expr(), struct_type->arg(field_decl->index()), "initialization type for field");
-                } else
+                else
                     error(elem.expr(), "field '%' specified more than once", elem.symbol());
             } else
                 error(elem.expr(), "structure '%' has no field named '%'", struct_decl->symbol(), elem.symbol());
