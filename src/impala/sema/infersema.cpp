@@ -642,6 +642,9 @@ const Type* TupleExpr::check(InferSema& sema, const Type* expected) const {
 }
 
 const Type* StructExpr::check(InferSema& sema, const Type* /*expected*/) const {
+    for (const auto& elem : elems()) {
+        sema.check(elem.expr());
+    }
     // TODO use fields to constrain type
     return sema.check(ast_type_app());
 }

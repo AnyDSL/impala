@@ -369,7 +369,7 @@ void InfixExpr::check(TypeSema& sema) const {
     sema.check(lhs());
     sema.check(rhs());
 
-    if (lhs()->type() != rhs()->type()) {
+    if (lhs()->type() != rhs()->type() && !lhs()->type()->isa<TypeError>() && rhs()->type()->isa<TypeError>()) {
         error(this, "both left-hand side and right-hand side of expression must agree on the same type");
         error(lhs(),  "left-hand side type is '%'", lhs()->type());
         error(rhs(), "right-hand side type is '%'", rhs()->type());
@@ -493,108 +493,41 @@ void SimdExpr::check(TypeSema& sema) const {
     }
 }
 
-void StructExpr::check(TypeSema& /*sema*/) const {
-#if 0
-    if (auto decl = path()->decl()) {
-        StructAppType struct_app;
-
-        if (auto typeable_decl = decl->isa<TypeableDecl>()) {
-            if (auto decl_type = typeable_decl->type()) {
-                if (num_ast_type_args() <= decl_type->num_ast_type_params()) {
-                    StructAppType exp_type = expected->isa<StructAppType>();
-
-                    // use the expected type if there is any
-                    if (exp_type && (decl_type == exp_type->struct_abs_type())) {
-                        for (size_t i = 0; i < exp_type->num_args(); ++i) {
-                            if ((i < num_ast_type_args()) && (exp_type->arg(i) != sema.check(type_arg(i))))
-                                error(type_arg(i)) << "expected different argument for type parameter '" << decl_type->type_param(i) << "': expected '" << exp_type->arg(i) << "' but found '" << type_arg(i)->type() << "'\n";
-                            type_args_.push_back(exp_type->arg(i));
-                        }
-
-                        assert(type_args_.size() == decl_type->num_ast_type_params());
-                        struct_app = exp_type;
-                    } else { // if no expected type was given fill type arguments with unknowns
-                        for (auto type_arg : ast_type_args())
-                            type_args_.push_back(sema.check(type_arg));
-
-                        for (size_t i = num_ast_type_args(), e = decl_type->num_ast_type_params(); i != e; ++i)
-                            type_args_.push_back(sema.unknown_type());
-
-                        assert(type_args_.size() == decl_type->num_ast_type_params());
-                        auto instantiated_decl_type = decl_type->instantiate(type_args_);
-
-                        if (instantiated_decl_type->isa<StructAppType>())
-                            struct_app = instantiated_decl_type->as<StructAppType>();
-                        else
-                            error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
-                    }
+void StructExpr::check(TypeSema& sema) const {
+    auto type = sema.check(ast_type_app());
+    if (auto struct_type = type->isa<StructType>()) {
+        auto struct_decl = struct_type->struct_decl();
+        thorin::HashSet<const FieldDecl*> done;
+        for (const auto& elem : elems()) {
+            if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
+                elem.field_decl_ = field_decl;
+                if (!thorin::visit(done, field_decl)) {
+                    sema.check(elem.expr());
+                    sema.expect_type(elem.expr(), struct_type->arg(field_decl->index()), "initialization type for field");
                 } else
-                    error(this) << "too many type arguments to structure: " << num_ast_type_args() << " for " << decl_type->num_ast_type_params() << "\n";
-
-                if (struct_app) {
-                    auto struct_abs  = struct_app->struct_abs_type();
-                    auto struct_decl = struct_abs->struct_decl();
-                    thorin::HashSet<const FieldDecl*> done;
-                    for (const auto& elem : elems()) {
-                        if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
-                            elem.field_decl_ = field_decl;
-                            if (!thorin::visit(done, field_decl)) {
-                                std::ostringstream oss;
-                                oss << "initialization type for field '" << elem.symbol() << '\'';
-                                sema.check(elem.expr(), struct_app->elem(field_decl->index()), oss.str().c_str());
-                            } else
-                                error(elem.expr()) << "field '" << elem.symbol() << "' specified more than once\n";
-                        } else
-                            error(elem.expr()) << "structure '" << struct_decl->symbol() << "' has no field named '" << elem.symbol() << "'\n";
-                    }
-
-                    if (done.size() != struct_decl->field_table().size()) {
-                        for (const auto& p : struct_decl->field_table()) {
-                            if (!done.contains(p.second))
-                                error(this) << "missing field '" << p.first << "'\n";
-                        }
-                    }
-
-                    return struct_app;
-                }
+                    error(elem.expr(), "field '%' specified more than once", elem.symbol());
             } else
-                return sema.unknown_type();
-        } else
-            error(path()) << '\'' << decl->symbol() << '\'' << " does not name a structure\n";
-    }
-    return sema.type_error();
-#endif
-}
-
-#if 0
-void FieldExpr::check(TypeSema& /*sema*/) const {
-    if (auto type = check_as_struct(sema, expected))
-        return type;
-
-    if (!lhs()->type()->is_error())
-        error(lhs()) << "attempted access of field '" << symbol() << "' on type '" << lhs()->type() << "', but no field with that name was found\n";
-    return sema.type_error();
-}
-#endif
-
-void FieldExpr::check(TypeSema& /*sema*/) const {
-#if 0
-    auto ltype = sema.check(lhs());
-    if (ltype->isa<PtrType>()) {
-        ltype.clear();
-        PrefixExpr::create_deref(lhs_);
-        ltype = sema.check(lhs());
-    }
-
-    if (auto struct_app = ltype->isa<StructAppType>()) {
-        if (auto field_decl = struct_app->struct_abs_type()->struct_decl()->field_decl(symbol())) {
-            index_ = field_decl->index();
-            // a struct cannot have fields of type noret, so we can check against expected (noret defaults to false)
-            sema.expect_type(this, struct_app->elem(index_), expected, "field expression type");
-            return expected;
+                error(elem.expr(), "structure '%' has no field named '%'", struct_decl->symbol(), elem.symbol());
         }
-    }
-#endif
+
+        if (done.size() != struct_decl->field_table().size()) {
+            for (const auto& p : struct_decl->field_table()) {
+                if (!done.contains(p.second))
+                    error(this, "missing field '%'", p.first);
+            }
+        }
+    } else
+        error(ast_type_app(), "'%' is not a structure", type);
+}
+
+void FieldExpr::check(TypeSema& sema) const {
+    auto type = sema.check(lhs());
+    if (auto struct_type = type->isa<StructType>()) {
+        auto struct_decl = struct_type->struct_decl();
+        if (struct_decl->field_decl(symbol()) == nullptr)
+            error(lhs(), "attempted access of field '%' on type '%', but no field with that name was found", symbol(), type);
+    } else if (!type->isa<TypeError>())
+        error(lhs(), "'%' is not a structure");
 }
 
 void TypeAppExpr::check(TypeSema& /*sema*/) const {

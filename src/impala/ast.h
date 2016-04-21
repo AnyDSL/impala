@@ -712,7 +712,7 @@ private:
     const Type* check(InferSema&) const;
     void check(TypeSema&) const;
 
-    int index_;
+    int index_ = -1;
     AutoPtr<const ASTType> ast_type_;
     Visibility visibility_;
 
