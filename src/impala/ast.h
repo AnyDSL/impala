@@ -700,7 +700,7 @@ private:
 
 class FieldDecl : public TypeableDecl {
 public:
-    int index() const { return index_; }
+    uint32_t index() const { return index_; }
     const ASTType* ast_type() const { return ast_type_; }
     Visibility visibility() const { return  visibility_; }
 
@@ -712,7 +712,7 @@ private:
     const Type* check(InferSema&) const;
     void check(TypeSema&) const;
 
-    int index_ = -1;
+    uint32_t index_ = uint32_t(-1);
     AutoPtr<const ASTType> ast_type_;
     Visibility visibility_;
 
@@ -1161,7 +1161,8 @@ public:
     const Expr* lhs() const { return lhs_; }
     const Identifier* identifier() const { return identifier_; }
     Symbol symbol() const { return identifier()->symbol(); }
-    uint32_t index() const { return index_; }
+    const FieldDecl* field_decl() const { return field_decl_; }
+    uint32_t index() const { return field_decl()->index(); }
 
     virtual bool is_lvalue() const override;
     virtual void take_address() const override;
@@ -1178,7 +1179,7 @@ private:
 
     AutoPtr<const Expr> lhs_;
     AutoPtr<const Identifier> identifier_;
-    mutable uint32_t index_ = uint32_t(-1);
+    mutable const FieldDecl* field_decl_ = nullptr;
 
     friend class Parser;
     friend class MapExpr; // remove this

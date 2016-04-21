@@ -524,7 +524,9 @@ void FieldExpr::check(TypeSema& sema) const {
     auto type = sema.check(lhs());
     if (auto struct_type = type->isa<StructType>()) {
         auto struct_decl = struct_type->struct_decl();
-        if (struct_decl->field_decl(symbol()) == nullptr)
+        if (auto field_decl = struct_decl->field_decl(symbol()))
+            field_decl_ = field_decl;
+        else
             error(lhs(), "attempted access of field '%' on type '%', but no field with that name was found", symbol(), type);
     } else if (!type->isa<TypeError>())
         error(lhs(), "'%' is not a structure");
