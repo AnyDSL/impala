@@ -6,6 +6,8 @@
 
 namespace impala {
 
+const unsigned MULTI_REF_THRESHOLD = 2;
+
 //---------------------------------------------------------------
 
 /*
@@ -13,7 +15,13 @@ namespace impala {
  */
 
 void Payload::set_payload(payload_t pl, const thorin::Location& loc) {
-    payload_val_ = pl;
+    assert(pl != INHERITED_PAYLOAD);
+    value_ = pl;
+    set_loc(loc);
+}
+
+void Payload::set_inherited(const thorin::Location& loc) {
+    value_ = INHERITED_PAYLOAD;
     set_loc(loc);
 }
 
@@ -30,7 +38,8 @@ public:
 
     const Payload& get_payload() const { return payload_; }
     void set_payload(payload_t pl, const thorin::Location& loc) { payload_.set_payload(pl, loc); }
-    LvTreeLookupTree get_child(Symbol, bool);
+    void set_payload_inherited(const thorin::Location& loc) { payload_.set_inherited(loc); }
+    std::shared_ptr<LvTree> get_child(Symbol, bool);
     LvTree* get_parent(void) const { return parent_; }
     void set_parent(LvTree* parent) { parent_ = parent; };
     void update_child(Symbol, LvTree*);
@@ -58,34 +67,32 @@ inline const Symbol& get_deref_symbol(void) {
 }
 
 template <class Key>
-LvTreeLookupTree find_tree(const thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key) {
+std::shared_ptr<LvTree> find_tree(const thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key) {
     // this code is copied from the find() function in thorin/util/hash.h because this function
     // is not compatible with std::shared_ptr
     auto i = map.find(key);
     if (i == map.end())
-        return LvTreeLookupTree(nullptr, false);
-    std::shared_ptr<LvTree> tree = i->second;
-    return LvTreeLookupTree(tree.get(), tree.use_count() > 2);
-    // we need to use > 2 here because we created a copy of the shared pointer from the iterator above
+        return nullptr;
+    return i->second;
 }
 
 template <class Key>
-LvTree* create_tree(thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key, LvTree* parent) {
+std::shared_ptr<LvTree> create_tree(thorin::HashMap<Key, std::shared_ptr<LvTree>>& map, Key key, LvTree* parent) {
     assert(!map.contains(key));
     auto new_tree = std::shared_ptr<LvTree>(new LvTree(parent));
     map[key] = new_tree;
-    return new_tree.get();
+    return new_tree;
 }
 
-LvTreeLookupTree LvTree::get_child(Symbol sym, bool create) {
+std::shared_ptr<LvTree> LvTree::get_child(Symbol sym, bool create) {
     if (sym == get_deref_symbol())
         assert(children_.size() == 0 || (children_.size() == 1 && children_.contains(sym)));
     else
         assert(!children_.contains(get_deref_symbol()));
 
     if (create && !children_.contains(sym)) {
-        LvTree* t = create_tree<Symbol>(children_, sym, this);
-        return LvTreeLookupTree(t, false);
+        auto t = create_tree<Symbol>(children_, sym, this);
+        return t;
     }
     return find_tree<Symbol>(children_, sym);
 }
@@ -177,6 +184,38 @@ std::ostream& LvTree::stream(std::ostream& os) const {
     return os;
 }
 
+//---------------------------------------------------------------
+
+/*
+ * LvTreeLookupRes
+ */
+
+LvTreeLookupRes::LvTreeLookupRes(std::shared_ptr<LvTree> tree, bool multi_ref, const Payload& pl)
+    : tree_(tree)
+    , is_multi_ref_(multi_ref)
+    , payload_(pl)
+    {
+        assert(tree_.use_count() > 1);
+        assert(tree->get_payload().is_inherited());
+    }
+
+LvTreeLookupRes::LvTreeLookupRes(std::shared_ptr<LvTree> tree, bool multi_ref)
+    : tree_(tree)
+    , is_multi_ref_(multi_ref)
+    , payload_(tree->get_payload())
+    {
+        assert(tree_.use_count() > 1);
+        assert(!payload_.is_inherited());
+    }
+
+LvTreeLookupRes::LvTreeLookupRes(const Payload& pl)
+    : tree_(nullptr)
+    , is_multi_ref_(false)
+    , payload_(pl)
+    {
+        assert(!payload_.is_inherited());
+    }
+ 
 //-------------------------------------------------------------
 
 /*
@@ -222,9 +261,9 @@ LvMap::~LvMap() {
     // TODO: delete the trees
 }
 
-LvTreeLookupTree LvMap::lookup(const ValueDecl* decl) const {
+std::shared_ptr<LvTree> LvMap::lookup(const ValueDecl* decl) const {
     auto tree = find_tree<const ValueDecl*>(varmap_, decl);
-    assert(tree.tree_ != nullptr);
+    assert(tree != nullptr);
     return tree;
 }
 
@@ -281,7 +320,7 @@ std::ostream& LvMap::stream(std::ostream& os) const {
 
 const Payload& lookup(const Expr* expr, LvMap& map) {
     auto res = expr->lookup_lv_tree(map, false);
-    return res.is_tree_ ? res.value_.tree_res_.tree_->get_payload() : res.value_.implicit_payload_;
+    return res.payload_;
 }
 
 //---------------------------------------------------------
@@ -293,52 +332,57 @@ const Payload& lookup(const Expr* expr, LvMap& map) {
 const LvTreeLookupRes PathExpr::lookup_lv_tree(LvMap& map, bool create) const {
     // TODO: are there valid cases where there is no mapping for the corresponding declaration?
     // TODO: check for invalid returned trees
-    LvTreeLookupTree res = map.lookup(value_decl().get());
-    assert(res.tree_ != nullptr);
+    std::shared_ptr<LvTree> res = map.lookup(value_decl().get());
+    assert(res != nullptr);
     //assert(res.tree_->get_parent() == nullptr);
-    return res;
+    assert(!res->get_payload().is_inherited());
+    bool multi_ref = res.use_count() > MULTI_REF_THRESHOLD;
+    return LvTreeLookupRes(res, multi_ref);
+    // we need to use > 2 here because of the copy of the shared pointer in this function
 }
 
-LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent, bool lookup_pointer,
+LvTreeLookupRes lookup_shared(LvMap& map, bool create, const Expr& parent,
     const Symbol& symbol) {
 
     LvTreeLookupRes parent_res = parent.lookup_lv_tree(map, create);
-    assert(!create || parent_res.is_tree_);
-    if (!parent_res.is_tree_)
+    assert(!create || parent_res.tree_ != nullptr);
+    if (parent_res.tree_ == nullptr)
         return parent_res;
 
-    LvTreeLookupTree this_tree = lookup_pointer ?
-        parent_res.value_.tree_res_.tree_->get_child(get_deref_symbol(), create)
-        : parent_res.value_.tree_res_.tree_->get_child(symbol, create);
-    assert(!create || this_tree.tree_ != nullptr);
-    if (this_tree.tree_ == nullptr)
-        return LvTreeLookupRes(parent_res.value_.tree_res_.tree_->get_payload());
-
-    Relation comp_res = map.get_comparator().compare(
-        parent_res.value_.tree_res_.tree_->get_payload().get_value(),
-        this_tree.tree_->get_payload().get_value());
-    assert(comp_res == Relation::LESS || (comp_res == Relation::EQUAL
-        && (create || this_tree.tree_->has_children())));
-
+    std::shared_ptr<LvTree> this_tree = parent_res.tree_->get_child(symbol, create);
+    assert(!create || this_tree != nullptr);
+    if (this_tree == nullptr) {
+        assert(!parent_res.payload_.is_inherited());
+        return LvTreeLookupRes(parent_res.payload_);
+    }
+    
+    bool multi_ref = parent_res.is_multi_ref_ || this_tree.use_count() > MULTI_REF_THRESHOLD;
     // set the parent for this lookup, necessary because of COW pattern that results in a DAG
-    this_tree.tree_->set_parent(parent_res.value_.tree_res_.tree_);
-    this_tree.multi_ref_ |= parent_res.value_.tree_res_.multi_ref_;
-    return LvTreeLookupRes(this_tree);
+    this_tree->set_parent(parent_res.tree_.get());
+
+    if (this_tree->get_payload().is_inherited()) {
+        assert(create || this_tree->has_children());
+        return LvTreeLookupRes(this_tree, multi_ref, parent_res.payload_);
+    } else {
+        assert(map.get_comparator().compare(parent_res.payload_.get_value(),
+            this_tree->get_payload().get_value()) == Relation::LESS);
+        return LvTreeLookupRes(this_tree, multi_ref);
+    }
 }
     
 const LvTreeLookupRes PrefixExpr::lookup_lv_tree(LvMap& map, bool create) const {
     switch (kind()) {
         case PrefixExpr::MUL:
-            return lookup_shared(map, create, *rhs(), true, get_deref_symbol());
+            return lookup_shared(map, create, *rhs(), get_deref_symbol());
         case PrefixExpr::AND: {
             assert(!create);
             // TODO: support create and build a separate tree with a new root whose 
             // only deref child is the lookup res of the parent expr (rhs)
             LvTreeLookupRes parent_res = rhs()->lookup_lv_tree(map, create);
-            if (!parent_res.is_tree_)
+            if (parent_res.tree_ == nullptr)
                 return parent_res;
             else
-                return LvTreeLookupRes(parent_res.value_.tree_res_.tree_->get_payload());
+                return LvTreeLookupRes(parent_res.payload_);
         }
         default:
             assert(false);
@@ -346,7 +390,7 @@ const LvTreeLookupRes PrefixExpr::lookup_lv_tree(LvMap& map, bool create) const 
 }
 
 const LvTreeLookupRes FieldExpr::lookup_lv_tree(LvMap& map, bool create) const {
-    return lookup_shared(map, create, *lhs(), false, symbol());
+    return lookup_shared(map, create, *lhs(), symbol());
 }
 
 const LvTreeLookupRes CastExpr::lookup_lv_tree(LvMap& map, bool create) const {
@@ -356,7 +400,7 @@ const LvTreeLookupRes CastExpr::lookup_lv_tree(LvMap& map, bool create) const {
 const LvTreeLookupRes MapExpr::lookup_lv_tree(LvMap& map, bool create) const {
     assert(is_lvalue());
     // handled like a deref expr
-    return lookup_shared(map, create, *lhs(), true, get_deref_symbol());
+    return lookup_shared(map, create, *lhs(), get_deref_symbol());
 }
 
 //-------------------------------------------------------------------
@@ -369,18 +413,18 @@ void insert(const Expr* expr, LvMap& map, payload_t pl, const thorin::Location& 
     // TODO: this is not super optimal because we might build up the tree only to tear it down
     // afterwards in the insertion
     LvTreeLookupRes res = expr->lookup_lv_tree(map, true);
-    assert(res.is_tree_);
+    // TODO: try to insert only if the payload is changed
+    assert(res.tree_ != nullptr);
     
-    LvTree* tree = res.value_.tree_res_.tree_;
-    bool multi_ref = res.value_.tree_res_.multi_ref_;
-    if (multi_ref)
+    LvTree* tree = res.tree_.get();
+    bool multi_ref = res.is_multi_ref_;
+    if (multi_ref) {
         // TODO: and change
+        // TODO: check that no memory leaks
         tree = new LvTree(*tree);
+    }
     tree->clear_subtrees();
     expr->insert_payload(tree, multi_ref, map, pl, loc);
-
-    //std::cout << "map after insert of " << expr << "\n";
-    //std::cout << &map << "\n";
 }
 
 //-------------------------------------------------------------------
@@ -416,13 +460,21 @@ LvTree* init_parent(LvTree* tree, bool multi_ref, Symbol parent_symbol) {
     return parent;
 }
 
+payload_t get_parent_pl(LvTree* parent) {
+    while (parent->get_payload().is_inherited()) {
+        parent = parent->get_parent();
+        assert(parent != nullptr);
+    }
+    return parent->get_payload().get_value();
+}
+
 void handle_ptr_insert(const Expr* parent_expr, LvTree* tree, bool multi_ref, LvMap& map,
     payload_t pl, const thorin::Location& loc) {
 
     LvTree* parent = init_parent(tree, multi_ref, get_deref_symbol());
+    payload_t parent_pl = get_parent_pl(parent);
 
-    // TODO: can this be simplified?
-    switch (map.get_comparator().compare(pl, parent->get_payload().get_value())) {
+    switch (map.get_comparator().compare(pl, parent_pl)) {
         case Relation::LESS:
             if (!tree->has_children())
                 parent->remove_subtree(get_deref_symbol());
@@ -435,6 +487,8 @@ void handle_ptr_insert(const Expr* parent_expr, LvTree* tree, bool multi_ref, Lv
         case Relation::EQUAL:
             if (!tree->has_children())
                 parent->remove_subtree(get_deref_symbol());
+            else
+                tree->set_payload_inherited(loc);
             propagate_change(parent_expr, parent, multi_ref, map);
             break;
         case Relation::INCOMPARABLE:
@@ -463,23 +517,24 @@ void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload
     const thorin::Location& loc) const {
 
     LvTree* parent = init_parent(tree, multi_ref, symbol());
+    payload_t parent_pl = get_parent_pl(parent);
 
-    payload_t parent_pl = parent->get_payload().get_value();
     switch (map.get_comparator().compare(pl, parent_pl)) {
         case Relation::LESS: {
             const StructDecl* decl = get_struct_decl(lhs()->type());
             for (auto i : decl->field_decls()) {
                 Symbol s = i->symbol();
-                LvTreeLookupTree sibling = parent->get_child(s, false);
-                if (sibling.tree_ == nullptr) {
+                std::shared_ptr<LvTree> sibling = parent->get_child(s, false);
+                if (sibling == nullptr) {
                     sibling = parent->get_child(s, true);
-                    sibling.tree_->set_payload(parent_pl, loc);
+                    sibling->set_payload(parent_pl, loc);
                 }
             }
+
             if (!tree->has_children())
                 parent->remove_subtree(symbol());
             else
-                tree->set_payload(pl, loc);
+                tree->set_payload_inherited(loc);
             lhs()->insert_payload(parent, multi_ref, map, pl, loc);
             break;
         }
@@ -490,10 +545,10 @@ void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload
                 Symbol s = i->symbol();
                 if (s == symbol())
                     continue;
-                LvTreeLookupTree sibling = parent->get_child(s, false);
+                std::shared_ptr<LvTree> sibling = parent->get_child(s, false);
 
-                if (sibling.tree_ == nullptr || sibling.tree_->get_payload().get_value() != pl
-                        || sibling.tree_->has_children()) {
+                if (sibling == nullptr || sibling->get_payload().get_value() != pl
+                        || sibling->has_children()) {
                     // TODO: do not set to false if siblings have children
                     all_siblings_same_payload = false;
                     break;
@@ -512,8 +567,8 @@ void FieldExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload
         case Relation::EQUAL:
             if (!tree->has_children())
                 parent->remove_subtree(symbol());
-            else if (tree->get_payload().get_value() != pl)
-                tree->set_payload(pl, loc);
+            else
+                tree->set_payload_inherited(loc);
             propagate_change(lhs(), parent, multi_ref, map);
             break;
         case Relation::INCOMPARABLE:

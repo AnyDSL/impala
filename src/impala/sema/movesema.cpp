@@ -8,10 +8,10 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-enum Liveness: char { LIVE = 0, DEAD = 1, ERROR = 2};
+enum Liveness: char { LIVE = 1, DEAD = 2 };
 
 inline Liveness payload2ls(payload_t pl) {
-    assert(pl == DEAD || pl == LIVE || pl == ERROR);
+    assert(pl == DEAD || pl == LIVE);
     return (Liveness) pl;
 }
 

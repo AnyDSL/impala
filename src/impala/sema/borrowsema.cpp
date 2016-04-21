@@ -5,8 +5,8 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-enum BorrowState { MUT = 0, FREEZED = 1, CLAIMED = 2 };
-enum InitState { UNINIT = 0, INIT = 1 };
+enum BorrowState { MUT = 1, FREEZED = 2, CLAIMED = 3 };
+enum InitState { UNINIT = 1, INIT = 2 };
 
 inline payload_t bs2pl(BorrowState bs) { return (payload_t) bs; }
 inline payload_t is2pl(InitState is) { return (payload_t) is; }

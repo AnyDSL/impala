@@ -16,49 +16,38 @@ class LvTree;
 
 typedef int payload_t;
 
-const payload_t ERROR_PAYLOAD = -1;
+const payload_t INHERITED_PAYLOAD = 0;
 
 const thorin::Location UNSET_LOCATION = thorin::Location();
 
 class Payload: public thorin::HasLocation {
     public:
         // TODO: the loc_ init is not good, maybe use a pointer instead
-        Payload(): HasLocation(UNSET_LOCATION), payload_val_(0) {}
-        payload_t get_value() const { return payload_val_; }
+        Payload(): HasLocation(UNSET_LOCATION), value_(INHERITED_PAYLOAD) {}
+        payload_t get_value() const { assert(!is_inherited()); return value_; }
+        bool is_inherited() const { return value_ == INHERITED_PAYLOAD; }
 
     protected:
         void set_payload(payload_t, const thorin::Location&);
+        void set_inherited(const thorin::Location&);
 
         friend class LvTree;
 
     private:
-        payload_t payload_val_;
+        payload_t value_;
 };
 
 //-----------------------------------------------------------------------
 
-struct LvTreeLookupTree {
-    LvTreeLookupTree(LvTree* tree, bool multi_ref): tree_(tree), multi_ref_(multi_ref) {}
-
-    LvTree* tree_;
-    bool multi_ref_;
-};
-
 struct LvTreeLookupRes {
-    LvTreeLookupRes(LvTree* tree, bool multi_ref): is_tree_(true), value_(tree, multi_ref) {};
-    LvTreeLookupRes(LvTreeLookupTree tree): is_tree_(true), value_(tree) {};
-    LvTreeLookupRes(const Payload& pl): is_tree_(false), value_(pl) {};
+    LvTreeLookupRes(std::shared_ptr<LvTree>, bool multi_ref, const Payload&);
+    LvTreeLookupRes(std::shared_ptr<LvTree>, bool multi_ref);
+    // TODO: maybe introduce a move constructor for the shared pointer
+    LvTreeLookupRes(const Payload& pl);
 
-    bool is_tree_;
-
-    union LvTreeLookupResValue {
-        LvTreeLookupResValue(LvTree* tree, bool multi_ref): tree_res_(tree, multi_ref) {};
-        LvTreeLookupResValue(LvTreeLookupTree tree): tree_res_(tree) {};
-        LvTreeLookupResValue(const Payload& pl): implicit_payload_(pl) {};
-
-        LvTreeLookupTree tree_res_;
-        const Payload& implicit_payload_;
-    } value_;
+    const std::shared_ptr<LvTree> tree_;
+    const bool is_multi_ref_;
+    const Payload& payload_;
 };
 
 //---------------------------------------------------------------------------------
@@ -123,7 +112,7 @@ public:
     LvMap(const LvMap&);
     ~LvMap();
 
-    LvTreeLookupTree lookup(const ValueDecl*) const;
+    std::shared_ptr<LvTree> lookup(const ValueDecl*) const;
     bool contains(const ValueDecl* decl) const { return varmap_.contains(decl); }
     void insert(const ValueDecl*, payload_t, const thorin::Location&);
     void update(const ValueDecl*, LvTree*);
