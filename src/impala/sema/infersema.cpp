@@ -643,11 +643,16 @@ const Type* TupleExpr::check(InferSema& sema, const Type* expected) const {
 }
 
 const Type* StructExpr::check(InferSema& sema, const Type* /*expected*/) const {
+    auto type = sema.check(ast_type_app());
+
     for (const auto& elem : elems()) {
-        sema.check(elem.expr());
+        if (auto struct_type = type->isa<StructType>())
+            sema.check(elem.expr(), struct_type->arg(struct_type->struct_decl()->field_decl(elem.identifier())->index()));
+        else
+            sema.check(elem.expr());
     }
-    // TODO use fields to constrain type
-    return sema.check(ast_type_app());
+
+    return type;
 }
 
 const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> args, const Type* expected) {
