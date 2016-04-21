@@ -494,6 +494,8 @@ void FnDecl::check(InferSema& sema) const {
 }
 
 void StaticItem::check(InferSema& sema) const {
+    if (ast_type())
+        sema.constrain(this, sema.check(ast_type()));
     if (init())
         sema.constrain(this, sema.check(init()));
 }
