@@ -154,7 +154,6 @@ const Type* BorrowedPtrType    ::vrebuild(TypeTable& to, Types args) const { ret
 const Type* MutPtrType         ::vrebuild(TypeTable& to, Types args) const { return to.     mut_ptr_type(args[0], addr_space()); }
 const Type* OwnedPtrType       ::vrebuild(TypeTable& to, Types args) const { return to.   owned_ptr_type(args[0], addr_space()); }
 const Type* NoRetType          ::vrebuild(TypeTable&,    Types     ) const { return this; }
-const Type* TypeError          ::vrebuild(TypeTable&,    Types     ) const { return this; }
 const Type* UnknownType        ::vrebuild(TypeTable&,    Types     ) const { return this; }
 
 //------------------------------------------------------------------------------
@@ -193,7 +192,6 @@ const Type* FnType::vreduce(int depth, const Type* type, Type2Type& map) const {
 
 const Type* PrimType   ::vreduce(int, const Type*, Type2Type&) const { return this; }
 const Type* NoRetType  ::vreduce(int, const Type*, Type2Type&) const { return this; }
-const Type* TypeError  ::vreduce(int, const Type*, Type2Type&) const { return this; }
 const Type* UnknownType::vreduce(int, const Type*, Type2Type&) const { return this; }
 
 //------------------------------------------------------------------------------

@@ -47,6 +47,7 @@ static const int Node_Lambda     = impala::Kind_lambda;
 static const int Node_Pi         = impala::Kind_pi;
 static const int Node_StructType = impala::Kind_struct;
 static const int Node_TupleType  = impala::Kind_tuple;
+static const int Node_TypeError  = impala::Kind_error;
 static const int Node_Var        = impala::Kind_var;
 
 #define HENK_STRUCT_EXTRA_NAME  struct_decl
@@ -86,6 +87,7 @@ bool is_void(const Type*);
 
 //------------------------------------------------------------------------------
 
+/// Pointer @p Type.
 class PtrType : public Type {
 protected:
     PtrType(TypeTable& typetable, int kind, const Type* referenced_type, int addr_space)
@@ -248,22 +250,6 @@ class NoRetType : public Type {
 private:
     NoRetType(TypeTable& typetable)
         : Type(typetable, Kind_noret, {})
-    {}
-
-public:
-    virtual std::ostream& stream(std::ostream&) const override;
-
-private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
-
-    friend class TypeTable;
-};
-
-class TypeError : public Type {
-private:
-    TypeError(TypeTable& typetable)
-        : Type(typetable, Kind_error, {})
     {}
 
 public:

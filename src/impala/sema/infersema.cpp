@@ -24,12 +24,11 @@ public:
     const Type* close(int num_lambdas, const Type* body);
     size_t num_lambdas(const Lambda* lambda);
     const Type* expr2expected(const Expr* expr);
-    const Type* arg(const Type* type, size_t i) { return i < type->size() ? type->arg(i) : type_error(); }
 
     template<class T>
-    const Type* arg(const Expr* expr, const Type* expected, size_t i) {
+    const Type* expect_arg(const Expr* expr, const Type* expected, size_t i) {
         if (auto type = expected->template isa<T>())
-            return arg(type, i);
+            return type->arg(i);
         return expr2expected(expr);
     }
 
@@ -520,7 +519,7 @@ const Type* FnExpr::check(InferSema& sema, const Type* expected) const {
 
     Array<const Type*> param_types(num_params());
     for (size_t i = 0, e = num_params(); i != e; ++i)
-        param_types[i] = sema.constrain(param(i), sema.arg<FnType>(this, expected, i));
+        param_types[i] = sema.constrain(param(i), sema.expect_arg<FnType>(this, expected, i));
 
     auto fn_type = sema.fn_type(param_types);
     assert(body() != nullptr);
@@ -537,12 +536,12 @@ const Type* PathExpr::check(InferSema& sema, const Type* expected) const {
 const Type* PrefixExpr::check(InferSema& sema, const Type* expected) const {
     switch (kind()) {
         case AND: {
-            auto expected_referenced_type = sema.arg<PtrType>(this, expected, 0);
+            auto expected_referenced_type = sema.expect_arg<PtrType>(this, expected, 0);
             auto rtype = sema.check(rhs(), expected_referenced_type);
             return sema.borrowed_ptr_type(rtype, 0);
         }
         case TILDE:
-            return sema.owned_ptr_type(sema.check(rhs(), sema.arg<PtrType>(this, expected, 0)));
+            return sema.owned_ptr_type(sema.check(rhs(), sema.expect_arg<PtrType>(this, expected, 0)));
         case MUL: {
             auto type = sema.check(rhs(), sema.borrowed_ptr_type(expected));
             if (auto ptr_type = type->isa<PtrType>())
@@ -603,7 +602,7 @@ const Type* CastExpr::check(InferSema& sema, const Type*) const {
 }
 
 const Type* DefiniteArrayExpr::check(InferSema& sema, const Type* expected) const {
-    auto expected_elem_type = sema.arg<ArrayType>(this, expected, 0);
+    auto expected_elem_type = sema.expect_arg<ArrayType>(this, expected, 0);
 
     for (const auto& arg : args())
         expected_elem_type = sema.unify(expected_elem_type, sema.type(arg));
@@ -615,7 +614,7 @@ const Type* DefiniteArrayExpr::check(InferSema& sema, const Type* expected) cons
 }
 
 const Type* SimdExpr::check(InferSema& sema, const Type* expected) const {
-    auto expected_elem_type = sema.arg<SimdType>(this, expected, 0);
+    auto expected_elem_type = sema.expect_arg<SimdType>(this, expected, 0);
 
     for (const auto& arg : args())
         expected_elem_type = sema.unify(expected_elem_type, sema.type(arg));
@@ -627,7 +626,7 @@ const Type* SimdExpr::check(InferSema& sema, const Type* expected) const {
 }
 
 const Type* RepeatedDefiniteArrayExpr::check(InferSema& sema, const Type* expected) const {
-    auto expected_elem_type = sema.arg<ArrayType>(this, expected, 0);
+    auto expected_elem_type = sema.expect_arg<ArrayType>(this, expected, 0);
     return sema.definite_array_type(sema.check(value(), expected_elem_type), count());
 }
 
@@ -639,7 +638,7 @@ const Type* IndefiniteArrayExpr::check(InferSema& sema, const Type*) const {
 const Type* TupleExpr::check(InferSema& sema, const Type* expected) const {
     Array<const Type*> types(num_args());
     for (size_t i = 0, e = types.size(); i != e; ++i)
-        types[i] = sema.check(arg(i), sema.arg<TupleType>(this, expected, i));
+        types[i] = sema.check(arg(i), sema.expect_arg<TupleType>(this, expected, i));
 
     return sema.tuple_type(types);
 }
@@ -679,7 +678,7 @@ const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> a
         constrain(args[i], fn_type->arg(i));
 
     for (size_t i = 0; i != args.size(); ++i)
-        check(args[i], arg(fn_type, i));
+        check(args[i], fn_type->arg(i));
 
     return fn_type->return_type();
 #if 0
@@ -777,7 +776,7 @@ const Type* MapExpr::check(InferSema& sema, const Type* expected) const {
             return array->elem_type();
         else if (auto tuple_type = ltype->isa<TupleType>()) {
             if (auto lit = arg(0)->isa<LiteralExpr>())
-                return sema.arg(tuple_type, lit->get_u64());
+                return tuple_type->arg(lit->get_u64());
         } else if (auto simd_type = ltype->isa<SimdType>())
             return simd_type->elem_type();
     }

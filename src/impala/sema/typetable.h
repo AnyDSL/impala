@@ -32,11 +32,9 @@ public:
         return unify(new OwnedPtrType(*this, referenced_type, addr_space));
     }
     const PrimType* prim_type(PrimTypeKind kind);
-    const TypeError* type_error() { return type_error_; }
     const UnknownType* unknown_type() { return unify(new UnknownType(*this)); }
 
 private:
-    const TypeError* type_error_;
     const NoRetType* type_noret_;
 #define IMPALA_TYPE(itype, atype) const PrimType* itype##_;
 #include "impala/tokenlist.h"
