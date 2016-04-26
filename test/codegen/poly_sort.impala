@@ -1,0 +1,25 @@
+fn range(a: int, b: int, body: fn (int) -> ()) -> () {
+    if a < b {
+        body(a);
+        range(a + 1, b, body, return)
+    }
+}
+
+fn sort[T](mut a: &[T], n: int, cmp: fn (T, T) -> bool) -> () {
+    for i in range(1, n) {
+        let elem = a(i);
+        let mut j = i;
+
+        while j > 0 && cmp(elem, a(j-1)) {
+            a(j) = a(j - 1);
+            j--;
+        }
+        a(j) = elem;
+    }
+}
+
+fn main() -> int {
+    let mut array = [100, 205, 190, 510, 42, 700, 300, 800];
+    sort[int](&array, 8, |x, y| x < y);
+    if array(0) == 42 { 0 } else { 1 }
+}

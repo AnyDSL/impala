@@ -1,10 +1,14 @@
 #include "impala/token.h"
 
 #include <algorithm>
+#include <cerrno>
+#include <cstdlib>
+#include <limits>
 
 #include "thorin/util/assert.h"
 #include "thorin/util/cast.h"
-#include "thorin/util/stdlib.h"
+
+#include "impala/impala.h"
 
 using namespace thorin;
 
@@ -28,12 +32,18 @@ Token::Token(const Location& loc, const std::string& str)
         kind_ = i->second;
 }
 
+template<class T, class V>
+static bool inrange(V val) {
+    return std::numeric_limits<T>::lowest() <= val && val <= std::numeric_limits<T>::max();
+}
+
 Token::Token(const Location& loc, Kind kind, const std::string& str)
     : HasLocation(loc)
     , symbol_(str)
     , kind_(kind)
 {
     using namespace std;
+    using thorin::half;
 
     if (kind_ == LIT_str || kind_ == LIT_char)
         return;
@@ -58,21 +68,44 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
         }
     }
 
-    // remove underscores and '0b'/'0x'/'0x' prefix
-    std::copy_if(begin, str.end(), std::back_inserter(literal), [] (char c) { return c != '_'; });
+    // remove underscores and '0b'/'0o'/'0x' prefix if applicable
+    std::copy_if(begin, str.end(), std::back_inserter(literal), [](char c) { return c != '_'; });
     auto nptr = &literal.front();
 
+    bool err = 0;
+    int64_t ival; uint64_t uval; half hval; float fval; double dval;
+
     switch (kind_) {
-        case LIT_i8:  box_ = Box(  int8_t(strtol  (nptr, 0, base))); break;
-        case LIT_i16: box_ = Box( int16_t(strtol  (nptr, 0, base))); break;
-        case LIT_i32: box_ = Box( int32_t(strtol  (nptr, 0, base))); break;
-        case LIT_i64: box_ = Box( int64_t(strtoll (nptr, 0, base))); break;
-        case LIT_u8:  box_ = Box( uint8_t(strtoul (nptr, 0, base))); break;
-        case LIT_u16: box_ = Box(uint16_t(strtoul (nptr, 0, base))); break;
-        case LIT_u32: box_ = Box(uint32_t(strtoul (nptr, 0, base))); break;
-        case LIT_u64: box_ = Box(uint64_t(strtoull(nptr, 0, base))); break;
-        case LIT_f32: box_ = Box(strtof(symbol_.str(), 0)); break;
-        case LIT_f64: box_ = Box(strtod(symbol_.str(), 0)); break;
+        case LIT_i8: case LIT_i16: case LIT_i32: case LIT_i64:
+                      ival = strtoll (nptr, 0, base);  err = errno; break;
+        case LIT_u8: case LIT_u16: case LIT_u32: case LIT_u64:
+                      uval = strtoull(nptr, 0, base);  err = errno; break;
+        case LIT_f16: hval = strtof(symbol_.str(), 0); err = errno; break; // TODO: errno for half not correctly set
+        case LIT_f32: fval = strtof(symbol_.str(), 0); err = errno; break;
+        case LIT_f64: dval = strtod(symbol_.str(), 0); err = errno; break;
+        default: THORIN_UNREACHABLE;
+    }
+
+    switch (kind_) {
+        case LIT_i8:  box_ =   int8_t(ival); err |= !inrange<  int8_t>(ival); break;
+        case LIT_i16: box_ =  int16_t(ival); err |= !inrange< int16_t>(ival); break;
+        case LIT_i32: box_ =  int32_t(ival); err |= !inrange< int32_t>(ival); break;
+        case LIT_i64: box_ =  int64_t(ival); err |= !inrange< int64_t>(ival); break;
+        case LIT_u8:  box_ =  uint8_t(uval); err |= !inrange< uint8_t>(uval); break;
+        case LIT_u16: box_ = uint16_t(uval); err |= !inrange<uint16_t>(uval); break;
+        case LIT_u32: box_ = uint32_t(uval); err |= !inrange<uint32_t>(uval); break;
+        case LIT_u64: box_ = uint64_t(uval); err |= !inrange<uint64_t>(uval); break;
+        case LIT_f16: box_ =     half(hval); err |= !inrange<    half>(hval); break;
+        case LIT_f32: box_ =    float(fval); err |= !inrange<   float>(fval); break;
+        case LIT_f64: box_ =   double(dval); err |= !inrange<  double>(dval); break;
+        default: THORIN_UNREACHABLE;
+    }
+
+    if (err)
+        switch (kind_) {
+#define IMPALA_LIT(itype, atype) \
+            case LIT_##itype: error(loc) << "literal out of range for type '" #itype "'\n"; return;
+#include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
 }
@@ -182,6 +215,7 @@ void Token::init() {
     // type aliases
     insert_key(TYPE_i32, "int");
     insert_key(TYPE_u32, "uint");
+    insert_key(TYPE_f16, "half");
     insert_key(TYPE_f32, "float");
     insert_key(TYPE_f64, "double");
 
@@ -192,6 +226,8 @@ void Token::init() {
     sym2lit_["i32"] = LIT_i32; sym2lit_["u32"] = LIT_u32;
     sym2lit_["i64"] = LIT_i64; sym2lit_["u64"] = LIT_u64;
 
+    sym2lit_["h"]   = LIT_f16; sym2flit_["h"]   = LIT_f16;
+    sym2lit_["f16"] = LIT_f16; sym2flit_["f16"] = LIT_f16;
     sym2lit_["f"]   = LIT_f32; sym2flit_["f"]   = LIT_f32;
     sym2lit_["f32"] = LIT_f32; sym2flit_["f32"] = LIT_f32;
     sym2lit_["f64"] = LIT_f64; sym2flit_["f64"] = LIT_f64;

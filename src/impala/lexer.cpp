@@ -244,8 +244,8 @@ l_dec:                                      // [0-9_]*
         return lex_suffix(str, false);
 
 l_fractional_dot_rest:                      // [0-9_]*
-		while (accept(str, dec) || accept(str, '_')) {}
-		if (accept(str,  eE)) goto l_exp;
+        while (accept(str, dec) || accept(str, '_')) {}
+        if (accept(str,  eE)) goto l_exp;
         return lex_suffix(str, true);
 
 l_exp:                                      // [eE][+-]?[0-9_]+

@@ -77,9 +77,6 @@ IMPALA_INFIX(   REM,  "%",    MUL,  UNARY)
 #define IMPALA_KEY(tok, str)
 #endif
 
-// Windows workaround for MSVC18
-#undef IN
-
 IMPALA_KEY(AS,        "as")
 IMPALA_KEY(DO,        "do")
 IMPALA_KEY(ELSE,      "else")
@@ -141,6 +138,7 @@ IMPALA_LIT(u8,  pu8)
 IMPALA_LIT(u16, pu16)
 IMPALA_LIT(u32, pu32)
 IMPALA_LIT(u64, pu64)
+IMPALA_LIT(f16, pf16)
 IMPALA_LIT(f32, pf32)
 IMPALA_LIT(f64, pf64)
 
@@ -158,6 +156,7 @@ IMPALA_TYPE(u8,   pu8)
 IMPALA_TYPE(u16,  pu16)
 IMPALA_TYPE(u32,  pu32)
 IMPALA_TYPE(u64,  pu64)
+IMPALA_TYPE(f16,  pf16)
 IMPALA_TYPE(f32,  pf32)
 IMPALA_TYPE(f64,  pf64)
 IMPALA_TYPE(bool, bool)
