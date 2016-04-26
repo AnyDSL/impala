@@ -235,8 +235,8 @@ const Type* InferSema::unify(const Type* t, const Type* u) {
     // HACK needed as long as we have this stupid tuple problem
     if (auto t_fn = t->isa<FnType>()) {
         if (auto u_fn = u->isa<FnType>()) {
-            if (t_fn->empty() && u_fn->size() == 1 && u_fn->arg(0)->isa<UnknownType>()) return unify(t_repr, u_repr)->type;
-            if (u_fn->empty() && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) return unify(t_repr, u_repr)->type;
+            if (t_fn->size() != 1 && u_fn->size() == 1 && u_fn->arg(0)->isa<UnknownType>()) return unify(t_repr, u_repr)->type;
+            if (u_fn->size() != 1 && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) return unify(t_repr, u_repr)->type;
         }
     }
 
@@ -663,7 +663,12 @@ const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> a
         Array<const Type*> types(args.size()+1);
         for (size_t i = 0, e = args.size(); i != e; ++i)
             types[i] = type(args[i]);
-        types.back() = this->fn_type({expected}); // TODO nullptr check
+        // TODO nullptr check for expected?
+        if (auto expected_tuple_type = expected->isa<TupleType>())
+            // HACK needed as long as we have this stupid tuple problem
+            types.back() = this->fn_type(expected_tuple_type->args());
+        else
+            types.back() = this->fn_type({expected});
         fn_type = unify(fn_type, this->fn_type(types))->as<FnType>();
     } else {
         Array<const Type*> types(args.size());
