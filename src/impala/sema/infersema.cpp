@@ -403,6 +403,16 @@ const Type* FnASTType::check(InferSema& sema) const {
     check_ast_type_params(sema);
 
     Array<const Type*> types(num_ast_type_args());
+    size_t e = num_ast_type_args();
+    // TODO remove wild hack to reduce Typedef'd tuple types to argument lists of return continuations
+    if(auto ret_fn_ast_type = ret_fn_type()) {
+        auto ret_type = sema.check(ret_fn_ast_type);
+        if (ret_type->size() == 1) {
+            if (auto ret_tuple_type = ret_type->arg(0)->isa<TupleType>()) {
+                types[--e] = sema.fn_type(ret_tuple_type->args());
+            }
+        }
+    }
     for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
         types[i] = sema.check(ast_type_arg(i));
 
@@ -450,16 +460,17 @@ void ExternBlock::check(InferSema& sema) const {
 
 void Typedef::check(InferSema& sema) const {
     check_ast_type_params(sema);
-    sema.close(num_ast_type_params(), sema.check(ast_type()));
-#if 0
+    auto body_type = sema.check(ast_type());
 
     if (ast_type_params().size() > 0) {
+        // TODO parametric Typedefs
+#if 0
         auto abs = sema.typedef_abs(sema.type(ast_type())); // TODO might be nullptr
         for (auto lambda : lambdas())
             abs->bind(lambda->lambda());
-    } else
-        sema.constrain(this, sema.type(ast_type()));
 #endif
+    } else
+        sema.constrain(this, body_type);
 }
 
 void EnumDecl::check(InferSema&) const { /*TODO*/ }
@@ -483,7 +494,17 @@ void FnDecl::check(InferSema& sema) const {
     check_ast_type_params(sema);
 
     Array<const Type*> param_types(num_params());
-    for (size_t i = 0, e = num_params(); i != e; ++i)
+    size_t e = num_params();
+    // TODO remove wild hack to reduce Typedef'd tuple types to argument lists of return continuations
+    if(!is_continuation()) {
+        auto ret_type = sema.check(param(e - 1));
+        if (ret_type->size() == 1) {
+            if (auto ret_tuple_type = ret_type->arg(0)->isa<TupleType>()) {
+                param_types[--e] = sema.fn_type(ret_tuple_type->args());
+            }
+        }
+    }
+    for (size_t i = 0; i != e; ++i)
         param_types[i] = sema.check(param(i));
 
     sema.constrain(this, sema.close(num_ast_type_params(), sema.fn_type(param_types)));
