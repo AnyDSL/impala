@@ -1126,7 +1126,8 @@ const FnExpr* Parser::parse_fn_expr() {
         expect(Token::OROR, "parameter list of function expression");
 
     parse_return_param(fn_expr);
-    fn_expr->ret_var_handle_ = cur_var_handle++; // reserve one hanlde - we might later on add another return param
+    // TODO pull this up into Fn - it's missing for parse_fn_decl
+    fn_expr->ret_var_handle_ = cur_var_handle++; // reserve one handle - we might later on add another return param
     dock(fn_expr->body_, parse_expr());
     return fn_expr;
 }
