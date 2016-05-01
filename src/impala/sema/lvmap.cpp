@@ -1,6 +1,8 @@
 #include "impala/sema/lvmap.h"
 
 #include "impala/ast.h"
+//TODO: get rid of this import, only needed for error()
+#include "impala/impala.h"
 
 #include <iostream>
 
@@ -46,6 +48,7 @@ public:
     bool has_children() { return children_.size() > 0; }
     void remove_subtree(Symbol field);
     void clear_subtrees(void);
+    void copy_subtrees(const LvTree*);
     LvTree* merge(LvTree*, bool, const LvMapComparator&);
     std::ostream& stream(std::ostream&) const;
 
@@ -108,6 +111,10 @@ void LvTree::remove_subtree(Symbol field) {
 
 void LvTree::clear_subtrees(void) {
     children_.clear();
+}
+
+void LvTree::copy_subtrees(const LvTree* other) {
+    children_ = other->children_;
 }
 
 LvTree* LvTree::merge(LvTree* other, bool multi_ref, const LvMapComparator& comp) {
@@ -588,6 +595,111 @@ void MapExpr::insert_payload(LvTree* tree, bool multi_ref, LvMap& map, payload_t
 }
 
 //--------------------------------------------------------------------
+
+/*
+ * integrate_lifetime_tree
+ */
+
+void integrate_lifetime_tree(const Expr* left_expr, const Expr* right_expr, LvMap& map, const thorin::Location& loc) {
+    assert(left_expr->is_lvalue());
+    assert(right_expr->is_lvalue());
+
+    if (!contains_ref_types(left_expr->type()))
+        return;
+
+    // TODO: only build trees with true here if the right side has children or the payloads are equal
+    LvTreeLookupRes left_res = left_expr->lookup_lv_tree(map, true);
+    assert(left_res.tree_ != nullptr);
+    LvTreeLookupRes right_res = right_expr->lookup_lv_tree(map, false);
+
+    switch (map.get_comparator().compare(left_res.payload_.get_value(), right_res.payload_.get_value())) {
+        case Relation::EQUAL:
+            // TODO: handle multi_ref
+            if (right_res.tree_ != nullptr && right_res.tree_->has_children())
+                left_res.tree_->copy_subtrees(right_res.tree_.get());
+            else
+                insert(left_expr, map, left_res.payload_.get_value(), left_res.payload_.loc());
+            break;
+        case Relation::LESS:
+        case Relation::GREATER:
+            // TODO: handle multi_ref
+            left_expr->type()->integrate_lifetime_tree(left_res.tree_.get(),
+                left_res.payload_.get_value(), right_res.tree_.get(), right_res.payload_.get_value(),
+                loc, map.get_comparator());
+            break;
+        default:
+            assert(false);
+    }
+}
+
+void StructAppTypeNode::integrate_lifetime_tree(LvTree* target, payload_t target_pl, LvTree* source, payload_t source_pl, const thorin::Location& loc, const LvMapComparator& comp) const {
+    // TODO: assert refernced type contains ref || pl relation
+    
+    StructAbsType t = struct_abs_type();
+    const StructDecl *decl = t->struct_decl();
+    for (auto fd : decl->field_decls()) {
+        Type ft = fd->type();
+        if (!contains_ref_types(ft))
+            continue;
+        Symbol fs = fd->symbol();
+        // TODO: multi ref
+        // TODO: assert that pl does not change
+        ft->integrate_lifetime_tree(target->get_child(fs, true).get(), target_pl,
+            source == nullptr ? nullptr : source->get_child(fs, false).get(), source_pl,
+            loc, comp);
+    }
+}
+
+payload_t get_child_payload(LvTree* tree, payload_t default_pl) {
+    payload_t child_pl = default_pl;
+    auto child = tree->get_child(get_deref_symbol(), false);
+    if (child != nullptr && !child->get_payload().is_inherited())
+        child_pl = child->get_payload().get_value();
+    return child_pl;
+}
+
+void PtrTypeNode::integrate_lifetime_tree(LvTree* target, payload_t target_pl, LvTree* source,
+    payload_t source_pl, const thorin::Location& loc, const LvMapComparator& comp) const {
+    // TODO: assert refernced type contains ref || pl relation
+    switch (kind()) {
+        case Kind_borrowed_ptr:
+        case Kind_mut_ptr: {
+            if (source != nullptr)
+                // TODO: multi ref
+                target->copy_subtrees(source);
+
+            payload_t source_child_pl = get_child_payload(source, source_pl);
+            Relation compare_res = comp.compare(target_pl, source_child_pl);
+            switch (compare_res) {
+                case Relation::EQUAL:
+                    if (target->has_children())
+                        target->get_child(get_deref_symbol(), false)->set_payload_inherited(loc);
+                    break;
+                case Relation::LESS:
+                    if (target->has_children())
+                        target->get_child(get_deref_symbol(), false)->set_payload(source_child_pl, loc);
+                case Relation::GREATER:
+                    error(loc) << "Cannot assign because the source of the assignment does not live long enough\n";
+                    // TODO: this should be in the lifetimesema
+                    return;
+                default:    
+                    assert(false);
+            }
+            break;
+        }
+        case Kind_owned_ptr:
+            // TODO: assert inherited
+            referenced_type()->integrate_lifetime_tree(target->get_child(get_deref_symbol(), true).get(),
+                target_pl, source == nullptr ? nullptr :
+                source->get_child(get_deref_symbol(), false).get(), source_pl, loc, comp);
+            break;
+        default:
+            THORIN_UNREACHABLE;
+    }
+}
+
+//--------------------------------------------------------------------
+
 
 }
 

@@ -15,6 +15,7 @@
 #include "thorin/util/stream.h"
 
 #include "impala/symbol.h"
+#include "impala/sema/lvmap.h"
 
 namespace impala {
 
@@ -299,6 +300,8 @@ public:
      */
     virtual bool is_sane() const = 0;
 
+    virtual void integrate_lifetime_tree(LvTree*, payload_t, LvTree*, payload_t, const thorin::Location&, const LvMapComparator&) const { assert(false); /*TODO: overwrite in certain types*/ };
+
 
 private:
     virtual Type vinstantiate(SpecializeMap&) const = 0;
@@ -467,6 +470,8 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode* other) const override;
 
+    virtual void integrate_lifetime_tree(LvTree*, payload_t, LvTree*, payload_t, const thorin::Location&, const LvMapComparator&) const override;
+
 private:
     virtual Type vinstantiate(SpecializeMap&) const override;
     virtual const thorin::Type* convert(CodeGen&) const override;
@@ -552,6 +557,8 @@ public:
 
     virtual bool equal(const Unifiable*) const override;
     virtual bool is_subtype(const TypeNode*) const override;
+
+    virtual void integrate_lifetime_tree(LvTree*, payload_t, LvTree*, payload_t, const thorin::Location&, const LvMapComparator&) const override;
 
 private:
     virtual const thorin::Type* convert(CodeGen&) const override;
@@ -768,11 +775,13 @@ private:
 
 //------------------------------------------------------------------------------
 
-bool is_copyable(const Type&);
+bool is_copyable(const Type);
 
-inline bool is_ref_type(const Type& t) {
+inline bool is_ref_type(const Type t) {
     return t->kind() == Kind_borrowed_ptr || t->kind() == Kind_mut_ptr;
 }
+
+bool contains_ref_types(const Type t);
 
 //------------------------------------------------------------------------------
 

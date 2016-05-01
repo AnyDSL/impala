@@ -726,7 +726,7 @@ FnType TraitAppNode::find_method(Symbol name) const {
 
 //------------------------------------------------------------------------------
 
-bool is_copyable(const Type& t) {
+bool is_copyable(const Type t) {
     switch (t->kind()) {
 #define IMPALA_TYPE(itype, atype) case Kind_##itype:
 #include "impala/tokenlist.h"
@@ -751,6 +751,32 @@ bool is_copyable(const Type& t) {
         // TODO: how to handle error types, etc?
     }
 }
+
+bool contains_ref_types(const Type t) {
+    switch (t->kind()) {
+#define IMPALA_TYPE(itype, atype) case Kind_##itype:
+#include "impala/tokenlist.h"
+        case Kind_borrowed_ptr:
+        case Kind_mut_ptr:
+            return true;
+        case Kind_owned_ptr: {
+            const OwnedPtrTypeNode* ptr_node = dynamic_cast<const OwnedPtrTypeNode*>(*t);
+            return contains_ref_types(ptr_node->referenced_type());
+        }
+        default:
+            // TODO: this is dirty, change it
+            const StructAppTypeNode* app_node = dynamic_cast<const StructAppTypeNode*>(*t);
+            assert(app_node != nullptr);
+            StructAbsType type = app_node->struct_abs_type();
+
+            for (auto type_arg : type->args()) {
+                if (contains_ref_types(type_arg))
+                    return true;
+            }
+            return false;
+    }
+}
+
 
 //------------------------------------------------------------------------------
 

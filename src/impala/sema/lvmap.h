@@ -139,6 +139,8 @@ const Payload& lookup(const Expr*, LvMap&);
 
 void insert(const Expr*, LvMap&, payload_t, const thorin::Location& loc);
 
+void integrate_lifetime_tree(const Expr* left_expr, const Expr* right_expr, LvMap& map, const thorin::Location& loc);
+
 }
 
 #endif
