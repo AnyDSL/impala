@@ -57,6 +57,7 @@ public:
     void check(const Item* n) { n->check(*this); }
     void check(const Stmt* n) { n->check(*this); }
     const Type* check(const Expr* expr) { return constrain(expr, expr->check(*this)); }
+    const Type* check(const Expr* expr, const Type* t) { return constrain(expr, expr->check(*this), t); }
 
     const Var* check(const ASTTypeParam* ast_type_param) {
         if (!ast_type_param->type())
@@ -484,10 +485,8 @@ void FnDecl::check(InferSema& sema) const {
 
     sema.constrain(this, sema.close(num_ast_type_params(), sema.fn_type(param_types)));
 
-    if (body() != nullptr) {
-        sema.check(body());
-        sema.constrain(body(), fn_type()->return_type());
-    }
+    if (body() != nullptr)
+        sema.check(body(), fn_type()->return_type());
 }
 
 void StaticItem::check(InferSema& sema) const {
@@ -570,13 +569,10 @@ const Type* InfixExpr::check(InferSema& sema) const {
             return sema.type_bool();
         }
         case OROR:
-        case ANDAND: {
-            sema.check(lhs());
-            sema.check(rhs());
-            sema.constrain(lhs(), sema.type_bool());
-            sema.constrain(rhs(), sema.type_bool());
+        case ANDAND:
+            sema.check(lhs(), sema.type_bool());
+            sema.check(rhs(), sema.type_bool());
             return sema.type_bool();
-        }
         case ADD: case SUB:
         case MUL: case DIV: case REM:
         case SHL: case SHR:
