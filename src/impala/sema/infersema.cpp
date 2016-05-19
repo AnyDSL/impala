@@ -39,10 +39,9 @@ public:
      * Initializes @p t with @p UnknownType if @p type is @c nullptr.
      * Updates @p todo_ if something changed.
      */
-    const   Type*& constrain(const    Type*& t, const   Type* u);
-    const   Type*& constrain(const    Type*& t, const   Type* u, const Type* v) { return constrain(constrain(t, u), v); }
-    const   Type*& constrain(const Typeable* t, const   Type* u, const Type* v) { return constrain(constrain(t, u), v); }
-    const   Type*& constrain(const Typeable* t, const   Type* u)                { return constrain(t->type_, u); }
+    const Type*& constrain(const    Type*& t, const   Type* u);
+    const Type*& constrain(const Typeable* t, const   Type* u, const Type* v) { return constrain(constrain(t, u), v); }
+    const Type*& constrain(const Typeable* t, const   Type* u)                { return constrain(t->type_, u); }
 
     // check wrappers
 
