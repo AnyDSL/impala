@@ -225,8 +225,8 @@ const Type* InferSema::unify(const Type* t, const Type* u) {
     if (t == u)              return t;
     if (t->isa<TypeError>()) return t;
     if (u->isa<TypeError>()) return u;
-    if (t->isa<NoRetType>()) return u;
-    if (u->isa<NoRetType>()) return t;
+    if (t->isa<NoRetType>()) return t;
+    if (u->isa<NoRetType>()) return u;
 
     if (t->isa<UnknownType>() && u->isa<UnknownType>())
         return unify_by_rank(t_repr, u_repr)->type;
@@ -774,6 +774,10 @@ const Type* IfExpr::check(InferSema& sema) const {
     sema.check(cond());
     auto then_type = sema.check(then_expr());
     auto else_type = sema.check(else_expr());
+
+    if (then_type->isa<NoRetType>()) return else_type;
+    if (else_type->isa<NoRetType>()) return then_type;
+
     sema.constrain(then_expr(), else_type);
     return sema.constrain(else_expr(), then_type);
 }
