@@ -39,8 +39,8 @@ public:
      * Initializes @p type with @p UnknownType if @p type is @c nullptr.
      * Updates @p todo_ if something changed.
      */
-    const Type* type(const Type*& type);
-    const Type* type(const Typeable* typeable) { return type(typeable->type_); }
+    const Type* find_type(const Type*& type);
+    const Type* find_type(const Typeable* typeable) { return find_type(typeable->type_); }
 
     /**
      * @c unify(t, u).
@@ -200,7 +200,7 @@ const Type* InferSema::expr2expected(const Expr* expr) {
  * unification
  */
 
-const Type* InferSema::type(const Type*& type) {
+const Type* InferSema::find_type(const Type*& type) {
     if (type == nullptr) {
         todo_ = true;
         return type = unknown_type();
@@ -426,7 +426,7 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
             if (auto ast_type_param = type_decl->isa<ASTTypeParam>())
                 return sema.var(ast_type_param->lambda_depth_);
-            if (auto type = sema.type(type_decl)) {
+            if (auto type = sema.find_type(type_decl)) {
                 if (auto lambda = type->isa<Lambda>())
                     return sema.reduce(lambda, ast_type_args(), type_args_);
                 return type;
@@ -585,8 +585,8 @@ const Type* InfixExpr::check(InferSema& sema, const Type* expected) const {
         case EQ: case NE:
         case LT: case LE:
         case GT: case GE:
-            sema.check(lhs(), sema.type(rhs()));
-            sema.check(rhs(), sema.type(lhs()));
+            sema.check(lhs(), sema.find_type(rhs()));
+            sema.check(rhs(), sema.find_type(lhs()));
             return sema.type_bool();
         case OROR:
         case ANDAND:
@@ -597,16 +597,16 @@ const Type* InfixExpr::check(InferSema& sema, const Type* expected) const {
         case MUL: case DIV: case REM:
         case SHL: case SHR:
         case AND: case OR:  case XOR:
-            sema.check(lhs(), sema.unify(expected, sema.type(rhs())));
-            sema.check(rhs(), sema.type(lhs()));
-            return sema.type(rhs());
+            sema.check(lhs(), sema.unify(expected, sema.find_type(rhs())));
+            sema.check(rhs(), sema.find_type(lhs()));
+            return sema.find_type(rhs());
         case ASGN:
         case ADD_ASGN: case SUB_ASGN:
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
         case SHL_ASGN: case SHR_ASGN:
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN:
-            sema.check(lhs(), sema.type(rhs()));
-            sema.check(rhs(), sema.type(lhs()));
+            sema.check(lhs(), sema.find_type(rhs()));
+            sema.check(rhs(), sema.find_type(lhs()));
             return sema.unit();
     }
 
@@ -626,7 +626,7 @@ const Type* DefiniteArrayExpr::check(InferSema& sema, const Type* expected) cons
     auto expected_elem_type = sema.expect_arg<ArrayType>(this, expected, 0);
 
     for (const auto& arg : args())
-        expected_elem_type = sema.unify(expected_elem_type, sema.type(arg));
+        expected_elem_type = sema.unify(expected_elem_type, sema.find_type(arg));
 
     for (const auto& arg : args())
         sema.check(arg, expected_elem_type);
@@ -638,7 +638,7 @@ const Type* SimdExpr::check(InferSema& sema, const Type* expected) const {
     auto expected_elem_type = sema.expect_arg<SimdType>(this, expected, 0);
 
     for (const auto& arg : args())
-        expected_elem_type = sema.unify(expected_elem_type, sema.type(arg));
+        expected_elem_type = sema.unify(expected_elem_type, sema.find_type(arg));
 
     for (const auto& arg : args())
         sema.check(arg, expected_elem_type);
@@ -683,7 +683,7 @@ const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> a
     if (is_returning) {
         Array<const Type*> types(args.size()+1);
         for (size_t i = 0, e = args.size(); i != e; ++i)
-            types[i] = type(args[i]);
+            types[i] = find_type(args[i]);
         // TODO nullptr check for expected?
         if (auto expected_tuple_type = expected->isa<TupleType>())
             // HACK needed as long as we have this stupid tuple problem
@@ -694,7 +694,7 @@ const Type* InferSema::check_call(const FnType* fn_type, ArrayRef<const Expr*> a
     } else {
         Array<const Type*> types(args.size());
         for (size_t i = 0, e = args.size(); i != e; ++i)
-            types[i] = type(args[i]);
+            types[i] = find_type(args[i]);
         fn_type = unify(fn_type, this->fn_type(types))->as<FnType>();
     }
 
@@ -770,7 +770,7 @@ const Type* TypeAppExpr::check(InferSema& sema, const Type* /*expected*/) const 
                     type_args_.push_back(sema.unknown_type());
 
                 for (auto& type_arg : type_args_)
-                    type_arg = sema.type(type_arg);
+                    type_arg = sema.find_type(type_arg);
 
                 return sema.reduce(lambda, ast_type_args(), type_args_);
             }
@@ -816,16 +816,16 @@ const Type* BlockExprBase::check(InferSema& sema, const Type* expected) const {
 
     sema.check(expr(), expected);
 
-    return expr() ? sema.type(expr()) : sema.unit()->as<Type>();
+    return expr() ? sema.find_type(expr()) : sema.unit()->as<Type>();
 }
 
 const Type* IfExpr::check(InferSema& sema, const Type* expected) const {
     sema.check(cond(), sema.type_bool());
     sema.check(then_expr(), expected);
     sema.check(else_expr(), expected);
-    sema.constrain(then_expr(), sema.type(else_expr()), expected);
-    sema.constrain(else_expr(), sema.type(then_expr()), expected);
-    return sema.constrain(this, sema.type(then_expr()), sema.type(else_expr()));
+    sema.constrain(then_expr(), sema.find_type(else_expr()), expected);
+    sema.constrain(else_expr(), sema.find_type(then_expr()), expected);
+    return sema.constrain(this, sema.find_type(then_expr()), sema.find_type(else_expr()));
 }
 
 const Type* WhileExpr::check(InferSema& sema, const Type*) const {
