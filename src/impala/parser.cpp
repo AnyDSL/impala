@@ -540,7 +540,8 @@ FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
         case BodyMode::Mandatory: dock(fn_decl->body_, try_block_expr("body of function")); break;
         case BodyMode::Optional:
             if (!accept(Token::SEMICOLON))
-                dock(fn_decl->body_, try_block_expr("body of function")); break;
+                dock(fn_decl->body_, try_block_expr("body of function"));
+            break;
     }
 
     return fn_decl;
