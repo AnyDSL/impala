@@ -29,7 +29,7 @@ std::ostream& TupleASTType::stream(std::ostream& os) const {
 }
 
 std::ostream& FnASTType::stream(std::ostream& os) const {
-    auto ret = ret_fn_type();
+    auto ret = ret_fn_ast_type();
     stream_ast_type_params(os << "fn");
     stream_list(os, ret != nullptr ? ast_type_args().skip_back() : ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "(", ")");
     if (ret != nullptr) {

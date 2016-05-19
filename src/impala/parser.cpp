@@ -1162,7 +1162,7 @@ const ForExpr* Parser::parse_for_expr() {
     if (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
         parse_param_list(fn_expr->params_, Token::IN, true);
     fn_expr->params_.emplace_back(Param::create(cur_var_handle++, new Identifier("continue", prev_loc()), prev_loc(), nullptr));
-    fn_expr->is_continuation_ = true;
+    fn_expr->is_continuation_ = false;
     for_expr->break_decl_ = create_continuation_decl("break", /*set type during TypeSema*/ false);
     dock(for_expr->expr_, parse_expr());
     dock(fn_expr->body_, try_block_expr("body of for loop"));

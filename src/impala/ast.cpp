@@ -43,7 +43,7 @@ std::string PtrASTType::prefix() const {
     THORIN_UNREACHABLE;
 }
 
-const FnASTType* FnASTType::ret_fn_type() const {
+const FnASTType* FnASTType::ret_fn_ast_type() const {
     if (num_ast_type_args() != 0) {
         if (auto fn_type = ast_type_args().back()->isa<FnASTType>())
             return fn_type;
