@@ -223,8 +223,8 @@ const Type* InferSema::unify(const Type* t, const Type* u) {
     }
 
     if (t == u)              return t;
-    if (t->isa<TypeError>()) return t;
-    if (u->isa<TypeError>()) return u;
+    if (t->isa<TypeError>()) return u; // guess the other one
+    if (u->isa<TypeError>()) return t; // dito
     if (t->isa<NoRetType>()) return t;
     if (u->isa<NoRetType>()) return u;
 
@@ -249,8 +249,8 @@ const Type* InferSema::unify(const Type* t, const Type* u) {
         return t->rebuild(nargs);
     }
 
-    assert(false && "TODO: this assert is currently only here in order to debug incorrect type error during type inference");
-    return type_error();
+    //assert(false && "TODO: this assert is currently only here in order to debug incorrect type error during type inference");
+    return t;
 }
 
 //------------------------------------------------------------------------------

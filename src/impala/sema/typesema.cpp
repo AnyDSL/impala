@@ -369,7 +369,7 @@ void InfixExpr::check(TypeSema& sema) const {
     sema.check(lhs());
     sema.check(rhs());
 
-    if (lhs()->type() != rhs()->type() && !lhs()->type()->isa<TypeError>() && rhs()->type()->isa<TypeError>()) {
+    if (lhs()->type() != rhs()->type() && !lhs()->type()->isa<TypeError>() && !rhs()->type()->isa<TypeError>()) {
         error(this, "both left-hand side and right-hand side of expression must agree on the same type");
         error(lhs(),  "left-hand side type is '%'", lhs()->type());
         error(rhs(), "right-hand side type is '%'", rhs()->type());
