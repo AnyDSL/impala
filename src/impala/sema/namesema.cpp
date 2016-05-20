@@ -230,10 +230,6 @@ void Fn::fn_check(NameSema& sema) const {
 
 void FnDecl::check(NameSema& sema) const {
     fn_check(sema);
-#ifndef NDEBUG
-    for (auto param : params())
-        assert(param->ast_type());
-#endif
 }
 
 void StructDecl::check(NameSema& sema) const {
