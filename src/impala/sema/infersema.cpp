@@ -70,10 +70,10 @@ public:
         return constrain(ast_type, ast_type->check(*this));
     }
 
-    const Type* check_call(const Expr* expr, ArrayRef<const Expr*> args);
-    const Type* check_call(const Expr* expr, const std::deque<AutoPtr<const Expr>>& args) {
+    const Type* check_call(const Expr* lhs, ArrayRef<const Expr*> args);
+    const Type* check_call(const Expr* lhs, const std::deque<AutoPtr<const Expr>>& args) {
         Array<const Expr*> array(args.begin(), args.end());
-        return check_call(expr, array);
+        return check_call(lhs, array);
     }
 
     const FnType* fn_type(const Type* type) {
@@ -669,8 +669,8 @@ const Type* StructExpr::check(InferSema& sema) const {
     return type;
 }
 
-const Type* InferSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
-    auto fn_type = expr->type()->as<FnType>();
+const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args) {
+    auto fn_type = lhs->type()->as<FnType>();
     for (auto arg : args)
         check(arg);
 
@@ -678,14 +678,14 @@ const Type* InferSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) 
         Array<const Type*> types(args.size());
         for (size_t i = 0, e = args.size(); i != e; ++i)
             types[i] = constrain(args[i], fn_type->arg(i));
-        constrain(expr, this->fn_type(types));
+        constrain(lhs, this->fn_type(types));
         return type_noret();
     } else if (args.size()+1 == fn_type->size()) {
         Array<const Type*> types(args.size()+1);
         for (size_t i = 0, e = args.size(); i != e; ++i)
             types[i] = constrain(args[i], fn_type->arg(i));
         types.back() = fn_type->args().back();
-        auto result = constrain(expr, this->fn_type(types));
+        auto result = constrain(lhs, this->fn_type(types));
         if (auto fn_type = result->isa<FnType>())
             return fn_type->return_type();
         else
