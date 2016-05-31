@@ -1311,6 +1311,8 @@ void LetStmt::check(TypeSema& sema) const {
     Type expected = sema.check(local(), sema.unknown_type());
     if (init())
         sema.check(init(), expected, "initialization type");
+    else if (!local()->is_mut())
+        error(this) << "non-mutable let statement lacks initialization\n";
 }
 
 //------------------------------------------------------------------------------
