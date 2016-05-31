@@ -4,7 +4,7 @@ fn max(a: f32, b: f32) -> f32 @{
 }
 
 fn main() -> int @{
-    let t0_y : f32;
+    let mut t0_y : f32;
     let t0 = max(t0_y, t0_y);
     0
 }
