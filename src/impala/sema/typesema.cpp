@@ -1202,7 +1202,7 @@ Type BlockExprBase::check(TypeSema& sema, TypeExpectation expected) const {
 }
 
 Type RunBlockExpr::check(TypeSema& sema, TypeExpectation expected) const {
-    THORIN_PUSH(sema.cur_fn_, this);
+    //THORIN_PUSH(sema.cur_fn_, this); // TODO: please verify this
     return BlockExprBase::check(sema, expected);
 }
 
