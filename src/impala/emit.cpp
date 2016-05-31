@@ -184,17 +184,19 @@ const thorin::Type* SimdTypeNode::convert(CodeGen& cg) const {
 
 Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
     auto thorin_type = cg.convert(type());
-    if (!init)
-        init = cg.world().bottom(thorin_type, loc());
-    if (!is_mut())
+    // TODO give sema error for non-mutable let without init
+
+    if (is_mut()) {
+        if (is_address_taken())
+            value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), handle(), loc(), symbol().str()));
+        else
+            value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str()); // TODO
+
+        if (init)
+            value_.store(init, loc());
+    } else
         return value_ = Value::create_val(cg, init);
 
-    if (is_address_taken())
-        value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), handle(), loc(), symbol().str()));
-    else
-        value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str()); // TODO
-
-    value_.store(init, loc());
     return value_;
 }
 
