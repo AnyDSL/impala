@@ -1,0 +1,19 @@
+struct S {
+    fun : fn(i32, fn(fn(i32) -> i32) -> ()) -> (),
+}
+
+static g = S {
+    fun : fun_impl,
+};
+
+fn fun_impl(N: i32, body: fn(fn(i32) -> i32) -> ()) -> () {
+    fn idx(i: i32) -> i32 { i * N }
+    body(idx);
+}
+
+fn main(p: S, N: i32, mut arr: &[f32]) -> () {
+    for idx_hyp in p.fun(N) {
+        arr(idx_hyp(42)) = 42.0f;
+        arr(23) = 23.0f;
+    }
+}
