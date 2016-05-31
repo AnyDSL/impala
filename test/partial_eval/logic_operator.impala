@@ -1,8 +1,5 @@
-fn fun(i: int, s: [int * 2]) -> bool {
-    s(0) * i > s(1) * i
-}
+fn fun() -> bool { false }
 
-fn main(i: int) -> int {
-    let s = [47, 11];
-    if (@fun(i, s) || @fun(i, s)) { 47 } else { 11 }
+fn main() -> int {
+    if @fun() && true { 1 } else { 0 }
 }

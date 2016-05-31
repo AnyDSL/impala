@@ -424,7 +424,7 @@ void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
     if (kind() == NOT && is_type_bool(cg.convert(type())))
         cg.emit_branch(rhs(), f, t);
     else
-        cg.branch(cg.remit(rhs()), t, f, loc().end());
+        cg.branch(cg.remit(this), t, f, loc().end());
 }
 
 void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
