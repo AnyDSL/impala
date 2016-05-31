@@ -193,12 +193,12 @@ Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
         if (is_address_taken())
             value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), handle(), loc(), symbol().str()));
         else
-            value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str()); // TODO
+            value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str());
 
         if (init)
             value_.store(init, loc());
     } else
-        return value_ = Value::create_val(cg, init);
+        value_ = Value::create_val(cg, init);
 
     return value_;
 }
