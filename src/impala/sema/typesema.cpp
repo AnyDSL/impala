@@ -747,6 +747,8 @@ void LetStmt::check(TypeSema& sema) const {
     sema.check(local());
     if (init())
         sema.check(init());
+    else if (!local()->is_mut())
+        error(this, "non-mutable let statement lacks initialization");
 }
 
 //------------------------------------------------------------------------------
