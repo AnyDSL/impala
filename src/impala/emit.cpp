@@ -146,7 +146,6 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
 
 Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
     auto thorin_type = cg.convert(type());
-    // TODO give sema error for non-mutable let without init
 
     if (is_mut()) {
         if (is_address_taken())
