@@ -1,0 +1,16 @@
+fn power(a: int, mut b: int) -> int {
+    let mut result = 1;
+    while (b != 0) {
+        result *= a;
+        --b;
+    }
+
+    result
+}
+
+fn main(i: int) -> int {
+    {
+        let x = @power(i, 4);
+    }
+    42
+}

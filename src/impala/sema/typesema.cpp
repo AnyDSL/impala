@@ -91,7 +91,7 @@ private:
 
 public:
     const BlockExprBase* cur_block_ = nullptr;
-    const Expr* cur_fn_ = nullptr;
+    const Fn* cur_fn_ = nullptr;
 };
 
 void type_analysis(const ModContents* mod, bool nossa) {
@@ -219,7 +219,7 @@ void StructDecl::check(TypeSema& sema) const {
 void FieldDecl::check(TypeSema& sema) const { sema.check(ast_type()); }
 
 void FnDecl::check(TypeSema& sema) const {
-    THORIN_PUSH(sema.cur_fn_, body());
+    THORIN_PUSH(sema.cur_fn_, this);
     check_ast_type_params(sema);
     for (auto param : params())
         sema.check(param);
@@ -313,7 +313,7 @@ void StrExpr::check(TypeSema& sema) const {
 }
 
 void FnExpr::check(TypeSema& sema) const {
-    THORIN_PUSH(sema.cur_fn_, body());
+    THORIN_PUSH(sema.cur_fn_, this);
     assert(ast_type_params().empty());
 
     for (size_t i = 0, e = num_params(); i != e; ++i)
@@ -630,11 +630,6 @@ void BlockExprBase::check(TypeSema& sema) const {
         if (local->is_mut() && !local->is_written())
             warning(local, "variable '%' declared mutable but variable is never written to", local->symbol());
     }
-}
-
-void RunBlockExpr::check(TypeSema& sema) const {
-    THORIN_PUSH(sema.cur_fn_, this);
-    return BlockExprBase::check(sema);
 }
 
 void IfExpr::check(TypeSema& sema) const {
