@@ -1,0 +1,24 @@
+fn range(a: int, z: int, body: fn(int)->()) -> () {
+    if a < z {
+        body(a);
+        range(a+1, z, body, return)
+    }
+}
+
+fn foo(a: int, b: int) -> int {
+    let mut res1 = 0;
+    let mut res2 = 0;
+
+    for i in range(0, a) {
+        res1 += 4;
+        for i in range(0, b) {
+            res2 += 3333;
+        }
+    }
+
+    res1 + res2
+}
+
+fn main(i: int) -> int {
+    @foo(i, 10)
+}
