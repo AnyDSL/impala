@@ -116,7 +116,7 @@ std::ostream& Var::stream(std::ostream& os) const {
     return streamf(os, "<%>", depth());
 }
 
-std::ostream& Application::stream(std::ostream& os) const { return streamf(os, "%[%]", callee(), arg()); }
+std::ostream& App::stream(std::ostream& os) const { return streamf(os, "%[%]", callee(), arg()); }
 
 std::ostream& PtrType::stream(std::ostream& os) const {
     os << prefix();
