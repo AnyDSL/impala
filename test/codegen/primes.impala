@@ -1,7 +1,8 @@
-fn primes[T](n: int, t: T, body: fn(int, T, fn(T)), ret: fn(T)) {
+fn primes[T](n: int, t: T, body: fn(int, T) -> T) -> T {
     if n < 2 {
-        ret(t)
+        return(t)
     }
+    let ret = return;
 
     body(2, t, |t| {
         fn loop(i: int, t: T) {
@@ -18,14 +19,15 @@ fn primes[T](n: int, t: T, body: fn(int, T, fn(T)), ret: fn(T)) {
             if (i < n) {
                 inner_loop(2)
             } else {
-                ret(t)
+                return(t)
             }
         }
         loop(3, t)
     })
 }
 
-fn main(main_ret: fn(int)) {
+fn main() -> int {
+    let main_ret = return;
     let x:int = primes(50, 0, 
            |p, result, next| next(result + p));
     
