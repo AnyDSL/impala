@@ -80,10 +80,10 @@ public:
     void check(const Item* n) { n->check(*this); }
     const Type* check(const Expr* expr) { expr->check(*this); return expr->type(); }
     void check(const Stmt* n) { n->check(*this); }
-    void check_call(const MapExpr* map_expr, ArrayRef<const Expr*> args);
-    void check_call(const MapExpr* map_expr, const std::deque<AutoPtr<const Expr>>& args) {
+    void check_call(const Expr* expr, ArrayRef<const Expr*> args);
+    void check_call(const Expr* expr, const std::deque<AutoPtr<const Expr>>& args) {
         Array<const Expr*> array(args.begin(), args.end());
-        check_call(map_expr, array);
+        check_call(expr, array);
     }
 
 private:
@@ -543,7 +543,7 @@ void MapExpr::check(TypeSema& sema) const {
         sema.check(arg);
 
     if (ltype->isa<FnType>()) {
-        sema.check_call(this, args());
+        sema.check_call(lhs(), args());
     } else if (ltype->isa<ArrayType>()) {
         if (num_args() == 1)
             sema.expect_int(arg(0), "for array subscript");
@@ -565,14 +565,14 @@ void MapExpr::check(TypeSema& sema) const {
         error(this, "incorrect type for map expression");
 }
 
-void TypeSema::check_call(const MapExpr* map_expr, ArrayRef<const Expr*> args) {
-    auto fn_type = check(map_expr->lhs())->as<FnType>();
+void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
+    auto fn_type = check(expr)->as<FnType>();
 
     if (fn_type->size() == args.size() || fn_type->size() == args.size() + 1) {
         for (size_t i = 0; i < args.size(); i++)
             expect_type(args[i], fn_type->arg(i), "argument type");
     } else {
-        error(map_expr, "Incorrect number of arguments in function application: got %, expected %", args.size(), fn_type->size() - 1);
+        error(expr, "Incorrect number of arguments in function application: got %, expected %", args.size(), fn_type->size() - 1);
     }
 }
 
@@ -609,34 +609,29 @@ void WhileExpr::check(TypeSema& sema) const {
     sema.check(body());
 }
 
-void ForExpr::check(TypeSema& /*sema*/) const {
-#if 0
+void ForExpr::check(TypeSema& sema) const {
     auto forexpr = expr();
     if (auto prefix = forexpr->isa<PrefixExpr>())
         if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HLT)
             forexpr = prefix->rhs();
+
     if (auto map = forexpr->isa<MapExpr>()) {
         const Type* lhst = sema.check(map->lhs());
 
         if (auto fn_for = lhst->isa<FnType>()) {
-            if (fn_for->num_args() != 0) {
-                if (auto fn_ret = fn_for->args().back()->isa<FnType>()) {
-                    break_decl_->type_ = fn_ret; // inherit the type for break
-
+            if (fn_for->size() != 0) {
+                if (fn_for->args().back()->isa<FnType>()) {
                     // copy over args and check call
                     Array<const Expr*> args(map->args().size()+1);
                     *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
-                    return sema.check_call(map, fn_for, map->ast_type_args(), map->type_args_, args, expected);
+                    sema.check_call(map->lhs(), args);
+                    return;
                 }
             }
         }
-    } else if (auto field_expr = forexpr->isa<FieldExpr>()) {
-        assert_unused(false && field_expr && "TODO");
     }
 
-    error(expr()) << "the looping expression does not support the 'for' protocol\n";
-    return sema.unit();
-#endif
+    error(expr(), "the looping expression does not support the 'for' protocol");
 }
 
 //------------------------------------------------------------------------------
