@@ -882,10 +882,10 @@ private:
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
 
+    mutable AutoPtr<const Expr>* docker_ = nullptr;
+
 protected:
     mutable const thorin::Def* extra_ = nullptr; ///< Needed to propagate extend of indefinite arrays.
-public:
-    mutable AutoPtr<const Expr>* docker_ = nullptr;
 
     friend void dock(AutoPtr<const Expr>& dst, const Expr* src) {
         assert(src->docker_ == nullptr);
