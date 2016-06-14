@@ -214,12 +214,9 @@ const Type* InferSema::unify(const Type* t, const Type* u) {
     t = t_repr->type;
     u = u_repr->type;
 
-    // Normalise singleton tuples to their element
-    if (u->isa<TupleType>() && u->size() == 1)
-        u = u->arg(0);
-
-    if (t->isa<TupleType>() && t->size() == 1)
-        t = t->arg(0);
+    // normalise singleton tuples to their element
+    if (u->isa<TupleType>() && u->size() == 1) u = u->arg(0);
+    if (t->isa<TupleType>() && t->size() == 1) t = t->arg(0);
 
     // HACK needed as long as we have this stupid tuple problem
     if (auto t_fn = t->isa<FnType>()) {
@@ -256,7 +253,6 @@ const Type* InferSema::unify(const Type* t, const Type* u) {
         return t->rebuild(nargs);
     }
 
-    // assert(false && "TODO: this assert is currently only here in order to debug incorrect type error during type inference");
     return t;
 }
 
