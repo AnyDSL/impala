@@ -34,7 +34,7 @@ public:
     void error_msg(const Expr* expr, const char* what, const Type* type, const char* fmt, Args... args) {
         std::ostringstream os;
         thorin::streamf(os, fmt, args...);
-        error(expr, "expected % (have '%') for %", what, type, os.str());
+        error(expr, "mismatched types: expected % but found '%' as %", what, type, os.str());
     }
 
 #define IMPALA_EXPECT(T, pred, what) \
