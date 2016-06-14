@@ -67,7 +67,7 @@ public:
 
     void expect_type(const Expr* expr, const Type* found, const char* context) {
         if (expr->type() != found)
-            error(expr, "mismatched types: expected '%' but found '%' as %", expr->type(), found, context);
+            error(expr, "mismatched types: expected '%' but found '%' as %", found, expr->type(), context);
     }
 
     // check wrappers
@@ -80,10 +80,10 @@ public:
     void check(const Item* n) { n->check(*this); }
     const Type* check(const Expr* expr) { expr->check(*this); return expr->type(); }
     void check(const Stmt* n) { n->check(*this); }
-    const Type* check_call(const MapExpr* expr, ArrayRef<const Expr*> args);
-    const Type* check_call(const MapExpr* expr, const std::deque<AutoPtr<const Expr>>& args) {
+    void check_call(const MapExpr* map_expr, ArrayRef<const Expr*> args);
+    void check_call(const MapExpr* map_expr, const std::deque<AutoPtr<const Expr>>& args) {
         Array<const Expr*> array(args.begin(), args.end());
-        return check_call(expr, array);
+        check_call(map_expr, array);
     }
 
 private:
@@ -565,58 +565,15 @@ void MapExpr::check(TypeSema& sema) const {
         error(this, "incorrect type for map expression");
 }
 
-const Type* TypeSema::check_call(const MapExpr* /*map_expr*/, ArrayRef<const Expr*> /*args*/) {
-#if 0
-    size_t num_ast_type_args = ast_type_args.size();
-    size_t num_args = args.size();
+void TypeSema::check_call(const MapExpr* map_expr, ArrayRef<const Expr*> args) {
+    auto fn_type = check(map_expr->lhs())->as<FnType>();
 
-    if (num_ast_type_args <= fn_poly->num_ast_type_params()) {
-        for (auto type_arg : ast_type_args)
-            type_args.push_back(check(type_arg));
-
-        for (size_t i = num_ast_type_args, e = fn_poly->num_ast_type_params(); i != e; ++i)
-            type_args.push_back(unknown_type());
-
-        assert(type_args.size() == fn_poly->num_ast_type_params());
-        expr->fn_mono_ = fn_poly->instantiate(type_args)->as<FnType>();
-
-        bool is_contuation = num_args == expr->fn_mono()->num_args();
-        if (is_contuation || num_args+1 == expr->fn_mono()->num_args()) {
-            for (size_t i = 0; i != num_args; ++i)
-                check(args[i], expr->fn_mono()->arg(i), "argument type");
-
-            // note: the order is important because of the unifying side-effects of ==
-            if (is_contuation || expr->fn_mono->return_type() == expected) { // TODO this looks overly complicated
-                // check if all type variables could be inferred
-                bool is_known = true;
-                for (size_t i = 0, e = type_args.size(); i != e; ++i) {
-                    if (!type_args[i]->is_known()) {
-                        is_known = false;
-                        error(expr->loc()) << "could not find instance for type variable '" << fn_poly->type_param(i) << "' of function '" << expr->lhs() << "'\n";
-                    }
-                }
-
-                if (is_known) {
-                    check_bounds(expr->loc(), fn_poly, type_args);
-                    if (is_contuation)
-                        return type_noret();
-                    if (!expr->fn_mono()->return_type()->is_noret())
-                        return expect_type(expr, expr->fn_mono()->return_type(), expected);
-                    error(expr) << "missing last argument to call continuation\n";
-                }
-            } else
-                error(expr->loc()) << "return type '" << expr->fn_mono->return_type() << "' does not match expected type '" << expected << "'\n";
-        } else {
-            std::string rela = (num_args+1 < expr->fn_mono()->num_args()) ? "few" : "many";
-            size_t exp_args = expr->fn_mono()->num_args() > 0 ? expr->fn_mono()->num_args()-1 : 0;
-            error(expr->loc()) << "too " << rela << " arguments: " << num_args << " for " << exp_args << "\n";
-        }
-    } else
-        error(expr->loc()) << "too many type arguments to function: " << num_ast_type_args << " for " << fn_poly->num_ast_type_params() << "\n";
-
-    return type_error();
-#endif
-    return nullptr;
+    if (fn_type->size() == args.size() || fn_type->size() == args.size() + 1) {
+        for (size_t i = 0; i < args.size(); i++)
+            expect_type(args[i], fn_type->arg(i), "argument type");
+    } else {
+        error(map_expr, "Incorrect number of arguments in function application: got %, expected %", args.size(), fn_type->size() - 1);
+    }
 }
 
 void BlockExprBase::check(TypeSema& sema) const {
