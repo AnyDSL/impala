@@ -591,53 +591,15 @@ void BlockExprBase::check(TypeSema& sema) const {
 
 void IfExpr::check(TypeSema& sema) const {
     sema.check(cond());
-    sema.check(then_expr());
-    sema.check(else_expr());
+    sema.expect_bool(cond(), "if condition"); 
+    auto then_type = sema.check(then_expr());
+    auto else_type = sema.check(else_expr());
 
-#if 0
-    // if there is an expected type, we want to pipe it down to enable type inference
-    // otherwise we cannot do so because if then_type is noret, else type still can be anything
-    if (expected->isa<UnknownType>()) {
-        const Type* then_type = sema.check(then_expr(), sema.unknown_type());
-        const Type* else_type = sema.check(else_expr(), sema.unknown_type());
-
-        if (then_type->is_noret() && else_type->is_noret())
-            return sema.type_noret();
-        if (then_type->is_noret())
-            return sema.expect_type(else_expr(), expected, "if expression type");
-        if (else_type->is_noret())
-            return sema.expect_type(then_expr(), expected, "if expression type");
-        if (then_type == else_type) {
-            assert(!then_expr()->needs_cast());
-            assert(!else_expr()->needs_cast());
-            return sema.expect_type(this, then_type, expected, "if expression type");
-        }
-        if (then_type <= else_type) {
-            assert(!then_expr()->needs_cast());
-            then_expr()->actual_type_ = then_type;
-            then_expr()->type_.clear();
-            then_expr()->type_ = else_type;
-            return sema.expect_type(this, else_type, expected, "if expression type");
-        }
-        if (else_type <= then_type) {
-            assert(!else_expr()->needs_cast());
-            else_expr()->actual_type_ = else_type;
-            else_expr()->type_.clear();
-            else_expr()->type_ = then_type;
-            return sema.expect_type(this, then_type, expected, "if expression type");
-        }
-
-        error(this) << "different types in arms of an if expression\n";
-        error(then_expr()) << "type of the consequence is '" << then_type << "'\n";
-        error(else_expr()) << "type of the alternative is '" << else_type << "'\n";
-        return sema.type_error();
-    } else {
-        // we always allow noret in one of the branches as long
-        const Type* then_type = sema.check(then_expr(), expected, "type of then branch");
-        const Type* else_type = sema.check(else_expr(), expected, "type of else branch");
-        return (then_type->is_noret()) ? else_type : then_type;
+    if (then_type != else_type &&
+        !then_type->isa<NoRetType>() &&
+        !else_type->isa<NoRetType>()) {
+        sema.expect_type(else_expr(), then_type, "else branch type");
     }
-#endif
 }
 
 void WhileExpr::check(TypeSema& sema) const {
