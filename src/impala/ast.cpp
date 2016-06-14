@@ -15,17 +15,17 @@ const Param* Param::create(size_t var_handle, const Identifier* identifier, cons
     return param;
 }
 
-void PrefixExpr::create_deref(const AutoPtr<const Expr>& parent) {
+void PrefixExpr::create_deref(const Expr* expr) {
     auto deref = new PrefixExpr();
-    deref->set_loc(parent->loc());
+    deref->set_loc(expr->loc());
     deref->kind_ = PrefixExpr::MUL;
-    barge(deref, deref->rhs_, parent);
+    insert(deref, deref->rhs_, expr);
 }
 
-void TypeAppExpr::create(const AutoPtr<const Expr>& parent) {
+void TypeAppExpr::create(const Expr* expr) {
     auto type_app_expr = new TypeAppExpr();
-    type_app_expr->set_loc(parent->loc());
-    barge(type_app_expr, type_app_expr->lhs_, parent);
+    type_app_expr->set_loc(expr->loc());
+    insert(type_app_expr, type_app_expr->lhs_, expr);
 }
 
 const char* Visibility::str() {

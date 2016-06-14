@@ -861,7 +861,7 @@ private:
 class Expr : public ASTNode, public Typeable {
 public:
 #ifndef NDEBUG
-    //virtual ~Expr() { assert(docker_ != nullptr); }
+    virtual ~Expr() { assert(docker_ != nullptr); }
 #endif
 
     const thorin::Def* extra() const { return extra_; }
@@ -884,7 +884,8 @@ private:
 
 protected:
     mutable const thorin::Def* extra_ = nullptr; ///< Needed to propagate extend of indefinite arrays.
-    mutable const AutoPtr<const Expr>* docker_ = nullptr;
+public:
+    mutable AutoPtr<const Expr>* docker_ = nullptr;
 
     friend void dock(AutoPtr<const Expr>& dst, const Expr* src) {
         assert(src->docker_ == nullptr);
@@ -892,9 +893,11 @@ protected:
         src->docker_ = &dst;
     }
 
-    friend void barge(const Expr* nexpr, AutoPtr<const Expr>& child, const AutoPtr<const Expr>& dropped) {
-        child = nexpr;
-        swap(child, const_cast<AutoPtr<const Expr>&>(dropped));
+    friend void insert(const Expr* nexpr, AutoPtr<const Expr>& nexpr_dock, const Expr* child) {
+        nexpr_dock = nexpr;
+        swap(nexpr_dock, *child->docker_); // nexpr_dock -> *child->docker_, *child->docker -> nexpr
+        nexpr->docker_ = child->docker_;
+        child->docker_ = &nexpr_dock;
     }
 
     friend class CodeGen;
@@ -1068,7 +1071,7 @@ public:
 #include "impala/tokenlist.h"
     };
 
-    static void create_deref(const AutoPtr<const Expr>& dock);
+    static void create_deref(const Expr* child);
 
     const Expr* rhs() const { return rhs_; }
     Kind kind() const { return kind_; }
@@ -1335,7 +1338,7 @@ private:
 
 class TypeAppExpr : public Expr {
 public:
-    static void create(const AutoPtr<const Expr>& parent);
+    static void create(const Expr*);
 
     const Expr* lhs() const { return lhs_; }
     const ASTTypes& ast_type_args() const { return ast_type_args_; }
@@ -1427,7 +1430,7 @@ protected:
 class BlockExpr : public BlockExprBase {
 public:
     BlockExpr() {}
-    BlockExpr(thorin::Location loc) { loc_ = loc; expr_ = new EmptyExpr(loc); }
+    BlockExpr(thorin::Location loc) { loc_ = loc; dock(expr_, new EmptyExpr(loc)); }
 
     virtual const char* prefix() const override { return "{"; }
 

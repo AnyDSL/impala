@@ -587,7 +587,7 @@ StaticItem* Parser::parse_static_item() {
     if (accept(Token::COLON))
         static_item->ast_type_ = parse_type();
     if (accept(Token::ASGN))
-        static_item->init_ = parse_expr();
+        dock(static_item->init_, parse_expr());
     expect(Token::SEMICOLON, "static item");
     return static_item;
 }
