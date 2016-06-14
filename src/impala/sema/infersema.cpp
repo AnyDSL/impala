@@ -779,6 +779,7 @@ const Type* BlockExprBase::check(InferSema& sema) const {
 
 const Type* IfExpr::check(InferSema& sema) const {
     sema.check(cond());
+    sema.constrain(cond(), sema.type_bool());
     auto then_type = sema.check(then_expr());
     auto else_type = sema.check(else_expr());
 
@@ -791,9 +792,11 @@ const Type* IfExpr::check(InferSema& sema) const {
 
 const Type* WhileExpr::check(InferSema& sema) const {
     sema.check(cond());
+    sema.constrain(cond(), sema.type_bool());
     sema.check(break_decl());
     sema.check(continue_decl());
     sema.check(body());
+    sema.constrain(cond(), sema.unit());
     return sema.unit();
 }
 
