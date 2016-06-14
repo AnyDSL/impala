@@ -126,6 +126,21 @@ private:
     friend void type_inference(Init&, const ModContents*);
 };
 
+bool is_subtype(const Type* dst, const Type* src) {
+    if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
+        if (auto src_owned_ptr_type = src->isa<OwnedPtrType>())
+            return src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space()
+                && is_subtype(dst_borrowed_ptr_type->referenced_type(), src_owned_ptr_type->referenced_type());
+    }
+
+    if (auto dst_indefinite_array_type = dst->isa<IndefiniteArrayType>()) {
+        if (auto src_definite_array_type = src->isa<DefiniteArrayType>())
+            return is_subtype(dst_indefinite_array_type->elem_type(), src_definite_array_type->elem_type());
+    }
+
+    return dst == src;
+}
+
 //------------------------------------------------------------------------------
 
 /*
