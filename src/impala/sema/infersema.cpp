@@ -236,8 +236,15 @@ const Type* InferSema::unify(const Type* t, const Type* u) {
     // HACK needed as long as we have this stupid tuple problem
     if (auto t_fn = t->isa<FnType>()) {
         if (auto u_fn = u->isa<FnType>()) {
-            if (t_fn->size() != 1 && u_fn->size() == 1 && u_fn->arg(0)->isa<UnknownType>()) { todo_ = true; return unify(t_repr, u_repr)->type; }
-            if (u_fn->size() != 1 && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) { todo_ = true; return unify(u_repr, t_repr)->type; }
+            if (t_fn->size() != 1 && u_fn->size() == 1 && u_fn->arg(0)->isa<UnknownType>()) {
+                todo_ = true;
+                return unify(t_repr, u_repr)->type;
+            }
+
+            if (u_fn->size() != 1 && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) {
+                todo_ = true;
+                return unify(u_repr, t_repr)->type;
+            }
         }
     }
 
@@ -749,6 +756,7 @@ const Type* TypeAppExpr::check(InferSema& sema) const {
 }
 
 const Type* MapExpr::check(InferSema& sema) const {
+    // TODO always check args such that TypeSema doesn't see nullptrs as types
     auto ltype = sema.check(lhs());
 
     if (ltype->isa<Lambda>()) {
