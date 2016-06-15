@@ -575,9 +575,8 @@ void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
     if (fn_type->size() == args.size() || fn_type->size() == args.size() + 1) {
         for (size_t i = 0; i < args.size(); i++)
             expect_type(args[i], fn_type->arg(i), "argument type");
-    } else {
-        error(expr, "Incorrect number of arguments in function application: got %, expected %", args.size(), fn_type->size() - 1);
-    }
+    } else
+        error(expr, "incorrect number of arguments in function application: got %, expected %", args.size(), fn_type->size() - 1);
 }
 
 void BlockExprBase::check(TypeSema& sema) const {
@@ -595,15 +594,12 @@ void BlockExprBase::check(TypeSema& sema) const {
 
 void IfExpr::check(TypeSema& sema) const {
     sema.check(cond());
-    sema.expect_bool(cond(), "if condition"); 
+    sema.expect_bool(cond(), "if condition");
     auto then_type = sema.check(then_expr());
     auto else_type = sema.check(else_expr());
 
-    if (then_type != else_type &&
-        !then_type->isa<NoRetType>() &&
-        !else_type->isa<NoRetType>()) {
+    if (then_type != else_type && !then_type->isa<NoRetType>() && !else_type->isa<NoRetType>())
         sema.expect_type(else_expr(), then_type, "else branch type");
-    }
 }
 
 void WhileExpr::check(TypeSema& sema) const {
