@@ -237,7 +237,7 @@ const Type* InferSema::unify(const Type* t, const Type* u) {
     if (auto t_fn = t->isa<FnType>()) {
         if (auto u_fn = u->isa<FnType>()) {
             if (t_fn->size() != 1 && u_fn->size() == 1 && u_fn->arg(0)->isa<UnknownType>()) return unify(t_repr, u_repr)->type;
-            if (u_fn->size() != 1 && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) return unify(t_repr, u_repr)->type;
+            if (u_fn->size() != 1 && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) return unify(u_repr, t_repr)->type;
         }
     }
 

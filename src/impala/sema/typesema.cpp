@@ -61,8 +61,12 @@ public:
     }
 
     void expect_known(const ValueDecl* value_decl) {
-        if (!value_decl->type()->is_known())
-            error(value_decl, "cannot infer type for '%'", value_decl->symbol());
+        if (!value_decl->type()->is_known()) {
+            if (value_decl->symbol() == "return")
+                error(value_decl, "cannot infer a return type, maybe you forgot to mark it as a continuation with '-> !'?");
+            else
+                error(value_decl, "cannot infer type for '%'", value_decl->symbol());
+        }
     }
 
     void expect_type(const Expr* expr, const Type* found, const char* context) {
