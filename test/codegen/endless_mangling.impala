@@ -1,4 +1,4 @@
-fn f(a: int, ret1: fn(int), ret2: fn(int)) {
+fn f(a: int, ret1: fn(int) -> !, ret2: fn(int) -> !) -> ! {
     if a < 42 {
         f(a + 1, |i| -> ! ret2(a+i), |i| -> ! ret1(a-i))
     } else {
@@ -6,8 +6,8 @@ fn f(a: int, ret1: fn(int), ret2: fn(int)) {
     }
 }
 
-extern fn g(i: int, ret: fn(int)) {
-    f(i, ret, |i: int| ret(i))
+extern fn g(i: int) -> int {
+    f(i, return, |i: int| -> ! return(i))
 }
 
 fn main() -> int { 0 }
