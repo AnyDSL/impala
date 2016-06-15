@@ -63,7 +63,7 @@ public:
     void expect_known(const ValueDecl* value_decl) {
         if (!value_decl->type()->is_known()) {
             if (value_decl->symbol() == "return")
-                error(value_decl, "cannot infer a return type, maybe you forgot to mark it as a continuation with '-> !'?");
+                error(value_decl, "cannot infer a return type, maybe you forgot to mark the function with '-> !'?");
             else
                 error(value_decl, "cannot infer type for '%'", value_decl->symbol());
         }
