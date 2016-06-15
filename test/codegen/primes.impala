@@ -4,9 +4,9 @@ fn primes[T](n: int, t: T, body: fn(int, T) -> T) -> T {
     }
     let ret = return;
 
-    body(2, t, |t| {
-        fn loop(i: int, t: T) {
-            fn inner_loop(j: int) {
+    body(2, t, |t| -> ! {
+        fn loop(i: int, t: T) -> ! {
+            fn inner_loop(j: int) -> ! {
                 if j < i {
                     if i % j == 0 {
                         loop(i + 1, t)
@@ -14,7 +14,7 @@ fn primes[T](n: int, t: T, body: fn(int, T) -> T) -> T {
                         inner_loop(j + 1)
                     }
                 }
-                body(i, t, |t| loop(i+1, t))
+                body(i, t, |t| -> ! loop(i+1, t))
             }
             if (i < n) {
                 inner_loop(2)
@@ -29,13 +29,13 @@ fn primes[T](n: int, t: T, body: fn(int, T) -> T) -> T {
 fn main() -> int {
     let main_ret = return;
     let x:int = primes(50, 0, 
-           |p, result, next| next(result + p));
+           |p, result, next| -> ! next(result + p));
     
     primes(100, (0, 42),
-        |p, result, next| {
+        |p, result, next| -> ! {
             next(result)
         },
-        |result : (int, int)| {
+        |result : (int, int)| -> ! {
             main_ret(if result(0) == 0 { 0 } else { 1 })
         }
     )
