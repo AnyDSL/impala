@@ -546,7 +546,7 @@ const Type* FnExpr::check(InferSema& sema) const {
     }
 
     auto body_type = sema.check(body());
-    if (body_type->isa<NoRetType>())
+    if (body_type->isa<NoRetType>() || body_type->isa<UnknownType>())
         return sema.fn_type(param_types);
     else {
         param_types.back() = sema.constrain(params().back(), sema.fn_type(body_type));
