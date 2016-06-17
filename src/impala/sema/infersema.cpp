@@ -496,7 +496,7 @@ void FnDecl::check(InferSema& sema) const {
     Array<const Type*> param_types(num_params());
     size_t e = num_params();
     // TODO remove wild hack to reduce Typedef'd tuple types to argument lists of return continuations
-    if(!is_continuation()) {
+    if (!is_continuation()) {
         auto ret_type = sema.check(param(e - 1));
         if (ret_type->size() == 1) {
             if (auto ret_tuple_type = ret_type->arg(0)->isa<TupleType>()) {
@@ -504,8 +504,12 @@ void FnDecl::check(InferSema& sema) const {
             }
         }
     }
-    for (size_t i = 0; i != e; ++i)
+
+    for (size_t i = 0; i != e; ++i) {
         param_types[i] = sema.check(param(i));
+        if (type())
+            sema.constrain(param(i), fn_type()->arg(i));
+    }
 
     sema.constrain(this, sema.close(num_ast_type_params(), sema.fn_type(param_types)));
 
