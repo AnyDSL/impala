@@ -539,8 +539,11 @@ const Type* FnExpr::check(InferSema& sema) const {
     assert(ast_type_params().empty());
 
     Array<const Type*> param_types(num_params());
-    for (size_t i = 0, e = num_params(); i != e; ++i)
+    for (size_t i = 0, e = num_params(); i != e; ++i) {
         param_types[i] = sema.check(param(i));
+        if (type())
+            sema.constrain(param(i), fn_type()->arg(i));
+    }
 
     auto body_type = sema.check(body());
     if (body_type->isa<NoRetType>())
