@@ -356,7 +356,6 @@ void type_inference(Init& init, const ModContents* mod) {
     for (;sema->todo_; ++i) {
         sema->todo_ = false;
         sema->check(mod);
-        WLOG("%", i);
     }
 
     DLOG("iterations needed for type inference: %", i);
