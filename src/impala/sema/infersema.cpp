@@ -44,8 +44,8 @@ public:
     const Type*& constrain(const Typeable* t, const   Type* u)                { return constrain(t->type_, u); }
 
     /// Obeys subtyping.
-    const Type* coerce(const Type*& dst, const Expr* src);
-    const Type* coerce(const Typeable* dst, const Expr* src) { return coerce(dst->type_, src); }
+    const Type* coerce(const Type* dst, const Expr* src);
+    const Type* coerce(const Typeable* dst, const Expr* src) { return dst->type_ = coerce(dst->type_, src); }
 
     // check wrappers
 
@@ -131,6 +131,11 @@ private:
 };
 
 bool is_subtype(const Type* dst, const Type* src) {
+    assert(dst->is_known() && src->is_known());
+
+    if (dst == src)
+        return true;
+
     if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
         if (auto src_owned_ptr_type = src->isa<OwnedPtrType>())
             return src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space()
@@ -142,7 +147,15 @@ bool is_subtype(const Type* dst, const Type* src) {
             return is_subtype(dst_indefinite_array_type->elem_type(), src_definite_array_type->elem_type());
     }
 
-    return dst == src;
+    if (dst->kind() == src->kind() && dst->size() == src->size()) {
+        bool result = true;
+        // this does not work for types which carry extra stuff like a pointer's addr_space or a definite array's dim
+        for (size_t i = 0, e = dst->size(); result && i != e; ++i)
+            result &= is_subtype(dst->arg(i), src->arg(i));
+        return result;
+    }
+
+    return false;
 }
 
 //------------------------------------------------------------------------------
@@ -225,72 +238,99 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
     return t = unify(t, u);
 }
 
-const Type* InferSema::coerce(const Type*& dst, const Expr* src) {
-    auto t = unify(dst, src->type());
-    if (t == nullptr) {
-        if (is_subtype(dst, src->type()))
-            return check(ImplicitCastExpr::create(src, dst));
-        else
-            return dst = type_error();
-    } else
-        return dst = t;
+const Type* InferSema::coerce(const Type* dst, const Expr* src) {
+    auto src_type = find_type(src);
+    if (src_type != src->type_) {
+        todo_ = true;
+        src->type_ = src_type;
+    }
+    auto t = unify(dst, src_type);
+
+    if (t->is_known() && src_type->is_known() && is_subtype(t, src_type) && t != src_type)
+        ImplicitCastExpr::create(src, t);
+
+    return t;
 }
 
-const Type* InferSema::unify(const Type* t, const Type* u) {
-    assert(t->is_hashed() && u->is_hashed());
+const Type* InferSema::unify(const Type* dst, const Type* src) {
+    assert(dst->is_hashed() && src->is_hashed());
 
-    auto t_repr = find(representative(t));
-    auto u_repr = find(representative(u));
-    t = t_repr->type;
-    u = u_repr->type;
+    auto dst_repr = find(representative(dst));
+    auto src_repr = find(representative(src));
+
+    if (src_repr->type != src || dst_repr->type != dst)
+        todo_ = true;
+
+    dst = dst_repr->type;
+    src = src_repr->type;
 
     // normalise singleton tuples to their element
-    if (u->isa<TupleType>() && u->size() == 1) u = u->arg(0);
-    if (t->isa<TupleType>() && t->size() == 1) t = t->arg(0);
+    if (src->isa<TupleType>() && src->size() == 1) src = src->arg(0);
+    if (dst->isa<TupleType>() && dst->size() == 1) dst = dst->arg(0);
 
     // HACK needed as long as we have this stupid tuple problem
-    if (auto t_fn = t->isa<FnType>()) {
-        if (auto u_fn = u->isa<FnType>()) {
-            if (t_fn->size() != 1 && u_fn->size() == 1 && u_fn->arg(0)->isa<UnknownType>()) {
-                todo_ = true;
-                return unify(t_repr, u_repr)->type;
+    if (auto dst_fn = dst->isa<FnType>()) {
+        if (auto src_fn = src->isa<FnType>()) {
+            if (dst_fn->size() != 1 && src_fn->size() == 1 && src_fn->arg(0)->isa<UnknownType>()) {
+                if (dst_fn->is_known()) {
+                    todo_ = true;
+                    return unify(dst_repr, src_repr)->type;
+                }
             }
 
-            if (u_fn->size() != 1 && t_fn->size() == 1 && t_fn->arg(0)->isa<UnknownType>()) {
-                todo_ = true;
-                return unify(u_repr, t_repr)->type;
+            if (src_fn->size() != 1 && dst_fn->size() == 1 && dst_fn->arg(0)->isa<UnknownType>()) {
+                if (src_fn->is_known()) {
+                    todo_ = true;
+                    return unify(src_repr, dst_repr)->type;
+                }
             }
         }
     }
 
-    if (t == u)              return t;
-    if (t->isa<TypeError>()) return u; // guess the other one
-    if (u->isa<TypeError>()) return t; // dito
-    if (t->isa<NoRetType>()) return t;
-    if (u->isa<NoRetType>()) return u;
+    if (dst == src)            return dst;
+    if (dst->isa<TypeError>()) return src; // guess the other one
+    if (src->isa<TypeError>()) return dst; // dito
 
-    if (t->isa<UnknownType>() && u->isa<UnknownType>())
-        return unify_by_rank(t_repr, u_repr)->type;
-
-    if (t->isa<UnknownType>()) {
+    if (dst->isa<UnknownType>() && src->is_known()) {
         todo_ = true;
-        return unify(u_repr, t_repr)->type;
+        return unify(src_repr, dst_repr)->type;
     }
 
-    if (u->isa<UnknownType>()) {
+    if (src->isa<UnknownType>() && dst->is_known()) {
         todo_ = true;
-        return unify(t_repr, u_repr)->type;
+        return unify(dst_repr, src_repr)->type;
     }
 
-    if (t->kind() == u->kind() && t->size() == u->size()) {
-        Array<const Type*> nargs(t->size());
-        for (size_t i = 0, e = nargs.size(); i != e; ++i)
-            nargs[i] = unify(t->arg(i), u->arg(i));
+    if (dst->isa<UnknownType>() || src->isa<UnknownType>())
+        return dst;
 
-        return t->rebuild(nargs);
+    if (dst->size() == src->size()) {
+        if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
+            if (auto src_owned_ptr_type = src->isa<OwnedPtrType>()) {
+                if (src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space()) {
+                    auto referenced_type = unify(dst_borrowed_ptr_type->referenced_type(), src_owned_ptr_type->referenced_type());
+                    return borrowed_ptr_type(referenced_type, dst_borrowed_ptr_type->addr_space());
+                }
+            }
+        }
+
+        if (auto dst_indefinite_array_type = dst->isa<IndefiniteArrayType>()) {
+            if (auto src_definite_array_type = src->isa<DefiniteArrayType>()) {
+                auto elem_type = unify(dst_indefinite_array_type->elem_type(), src_definite_array_type->elem_type());
+                return indefinite_array_type(elem_type);
+            }
+        }
+
+        if (dst->kind() == src->kind()) {
+            Array<const Type*> nargs(dst->size());
+            for (size_t i = 0, e = nargs.size(); i != e; ++i)
+                nargs[i] = unify(dst->arg(i), src->arg(i));
+
+            return dst->rebuild(nargs);
+        }
     }
 
-    return nullptr;
+    return dst;
 }
 
 //------------------------------------------------------------------------------
@@ -637,7 +677,6 @@ const Type* InfixExpr::check(InferSema& sema) const {
             sema.check(lhs());
             sema.check(rhs());
             sema.coerce(lhs(), rhs());
-            sema.constrain(rhs(), lhs()->type());
             return sema.unit();
         }
     }
@@ -729,13 +768,13 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args) {
     if (args.size() == fn_type->size()) {
         Array<const Type*> types(args.size());
         for (size_t i = 0, e = args.size(); i != e; ++i)
-            types[i] = constrain(args[i], fn_type->arg(i));
+            types[i] = coerce(fn_type->arg(i), args[i]);
         constrain(lhs, this->fn_type(types));
         return type_noret();
     } else if (args.size()+1 == fn_type->size()) {
         Array<const Type*> types(args.size()+1);
         for (size_t i = 0, e = args.size(); i != e; ++i)
-            types[i] = constrain(args[i], fn_type->arg(i));
+            types[i] = coerce(fn_type->arg(i), args[i]);
         types.back() = fn_type->args().back();
         auto result = constrain(lhs, this->fn_type(types));
         if (auto fn_type = result->isa<FnType>())
@@ -799,7 +838,7 @@ const Type* MapExpr::check(InferSema& sema) const {
     if (ltype->isa<FnType>()) {
         return sema.check_call(lhs(), args());
     } else if (ltype->isa<UnknownType>()) {
-        return sema.unknown_type();
+        return sema.unknown_type(); // TODO don't create a new UnknownType here
     } else {
         if (num_args() == 1)
             sema.check(arg(0));
@@ -886,6 +925,7 @@ void LetStmt::check(InferSema& sema) const {
     if (init()) {
         sema.check(init());
         sema.coerce(local(), init());
+        //sema.constrain(local(), init()->type());
     }
 }
 
