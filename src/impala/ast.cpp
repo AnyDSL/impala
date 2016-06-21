@@ -15,17 +15,27 @@ const Param* Param::create(size_t var_handle, const Identifier* identifier, cons
     return param;
 }
 
-void PrefixExpr::create_deref(const Expr* expr) {
+const ImplicitCastExpr* ImplicitCastExpr::create(const Expr* expr, const Type* type) {
+    auto implicit_cast_expr = new ImplicitCastExpr();
+    implicit_cast_expr->type_ = type;
+    implicit_cast_expr->set_loc(expr->loc());
+    insert(implicit_cast_expr, implicit_cast_expr->lhs_, expr);
+    return implicit_cast_expr;
+}
+
+const PrefixExpr* PrefixExpr::create_deref(const Expr* expr) {
     auto deref = new PrefixExpr();
     deref->set_loc(expr->loc());
     deref->kind_ = PrefixExpr::MUL;
     insert(deref, deref->rhs_, expr);
+    return deref;
 }
 
-void TypeAppExpr::create(const Expr* expr) {
+const TypeAppExpr* TypeAppExpr::create(const Expr* expr) {
     auto type_app_expr = new TypeAppExpr();
     type_app_expr->set_loc(expr->loc());
     insert(type_app_expr, type_app_expr->lhs_, expr);
+    return type_app_expr;
 }
 
 const char* Visibility::str() {

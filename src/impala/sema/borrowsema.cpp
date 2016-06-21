@@ -196,7 +196,8 @@ void FieldExpr::check(BorrowSema& sema) const {
 
 void CastExpr::check(BorrowSema& sema) const {
     lhs()->check(sema);
-    ast_type()->check(sema);
+    //ast_type()->check(sema);
+    // TODO
 }
 
 void DefiniteArrayExpr::check(BorrowSema& sema) const {

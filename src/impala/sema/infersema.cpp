@@ -43,6 +43,10 @@ public:
     const Type*& constrain(const Typeable* t, const   Type* u, const Type* v) { return constrain(constrain(t, u), v); }
     const Type*& constrain(const Typeable* t, const   Type* u)                { return constrain(t->type_, u); }
 
+    /// Obeys subtyping.
+    const Type* coerce(const Type*& dst, const Expr* src);
+    const Type* coerce(const Typeable* dst, const Expr* src) { return coerce(dst->type_, src); }
+
     // check wrappers
 
     void check(const ModContents* n) { n->check(*this); }
@@ -105,6 +109,7 @@ private:
     const Type* find(const Type* type);
 
     /// Unifies @p t and @p u. Updates @p todo_ if something changed.
+public: // HACK
     const Type* unify(const Type* t, const Type* u);
 
     /**
@@ -221,6 +226,17 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
     return t = unify(t, u);
 }
 
+const Type* InferSema::coerce(const Type*& dst, const Expr* src) {
+    auto t = unify(dst, src->type());
+    if (t == nullptr) {
+        if (is_subtype(dst, src->type()))
+            return check(ImplicitCastExpr::create(src, dst));
+        else
+            return dst = type_error();
+    } else
+        return dst = t;
+}
+
 const Type* InferSema::unify(const Type* t, const Type* u) {
     assert(t->is_hashed() && u->is_hashed());
 
@@ -275,7 +291,7 @@ const Type* InferSema::unify(const Type* t, const Type* u) {
         return t->rebuild(nargs);
     }
 
-    return t;
+    return nullptr;
 }
 
 //------------------------------------------------------------------------------
@@ -341,6 +357,7 @@ void type_inference(Init& init, const ModContents* mod) {
     for (;sema->todo_; ++i) {
         sema->todo_ = false;
         sema->check(mod);
+        WLOG("%", i);
     }
 
     DLOG("iterations needed for type inference: %", i);
@@ -619,10 +636,10 @@ const Type* InfixExpr::check(InferSema& sema) const {
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
         case SHL_ASGN: case SHR_ASGN:
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN: {
-            auto ltype = sema.check(lhs());
-            auto rtype = sema.check(rhs());
-            sema.constrain(lhs(), rtype);
-            sema.constrain(rhs(), ltype);
+            sema.check(lhs());
+            sema.check(rhs());
+            sema.coerce(lhs(), rhs());
+            sema.constrain(rhs(), lhs()->type());
             return sema.unit();
         }
     }
@@ -634,9 +651,14 @@ const Type* PostfixExpr::check(InferSema& sema) const {
     return sema.check(lhs());
 }
 
-const Type* CastExpr::check(InferSema& sema) const {
+const Type* ExplicitCastExpr::check(InferSema& sema) const {
     sema.check(lhs());
     return sema.check(ast_type());
+}
+
+const Type* ImplicitCastExpr::check(InferSema& sema) const {
+    sema.check(lhs());
+    return type();
 }
 
 const Type* DefiniteArrayExpr::check(InferSema& sema) const {
@@ -863,8 +885,10 @@ void ItemStmt::check(InferSema& sema) const { sema.check(item()); }
 
 void LetStmt::check(InferSema& sema) const {
     sema.check(local());
-    if (init())
-        sema.constrain(local(), sema.check(init()));
+    if (init()) {
+        sema.check(init());
+        sema.coerce(local(), init());
+    }
 }
 
 //------------------------------------------------------------------------------

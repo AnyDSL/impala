@@ -365,7 +365,12 @@ std::ostream& FieldExpr::stream(std::ostream& os) const {
 
 std::ostream& CastExpr::stream(std::ostream& os) const {
     auto open_state = open(os, Token::AS);
-    streamf(os, "% as %", lhs(), ast_type());
+
+    if (auto explicit_cast_expr = isa<ExplicitCastExpr>())
+        streamf(os, "% as %", lhs(), explicit_cast_expr->ast_type());
+    else
+        streamf(os, "% as %", lhs(), type());
+
     return close(os, open_state);
 }
 

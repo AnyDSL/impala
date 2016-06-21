@@ -1071,7 +1071,7 @@ public:
 #include "impala/tokenlist.h"
     };
 
-    static void create_deref(const Expr* child);
+    static const PrefixExpr* create_deref(const Expr* child);
 
     const Expr* rhs() const { return rhs_; }
     Kind kind() const { return kind_; }
@@ -1190,23 +1190,42 @@ private:
 class CastExpr : public Expr {
 public:
     const Expr* lhs() const { return lhs_; }
-    const ASTType* ast_type() const { return ast_type_; }
 
     virtual bool is_lvalue() const override;
 
     virtual std::ostream& stream(std::ostream&) const override;
-    virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
 
 private:
-    virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
+protected:
     AutoPtr<const Expr> lhs_;
+};
+
+class ExplicitCastExpr : public CastExpr {
+public:
+    const ASTType* ast_type() const { return ast_type_; }
+
+    virtual void check(NameSema&) const override;
+
+private:
+    virtual const Type* check(InferSema&) const override;
+
     AutoPtr<const ASTType> ast_type_;
 
     friend class Parser;
+};
+
+class ImplicitCastExpr : public CastExpr {
+public:
+    static const ImplicitCastExpr* create(const Expr*, const Type*);
+
+    virtual void check(NameSema&) const override { THORIN_UNREACHABLE; }
+
+private:
+    virtual const Type* check(InferSema&) const override;
 };
 
 class DefiniteArrayExpr : public Expr, public Args {
@@ -1338,7 +1357,7 @@ private:
 
 class TypeAppExpr : public Expr {
 public:
-    static void create(const Expr*);
+    static const TypeAppExpr* create(const Expr*);
 
     const Expr* lhs() const { return lhs_; }
     const ASTTypes& ast_type_args() const { return ast_type_args_; }

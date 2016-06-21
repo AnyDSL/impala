@@ -436,8 +436,11 @@ template <typename F, typename T>
 bool symmetric(F f, T a, T b) { return f(a, b) || f(b, a); }
 
 void CastExpr::check(TypeSema& sema) const {
+    if (auto explicit_cast_expr = isa<ExplicitCastExpr>())
+        sema.check(explicit_cast_expr->ast_type());
+
     auto src_type = sema.check(lhs());
-    auto dst_type = sema.check(ast_type());
+    auto dst_type = type();
 
     auto ptr_to_ptr     = [&] (const Type* a, const Type* b) { return a->isa<PtrType>() && b->isa<PtrType>(); };
     auto int_to_int     = [&] (const Type* a, const Type* b) { return is_int(a)         && is_int(b);         };

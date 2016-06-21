@@ -325,7 +325,7 @@ void FieldExpr::check(NameSema& sema) const {
     // don't check symbol here as it depends on lhs' type - must be done in TypeSema
 }
 
-void CastExpr::check(NameSema& sema) const {
+void ExplicitCastExpr::check(NameSema& sema) const {
     lhs()->check(sema);
     ast_type()->check(sema);
 }

@@ -947,7 +947,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
         }
         case Token::AS: {
             lex();
-            auto expr = new CastExpr();
+            auto expr = new ExplicitCastExpr();
             dock(expr->lhs_, lhs);
             expr->ast_type_ = parse_type();
             expr->set_loc(lhs->loc().begin(), prev_loc().end());
