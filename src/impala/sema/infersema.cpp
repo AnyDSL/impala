@@ -109,7 +109,6 @@ private:
     const Type* find(const Type* type);
 
     /// Unifies @p t and @p u. Updates @p todo_ if something changed.
-public: // HACK
     const Type* unify(const Type* t, const Type* u);
 
     /**
