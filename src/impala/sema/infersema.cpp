@@ -29,7 +29,6 @@ public:
     /**
      * Gets the representative of @p type.
      * Initializes @p type with @p UnknownType if @p type is @c nullptr.
-     * Updates @p todo_ if something changed.
      */
     const Type* find_type(const Type*& type);
     const Type* find_type(const Typeable* typeable) { return find_type(typeable->type_); }
@@ -37,7 +36,6 @@ public:
     /**
      * @c unify(t, u).
      * Initializes @p t with @p UnknownType if @p type is @c nullptr.
-     * Updates @p todo_ if something changed.
      */
     const Type*& constrain(const    Type*& t, const   Type* u);
     const Type*& constrain(const Typeable* t, const   Type* u, const Type* v) { return constrain(constrain(t, u), v); }
@@ -108,7 +106,7 @@ private:
     Representative* find(Representative* repr);
     const Type* find(const Type* type);
 
-    /// Unifies @p t and @p u. Updates @p todo_ if something changed.
+    /// Unifies @p t and @p u.
     const Type* unify(const Type* t, const Type* u);
 
     /**
@@ -218,32 +216,22 @@ const Type* InferSema::close(int num_lambdas, const Type* body) {
  */
 
 const Type* InferSema::find_type(const Type*& type) {
-    if (type == nullptr) {
-        todo_ = true;
+    if (type == nullptr)
         return type = unknown_type();
-    }
-
-    auto otype = type;
-    type = find(otype);
-    todo_ |= otype != type;
-    return type;
+    return type = find(type);
 }
 
 const Type*& InferSema::constrain(const Type*& t, const Type* u) {
-    if (t == nullptr) {
-        todo_ = true;
+    if (t == nullptr)
         return t = find(u);
-    }
-
     return t = unify(t, u);
 }
 
 const Type* InferSema::coerce(const Type* dst, const Expr* src) {
     auto src_type = find_type(src);
-    if (src_type != src->type_) {
-        todo_ = true;
+    if (src_type != src->type_)
         src->type_ = src_type;
-    }
+
     auto t = unify(dst, src_type);
 
     if (t->is_known() && src_type->is_known() && is_subtype(t, src_type) && t != src_type)
@@ -258,9 +246,6 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     auto dst_repr = find(representative(dst));
     auto src_repr = find(representative(src));
 
-    if (src_repr->type != src || dst_repr->type != dst)
-        todo_ = true;
-
     dst = dst_repr->type;
     src = src_repr->type;
 
@@ -272,17 +257,13 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     if (auto dst_fn = dst->isa<FnType>()) {
         if (auto src_fn = src->isa<FnType>()) {
             if (dst_fn->size() != 1 && src_fn->size() == 1 && src_fn->arg(0)->isa<UnknownType>()) {
-                if (dst_fn->is_known()) {
-                    todo_ = true;
+                if (dst_fn->is_known())
                     return unify(dst_repr, src_repr)->type;
-                }
             }
 
             if (src_fn->size() != 1 && dst_fn->size() == 1 && dst_fn->arg(0)->isa<UnknownType>()) {
-                if (src_fn->is_known()) {
-                    todo_ = true;
+                if (src_fn->is_known())
                     return unify(src_repr, dst_repr)->type;
-                }
             }
         }
     }
@@ -291,15 +272,8 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     if (dst->isa<TypeError>()) return src; // guess the other one
     if (src->isa<TypeError>()) return dst; // dito
 
-    if (dst->isa<UnknownType>() && src->is_known()) {
-        todo_ = true;
-        return unify(src_repr, dst_repr)->type;
-    }
-
-    if (src->isa<UnknownType>() && dst->is_known()) {
-        todo_ = true;
-        return unify(dst_repr, src_repr)->type;
-    }
+    if (dst->isa<UnknownType>() && src->is_known()) return unify(src_repr, dst_repr)->type;
+    if (src->isa<UnknownType>() && dst->is_known()) return unify(dst_repr, src_repr)->type;
 
     if (dst->isa<UnknownType>() || src->isa<UnknownType>())
         return dst;
@@ -351,8 +325,10 @@ auto InferSema::representative(const Type* type) -> Representative* {
 }
 
 auto InferSema::find(Representative* repr) -> Representative* {
-    if (repr->parent != repr)
+    if (repr->parent != repr) {
+        todo_ = true;
         repr->parent = find(repr->parent);
+    }
     return repr->parent;
 }
 
@@ -368,6 +344,7 @@ auto InferSema::unify(Representative* x, Representative* y) -> Representative* {
     if (x == y)
         return x;
     ++x->rank;
+    todo_ = true;
     return y->parent = x;
 }
 
