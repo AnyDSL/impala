@@ -357,9 +357,14 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             return ptr;
         }
         case AND: {
-            auto var = cg.lemit(rhs());
-            assert(var.kind() == Value::PtrRef);
-            return var.def();
+            if (rhs()->is_lvalue()) {
+                auto var = cg.lemit(rhs());
+                assert(var.kind() == Value::PtrRef);
+                return var.def();
+            }
+            auto def = cg.remit(rhs());
+            //return cg.world().slot(cg.convert(, cg.frame(), handle(), loc(), symbol().str()));
+            return cg.world().global(def, loc(), false);
         }
         case RUN: return cg.remit(rhs(), MapExpr::Run, loc());
         case HLT: return cg.remit(rhs(), MapExpr::Hlt, loc());
