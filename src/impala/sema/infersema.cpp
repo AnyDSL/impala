@@ -233,7 +233,7 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
     auto t = unify(dst, src->type_);
 
     if (t->is_known() && src->type()->is_known()) {
-        if (t->isa<BorrowedPtrType>() && ! src->type()->isa<BorrowedPtrType>()) {
+        if (t->isa<BorrowedPtrType>() && !src->type()->isa<PtrType>()) {
             src = PrefixExpr::create_addrof(src);
             check(src);
         }
