@@ -362,10 +362,17 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
                 assert(var.kind() == Value::PtrRef);
                 return var.def();
             }
+
             auto def = cg.remit(rhs());
-            //return cg.world().slot(cg.convert(, cg.frame(), handle(), loc(), symbol().str()));
-            return cg.world().global(def, loc(), false);
+            if (def->is_const())
+                return cg.world().global(def, loc(), false);
+
+            auto slot = cg.world().slot(cg.convert(rhs()->type()), cg.frame(), loc());
+            cg.store(slot, def, loc());
+            return slot;
+
         }
+
         case RUN: return cg.remit(rhs(), MapExpr::Run, loc());
         case HLT: return cg.remit(rhs(), MapExpr::Hlt, loc());
         default:  return cg.lemit(this).load(loc());
