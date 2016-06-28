@@ -323,11 +323,7 @@ const Def* StrExpr::remit(CodeGen& cg) const {
     for (size_t i = 0, e = args.size(); i != e; ++i)
         args[i] = cg.world().literal_pu8(values_[i], loc());
 
-    auto str = cg.world().definite_array(args, loc());;
-    if (is_used_as_global())
-        return cg.world().global(str, loc());
-
-    return str;
+    return cg.world().definite_array(args, loc());;
 }
 
 const Def* CastExpr::remit(CodeGen& cg) const {
