@@ -24,7 +24,8 @@ int main() {
         auto id = (llvm::Intrinsic::ID) i;
         std::string llvm_name = llvm::Intrinsic::getName(id);
         // skip "experimental" intrinsics
-        if (llvm_name.find("experimental")!=std::string::npos) continue;
+        if (llvm_name.find("experimental")!=std::string::npos)
+            continue;
         assert(llvm_name.substr(0, 5) == "llvm.");
         std::string name = llvm_name.substr(5); // remove 'llvm.' prefix
         // replace '.' with '_'
@@ -42,9 +43,9 @@ int main() {
                 stream_list(std::cout, fn->args().skip_back(fn->size()-1), [&](const impala::Type* type) { std::cout << type; }, "(", ")");
                 std::cout << " -> ";
                 if (fn->return_type()->isa<impala::NoRetType>())
-                    std::cout << "();";
+                    std::cout << " -> !;";
                 else
-                    std::cout << fn->return_type() << ';';
+                    std::cout << " -> " << fn->return_type() << ';';
             }
         }
     }
@@ -63,6 +64,7 @@ const impala::Type* llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
         }
     }
 
+    if (type->isHalfTy())   return tt.type_f16();
     if (type->isFloatTy())  return tt.type_f32();
     if (type->isDoubleTy()) return tt.type_f64();
 
@@ -78,7 +80,7 @@ const impala::Type* llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
         auto ret = fn->getReturnType()->isVoidTy() ? (const impala::Type*)tt.tuple_type({}) : llvm2impala(tt, fn->getReturnType());
         valid &= bool(ret);
         if (valid) {
-            param_types.back() = fn->getReturnType()->isVoidTy() ? tt.tuple_type({}) : tt.tuple_type({ret});
+            param_types.back() = fn->getReturnType()->isVoidTy() ? tt.fn_type({}) : tt.fn_type({ret});
             return tt.fn_type(param_types);
         }
     }
