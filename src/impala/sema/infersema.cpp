@@ -692,7 +692,7 @@ const Type* DefiniteArrayExpr::check(InferSema& sema) const {
         sema.check(arg);
 
     for (const auto& arg : args())
-        sema.constrain(expected_elem_type, sema.constrain(arg, expected_elem_type));
+        expected_elem_type = sema.coerce(expected_elem_type, arg);
 
     return sema.definite_array_type(expected_elem_type, num_args());
 }
@@ -710,7 +710,7 @@ const Type* SimdExpr::check(InferSema& sema) const {
         sema.check(arg);
 
     for (const auto& arg : args())
-        sema.constrain(expected_elem_type, sema.constrain(arg, expected_elem_type));
+        expected_elem_type = sema.coerce(expected_elem_type, arg);
 
     return sema.simd_type(expected_elem_type, num_args());
 }
