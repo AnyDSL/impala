@@ -191,7 +191,7 @@ Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
 
     if (is_mut()) {
         if (is_address_taken())
-            value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), handle(), loc(), symbol().str()));
+            value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), loc(), symbol().str()));
         else
             value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str());
 
