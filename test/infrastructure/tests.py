@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import sys, os, difflib, shutil, imp, tempfile
 from .timed_process import CompileProcess, RuntimeProcess
 from .valgrindxml import ValgrindXML
+import traceback
 
 class Test(object):
     """Superclass for all the tests."""
@@ -82,8 +83,12 @@ class ValgrindTest(Test):
             return False
 
 def diff_output(output, expected):
-    olines = output.splitlines(1)
-    elines = expected.splitlines(1)
+    try:
+        olines = output.decode('utf-8').splitlines(1)
+        elines = expected.decode('utf-8').splitlines(1)
+    except UnicodeDecodeError:
+        print("Output/Expected output not UTF-8, comparing as binary")
+        return output == expected
 
     diff = difflib.Differ()
     fails = 0
@@ -114,18 +119,18 @@ class CompilerOutputTest(Test):
         return self.checkBasics(p) and self.checkOutput(p)
 
     def checkOutput(self, p):
-        decoded = p.output.decode()
+        output = p.output
         if p.success() != self.positive:
             print("[FAIL] "+os.path.join(self.basedir, self.srcfile))
-            print("Output: "+decoded)
+            print("Output: "+p.output)
             print
             return False
 
         if self.result is None:
             return True
 
-        with open(os.path.join(self.basedir, self.result), 'r') as f:
-            return diff_output(decoded, f.read())
+        with open(os.path.join(self.basedir, self.result), 'rb') as f:
+            return diff_output(output, f.read())
 
 class InvokeTest(Test):
     """Superclass tests which work on a single file and compare the output."""
@@ -214,11 +219,11 @@ class InvokeTest(Test):
         if self.output_file is not None:
             if self.compare_file is None:
                 #Image.open();
-                with open(os.path.join(self.basedir, self.output_file), 'r') as f:
+                with open(os.path.join(self.basedir, self.output_file), 'rb') as f:
                     return diff_output(proc.output, f.read())
             else:
-                with open(self.compare_file, 'r') as f:
-                    with open(os.path.join(self.basedir, self.output_file), 'r') as g:
+                with open(self.compare_file, 'rb') as f:
+                    with open(os.path.join(self.basedir, self.output_file), 'rb') as g:
                         return diff_output(f.read(), g.read())
         return True
 
@@ -229,7 +234,7 @@ class InvokeTest(Test):
     def compilationSuccess(self, p):
         if not p.success():
             print("\n[FAIL] "+os.path.join(self.basedir, self.srcfile))
-            print("Output: "+p.output.decode())
+            print("Output: "+p.output.decode('utf-8'))
             return False
         return True
 
