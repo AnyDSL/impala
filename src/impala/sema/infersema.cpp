@@ -228,14 +228,18 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
 }
 
 const Type* InferSema::coerce(const Type* dst, const Expr* src) {
-    auto src_type = find_type(src);
-    if (src_type != src->type_)
-        src->type_ = src_type;
+    src->type_ = find_type(src);
 
-    auto t = unify(dst, src_type);
+    auto t = unify(dst, src->type_);
 
-    if (t->is_known() && src_type->is_known() && is_subtype(t, src_type) && t != src_type)
-        ImplicitCastExpr::create(src, t);
+    if (t->is_known() && src->type()->is_known()) {
+        if (t->isa<BorrowedPtrType>() && ! src->type()->isa<BorrowedPtrType>()) {
+            src = PrefixExpr::create_addrof(src);
+            check(src);
+        }
+        if (is_subtype(t, src->type_) && t != src->type())
+            ImplicitCastExpr::create(src, t);
+    }
 
     return t;
 }

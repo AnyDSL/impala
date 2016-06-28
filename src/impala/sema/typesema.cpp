@@ -342,7 +342,6 @@ void PrefixExpr::check(TypeSema& sema) const {
 
     switch (kind()) {
         case AND:
-            sema.expect_lvalue(rhs(), "as unary '&' operand");
             rhs()->take_address();
             return;
         case TILDE:

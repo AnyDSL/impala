@@ -1071,7 +1071,9 @@ public:
 #include "impala/tokenlist.h"
     };
 
-    static const PrefixExpr* create_deref(const Expr* child);
+    static const PrefixExpr* create(const Expr* child, const Kind kind);
+    static const PrefixExpr* create_deref(const Expr* child) { return create(child, MUL); }
+    static const PrefixExpr* create_addrof(const Expr* child) { return create(child, AND); }
 
     const Expr* rhs() const { return rhs_; }
     Kind kind() const { return kind_; }

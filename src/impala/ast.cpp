@@ -23,10 +23,10 @@ const ImplicitCastExpr* ImplicitCastExpr::create(const Expr* expr, const Type* t
     return implicit_cast_expr;
 }
 
-const PrefixExpr* PrefixExpr::create_deref(const Expr* expr) {
+const PrefixExpr* PrefixExpr::create(const Expr* expr, const Kind kind) {
     auto deref = new PrefixExpr();
     deref->set_loc(expr->loc());
-    deref->kind_ = PrefixExpr::MUL;
+    deref->kind_ = kind;
     insert(deref, deref->rhs_, expr);
     return deref;
 }
