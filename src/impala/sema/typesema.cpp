@@ -50,6 +50,7 @@ public:
     IMPALA_EXPECT(num,         is_int(t) || is_float(t),               "number type")
     IMPALA_EXPECT(num_or_bool, is_int(t) || is_float(t) || is_bool(t), "number or boolean type")
     IMPALA_EXPECT(ptr,         t->isa<PtrType>(),                      "pointer type")
+    IMPALA_EXPECT(num_or_bool_or_ptr, is_int(t) || is_float(t) || is_bool(t) || t->isa<PtrType>(), "number or boolean or pointer type")
 
     template<typename... Args>
     void expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
@@ -337,8 +338,8 @@ void InfixExpr::check(TypeSema& sema) const {
         case EQ: case NE:
         case LT: case GT:
         case LE: case GE:
-            sema.expect_num_or_bool(lhs(),  "left-hand side of binary '%'", tok2str(this));
-            sema.expect_num_or_bool(rhs(), "right-hand side of binary '%'", tok2str(this));
+            sema.expect_num_or_bool_or_ptr(lhs(),  "left-hand side of binary '%'", tok2str(this));
+            sema.expect_num_or_bool_or_ptr(rhs(), "right-hand side of binary '%'", tok2str(this));
             return;
         case ADD: case SUB:
         case MUL: case DIV: case REM:
