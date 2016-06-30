@@ -577,6 +577,7 @@ void ForExpr::check(TypeSema& sema) const {
         auto ltype = sema.check(map->lhs());
         for (const auto& arg : map->args())
             sema.check(arg);
+        sema.check(fn_expr());
 
         if (auto fn_for = ltype->isa<FnType>()) {
             if (fn_for->num_ops() != 0) {
