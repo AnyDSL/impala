@@ -98,7 +98,7 @@ protected:
     std::ostream& stream_ptr_type(std::ostream&, std::string prefix, int addr_space, const Type* ref_type) const;
 
 public:
-    const Type* referenced_type() const { return arg(0); }
+    const Type* referenced_type() const { return op(0); }
     int addr_space() const { return addr_space_; }
 
     virtual std::ostream& stream(std::ostream&) const override;
@@ -155,8 +155,8 @@ private:
 
 class FnType : public Type {
 private:
-    FnType(TypeTable& typetable, Types args)
-        : Type(typetable, Kind_fn, args)
+    FnType(TypeTable& typetable, Types ops)
+        : Type(typetable, Kind_fn, ops)
     {
         ++order_;
     }
@@ -180,7 +180,7 @@ protected:
     {}
 
 public:
-    const Type* elem_type() const { return arg(0); }
+    const Type* elem_type() const { return op(0); }
 };
 
 class IndefiniteArrayType : public ArrayType {

@@ -511,7 +511,7 @@ void StructExpr::check(TypeSema& sema) const {
                 elem.field_decl_ = field_decl;
 
                 if (!thorin::visit(done, field_decl))
-                    sema.expect_type(elem.expr(), struct_type->arg(field_decl->index()), "initialization type for field");
+                    sema.expect_type(elem.expr(), struct_type->op(field_decl->index()), "initialization type for field");
                 else
                     error(elem.expr(), "field '%' specified more than once", elem.symbol());
             } else
@@ -576,7 +576,7 @@ void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
 
     if (fn_type->size() == args.size() || fn_type->size() == args.size() + 1) {
         for (size_t i = 0; i < args.size(); i++)
-            expect_type(args[i], fn_type->arg(i), "argument type");
+            expect_type(args[i], fn_type->op(i), "argument type");
     } else
         error(expr, "incorrect number of arguments in function application: got %, expected %", args.size(), fn_type->size() - 1);
 }
@@ -622,7 +622,7 @@ void ForExpr::check(TypeSema& sema) const {
 
         if (auto fn_for = lhst->isa<FnType>()) {
             if (fn_for->size() != 0) {
-                if (fn_for->args().back()->isa<FnType>()) {
+                if (fn_for->ops().back()->isa<FnType>()) {
                     // copy over args and check call
                     Array<const Expr*> args(map->args().size()+1);
                     *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();

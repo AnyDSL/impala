@@ -82,7 +82,7 @@ public:
         return thorin_type(type);
     }
 
-    void convert_args(const Type*, std::vector<const thorin::Type*>& nargs);
+    void convert_ops(const Type*, std::vector<const thorin::Type*>& nargs);
     const thorin::Type* convert_rec(const Type*);
 
     const thorin::Type*& thorin_type(const Type* type) { return impala2thorin_[type]; }
@@ -97,9 +97,9 @@ public:
  * Type
  */
 
-void CodeGen::convert_args(const Type* type, std::vector<const thorin::Type*>& nargs) {
-    for (auto arg : type->args())
-        nargs.push_back(convert(arg));
+void CodeGen::convert_ops(const Type* type, std::vector<const thorin::Type*>& nops) {
+    for (auto op : type->ops())
+        nops.push_back(convert(op));
 }
 
 const thorin::Type* CodeGen::convert_rec(const Type* type) {
@@ -115,20 +115,20 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
             default: THORIN_UNREACHABLE;
         }
     } else if (auto fn_type = type->isa<FnType>()) {
-        std::vector<const thorin::Type*> nargs;
-        nargs.push_back(world().mem_type());
-        convert_args(fn_type, nargs);
-        return world().fn_type(nargs);
+        std::vector<const thorin::Type*> nops;
+        nops.push_back(world().mem_type());
+        convert_ops(fn_type, nops);
+        return world().fn_type(nops);
     } else if (auto tuple_type = type->isa<TupleType>()) {
-        std::vector<const thorin::Type*> nargs;
-        convert_args(tuple_type, nargs);
-        return world().tuple_type(nargs);
+        std::vector<const thorin::Type*> nops;
+        convert_ops(tuple_type, nops);
+        return world().tuple_type(nops);
     } else if (auto struct_type = type->isa<StructType>()) {
         thorin_struct_type(struct_type) = world().struct_type(struct_type->struct_decl()->symbol().str(), struct_type->size());
         thorin_type(type) = thorin_struct_type(struct_type);
         size_t i = 0;
-        for (auto arg : struct_type->args())
-            thorin_struct_type(struct_type)->set(i++, convert(arg));
+        for (auto op : struct_type->ops())
+            thorin_struct_type(struct_type)->set(i++, convert(op));
         thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
         return thorin_struct_type(struct_type);
     } else if (auto ptr_type = type->isa<PtrType>()) {

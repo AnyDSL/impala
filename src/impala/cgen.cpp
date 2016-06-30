@@ -195,8 +195,8 @@ private:
 
         // Read each argument in turn and record the structures that have to be exported
         auto fn_type = fn_decl->fn_type();
-        for (auto arg : fn_type->args()) {
-            struct_from_type(arg, [this] (const StructDecl* decl) {
+        for (auto op : fn_type->ops()) {
+            struct_from_type(op, [this] (const StructDecl* decl) {
                 export_structs.insert(decl);
             });
         }
@@ -295,7 +295,7 @@ public:
             // Generate all arguments except the last one which is the implicit continuation
             for (size_t i = 0, e = fn_type->size() - 1; i != e; ++i) {
                 std::string ctype_pref, ctype_suf;
-                if (!ctype_from_impala(fn_type->arg(i), ctype_pref, ctype_suf)) {
+                if (!ctype_from_impala(fn_type->op(i), ctype_pref, ctype_suf)) {
                     error(fn, "function argument type not exportable");
                     return false;
                 }

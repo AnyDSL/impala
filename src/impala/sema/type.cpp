@@ -32,8 +32,8 @@ bool is_void(const Type* type) {
 
 bool FnType::is_returning() const {
     bool ret = false;
-    for (auto arg : args()) {
-        switch (arg->order()) {
+    for (auto op : ops()) {
+        switch (op->order()) {
             case 0: continue;
             case 1:
                 if (!ret) {
@@ -49,10 +49,10 @@ bool FnType::is_returning() const {
 
 const Type* FnType::return_type() const {
     if (!empty()) {
-        if (auto fn = args().back()->isa<FnType>()) {
+        if (auto fn = ops().back()->isa<FnType>()) {
             if (fn->size() == 1)
-                return fn->args().front();
-            return typetable().tuple_type(fn->args());
+                return fn->ops().front();
+            return typetable().tuple_type(fn->ops());
         }
     }
     return typetable().type_noret();
@@ -107,9 +107,9 @@ std::ostream& FnType::stream(std::ostream& os) const {
     os << "fn";
     //auto ret_type = return_type();
     //if (ret_type->isa<NoRetType>())
-        return stream_list(os, args(), [&](const Type* type) { os << type; }, "(", ")");
+        return stream_list(os, ops(), [&](const Type* type) { os << type; }, "(", ")");
 
-    //return streamf(os, "(%) -> %", stream_list(args().skip_back(), [&](const Type* type) { os << type; }), ret_type);
+    //return streamf(os, "(%) -> %", stream_list(ops().skip_back(), [&](const Type* type) { os << type; }), ret_type);
 }
 
 std::ostream& Var::stream(std::ostream& os) const {
@@ -136,7 +136,7 @@ std::ostream& StructType::stream(std::ostream& os) const { return os << struct_d
 //}
 
 std::ostream& TupleType::stream(std::ostream& os) const {
-    return stream_list(os, args(), [&](const Type* type) { os << type; }, "(", ")");
+    return stream_list(os, ops(), [&](const Type* type) { os << type; }, "(", ")");
 }
 
 //------------------------------------------------------------------------------
@@ -146,13 +146,13 @@ std::ostream& TupleType::stream(std::ostream& os) const {
  */
 
 const Type* PrimType           ::vrebuild(TypeTable& to, Types     ) const { return to.prim_type(primtype_kind()); }
-const Type* FnType             ::vrebuild(TypeTable& to, Types args) const { return to.   fn_type(args); }
-const Type* DefiniteArrayType  ::vrebuild(TypeTable& to, Types args) const { return to.  definite_array_type(args[0], dim()); }
-const Type* SimdType           ::vrebuild(TypeTable& to, Types args) const { return to.            simd_type(args[0], dim()); }
-const Type* IndefiniteArrayType::vrebuild(TypeTable& to, Types args) const { return to.indefinite_array_type(args[0]); }
-const Type* BorrowedPtrType    ::vrebuild(TypeTable& to, Types args) const { return to.borrowed_ptr_type(args[0], addr_space()); }
-const Type* MutPtrType         ::vrebuild(TypeTable& to, Types args) const { return to.     mut_ptr_type(args[0], addr_space()); }
-const Type* OwnedPtrType       ::vrebuild(TypeTable& to, Types args) const { return to.   owned_ptr_type(args[0], addr_space()); }
+const Type* FnType             ::vrebuild(TypeTable& to, Types ops) const { return to.   fn_type(ops); }
+const Type* DefiniteArrayType  ::vrebuild(TypeTable& to, Types ops) const { return to.  definite_array_type(ops[0], dim()); }
+const Type* SimdType           ::vrebuild(TypeTable& to, Types ops) const { return to.            simd_type(ops[0], dim()); }
+const Type* IndefiniteArrayType::vrebuild(TypeTable& to, Types ops) const { return to.indefinite_array_type(ops[0]); }
+const Type* BorrowedPtrType    ::vrebuild(TypeTable& to, Types ops) const { return to.borrowed_ptr_type(ops[0], addr_space()); }
+const Type* MutPtrType         ::vrebuild(TypeTable& to, Types ops) const { return to.     mut_ptr_type(ops[0], addr_space()); }
+const Type* OwnedPtrType       ::vrebuild(TypeTable& to, Types ops) const { return to.   owned_ptr_type(ops[0], addr_space()); }
 const Type* NoRetType          ::vrebuild(TypeTable&,    Types     ) const { return this; }
 const Type* UnknownType        ::vrebuild(TypeTable&,    Types     ) const { return this; }
 
@@ -187,7 +187,7 @@ const Type* OwnedPtrType::vreduce(int depth, const Type* type, Type2Type& map) c
 }
 
 const Type* FnType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return typetable().fn_type(reduce_args(depth, type, map));
+    return typetable().fn_type(reduce_ops(depth, type, map));
 }
 
 const Type* PrimType   ::vreduce(int, const Type*, Type2Type&) const { return this; }
