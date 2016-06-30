@@ -528,7 +528,7 @@ void MapExpr::check(TypeSema& sema) const {
 }
 
 void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
-    auto fn_type = check(expr)->as<FnType>();
+    auto fn_type = expr->type()->as<FnType>();
 
     if (fn_type->num_ops() == args.size() || fn_type->num_ops() == args.size() + 1) {
         for (size_t i = 0; i < args.size(); i++)
@@ -574,9 +574,11 @@ void ForExpr::check(TypeSema& sema) const {
             forexpr = prefix->rhs();
 
     if (auto map = forexpr->isa<MapExpr>()) {
-        const Type* lhst = sema.check(map->lhs());
+        auto ltype = sema.check(map->lhs());
+        for (const auto& arg : map->args())
+            sema.check(arg);
 
-        if (auto fn_for = lhst->isa<FnType>()) {
+        if (auto fn_for = ltype->isa<FnType>()) {
             if (fn_for->num_ops() != 0) {
                 if (fn_for->ops().back()->isa<FnType>()) {
                     // copy over args and check call
