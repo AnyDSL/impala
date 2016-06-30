@@ -165,6 +165,7 @@ public:
     Visibility parse_visibility();
     u64 parse_integer(const char* what);
     int parse_addr_space();
+    thorin::u8 char_value(const char*& p);
 
     // paths
     const Path* parse_path();
@@ -1102,17 +1103,59 @@ const LiteralExpr* Parser::parse_literal_expr() {
     }
 }
 
+thorin::u8 Parser::char_value(const char*& p) {
+    thorin::u8 value = 0;
+    if (*p++ == '\\') {
+        switch (*p++) {
+        case '0':  value = '\0'; break;
+        case 'n':  value = '\n'; break;
+        case 't':  value = '\t'; break;
+        case '\'': value = '\''; break;
+        case '\"': value = '\"'; break;
+        case '\\': value = '\\'; break;
+        default:
+            // TODO make location precise inside strings, reduce redundancy for single chars
+            impala::error(la().loc(), "expected valid escape sequence, got '\\%' while parsing %", *(p-1), la());
+        }
+    } else
+        value = thorin::u8(*(p-1));
+
+    return value;
+}
+
 const CharExpr* Parser::parse_char_expr() {
     auto symbol = la().symbol();
-    return new CharExpr(lex().loc(), symbol);
+    const char* p = symbol.str();
+    assert(*p == '\'');
+    ++p;
+    thorin::u8 value = 0;
+    if (*p != '\'') {
+        value = char_value(p);
+
+        if (*p++ != '\'')
+            error("single character", "character constant");
+        else
+            assert(*p == '\0');
+    } else
+        error("a character", "character constant");
+
+    return new CharExpr(lex().loc(), symbol, value);
 }
 
 const StrExpr* Parser::parse_str_expr() {
     auto str_expr = loc(new StrExpr());
     do {
         str_expr->symbols_.emplace_back(la().symbol());
+
+        const char* p = str_expr->symbols_.back().str();
+        assert(*p == '"');
+        ++p;
+        while (*p != '"')
+            str_expr->values_.push_back(char_value(p));
+        assert(p[1] == '\0');
         lex();
     } while (la() == Token::LIT_str);
+    str_expr->values_.push_back('\0');
     return str_expr;
 }
 

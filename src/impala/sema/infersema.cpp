@@ -572,8 +572,13 @@ void ImplItem::check(InferSema& /*sema*/) const {}
 
 const Type* EmptyExpr::check(InferSema& sema) const { return sema.unit(); }
 const Type* LiteralExpr::check(InferSema& sema) const { return sema.prim_type(literal2type()); }
-const Type* CharExpr::check(InferSema& sema) const { return sema.type_u8(); }
-const Type* StrExpr::check(InferSema& sema) const { return sema.definite_array_type(sema.type_u8(), values_.size()); }
+const Type* CharExpr::check(InferSema& sema) const {
+    return sema.type_u8();
+}
+
+const Type* StrExpr::check(InferSema& sema) const {
+    return sema.definite_array_type(sema.type_u8(), values_.size());
+}
 
 const Type* FnExpr::check(InferSema& sema) const {
     assert(ast_type_params().empty());
