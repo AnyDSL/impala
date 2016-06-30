@@ -364,7 +364,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             }
 
             auto def = cg.remit(rhs());
-            if (def->is_const())
+            if (is_const(def))
                 return cg.world().global(def, loc(), false);
 
             auto slot = cg.world().slot(cg.convert(rhs()->type()), cg.frame(), loc());
