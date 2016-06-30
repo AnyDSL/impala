@@ -145,10 +145,10 @@ bool is_subtype(const Type* dst, const Type* src) {
             return is_subtype(dst_indefinite_array_type->elem_type(), src_definite_array_type->elem_type());
     }
 
-    if (dst->kind() == src->kind() && dst->size() == src->size()) {
+    if (dst->kind() == src->kind() && dst->num_ops() == src->num_ops()) {
         bool result = true;
         // this does not work for types which carry extra stuff like a pointer's addr_space or a definite array's dim
-        for (size_t i = 0, e = dst->size(); result && i != e; ++i)
+        for (size_t i = 0, e = dst->num_ops(); result && i != e; ++i)
             result &= is_subtype(dst->op(i), src->op(i));
         return result;
     }
@@ -254,18 +254,18 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     src = src_repr->type;
 
     // normalise singleton tuples to their element
-    if (src->isa<TupleType>() && src->size() == 1) src = src->op(0);
-    if (dst->isa<TupleType>() && dst->size() == 1) dst = dst->op(0);
+    if (src->isa<TupleType>() && src->num_ops() == 1) src = src->op(0);
+    if (dst->isa<TupleType>() && dst->num_ops() == 1) dst = dst->op(0);
 
     // HACK needed as long as we have this stupid tuple problem
     if (auto dst_fn = dst->isa<FnType>()) {
         if (auto src_fn = src->isa<FnType>()) {
-            if (dst_fn->size() != 1 && src_fn->size() == 1 && src_fn->op(0)->isa<UnknownType>()) {
+            if (dst_fn->num_ops() != 1 && src_fn->num_ops() == 1 && src_fn->op(0)->isa<UnknownType>()) {
                 if (dst_fn->is_known())
                     return unify(dst_repr, src_repr)->type;
             }
 
-            if (src_fn->size() != 1 && dst_fn->size() == 1 && dst_fn->op(0)->isa<UnknownType>()) {
+            if (src_fn->num_ops() != 1 && dst_fn->num_ops() == 1 && dst_fn->op(0)->isa<UnknownType>()) {
                 if (src_fn->is_known())
                     return unify(src_repr, dst_repr)->type;
             }
@@ -282,7 +282,7 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     if (dst->isa<UnknownType>() || src->isa<UnknownType>())
         return dst;
 
-    if (dst->size() == src->size()) {
+    if (dst->num_ops() == src->num_ops()) {
         if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
             if (auto src_owned_ptr_type = src->isa<OwnedPtrType>()) {
                 if (src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space()) {
@@ -300,7 +300,7 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
         }
 
         if (dst->kind() == src->kind()) {
-            Array<const Type*> op(dst->size());
+            Array<const Type*> op(dst->num_ops());
             for (size_t i = 0, e = op.size(); i != e; ++i)
                 op[i] = unify(dst->op(i), src->op(i));
 
@@ -534,7 +534,7 @@ void FnDecl::check(InferSema& sema) const {
     // TODO remove wild hack to reduce Typedef'd tuple types to argument lists of return continuations
     if (!is_continuation()) {
         auto ret_type = sema.check(param(e - 1));
-        if (ret_type->size() == 1) {
+        if (ret_type->num_ops() == 1) {
             if (auto ret_tuple_type = ret_type->op(0)->isa<TupleType>()) {
                 param_types[--e] = sema.fn_type(ret_tuple_type->ops());
             }
@@ -751,13 +751,13 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args) {
     for (auto arg : args)
         check(arg);
 
-    if (args.size() == fn_type->size()) {
+    if (args.size() == fn_type->num_ops()) {
         Array<const Type*> types(args.size());
         for (size_t i = 0, e = args.size(); i != e; ++i)
             types[i] = coerce(fn_type->op(i), args[i]);
         constrain(lhs, this->fn_type(types));
         return type_noret();
-    } else if (args.size()+1 == fn_type->size()) {
+    } else if (args.size()+1 == fn_type->num_ops()) {
         Array<const Type*> types(args.size()+1);
         for (size_t i = 0, e = args.size(); i != e; ++i)
             types[i] = coerce(fn_type->op(i), args[i]);
@@ -881,7 +881,7 @@ const Type* ForExpr::check(InferSema& sema) const {
         auto ltype = sema.check(map->lhs());
 
         if (auto fn_for = ltype->isa<FnType>()) {
-            if (fn_for->size() != 0) {
+            if (fn_for->num_ops() != 0) {
                 if (auto fn_ret = fn_for->ops().back()->isa<FnType>()) {
                     sema.constrain(break_decl_->type_, fn_ret); // inherit the type for break
 

@@ -82,7 +82,7 @@ public:
         return thorin_type(type);
     }
 
-    void convert_ops(const Type*, std::vector<const thorin::Type*>& nargs);
+    void convert_ops(const Type*, std::vector<const thorin::Type*>& nops);
     const thorin::Type* convert_rec(const Type*);
 
     const thorin::Type*& thorin_type(const Type* type) { return impala2thorin_[type]; }
@@ -124,7 +124,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         convert_ops(tuple_type, nops);
         return world().tuple_type(nops);
     } else if (auto struct_type = type->isa<StructType>()) {
-        thorin_struct_type(struct_type) = world().struct_type(struct_type->struct_decl()->symbol().str(), struct_type->size());
+        thorin_struct_type(struct_type) = world().struct_type(struct_type->struct_decl()->symbol().str(), struct_type->num_ops());
         thorin_type(type) = thorin_struct_type(struct_type);
         size_t i = 0;
         for (auto op : struct_type->ops())
@@ -199,7 +199,7 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
         if (auto tuple = def->type()->isa<thorin::TupleType>()) {
             std::vector<const Def*> args;
             args.push_back(mem);
-            for (size_t i = 0, e = tuple->size(); i != e; ++i)
+            for (size_t i = 0, e = tuple->num_ops(); i != e; ++i)
                 args.push_back(cg.extract(def, i, loc));
             cg.cur_bb->jump(ret_param(), args, loc.end());
         } else
@@ -524,7 +524,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
             defs.push_back(cg.remit(arg));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
-        auto ret_type = args().size() == fn_type->size() ? nullptr : cg.convert(fn_type->return_type());
+        auto ret_type = args().size() == fn_type->num_ops() ? nullptr : cg.convert(fn_type->return_type());
         auto old_bb = cg.cur_bb;
         auto ret = cg.call(dst, defs, ret_type, loc());
         if (ret_type)

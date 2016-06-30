@@ -293,7 +293,7 @@ public:
             o << return_pref << ' ' << fn->item_symbol().str() << '(';
 
             // Generate all arguments except the last one which is the implicit continuation
-            for (size_t i = 0, e = fn_type->size() - 1; i != e; ++i) {
+            for (size_t i = 0, e = fn_type->num_ops() - 1; i != e; ++i) {
                 std::string ctype_pref, ctype_suf;
                 if (!ctype_from_impala(fn_type->op(i), ctype_pref, ctype_suf)) {
                     error(fn, "function argument type not exportable");
@@ -302,12 +302,12 @@ public:
 
                 o << ctype_pref << ' ' << fn->param(i)->symbol().str() << ctype_suf;
 
-                if (i < fn_type->size() - 2)
+                if (i < fn_type->num_ops() - 2)
                     o << ", ";
             }
 
             // Generate void functions when the function takes no argument to be C89 compatible
-            if (fn_type->size() == 1) {
+            if (fn_type->num_ops() == 1) {
                 o << "void";
             }
 

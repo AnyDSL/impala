@@ -50,7 +50,7 @@ bool FnType::is_returning() const {
 const Type* FnType::return_type() const {
     if (!empty()) {
         if (auto fn = ops().back()->isa<FnType>()) {
-            if (fn->size() == 1)
+            if (fn->num_ops() == 1)
                 return fn->ops().front();
             return typetable().tuple_type(fn->ops());
         }
