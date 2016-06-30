@@ -1,5 +1,5 @@
 fn get[T]() -> T {
-    let tuple: (T, T);
+    let mut tuple: (T, T);
     tuple(0)
 }
 

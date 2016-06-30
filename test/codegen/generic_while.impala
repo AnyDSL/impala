@@ -3,7 +3,7 @@ fn generic_while[L, B](l : L,
                           body : fn(B) -> L) -> B
 {
     head(l,
-        |b : B, cond : bool| {
+        |b : B, cond : bool| -> ! {
             if (cond) {
                 generic_while(body(b), head, body)
             } else {

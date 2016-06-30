@@ -972,8 +972,9 @@ private:
 
 class CharExpr : public Expr {
 public:
-    CharExpr(const thorin::Location& loc, Symbol symbol)
+    CharExpr(const thorin::Location& loc, Symbol symbol, thorin::u8 value)
         : symbol_(symbol)
+        , value_(value)
     {
         loc_ = loc;
     }
@@ -991,7 +992,7 @@ private:
     virtual void check(TypeSema&) const override;
 
     Symbol symbol_;
-    mutable thorin::u8 value_;
+    thorin::u8 value_;
 };
 
 class StrExpr : public Expr {

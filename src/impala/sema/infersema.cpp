@@ -572,8 +572,13 @@ void ImplItem::check(InferSema& /*sema*/) const {}
 
 const Type* EmptyExpr::check(InferSema& sema) const { return sema.unit(); }
 const Type* LiteralExpr::check(InferSema& sema) const { return sema.prim_type(literal2type()); }
-const Type* CharExpr::check(InferSema& sema) const { return sema.type_u8(); }
-const Type* StrExpr::check(InferSema& sema) const { return sema.definite_array_type(sema.type_u8(), values_.size()); }
+const Type* CharExpr::check(InferSema& sema) const {
+    return sema.type_u8();
+}
+
+const Type* StrExpr::check(InferSema& sema) const {
+    return sema.definite_array_type(sema.type_u8(), values_.size());
+}
 
 const Type* FnExpr::check(InferSema& sema) const {
     assert(ast_type_params().empty());
@@ -692,7 +697,7 @@ const Type* DefiniteArrayExpr::check(InferSema& sema) const {
         sema.check(arg);
 
     for (const auto& arg : args())
-        sema.constrain(expected_elem_type, sema.constrain(arg, expected_elem_type));
+        expected_elem_type = sema.coerce(expected_elem_type, arg);
 
     return sema.definite_array_type(expected_elem_type, num_args());
 }
@@ -710,7 +715,7 @@ const Type* SimdExpr::check(InferSema& sema) const {
         sema.check(arg);
 
     for (const auto& arg : args())
-        sema.constrain(expected_elem_type, sema.constrain(arg, expected_elem_type));
+        expected_elem_type = sema.coerce(expected_elem_type, arg);
 
     return sema.simd_type(expected_elem_type, num_args());
 }

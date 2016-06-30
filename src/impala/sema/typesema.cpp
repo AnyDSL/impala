@@ -21,7 +21,6 @@ public:
     // helpers
 
     bool nossa() const { return nossa_; }
-    thorin::u8 char_value(const Location& loc, const char*& p);
     const Type* scalar_type(const Expr* expr) {
         if (auto simd_type = expr->type()->isa<SimdType>())
             return simd_type->elem_type();
@@ -51,6 +50,7 @@ public:
     IMPALA_EXPECT(num,         is_int(t) || is_float(t),               "number type")
     IMPALA_EXPECT(num_or_bool, is_int(t) || is_float(t) || is_bool(t), "number or boolean type")
     IMPALA_EXPECT(ptr,         t->isa<PtrType>(),                      "pointer type")
+    IMPALA_EXPECT(num_or_bool_or_ptr, is_int(t) || is_float(t) || is_bool(t) || t->isa<PtrType>(), "number or boolean or pointer type")
 
     template<typename... Args>
     void expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
@@ -269,52 +269,8 @@ void ImplItem::check(TypeSema& sema) const {
 
 void EmptyExpr::check(TypeSema&) const {}
 void LiteralExpr::check(TypeSema&) const {}
-
-thorin::u8 TypeSema::char_value(const Location& loc, const char*& p) {
-    thorin::u8 value = 0;
-    if (*p++ == '\\') {
-        switch (*p++) {
-            case '0':  value = '\0'; break;
-            case 'n':  value = '\n'; break;
-            case 't':  value = '\t'; break;
-            case '\'': value = '\''; break;
-            case '\"': value = '\"'; break;
-            case '\\': value = '\\'; break;
-            default:
-                error(loc, "unknown escape sequence '\\%'", *(p-1));
-        }
-    } else
-        value = thorin::u8(*(p-1));
-
-    return value;
-}
-
-void CharExpr::check(TypeSema& sema) const {
-    const char* p = symbol().str();
-    assert(*p == '\'');
-    ++p;
-    if (*p != '\'') {
-        value_ = sema.char_value(loc(), p);
-
-        if (*p++ != '\'')
-            error(this, "multi-character character constant");
-        else
-            assert(*p == '\0');
-    } else
-        error(this, "empty character constant");
-}
-
-void StrExpr::check(TypeSema& sema) const {
-    for (auto symbol : symbols()) {
-        const char* p = symbol.str();
-        assert(*p == '"');
-        ++p;
-        while (*p != '"')
-            values_.push_back(sema.char_value(loc(), p));
-        assert(p[1] == '\0');
-    }
-    values_.push_back('\0');
-}
+void CharExpr::check(TypeSema&) const {}
+void StrExpr::check(TypeSema&) const {}
 
 void FnExpr::check(TypeSema& sema) const {
     THORIN_PUSH(sema.cur_fn_, this);
@@ -382,8 +338,8 @@ void InfixExpr::check(TypeSema& sema) const {
         case EQ: case NE:
         case LT: case GT:
         case LE: case GE:
-            sema.expect_num_or_bool(lhs(),  "left-hand side of binary '%'", tok2str(this));
-            sema.expect_num_or_bool(rhs(), "right-hand side of binary '%'", tok2str(this));
+            sema.expect_num_or_bool_or_ptr(lhs(),  "left-hand side of binary '%'", tok2str(this));
+            sema.expect_num_or_bool_or_ptr(rhs(), "right-hand side of binary '%'", tok2str(this));
             return;
         case ADD: case SUB:
         case MUL: case DIV: case REM:
