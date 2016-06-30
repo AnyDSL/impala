@@ -543,7 +543,7 @@ void FnDecl::check(InferSema& sema) const {
 
     for (size_t i = 0; i != e; ++i) {
         param_types[i] = sema.check(param(i));
-        if (type())
+        if (type() && !type()->isa<UnknownType>())
             sema.constrain(param(i), fn_type()->op(i));
     }
 
