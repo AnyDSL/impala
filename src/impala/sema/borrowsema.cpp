@@ -47,8 +47,6 @@ public:
 
     void merge(BorrowSema& other);
 
-    //std::ostream& stream(std::ostream&) const;
-
 private:
     std::vector<std::shared_ptr<BorrowMap>> borrow_maps_;
     InitMap init_map_;
@@ -115,7 +113,10 @@ void BorrowSema::add_borrow(const Expr* expr, BorrowState bs, size_t target_scop
     assert(target_scope < borrow_maps_.size());
 
     BorrowMap& bmap = get_borrow_map_for_insert(borrow_maps_, target_scope);
-    insert(expr, bmap, bs2pl(bs), expr->loc());
+    if (bmap.contains(expr->get_decl()))
+        insert(expr, bmap, bs2pl(bs), expr->loc());
+    // else the borrow is invalid because it would live longer than its target, however
+    // that is handled in the lifetime analysis so we do not do anything here
 }
 
 void BorrowSema::set_init(const Expr* expr) {

@@ -119,8 +119,8 @@ public:
 
     const LvMapComparator& get_comparator(void) const { return comparator_; }
 
-    void enter_scope();
-    void leave_scope();
+    virtual void enter_scope();
+    virtual void leave_scope();
 
     void merge(LvMap& other);
 
@@ -138,8 +138,6 @@ inline bool payload2bool(payload_t pl) { assert(pl == 0 || pl == 1); return (boo
 const Payload& lookup(const Expr*, LvMap&);
 
 void insert(const Expr*, LvMap&, payload_t, const thorin::Location& loc);
-
-void integrate_lifetime_tree(const Expr* left_expr, const Expr* right_expr, LvMap& map, const thorin::Location& loc);
 
 }
 
