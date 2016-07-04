@@ -490,7 +490,7 @@ public:
 
     size_t handle() const { return handle_; }
     bool is_address_taken() const { return is_address_taken_; }
-    const Expr* fn() const { return fn_; }
+    const Fn* fn() const { return fn_; }
     void take_address() const { is_address_taken_ = true; }
     void check(NameSema&) const;
     void check(LifetimeSema&) const;
@@ -500,7 +500,7 @@ private:
 
 protected:
     size_t handle_;
-    mutable const Expr* fn_ = nullptr;
+    mutable const Fn* fn_ = nullptr;
     mutable bool is_address_taken_ = false;
 
     friend class Parser;
@@ -1385,6 +1385,10 @@ private:
 
 class MapExpr : public Expr, public Args, public TypeArgs {
 public:
+    enum State {
+        None, Run, Hlt
+    };
+
     const Expr* lhs() const { return lhs_; }
     FnType fn_mono() const { return fn_mono_; }
     virtual bool is_lvalue() const override;
@@ -1406,10 +1410,12 @@ private:
     virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
+    const thorin::Def* remit(CodeGen&, State, thorin::Location) const;
 
     AutoPtr<const Expr> lhs_;
     mutable FnType fn_mono_;
 
+    friend class CodeGen;
     friend class Parser;
     friend class ForExpr;
     friend class TypeSema;
@@ -1461,7 +1467,6 @@ public:
     virtual const char* prefix() const override { return "@{"; }
 
 private:
-    virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
     friend class Parser;

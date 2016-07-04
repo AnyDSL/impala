@@ -1,0 +1,16 @@
+
+fn f(b: bool, i: int) -> int {
+    fn F() -> ! { r(i-1) }
+    fn T() -> ! { r(i) }
+    let ret : fn(int) -> ! = return;
+    fn r(x: int) -> ! { ret(x) }
+    if (b) {
+        T()
+    } else {
+        F()
+    }
+}
+
+fn main() -> int {
+    f(true, 5)
+}

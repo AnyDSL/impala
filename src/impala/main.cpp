@@ -98,6 +98,8 @@ int main(int argc, char** argv) {
             Log::set(Log::Debug, open(log_stream, log_name));
         } else
             throw invalid_argument("log level must be one of {none|error|warn|info|debug}");
+#else
+        Log::set(Log::Error, &std::cout);
 #endif
 
         // check optimization levels

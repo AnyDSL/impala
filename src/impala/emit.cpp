@@ -62,6 +62,10 @@ public:
             def = world().convert(convert(expr->type()), def, def->loc());
         return def;
     }
+    const Def* remit(const Expr* expr, MapExpr::State state, Location eval_loc) {
+        assert(!expr->needs_cast());
+        return expr->as<MapExpr>()->remit(*this, state, eval_loc);
+    }
     void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
     void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }
@@ -184,17 +188,18 @@ const thorin::Type* SimdTypeNode::convert(CodeGen& cg) const {
 
 Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
     auto thorin_type = cg.convert(type());
-    if (!init)
-        init = cg.world().bottom(thorin_type, loc());
-    if (!is_mut())
-        return value_ = Value::create_val(cg, init);
 
-    if (is_address_taken())
-        value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), handle(), loc(), symbol().str()));
-    else
-        value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str()); // TODO
+    if (is_mut()) {
+        if (is_address_taken())
+            value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), loc(), symbol().str()));
+        else
+            value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str());
 
-    value_.store(init, loc());
+        if (init)
+            value_.store(init, loc());
+    } else
+        value_ = Value::create_val(cg, init);
+
     return value_;
 }
 
@@ -403,8 +408,8 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             assert(var.kind() == Value::PtrRef);
             return var.def();
         }
-        case RUN: return cg.world().run(cg.remit(rhs()), loc());
-        case HLT: return cg.world().hlt(cg.remit(rhs()), loc());
+        case RUN: return cg.remit(rhs(), MapExpr::Run, loc());
+        case HLT: return cg.remit(rhs(), MapExpr::Hlt, loc());
         default:  return cg.lemit(this).load(loc());
     }
 }
@@ -419,7 +424,7 @@ void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
     if (kind() == NOT && is_type_bool(cg.convert(type())))
         cg.emit_branch(rhs(), f, t);
     else
-        cg.branch(cg.remit(rhs()), t, f, loc().end());
+        cg.branch(cg.remit(this), t, f, loc().end());
 }
 
 void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
@@ -530,14 +535,14 @@ const Def* StructExpr::remit(CodeGen& cg) const {
 }
 
 Value MapExpr::lemit(CodeGen& cg) const {
-    if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<SimdType>()) {
-        auto agg = cg.lemit(lhs());
-        return Value::create_agg(agg, cg.remit(arg(0)));
-    }
-    throw std::logic_error("cannot emit lvalue");
+    assert(lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<SimdType>());
+    auto agg = cg.lemit(lhs());
+    return Value::create_agg(agg, cg.remit(arg(0)));
 }
 
-const Def* MapExpr::remit(CodeGen& cg) const {
+const Def* MapExpr::remit(CodeGen& cg) const { return remit(cg, None, Location()); }
+
+const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
     if (auto fn_poly = lhs()->type().isa<FnType>()) {
         assert(fn_poly->num_type_vars() == num_inferred_args());
 
@@ -553,10 +558,17 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         defs.front() = cg.get_mem(); // now get the current memory monad
 
         auto ret_type = args().size() == fn_mono()->num_args() ? nullptr : cg.convert(fn_mono()->return_type());
-
+        auto old_bb = cg.cur_bb;
         auto ret = cg.call(dst, type_args, defs, ret_type, loc());
         if (ret_type)
             cg.set_mem(cg.cur_bb->param(0));
+
+        if (state != None) {
+            auto eval = state == Run ? &thorin::World::run : &thorin::World::hlt;
+            auto cont = old_bb->args().back();
+            old_bb->update_callee((cg.world().*eval)(old_bb->callee(), cont, eval_loc, ""));
+        }
+
         return ret;
     } else if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<SimdType>()) {
         auto index = cg.remit(arg(0));
@@ -582,52 +594,24 @@ const Def* BlockExprBase::remit(CodeGen& cg) const {
 const Def* RunBlockExpr::remit(CodeGen& cg) const {
     if (cg.is_reachable()) {
         World& w = cg.world();
-        auto fn_mem = w.fn_type({w.mem_type()});
-        auto lrun  = w.continuation(w.fn_type({w.mem_type(), fn_mem}), loc(), "run_block");
-        auto run = w.run(lrun, loc());
+        auto lrun = w.basicblock(loc(), "run_block");
+        auto next = w.basicblock(loc(), "run_next");
         auto old_bb = cg.cur_bb;
-        cg.cur_bb->jump(run, {}, {cg.get_mem(), w.bottom(fn_mem, loc())}, loc());
-        cg.cur_bb = lrun;
-        cg.set_mem(cg.cur_bb->param(0));
+        cg.cur_bb->jump(lrun, {}, {}, loc());
+        cg.enter(lrun);
         auto res = BlockExprBase::remit(cg);
         if (cg.is_reachable()) {
             assert(res);
-            auto next = w.continuation(fn_mem, loc(), "run_next");
-            cg.cur_bb->jump(lrun->param(1), {}, {cg.get_mem()}, loc());
-            old_bb->update_arg(1, next);
-            cg.cur_bb = next;
-            cg.set_mem(cg.cur_bb->param(0));
-            assert(res);
+            cg.cur_bb->jump(next, {}, {}, loc());
+            cg.enter(next);
+            old_bb->update_callee(w.run(lrun, next, loc()));
             return res;
         }
-    }
-    return nullptr;
-}
 
-#if 0
-const Def* RunBlockExpr::remit(CodeGen& cg) const {
-    if (cg.is_reachable()) {
-        World& w = cg.world();
-        auto fn_mem = w.fn_type({w.mem_type()});
-        auto lrun  = w.continuation(fn_mem, "run_block");
-        auto run = w.run(lrun);
-        cg.cur_bb->jump(run, {cg.get_mem()});
-        cg.cur_bb = lrun;
-        cg.set_mem(cg.cur_bb->param(0));
-        auto res = BlockExprBase::remit(cg);
-        if (cg.is_reachable()) {
-            assert(res);
-            auto next = w.continuation(fn_mem, "run_next");
-            cg.cur_bb->jump(next, {cg.get_mem()});
-            cg.cur_bb = next;
-            cg.set_mem(cg.cur_bb->param(0));
-            assert(res);
-            return res;
-        }
+        old_bb->update_callee(w.run(lrun, w.bottom(w.fn_type(), loc()), loc()));
     }
     return nullptr;
 }
-#endif
 
 void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     JumpTarget t(then_expr()->loc().begin(), "if_then"), f(else_expr()->loc().begin(), "if_else");
@@ -688,8 +672,8 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     defs.push_back(cg.remit(fn_expr()));
     defs.push_back(break_continuation);
     auto fun = cg.remit(map_expr->lhs());
-    if (prefix && prefix->kind() == PrefixExpr::RUN) fun = cg.world().run(fun, loc());
-    if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun, loc());
+    if (prefix && prefix->kind() == PrefixExpr::RUN) fun = cg.world().run(fun, break_continuation, loc());
+    if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun, break_continuation, loc());
 
     defs.front() = cg.get_mem(); // now get the current memory monad
     cg.call(fun, {}, defs, nullptr, map_expr->loc());

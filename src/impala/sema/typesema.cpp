@@ -130,7 +130,7 @@ private:
 
 public:
     const BlockExprBase* cur_block_ = nullptr;
-    const Expr* cur_fn_ = nullptr;
+    const Fn* cur_fn_ = nullptr;
 };
 
 //------------------------------------------------------------------------------
@@ -474,7 +474,7 @@ void FnDecl::check_item(TypeSema& sema) const {
 }
 
 Type FnDecl::check(TypeSema& sema) const {
-    THORIN_PUSH(sema.cur_fn_, body());
+    THORIN_PUSH(sema.cur_fn_, this);
     check_type_params(sema);
     std::vector<Type> types;
     for (auto param : params())
@@ -663,7 +663,7 @@ Type StrExpr::check(TypeSema& sema, TypeExpectation expected) const {
 }
 
 Type FnExpr::check(TypeSema& sema, TypeExpectation expected) const {
-    THORIN_PUSH(sema.cur_fn_, body());
+    THORIN_PUSH(sema.cur_fn_, this);
     assert(type_params().empty());
 
     FnType fn_type;
@@ -1201,11 +1201,6 @@ Type BlockExprBase::check(TypeSema& sema, TypeExpectation expected) const {
     return expr() ? expr()->type() : sema.unit().as<Type>();
 }
 
-Type RunBlockExpr::check(TypeSema& sema, TypeExpectation expected) const {
-    THORIN_PUSH(sema.cur_fn_, this);
-    return BlockExprBase::check(sema, expected);
-}
-
 Type IfExpr::check(TypeSema& sema, TypeExpectation expected) const {
     sema.check(cond(), sema.type_bool(), "condition type");
 
@@ -1311,6 +1306,8 @@ void LetStmt::check(TypeSema& sema) const {
     Type expected = sema.check(local(), sema.unknown_type());
     if (init())
         sema.check(init(), expected, "initialization type");
+    else if (!local()->is_mut())
+        error(this) << "non-mutable let statement lacks initialization\n";
 }
 
 //------------------------------------------------------------------------------

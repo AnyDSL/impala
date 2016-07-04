@@ -1,0 +1,5 @@
+fn fun() -> bool { false }
+
+fn main() -> int {
+    if @fun() && true { 1 } else { 0 }
+}

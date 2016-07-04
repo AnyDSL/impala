@@ -63,8 +63,8 @@ enum Prec {
     ADD,
     MUL,
     UNARY,
-    POSTFIX,
     EVAL,
+    POSTFIX,
     TOP,
     NUM_PREC
 };

@@ -24,7 +24,8 @@ int main() {
         auto id = (llvm::Intrinsic::ID) i;
         std::string llvm_name = llvm::Intrinsic::getName(id);
         // skip "experimental" intrinsics
-        if (llvm_name.find("experimental")!=std::string::npos) continue;
+        if (llvm_name.find("experimental")!=std::string::npos)
+            continue;
         assert(llvm_name.substr(0, 5) == "llvm.");
         std::string name = llvm_name.substr(5); // remove 'llvm.' prefix
         // replace '.' with '_'
@@ -39,12 +40,11 @@ int main() {
                 std::cout << thorin::endl;
                 auto fn = itype.as<impala::FnType>();
                 std::cout << "fn \"" << llvm_name << "\" " << name;
-                stream_list(std::cout, fn->args().skip_back(fn->num_args()-1), [&](impala::Type type) { std::cout << type; }, "(", ")");
-                std::cout << " -> ";
+                stream_list(std::cout, fn->args().skip_back(1), [&](impala::Type type) { std::cout << type; }, "(", ")");
                 if (fn->return_type()->is_noret())
-                    std::cout << "();";
+                    std::cout << " -> !;";
                 else
-                    std::cout << fn->return_type() << ';';
+                    std::cout << " -> " << fn->return_type() << ';';
             }
         }
     }
@@ -63,6 +63,7 @@ impala::Type llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
         }
     }
 
+    if (type->isHalfTy())   return tt.type_f16();
     if (type->isFloatTy())  return tt.type_f32();
     if (type->isDoubleTy()) return tt.type_f64();
 
@@ -72,13 +73,14 @@ impala::Type llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
         for (size_t i = 0, e = fn->getNumParams(); i != e; ++i) {
             auto t = llvm2impala(tt, fn->getParamType(i));
             valid &= t;
-            if (valid) param_types[i] = t;
+            if (valid)
+                param_types[i] = t;
         }
 
         auto ret = fn->getReturnType()->isVoidTy() ? (impala::Type)tt.tuple_type({}) : llvm2impala(tt, fn->getReturnType());
         valid &= ret;
         if (valid) {
-            param_types.back() = fn->getReturnType()->isVoidTy() ? tt.tuple_type({}) : tt.tuple_type({ret});
+            param_types.back() = fn->getReturnType()->isVoidTy() ? tt.fn_type({}) : tt.fn_type({ret});
             return tt.fn_type(param_types);
         }
     }
