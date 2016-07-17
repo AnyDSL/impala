@@ -161,9 +161,10 @@ void handle_lvs(const Expr* right_expr, LifetimeSema& sema, AssignmentInfo* asgn
     if (!build_left_tree(asgn_info->left_lt_, asgn_info->asgn_loc_, right_expr, sema))
         return;
     if (asgn_info->left_expr_ == nullptr)
-        asgn_info->tree_res_ = tree_res;
+        //asgn_info->tree_res_ = tree_res;
+        ;
     else {
-        auto tree_res = asgn_info_->left_expr_->lookup_lv_tree(sema, true);
+        auto tree_res = asgn_info->left_expr_->lookup_lv_tree(sema, true);
         integrate_lifetime_tree(tree_res.tree_.get(), right_expr, sema, asgn_info->asgn_loc_);
     }
 }
@@ -191,7 +192,7 @@ void PrefixExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const  {
                     assert(false); // TODO
                 else {
                     auto tree_res = left_expr->lookup_lv_tree(sema, true);
-                    integrate_lifetime_tree(tree_res.tree_.get(), /* TODO */ right_expr, sema, asgn_info->asgn_loc_);
+                    integrate_lifetime_tree(tree_res.tree_.get(), nullptr, sema, asgn_info->asgn_loc_);
                 }
             }
             break;
@@ -379,13 +380,13 @@ void integrate_lifetime_tree(LvTree* left_tree, const Expr* right_expr, LvMap& m
                 assert(false);
                 // TODO
             break;
-        case Relation::LESS:
         case Relation::GREATER:
             // TODO: handle multi_ref
             right_expr->type()->integrate_lifetime_tree(left_tree,
                 left_pl, right_res.tree_.get(), right_res.payload_.get_value(),
                 loc, map.get_comparator());
             break;
+        case Relation::LESS:
         default:
             assert(false);
     }
