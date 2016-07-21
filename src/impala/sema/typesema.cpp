@@ -511,7 +511,7 @@ Type StaticItem::check(TypeSema& sema) const {
     if (init_type)
         ret_type = sema.check(static_cast<const ValueDecl*>(this), init_type);
     else
-        ret_type = sema.check(static_cast<const ValueDecl*>(this));
+        ret_type = sema.check(static_cast<const ValueDecl*>(this), sema.unknown_type());
 
     type_.clear(); // will be set again by TypeSema's wrapper
     return ret_type;
