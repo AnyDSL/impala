@@ -209,7 +209,7 @@ Continuation* Fn::emit_head(CodeGen& cg, const Location& loc) const {
 
 void Fn::emit_body(CodeGen& cg, const Location& loc) const {
     // setup function nest
-    continuation()->set_parent(cg.cur_bb);
+    continuation()->set_top();
     THORIN_PUSH(cg.cur_fn, this);
     THORIN_PUSH(cg.cur_bb, continuation());
 
