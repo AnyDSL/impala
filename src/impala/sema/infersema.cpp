@@ -143,10 +143,10 @@ const Type* InferSema::reduce(const Lambda* lambda, ArrayRef<const ASTType*> ast
         while (type_args.size() < num)
             type_args.push_back(unknown_type());
 
-        size_t i = 0;
+        size_t i = type_args.size();
         const Type* type = lambda;
         while (auto lambda = type->isa<Lambda>())
-            type = app(lambda, type_args[i++]);
+            type = app(lambda, type_args[--i]);
 
         return type;
     }
