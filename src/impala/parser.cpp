@@ -521,7 +521,7 @@ Item* Parser::parse_extern_block_or_fn_decl() {
 }
 
 FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
-    THORIN_PUSH(cur_var_handle, cur_var_handle);
+    //THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     auto fn_decl = loc(new FnDecl());
     eat(Token::FN);
@@ -647,6 +647,7 @@ const ModContents* Parser::parse_mod_contents() {
 
 void Parser::parse_mod_contents(ModContents* mod_contents) {
     while (true) {
+        cur_var_handle = 2; // HACK
         switch (la()) {
             case VISIBILITY:
             case ITEM:
@@ -1080,7 +1081,7 @@ const StrExpr* Parser::parse_str_expr() {
 }
 
 const FnExpr* Parser::parse_fn_expr() {
-    THORIN_PUSH(cur_var_handle, cur_var_handle);
+    //THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     auto fn_expr = loc(new FnExpr());
 
@@ -1118,7 +1119,7 @@ const IfExpr* Parser::parse_if_expr() {
 const ForExpr* Parser::parse_for_expr() {
     auto for_expr = loc(new ForExpr());
     eat(Token::FOR);
-    THORIN_PUSH(cur_var_handle, cur_var_handle);
+    //THORIN_PUSH(cur_var_handle, cur_var_handle);
     auto fn_expr = loc(new FnExpr());
     for_expr->fn_expr_ = fn_expr.get();
     if (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
