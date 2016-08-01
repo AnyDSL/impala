@@ -231,7 +231,8 @@ void FnDecl::check(TypeSema& sema) const {
 
     if (body() != nullptr) {
         check_body(sema);
-        sema.expect_type(fn_type()->return_type(), body(), "return type");
+        if (!body()->type()->isa<NoRetType>())
+            sema.expect_type(fn_type()->return_type(), body(), "return type");
     }
 }
 
