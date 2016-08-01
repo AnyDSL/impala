@@ -512,8 +512,12 @@ Item* Parser::parse_extern_block_or_fn_decl() {
         if (la() == Token::LIT_str)
             extern_block->abi_ = lex().symbol();
         expect(Token::L_BRACE, "opening brace of external block");
-        while (la() == Token::FN)
-            extern_block->fns_.emplace_back(parse_fn_decl(BodyMode::None));
+        while (la() == Token::FN) {
+            auto fn_decl = parse_fn_decl(BodyMode::None);
+            fn_decl->is_extern_ = true;
+            fn_decl->abi_ = extern_block->abi_;
+            extern_block->fns_.emplace_back(fn_decl);
+        }
         expect(Token::R_BRACE, "closing brace of external block");
         extern_block->set_end(prev_loc().end());
         item = extern_block;

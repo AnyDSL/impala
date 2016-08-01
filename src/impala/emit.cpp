@@ -220,7 +220,18 @@ void ModContents::emit(CodeGen& cg) const {
         cg.emit(item);
 }
 
+static bool is_primop(const Symbol& name) {
+    if      (name == "select")   return true;
+    else if (name == "sizeof")   return true;
+    else if (name == "bitcast")  return true;
+    return false;
+}
+
 Value FnDecl::emit(CodeGen& cg, const Def*) const {
+    // no code is emitted for primops
+    if (is_extern() && abi() == "\"thorin\"" && is_primop(symbol()))
+        return value_;
+
     // create thorin function
     value_ = Value::create_val(cg, emit_head(cg, loc()));
     if (is_extern())
@@ -244,7 +255,7 @@ void ExternBlock::emit_item(CodeGen& cg) const {
             continuation->cc() = thorin::CC::C;
         else if (abi() == "\"device\"")
             continuation->cc() = thorin::CC::Device;
-        else if (abi() == "\"thorin\"")
+        else if (abi() == "\"thorin\"" && continuation) // no continuation for primops
             continuation->set_intrinsic();
     }
 }
@@ -516,6 +527,24 @@ const Def* MapExpr::remit(CodeGen& cg) const { return remit(cg, None, Location()
 
 const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
     if (auto fn_type = lhs()->type()->isa<FnType>()) {
+        // Handle primops here
+        if (auto type_expr = lhs()->isa<TypeAppExpr>()) { // Bitcast, sizeof and select are all polymorphic
+            if (auto path = type_expr->lhs()->isa<PathExpr>()) {
+                if (auto fn_decl = path->value_decl()->isa<FnDecl>()) {
+                    if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {
+                        auto name = fn_decl->symbol();
+                        if (name == "bitcast") {
+                            return cg.world().bitcast(cg.convert(type_expr->type_arg(0)), cg.remit(arg(0)), eval_loc);
+                        } else if (name == "select") {
+                            return cg.world().select(cg.remit(arg(0)), cg.remit(arg(1)), cg.remit(arg(2)), eval_loc);
+                        } else if (name == "sizeof") {
+                            return cg.world().size_of(cg.convert(type_expr->type_arg(0)), eval_loc);
+                        }
+                    }
+                }
+            }
+        }
+
         auto dst = cg.remit(lhs());
 
         std::vector<const Def*> defs;

@@ -777,6 +777,8 @@ private:
 class FnDecl : public ValueItem, public Fn {
 public:
     bool is_extern() const { return is_extern_; }
+    Symbol abi() const { return abi_; }
+
     virtual const FnType* fn_type() const override {
         auto t = type();
         while (auto lambda = t->isa<Lambda>())
@@ -795,6 +797,7 @@ private:
 
     AutoPtr<const Identifier> export_name_;
     bool is_extern_ = false;
+    Symbol abi_;
 
     friend class Parser;
     friend class InferSema;
