@@ -482,7 +482,7 @@ private:
 
 protected:
     size_t handle_;
-    mutable const Fn* fn_ = nullptr;
+    mutable const Fn* fn_;
     mutable bool is_address_taken_ = false;
 
     friend class InferSema;

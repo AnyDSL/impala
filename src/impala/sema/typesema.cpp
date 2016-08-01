@@ -165,6 +165,7 @@ void Typeof::check(TypeSema& sema) const { sema.check(expr()); }
 //------------------------------------------------------------------------------
 
 void LocalDecl::check(TypeSema& sema) const {
+    fn_ = sema.cur_fn_;
     if (ast_type())
         sema.check(ast_type());
     sema.expect_known(this);
@@ -397,6 +398,7 @@ void CastExpr::check(TypeSema& sema) const {
     auto src_type = sema.check(lhs());
     auto dst_type = type();
 
+    // TODO be consistent: dst is first argument, src ist second argument
     auto ptr_to_ptr     = [&] (const Type* a, const Type* b) { return a->isa<PtrType>() && b->isa<PtrType>(); };
     auto int_to_int     = [&] (const Type* a, const Type* b) { return is_int(a)         && is_int(b);         };
     auto float_to_float = [&] (const Type* a, const Type* b) { return is_float(a)       && is_float(b);       };
@@ -414,7 +416,7 @@ void CastExpr::check(TypeSema& sema) const {
         symmetric(int_to_bool, src_type, dst_type) ||
         symmetric(float_to_bool, src_type, dst_type);
 
-    if (!valid_cast)
+    if (!valid_cast && !is_subtype(dst_type, src_type))
         error(this, "invalid source and destination types for cast operator, got '%' and '%'", src_type, dst_type);
 }
 
