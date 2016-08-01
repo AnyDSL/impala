@@ -128,34 +128,6 @@ private:
     friend void type_inference(Init&, const ModContents*);
 };
 
-bool is_subtype(const Type* dst, const Type* src) {
-    assert(dst->is_known() && src->is_known());
-
-    if (dst == src)
-        return true;
-
-    if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
-        if (auto src_owned_ptr_type = src->isa<OwnedPtrType>())
-            return src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space()
-                && is_subtype(dst_borrowed_ptr_type->referenced_type(), src_owned_ptr_type->referenced_type());
-    }
-
-    if (auto dst_indefinite_array_type = dst->isa<IndefiniteArrayType>()) {
-        if (auto src_definite_array_type = src->isa<DefiniteArrayType>())
-            return is_subtype(dst_indefinite_array_type->elem_type(), src_definite_array_type->elem_type());
-    }
-
-    if (dst->kind() == src->kind() && dst->num_ops() == src->num_ops()) {
-        bool result = true;
-        // this does not work for types which carry extra stuff like a pointer's addr_space or a definite array's dim
-        for (size_t i = 0, e = dst->num_ops(); result && i != e; ++i)
-            result &= is_subtype(dst->op(i), src->op(i));
-        return result;
-    }
-
-    return false;
-}
-
 //------------------------------------------------------------------------------
 
 /*
@@ -549,8 +521,10 @@ void FnDecl::check(InferSema& sema) const {
 
     sema.constrain(this, sema.close(num_ast_type_params(), sema.fn_type(param_types)));
 
-    if (body() != nullptr)
-        sema.check(body(), fn_type()->return_type());
+    if (body() != nullptr) {
+        sema.check(body());
+        sema.coerce(fn_type()->return_type(), body());
+    }
 }
 
 void StaticItem::check(InferSema& sema) const {
