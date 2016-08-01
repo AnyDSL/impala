@@ -165,6 +165,7 @@ void Typeof::check(TypeSema& sema) const { sema.check(expr()); }
 //------------------------------------------------------------------------------
 
 void LocalDecl::check(TypeSema& sema) const {
+    fn_ = sema.cur_fn_;
     if (ast_type())
         sema.check(ast_type());
     sema.expect_known(this);
