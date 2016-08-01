@@ -234,7 +234,7 @@ Value FnDecl::emit(CodeGen& cg, const Def*) const {
 
     // create thorin function
     value_ = Value::create_val(cg, emit_head(cg, loc()));
-    if (is_extern())
+    if (is_extern() && abi() == "")
         continuation_->make_external();
 
     // handle main function
