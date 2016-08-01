@@ -69,9 +69,9 @@ public:
         }
     }
 
-    void expect_type(const Expr* expr, const Type* found, const char* context) {
-        if (expr->type() != found)
-            error(expr, "mismatched types: expected '%' but found '%' as %", found, expr->type(), context);
+    void expect_type(const Type* expected, const Expr* expr, const char* context) {
+        if (expected != expr->type())
+            error(expr, "mismatched types: expected '%' but found '%' as %", expected, expr->type(), context);
     }
 
     // check wrappers
@@ -229,8 +229,10 @@ void FnDecl::check(TypeSema& sema) const {
     for (auto param : params())
         sema.check(param);
 
-    if (body() != nullptr)
+    if (body() != nullptr) {
         check_body(sema);
+        sema.expect_type(fn_type()->return_type(), body(), "return type");
+    }
 }
 
 void StaticItem::check(TypeSema& sema) const {
@@ -441,7 +443,7 @@ void DefiniteArrayExpr::check(TypeSema& sema) const {
     for (const auto& arg : args()) {
         sema.check(arg);
         if (elem_type)
-            sema.expect_type(arg, elem_type, "element of definite array expression");
+            sema.expect_type(elem_type, arg, "element of definite array expression");
     }
 }
 
@@ -453,7 +455,7 @@ void SimdExpr::check(TypeSema& sema) const {
     for (const auto& arg : args()) {
         sema.check(arg);
         if (elem_type)
-            sema.expect_type(arg, elem_type, "element of simd expression");
+            sema.expect_type(elem_type, arg, "element of simd expression");
     }
 }
 
@@ -469,7 +471,7 @@ void StructExpr::check(TypeSema& sema) const {
                 elem.field_decl_ = field_decl;
 
                 if (!thorin::visit(done, field_decl))
-                    sema.expect_type(elem.expr(), struct_type->op(field_decl->index()), "initialization type for field");
+                    sema.expect_type(struct_type->op(field_decl->index()), elem.expr(), "initialization type for field");
                 else
                     error(elem.expr(), "field '%' specified more than once", elem.symbol());
             } else
@@ -534,7 +536,7 @@ void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
 
     if (fn_type->num_ops() == args.size() || fn_type->num_ops() == args.size() + 1) {
         for (size_t i = 0; i < args.size(); i++)
-            expect_type(args[i], fn_type->op(i), "argument type");
+            expect_type(fn_type->op(i), args[i], "argument type");
     } else
         error(expr, "incorrect number of arguments in function application: got %, expected %", args.size(), fn_type->num_ops() - 1);
 }
@@ -559,7 +561,7 @@ void IfExpr::check(TypeSema& sema) const {
     auto else_type = sema.check(else_expr());
 
     if (then_type != else_type && !then_type->isa<NoRetType>() && !else_type->isa<NoRetType>())
-        sema.expect_type(else_expr(), then_type, "else branch type");
+        sema.expect_type(then_type, else_expr(), "else branch type");
 }
 
 void WhileExpr::check(TypeSema& sema) const {
