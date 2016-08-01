@@ -766,7 +766,7 @@ const Type* TypeAppExpr::check(InferSema& sema) const {
             auto num = sema.num_lambdas(lambda);
             if (num_ast_type_args() <= num) {
                 for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
-                    sema.constrain(type_args_[i], sema.check(ast_type_arg(i)));
+                    type_args_.push_back(sema.check(ast_type_arg(i)));
 
                 while (num_type_args() < num)
                     type_args_.push_back(sema.unknown_type());
