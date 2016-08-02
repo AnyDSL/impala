@@ -503,8 +503,16 @@ void StaticItem::check_item(TypeSema& sema) const {
 }
 
 Type StaticItem::check(TypeSema& sema) const {
-    auto init_type = sema.check(init());
-    auto ret_type = sema.check(static_cast<const ValueDecl*>(this), init_type);
+    Type init_type;
+    if (init())
+        init_type = sema.check(init());
+
+    Type ret_type;
+    if (init_type)
+        ret_type = sema.check(static_cast<const ValueDecl*>(this), init_type);
+    else
+        ret_type = sema.check(static_cast<const ValueDecl*>(this), sema.unknown_type());
+
     type_.clear(); // will be set again by TypeSema's wrapper
     return ret_type;
 }
