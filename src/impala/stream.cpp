@@ -151,7 +151,7 @@ std::ostream& FnDecl::stream(std::ostream& os) const {
     stream_ast_type_params(os << symbol());
 
     const FnASTType* ret = nullptr;
-    if (!params().empty() && params().back()->symbol() == "return") {
+    if (!params().empty() && params().back()->symbol() == "return" && params().back()->ast_type()) {
         if (auto fn_type = params().back()->ast_type()->isa<FnASTType>())
             ret = fn_type;
     }

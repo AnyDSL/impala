@@ -215,7 +215,7 @@ private:
 
 class ErrorASTType : public ASTType {
 public:
-    ErrorASTType(const thorin::Location& loc) { loc_ = loc; }
+    ErrorASTType() {}
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;

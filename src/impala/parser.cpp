@@ -699,7 +699,7 @@ const ASTType* Parser::parse_type() {
         case Token::SIMD:       return parse_simd_type();
         default:  {
             error("type", "");
-            auto error_type = new ErrorASTType(prev_loc());
+            auto error_type = loc(new ErrorASTType());
             lex();
             return error_type;
         }
@@ -736,8 +736,7 @@ const FnASTType* Parser::parse_fn_type() {
     });
 
     bool unused;
-    if (auto ret_type = parse_return_type(unused, true))
-        fn_type->ast_type_args_.emplace_back(ret_type);
+    fn_type->ast_type_args_.emplace_back(parse_return_type(unused, true));
 
     return fn_type;
 }
@@ -763,8 +762,15 @@ const ASTType* Parser::parse_return_type(bool& is_continuation, bool mandatory) 
         return ret_type;
     }
 
-    if (mandatory)
+    if (mandatory) {
         error("return type", "function type");
+
+        // return a type that can be printed and checked
+        auto ret_type = loc(new FnASTType());
+        ret_type->ast_type_args_.emplace_back(loc(new ErrorASTType()));
+        return ret_type;
+    }
+
     return nullptr;
 }
 
