@@ -83,6 +83,7 @@ public:
     const Type* check(const ASTType* ast_type) { ast_type->check(*this); return ast_type->type(); }
     void check(const Item* n) { n->check(*this); }
     const Type* check(const Expr* expr) { expr->check(*this); return expr->type(); }
+    const Type* check(const Pattern* p) { p->check(*this); return p->type(); }
     void check(const Stmt* n) { n->check(*this); }
     void check_call(const Expr* expr, ArrayRef<const Expr*> args);
     void check_call(const Expr* expr, const std::deque<AutoPtr<const Expr>>& args) {
@@ -603,6 +604,23 @@ void ForExpr::check(TypeSema& sema) const {
 //------------------------------------------------------------------------------
 
 /*
+ * patterns
+ */
+
+void TuplePattern::check(TypeSema& sema) const {
+    for (auto& a : args()) {
+        sema.check(a);
+    }
+}
+
+void IdentPattern::check(TypeSema& sema) const {
+    sema.cur_block_->add_local(local());
+    sema.check(local());
+}
+
+//------------------------------------------------------------------------------
+
+/*
  * statements
  */
 
@@ -618,12 +636,18 @@ void ItemStmt::check(TypeSema& sema) const {
 }
 
 void LetStmt::check(TypeSema& sema) const {
-    sema.cur_block_->add_local(local());
-    sema.check(local());
-    if (init())
-        sema.check(init());
-    else if (!local()->is_mut())
-        error(this, "non-mutable let statement lacks initialization");
+    auto type = sema.check(pattern());
+    if (init()) {
+        if (type != sema.check(init()))
+            error(this, "let pattern type does not match initializer type");
+    } else {
+        auto ident_pat = pattern()->isa<IdentPattern>();
+        // Patterns and non-mutable variables need an initialization
+        if (!ident_pat)
+            error(this, "let pattern lacks initialization");
+        else if (!ident_pat->local()->is_mut())
+            error(this, "non-mutable let statement lacks initialization");
+    }
 }
 
 //------------------------------------------------------------------------------

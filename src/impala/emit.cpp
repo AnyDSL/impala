@@ -67,6 +67,7 @@ public:
         item->done_ = true;
 #endif
     }
+    void emit(const Pattern* pat, const thorin::Def* def) { pat->emit(*this, def); }
     Value emit(const ValueDecl* decl) {
         assert(decl->value_.kind() != thorin::Value::Empty);
         return decl->value_;
@@ -703,6 +704,23 @@ const Def* FnExpr::remit(CodeGen& cg) const {
 }
 
 /*
+ * patterns
+ */
+
+void TuplePattern::emit(CodeGen& cg, const thorin::Def* init) const {
+    int index = 0;
+    for (auto& a : args()) {
+        auto def = cg.extract(init, index++, loc());
+        cg.emit(a, def);
+    }
+}
+
+void IdentPattern::emit(CodeGen& cg, const thorin::Def* init) const {
+    init->name = local()->symbol().str();
+    cg.emit(local(), init);
+}
+
+/*
  * statements
  */
 
@@ -717,12 +735,7 @@ void ItemStmt::emit(CodeGen& cg) const {
 
 void LetStmt::emit(CodeGen& cg) const {
     if (cg.is_reachable()) {
-        if (init()) {
-            auto def = cg.remit(init());
-            def->name = local()->symbol().str();
-            cg.emit(local(), def);
-        } else
-            cg.emit(local(), nullptr);
+        cg.emit(pattern(), init() ? cg.remit(init()) : nullptr);
     }
 }
 

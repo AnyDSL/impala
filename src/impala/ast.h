@@ -1550,6 +1550,64 @@ private:
 //------------------------------------------------------------------------------
 
 /*
+ * patterns
+ */
+
+class Pattern : public ASTNode, public Typeable {
+public:
+    virtual void check(NameSema&) const = 0;
+    virtual void check(BorrowSema&) const = 0;
+    virtual void emit(CodeGen&, const thorin::Def*) const = 0;
+
+private:
+    virtual const Type* check(InferSema&) const = 0;
+    virtual void check(TypeSema&) const = 0;
+
+    friend class InferSema;
+    friend class TypeSema;
+};
+
+class TuplePattern : public Pattern {
+public:
+    const AutoVector<const Pattern*>& args() const { return args_; }
+    const Pattern* arg(int i) const { return args_[i]; }
+    size_t num_args() const { return args_.size(); }
+
+    virtual std::ostream& stream(std::ostream&) const override;
+    virtual void check(NameSema&) const override;
+    virtual void check(BorrowSema&) const override;
+    virtual void emit(CodeGen&, const thorin::Def*) const override;
+
+private:
+    virtual const Type* check(InferSema&) const override;
+    virtual void check(TypeSema&) const override;
+
+    AutoVector<const Pattern*> args_;
+
+    friend class Parser;
+};
+
+class IdentPattern : public Pattern {
+public:
+    const LocalDecl* local() const { return local_; }
+
+    virtual std::ostream& stream(std::ostream&) const override;
+    virtual void check(NameSema&) const override;
+    virtual void check(BorrowSema&) const override;
+    virtual void emit(CodeGen&, const thorin::Def*) const override;
+
+private:
+    virtual const Type* check(InferSema&) const override;
+    virtual void check(TypeSema&) const override;
+
+    AutoPtr<const LocalDecl> local_;
+
+    friend class Parser;
+};
+
+//------------------------------------------------------------------------------
+
+/*
  * statements
  */
 
@@ -1605,7 +1663,7 @@ private:
 
 class LetStmt : public Stmt {
 public:
-    const LocalDecl* local() const { return local_; }
+    const Pattern* pattern() const { return pattern_; }
     const Expr* init() const { return init_; }
 
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1617,7 +1675,7 @@ private:
     virtual void check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 
-    AutoPtr<const LocalDecl> local_;
+    AutoPtr<const Pattern> pattern_;
     AutoPtr<const Expr> init_;
 
     friend class Parser;

@@ -232,6 +232,11 @@ public:
     const BlockExprBase*    parse_block_expr();
     const BlockExprBase*    try_block_expr(const std::string& context);
 
+    // Patterns
+    const Pattern*      parse_pattern();
+    const TuplePattern* parse_tuple_pattern();
+    const IdentPattern* parse_ident_pattern();
+
     // statements
     const Stmt*     parse_stmt_not_expr();
     const ItemStmt* parse_item_stmt();
@@ -1286,6 +1291,38 @@ const BlockExprBase* Parser::try_block_expr(const std::string& context) {
 }
 
 /*
+ * patterns
+ */
+
+const Pattern* Parser::parse_pattern() {
+    if (la() == Token::L_PAREN) {
+        return parse_tuple_pattern();
+    } else {
+        return parse_ident_pattern();
+    }
+}
+
+const TuplePattern* Parser::parse_tuple_pattern() {
+    auto tuple_pat = loc(new TuplePattern());
+    eat(Token::L_PAREN);
+    parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple pattern", [&] {
+        tuple_pat->args_.emplace_back(parse_pattern());
+    });
+    return tuple_pat;
+}
+
+const IdentPattern* Parser::parse_ident_pattern() {
+    auto ident_pat = loc(new IdentPattern());
+    auto local = loc(new LocalDecl(cur_var_handle++));
+    local->is_mut_ = accept(Token::MUT);
+    local->identifier_ = try_id("local variable in let binding");
+    if (accept(Token::COLON))
+        local->ast_type_ = parse_type();
+    ident_pat->local_ = local.get();
+    return ident_pat;
+}
+
+/*
  * statements
  */
 
@@ -1300,16 +1337,10 @@ const Stmt* Parser::parse_stmt_not_expr() {
 const LetStmt* Parser::parse_let_stmt() {
     auto let_stmt = loc(new LetStmt());
     eat(Token::LET);
-    auto local = loc(new LocalDecl(cur_var_handle++));
-    local->is_mut_ = accept(Token::MUT);
-    local->identifier_ = try_id("local variable in let binding");
-    if (accept(Token::COLON))
-        local->ast_type_ = parse_type();
+    let_stmt->pattern_ = parse_pattern();
     if (accept(Token::ASGN))
         dock(let_stmt->init_, parse_expr());
     expect(Token::SEMICOLON, "the end of an let statement");
-
-    let_stmt->local_ = local.get();
     return let_stmt;
 }
 
