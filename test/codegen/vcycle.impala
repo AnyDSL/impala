@@ -1,7 +1,7 @@
 extern "C" {
     fn print_int(int) -> ();
 }
-fn range(a : int, b : int, yield : fn(int, fn())) -> () {
+fn range(a : int, b : int, yield : fn(int) -> ()) -> () {
     if a < b {
         yield(a);
         range(a+1, b, yield, return)

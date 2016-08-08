@@ -15,13 +15,27 @@ const Param* Param::create(size_t var_handle, const Identifier* identifier, cons
     return param;
 }
 
-const PrefixExpr* PrefixExpr::create_deref(const AutoPtr<const Expr>& dock) {
+const ImplicitCastExpr* ImplicitCastExpr::create(const Expr* expr, const Type* type) {
+    auto implicit_cast_expr = new ImplicitCastExpr();
+    implicit_cast_expr->type_ = type;
+    implicit_cast_expr->set_loc(expr->loc());
+    insert(implicit_cast_expr, implicit_cast_expr->lhs_, expr);
+    return implicit_cast_expr;
+}
+
+const PrefixExpr* PrefixExpr::create(const Expr* expr, const Kind kind) {
     auto deref = new PrefixExpr();
-    deref->set_loc(dock->loc());
-    deref->kind_ = PrefixExpr::MUL;
-    deref->rhs_ = deref;
-    swap(deref->rhs_, const_cast<AutoPtr<const Expr>&>(dock));
+    deref->set_loc(expr->loc());
+    deref->kind_ = kind;
+    insert(deref, deref->rhs_, expr);
     return deref;
+}
+
+const TypeAppExpr* TypeAppExpr::create(const Expr* expr) {
+    auto type_app_expr = new TypeAppExpr();
+    type_app_expr->set_loc(expr->loc());
+    insert(type_app_expr, type_app_expr->lhs_, expr);
+    return type_app_expr;
 }
 
 const char* Visibility::str() {
@@ -39,9 +53,9 @@ std::string PtrASTType::prefix() const {
     THORIN_UNREACHABLE;
 }
 
-const FnASTType* FnASTType::ret_fn_type() const {
-    if (num_args() != 0) {
-        if (auto fn_type = args().back()->isa<FnASTType>())
+const FnASTType* FnASTType::ret_fn_ast_type() const {
+    if (num_ast_type_args() != 0) {
+        if (auto fn_type = ast_type_args().back()->isa<FnASTType>())
             return fn_type;
     }
     return nullptr;
@@ -82,7 +96,7 @@ bool PathExpr::is_lvalue() const {
 bool MapExpr::is_lvalue() const {
     if (!lhs()->type())
         return true; // prevent further errors
-    return (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<PtrType>()) && lhs()->is_lvalue();
+    return (lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<PtrType>()) && lhs()->is_lvalue();
 }
 
 bool PrefixExpr::is_lvalue() const { return (kind() == MUL || kind() == AND) && rhs()->is_lvalue(); }
@@ -104,7 +118,7 @@ bool InfixExpr::has_side_effect() const {
 }
 
 bool PostfixExpr::has_side_effect() const { return true; }
-bool MapExpr::has_side_effect() const { return lhs()->type().isa<FnType>(); }
+bool MapExpr::has_side_effect() const { return bool(lhs()->type()->isa<FnType>()); }
 bool BlockExprBase::has_side_effect() const { return !stmts().empty() || expr()->has_side_effect(); }
 
 bool IfExpr::has_side_effect() const {

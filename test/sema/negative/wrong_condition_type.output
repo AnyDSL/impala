@@ -1,1 +1,1 @@
-wrong_condition_type.impala:2 col 9: error: mismatched types: expected 'bool' but found 'i32' as condition type
+wrong_condition_type.impala:2 col 9: error: mismatched types: expected boolean type but found 'i32' as if condition

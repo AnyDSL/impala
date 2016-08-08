@@ -1,0 +1,9 @@
+
+static mut v0 = "elem1";
+static mut v1 = "elem2";
+
+fn main() -> int {
+    let mut variants: [&[u8] * 2] = [(&v0) as &[u8], &v1];
+
+    0
+}

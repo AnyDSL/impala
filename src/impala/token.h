@@ -35,7 +35,7 @@ public:
     };
 
     struct KindHash {
-        uint64_t operator () (Kind kind) const { return thorin::hash_value((int) kind); }
+        uint64_t operator()(Kind kind) const { return thorin::hash_value((int) kind); }
     };
 
     Token() {}
@@ -49,7 +49,7 @@ public:
     Symbol symbol() const { return symbol_; }
     thorin::Box box() const { return box_; }
     Kind kind() const { return kind_; }
-    operator Kind () const { return kind_; }
+    operator Kind() const { return kind_; }
 
     enum Op {
         NONE    = 0,
@@ -78,9 +78,10 @@ public:
     static int to_binop(Kind kind);
     static thorin::ArithOpKind to_arithop(Kind kind) { return (thorin::ArithOpKind) to_binop(kind); }
     static thorin::CmpKind     to_cmp    (Kind kind) { return (thorin::CmpKind)     to_binop(kind); }
+    static const char* tok2str(Kind kind);
 
-    bool operator == (const Token& t) const { return kind_ == t; }
-    bool operator != (const Token& t) const { return kind_ != t; }
+    bool operator==(const Token& t) const { return kind_ == t; }
+    bool operator!=(const Token& t) const { return kind_ != t; }
 
 private:
     static void init();
@@ -99,16 +100,16 @@ private:
     static thorin::HashMap<Symbol, Kind> sym2flit_;///< Table of suffixes for \em floating point literals.
 
     friend void init();
-    friend std::ostream& operator << (std::ostream& os, const Token& tok);
-    friend std::ostream& operator << (std::ostream& os, const Kind&  tok);
+    friend std::ostream& operator<<(std::ostream& os, const Token& tok);
+    friend std::ostream& operator<<(std::ostream& os, const Kind&  tok);
 };
 
 typedef Token::Kind TokenKind;
 
 //------------------------------------------------------------------------------
 
-std::ostream& operator << (std::ostream& os, const Token& tok);
-std::ostream& operator << (std::ostream& os, const TokenKind& tok);
+std::ostream& operator<<(std::ostream& os, const Token& tok);
+std::ostream& operator<<(std::ostream& os, const TokenKind& tok);
 
 //------------------------------------------------------------------------------
 

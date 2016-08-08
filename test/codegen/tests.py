@@ -10,14 +10,12 @@ def allTests():
     """
     This function returns a list of tests.
     """
-    
+
     optionals = [
       "codegen/alloc_definite_array.impala",
       "codegen/conversion_trait.impala",
-      "codegen/cur_bb_bug.impala",
       "codegen/diderot.impala",
       "codegen/endless_mangling.impala",
-      "codegen/generic_get.impala",
       "codegen/ldg.impala",
       "codegen/parallel.impala",
       "codegen/poly_type_arg.impala",
@@ -41,5 +39,5 @@ def allTests():
     for test in tests:
         if test.getName() in optionals:
             test.opt()
-    
+
     return tests
