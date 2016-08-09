@@ -723,6 +723,7 @@ const Type* StructExpr::check(InferSema& sema) const {
 
 const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args) {
     auto fn_type = lhs->type()->as<FnType>();
+
     for (auto arg : args)
         check(arg);
 
@@ -732,7 +733,9 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args) {
             types[i] = coerce(fn_type->op(i), args[i]);
         constrain(lhs, this->fn_type(types));
         return type_noret();
-    } else if (args.size()+1 == fn_type->num_ops()) {
+    }
+
+    if (args.size()+1 == fn_type->num_ops()) {
         Array<const Type*> types(args.size()+1);
         for (size_t i = 0, e = args.size(); i != e; ++i)
             types[i] = coerce(fn_type->op(i), args[i]);
@@ -740,10 +743,9 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args) {
         auto result = constrain(lhs, this->fn_type(types));
         if (auto fn_type = result->isa<FnType>())
             return fn_type->return_type();
-        else
-            return type_error();
-    } else
-        return type_error();
+    }
+
+    return type_error();
 }
 
 const Type* FieldExpr::check(InferSema& sema) const {
