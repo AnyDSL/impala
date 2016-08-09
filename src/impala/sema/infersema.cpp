@@ -783,7 +783,6 @@ const Type* TypeAppExpr::check(InferSema& sema) const {
 }
 
 const Type* MapExpr::check(InferSema& sema) const {
-    // TODO always check args such that TypeSema doesn't see nullptrs as types
     auto ltype = sema.check(lhs());
 
     if (ltype->isa<Lambda>()) {
