@@ -68,7 +68,7 @@ public:
     }
 
     const Type* check(const ASTType* ast_type) {
-        if (ast_type->type() && ast_type->type()->is_known())
+        if (ast_type->type())
             return ast_type->type();
         return constrain(ast_type, ast_type->check(*this));
     }
@@ -249,11 +249,11 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     if (dst->isa<TypeError>()) return src; // guess the other one
     if (src->isa<TypeError>()) return dst; // dito
 
-    if (dst->isa<UnknownType>() && src->is_known()) return unify(src_repr, dst_repr)->type;
-    if (src->isa<UnknownType>() && dst->is_known()) return unify(dst_repr, src_repr)->type;
+    if (dst->isa<UnknownType>() && src->isa<UnknownType>())
+        return unify_by_rank(dst_repr, src_repr)->type;
 
-    if (dst->isa<UnknownType>() || src->isa<UnknownType>())
-        return dst;
+    if (dst->isa<UnknownType>()) return unify(src_repr, dst_repr)->type;
+    if (src->isa<UnknownType>()) return unify(dst_repr, src_repr)->type;
 
     if (dst->num_ops() == src->num_ops()) {
         if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
@@ -485,7 +485,7 @@ void Typedef::check(InferSema& sema) const {
 void EnumDecl::check(InferSema&) const { /*TODO*/ }
 
 void StructDecl::check(InferSema& sema) const {
-    if (type_ && type_->is_known())
+    if (type_)
         return;
 
     auto struct_type = sema.struct_type(this, num_field_decls());
@@ -799,7 +799,9 @@ const Type* MapExpr::check(InferSema& sema) const {
     if (ltype->isa<FnType>()) {
         return sema.check_call(lhs(), args());
     } else if (ltype->isa<UnknownType>()) {
-        return sema.unknown_type(); // TODO don't create a new UnknownType here
+        if (type_ == nullptr)
+            return type_ = sema.unknown_type();
+        return type_;
     } else {
         if (num_args() == 1)
             sema.check(arg(0));
