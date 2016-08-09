@@ -73,10 +73,10 @@ public:
         return constrain(ast_type, ast_type->check(*this));
     }
 
-    const Type* check_call(const Expr* lhs, ArrayRef<const Expr*> args);
-    const Type* check_call(const Expr* lhs, const std::deque<AutoPtr<const Expr>>& args) {
+    const Type* check_call(const Expr* lhs, ArrayRef<const Expr*> args, const Type* return_type);
+    const Type* check_call(const Expr* lhs, const std::deque<AutoPtr<const Expr>>& args, const Type* return_type) {
         Array<const Expr*> array(args.begin(), args.end());
-        return check_call(lhs, array);
+        return check_call(lhs, array, return_type);
     }
 
     const FnType* fn_type(const Type* type) {
@@ -721,7 +721,7 @@ const Type* StructExpr::check(InferSema& sema) const {
     return type;
 }
 
-const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args) {
+const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, const Type* return_type) {
     auto fn_type = lhs->type()->as<FnType>();
 
     for (auto arg : args)
@@ -739,7 +739,7 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args) {
         Array<const Type*> types(args.size()+1);
         for (size_t i = 0, e = args.size(); i != e; ++i)
             types[i] = coerce(fn_type->op(i), args[i]);
-        types.back() = fn_type->ops().back();
+        types.back() = return_type;
         auto result = constrain(lhs, this->fn_type(types));
         if (auto fn_type = result->isa<FnType>())
             return fn_type->return_type();
@@ -785,6 +785,9 @@ const Type* TypeAppExpr::check(InferSema& sema) const {
 }
 
 const Type* MapExpr::check(InferSema& sema) const {
+    if (type_ == nullptr)
+        type_ = sema.unknown_type();
+
     auto ltype = sema.check(lhs());
 
     if (ltype->isa<Lambda>()) {
@@ -798,10 +801,8 @@ const Type* MapExpr::check(InferSema& sema) const {
     }
 
     if (ltype->isa<FnType>()) {
-        return sema.check_call(lhs(), args());
+        return sema.check_call(lhs(), args(), type_);
     } else if (ltype->isa<UnknownType>()) {
-        if (type_ == nullptr)
-            return type_ = sema.unknown_type();
         return type_;
     } else {
         if (num_args() == 1)
@@ -850,6 +851,9 @@ const Type* WhileExpr::check(InferSema& sema) const {
 }
 
 const Type* ForExpr::check(InferSema& sema) const {
+    if (type_ == nullptr)
+        type_ = sema.unknown_type();
+
     auto forexpr = expr();
     if (auto prefix = forexpr->isa<PrefixExpr>())
         if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HLT)
@@ -866,7 +870,7 @@ const Type* ForExpr::check(InferSema& sema) const {
                     // copy over args and check call
                     Array<const Expr*> args(map->args().size()+1);
                     *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
-                    return sema.check_call(map->lhs(), args);
+                    return sema.check_call(map->lhs(), args, type_);
                 }
             }
         }
