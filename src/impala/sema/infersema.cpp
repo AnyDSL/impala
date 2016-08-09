@@ -68,8 +68,6 @@ public:
     }
 
     const Type* check(const ASTType* ast_type) {
-        if (ast_type->type())
-            return ast_type->type();
         return constrain(ast_type, ast_type->check(*this));
     }
 
