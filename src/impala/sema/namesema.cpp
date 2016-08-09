@@ -401,13 +401,13 @@ void ForExpr::check(NameSema& sema) const {
  * patterns
  */
 
-void TuplePattern::check(NameSema& sema) const {
-    for (auto& a : args()) {
-        a->check(sema);
+void TuplePtrn::check(NameSema& sema) const {
+    for (const auto& elem : elems()) {
+        elem->check(sema);
     }
 }
 
-void IdentPattern::check(NameSema& sema) const {
+void IdPtrn::check(NameSema& sema) const {
     local()->check(sema);
 }
 
@@ -422,7 +422,7 @@ void ItemStmt::check(NameSema& sema) const { item()->check(sema); }
 void LetStmt::check(NameSema& sema) const {
     if (init())
         init()->check(sema);
-    pattern()->check(sema);
+    ptrn()->check(sema);
 }
 
 //------------------------------------------------------------------------------

@@ -1553,7 +1553,7 @@ private:
  * patterns
  */
 
-class Pattern : public ASTNode, public Typeable {
+class Ptrn : public ASTNode, public Typeable {
 public:
     virtual void check(NameSema&) const = 0;
     virtual void check(BorrowSema&) const = 0;
@@ -1567,11 +1567,11 @@ private:
     friend class TypeSema;
 };
 
-class TuplePattern : public Pattern {
+class TuplePtrn : public Ptrn {
 public:
-    const AutoVector<const Pattern*>& args() const { return args_; }
-    const Pattern* arg(int i) const { return args_[i]; }
-    size_t num_args() const { return args_.size(); }
+    const std::deque<AutoPtr<const Ptrn>>& elems() const { return elems_; }
+    const Ptrn* elem(size_t i) const { return elems_[i]; }
+    size_t num_elems() const { return elems_.size(); }
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
@@ -1582,12 +1582,12 @@ private:
     virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 
-    AutoVector<const Pattern*> args_;
+    std::deque<AutoPtr<const Ptrn>> elems_;
 
     friend class Parser;
 };
 
-class IdentPattern : public Pattern {
+class IdPtrn : public Ptrn {
 public:
     const LocalDecl* local() const { return local_; }
 
@@ -1663,7 +1663,7 @@ private:
 
 class LetStmt : public Stmt {
 public:
-    const Pattern* pattern() const { return pattern_; }
+    const Ptrn* ptrn() const { return ptrn_; }
     const Expr* init() const { return init_; }
 
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1675,7 +1675,7 @@ private:
     virtual void check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
 
-    AutoPtr<const Pattern> pattern_;
+    AutoPtr<const Ptrn> ptrn_;
     AutoPtr<const Expr> init_;
 
     friend class Parser;

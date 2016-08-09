@@ -71,6 +71,11 @@
     case Token::L_BRACKET: \
     case Token::SIMD
 
+#define PTRN \
+         Token::MUT: \
+    case Token::ID: \
+         Token::L_PAREN
+
 #define STMT_NOT_EXPR \
          Token::LET: \
     case ITEM
@@ -232,10 +237,10 @@ public:
     const BlockExprBase*    parse_block_expr();
     const BlockExprBase*    try_block_expr(const std::string& context);
 
-    // Patterns
-    const Pattern*      parse_pattern();
-    const TuplePattern* parse_tuple_pattern();
-    const IdentPattern* parse_ident_pattern();
+    // patterns
+    const Ptrn*      parse_ptrn();
+    const TuplePtrn* parse_tuple_ptrn();
+    const IdPtrn*    parse_id_ptrn();
 
     // statements
     const Stmt*     parse_stmt_not_expr();
@@ -1294,32 +1299,32 @@ const BlockExprBase* Parser::try_block_expr(const std::string& context) {
  * patterns
  */
 
-const Pattern* Parser::parse_pattern() {
+const Ptrn* Parser::parse_ptrn() {
     if (la() == Token::L_PAREN) {
-        return parse_tuple_pattern();
+        return parse_tuple_ptrn();
     } else {
-        return parse_ident_pattern();
+        return parse_id_ptrn();
     }
 }
 
-const TuplePattern* Parser::parse_tuple_pattern() {
-    auto tuple_pat = loc(new TuplePattern());
+const TuplePtrn* Parser::parse_tuple_ptrn() {
+    auto tuple_ptrn = loc(new TuplePtrn());
     eat(Token::L_PAREN);
     parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple pattern", [&] {
-        tuple_pat->args_.emplace_back(parse_pattern());
+        tuple_ptrn->elems_.emplace_back(parse_ptrn());
     });
-    return tuple_pat;
+    return tuple_ptrn;
 }
 
-const IdentPattern* Parser::parse_ident_pattern() {
-    auto ident_pat = loc(new IdentPattern());
+const IdPtrn* Parser::parse_id_ptrn() {
+    auto id_ptrn = loc(new IdPtrn());
     auto local = loc(new LocalDecl(cur_var_handle++));
     local->is_mut_ = accept(Token::MUT);
     local->identifier_ = try_id("local variable in let binding");
     if (accept(Token::COLON))
         local->ast_type_ = parse_type();
-    ident_pat->local_ = local.get();
-    return ident_pat;
+    id_ptrn->local_ = local.get();
+    return id_ptrn;
 }
 
 /*
@@ -1337,7 +1342,7 @@ const Stmt* Parser::parse_stmt_not_expr() {
 const LetStmt* Parser::parse_let_stmt() {
     auto let_stmt = loc(new LetStmt());
     eat(Token::LET);
-    let_stmt->pattern_ = parse_pattern();
+    let_stmt->ptrn_ = parse_ptrn();
     if (accept(Token::ASGN))
         dock(let_stmt->init_, parse_expr());
     expect(Token::SEMICOLON, "the end of an let statement");

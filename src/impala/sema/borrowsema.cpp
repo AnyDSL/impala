@@ -267,13 +267,13 @@ void ForExpr::check(BorrowSema& sema) const {
  * patterns
  */
 
-void TuplePattern::check(BorrowSema& sema) const {
-    for (auto& a : args()) {
-        a->check(sema);
+void TuplePtrn::check(BorrowSema& sema) const {
+    for (const auto& elem : elems()) {
+        elem->check(sema);
     }
 }
 
-void IdentPattern::check(BorrowSema& sema) const {
+void IdPtrn::check(BorrowSema& sema) const {
     local()->check(sema);
 }
 
@@ -288,7 +288,7 @@ void ItemStmt::check(BorrowSema& sema) const { item()->check(sema); }
 void LetStmt::check(BorrowSema& sema) const {
     if (init())
         init()->check(sema);
-    pattern()->check(sema);
+    ptrn()->check(sema);
 }
 
 //------------------------------------------------------------------------------
