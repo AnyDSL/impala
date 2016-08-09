@@ -732,7 +732,7 @@ void ItemStmt::emit(CodeGen& cg) const {
 
 void LetStmt::emit(CodeGen& cg) const {
     if (cg.is_reachable())
-        cg.emit(ptrn(), init() ? cg.remit(init()) : nullptr);
+        cg.emit(ptrn(), init() ? cg.remit(init()) : cg.world().bottom(cg.convert(ptrn()->type()), ptrn()->loc()));
 }
 
 //------------------------------------------------------------------------------
