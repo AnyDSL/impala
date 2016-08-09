@@ -398,6 +398,22 @@ void ForExpr::check(NameSema& sema) const {
 //------------------------------------------------------------------------------
 
 /*
+ * patterns
+ */
+
+void TuplePtrn::check(NameSema& sema) const {
+    for (const auto& elem : elems()) {
+        elem->check(sema);
+    }
+}
+
+void IdPtrn::check(NameSema& sema) const {
+    local()->check(sema);
+}
+
+//------------------------------------------------------------------------------
+
+/*
  * statements
  */
 
@@ -406,7 +422,7 @@ void ItemStmt::check(NameSema& sema) const { item()->check(sema); }
 void LetStmt::check(NameSema& sema) const {
     if (init())
         init()->check(sema);
-    local()->check(sema);
+    ptrn()->check(sema);
 }
 
 //------------------------------------------------------------------------------

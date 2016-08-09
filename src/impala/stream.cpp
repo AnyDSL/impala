@@ -470,13 +470,26 @@ std::ostream& ForExpr::stream(std::ostream& os) const {
 }
 
 /*
+ * patterns
+ */
+
+std::ostream& TuplePtrn::stream(std::ostream& os) const {
+    stream_list(os << "(", elems(), [&] (const Ptrn* ptrn) { os << ptrn; }) << ")";
+    return os;
+}
+
+std::ostream& IdPtrn::stream(std::ostream& os) const {
+    return os << local();
+}
+
+/*
  * statements
  */
 
 std::ostream& ItemStmt::stream(std::ostream& os) const { return os << item(); }
 
 std::ostream& LetStmt::stream(std::ostream& os) const {
-    os << "let " << local();
+    os << "let " << ptrn();
     if (init())
         os << " = " << init();
     return os << ';';

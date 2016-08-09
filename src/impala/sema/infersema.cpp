@@ -54,6 +54,7 @@ public:
             constrain(local, type);
         return type;
     }
+    const Type* check(const Ptrn* p) { return constrain(p, p->check(*this)); }
     const Type* check(const FieldDecl* f) { return constrain(f, f->check(*this)); }
     void check(const Item* n) { n->check(*this); }
     void check(const Stmt* n) { n->check(*this); }
@@ -874,6 +875,23 @@ const Type* ForExpr::check(InferSema& sema) const {
 //------------------------------------------------------------------------------
 
 /*
+ * patterns
+ */
+
+const Type* TuplePtrn::check(InferSema& sema) const {
+    Array<const Type*> types(num_elems());
+    for (size_t i = 0, e = types.size(); i != e; ++i)
+        types[i] = sema.check(elem(i));
+    return sema.tuple_type(types);
+}
+
+const Type* IdPtrn::check(InferSema& sema) const {
+    return sema.check(local());
+}
+
+//------------------------------------------------------------------------------
+
+/*
  * statements
  */
 
@@ -881,10 +899,10 @@ void ExprStmt::check(InferSema& sema) const { sema.check(expr()); }
 void ItemStmt::check(InferSema& sema) const { sema.check(item()); }
 
 void LetStmt::check(InferSema& sema) const {
-    sema.check(local());
+    sema.check(ptrn());
     if (init()) {
         sema.check(init());
-        sema.coerce(local(), init());
+        sema.coerce(ptrn(), init());
         //sema.constrain(local(), init()->type());
     }
 }

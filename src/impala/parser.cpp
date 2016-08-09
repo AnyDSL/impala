@@ -71,6 +71,11 @@
     case Token::L_BRACKET: \
     case Token::SIMD
 
+#define PTRN \
+         Token::MUT: \
+    case Token::ID: \
+         Token::L_PAREN
+
 #define STMT_NOT_EXPR \
          Token::LET: \
     case ITEM
@@ -231,6 +236,11 @@ public:
     const WhileExpr*        parse_while_expr();
     const BlockExprBase*    parse_block_expr();
     const BlockExprBase*    try_block_expr(const std::string& context);
+
+    // patterns
+    const Ptrn*      parse_ptrn();
+    const TuplePtrn* parse_tuple_ptrn();
+    const IdPtrn*    parse_id_ptrn();
 
     // statements
     const Stmt*     parse_stmt_not_expr();
@@ -1292,6 +1302,38 @@ const BlockExprBase* Parser::try_block_expr(const std::string& context) {
 }
 
 /*
+ * patterns
+ */
+
+const Ptrn* Parser::parse_ptrn() {
+    if (la() == Token::L_PAREN) {
+        return parse_tuple_ptrn();
+    } else {
+        return parse_id_ptrn();
+    }
+}
+
+const TuplePtrn* Parser::parse_tuple_ptrn() {
+    auto tuple_ptrn = loc(new TuplePtrn());
+    eat(Token::L_PAREN);
+    parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple pattern", [&] {
+        tuple_ptrn->elems_.emplace_back(parse_ptrn());
+    });
+    return tuple_ptrn;
+}
+
+const IdPtrn* Parser::parse_id_ptrn() {
+    auto id_ptrn = loc(new IdPtrn());
+    auto local = loc(new LocalDecl(cur_var_handle++));
+    local->is_mut_ = accept(Token::MUT);
+    local->identifier_ = try_id("local variable in let binding");
+    if (accept(Token::COLON))
+        local->ast_type_ = parse_type();
+    id_ptrn->local_ = local.get();
+    return id_ptrn;
+}
+
+/*
  * statements
  */
 
@@ -1306,16 +1348,10 @@ const Stmt* Parser::parse_stmt_not_expr() {
 const LetStmt* Parser::parse_let_stmt() {
     auto let_stmt = loc(new LetStmt());
     eat(Token::LET);
-    auto local = loc(new LocalDecl(cur_var_handle++));
-    local->is_mut_ = accept(Token::MUT);
-    local->identifier_ = try_id("local variable in let binding");
-    if (accept(Token::COLON))
-        local->ast_type_ = parse_type();
+    let_stmt->ptrn_ = parse_ptrn();
     if (accept(Token::ASGN))
         dock(let_stmt->init_, parse_expr());
     expect(Token::SEMICOLON, "the end of an let statement");
-
-    let_stmt->local_ = local.get();
     return let_stmt;
 }
 
