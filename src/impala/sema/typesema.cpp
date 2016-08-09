@@ -70,7 +70,7 @@ public:
     }
 
     void expect_type(const Type* expected, const Expr* expr, const char* context) {
-        if (expected != expr->type())
+        if (expected != expr->type() && expected->is_known() && expr->type()->is_known() && !expr->type()->isa<TypeError>())
             error(expr, "mismatched types: expected '%' but found '%' as %", expected, expr->type(), context);
     }
 
@@ -486,7 +486,7 @@ void StructExpr::check(TypeSema& sema) const {
                     error(this, "missing field '%'", p.first);
             }
         }
-    } else if (!type->isa<TypeError>())
+    } else if (type->is_known() && !type->isa<TypeError>())
         error(ast_type_app(), "'%' is not a structure", type);
 }
 
@@ -499,7 +499,7 @@ void FieldExpr::check(TypeSema& sema) const {
         else
             error(lhs(), "attempted access of field '%' on type '%', but no field with that name was found", symbol(), type);
     } else if (!type->isa<TypeError>())
-        error(lhs(), "'%' is not a structure");
+        error(lhs(), "request for field '%' in something not a structure", symbol());
 }
 
 void TypeAppExpr::check(TypeSema& /*sema*/) const {
