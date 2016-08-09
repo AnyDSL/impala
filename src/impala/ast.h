@@ -350,7 +350,6 @@ private:
     virtual void check(TypeSema&) const override;
 
     AutoPtr<const Path> path_;
-    mutable const Decl* decl_ = nullptr;
 
     friend class Parser;
     friend class NameScope;
