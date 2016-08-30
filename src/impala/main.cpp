@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("O3",                 "",                               "optimize yet more", opt_3, false)
             .add_option<bool>            ("Os",                 "",                               "optimize for size", opt_s, false)
             .add_option<bool>            ("Othorin",            "",                               "optimize at Thorin level", opt_thorin, false)
-            .add_option<bool>            ("emit-annotated",     "",                               "emit AST of Impala program after semantical analysis", emit_annotated, false)
+            .add_option<bool>            ("emit-annotated",     "",                               "emit AST of Impala program after semantic analysis", emit_annotated, false)
             .add_option<bool>            ("emit-ast",           "",                               "emit AST of Impala program", emit_ast, false)
             .add_option<bool>            ("emit-c-interface",   "",                               "emit C interface from Impala code (experimental)", emit_cint, false)
             .add_option<bool>            ("emit-llvm",          "",                               "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
