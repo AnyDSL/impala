@@ -1,0 +1,12 @@
+// https://github.com/AnyDSL/thorin/issues/51
+extern fn h(mut n: int) -> () { g(n) }
+extern fn i(mut n: int) -> () { g(n) }
+extern fn g(mut n: int) -> () {
+    let mut i = 0;
+    while i < n { i = i*3 + 2*i + 5*i; }
+}
+extern fn f(mut n: int, ret: fn() -> !) -> ! {
+    g(n, ret)
+}
+
+fn main() -> int { 0 }
