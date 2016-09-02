@@ -29,20 +29,16 @@ private:
 };
 
 struct AssignmentInfo {
-    AssignmentInfo(const Expr* left_expr, lt_t left_lt, const thorin::Location& loc)
-        : left_expr_(left_expr)
-        , left_lt_(left_lt)
+    AssignmentInfo(lt_t left_lt, const thorin::Location& loc)
+        : left_lt_(left_lt)
         , asgn_loc_(loc)
         , tree_res_(nullptr)
         {}
 
-    const Expr* left_expr_; // TODO: const ptr?
     const lt_t left_lt_;
     const thorin::Location& asgn_loc_;
     std::shared_ptr<LvTree> tree_res_; // TODO: leave this here?
 };
-
-bool build_left_tree(payload_t, const thorin::Location&, const Expr*, LvMap&);
 
 void integrate_lifetime_tree(LvTree*, const Expr*, LvMap&, const thorin::Location&);
 
@@ -152,48 +148,63 @@ void FnExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
     fn_check(sema);
 }
 
-void handle_lvs(const Expr* right_expr, LifetimeSema& sema, AssignmentInfo* asgn_info) {
+void handle_lv(const Expr* right_expr, LifetimeSema& sema, AssignmentInfo* asgn_info) {
     if (asgn_info == nullptr)
+        // TODO: should this be possible, would it be better to make asgn_info a reference?
         return;
     assert(asgn_info->tree_res_ == nullptr);
+    assert(contains_ref_types(right_expr->type()));
 
-    // TODO: rename build_left_tree
-    if (!build_left_tree(asgn_info->left_lt_, asgn_info->asgn_loc_, right_expr, sema))
-        return;
-    if (asgn_info->left_expr_ == nullptr)
-        //asgn_info->tree_res_ = tree_res;
-        ;
-    else {
-        auto tree_res = asgn_info->left_expr_->lookup_lv_tree(sema, true);
-        integrate_lifetime_tree(tree_res.tree_.get(), right_expr, sema, asgn_info->asgn_loc_);
+    auto right_tree = right_expr->lookup_lv_tree(sema, false);
+    // TODO: what if no tree is returned?
+    lt_t right_lt = right_tree.payload_.get_value();
+    // TODO: have to make sure that get_value() works
+
+    // TODO: explain this behavior
+    switch (sema.get_comparator().compare(asgn_info->left_lt_, right_lt)) {
+        case Relation::INCOMPARABLE:
+            // TODO
+            assert(false);
+        case Relation::GREATER:
+            error(asgn_info->asgn_loc_) << "cannot make assignment because the right side does not "
+                << "live long enough\n";
+            // TODO: better error message
+            return;
+        case Relation::EQUAL:
+            if (right_tree.tree_ != nullptr && right_tree.tree_->has_children())
+                // TODO: right thing to check here? want to check that there are children for this lv
+                // that will have larger payloads
+                asgn_info->tree_res_ = right_tree.tree_;
+            return;
+        case Relation::LESS: {
+            asgn_info->tree_res_ = right_tree.tree_ == nullptr ?
+                right_expr->lookup_lv_tree(sema, true).tree_ : right_tree.tree_;
+            return;
+        }
     }
 }
 
 void PathExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const {
-    handle_lvs(this, sema, asgn_info);
+    handle_lv(this, sema, asgn_info);
 }
 
 void PrefixExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const  {
     switch (kind()) {
         case Token::MUL:
+            // TODO: ok like that, always check rhs?
             if (asgn_info == nullptr)
                 rhs()->check(sema, nullptr);
             else
-                handle_lvs(this, sema, asgn_info);
+                handle_lv(this, sema, asgn_info);
             break;
         case Token::AND: {
             assert(asgn_info != nullptr); // TODO: is this possible?
             assert(asgn_info->tree_res_ == nullptr);
-            const Expr* left_expr = asgn_info->left_expr_;
-            asgn_info->left_expr_ = nullptr;
             rhs()->check(sema, asgn_info);
             if (asgn_info->tree_res_ != nullptr) {
-                if (left_expr == nullptr)
-                    assert(false); // TODO
-                else {
-                    auto tree_res = left_expr->lookup_lv_tree(sema, true);
-                    integrate_lifetime_tree(tree_res.tree_.get(), nullptr, sema, asgn_info->asgn_loc_);
-                }
+                // TODO: build a new tree around the returned one and return it
+                //auto tree_res = left_expr->lookup_lv_tree(sema, true);
+                //integrate_lifetime_tree(tree_res.tree_.get(), nullptr, sema, asgn_info->asgn_loc_);
             }
             break;
         }
@@ -215,14 +226,26 @@ void InfixExpr::check(LifetimeSema& sema, AssignmentInfo*) const   {
         case XOR_ASGN:
         case SHL_ASGN:
         case SHR_ASGN: {
-            assert(lhs()->is_lvalue());
+            if (!contains_ref_types(rhs()->type()))
+                // TODO: should we really stop here, couldn't the arguments do something with references
+                // even if they are not assigned? do we need to check that?
+                // TODO: the idea is that we only need to check assignments in this phase,
+                // is that correct? the correctness of the rest should follow
+                // nothing to do
+                return;
+
             lt_t left_lt = lookup(lhs(), sema).get_value();
-            auto ai = AssignmentInfo(lhs(), left_lt, loc());
+            auto ai = AssignmentInfo(left_lt, loc());
             rhs()->check(sema, &ai);
+            if (ai.tree_res_ != nullptr)
+                // TODO: should we really pass a pointer to integrate... or better a shared pointer?
+                ;//integrate_lifetime_tree(ai.tree_res_.get(), rhs(), sema, loc());
+                // TODO: change integrate
             // TODO: might need to handle parent assignment
             break;
         }
         default:
+            // TODO: can we stop here?
             lhs()->check(sema, nullptr);
             rhs()->check(sema, nullptr);
     }
@@ -309,9 +332,10 @@ void ItemStmt::check(LifetimeSema& sema) const {
 void LetStmt::check(LifetimeSema& sema) const {
     local()->check(sema);
     if (init()) {
-        // TODO:
-        //auto ai = AssignmentInfo(init(), init()->loc());
-        init()->check(sema, nullptr);
+        // TODO: handle the same way as the assignment
+        // TODO: need a different location, the one of the assignment operator
+        auto ai = AssignmentInfo(sema.cur_lifetime(), init()->loc());
+        init()->check(sema, &ai);
     }
 }
 
@@ -321,37 +345,6 @@ void lifetime_analysis(const ModContents* mod) {
     LvMapComparator comparator = LvMapComparator();
     LifetimeSema sema = LifetimeSema(comparator);
     mod->check(sema);
-}
-
-//------------------------------------------------------------------------------
-
-/*
- * build_left_tree
- */
-
-bool build_left_tree(payload_t base_lt, const thorin::Location& asgn_loc, const Expr* right_expr, LvMap& map) {
-    if (!contains_ref_types(right_expr->type()))
-        return false;
-
-    LvTreeLookupRes right_res = right_expr->lookup_lv_tree(map, false);
-    lt_t right_lt = right_res.payload_.get_value();
-    switch (map.get_comparator().compare(base_lt, right_lt)) {
-        // either the left side tree has children with larger lifetimes already or it does not
-        // in which case it needs to be built up because the right side's reference children
-        // need to be appended which have a lifetime as least as long as the right side and
-        // thus longer than the left side base
-        case Relation::LESS: return true;
-        case Relation::EQUAL:
-            return right_res.tree_ != nullptr && right_res.tree_->has_children();
-        case Relation::GREATER:
-            // TODO: use other loc
-            error(asgn_loc) << "cannot assign from " << right_expr << " because it does not live long enough\n";
-            break;
-        case Relation::INCOMPARABLE:
-            error(asgn_loc) << "lifetimes are incomparable (TODO)\n";
-            assert(false);
-    }
-    return false;
 }
 
 //------------------------------------------------------------------------------
