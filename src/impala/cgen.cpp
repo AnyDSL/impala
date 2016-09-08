@@ -93,19 +93,19 @@ private:
             switch (prim->primtype_kind()) {
                 case PrimType_i32:
                     if (vector_type->size() == 4) ctype_prefix = "__m128i";
-                    else if (vector_type->size() == 8) ctype_prefix = "__m258i";
+                    else if (vector_type->size() == 8) ctype_prefix = "__m256i";
                     else return false;
                     break;
                 case PrimType_f16:
                     THORIN_UNREACHABLE;
                 case PrimType_f32:
                     if (vector_type->size() == 4) ctype_prefix = "__m128";
-                    else if (vector_type->size() == 8) ctype_prefix = "__m258";
+                    else if (vector_type->size() == 8) ctype_prefix = "__m256";
                     else return false;
                     break;
                 case PrimType_f64:
                     if (vector_type->size() == 4) ctype_prefix = "__m128d";
-                    else if (vector_type->size() == 8) ctype_prefix = "__m258d";
+                    else if (vector_type->size() == 8) ctype_prefix = "__m256d";
                     else return false;
                     break;
                 default:
