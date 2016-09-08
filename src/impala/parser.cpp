@@ -73,6 +73,7 @@
 
 #define STMT_NOT_EXPR \
          Token::LET: \
+    case Token::ASM: \
     case ITEM
 
 #define STMT \
@@ -227,11 +228,13 @@ public:
     const WhileExpr*        parse_while_expr();
     const BlockExprBase*    parse_block_expr();
     const BlockExprBase*    try_block_expr(const std::string& context);
+    
 
     // statements
     const Stmt*     parse_stmt_not_expr();
     const ItemStmt* parse_item_stmt();
     const LetStmt*  parse_let_stmt();
+    const AsmStmt*  parse_asm_stmt();
 
 private:
     Token lex();        ///< Consume next Token in input stream, fill look-ahead buffer, return consumed Token.
@@ -1208,6 +1211,7 @@ const Stmt* Parser::parse_stmt_not_expr() {
     switch (la()) {
         case ITEM:       return parse_item_stmt();
         case Token::LET: return parse_let_stmt();
+        case Token::ASM: return parse_asm_stmt();
         default:         THORIN_UNREACHABLE;
     }
 }
@@ -1232,6 +1236,45 @@ const ItemStmt* Parser::parse_item_stmt() {
     auto item_stmt = loc(new ItemStmt());
     item_stmt->item_ = parse_item();
     return item_stmt;
+}
+
+const AsmStmt* Parser::parse_asm_stmt() {
+    auto asm_stmt = loc(new AsmStmt());
+    eat(Token::ASM);
+    expect(Token::L_PAREN, "arguemnts of inline assembly");
+    
+    const StrExpr *asm_template = parse_str_expr();
+    // TODO: get into the stmt
+    StrExpr *asm_content = new StrExpr();
+    asm_content->symbols_.insert(asm_content->symbols_.end(), asm_template->symbols_.begin(),
+        asm_template->symbols_.end());
+    delete asm_template;
+
+    // number of assembly operand lists
+    int num_args = 2;
+    // parse the input and output operands
+    while (num_args-- > 0 && accept(Token::COLON) && la() != Token::R_PAREN) {
+        const StrExpr *operand_constraint = parse_str_expr();
+        asm_content->symbols_.insert(asm_content->symbols_.end(), operand_constraint->symbols_.begin(),
+            operand_constraint->symbols_.end());
+        delete operand_constraint;
+        
+        expect(Token::L_PAREN, "operand expression for inline assemlby");
+        asm_stmt->output_exprs_.push_back(parse_expr());
+        expect(Token::R_PAREN, "')' after asm operand");
+    }
+
+    // two more strings possible for clobbers and options
+    num_args = 2;
+    while (num_args-- > 0 && accept(Token::COLON) && la() != Token::R_PAREN) {
+        const StrExpr *additional_param = parse_str_expr();
+        asm_content->symbols_.insert(asm_content->symbols_.end(), additional_param->symbols_.begin(),
+            additional_param->symbols_.end());
+        delete additional_param;
+    }
+
+    expect(Token::R_PAREN, "arguemnts of inline assembly");
+    return asm_stmt;
 }
 
 }

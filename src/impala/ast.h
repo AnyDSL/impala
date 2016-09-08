@@ -1511,6 +1511,27 @@ private:
     friend class Parser;
 };
 
+class AsmStmt : public Stmt {
+public:
+    virtual std::ostream& stream(std::ostream&) const override;
+    virtual void check(NameSema&) const override;
+    virtual void check(BorrowSema&) const override;
+    virtual void check(TypeSema&) const override;
+    virtual void emit(CodeGen&) const override;
+
+private:
+    AutoPtr<const std::string> template_;
+    // TODO: use const strings?
+    ///AutoVector<std::string> output_constraints_;
+    Exprs output_exprs_;
+    //AutoVector<std::string> input_constraints_;
+    Exprs input_exprs_;
+    AutoPtr<const std::string> clobbers_;
+    AutoPtr<const std::string> options_;
+
+    friend class Parser;
+};
+
 //------------------------------------------------------------------------------
 
 }
