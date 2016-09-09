@@ -719,6 +719,10 @@ void LetStmt::emit(CodeGen& cg) const {
     }
 }
 
+void AsmStmt::emit(CodeGen& cg) const {
+    // TODO
+}
+
 //------------------------------------------------------------------------------
 
 void emit(World& world, const ModContents* mod) {

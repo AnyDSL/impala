@@ -275,6 +275,13 @@ void LetStmt::check(BorrowSema& sema) const {
         init()->check(sema);
     local()->check(sema);
 }
+void AsmStmt::check(BorrowSema& sema) const {
+    // TODO: does something need to be checked for the outputs?
+    // do we want to check something at all? this is unsafe
+    for (auto expr : input_exprs_)
+        expr->check(sema);
+    error(this) << this;
+}
 
 //------------------------------------------------------------------------------
 

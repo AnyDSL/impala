@@ -1318,6 +1318,17 @@ void LetStmt::check(TypeSema& sema) const {
         error(this) << "non-mutable let statement lacks initialization\n";
 }
 
+void AsmStmt::check(TypeSema& sema) const {
+    for (auto expr : output_exprs_) {
+        if (!expr->is_lvalue())
+            error(expr) << "output expression of an asm statement must be an lvalue\n";
+        // TODO: check that expressions have primitive type?
+    }
+    // TODO: check inputs
+    //for (auto expr : input_exprs_)
+    //    expr->check(sema);
+}
+
 //------------------------------------------------------------------------------
 
 void type_analysis(Init& init, const ModContents* mod, bool nossa) {

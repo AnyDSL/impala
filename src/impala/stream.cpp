@@ -559,4 +559,9 @@ std::ostream& ExprStmt::stream(std::ostream& os) const {
     return os;
 }
 
+std::ostream& AsmStmt::stream(std::ostream& os) const {
+    os << "asm(...);";
+    return os;
+}
+
 }

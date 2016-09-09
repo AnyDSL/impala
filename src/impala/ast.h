@@ -1520,14 +1520,13 @@ public:
     virtual void emit(CodeGen&) const override;
 
 private:
-    AutoPtr<const std::string> template_;
-    // TODO: use const strings?
-    ///AutoVector<std::string> output_constraints_;
+    AutoPtr<const StrExpr> template_;
+    AutoVector<const StrExpr*> output_constraints_;
     Exprs output_exprs_;
-    //AutoVector<std::string> input_constraints_;
+    AutoVector<const StrExpr*> input_constraints_;
     Exprs input_exprs_;
-    AutoPtr<const std::string> clobbers_;
-    AutoPtr<const std::string> options_;
+    AutoPtr<const StrExpr> clobbers_;
+    AutoPtr<const StrExpr> options_;
 
     friend class Parser;
 };
