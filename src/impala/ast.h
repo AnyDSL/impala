@@ -894,7 +894,7 @@ public:
     virtual void check(NameSema&) const = 0;
     virtual void check(MoveSema&, bool) const = 0;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const = 0;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const = 0;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const = 0;
 
     // lvalue functions
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const { assert(false); /* overwrite this */ }
@@ -956,7 +956,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
@@ -986,7 +986,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
 private:
@@ -1010,7 +1010,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
 private:
@@ -1029,7 +1029,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
 private:
@@ -1049,7 +1049,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual Symbol fn_symbol() const override { return Symbol("lambda"); }
 
 private:
@@ -1077,7 +1077,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
     virtual void insert_payload(LvTree*, bool multi_ref, LvMap&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
@@ -1110,7 +1110,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
     virtual void insert_payload(LvTree*, bool multi_ref, LvMap&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
@@ -1144,7 +1144,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
 
@@ -1176,7 +1176,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
 private:
@@ -1200,7 +1200,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
     virtual void insert_payload(LvTree*, bool multi_ref, LvMap&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
@@ -1228,7 +1228,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
     virtual void insert_payload(LvTree*, bool multi_ref, LvMap&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
@@ -1251,7 +1251,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1268,7 +1268,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1288,7 +1288,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1306,7 +1306,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1321,7 +1321,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1370,7 +1370,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1397,7 +1397,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const LvTreeLookupRes lookup_lv_tree(LvMap&, bool) const override;
     virtual void insert_payload(LvTree*, bool multi_ref, LvMap&, payload_t, const thorin::Location&) const override;
     virtual bool owns_value(void) const override;
@@ -1435,7 +1435,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const char* prefix() const = 0;
 
 private:
@@ -1482,7 +1482,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
 
@@ -1507,7 +1507,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
 
@@ -1532,7 +1532,7 @@ public:
     virtual void check(NameSema&) const override;
     virtual void check(MoveSema&, bool) const override;
 	virtual void check(BorrowSema&, BorrowExpectation, size_t) const override;
-	virtual void check(LifetimeSema&, AssignmentInfo*) const override;
+	virtual std::shared_ptr<LvTree> check(LifetimeSema&, AssignmentInfo*) const override;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;

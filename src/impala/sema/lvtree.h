@@ -22,7 +22,9 @@ public:
     std::shared_ptr<LvTree> get_child(Symbol, bool);
     LvTree* get_parent(void) const { return parent_; }
     void set_parent(LvTree* parent) { parent_ = parent; };
+    // TODO: check if not better a shared pointer should be used here
     void update_child(Symbol, LvTree*);
+    void add_child(Symbol, std::shared_ptr<LvTree>);
     bool has_children() { return children_.size() > 0; }
     void remove_subtree(Symbol field);
     void clear_subtrees(void);

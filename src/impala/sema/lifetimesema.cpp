@@ -32,12 +32,10 @@ struct AssignmentInfo {
     AssignmentInfo(lt_t left_lt, const thorin::Location& loc)
         : left_lt_(left_lt)
         , asgn_loc_(loc)
-        , tree_res_(nullptr)
         {}
 
     const lt_t left_lt_;
     const thorin::Location& asgn_loc_;
-    std::shared_ptr<LvTree> tree_res_; // TODO: leave this here?
 };
 
 void integrate_lifetime_tree(LvTree*, const Expr*, LvMap&, const thorin::Location&);
@@ -130,29 +128,30 @@ void ImplItem::check(LifetimeSema& sema) const {
  * expressions
  */
 
-void EmptyExpr::check(LifetimeSema&, AssignmentInfo*) const {}
+std::shared_ptr<LvTree> EmptyExpr::check(LifetimeSema&, AssignmentInfo*) const {return nullptr;}
 
-void BlockExprBase::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const {
+std::shared_ptr<LvTree> BlockExprBase::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const {
     sema.enter_scope();
     for (auto stmt : stmts())
         stmt->check(sema);
-    expr()->check(sema, asgn_info);
+    auto res = expr()->check(sema, asgn_info);
     sema.leave_scope();
+    return res;
 }
 
-void LiteralExpr::check(LifetimeSema&, AssignmentInfo*) const {}
-void CharExpr::check(LifetimeSema&, AssignmentInfo*) const {}
-void StrExpr::check(LifetimeSema&, AssignmentInfo*) const {}
+std::shared_ptr<LvTree> LiteralExpr::check(LifetimeSema&, AssignmentInfo*) const {return nullptr;}
+std::shared_ptr<LvTree> CharExpr::check(LifetimeSema&, AssignmentInfo*) const {return nullptr;}
+std::shared_ptr<LvTree> StrExpr::check(LifetimeSema&, AssignmentInfo*) const {return nullptr;}
 
-void FnExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
+std::shared_ptr<LvTree> FnExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
     fn_check(sema);
+    return nullptr;
 }
 
-void handle_lv(const Expr* right_expr, LifetimeSema& sema, AssignmentInfo* asgn_info) {
+std::shared_ptr<LvTree> handle_lv(const Expr* right_expr, LifetimeSema& sema, AssignmentInfo* asgn_info) {
     if (asgn_info == nullptr)
         // TODO: should this be possible, would it be better to make asgn_info a reference?
-        return;
-    assert(asgn_info->tree_res_ == nullptr);
+        return nullptr;
     assert(contains_ref_types(right_expr->type()));
 
     auto right_tree = right_expr->lookup_lv_tree(sema, false);
@@ -169,51 +168,53 @@ void handle_lv(const Expr* right_expr, LifetimeSema& sema, AssignmentInfo* asgn_
             error(asgn_info->asgn_loc_) << "cannot make assignment because the right side does not "
                 << "live long enough\n";
             // TODO: better error message
-            return;
+            break;
         case Relation::EQUAL:
             if (right_tree.tree_ != nullptr && right_tree.tree_->has_children())
                 // TODO: right thing to check here? want to check that there are children for this lv
                 // that will have larger payloads
-                asgn_info->tree_res_ = right_tree.tree_;
-            return;
+                return right_tree.tree_;
+            break;
         case Relation::LESS: {
-            asgn_info->tree_res_ = right_tree.tree_ == nullptr ?
+            return right_tree.tree_ == nullptr ?
                 right_expr->lookup_lv_tree(sema, true).tree_ : right_tree.tree_;
-            return;
         }
     }
+    return nullptr;
 }
 
-void PathExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const {
-    handle_lv(this, sema, asgn_info);
+std::shared_ptr<LvTree> PathExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const {
+    return handle_lv(this, sema, asgn_info);
 }
 
-void PrefixExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const  {
+std::shared_ptr<LvTree> PrefixExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const  {
     switch (kind()) {
         case Token::MUL:
             // TODO: ok like that, always check rhs?
             if (asgn_info == nullptr)
                 rhs()->check(sema, nullptr);
             else
-                handle_lv(this, sema, asgn_info);
+                return handle_lv(this, sema, asgn_info);
             break;
         case Token::AND: {
             assert(asgn_info != nullptr); // TODO: is this possible?
-            assert(asgn_info->tree_res_ == nullptr);
-            rhs()->check(sema, asgn_info);
-            if (asgn_info->tree_res_ != nullptr) {
-                // TODO: build a new tree around the returned one and return it
-                //auto tree_res = left_expr->lookup_lv_tree(sema, true);
-                //integrate_lifetime_tree(tree_res.tree_.get(), nullptr, sema, asgn_info->asgn_loc_);
+            auto res = rhs()->check(sema, asgn_info);
+            if (false && res != nullptr) {
+                // TODO: reuse functionality from lvmap.cpp?
+                auto new_tree = std::shared_ptr<LvTree>(new LvTree(nullptr));
+                new_tree->set_payload_inherited(asgn_info->asgn_loc_);
+                new_tree->add_child(get_deref_symbol(), res);
+                return new_tree;
             }
             break;
         }
         default:
             rhs()->check(sema, nullptr);
     }
+    return nullptr;
 }
 
-void InfixExpr::check(LifetimeSema& sema, AssignmentInfo*) const   {
+std::shared_ptr<LvTree> InfixExpr::check(LifetimeSema& sema, AssignmentInfo*) const   {
     switch (kind()) {
         case ASGN:      // all assignments
         case ADD_ASGN:
@@ -232,12 +233,12 @@ void InfixExpr::check(LifetimeSema& sema, AssignmentInfo*) const   {
                 // TODO: the idea is that we only need to check assignments in this phase,
                 // is that correct? the correctness of the rest should follow
                 // nothing to do
-                return;
+                return nullptr;
 
             lt_t left_lt = lookup(lhs(), sema).get_value();
             auto ai = AssignmentInfo(left_lt, loc());
-            rhs()->check(sema, &ai);
-            if (ai.tree_res_ != nullptr)
+            auto res = rhs()->check(sema, &ai);
+            if (res != nullptr)
                 // TODO: should we really pass a pointer to integrate... or better a shared pointer?
                 ;//integrate_lifetime_tree(ai.tree_res_.get(), rhs(), sema, loc());
                 // TODO: change integrate
@@ -249,70 +250,84 @@ void InfixExpr::check(LifetimeSema& sema, AssignmentInfo*) const   {
             lhs()->check(sema, nullptr);
             rhs()->check(sema, nullptr);
     }
+    return nullptr;
 }
 
-void PostfixExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
+std::shared_ptr<LvTree> PostfixExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
     lhs()->check(sema, nullptr);
+    return nullptr;
 }
 
-void FieldExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
+std::shared_ptr<LvTree> FieldExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
     lhs()->check(sema, nullptr);
+    return nullptr;
 }
 
-void CastExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
+std::shared_ptr<LvTree> CastExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
     lhs()->check(sema, nullptr);
+    return nullptr;
 }
 
-void DefiniteArrayExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
+std::shared_ptr<LvTree> DefiniteArrayExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
     for (auto arg : args())
         arg->check(sema, nullptr);
+    return nullptr;
 }
 
-void RepeatedDefiniteArrayExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
+std::shared_ptr<LvTree> RepeatedDefiniteArrayExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
     value()->check(sema, nullptr);
+    return nullptr;
 }
 
-void IndefiniteArrayExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
+std::shared_ptr<LvTree> IndefiniteArrayExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
     dim()->check(sema, nullptr);
+    return nullptr;
 }
 
-void TupleExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
+std::shared_ptr<LvTree> TupleExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
     for (auto arg : args())
         arg->check(sema, nullptr);
+    return nullptr;
 }
 
-void SimdExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
+std::shared_ptr<LvTree> SimdExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
     for (auto arg : args())
         arg->check(sema, nullptr);
+    return nullptr;
 }
 
-void StructExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
+std::shared_ptr<LvTree> StructExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
     for (const auto& elem : elems())
         elem.expr()->check(sema, nullptr);
+    return nullptr;
 }
 
-void MapExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
+std::shared_ptr<LvTree> MapExpr::check(LifetimeSema& sema, AssignmentInfo*) const {
     lhs()->check(sema, nullptr);
     for (auto arg : args())
         arg->check(sema, nullptr);
+    return nullptr;
 }
 
-void IfExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const {
+std::shared_ptr<LvTree> IfExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const {
     cond()->check(sema, nullptr);
     then_expr()->check(sema, asgn_info);
     else_expr()->check(sema, asgn_info);
     // TODO: merge semas
+    return nullptr;
 }
 
-void WhileExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const {
+std::shared_ptr<LvTree> WhileExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const {
     cond()->check(sema, nullptr);
     body()->check(sema, asgn_info);
     // TODO: merge semas
+    return nullptr;
 }
 
-void ForExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const {
+std::shared_ptr<LvTree> ForExpr::check(LifetimeSema& sema, AssignmentInfo* asgn_info) const {
     expr()->check(sema, nullptr);
     fn_expr()->check(sema, nullptr);
+    return nullptr;
 }
 
 //------------------------------------------------------------------------------

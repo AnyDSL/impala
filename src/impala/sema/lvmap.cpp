@@ -66,6 +66,12 @@ void LvTree::update_child(Symbol s, LvTree* tree) {
     children_[s] = std::shared_ptr<LvTree>(tree);
 }
 
+void LvTree::add_child(Symbol s, std::shared_ptr<LvTree> child) {
+    assert(!children_.contains(s));
+    // TODO assert children sanity
+    children_[s] = child;
+}
+
 void LvTree::remove_subtree(Symbol field) {
     children_.erase(field);
 }
