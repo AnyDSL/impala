@@ -720,7 +720,38 @@ void LetStmt::emit(CodeGen& cg) const {
 }
 
 void AsmStmt::emit(CodeGen& cg) const {
-    // TODO
+    // first remit inputs
+    // then place asm instruction taking memory and expressions as input
+    // then set memory of asm instruction
+    // produce tuple with mem and all outputs as output, wire so that out(i) gives the right result
+    // lemit all outputs
+    // place stores for all outputs with input mem of asm or previous store and out(i) as parameter
+
+    // TODO: can this be done better? 
+    std::vector<const thorin::Type*> out_types(output_exprs_.size());
+    int i = 0;
+    for (auto expr : output_exprs_) {
+        //out_types.push_back(cg.convert(expr->type()));
+        out_types[i++] = cg.convert(expr->type());
+    }
+
+    // TODO: correct this way?
+    // TODO: maybe emit template and operands and throw them in expressions as well
+    std::vector<const Def*> inputs(input_exprs_.size() + 1);
+    i = 0;
+    inputs[i++] = cg.remit(template_);
+    for (auto expr : input_exprs_)
+        inputs[i++] = cg.remit(expr);
+
+    const Asm *asm_op = cg.world().inl_asm(cg.get_mem(), out_types, inputs, loc())->as<Asm>();
+    // TODO: can it not be an Asm? We shouldn't be able to optimize things away over asm code
+    
+    i = 0; 
+    cg.set_mem(asm_op->out(i++));
+    for (auto expr: output_exprs_) {
+        auto exprl = cg.lemit(expr);
+        exprl.store(asm_op->out(i++), loc());
+    }
 }
 
 //------------------------------------------------------------------------------
