@@ -237,8 +237,9 @@ public:
     const AsmStmt*  parse_asm_stmt();
 
     // asm helper
-    bool            parse_asm_operands(AutoVector<const StrExpr*>&, Exprs&);
+    bool            parse_asm_operands(std::vector<std::string>&, Exprs&);
     bool            parse_asm_option(std::function<void()> f);
+    std::string     parse_str();
 
 private:
     Token lex();        ///< Consume next Token in input stream, fill look-ahead buffer, return consumed Token.
@@ -1242,12 +1243,26 @@ const ItemStmt* Parser::parse_item_stmt() {
     return item_stmt;
 }
 
+// TODO: better way to do this?
+std::string Parser::parse_str() {
+    auto str_expr = parse_str_expr();
+    std::string str;
+    //for (auto it = str_expr->symbols().begin() + 1; it < str_expr->symbols().end() - 1; it++)
+    //    str += it->str();
+    for (auto sym : str_expr->symbols()) {
+        auto str_res = std::string(sym.str());
+        str += str_res.substr(1, str_res.size() - 2);
+    }
+    delete str_expr;
+    return str;
+}
+
 const AsmStmt* Parser::parse_asm_stmt() {
     auto asm_stmt = loc(new AsmStmt());
     eat(Token::ASM);
     expect(Token::L_PAREN, "arguemnts of inline assembly");
-    
-    asm_stmt->template_ = parse_str_expr();
+   
+    asm_stmt->template_ = parse_str();
 
     // TODO: if there are no spaces between colons they get lexed as double colons
     // which screws up the parsing here. Handle that.
@@ -1261,18 +1276,18 @@ const AsmStmt* Parser::parse_asm_stmt() {
         goto exit;
 
     // two more strings possible for clobbers and options
-    if (!parse_asm_option([&] { asm_stmt->clobbers_ = parse_str_expr(); }))
+    if (!parse_asm_option([&] { asm_stmt->clobbers_ = parse_str(); }))
         goto exit;
-    parse_asm_option([&] { asm_stmt->options_ = parse_str_expr(); });
+    parse_asm_option([&] { asm_stmt->options_ = parse_str(); });
 
 exit:
     expect(Token::R_PAREN, "arguemnts of inline assembly");
     return asm_stmt;
 }
 
-bool Parser::parse_asm_operands(AutoVector<const StrExpr*>& constraints, Exprs& expressions) {
+bool Parser::parse_asm_operands(std::vector<std::string>& constraints, Exprs& expressions) {
     while (la() != Token::COLON && la() != Token::R_PAREN) {
-        constraints.push_back(parse_str_expr());
+        constraints.push_back(parse_str());
 
         expect(Token::L_PAREN, "operand expression for inline assemlby");
         expressions.push_back(parse_expr());

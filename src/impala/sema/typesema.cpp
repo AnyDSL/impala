@@ -1319,7 +1319,6 @@ void LetStmt::check(TypeSema& sema) const {
 }
 
 void AsmStmt::check(TypeSema& sema) const {
-    sema.check(template_);
     // TODO: check that output and input types are primitive or pointers
     for (auto expr : output_exprs_) {
         // TODO: the is_lvalue() function is broken somehow, fix it and uncomment this

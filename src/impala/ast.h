@@ -1520,13 +1520,11 @@ public:
     virtual void emit(CodeGen&) const override;
 
 private:
-    AutoPtr<const StrExpr> template_;
-    AutoVector<const StrExpr*> output_constraints_;
-    Exprs output_exprs_;
-    AutoVector<const StrExpr*> input_constraints_;
-    Exprs input_exprs_;
-    AutoPtr<const StrExpr> clobbers_;
-    AutoPtr<const StrExpr> options_;
+    // is this efficient?
+    std::string template_, clobbers_, options_;
+    // TODO: check no memory leaks
+    std::vector<std::string> output_constraints_, input_constraints_;
+    Exprs output_exprs_, input_exprs_;
 
     friend class Parser;
 };

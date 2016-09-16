@@ -735,7 +735,7 @@ void AsmStmt::emit(CodeGen& cg) const {
     for (auto expr : input_exprs_)
         inputs[i++] = cg.remit(expr);
 
-    const Asm *asm_op = cg.world().inl_asm(cg.get_mem(), out_types, inputs, loc())->as<Asm>();
+    const Asm *asm_op = cg.world().inl_asm(cg.get_mem(), out_types, inputs, loc(), template_, output_constraints_, input_constraints_)->as<Asm>();
     // TODO: can it not be an Asm? We shouldn't be able to optimize things away over asm code
     
     i = 0; 
