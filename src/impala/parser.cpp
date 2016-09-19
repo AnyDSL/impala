@@ -1242,15 +1242,13 @@ const ItemStmt* Parser::parse_item_stmt() {
     return item_stmt;
 }
 
-// TODO: better way to do this?
 std::string Parser::parse_str() {
-    auto str_expr = parse_str_expr();
     std::string str;
-    for (auto sym : str_expr->symbols()) {
-        auto str_res = std::string(sym.str());
-        str += str_res.substr(1, str_res.size() - 2);
-    }
-    delete str_expr;
+    do {
+        str += la().symbol().str() + 1;
+        str.pop_back();
+        lex();
+    } while (la() == Token::LIT_str);
     return str;
 }
 
