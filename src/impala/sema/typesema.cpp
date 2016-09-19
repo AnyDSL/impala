@@ -1321,12 +1321,10 @@ void LetStmt::check(TypeSema& sema) const {
 void AsmStmt::check(TypeSema& sema) const {
     // TODO: check that output and input types are primitive or pointers
     for (auto expr : output_exprs_) {
-        // TODO: the is_lvalue() function is broken somehow, fix it and uncomment this
-        //if (!expr->is_lvalue())
-        //    error(expr) << "output expression of an asm statement must be an lvalue\n";
-        // TODO: check that the corresponding value decl is mutable
-        //if (!expr->is_mut())
-        //    error(expr) << "output operand of an asm statement must be mutable\n";
+        // also checks for the mutability of the declaration and marks it as written
+        // TODO: should this be separated?
+        if (!expr->is_lvalue())
+            error(expr) << "output expression of an asm statement must be an lvalue\n";
         sema.check(expr);
     }
     for (auto expr : input_exprs_)

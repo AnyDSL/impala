@@ -237,8 +237,7 @@ public:
     const AsmStmt*  parse_asm_stmt();
 
     // asm helper
-    bool            parse_asm_operands(std::vector<std::string>&, Exprs&);
-    bool            parse_asm_option(std::function<void()> f);
+    void            parse_asm_operands(std::vector<std::string>&, Exprs&);
     std::string     parse_str();
 
 private:
@@ -1247,8 +1246,6 @@ const ItemStmt* Parser::parse_item_stmt() {
 std::string Parser::parse_str() {
     auto str_expr = parse_str_expr();
     std::string str;
-    //for (auto it = str_expr->symbols().begin() + 1; it < str_expr->symbols().end() - 1; it++)
-    //    str += it->str();
     for (auto sym : str_expr->symbols()) {
         auto str_res = std::string(sym.str());
         str += str_res.substr(1, str_res.size() - 2);
@@ -1257,35 +1254,44 @@ std::string Parser::parse_str() {
     return str;
 }
 
+#define PARSE_NEXT(double_col_target) \
+    if (accept(Token::DOUBLE_COLON)) \
+        goto double_col_target; \
+    if (!accept(Token::COLON)) \
+        goto exit;
+
 const AsmStmt* Parser::parse_asm_stmt() {
     auto asm_stmt = loc(new AsmStmt());
     eat(Token::ASM);
     expect(Token::L_PAREN, "arguemnts of inline assembly");
    
     asm_stmt->template_ = parse_str();
+    PARSE_NEXT(inputs)
 
-    // TODO: if there are no spaces between colons they get lexed as double colons
-    // which screws up the parsing here. Handle that.
+    // output operands
+    parse_asm_operands(asm_stmt->output_constraints_, asm_stmt->output_exprs_);
+    PARSE_NEXT(side_effects)
+
+inputs:
+    parse_asm_operands(asm_stmt->input_constraints_, asm_stmt->input_exprs_);
+    PARSE_NEXT(options)
+
+side_effects:
+    if (accept(Token::COLON))
+        goto options;
+    asm_stmt->clobbers_ = parse_str();
     if (!accept(Token::COLON))
         goto exit;
 
-    // parse the input and output operands
-    if (!parse_asm_operands(asm_stmt->output_constraints_, asm_stmt->output_exprs_))
-        goto exit;
-    if (!parse_asm_operands(asm_stmt->input_constraints_, asm_stmt->input_exprs_))
-        goto exit;
-
-    // two more strings possible for clobbers and options
-    if (!parse_asm_option([&] { asm_stmt->clobbers_ = parse_str(); }))
-        goto exit;
-    parse_asm_option([&] { asm_stmt->options_ = parse_str(); });
+options:
+    asm_stmt->options_ = parse_str();
 
 exit:
     expect(Token::R_PAREN, "arguemnts of inline assembly");
     return asm_stmt;
 }
 
-bool Parser::parse_asm_operands(std::vector<std::string>& constraints, Exprs& expressions) {
+void Parser::parse_asm_operands(std::vector<std::string>& constraints, Exprs& expressions) {
     while (la() != Token::COLON && la() != Token::R_PAREN) {
         constraints.push_back(parse_str());
 
@@ -1296,18 +1302,6 @@ bool Parser::parse_asm_operands(std::vector<std::string>& constraints, Exprs& ex
         if (!accept(Token::COMMA))
             break;
     } 
-    return accept(Token::COLON);
-}
-
-bool Parser::parse_asm_option(std::function<void()> f) {
-    // TODO: this allows for one colon too much when this function is used for the last
-    // argument, is that a problem?
-    if (accept(Token::COLON))
-        return true;
-    if (la() == Token::R_PAREN)
-        return false;
-    f();
-    return accept(Token::COLON);
 }
 
 }
