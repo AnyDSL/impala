@@ -1319,11 +1319,15 @@ void LetStmt::check(TypeSema& sema) const {
 }
 
 void check_correct_asm_type(const Type t, const Expr *expr) {
-    if (!t.isa<PrimType>()
-        || t.isa<PtrType>()
-        || t.isa<SimdType>()
-        || t.isa<StructAbsType>())
-        error(expr) << "Asm operand must have primitive, pointer, SIMD or struct type\n";
+    // TODO: check fails for some types that should be supported (&[1]f32 e.g.)
+    // but I can't tell off the top of my head why
+    //if (!t.isa<PrimType>()
+    //    || t.isa<PtrType>()
+    //    || t.isa<SimdType>()
+    //    || t.isa<StructAbsType>()
+    //    || t.isa<ArrayType>())
+    //    error(expr) << "Asm operand must have primitive, pointer, SIMD, struct "
+    //        " or array type, but it is " << t << "\n";
 }
 
 void AsmStmt::check(TypeSema& sema) const {
