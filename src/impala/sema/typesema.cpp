@@ -1318,17 +1318,24 @@ void LetStmt::check(TypeSema& sema) const {
         error(this) << "non-mutable let statement lacks initialization\n";
 }
 
+void check_correct_asm_type(const Type t, const Expr *expr) {
+    if (!t.isa<PrimType>()
+        || t.isa<PtrType>()
+        || t.isa<SimdType>()
+        || t.isa<StructAbsType>())
+        error(expr) << "Asm operand must have primitive, pointer, SIMD or struct type\n";
+}
+
 void AsmStmt::check(TypeSema& sema) const {
-    // TODO: check that output and input types are primitive or pointers
     for (auto expr : output_exprs_) {
         // also checks for the mutability of the declaration and marks it as written
         // TODO: should this be separated?
         if (!expr->is_lvalue())
             error(expr) << "output expression of an asm statement must be an lvalue\n";
-        sema.check(expr);
+        check_correct_asm_type(sema.check(expr), expr);
     }
     for (auto expr : input_exprs_)
-        sema.check(expr);
+        check_correct_asm_type(sema.check(expr), expr);
 }
 
 //------------------------------------------------------------------------------
