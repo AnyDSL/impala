@@ -611,6 +611,8 @@ const Type* InfixExpr::check(InferSema& sema) const {
             auto rtype = sema.check(rhs());
             sema.constrain(lhs(), rtype);
             sema.constrain(rhs(), ltype);
+            if (auto simd = rhs()->type()->isa<SimdType>())
+                return sema.simd_type(sema.type_bool(), simd->dim());
             return sema.type_bool();
         }
         case OROR:
