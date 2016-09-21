@@ -238,6 +238,7 @@ public:
 
     // asm helper
     void            parse_asm_operands(std::vector<std::string>&, Exprs&);
+    void            parse_asm_options(std::function<void()>);
     std::string     parse_str();
 
 private:
@@ -1262,6 +1263,8 @@ const AsmStmt* Parser::parse_asm_stmt() {
     auto asm_stmt = loc(new AsmStmt());
     eat(Token::ASM);
     expect(Token::L_PAREN, "arguemnts of inline assembly");
+
+    int i = 0;
    
     asm_stmt->template_ = parse_str();
     PARSE_NEXT(inputs)
@@ -1277,17 +1280,28 @@ inputs:
 side_effects:
     if (accept(Token::COLON))
         goto options;
-    while (la() != Token::COLON && la() != Token::R_PAREN) {
-        asm_stmt->clobbers_.push_back(parse_str());
-
-        if (!accept(Token::COMMA))
-            break;
-    } 
+    parse_asm_options([&]{ asm_stmt->clobbers_.push_back(parse_str()); });
     if (!accept(Token::COLON))
         goto exit;
 
 options:
-    asm_stmt->options_ = parse_str();
+    parse_asm_options([&]{
+            auto loc = la().loc();
+            if (i++ >= 3) {
+                impala::error(loc) << "too many arguemtns, only three options supported for inline assembly\n";
+                return;
+            }
+            auto option = parse_str();
+            if (option == "volatile")
+                asm_stmt->is_volatile_ = true;
+            else if (option == "alignstack")
+                asm_stmt->is_alignstack_ = true;
+            else if (option == "intel")
+                asm_stmt->is_inteldialect_ = true;
+            else
+                impala::error(loc) << "unsupported inline assembly option '"
+                    << option << "', only 'volatile', 'alignstack' and 'intel' supported\n";
+        });
 
 exit:
     expect(Token::R_PAREN, "arguemnts of inline assembly");
@@ -1306,5 +1320,13 @@ void Parser::parse_asm_operands(std::vector<std::string>& constraints, Exprs& ex
             break;
     } 
 }
+
+void Parser::parse_asm_options(std::function<void()> f) {
+    while (la() != Token::COLON && la() != Token::R_PAREN) {
+        f();
+        if (!accept(Token::COMMA))
+            break;
+    }
+} 
 
 }
