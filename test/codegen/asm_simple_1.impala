@@ -1,7 +1,7 @@
 fn main() -> int {
     let mut a = 4;
     let b = 3;
-    asm("addl %1, %0" : "=r"(a) : "r"(b), "0"(a));
+    asm("addl $1, $0" : "=r"(a) : "r"(b), "0"(a));
 
     if a == 7 { 0 } else { 1 }    
 }
