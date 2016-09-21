@@ -1521,9 +1521,9 @@ public:
 
 private:
     // is this efficient?
-    std::string template_, clobbers_, options_;
+    std::string template_, options_;
     // TODO: check no memory leaks
-    std::vector<std::string> output_constraints_, input_constraints_;
+    std::vector<std::string> output_constraints_, input_constraints_, clobbers_;
     Exprs output_exprs_, input_exprs_;
 
     friend class Parser;

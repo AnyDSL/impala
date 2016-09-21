@@ -1277,7 +1277,12 @@ inputs:
 side_effects:
     if (accept(Token::COLON))
         goto options;
-    asm_stmt->clobbers_ = parse_str();
+    while (la() != Token::COLON && la() != Token::R_PAREN) {
+        asm_stmt->clobbers_.push_back(parse_str());
+
+        if (!accept(Token::COMMA))
+            break;
+    } 
     if (!accept(Token::COLON))
         goto exit;
 
