@@ -560,7 +560,28 @@ std::ostream& ExprStmt::stream(std::ostream& os) const {
 }
 
 std::ostream& AsmStmt::stream(std::ostream& os) const {
-    os << "asm(...);";
+    os << "asm(\"" << template_ << "\"\n\t:";
+
+    assert(output_constraints_.size() == output_exprs_.size());
+    for (size_t i = 0; i < output_constraints_.size(); i++) 
+        os << "\"" << output_constraints_[i] << "\"(" << output_exprs_[i] << "), ";
+    os << "\n\t:";
+    assert(input_constraints_.size() == input_exprs_.size());
+    for (size_t i = 0; i < input_constraints_.size(); i++) 
+        os << "\"" << input_constraints_[i] << "\"(" << input_exprs_[i] << "), ";
+    os << "\n\t:";
+    for (auto clob : clobbers_)
+        os << "\"" << clob << "\", ";
+    os << "\n\t:";
+    if (is_volatile_)
+        os << "\"volatile\", ";
+    if (is_alignstack_)
+        os << "\"alignstack\", ";
+    if (is_inteldialect_)
+        os << "\"intel\"";
+
+    os << "\n)";
+    
     return os;
 }
 
