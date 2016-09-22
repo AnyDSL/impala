@@ -87,7 +87,7 @@ def diff_output(output, expected):
         olines = output.decode('utf-8').splitlines(1)
         elines = expected.decode('utf-8').splitlines(1)
     except UnicodeDecodeError:
-        print("Output/Expected output not UTF-8, comparing as binary")
+        # output or expected output not UTF-8 - comparing as binary
         return output == expected
 
     diff = difflib.Differ()
