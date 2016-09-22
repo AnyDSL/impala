@@ -483,7 +483,7 @@ void Typedef::check(InferSema& sema) const {
 void EnumDecl::check(InferSema&) const { /*TODO*/ }
 
 void StructDecl::check(InferSema& sema) const {
-    if (type_)
+    if (type_ && type_->is_known())
         return;
 
     auto struct_type = sema.struct_type(this, num_field_decls());
