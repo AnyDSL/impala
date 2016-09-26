@@ -1,0 +1,28 @@
+fn main() -> int {
+    let str1 = "Come on, copy me!";
+    let mut str2 = "Don't overwrite me";
+    strcpy(str2, str1);
+
+    let mut i = -1;
+    while (++i < 18) {
+        if (str1(i) != str2(i)) {
+            return(1)
+        }
+    }
+    0
+}
+
+fn strcpy(mut dest: [u8], src: [u8]) -> [u8] {
+    let mut d0: int;
+    let mut d1: int;
+    let mut d2: int;
+    asm (  "1:\tlodsb\n\t"
+            "stosb\n\t"
+            "testb %al,%al\n\t"
+            "jne 1b"
+            : "=&S" (d0), "=&D" (d1), "=&a" (d2)
+            : "0" (src),"1" (dest) 
+            : "memory"
+            : "volatile");
+    dest
+}
