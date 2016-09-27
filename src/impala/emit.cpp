@@ -723,13 +723,9 @@ void AsmStmt::emit(CodeGen& cg) const {
     // TODO: can this be done better? 
     std::vector<const thorin::Type*> out_types(output_exprs_.size());
     int i = 0;
-    for (auto expr : output_exprs_) {
-        //out_types.push_back(cg.convert(expr->type()));
+    for (auto expr : output_exprs_)
         out_types[i++] = cg.convert(expr->type());
-    }
 
-    // TODO: correct this way?
-    // TODO: maybe emit template and operands and throw them in expressions as well
     std::vector<const Def*> inputs(input_exprs_.size());
     i = 0;
     for (auto expr : input_exprs_)
