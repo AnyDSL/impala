@@ -5,14 +5,14 @@ fn main() -> int {
     let mut b = 9;
     let b_dec_zero = atomic_dec(&b);
 
-    if a_dec_zero && !b_dec_zero { 0 } else { 1 }
+    if a_dec_zero && !b_dec_zero && a == 0 && b == 8 { 0 } else { 1 }
 }
 
 fn atomic_dec(mut p: &i32) -> bool {
-    let mut res: bool;
-    asm ("lock; decl $0; sete $1;"
-            : "=m" (*p), "=q" (res)
-            : "m" (*p) 
+    let mut res: bool = false;
+    asm ("lock; decl $1; sete $0;"
+            : /*"=r" (p),*/ "=q" (res)
+            : "*m" (p) 
             : "memory"
             : "volatile"
         );
