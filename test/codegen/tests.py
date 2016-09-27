@@ -33,9 +33,9 @@ def allTests():
       "codegen/while_true.impala",
     ]
 
-
     tests = make_invoke_tests("codegen")
     tests += get_tests_from_dir("codegen/benchmarks")
+    tests += get_tests_from_dir("codegen/inline_asm")
 
     # mark optionals
     for test in tests:
