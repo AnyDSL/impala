@@ -10,9 +10,7 @@ optionals = [
 ]
 
 args = {
-    "codegen/inline_asm/asm_simple_1.impala" : [],
-    "codegen/inline_asm/asm_simple_2.impala" : [],
-    "codegen/inline_asm/asm_atomic_decrement.impala" : [],
+    "codegen/inline_asm/asm_syscall.impala" : [],
 }
 
 def allTests():
