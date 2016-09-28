@@ -1520,9 +1520,7 @@ public:
     virtual void emit(CodeGen&) const override;
 
 private:
-    // is this efficient?
     std::string template_;
-    // TODO: check no memory leaks
     std::vector<std::string> output_constraints_, input_constraints_, clobbers_;
     Exprs output_exprs_, input_exprs_;
     bool is_volatile_ = false /* ~has sideeffects */;
