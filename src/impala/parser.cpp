@@ -1309,7 +1309,7 @@ exit:
 }
 
 void Parser::parse_asm_operands(std::vector<std::string>& constraints, Exprs& expressions) {
-    while (la() != Token::COLON && la() != Token::R_PAREN) {
+    while (la() != Token::COLON && la() != Token::DOUBLE_COLON && la() != Token::R_PAREN) {
         constraints.push_back(parse_str());
 
         expect(Token::L_PAREN, "operand expression for inline assemlby");
