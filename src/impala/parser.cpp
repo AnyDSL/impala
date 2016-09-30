@@ -1253,57 +1253,50 @@ std::string Parser::parse_str() {
     return str;
 }
 
-#define PARSE_NEXT(double_col_target) \
-    if (accept(Token::DOUBLE_COLON)) \
-        goto double_col_target; \
-    if (!accept(Token::COLON)) \
-        goto exit;
-
 const AsmStmt* Parser::parse_asm_stmt() {
     auto asm_stmt = loc(new AsmStmt());
     eat(Token::ASM);
     expect(Token::L_PAREN, "arguemnts of inline assembly");
 
-    int i = 0;
-   
     asm_stmt->template_ = parse_str();
-    PARSE_NEXT(inputs)
+    
+    int i = 0;
+    std::function<void()> op_parsers[] = {
+        [&] { parse_asm_operands(asm_stmt->output_constraints_, asm_stmt->output_exprs_); },
+        [&] { parse_asm_operands(asm_stmt->input_constraints_, asm_stmt->input_exprs_); },
+        [&] { parse_asm_options([&]{ asm_stmt->clobbers_.push_back(parse_str()); }); },
+        [&] { parse_asm_options([&]{
+                auto loc = la().loc();
+                if (i++ >= 3) {
+                    impala::error(loc) << "too many arguemtns, only three options supported for inline assembly\n";
+                    return;
+                }
+                auto option = parse_str();
+                if (option == "volatile")
+                    asm_stmt->flags_ |= thorin::Assembly::Flags::HasSideEffects;
+                else if (option == "alignstack")
+                    asm_stmt->flags_ |= thorin::Assembly::Flags::IsAlignStack;
+                else if (option == "intel")
+                    asm_stmt->flags_ |= thorin::Assembly::Flags::IsIntelDialect;
+                else
+                    impala::error(loc) << "unsupported inline assembly option '"
+                        << option << "', only 'volatile', 'alignstack' and 'intel' supported\n";
+            }); }
+        };
 
-    // output operands
-    parse_asm_operands(asm_stmt->output_constraints_, asm_stmt->output_exprs_);
-    PARSE_NEXT(side_effects)
+    bool was_double_colon = false;
+    for (size_t i = 0; i < 4; ++i) {
+        if (accept(Token::DOUBLE_COLON)) {
+            was_double_colon = true;
+            continue;
+        }
+        if (!was_double_colon && !accept(Token::COLON))
+            break;
 
-inputs:
-    parse_asm_operands(asm_stmt->input_constraints_, asm_stmt->input_exprs_);
-    PARSE_NEXT(options)
+        was_double_colon = false;
+        op_parsers[i]();
+    }
 
-side_effects:
-    if (accept(Token::COLON))
-        goto options;
-    parse_asm_options([&]{ asm_stmt->clobbers_.push_back(parse_str()); });
-    if (!accept(Token::COLON))
-        goto exit;
-
-options:
-    parse_asm_options([&]{
-            auto loc = la().loc();
-            if (i++ >= 3) {
-                impala::error(loc) << "too many arguemtns, only three options supported for inline assembly\n";
-                return;
-            }
-            auto option = parse_str();
-            if (option == "volatile")
-                asm_stmt->flags_ |= thorin::Assembly::Flags::HasSideEffects;
-            else if (option == "alignstack")
-                asm_stmt->flags_ |= thorin::Assembly::Flags::IsAlignStack;
-            else if (option == "intel")
-                asm_stmt->flags_ |= thorin::Assembly::Flags::IsIntelDialect;
-            else
-                impala::error(loc) << "unsupported inline assembly option '"
-                    << option << "', only 'volatile', 'alignstack' and 'intel' supported\n";
-        });
-
-exit:
     expect(Token::R_PAREN, "arguemnts of inline assembly");
     return asm_stmt;
 }
