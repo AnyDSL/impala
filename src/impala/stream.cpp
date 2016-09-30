@@ -573,11 +573,11 @@ std::ostream& AsmStmt::stream(std::ostream& os) const {
     for (auto clob : clobbers_)
         os << "\"" << clob << "\", ";
     os << "\n\t:";
-    if (is_volatile_)
+    if (flags_ & thorin::Assembly::Flags::HasSideEffects)
         os << "\"volatile\", ";
-    if (is_alignstack_)
+    if (flags_ & thorin::Assembly::Flags::IsAlignStack)
         os << "\"alignstack\", ";
-    if (is_inteldialect_)
+    if (flags_ & thorin::Assembly::Flags::IsIntelDialect)
         os << "\"intel\"";
 
     os << "\n)";

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "thorin/irbuilder.h"
+#include "thorin/primop.h"
 #include "thorin/util/array.h"
 #include "thorin/util/assert.h"
 #include "thorin/util/autoptr.h"
@@ -21,6 +22,7 @@ namespace thorin {
     class JumpTarget;
     class Continuation;
     class Param;
+    class Assembly;
 }
 
 namespace impala {
@@ -1523,9 +1525,7 @@ private:
     std::string template_;
     std::vector<std::string> output_constraints_, input_constraints_, clobbers_;
     Exprs output_exprs_, input_exprs_;
-    bool is_volatile_ = false /* ~has sideeffects */;
-    bool is_alignstack_ = false;
-    bool is_inteldialect_ = false;
+    thorin::Assembly::Flags flags_ = thorin::Assembly::Flags::NoFlag;
 
     friend class Parser;
 };

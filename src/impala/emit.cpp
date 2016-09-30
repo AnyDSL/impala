@@ -731,10 +731,9 @@ void AsmStmt::emit(CodeGen& cg) const {
     for (auto expr : input_exprs_)
         inputs[i++] = cg.remit(expr);
 
-    auto flags = Assembly::get_flags(is_volatile_, is_alignstack_, is_inteldialect_);
     auto assembly = cg.world().assembly(out_types, cg.get_mem(), inputs,
             template_, output_constraints_, input_constraints_, clobbers_,
-            flags, loc())->as<Assembly>();
+            flags_, loc())->as<Assembly>();
     // TODO: can it not be an Asm? We shouldn't be able to optimize things away over asm code
     
     i = 0; 

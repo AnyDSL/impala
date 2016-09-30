@@ -1293,11 +1293,11 @@ options:
             }
             auto option = parse_str();
             if (option == "volatile")
-                asm_stmt->is_volatile_ = true;
+                asm_stmt->flags_ |= thorin::Assembly::Flags::HasSideEffects;
             else if (option == "alignstack")
-                asm_stmt->is_alignstack_ = true;
+                asm_stmt->flags_ |= thorin::Assembly::Flags::IsAlignStack;
             else if (option == "intel")
-                asm_stmt->is_inteldialect_ = true;
+                asm_stmt->flags_ |= thorin::Assembly::Flags::IsIntelDialect;
             else
                 impala::error(loc) << "unsupported inline assembly option '"
                     << option << "', only 'volatile', 'alignstack' and 'intel' supported\n";
