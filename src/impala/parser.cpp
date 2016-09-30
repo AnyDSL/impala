@@ -237,9 +237,8 @@ public:
     const AsmStmt*  parse_asm_stmt();
 
     // asm helper
-    void            parse_asm_operands(std::vector<std::string>&, Exprs&);
-    void            parse_asm_options(std::function<void()>);
     std::string     parse_str();
+    void            parse_asm_operands(std::vector<std::string>&, Exprs&);
 
 private:
     Token lex();        ///< Consume next Token in input stream, fill look-ahead buffer, return consumed Token.
@@ -1243,16 +1242,6 @@ const ItemStmt* Parser::parse_item_stmt() {
     return item_stmt;
 }
 
-std::string Parser::parse_str() {
-    std::string str;
-    do {
-        str += la().symbol().str() + 1;
-        str.pop_back();
-        lex();
-    } while (la() == Token::LIT_str);
-    return str;
-}
-
 const AsmStmt* Parser::parse_asm_stmt() {
     auto asm_stmt = loc(new AsmStmt());
     eat(Token::ASM);
@@ -1260,14 +1249,20 @@ const AsmStmt* Parser::parse_asm_stmt() {
 
     asm_stmt->template_ = parse_str();
     
-    int i = 0;
+    size_t num_flags = 0;
     std::function<void()> op_parsers[] = {
         [&] { parse_asm_operands(asm_stmt->output_constraints_, asm_stmt->output_exprs_); },
         [&] { parse_asm_operands(asm_stmt->input_constraints_, asm_stmt->input_exprs_); },
-        [&] { parse_asm_options([&]{ asm_stmt->clobbers_.push_back(parse_str()); }); },
-        [&] { parse_asm_options([&]{
+        [&] { 
+                while (la() != Token::COLON && la() != Token::R_PAREN) {
+                    asm_stmt->clobbers_.push_back(parse_str());
+                    if (!accept(Token::COMMA))
+                        break;
+                }
+            },
+        [&] { parse_comma_list(Token::R_PAREN, "arguemnts of inline assembly", [&]{
                 auto loc = la().loc();
-                if (i++ >= 3) {
+                if (++num_flags > 3) {
                     impala::error(loc) << "too many arguemtns, only three options supported for inline assembly\n";
                     return;
                 }
@@ -1285,7 +1280,8 @@ const AsmStmt* Parser::parse_asm_stmt() {
         };
 
     bool was_double_colon = false;
-    for (size_t i = 0; i < 4; ++i) {
+    size_t i;
+    for (i = 0; i < 4; ++i) {
         if (accept(Token::DOUBLE_COLON)) {
             was_double_colon = true;
             continue;
@@ -1297,8 +1293,19 @@ const AsmStmt* Parser::parse_asm_stmt() {
         op_parsers[i]();
     }
 
-    expect(Token::R_PAREN, "arguemnts of inline assembly");
+    if (i < 4)
+        expect(Token::R_PAREN, "arguemnts of inline assembly");
     return asm_stmt;
+}
+
+std::string Parser::parse_str() {
+    std::string str;
+    do {
+        str += la().symbol().str() + 1;
+        str.pop_back();
+        lex();
+    } while (la() == Token::LIT_str);
+    return str;
 }
 
 void Parser::parse_asm_operands(std::vector<std::string>& constraints, Exprs& expressions) {
@@ -1313,13 +1320,5 @@ void Parser::parse_asm_operands(std::vector<std::string>& constraints, Exprs& ex
             break;
     } 
 }
-
-void Parser::parse_asm_options(std::function<void()> f) {
-    while (la() != Token::COLON && la() != Token::R_PAREN) {
-        f();
-        if (!accept(Token::COMMA))
-            break;
-    }
-} 
 
 }
