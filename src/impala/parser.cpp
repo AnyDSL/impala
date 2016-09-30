@@ -1282,7 +1282,7 @@ const AsmStmt* Parser::parse_asm_stmt() {
     bool was_double_colon = false;
     size_t i;
     for (i = 0; i < 4; ++i) {
-        if (accept(Token::DOUBLE_COLON)) {
+        if (i < 3 && accept(Token::DOUBLE_COLON)) {
             was_double_colon = true;
             continue;
         }
