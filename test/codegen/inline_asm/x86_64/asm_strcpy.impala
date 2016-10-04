@@ -11,11 +11,11 @@ fn main() -> int {
     0
 }
 
-fn strcpy(dst: &[u8], src: &[u8], count: u32) -> () {
-    asm("cld;"
-        "rep;"
-        "movsb;"
-        : /* no input */
-        : "{si}"(src), "{di}"(dst), "{cx}"(count)
+fn strcpy(mut dst: &[u8], mut src: &[u8], mut count: u32) -> () {
+    asm("cld\n\t"
+        "rep movsb"
+        : "={si}"(src), "={di}"(dst), "={cx}"(count)
+        : "0"(src), "1"(dst), "2"(count)
+        : "memory"
     );
 }
