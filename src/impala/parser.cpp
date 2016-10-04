@@ -1294,11 +1294,29 @@ parse_options:
     return asm_stmt;
 }
 
+#include <iostream>
+
 std::string Parser::parse_str() {
     std::string str;
     do {
-        str += la().symbol().str() + 1;
-        str.pop_back();
+        std::string res = la().symbol().str() + 1;
+        // replaces special characters
+        // TODO: get rid of this, there is functionality in LLVM for that already,
+        // can we use that?
+        for (size_t i = 0; i < res.length() - 1; ++i) {
+            if (res[i] != '\\') {
+                str += res[i];
+                continue;
+            }
+            switch (res[++i]) {
+                case 'n': str += '\n'; break;
+                case 't': str += '\t'; break;
+                default: assert(false); // TODO, more cases?
+            }
+        }
+
+        //str += la().symbol().str() + 1;
+        //str.pop_back();
         lex();
     } while (la() == Token::LIT_str);
     return str;
