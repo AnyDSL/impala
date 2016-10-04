@@ -405,10 +405,10 @@ void LetStmt::check(NameSema& sema) const {
     local()->check(sema);
 }
 void AsmStmt::check(NameSema& sema) const {
-    for (auto expr : output_exprs_)
-        expr->check(sema);
-    for (auto expr : input_exprs_)
-        expr->check(sema);
+    for (const auto& output : outputs())
+        output.expr()->check(sema);
+    for (const auto& input : inputs())
+        input.expr()->check(sema);
 }
 
 //------------------------------------------------------------------------------

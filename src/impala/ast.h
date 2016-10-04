@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "thorin/irbuilder.h"
-#include "thorin/primop.h"
 #include "thorin/util/array.h"
 #include "thorin/util/assert.h"
 #include "thorin/util/autoptr.h"
@@ -1515,6 +1514,50 @@ private:
 
 class AsmStmt : public Stmt {
 public:
+    class Elem {
+        public:
+            Elem(std::string constraint, const Expr* expr)
+                : constraint_(constraint)
+                , expr_(expr)
+        {}
+
+        const std::string& constraint() const { return constraint_; }
+        const Expr* expr() const { return expr_; }
+
+        private:
+            std::string constraint_;
+            const Expr* expr_;
+    };
+
+    virtual ~AsmStmt() {
+        for (auto  input :  inputs()) delete  input.expr();
+        for (auto output : outputs()) delete output.expr();
+    }
+
+    const std::string& asm_template() const { return asm_template_; }
+    ArrayRef<Elem> outputs() const { return outputs_; }
+    ArrayRef<Elem>  inputs() const { return  inputs_; }
+    const Elem& output(size_t i) const { return outputs_[i]; }
+    const Elem&  input(size_t i) const { return  inputs_[i]; }
+    size_t num_outputs() const { return outputs().size(); }
+    size_t  num_inputs() const { return  inputs().size(); }
+    ArrayRef<std::string> clobbers() const { return clobbers_; }
+    ArrayRef<std::string> options() const { return options_; }
+
+    Array<std::string> output_constraints() const {
+        Array<std::string> result(num_outputs());
+        for (size_t i = 0, e = result.size(); i != e; ++i)
+            result[i] = output(i).constraint();
+        return result;
+    }
+
+    Array<std::string> input_constraints() const {
+        Array<std::string> result(num_inputs());
+        for (size_t i = 0, e = result.size(); i != e; ++i)
+            result[i] = input(i).constraint();
+        return result;
+    }
+
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
@@ -1522,10 +1565,11 @@ public:
     virtual void emit(CodeGen&) const override;
 
 private:
-    std::string template_;
-    std::vector<std::string> output_constraints_, input_constraints_, clobbers_;
-    Exprs output_exprs_, input_exprs_;
-    thorin::Assembly::Flags flags_ = thorin::Assembly::Flags::NoFlag;
+    std::string asm_template_;
+    std::vector<Elem> outputs_;
+    std::vector<Elem>  inputs_;
+    std::vector<std::string> clobbers_;
+    std::vector<std::string> options_;
 
     friend class Parser;
 };

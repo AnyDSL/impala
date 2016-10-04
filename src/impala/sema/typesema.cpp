@@ -1319,23 +1319,26 @@ void LetStmt::check(TypeSema& sema) const {
 }
 
 void check_correct_asm_type(const Type t, const Expr *expr) {
-    if (!t.isa<PrimType>()
-        && !t.isa<PtrType>()
-        && !t.isa<SimdType>())
-        error(expr) << "Asm operand must have primitive, pointer"
-            " or SIMD type, but it is " << t << "\n";
+    if (!t.isa<PrimType>() && !t.isa<PtrType>() && !t.isa<SimdType>())
+        error(expr) << "Asm operand must have primitive, pointer or SIMD type, but it is " << t << "\n";
 }
 
 void AsmStmt::check(TypeSema& sema) const {
-    for (auto expr : output_exprs_) {
-        // also checks for the mutability of the declaration and marks it as written
-        // TODO: should this be separated?
-        if (!expr->is_lvalue())
-            error(expr) << "output expression of an asm statement must be an lvalue\n";
-        check_correct_asm_type(sema.check(expr), expr);
+    for (const auto& output : outputs()) {
+        if (!output.expr()->is_lvalue())
+            error(output.expr()) << "output expression of an asm statement must be an lvalue\n";
+        check_correct_asm_type(sema.check(output.expr()), output.expr());
     }
-    for (auto expr : input_exprs_)
-        check_correct_asm_type(sema.check(expr), expr);
+
+    for (const auto& input : inputs())
+        check_correct_asm_type(sema.check(input.expr()), input.expr());
+
+    for (const auto& option : options()) {
+        if (option != "volatile" && option != "alignstack" && option != "intel") {
+            error(this) << "unsupported inline assembly option '"
+                << option << "', only 'volatile', 'alignstack' and 'intel' supported\n";
+        }
+    }
 }
 
 //------------------------------------------------------------------------------

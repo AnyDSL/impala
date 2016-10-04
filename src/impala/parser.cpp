@@ -153,11 +153,22 @@ public:
     template<class T>
     Loc<T> loc(T* node) { return Loc<T>(*this, node); }
 
-    void parse_comma_list(TokenKind delimiter, const char* context, std::function<void()> f) {
-        if (la() != delimiter) {
+    void nibble_comma_list(const char* context, Array<TokenKind> delimiters, std::function<void()> f) {
+        auto is_delimiter = [&] () {
+            for (auto delimiter : delimiters)
+                if (la() == delimiter)
+                    return true;
+            return false;
+        };
+
+        if (!is_delimiter()) {
             do { f(); }
-            while (accept(Token::COMMA) && la() != delimiter);
+            while (accept(Token::COMMA) && !is_delimiter());
         }
+    }
+
+    void parse_comma_list(const char* context, TokenKind delimiter, std::function<void()> f) {
+        nibble_comma_list(context, {delimiter}, f);
         expect(delimiter, context);
     }
 
@@ -228,7 +239,7 @@ public:
     const WhileExpr*        parse_while_expr();
     const BlockExprBase*    parse_block_expr();
     const BlockExprBase*    try_block_expr(const std::string& context);
-    
+
 
     // statements
     const Stmt*     parse_stmt_not_expr();
@@ -236,9 +247,9 @@ public:
     const LetStmt*  parse_let_stmt();
     const AsmStmt*  parse_asm_stmt();
 
-    // asm helper
-    std::string     parse_str();
-    void            parse_asm_operands(std::vector<std::string>&, Exprs&);
+    // helpers
+    std::string parse_str();
+    AsmStmt::Elem parse_asm_op();
 
 private:
     Token lex();        ///< Consume next Token in input stream, fill look-ahead buffer, return consumed Token.
@@ -395,7 +406,7 @@ const Path* Parser::parse_path() {
 
 void Parser::parse_type_params(AutoVector<const TypeParam*>& type_params) {
     if (accept(Token::L_BRACKET))
-        parse_comma_list(Token::R_BRACKET, "type parameter list", [&] { type_params.push_back(parse_type_param()); });
+        parse_comma_list("type parameter list", Token::R_BRACKET, [&] { type_params.push_back(parse_type_param()); });
 }
 
 const TypeParam* Parser::parse_type_param() {
@@ -413,7 +424,7 @@ const TypeParam* Parser::parse_type_param() {
 
 void Parser::parse_param_list(AutoVector<const Param*>& params, TokenKind delimiter, bool lambda) {
     int i = 0;
-    parse_comma_list(delimiter, "parameter list", [&] { params.push_back(parse_param(i++, lambda)); });
+    parse_comma_list("parameter list", delimiter, [&] { params.push_back(parse_param(i++, lambda)); });
 }
 
 const Param* Parser::parse_param(int i, bool lambda) {
@@ -604,7 +615,7 @@ StructDecl* Parser::parse_struct_decl() {
     parse_type_params(struct_decl->type_params_);
     expect(Token::L_BRACE, "struct declaration");
     int i = 0;
-    parse_comma_list(Token::R_BRACE, "closing brace of struct declaration", [&] {
+    parse_comma_list("closing brace of struct declaration", Token::R_BRACE, [&] {
         struct_decl->field_decls_.push_back(parse_field_decl(i++));
     });
     return struct_decl;
@@ -617,7 +628,7 @@ TraitDecl* Parser::parse_trait_decl() {
     parse_type_params(trait_decl->type_params_);
 
     if (accept(Token::COLON)) {
-        parse_comma_list(Token::L_BRACE, "trait declaration", [&] {
+        parse_comma_list("trait declaration", Token::L_BRACE, [&] {
             trait_decl->super_traits_.push_back(parse_type_app());
         });
     } else
@@ -732,7 +743,7 @@ const FnASTType* Parser::parse_fn_type() {
     eat(Token::FN);
     parse_type_params(fn_type->type_params_);
     expect(Token::L_PAREN, "function type");
-    parse_comma_list(Token::R_PAREN, "closing parenthesis of function type", [&] {
+    parse_comma_list("closing parenthesis of function type", Token::R_PAREN, [&] {
         fn_type->args_.push_back(parse_type());
     });
 
@@ -753,7 +764,7 @@ const ASTType* Parser::parse_return_type(bool& cont) {
 
         auto ret_type = loc(new FnASTType());
         if (accept(Token::L_PAREN)) {                   // in-place tuple
-            parse_comma_list(Token::R_PAREN, "closing parenthesis of return type list", [&] {
+            parse_comma_list("closing parenthesis of return type list", Token::R_PAREN, [&] {
                 ret_type->args_.push_back(parse_type());
             });
         } else {
@@ -807,7 +818,7 @@ const PtrASTType* Parser::parse_ptr_type() {
 const TupleASTType* Parser::parse_tuple_type() {
     auto tuple_type = loc(new TupleASTType());
     eat(Token::L_PAREN);
-    parse_comma_list(Token::R_PAREN, "closing parenthesis of tuple type", [&] {
+    parse_comma_list("closing parenthesis of tuple type", Token::R_PAREN, [&] {
         tuple_type->args_.push_back(parse_type());
     });
     return tuple_type;
@@ -817,7 +828,7 @@ const ASTTypeApp* Parser::parse_type_app() {
     auto type_app = loc(new ASTTypeApp());
     type_app->identifier_ = new Identifier(lex());
     if (accept(Token::L_BRACKET)) {
-        parse_comma_list(Token::R_BRACKET, "type arguments for type application", [&] {
+        parse_comma_list("type arguments for type application", Token::R_BRACKET, [&] {
             type_app->args_.push_back(parse_type());
         });
     }
@@ -913,9 +924,9 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
             auto map = new MapExpr();
             map->lhs_ = lhs;
             if (accept(Token::L_BRACKET))
-                parse_comma_list(Token::R_BRACKET, "type arguments of a map expression", [&] { map->type_args_.push_back(parse_type()); });
+                parse_comma_list("type arguments of a map expression", Token::R_BRACKET, [&] { map->type_args_.push_back(parse_type()); });
             if (accept(Token::L_PAREN))
-                parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
+                parse_comma_list("arguments of a map expression", Token::R_PAREN, [&] { map->args_.push_back(parse_expr()); });
             map->set_loc(lhs->loc().begin(), prev_loc().end());
             return map;
         }
@@ -956,7 +967,7 @@ const Expr* Parser::parse_primary_expr() {
                 auto tuple = new TupleExpr();
                 tuple->set_begin(begin);
                 tuple->args_.push_back(expr);
-                parse_comma_list(Token::R_PAREN, "elements of a tuple expression", [&] { tuple->args_.push_back(parse_expr()); });
+                parse_comma_list("elements of a tuple expression", Token::R_PAREN, [&] { tuple->args_.push_back(parse_expr()); });
                 tuple->set_end(prev_loc().end());
                 return tuple;
             } else {
@@ -986,7 +997,7 @@ const Expr* Parser::parse_primary_expr() {
             auto array = new DefiniteArrayExpr();
             array->set_begin(begin);
             array->args_.push_back(expr);
-            parse_comma_list(Token::R_BRACKET, "elements of an array expression", [&] { array->args_.push_back(parse_expr()); });
+            parse_comma_list("elements of an array expression", Token::R_BRACKET, [&] { array->args_.push_back(parse_expr()); });
             array->set_end(prev_loc().end());
             return array;
         }
@@ -994,7 +1005,7 @@ const Expr* Parser::parse_primary_expr() {
             auto simd = loc(new SimdExpr());
             eat(Token::SIMD);
             expect(Token::L_BRACKET, "simd expression");
-            parse_comma_list(Token::R_BRACKET, "elements of a simd expression", [&] { simd->args_.push_back(parse_expr()); });
+            parse_comma_list("elements of a simd expression", Token::R_BRACKET, [&] { simd->args_.push_back(parse_expr()); });
             return simd;
         }
 #define IMPALA_LIT(itype, atype) \
@@ -1009,20 +1020,20 @@ const Expr* Parser::parse_primary_expr() {
             auto path = parse_path();
             ASTTypes type_args;
             if (accept(Token::L_BRACKET)) {     // struct or map expression
-                parse_comma_list(Token::R_BRACKET, "type arguments", [&] { type_args.push_back(parse_type()); });
+                parse_comma_list("type arguments", Token::R_BRACKET, [&] { type_args.push_back(parse_type()); });
 
                 if (accept(Token::L_PAREN)) {   // map expression
                     auto map = new MapExpr();
                     map->lhs_ = new PathExpr(path);
                     swap(map->type_args_, type_args);
-                    parse_comma_list(Token::R_PAREN, "arguments of a map expression", [&] { map->args_.push_back(parse_expr()); });
+                    parse_comma_list("arguments of a map expression", Token::R_PAREN, [&] { map->args_.push_back(parse_expr()); });
                     map->set_loc(path->loc().begin(), prev_loc().end());
                     return map;
                 } else if (accept(Token::L_BRACE)) {
                     auto struct_expr = new StructExpr();
                     struct_expr->path_ = path;
                     swap(struct_expr->type_args_, type_args);
-                    parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
+                    parse_comma_list("elements of struct expression", Token::R_BRACE, [&] {
                         auto symbol = try_id("identifier in struct expression");
                         expect(Token::COLON, "struct expression");
                         struct_expr->elems_.emplace_back(symbol, parse_expr());
@@ -1035,7 +1046,7 @@ const Expr* Parser::parse_primary_expr() {
                 eat(Token::L_BRACE);
                 auto struct_expr = new StructExpr();
                 struct_expr->path_ = path;
-                parse_comma_list(Token::R_BRACE, "elements of struct expression", [&] {
+                parse_comma_list("elements of struct expression", Token::R_BRACE, [&] {
                     auto symbol = try_id("identifier in struct expression");
                     expect(Token::COLON, "struct expression");
                     struct_expr->elems_.emplace_back(symbol, parse_expr());
@@ -1242,59 +1253,44 @@ const ItemStmt* Parser::parse_item_stmt() {
     return item_stmt;
 }
 
+AsmStmt::Elem Parser::parse_asm_op() {
+    auto str = parse_str();
+    auto expr = parse_expr();
+    return AsmStmt::Elem(str, expr);
+}
+
 const AsmStmt* Parser::parse_asm_stmt() {
+    static const Array<TokenKind> delimiters = {Token::COLON, Token::DOUBLE_COLON, Token::R_PAREN};
+
     auto asm_stmt = loc(new AsmStmt());
     eat(Token::ASM);
-    expect(Token::L_PAREN, "arguemnts of inline assembly");
+    expect(Token::L_PAREN, "asm statement");
+    asm_stmt->asm_template_ = parse_str();
 
-    asm_stmt->template_ = parse_str();
-    
-    size_t num_flags = 0;
-    std::function<void()> op_parsers[] = {
-        [&] { parse_asm_operands(asm_stmt->output_constraints_, asm_stmt->output_exprs_); },
-        [&] { parse_asm_operands(asm_stmt->input_constraints_, asm_stmt->input_exprs_); },
-        [&] { 
-                while (la() != Token::COLON && la() != Token::R_PAREN) {
-                    asm_stmt->clobbers_.push_back(parse_str());
-                    if (!accept(Token::COMMA))
-                        break;
-                }
-            },
-        [&] { parse_comma_list(Token::R_PAREN, "arguemnts of inline assembly", [&]{
-                auto loc = la().loc();
-                if (++num_flags > 3) {
-                    impala::error(loc) << "too many arguemtns, only three options supported for inline assembly\n";
-                    return;
-                }
-                auto option = parse_str();
-                if (option == "volatile")
-                    asm_stmt->flags_ |= thorin::Assembly::Flags::HasSideEffects;
-                else if (option == "alignstack")
-                    asm_stmt->flags_ |= thorin::Assembly::Flags::IsAlignStack;
-                else if (option == "intel")
-                    asm_stmt->flags_ |= thorin::Assembly::Flags::IsIntelDialect;
-                else
-                    impala::error(loc) << "unsupported inline assembly option '"
-                        << option << "', only 'volatile', 'alignstack' and 'intel' supported\n";
-            }); }
-        };
+    if (accept(Token::COLON))        goto parse_outputs;
+    if (accept(Token::DOUBLE_COLON)) goto parse_inputs;
+    if (accept(Token::R_PAREN))      return asm_stmt;
 
-    bool was_double_colon = false;
-    size_t i;
-    for (i = 0; i < 4; ++i) {
-        if (i < 3 && accept(Token::DOUBLE_COLON)) {
-            was_double_colon = true;
-            continue;
-        }
-        if (!was_double_colon && !accept(Token::COLON))
-            break;
+parse_outputs:
+    nibble_comma_list("asm statement", delimiters, [&]{ asm_stmt->outputs_.emplace_back(parse_asm_op()); });
+    if (accept(Token::COLON))        goto parse_inputs;
+    if (accept(Token::DOUBLE_COLON)) goto parse_clobbers;
+    if (accept(Token::R_PAREN))      return asm_stmt;
 
-        was_double_colon = false;
-        op_parsers[i]();
-    }
+parse_inputs:
+    nibble_comma_list("asm statement", delimiters, [&]{ asm_stmt->inputs_.emplace_back(parse_asm_op()); });
+    if (accept(Token::COLON))        goto parse_clobbers;
+    if (accept(Token::DOUBLE_COLON)) goto parse_options;
+    if (accept(Token::R_PAREN))      return asm_stmt;
 
-    if (i < 4)
-        expect(Token::R_PAREN, "arguemnts of inline assembly");
+parse_clobbers:
+    nibble_comma_list("asm statement", {Token::COMMA, Token::R_PAREN}, [&]{ asm_stmt->clobbers_.emplace_back(parse_str()); });
+    if (accept(Token::COLON))        goto parse_options;
+    expect(Token::R_PAREN, "asm statement");
+    return asm_stmt;
+
+parse_options:
+    parse_comma_list("asm statement", Token::R_PAREN, [&]{ asm_stmt->options_.emplace_back(parse_str()); });
     return asm_stmt;
 }
 
@@ -1306,19 +1302,6 @@ std::string Parser::parse_str() {
         lex();
     } while (la() == Token::LIT_str);
     return str;
-}
-
-void Parser::parse_asm_operands(std::vector<std::string>& constraints, Exprs& expressions) {
-    while (la() != Token::COLON && la() != Token::DOUBLE_COLON && la() != Token::R_PAREN) {
-        constraints.push_back(parse_str());
-
-        expect(Token::L_PAREN, "operand expression for inline assemlby");
-        expressions.push_back(parse_expr());
-        expect(Token::R_PAREN, "')' after asm operand");
-
-        if (!accept(Token::COMMA))
-            break;
-    } 
 }
 
 }

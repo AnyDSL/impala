@@ -720,28 +720,31 @@ void LetStmt::emit(CodeGen& cg) const {
 }
 
 void AsmStmt::emit(CodeGen& cg) const {
-    // TODO: can this be done better? 
-    std::vector<const thorin::Type*> out_types(output_exprs_.size());
-    int i = 0;
-    for (auto expr : output_exprs_)
-        out_types[i++] = cg.convert(expr->type());
+    Array<const thorin::Type*> outs(num_outputs());
+    for (size_t i = 0, e = num_outputs(); i != e; ++i)
+        outs[i] = cg.convert(output(i).expr()->type());
 
-    std::vector<const Def*> inputs(input_exprs_.size());
-    i = 0;
-    for (auto expr : input_exprs_)
-        inputs[i++] = cg.remit(expr);
+    Array<const Def*> ins(num_inputs());
+    for (size_t i = 0, e = num_inputs(); i != e; ++i)
+        ins[i] = cg.remit(input(i).expr());
 
-    auto assembly = cg.world().assembly(out_types, cg.get_mem(), inputs,
-            template_, output_constraints_, input_constraints_, clobbers_,
-            flags_, loc())->as<Assembly>();
-    // TODO: can it not be an Asm? We shouldn't be able to optimize things away over asm code
-    
-    i = 0; 
-    cg.set_mem(assembly->out(i++));
-    for (auto expr: output_exprs_) {
-        auto exprl = cg.lemit(expr);
-        exprl.store(assembly->out(i++), loc());
+    thorin::Assembly::Flags flags;
+    for (const auto& option : options()) {
+        if (option == "volatile")
+            flags |= thorin::Assembly::Flags::HasSideEffects;
+        else if (option == "alignstack")
+            flags |= thorin::Assembly::Flags::IsAlignStack;
+        else if (option == "intel")
+            flags |= thorin::Assembly::Flags::IsIntelDialect;
     }
+
+    auto assembly = cg.world().assembly(outs, cg.get_mem(), ins, asm_template(),
+            output_constraints(), input_constraints(), clobbers(), flags, loc());
+
+    size_t i = 0;
+    cg.set_mem(assembly->out(i++));
+    for (const auto& output: outputs())
+        cg.lemit(output.expr()).store(assembly->out(i++), loc());
 }
 
 //------------------------------------------------------------------------------

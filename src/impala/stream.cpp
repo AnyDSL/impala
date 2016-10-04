@@ -560,28 +560,11 @@ std::ostream& ExprStmt::stream(std::ostream& os) const {
 }
 
 std::ostream& AsmStmt::stream(std::ostream& os) const {
-    os << "asm(\"" << template_ << "\"\n\t:";
-
-    assert(output_constraints_.size() == output_exprs_.size());
-    for (size_t i = 0; i < output_constraints_.size(); i++) 
-        os << "\"" << output_constraints_[i] << "\"(" << output_exprs_[i] << "), ";
-    os << "\n\t:";
-    assert(input_constraints_.size() == input_exprs_.size());
-    for (size_t i = 0; i < input_constraints_.size(); i++) 
-        os << "\"" << input_constraints_[i] << "\"(" << input_exprs_[i] << "), ";
-    os << "\n\t:";
-    for (auto clob : clobbers_)
-        os << "\"" << clob << "\", ";
-    os << "\n\t:";
-    if (flags_ & thorin::Assembly::Flags::HasSideEffects)
-        os << "\"volatile\", ";
-    if (flags_ & thorin::Assembly::Flags::IsAlignStack)
-        os << "\"alignstack\", ";
-    if (flags_ & thorin::Assembly::Flags::IsIntelDialect)
-        os << "\"intel\"";
-
-    os << "\n)";
-    
+    os << "asm(\"" << asm_template() << "\"\n\t:";
+    stream_list(os << "\n\t",  outputs(), [&](const Elem& elem) { os << "\"" << elem.constraint() << "\"(" << elem.expr() << "), "; });
+    stream_list(os << "\n\t",   inputs(), [&](const Elem& elem) { os << "\"" << elem.constraint() << "\"(" << elem.expr() << "), "; });
+    stream_list(os << "\n\t", clobbers(), [&](const std::string& clobber) { os << "\"" << clobber << "\", "; });
+    stream_list(os << "\n\t",  options(), [&](const std::string& option) { os << "\"" << option << "\", "; });
     return os;
 }
 
