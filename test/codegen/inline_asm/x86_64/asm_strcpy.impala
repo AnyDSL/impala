@@ -12,7 +12,9 @@ fn main() -> int {
 }
 
 fn strcpy(dst: &[u8], src: &[u8], count: u32) -> () {
-    asm("cld; rep; movsb;"
+    asm("cld;"
+        "rep;"
+        "movsb;"
         : /* no input */
         : "{si}"(src), "{di}"(dst), "{cx}"(count)
     );
