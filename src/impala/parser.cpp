@@ -1294,8 +1294,6 @@ parse_options:
     return asm_stmt;
 }
 
-#include <iostream>
-
 std::string Parser::parse_str() {
     std::string str;
     do {
@@ -1314,9 +1312,6 @@ std::string Parser::parse_str() {
                 default: assert(false); // TODO, more cases?
             }
         }
-
-        //str += la().symbol().str() + 1;
-        //str.pop_back();
         lex();
     } while (la() == Token::LIT_str);
     return str;

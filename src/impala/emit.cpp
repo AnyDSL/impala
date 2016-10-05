@@ -728,7 +728,7 @@ void AsmStmt::emit(CodeGen& cg) const {
     for (size_t i = 0, e = num_inputs(); i != e; ++i)
         ins[i] = cg.remit(input(i).expr());
 
-    thorin::Assembly::Flags flags;
+    thorin::Assembly::Flags flags = thorin::Assembly::Flags::NoFlag;
     for (const auto& option : options()) {
         if (option == "volatile")
             flags |= thorin::Assembly::Flags::HasSideEffects;
