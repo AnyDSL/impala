@@ -1318,6 +1318,29 @@ void LetStmt::check(TypeSema& sema) const {
         error(this) << "non-mutable let statement lacks initialization\n";
 }
 
+void check_correct_asm_type(const Type t, const Expr *expr) {
+    if (!t.isa<PrimType>() && !t.isa<PtrType>() && !t.isa<SimdType>())
+        error(expr) << "Asm operand must have primitive, pointer or SIMD type, but it is " << t << "\n";
+}
+
+void AsmStmt::check(TypeSema& sema) const {
+    for (const auto& output : outputs()) {
+        if (!output.expr()->is_lvalue())
+            error(output.expr()) << "output expression of an asm statement must be an lvalue\n";
+        check_correct_asm_type(sema.check(output.expr()), output.expr());
+    }
+
+    for (const auto& input : inputs())
+        check_correct_asm_type(sema.check(input.expr()), input.expr());
+
+    for (const auto& option : options()) {
+        if (option != "volatile" && option != "alignstack" && option != "intel") {
+            error(this) << "unsupported inline assembly option '"
+                << option << "', only 'volatile', 'alignstack' and 'intel' supported\n";
+        }
+    }
+}
+
 //------------------------------------------------------------------------------
 
 void type_analysis(Init& init, const ModContents* mod, bool nossa) {

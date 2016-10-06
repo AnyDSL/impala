@@ -1,0 +1,15 @@
+fn main() -> int {
+    let mut a = 4;
+    let mut b = 3;
+    let c = 7;
+    asm("addl $2, $0\n\t"
+        "movl $1, %eax\n\t"
+        "addl %eax, $0\n\t"
+        "subl %eax, $1"
+        : "=r"(a), "=r"(b)
+        : "r"(c), "0"(a), "1"(b)
+        : "{eax}"
+        );
+
+    if a == 14 && b == 0 { 0 } else { 1 }    
+}

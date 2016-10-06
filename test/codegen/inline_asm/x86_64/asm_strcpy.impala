@@ -1,0 +1,21 @@
+extern "C" {
+    fn println(&[u8]) -> ();
+}
+
+fn main() -> int {
+    let mut str1 = "Come on, copy me!\n";
+    let mut str2 = "Don't overwrite me";
+    strcpy(&str2, &str1, 19u32);
+
+    println(&str2);
+    0
+}
+
+fn strcpy(mut dst: &[u8], mut src: &[u8], mut count: u32) -> () {
+    asm("cld\n\t"
+        "rep movsb"
+        : "={si}"(src), "={di}"(dst), "={cx}"(count)
+        : "0"(src), "1"(dst), "2"(count)
+        : "memory"
+    );
+}
