@@ -1294,13 +1294,12 @@ parse_options:
     return asm_stmt;
 }
 
+// TODO: merge this code with StrExpr
 std::string Parser::parse_str() {
     std::string str;
     do {
         std::string res = la().symbol().str() + 1;
         // replaces special characters
-        // TODO: get rid of this, there is functionality in LLVM for that already,
-        // can we use that?
         for (size_t i = 0; i < res.length() - 1; ++i) {
             if (res[i] != '\\') {
                 str += res[i];
@@ -1309,6 +1308,7 @@ std::string Parser::parse_str() {
             switch (res[++i]) {
                 case 'n': str += '\n'; break;
                 case 't': str += '\t'; break;
+                case 'r': str += '\r'; break;
                 default: assert(false); // TODO, more cases?
             }
         }
