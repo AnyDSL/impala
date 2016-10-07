@@ -162,6 +162,7 @@ enum Kind {
     Kind_noret,
     Kind_owned_ptr,
     Kind_simd,
+    Kind_matrix,
     Kind_struct_abs,
     Kind_struct_app,
     Kind_trait_abs,
@@ -659,6 +660,29 @@ private:
     virtual const thorin::Type* convert(CodeGen&) const override;
 
     const uint64_t size_;
+};
+
+class MatrixTypeNode : public KnownTypeNode {
+public:
+    MatrixTypeNode(TypeTable& tt, PrimTypeKind kind, uint32_t rows, uint32_t cols)
+        : KnownTypeNode(tt, Kind_matrix, {}), kind_(kind), rows_(rows), cols_(cols)
+    {}
+
+    uint32_t rows() const { return rows_; }
+    uint32_t cols() const { return cols_; }
+    PrimTypeKind kind() const { return kind_; }
+
+    virtual std::ostream& stream(std::ostream&) const override;
+    virtual bool is_subtype(const TypeNode*) const override;
+    virtual bool equal(const Unifiable*) const override;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
+
+    PrimTypeKind kind_;
+    uint32_t rows_;
+    uint32_t cols_;
 };
 
 /**
