@@ -1334,6 +1334,31 @@ private:
     friend class TypeSema;
 };
 
+class VectorExpr : public Expr {
+public:
+    enum Type {
+        Vec2, Vec3, Vec4,
+        Mat2, Mat2x3, Mat2x4,
+        Mat3, Mat3x2, Mat3x4,
+        Mat4, Mat4x2, Mat4x3,
+        Inverse, Dot, Cross, Normalize, Length
+    };
+
+    Type type() const { return type_; }
+    virtual void check(NameSema&) const override;
+    virtual void check(BorrowSema&) const override;
+
+private:
+    virtual std::ostream& stream(std::ostream&) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual thorin::Value lemit(CodeGen&) const override;
+    virtual const thorin::Def* remit(CodeGen&) const override;
+
+    friend class CodeGen;
+    friend class Parser;
+    friend class TypeSema;
+};
+
 class StmtLikeExpr : public Expr {};
 
 class BlockExprBase : public StmtLikeExpr {
