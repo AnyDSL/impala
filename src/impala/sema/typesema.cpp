@@ -1336,7 +1336,7 @@ void AsmStmt::check(TypeSema& sema) const {
     for (const auto& option : options()) {
         if (option != "volatile" && option != "alignstack" && option != "intel") {
             error(this) << "unsupported inline assembly option '"
-                << option << "', only 'volatile', 'alignstack' and 'intel' supported\n";
+                        << option << "', only 'volatile', 'alignstack' and 'intel' supported\n";
         }
     }
 }
