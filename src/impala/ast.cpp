@@ -72,11 +72,13 @@ bool IfExpr::has_else() const {
  */
 
 bool PathExpr::is_lvalue() const {
+    if (type().isa<PtrType>())
+        return true;
     if (value_decl()) {
         value_decl()->write();
-        return value_decl()->is_mut() || type().isa<PtrType>();
+        return value_decl()->is_mut();
     }
-    return type().isa<PtrType>();
+    return false;
 }
 
 bool MapExpr::is_lvalue() const {
