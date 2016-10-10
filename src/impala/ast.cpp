@@ -74,9 +74,9 @@ bool IfExpr::has_else() const {
 bool PathExpr::is_lvalue() const {
     if (value_decl()) {
         value_decl()->write();
-        return value_decl()->is_mut();
+        return value_decl()->is_mut() || type().isa<PtrType>();
     }
-    return false;
+    return type().isa<PtrType>();
 }
 
 bool MapExpr::is_lvalue() const {
@@ -86,7 +86,7 @@ bool MapExpr::is_lvalue() const {
 }
 
 bool PrefixExpr::is_lvalue() const { return (kind() == MUL || kind() == AND) && rhs()->is_lvalue(); }
-bool FieldExpr::is_lvalue() const { return lhs()->is_lvalue(); }
+bool FieldExpr::is_lvalue() const { return lhs()->is_lvalue() || type().isa<PtrType>(); }
 bool CastExpr::is_lvalue() const { return lhs()->is_lvalue(); }
 
 //------------------------------------------------------------------------------
