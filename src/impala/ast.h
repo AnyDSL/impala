@@ -1334,17 +1334,14 @@ private:
     friend class TypeSema;
 };
 
-class VectorExpr : public Expr {
+class VectorExpr : public Expr, public Args {
 public:
-    enum Type {
-        Vec2, Vec3, Vec4,
-        Mat2, Mat2x3, Mat2x4,
-        Mat3, Mat3x2, Mat3x4,
-        Mat4, Mat4x2, Mat4x3,
-        Inverse, Dot, Cross, Normalize, Length
+    enum Kind {
+#define IMPALA_VEC_KEY(tok, str) tok = Token:: tok,
+#include "tokenlist.h"
     };
 
-    Type type() const { return type_; }
+    Kind kind() const { return kind_; }
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
 
@@ -1357,6 +1354,8 @@ private:
     friend class CodeGen;
     friend class Parser;
     friend class TypeSema;
+
+    Kind kind_;
 };
 
 class StmtLikeExpr : public Expr {};

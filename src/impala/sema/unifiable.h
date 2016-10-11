@@ -42,6 +42,7 @@ class OwnedPtrTypeNode;         typedef Proxy<OwnedPtrTypeNode>         OwnedPtr
 class PrimTypeNode;             typedef Proxy<PrimTypeNode>             PrimType;
 class PtrTypeNode;              typedef Proxy<PtrTypeNode>              PtrType;
 class SimdTypeNode;             typedef Proxy<SimdTypeNode>             SimdType;
+class MatrixTypeNode;           typedef Proxy<MatrixTypeNode>           MatrixType;
 class StructAbsTypeNode;        typedef Proxy<StructAbsTypeNode>        StructAbsType;
 class StructAppTypeNode;        typedef Proxy<StructAppTypeNode>        StructAppType;
 class TraitAbsNode;             typedef Proxy<TraitAbsNode>             TraitAbs;
@@ -664,13 +665,13 @@ private:
 
 class MatrixTypeNode : public KnownTypeNode {
 public:
-    MatrixTypeNode(TypeTable& tt, PrimTypeKind kind, uint32_t rows, uint32_t cols)
-        : KnownTypeNode(tt, Kind_matrix, {}), kind_(kind), rows_(rows), cols_(cols)
+    MatrixTypeNode(TypeTable& tt, Type elem_type, uint32_t rows, uint32_t cols)
+        : KnownTypeNode(tt, Kind_matrix, {elem_type}), rows_(rows), cols_(cols)
     {}
 
+    Type elem_kind() const { return arg(0); }
     uint32_t rows() const { return rows_; }
     uint32_t cols() const { return cols_; }
-    PrimTypeKind kind() const { return kind_; }
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override;
@@ -680,7 +681,6 @@ private:
     virtual Type vinstantiate(SpecializeMap&) const override;
     virtual const thorin::Type* convert(CodeGen&) const override;
 
-    PrimTypeKind kind_;
     uint32_t rows_;
     uint32_t cols_;
 };

@@ -32,8 +32,8 @@ public:
     SimdType simd_type(Type elem_type, uint64_t size) {
         return join(new SimdTypeNode(*this, elem_type, size));
     }
-    MatrixType matrix_type(PrimTypeKind kind, uint32_t rows, uint32_t cols) {
-        return join(new MatrixTypeNode(*this, kind, rows, cols));
+    MatrixType matrix_type(Type elem_type, uint32_t rows, uint32_t cols) {
+        return join(new MatrixTypeNode(*this, elem_type, rows, cols));
     }
     MutPtrType          mut_ptr_type(Type referenced_type, int addr_space = 0) {
         return join(new MutPtrTypeNode(*this, referenced_type, addr_space));
