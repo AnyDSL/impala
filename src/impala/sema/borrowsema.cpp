@@ -243,6 +243,11 @@ void MapExpr::check(BorrowSema& sema) const {
         arg->check(sema);
 }
 
+void VectorExpr::check(BorrowSema& sema) const {
+    for (auto arg : args())
+        arg->check(sema);
+}
+
 void IfExpr::check(BorrowSema& sema) const {
     cond()->check(sema);
     then_expr()->check(sema);

@@ -1351,6 +1351,8 @@ private:
     virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
+    bool check_vector_args(TypeSema&) const;
+
     friend class CodeGen;
     friend class Parser;
     friend class TypeSema;

@@ -1194,6 +1194,40 @@ Type MapExpr::check_as_method_call(TypeSema& sema, TypeExpectation expected) con
     return sema.type_error();
 }
 
+Type VectorExpr::check(TypeSema& sema, TypeExpectation expected) const {
+    if (!num_args())
+        error(this) << "arguments expected\n";
+
+    for (auto arg : args()) {
+        sema.check(arg);
+    }
+
+    switch (kind()) {
+        case VEC3:
+            if (!check_vector_args(sema)) return sema.type_error();
+            return sema.matrix_type(arg(0)->type(), 3);
+            break;
+        default: break;
+    }
+    return sema.type_error();
+}
+
+bool VectorExpr::check_vector_args(TypeSema& sema) const {
+    auto arg0 = arg(0);
+    for (auto arg : args()) {
+        if (arg->type() != arg0->type()) {
+            error(this) << "mismatching types in vector expression\n";
+            return false;
+        }
+        if (!arg->type().isa<PrimType>() ||
+            !arg->type().isa<SimdType>()) {
+            error(this) << "incorrect type for vector element\n";
+            return false;
+        }
+    }
+    return true;
+}
+
 Type BlockExprBase::check(TypeSema& sema, TypeExpectation expected) const {
     THORIN_PUSH(sema.cur_block_, this);
     for (auto stmt : stmts())

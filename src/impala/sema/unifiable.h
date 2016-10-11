@@ -673,6 +673,9 @@ public:
     uint32_t rows() const { return rows_; }
     uint32_t cols() const { return cols_; }
 
+    bool is_vector() const { return cols_ == 1; }
+    bool is_matrix() const { return !is_vector(); }
+
     virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override;
     virtual bool equal(const Unifiable*) const override;

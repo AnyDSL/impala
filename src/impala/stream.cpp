@@ -80,6 +80,12 @@ std::ostream& IndefiniteArrayTypeNode::stream(std::ostream& os) const { return s
 std::ostream& SimdTypeNode::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_type(), size()); }
 std::ostream& StructAbsTypeNode::stream(std::ostream& os) const { return os << struct_decl_->symbol(); }
 
+std::ostream& MatrixTypeNode::stream(std::ostream& os) const {
+    return is_vector() ?
+           streamf(os, "vec%", rows()) :
+           streamf(os, "mat%x%", rows(), cols());
+}
+
 std::ostream& StructAppTypeNode::stream(std::ostream& os) const {
     os << struct_abs_type()->struct_decl()->symbol();
     if (num_args() != 0)

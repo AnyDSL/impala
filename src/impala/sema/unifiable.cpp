@@ -306,8 +306,16 @@ bool TraitAppNode::equal(const Unifiable* other) const {
 
 bool SimdTypeNode::equal(const Unifiable* other) const {
     assert(this->is_unified());
-    return Unifiable::equal(other) && (this->size() == other->as<SimdTypeNode>()->size());
+    return Unifiable::equal(other) && (size() == other->as<SimdTypeNode>()->size());
 }
+
+bool MatrixTypeNode::equal(const Unifiable* other) const {
+    assert(this->is_unified());
+    return Unifiable::equal(other) &&
+           rows() == other->as<MatrixTypeNode>()->rows() &&
+           cols() == other->as<MatrixTypeNode>()->cols();
+}
+
 
 //------------------------------------------------------------------------------
 
@@ -332,10 +340,8 @@ bool DefiniteArrayTypeNode::is_subtype(const TypeNode* other) const {
 
     return dim_eq && other->isa<IndefiniteArrayTypeNode>() && elem_type()->is_subtype(*other->as<ArrayTypeNode>()->elem_type());
 }
-
-bool SimdTypeNode::is_subtype(const TypeNode* other) const {
-    return this->equal(other);
-}
+bool SimdTypeNode::is_subtype(const TypeNode* other) const { return equal(other); }
+bool MatrixTypeNode::is_subtype(const TypeNode* other) const { return equal(other); }
 
 /*
  * TODO merge this code with equal

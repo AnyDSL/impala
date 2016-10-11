@@ -368,6 +368,11 @@ void MapExpr::check(NameSema& sema) const {
         arg->check(sema);
 }
 
+void VectorExpr::check(NameSema& sema) const {
+    for (auto arg : args())
+        arg->check(sema);
+}
+
 void IfExpr::check(NameSema& sema) const {
     cond()->check(sema);
     then_expr()->check(sema);
