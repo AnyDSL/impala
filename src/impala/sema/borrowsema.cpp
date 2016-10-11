@@ -76,6 +76,10 @@ void SimdASTType::check(BorrowSema& sema) const {
     elem_type()->check(sema);
 }
 
+void MatrixASTType::check(BorrowSema& sema) const {
+    elem_type()->check(sema);
+}
+
 //------------------------------------------------------------------------------
 
 

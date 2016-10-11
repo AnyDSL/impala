@@ -663,18 +663,16 @@ private:
     const uint64_t size_;
 };
 
-class MatrixTypeNode : public KnownTypeNode {
+class MatrixTypeNode : public ArrayTypeNode {
 public:
     MatrixTypeNode(TypeTable& tt, Type elem_type, uint32_t rows, uint32_t cols)
-        : KnownTypeNode(tt, Kind_matrix, {elem_type}), rows_(rows), cols_(cols)
+        : ArrayTypeNode(tt, Kind_matrix, { elem_type }), rows_(rows), cols_(cols)
     {}
 
-    Type elem_type() const { return arg(0); }
     uint32_t rows() const { return rows_; }
     uint32_t cols() const { return cols_; }
 
     bool is_vector() const { return cols_ == 1; }
-    bool is_matrix() const { return !is_vector(); }
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual bool is_subtype(const TypeNode*) const override;

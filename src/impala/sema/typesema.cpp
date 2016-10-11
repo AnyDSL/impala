@@ -365,6 +365,16 @@ Type SimdASTType::check(TypeSema& sema) const {
     }
 }
 
+Type MatrixASTType::check(TypeSema& sema) const {
+    auto type = sema.check(elem_type());
+    if (type.isa<PrimType>() || type.isa<SimdType>())
+        return sema.matrix_type(type, rows(), cols());
+    else {
+        error(this) << "vector or matrix types can only be used with primitive or simd types\n";
+        return sema.type_error();
+    }
+}
+
 //------------------------------------------------------------------------------
 
 Type ValueDecl::check(TypeSema& sema) const { return check(sema, Type()); }
@@ -1219,8 +1229,7 @@ bool VectorExpr::check_vector_args(TypeSema& sema) const {
             error(this) << "mismatching types in vector expression\n";
             return false;
         }
-        if (!arg->type().isa<PrimType>() &&
-            !arg->type().isa<SimdType>()) {
+        if (!arg->type().isa<PrimType>() && !arg->type().isa<SimdType>()) {
             error(this) << "incorrect type for vector element\n";
             return false;
         }

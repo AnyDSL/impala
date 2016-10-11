@@ -169,6 +169,10 @@ void SimdASTType::check(NameSema& sema) const {
     elem_type()->check(sema);
 }
 
+void MatrixASTType::check(NameSema& sema) const {
+    elem_type()->check(sema);
+}
+
 //------------------------------------------------------------------------------
 
 /*

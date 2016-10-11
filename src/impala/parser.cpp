@@ -202,16 +202,17 @@ public:
     void parse_return_param(Fn* fn);
 
     // types
-    const ASTType*      parse_type();
-    const ArrayASTType* parse_array_type();
-    const Typeof*       parse_typeof();
-    const ASTType*      parse_return_type(bool&);
-    const FnASTType*    parse_fn_type();
-    const PrimASTType*  parse_prim_type();
-    const PtrASTType*   parse_ptr_type();
-    const TupleASTType* parse_tuple_type();
-    const SimdASTType*  parse_simd_type();
-    const ASTTypeApp*   parse_type_app();
+    const ASTType*       parse_type();
+    const ArrayASTType*  parse_array_type();
+    const Typeof*        parse_typeof();
+    const ASTType*       parse_return_type(bool&);
+    const FnASTType*     parse_fn_type();
+    const PrimASTType*   parse_prim_type();
+    const PtrASTType*    parse_ptr_type();
+    const TupleASTType*  parse_tuple_type();
+    const SimdASTType*   parse_simd_type();
+    const MatrixASTType* parse_matrix_type();
+    const ASTTypeApp*    parse_type_app();
 
     enum class BodyMode { None, Optional, Mandatory };
 
@@ -722,6 +723,21 @@ const ASTType* Parser::parse_type() {
         case Token::AND:
         case Token::ANDAND:     return parse_ptr_type();
         case Token::SIMD:       return parse_simd_type();
+
+        case Token::VEC2:
+        case Token::VEC3:
+        case Token::VEC4:
+        case Token::MAT2:
+        case Token::MAT3:
+        case Token::MAT4:
+        case Token::MAT2X3:
+        case Token::MAT2X4:
+        case Token::MAT3X2:
+        case Token::MAT3X4:
+        case Token::MAT4X2:
+        case Token::MAT4X3:
+            return parse_matrix_type();
+
         default:  {
             error("type", "");
             auto error_type = new ErrorASTType(prev_loc());
@@ -866,6 +882,31 @@ const SimdASTType* Parser::parse_simd_type() {
     simd->size_ = parse_integer("simd vector size");
     expect(Token::R_BRACKET, "simd type");
     return simd;
+}
+
+const MatrixASTType* Parser::parse_matrix_type() {
+    auto mat = loc(new MatrixASTType());
+    mat->cols_ = 1;
+    switch (la()) {
+        case Token::VEC2:   mat->rows_ = 2; mat->cols_ = 1; break;
+        case Token::VEC3:   mat->rows_ = 3; mat->cols_ = 1; break;
+        case Token::VEC4:   mat->rows_ = 4; mat->cols_ = 1; break;
+        case Token::MAT2:   mat->rows_ = 2; mat->cols_ = 2; break;
+        case Token::MAT3:   mat->rows_ = 2; mat->cols_ = 3; break;
+        case Token::MAT4:   mat->rows_ = 2; mat->cols_ = 4; break;
+        case Token::MAT2X3: mat->rows_ = 2; mat->cols_ = 3; break;
+        case Token::MAT2X4: mat->rows_ = 2; mat->cols_ = 4; break;
+        case Token::MAT3X2: mat->rows_ = 3; mat->cols_ = 2; break;
+        case Token::MAT3X4: mat->rows_ = 3; mat->cols_ = 4; break;
+        case Token::MAT4X2: mat->rows_ = 4; mat->cols_ = 2; break;
+        case Token::MAT4X3: mat->rows_ = 4; mat->cols_ = 3; break;
+        default: THORIN_UNREACHABLE;
+    }
+    lex();
+    expect(Token::L_BRACKET, "vector or matrix type");
+    mat->elem_type_ = parse_type();
+    expect(Token::R_BRACKET, "vector or matrix type");
+    return mat;
 }
 
 /*

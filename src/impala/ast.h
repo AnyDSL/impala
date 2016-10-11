@@ -422,6 +422,25 @@ private:
     friend class Parser;
 };
 
+class MatrixASTType : public ArrayASTType {
+public:
+    uint32_t rows() const { return rows_; }
+    uint32_t cols() const { return cols_; }
+
+    bool is_vector() const { return cols_ == 1; }
+
+    virtual std::ostream& stream(std::ostream&) const override;
+    virtual void check(NameSema&) const override;
+    virtual void check(BorrowSema&) const override;
+
+private:
+    virtual Type check(TypeSema&) const override;
+
+    thorin::u32 rows_, cols_;
+
+    friend class Parser;
+};
+
 //------------------------------------------------------------------------------
 
 /*

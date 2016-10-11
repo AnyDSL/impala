@@ -82,8 +82,8 @@ std::ostream& StructAbsTypeNode::stream(std::ostream& os) const { return os << s
 
 std::ostream& MatrixTypeNode::stream(std::ostream& os) const {
     return is_vector() ?
-           streamf(os, "vec%", rows()) :
-           streamf(os, "mat%x%", rows(), cols());
+           streamf(os, "vec%[%]", rows(), elem_type()) :
+           streamf(os, "mat%x%[%]", rows(), cols(), elem_type());
 }
 
 std::ostream& StructAppTypeNode::stream(std::ostream& os) const {
@@ -121,6 +121,11 @@ std::ostream& PtrASTType::stream(std::ostream& os) const {
 std::ostream& DefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[% * %]", elem_type(), dim()); }
 std::ostream& IndefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[%]", elem_type()); }
 std::ostream& SimdASTType::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_type(), size()); }
+std::ostream& MatrixASTType::stream(std::ostream& os) const {
+    return is_vector() ?
+           streamf(os, "vec%[%]", rows(), elem_type()) :
+           streamf(os, "mat%x%[%]", rows(), cols(), elem_type());
+}
 
 std::ostream& TupleASTType::stream(std::ostream& os) const {
     return stream_list(os, args(), [&](const ASTType* type) { os << type; }, "(", ")");
