@@ -69,7 +69,19 @@
     case Token::L_BRACE: \
     case Token::RUN_BLOCK: \
     case Token::L_BRACKET: \
-    case Token::SIMD
+    case Token::SIMD: \
+    case Token::VEC2: \
+    case Token::VEC3: \
+    case Token::VEC4: \
+    case Token::MAT2: \
+    case Token::MAT3: \
+    case Token::MAT4: \
+    case Token::MAT2X3: \
+    case Token::MAT2X4: \
+    case Token::MAT3X2: \
+    case Token::MAT3X4: \
+    case Token::MAT4X2: \
+    case Token::MAT4X3
 
 #define STMT_NOT_EXPR \
          Token::LET: \
@@ -1078,6 +1090,7 @@ const VectorExpr* Parser::parse_vector_expr() {
 #include "tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
+    lex();
     expect(Token::L_PAREN, "vector expression");
     parse_comma_list("elements of a vector expression", Token::R_PAREN, [&] { vec->args_.push_back(parse_expr()); });
     return vec;

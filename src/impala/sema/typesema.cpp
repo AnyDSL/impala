@@ -1219,7 +1219,7 @@ bool VectorExpr::check_vector_args(TypeSema& sema) const {
             error(this) << "mismatching types in vector expression\n";
             return false;
         }
-        if (!arg->type().isa<PrimType>() ||
+        if (!arg->type().isa<PrimType>() &&
             !arg->type().isa<SimdType>()) {
             error(this) << "incorrect type for vector element\n";
             return false;
