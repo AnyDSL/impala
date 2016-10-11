@@ -481,6 +481,10 @@ Type SimdTypeNode::vinstantiate(SpecializeMap& map) const {
     return map[this] = *typetable().simd_type(elem_type()->specialize(map), size());
 }
 
+Type MatrixTypeNode::vinstantiate(SpecializeMap& map) const {
+    return map[this] = *typetable().matrix_type(elem_type()->specialize(map), rows(), cols());
+}
+
 Type FnTypeNode::vinstantiate(SpecializeMap& map) const {
     return map[this] = *typetable().fn_type(specialize_args(map));
 }

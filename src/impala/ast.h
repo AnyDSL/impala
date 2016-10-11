@@ -1348,7 +1348,6 @@ public:
 private:
     virtual std::ostream& stream(std::ostream&) const override;
     virtual Type check(TypeSema&, TypeExpectation) const override;
-    virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
     bool check_vector_args(TypeSema&) const;

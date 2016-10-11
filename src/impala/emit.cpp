@@ -182,6 +182,14 @@ const thorin::Type* SimdTypeNode::convert(CodeGen& cg) const {
     return cg.world().type(scalar->as<thorin::PrimType>()->primtype_kind(), size());
 }
 
+const thorin::Type* MatrixTypeNode::convert(CodeGen& cg) const {
+    int n = rows() * cols();
+    auto elem = cg.convert(elem_type());
+    Array<const thorin::Type*> args(n);
+    for (int i = 0; i < n; i++) args[i] = elem;
+    return cg.world().tuple_type(args);
+}
+
 /*
  * Decls and Function
  */
@@ -573,6 +581,31 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
     } else if (lhs()->type().isa<ArrayType>() || lhs()->type().isa<TupleType>() || lhs()->type().isa<SimdType>()) {
         auto index = cg.remit(arg(0));
         return cg.extract(cg.remit(lhs()), index, loc());
+    }
+    THORIN_UNREACHABLE;
+}
+
+const Def* VectorExpr::remit(CodeGen& cg) const {
+    switch (kind()) {
+        case VEC2:
+        case VEC3:
+        case VEC4:
+        case MAT2:
+        case MAT3:
+        case MAT4:
+        case MAT2X3:
+        case MAT2X4:
+        case MAT3X2:
+        case MAT3X4:
+        case MAT4X2:
+        case MAT4X3:
+            {
+                int i = 0;
+                Array<const Def*> defs(num_args());
+                for (auto arg : args()) defs[i++] = cg.remit(arg);
+                return cg.world().tuple(defs, loc());
+            }
+        default: break;
     }
     THORIN_UNREACHABLE;
 }

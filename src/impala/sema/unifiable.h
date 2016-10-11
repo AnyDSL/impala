@@ -669,7 +669,7 @@ public:
         : KnownTypeNode(tt, Kind_matrix, {elem_type}), rows_(rows), cols_(cols)
     {}
 
-    Type elem_kind() const { return arg(0); }
+    Type elem_type() const { return arg(0); }
     uint32_t rows() const { return rows_; }
     uint32_t cols() const { return cols_; }
 
