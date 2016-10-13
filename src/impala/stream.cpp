@@ -392,7 +392,7 @@ std::ostream& SimdExpr::stream(std::ostream& os) const {
     return stream_list(os, args(), [&](const Expr* expr) { os << expr; }, "simd[", "]");
 }
 
-std::ostream& VectorExpr::stream(std::ostream& os) const {
+std::ostream& MatrixExpr::stream(std::ostream& os) const {
     switch (kind()) {
 #define IMPALA_KEY_VEC(tok, str) case tok : os << str; break;
 #include "impala/tokenlist.h"

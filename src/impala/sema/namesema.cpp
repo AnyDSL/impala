@@ -372,7 +372,7 @@ void MapExpr::check(NameSema& sema) const {
         arg->check(sema);
 }
 
-void VectorExpr::check(NameSema& sema) const {
+void MatrixExpr::check(NameSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }

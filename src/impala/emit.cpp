@@ -183,11 +183,7 @@ const thorin::Type* SimdTypeNode::convert(CodeGen& cg) const {
 }
 
 const thorin::Type* MatrixTypeNode::convert(CodeGen& cg) const {
-    int n = rows() * cols();
-    auto elem = cg.convert(elem_type());
-    Array<const thorin::Type*> args(n);
-    for (int i = 0; i < n; i++) args[i] = elem;
-    return cg.world().tuple_type(args);
+    return cg.world().definite_array_type(cg.convert(elem_type()), size());
 }
 
 /*
@@ -585,7 +581,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
     THORIN_UNREACHABLE;
 }
 
-const Def* VectorExpr::remit(CodeGen& cg) const {
+const Def* MatrixExpr::remit(CodeGen& cg) const {
     switch (kind()) {
         case VEC2:
         case VEC3:
@@ -598,23 +594,56 @@ const Def* VectorExpr::remit(CodeGen& cg) const {
         case MAT3X2:
         case MAT3X4:
         case MAT4X2:
-        case MAT4X3:
-            {
-                int i = 0;
-                Array<const Def*> defs(num_args());
-                for (auto arg : args()) defs[i++] = cg.remit(arg);
-                return cg.world().tuple(defs, loc());
+        case MAT4X3: {
+            auto mat = type().as<MatrixType>();
+            int i = 0, n = mat->size();
+            Array<const Def*> defs(n);
+            for (auto arg : args()) {
+                auto def = cg.remit(arg);
+                if (arg->type().isa<MatrixType>()) {
+                    for (int j = 0, m = def->size(); j < m; j++)
+                        defs[i++] = cg.world().extract(def, j, loc());
+                } else {
+                    defs[i++] = def;
+                }
             }
+
+            if (i == 1) {
+                // repetition constructor, like so: vec4(1.0f)
+                if (mat->is_vector()) {
+                    for (; i < n; i++) defs[i] = defs[0];
+                } else {
+                    // for matrices, this means defs[0] * identity
+                    auto z = cg.world().zero(cg.convert(mat->elem_type()), loc());
+                    for (int i = 0, n = mat->rows(); i < n; i++) {
+                        for (int j = 0, m = mat->cols(); j < m; j++)
+                            defs[i * mat->cols() + j] = i == j ? defs[0] : z;
+                    }
+                }
+            }
+            return cg.world().definite_array(defs, loc());
+        }
         default: break;
     }
     THORIN_UNREACHABLE;
 }
 
 Value FieldExpr::lemit(CodeGen& cg) const {
+    assert(!lhs()->type().isa<MatrixType>());
     return Value::create_agg(cg.lemit(lhs()), cg.world().literal_qu32(index(), loc()));
 }
 
 const Def* FieldExpr::remit(CodeGen& cg) const {
+    if (lhs()->type().isa<MatrixType>()) {
+        int i = 0, n = swizzle().size();
+        auto def = cg.remit(lhs());
+        Array<const Def*> defs(n);
+        for (auto s : swizzle()) {
+            defs[i++] = cg.world().extract(def, s, loc());
+        }
+        return n > 1 ? cg.world().definite_array(defs, loc()) : defs[0];
+    }
+
     return cg.extract(cg.remit(lhs()), index(), loc());
 }
 

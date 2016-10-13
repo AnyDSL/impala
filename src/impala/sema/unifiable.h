@@ -671,6 +671,7 @@ public:
 
     uint32_t rows() const { return rows_; }
     uint32_t cols() const { return cols_; }
+    uint32_t size() const { return rows_ * cols_; }
 
     bool is_vector() const { return cols_ == 1; }
 

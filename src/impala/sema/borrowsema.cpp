@@ -247,7 +247,7 @@ void MapExpr::check(BorrowSema& sema) const {
         arg->check(sema);
 }
 
-void VectorExpr::check(BorrowSema& sema) const {
+void MatrixExpr::check(BorrowSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }

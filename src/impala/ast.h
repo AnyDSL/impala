@@ -1116,6 +1116,8 @@ private:
     virtual std::ostream& stream(std::ostream&) const override;
     virtual Type check(TypeSema&, TypeExpectation) const override;
 
+    Type check_arith_op(TypeSema&) const;
+
     Kind kind_;
     AutoPtr<const Expr> lhs_;
     AutoPtr<const Expr> rhs_;
@@ -1157,11 +1159,11 @@ public:
     const Identifier* identifier() const { return identifier_; }
     Symbol symbol() const { return identifier()->symbol(); }
     uint32_t index() const { return index_; }
+    const std::vector<uint32_t>& swizzle() const { return swizzle_; }
     virtual bool is_lvalue() const override;
     virtual void take_address() const override;
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
-    Type check_as_struct(TypeSema&, Type) const;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1169,9 +1171,13 @@ private:
     virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
+    Type check_as_struct(TypeSema&, Type) const;
+    Type check_as_matrix(TypeSema&, Type) const;
+
     AutoPtr<const Expr> lhs_;
     AutoPtr<const Identifier> identifier_;
     mutable uint32_t index_ = uint32_t(-1);
+    mutable std::vector<uint32_t> swizzle_;
 
     friend class Parser;
     friend class MapExpr; // remove this
@@ -1353,10 +1359,10 @@ private:
     friend class TypeSema;
 };
 
-class VectorExpr : public Expr, public Args {
+class MatrixExpr : public Expr, public Args {
 public:
     enum Kind {
-#define IMPALA_VEC_KEY(tok, str) tok = Token:: tok,
+#define IMPALA_MAT_KEY(tok, str, r, c) tok = Token:: tok,
 #include "tokenlist.h"
     };
 
@@ -1369,7 +1375,8 @@ private:
     virtual Type check(TypeSema&, TypeExpectation) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
-    bool check_vector_args(TypeSema&) const;
+    Type check_vector_args(TypeSema&, uint32_t) const;
+    Type check_matrix_args(TypeSema&, uint32_t, uint32_t) const;
 
     friend class CodeGen;
     friend class Parser;

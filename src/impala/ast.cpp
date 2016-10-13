@@ -86,7 +86,7 @@ bool MapExpr::is_lvalue() const {
 }
 
 bool PrefixExpr::is_lvalue() const { return (kind() == MUL || kind() == AND) && rhs()->is_lvalue(); }
-bool FieldExpr::is_lvalue() const { return lhs()->is_lvalue(); }
+bool FieldExpr::is_lvalue() const { return lhs()->is_lvalue() && !lhs()->type().isa<MatrixType>(); }
 bool CastExpr::is_lvalue() const { return lhs()->is_lvalue(); }
 
 //------------------------------------------------------------------------------

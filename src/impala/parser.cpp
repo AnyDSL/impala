@@ -242,7 +242,7 @@ public:
     const Expr*             parse_infix_expr(const Expr* lhs);
     const Expr*             parse_postfix_expr(const Expr* lhs);
     const Expr*             parse_primary_expr();
-    const VectorExpr*       parse_vector_expr();
+    const MatrixExpr*       parse_matrix_expr();
     const LiteralExpr*      parse_literal_expr();
     const CharExpr*         parse_char_expr();
     const StrExpr*          parse_str_expr();
@@ -1062,9 +1062,9 @@ const Expr* Parser::parse_primary_expr() {
             parse_comma_list("elements of a simd expression", Token::R_BRACKET, [&] { simd->args_.push_back(parse_expr()); });
             return simd;
         }
-#define IMPALA_VEC_KEY(tok, str) case Token:: tok:
+#define IMPALA_MAT_KEY(tok, str, r, c) case Token:: tok:
 #include "impala/tokenlist.h"
-            return parse_vector_expr();
+            return parse_matrix_expr();
         
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype:
@@ -1124,11 +1124,11 @@ const Expr* Parser::parse_primary_expr() {
     }
 }
 
-const VectorExpr* Parser::parse_vector_expr() {
-    auto vec = loc(new VectorExpr());
+const MatrixExpr* Parser::parse_matrix_expr() {
+    auto vec = loc(new MatrixExpr());
     switch (la()) {
-#define IMPALA_VEC_KEY(tok, str) case Token:: tok: vec->kind_ = VectorExpr:: tok; break;
-#include "tokenlist.h"
+#define IMPALA_MAT_KEY(tok, str, r, c) case Token:: tok: vec->kind_ = MatrixExpr:: tok; break;
+#include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
     lex();

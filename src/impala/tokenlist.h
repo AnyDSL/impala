@@ -104,30 +104,30 @@ IMPALA_KEY(TYPEOF,    "typeof")
 IMPALA_KEY(WHILE,     "while")
 IMPALA_KEY(SIMD,      "simd")
 
-#ifndef IMPALA_VEC_KEY
-#define IMPALA_VEC_KEY(tok, str) IMPALA_KEY(tok, str)
+#ifndef IMPALA_MAT_KEY
+#define IMPALA_MAT_KEY(tok, str, r, c) IMPALA_KEY(tok, str)
 #endif
 
-IMPALA_VEC_KEY(VEC2,      "vec2")
-IMPALA_VEC_KEY(VEC3,      "vec3")
-IMPALA_VEC_KEY(VEC4,      "vec4")
-IMPALA_VEC_KEY(MAT2,      "mat2")
-IMPALA_VEC_KEY(MAT3,      "mat3")
-IMPALA_VEC_KEY(MAT4,      "mat4")
-IMPALA_VEC_KEY(MAT2X3,    "mat2x3")
-IMPALA_VEC_KEY(MAT2X4,    "mat2x4")
-IMPALA_VEC_KEY(MAT3X2,    "mat3x2")
-IMPALA_VEC_KEY(MAT3X4,    "mat3x4")
-IMPALA_VEC_KEY(MAT4X2,    "mat4x2")
-IMPALA_VEC_KEY(MAT4X3,    "mat4x3")
+IMPALA_MAT_KEY(VEC2,   "vec2",   2, 1)
+IMPALA_MAT_KEY(VEC3,   "vec3",   3, 1)
+IMPALA_MAT_KEY(VEC4,   "vec4",   4, 1)
+IMPALA_MAT_KEY(MAT2,   "mat2",   2, 2)
+IMPALA_MAT_KEY(MAT3,   "mat3",   3, 3)
+IMPALA_MAT_KEY(MAT4,   "mat4",   4, 4)
+IMPALA_MAT_KEY(MAT2X3, "mat2x3", 2, 3)
+IMPALA_MAT_KEY(MAT2X4, "mat2x4", 2, 4)
+IMPALA_MAT_KEY(MAT3X2, "mat3x2", 3, 2)
+IMPALA_MAT_KEY(MAT3X4, "mat3x4", 3, 4)
+IMPALA_MAT_KEY(MAT4X2, "mat4x2", 4, 2)
+IMPALA_MAT_KEY(MAT4X3, "mat4x3", 4, 3)
 
-IMPALA_VEC_KEY(MAT_INVERSE,   "inverse")
-IMPALA_VEC_KEY(VEC_DOT,       "dot")
-IMPALA_VEC_KEY(VEC_CROSS,     "cross")
-IMPALA_VEC_KEY(VEC_LENGTH,    "length")
-IMPALA_VEC_KEY(VEC_NORMALIZE, "normalize")
+IMPALA_MAT_KEY(MAT_INVERSE,   "inverse",   0, 0)
+IMPALA_MAT_KEY(VEC_DOT,       "dot",       0, 0)
+IMPALA_MAT_KEY(VEC_CROSS,     "cross",     0, 0)
+IMPALA_MAT_KEY(VEC_LENGTH,    "length",    0, 0)
+IMPALA_MAT_KEY(VEC_NORMALIZE, "normalize", 0, 0)
 
-#undef IMPALA_VEC_KEY
+#undef IMPALA_MAT_KEY
 #undef IMPALA_KEY
 
 #ifndef IMPALA_MISC

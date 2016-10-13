@@ -65,6 +65,7 @@ public:
     bool is_float(Type t);
     bool expect_int(const Expr*);
     bool expect_int_or_bool(const Expr*);
+    bool expect_num(Type, const Expr*);
     void expect_num(const Expr*);
     Type expect_type(const Expr* expr, Type found, TypeExpectation expected);
     Type expect_type(const Expr* expr, TypeExpectation expected) { return expect_type(expr, expr->type(), expected); }
@@ -172,11 +173,16 @@ bool TypeSema::expect_int_or_bool(const Expr* expr) {
     return true;
 }
 
-void TypeSema::expect_num(const Expr* expr) {
-    auto t = scalar_type(expr);
-
-    if (!t->is_error() && !t->is_bool() && !is_int(t) && !is_float(t))
+bool TypeSema::expect_num(Type t, const Expr* expr) {
+    if (!t->is_error() && !t->is_bool() && !is_int(t) && !is_float(t)) {
         error(expr) << "expected number type but found " << t << "\n";
+        return false;
+    }
+    return true;
+}
+
+void TypeSema::expect_num(const Expr* expr) {
+    expect_num(scalar_type(expr), expr);
 }
 
 Type TypeSema::expect_type(const Expr* expr, Type found_type, TypeExpectation expected) {
@@ -367,12 +373,17 @@ Type SimdASTType::check(TypeSema& sema) const {
 
 Type MatrixASTType::check(TypeSema& sema) const {
     auto type = sema.check(elem_type());
-    if (type.isa<PrimType>() || type.isa<SimdType>())
+    if (type.isa<PrimType>() || type.isa<SimdType>()) {
+        if (!sema.is_int(type) && !sema.is_float(type)) {
+            error(this) << "only floating point and integer types are supported for "
+                        << (is_vector() ? "vectors" : "matrices") << "\n";
+            return sema.type_error();
+        }
         return sema.matrix_type(type, rows(), cols());
-    else {
-        error(this) << "vector or matrix types can only be used with primitive or simd types\n";
-        return sema.type_error();
     }
+
+    error(this) << "vector or matrix types only support primitive or simd types\n";
+    return sema.type_error();
 }
 
 //------------------------------------------------------------------------------
@@ -840,13 +851,10 @@ Type InfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
             return sema.type_bool();
         case ADD:
         case SUB:
-        case MUL:
         case DIV:
+        case MUL:
         case REM: {
-            auto type = sema.check(lhs(), sema.check(rhs(), expected));
-            sema.expect_num(lhs());
-            sema.expect_num(rhs());
-            return type;
+            return check_arith_op(sema);
         }
         case SHL:
         case SHR: {
@@ -873,12 +881,9 @@ Type InfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         case MUL_ASGN:
         case DIV_ASGN:
         case REM_ASGN: {
-            sema.check(rhs(), sema.check(lhs()));
-            if (sema.expect_lvalue(lhs())) {
-                sema.expect_num(lhs());
-                sema.expect_num(rhs());
+            check_arith_op(sema);
+            if (sema.expect_lvalue(lhs()))
                 return sema.unit();
-            }
             break;
         }
         case AND_ASGN:
@@ -898,6 +903,60 @@ Type InfixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         default: THORIN_UNREACHABLE;
     }
 
+    return sema.type_error();
+}
+
+inline Type matrix_elem_type(Type t) {
+    if (auto mat = t.isa<MatrixType>())
+        return mat->elem_type();
+    return t;
+}
+
+Type InfixExpr::check_arith_op(TypeSema& sema) const {
+    auto a = sema.check(lhs());
+    auto b = sema.check(rhs());
+
+    auto elem_a = matrix_elem_type(a);
+    auto elem_b = matrix_elem_type(b);
+    bool scalar_a = a == elem_a;
+    bool scalar_b = b == elem_b;
+
+    if (kind() == REM) {
+        // For REM, the types must be integers
+        if (!sema.is_int(elem_a) || !sema.is_int(elem_b)) {
+            error(this) << "the modulus '%' operator is only valid on integers\n";
+            return sema.type_error();
+        }
+    } else {
+        sema.expect_num(elem_a, lhs());
+        sema.expect_num(elem_b, rhs());
+    }
+
+    // if operands are both scalars or both vectors, types must be equal
+    if ((scalar_a & scalar_b) && a == b) return a;
+    if ((scalar_a ^ scalar_b) && elem_a == elem_b) { return scalar_a ? b : a; }
+
+    if (!scalar_a && !scalar_b && elem_a == elem_b) {
+        auto mat_a = elem_a.as<MatrixType>();
+        auto mat_b = elem_b.as<MatrixType>();
+
+        if (kind() == MUL) {
+            // vector * matrix, matrix * vector, or matrix * matrix multiplication            
+            if (!mat_a->is_vector()) {
+                if (mat_a->cols() == mat_b->rows()) return mat_b;
+            } else {
+                if (mat_a->rows() == mat_b->rows()) return mat_a;
+            }
+        } else if (mat_a->rows() == mat_b->rows()) {
+            // addition, subtraction, division, ...
+            return mat_a;
+        }
+    }            
+
+    if (!a->is_error() && !b->is_error()) {
+        error(this) << "types do not match for operator '" << Token(loc(), (Token::Kind)kind())
+                    << "', got " << a << " and " << b << " \n";
+    }
     return sema.type_error();
 }
 
@@ -1108,6 +1167,10 @@ Type TypeSema::check_call(const MapExpr* expr, FnType fn_poly, const ASTTypes& t
 }
 
 Type FieldExpr::check(TypeSema& sema, TypeExpectation expected) const {
+    auto ltype = sema.check(lhs());
+    if (ltype.isa<MatrixType>())
+        return check_as_matrix(sema, expected.type());
+
     if (auto type = check_as_struct(sema, expected.type()))
         return type;
 
@@ -1134,6 +1197,45 @@ Type FieldExpr::check_as_struct(TypeSema& sema, Type expected) const {
     }
 
     return Type();
+}
+
+Type FieldExpr::check_as_matrix(TypeSema& sema, Type expected) const {
+    auto ltype = sema.check(lhs()).as<MatrixType>();
+    if (ltype->is_vector()) {
+        const char* str = symbol().str();
+        uint32_t len_dst = strlen(str);
+        if (len_dst > 4) {
+            error(this) << "too many components in swizzle operation\n";
+            return sema.type_error();
+        }
+
+        uint32_t len_src = 0;
+        for (auto* p = str; *p; p++) {
+            uint32_t l;
+            switch (*p) {
+                case 'x': l = 0; break;
+                case 'y': l = 1; break;
+                case 'z': l = 2; break;
+                case 'w': l = 3; break;
+                default:
+                    error(this) << "incorrect character in swizzle operation, only 'x', 'y', 'z', and 'w' are allowed\n";
+                    return sema.type_error();
+            }
+            swizzle_.push_back(l);
+            len_src = std::max(len_src, l);
+        }
+        
+        if (len_src >= ltype->rows()) {
+            const char xyzw[] = "xyzw";
+            error(this) << "vector component '" << xyzw[len_src] << "' is out of bounds\n";
+            return sema.type_error();
+        }
+
+        return len_dst > 1 ? static_cast<Type>(sema.matrix_type(ltype->elem_type(), len_dst)) : ltype->elem_type();
+    }
+
+    error(this) << "matrix components cannot be accessed by field names, use the array syntax instead\n";
+    return sema.type_error();
 }
 
 Type MapExpr::check(TypeSema& sema, TypeExpectation expected) const {
@@ -1204,7 +1306,7 @@ Type MapExpr::check_as_method_call(TypeSema& sema, TypeExpectation expected) con
     return sema.type_error();
 }
 
-Type VectorExpr::check(TypeSema& sema, TypeExpectation expected) const {
+Type MatrixExpr::check(TypeSema& sema, TypeExpectation expected) const {
     if (!num_args())
         error(this) << "arguments expected\n";
 
@@ -1212,29 +1314,122 @@ Type VectorExpr::check(TypeSema& sema, TypeExpectation expected) const {
         sema.check(arg);
     }
 
+    // Check that the number and type of arguments is correct
+    uint32_t rows, cols;
     switch (kind()) {
-        case VEC3:
-            if (!check_vector_args(sema)) return sema.type_error();
-            return sema.matrix_type(arg(0)->type(), 3);
-            break;
-        default: break;
+#define IMPALA_MAT_KEY(tok, str, r, c) case Token:: tok : rows = r; cols = c; break;
+#include "impala/tokenlist.h"
+        default: THORIN_UNREACHABLE;
     }
-    return sema.type_error();
+
+    if (rows > 0) {
+        if (cols > 1) { return check_matrix_args(sema, rows, cols); }
+        else          { return check_vector_args(sema, rows);       }
+    } else {
+        // Special functions (e.g. dot, cross, ...) have rows = cols = 0
+        switch (kind()) {
+            /*case Token::MAT_INVERSE:    return check_vector_op(sema, 1);
+            case Token::VEC_DOT:        return check_vector_op(sema, 2, true);
+            case Token::VEC_LENGTH:     return check_vector_op(sema, 1, true);
+            case Token::VEC_NORMALIZE:  return check_vector_op(sema, 1, false);
+            case Token::VEC_CROSS:      return check_vector_op(sema, 2, false);*/
+            default: break;
+        }
+    }
+
+    THORIN_UNREACHABLE;
 }
 
-bool VectorExpr::check_vector_args(TypeSema& sema) const {
-    auto arg0 = arg(0);
+Type MatrixExpr::check_vector_args(TypeSema& sema, uint32_t rows) const {
+    // vectors can be constructed by concatenating scalars with smaller vectors
+    auto type = arg(0)->type();
+
+    Type elem_type;
+    if (auto mat = type.isa<MatrixType>())
+        elem_type = mat->elem_type();
+    else
+        elem_type = type;
+
+    if (!sema.is_int(elem_type) && !sema.is_float(elem_type)) {
+        error(this) << "only floating point and integer types are supported for vectors\n";
+        return sema.type_error();
+    }
+
+    uint32_t count = 0;
     for (auto arg : args()) {
-        if (arg->type() != arg0->type()) {
-            error(this) << "mismatching types in vector expression\n";
-            return false;
-        }
-        if (!arg->type().isa<PrimType>() && !arg->type().isa<SimdType>()) {
-            error(this) << "incorrect type for vector element\n";
-            return false;
+        if (arg->type().isa<PrimType>() || arg->type().isa<SimdType>()) {
+            if (arg->type() != elem_type) {
+                error(this) << "mismatching types in vector initializers\n";
+                return sema.type_error();
+            }
+            count += 1;
+        } else if (auto mat = arg->type().isa<MatrixType>()) {
+            if (mat->elem_type() != elem_type) {
+                error(this) << "mismatching types in vector initializers: got "
+                            << mat->elem_type() << ", expected " << elem_type << "\n";
+                return sema.type_error();            
+            }
+
+            if (!mat->is_vector()) {
+                error(this) << "matrices are not allowed in vector initializers\n";
+                return sema.type_error();
+            }
+            count += mat->rows();
+        } else {
+            error(this) << "incorrect type for vector initializer\n";
+            return sema.type_error();
         }
     }
-    return true;
+
+    if (count != rows && count > 1) {
+        error(this) << "incorrect number of initializers for vector: got "
+                    << count << ", expected " << rows << "\n";
+        return sema.type_error();
+    }
+
+    return sema.matrix_type(elem_type, rows);
+}
+
+Type MatrixExpr::check_matrix_args(TypeSema& sema, uint32_t rows, uint32_t cols) const {
+    // matrices can be constructed by providing the columns as vectors, or by listing all the components one by one.
+    auto type = arg(0)->type();
+    for (auto arg : args()) {
+        if (arg->type() != type) {
+            error(this) << "mismatching types in matrix initializers\n";
+            return sema.type_error();
+        }
+    }
+
+    if (auto mat = type.isa<MatrixType>()) {
+        if (!mat->is_vector()) {
+            error(this) << "matrices cannot be initialized with matrices\n";
+            return sema.type_error();
+        }
+
+        if (num_args() != cols || mat->rows() != rows) {
+            error(this) << "matrix initializer sizes do not match matrix dimensions\n";
+            return sema.type_error();
+        }
+
+        return sema.matrix_type(mat->elem_type(), rows, cols);
+    }
+
+    if (!type.isa<PrimType>() && !type.isa<SimdType>()) {
+        error(this) << "incorrect type for matrix initializer\n";
+        return sema.type_error();
+    }
+
+    if (!sema.is_int(type) && !sema.is_float(type)) {
+        error(this) << "only floating point and integer types are supported for matrices\n";
+        return sema.type_error();
+    }
+
+    if (num_args() > 1 && num_args() != rows * cols) {
+        error(this) << "incorrect number of initializers for vector: got "
+                    << num_args() << ", expected " << rows * cols << "\n";
+    }
+
+    return sema.matrix_type(type, rows, cols);
 }
 
 Type BlockExprBase::check(TypeSema& sema, TypeExpectation expected) const {
