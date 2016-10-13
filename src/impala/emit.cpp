@@ -470,16 +470,13 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             return cg.converge(this, x);
         }
         default:
-            const TokenKind op = (TokenKind) kind();
-
+            auto op = (TokenKind)kind();
             if (Token::is_assign(op)) {
                 Value lvar = cg.lemit(lhs());
                 const Def* rdef = cg.remit(rhs());
 
-                if (op != Token::ASGN) {
-                    TokenKind sop = Token::separate_assign(op);
-                    rdef = cg.world().binop(Token::to_binop(sop), lvar.load(loc()), rdef, loc());
-                }
+                if (op != Token::ASGN)
+                    rdef = emit(cg, Token::separate_assign(op), lvar.load(loc()), rdef);
 
                 lvar.store(rdef, loc());
                 return cg.world().tuple({}, loc());
@@ -487,8 +484,28 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
             const Def* ldef = cg.remit(lhs());
             const Def* rdef = cg.remit(rhs());
-            return cg.world().binop(Token::to_binop(op), ldef, rdef, loc());
+            return emit(cg, op, ldef, rdef);
     }
+}
+
+const Def* InfixExpr::emit(CodeGen& cg, TokenKind op, const Def* ldef, const Def* rdef) const {
+    if (lvec_ == SCALAR && rvec_ == SCALAR)
+        return cg.world().binop(Token::to_binop(op), ldef, rdef, loc());
+
+    typedef std::function<const Def*(int i)> ExtractFn;
+
+    auto lextract = lvec_ == SCALAR ?
+        ExtractFn([&] (int i) { return ldef; }) :
+        ExtractFn([&] (int i) { return cg.world().extract(ldef, i, loc()); });
+    auto rextract = rvec_ == SCALAR ?
+        ExtractFn([&] (int i) { return rdef; }) :
+        ExtractFn([&] (int i) { return cg.world().extract(rdef, i, loc()); });
+
+    int n = (lvec_ != SCALAR ? lhs() : rhs())->type().as<MatrixType>()->size();
+    Array<const Def*> defs(n);
+    for (int i = 0; i < n; i++)
+        defs[i] = cg.world().binop(Token::to_binop(op), lextract(i), rextract(i), loc());
+    return cg.world().definite_array(defs, loc());
 }
 
 const Def* PostfixExpr::remit(CodeGen& cg) const {

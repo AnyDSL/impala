@@ -1117,10 +1117,17 @@ private:
     virtual Type check(TypeSema&, TypeExpectation) const override;
 
     Type check_arith_op(TypeSema&) const;
+    const thorin::Def* emit(CodeGen&, TokenKind, const thorin::Def*, const thorin::Def*) const;
 
     Kind kind_;
     AutoPtr<const Expr> lhs_;
     AutoPtr<const Expr> rhs_;
+
+    mutable enum VecOp {
+        SCALAR,
+        VECTOR,
+        MATRIX
+    } lvec_, rvec_;
 
     friend class Parser;
 };

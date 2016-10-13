@@ -913,49 +913,52 @@ inline Type matrix_elem_type(Type t) {
 }
 
 Type InfixExpr::check_arith_op(TypeSema& sema) const {
-    auto a = sema.check(lhs());
-    auto b = sema.check(rhs());
+    auto ltype = sema.check(lhs());
+    auto rtype = sema.check(rhs());
 
-    auto elem_a = matrix_elem_type(a);
-    auto elem_b = matrix_elem_type(b);
-    bool scalar_a = a == elem_a;
-    bool scalar_b = b == elem_b;
+    auto lelem = matrix_elem_type(ltype);
+    auto relem = matrix_elem_type(rtype);
+    bool lscalar = ltype == lelem;
+    bool rscalar = rtype == relem;
+
+    lvec_ = lscalar ? SCALAR : (ltype.as<MatrixType>()->is_vector() ? VECTOR : MATRIX);
+    rvec_ = rscalar ? SCALAR : (ltype.as<MatrixType>()->is_vector() ? VECTOR : MATRIX);
 
     if (kind() == REM) {
         // For REM, the types must be integers
-        if (!sema.is_int(elem_a) || !sema.is_int(elem_b)) {
+        if (!sema.is_int(lelem) || !sema.is_int(relem)) {
             error(this) << "the modulus '%' operator is only valid on integers\n";
             return sema.type_error();
         }
     } else {
-        sema.expect_num(elem_a, lhs());
-        sema.expect_num(elem_b, rhs());
+        sema.expect_num(lelem, lhs());
+        sema.expect_num(relem, rhs());
     }
 
     // if operands are both scalars or both vectors, types must be equal
-    if ((scalar_a & scalar_b) && a == b) return a;
-    if ((scalar_a ^ scalar_b) && elem_a == elem_b) { return scalar_a ? b : a; }
+    if ((lscalar & rscalar) && ltype == rtype) return ltype;
+    if ((lscalar ^ rscalar) && lelem == relem) { return lscalar ? rtype : ltype; }
 
-    if (!scalar_a && !scalar_b && elem_a == elem_b) {
-        auto mat_a = a.as<MatrixType>();
-        auto mat_b = b.as<MatrixType>();
+    if (!lscalar && !rscalar && lelem == relem) {
+        auto lmat = ltype.as<MatrixType>();
+        auto rmat = rtype.as<MatrixType>();
 
         if (kind() == MUL) {
             // vector * matrix, matrix * vector, or matrix * matrix multiplication            
-            if (!mat_a->is_vector()) {
-                if (mat_a->cols() == mat_b->rows()) return mat_b;
+            if (!lmat->is_vector()) {
+                if (lmat->cols() == rmat->rows()) return rmat;
             } else {
-                if (mat_a->rows() == mat_b->rows()) return mat_a;
+                if (lmat->rows() == rmat->rows()) return lmat;
             }
-        } else if (mat_a->rows() == mat_b->rows()) {
+        } else if (lmat->rows() == rmat->rows()) {
             // addition, subtraction, division, ...
-            return mat_a;
+            return lmat;
         }
     }            
 
-    if (!a->is_error() && !b->is_error()) {
+    if (!ltype->is_error() && !rtype->is_error()) {
         error(this) << "types do not match for operator '" << Token(loc(), (Token::Kind)kind())
-                    << "', got " << a << " and " << b << " \n";
+                    << "', got " << ltype << " and " << rtype << " \n";
     }
     return sema.type_error();
 }
