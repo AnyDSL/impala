@@ -937,8 +937,8 @@ Type InfixExpr::check_arith_op(TypeSema& sema) const {
     if ((scalar_a ^ scalar_b) && elem_a == elem_b) { return scalar_a ? b : a; }
 
     if (!scalar_a && !scalar_b && elem_a == elem_b) {
-        auto mat_a = elem_a.as<MatrixType>();
-        auto mat_b = elem_b.as<MatrixType>();
+        auto mat_a = a.as<MatrixType>();
+        auto mat_b = b.as<MatrixType>();
 
         if (kind() == MUL) {
             // vector * matrix, matrix * vector, or matrix * matrix multiplication            
@@ -1574,7 +1574,7 @@ void AsmStmt::check(TypeSema& sema) const {
     for (const auto& option : options()) {
         if (option != "volatile" && option != "alignstack" && option != "intel") {
             error(this) << "unsupported inline assembly option '"
-                << option << "', only 'volatile', 'alignstack' and 'intel' supported\n";
+                        << option << "', only 'volatile', 'alignstack' and 'intel' supported\n";
         }
     }
 }
