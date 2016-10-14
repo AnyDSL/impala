@@ -492,8 +492,35 @@ const Def* InfixExpr::emit(CodeGen& cg, TokenKind op, const Def* ldef, const Def
     if (lvec_ == SCALAR && rvec_ == SCALAR)
         return cg.world().binop(Token::to_binop(op), ldef, rdef, loc());
 
-    typedef std::function<const Def*(int i)> ExtractFn;
+    if (kind() == MUL && lvec_ != SCALAR && rvec_ != SCALAR) {
+        auto lmat = lhs()->type().as<MatrixType>();
+        auto rmat = rhs()->type().as<MatrixType>();
+        if (!lmat->is_vector() || !rmat->is_vector()) {
+            // matrix-vector or vector-matrix multiplication
+            bool transpose = lmat->is_vector();
+            int rows = transpose ? lmat->cols() : lmat->rows();
+            int cols = rmat->cols();
+            int lrows = lmat->rows();
+            int rrows = rmat->rows();
+            Array<const Def*> defs(rows * cols);
+            for (int i = 0; i < cols; i++) {
+                for (int j = 0; j < rows; j++) {
+                    const Def* sum = nullptr;
+                    for (int k = 0, n = rmat->rows(); k < n; k++) {
+                        auto mul = cg.world().binop(ArithOp_mul,
+                            cg.world().extract(ldef, transpose ? j : k * lrows + j, loc()),
+                            cg.world().extract(rdef,                 i * rrows + k, loc()), loc());
+                        sum = sum ? cg.world().binop(ArithOp_add, sum, mul, loc()) : mul;
+                    }
+                    defs[transpose ? i : i * rows + j] = sum;
+                }
+            }
+            return cg.world().definite_array(defs, loc());
+        }
+    }
 
+    // component-wise ops and scalar vs. matrix/vector ops are handled here
+    typedef std::function<const Def*(int)> ExtractFn;
     auto lextract = lvec_ == SCALAR ?
         ExtractFn([&] (int i) { return ldef; }) :
         ExtractFn([&] (int i) { return cg.world().extract(ldef, i, loc()); });
@@ -603,9 +630,9 @@ const Def* MatrixExpr::remit(CodeGen& cg) const {
         case VEC2:
         case VEC3:
         case VEC4:
-        case MAT2:
-        case MAT3:
-        case MAT4:
+        case MAT2X2:
+        case MAT3X3:
+        case MAT4X4:
         case MAT2X3:
         case MAT2X4:
         case MAT3X2:
