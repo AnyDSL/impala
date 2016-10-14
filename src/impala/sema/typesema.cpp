@@ -1320,7 +1320,6 @@ Type MatrixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         if (sema.check(arg)->is_error()) return sema.type_error();
     }
 
-    // Check that the number and type of arguments is correct
     uint32_t rows, cols;
     switch (kind()) {
 #define IMPALA_MAT_KEY(tok, str, r, c) case Token:: tok : rows = r; cols = c; break;
@@ -1332,7 +1331,7 @@ Type MatrixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         if (cols > 1) { return check_matrix_args(sema, rows, cols); }
         else          { return check_vector_args(sema, rows);       }
     } else {
-        // Special functions (e.g. dot, cross, ...) have rows = cols = 0
+        // special functions (e.g. dot, cross, ...) have rows = cols = 0
         switch (kind()) {
             case Token::MAT_INVERSE:    return check_inverse(sema);
             case Token::VEC_DOT:        return check_dot(sema);
