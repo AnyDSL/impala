@@ -477,16 +477,13 @@ void Typedef::check(InferSema& sema) const {
 void EnumDecl::check(InferSema&) const { /*TODO*/ }
 
 void StructDecl::check(InferSema& sema) const {
-    if (type_ && type_->is_known())
-        return;
-
-    auto struct_type = sema.struct_type(this, num_field_decls());
-    check_ast_type_params(sema);
+    if (!type_) {
+        type_ = sema.struct_type(this, num_field_decls());
+        check_ast_type_params(sema);
+    }
 
     for (size_t i = 0, e = num_field_decls(); i != e; ++i)
-        struct_type->set(i, sema.check(field_decl(i)));
-
-    sema.constrain(this, struct_type);
+        type_->as<StructType>()->set(i, sema.check(field_decl(i)));
 }
 
 const Type* FieldDecl::check(InferSema& sema) const { return sema.check(ast_type()); }
