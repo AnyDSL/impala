@@ -50,8 +50,7 @@ public:
     void check(const ModContents* n) { n->check(*this); }
     const Type* check(const LocalDecl* local) {
         auto type = local->check(*this);
-        if (type->is_hashed())
-            constrain(local, type);
+        constrain(local, type);
         return type;
     }
     const Type* check(const Ptrn* p) { return constrain(p, p->check(*this)); }
@@ -216,8 +215,6 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
 }
 
 const Type* InferSema::unify(const Type* dst, const Type* src) {
-    assert(dst->is_hashed() && src->is_hashed());
-
     auto dst_repr = find(representative(dst));
     auto src_repr = find(representative(src));
 
@@ -289,7 +286,6 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
  */
 
 auto InferSema::representative(const Type* type) -> Representative* {
-    assert(type->is_hashed());
     auto i = representatives_.find(type);
     if (i == representatives_.end()) {
         auto p = representatives_.emplace(type, type);
@@ -308,9 +304,7 @@ auto InferSema::find(Representative* repr) -> Representative* {
 }
 
 const Type* InferSema::find(const Type* type) {
-    if (type->is_hashed())
-        return find(representative(type))->type;
-    return type;
+    return find(representative(type))->type;
 }
 
 auto InferSema::unify(Representative* x, Representative* y) -> Representative* {
