@@ -1316,7 +1316,8 @@ Type MatrixExpr::check(TypeSema& sema, TypeExpectation expected) const {
         error(this) << "arguments expected\n";
 
     for (auto arg : args()) {
-        sema.check(arg);
+        // prevent error message explosion
+        if (sema.check(arg)->is_error()) return sema.type_error();
     }
 
     // Check that the number and type of arguments is correct
@@ -1333,11 +1334,9 @@ Type MatrixExpr::check(TypeSema& sema, TypeExpectation expected) const {
     } else {
         // Special functions (e.g. dot, cross, ...) have rows = cols = 0
         switch (kind()) {
-            /*case Token::MAT_INVERSE:    return check_vector_op(sema, 1);
-            case Token::VEC_DOT:        return check_vector_op(sema, 2, true);
-            case Token::VEC_LENGTH:     return check_vector_op(sema, 1, true);
-            case Token::VEC_NORMALIZE:  return check_vector_op(sema, 1, false);
-            case Token::VEC_CROSS:      return check_vector_op(sema, 2, false);*/
+            case Token::MAT_INVERSE:    return check_inverse(sema);
+            case Token::VEC_DOT:        return check_dot(sema);
+            case Token::VEC_CROSS:      return check_cross(sema);
             default: break;
         }
     }
@@ -1435,6 +1434,56 @@ Type MatrixExpr::check_matrix_args(TypeSema& sema, uint32_t rows, uint32_t cols)
     }
 
     return sema.matrix_type(type, rows, cols);
+}
+
+Type MatrixExpr::check_inverse(TypeSema& sema) const {
+    if (num_args() != 1) {
+        error(this) << "incorrect number of arguments for the inverse function\n";
+        return sema.type_error();
+    }
+
+    auto mat = arg(0)->type().isa<MatrixType>();
+
+    if (!mat || mat->is_vector() || mat->rows() != mat->cols()) {
+        error(this) << "invalid operand type for the inverse function\n";
+        return sema.type_error();
+    }
+
+    return mat;
+}
+
+Type MatrixExpr::check_cross(TypeSema& sema) const {
+    if (num_args() != 2) {
+        error(this) << "incorrect number of arguments for the cross function\n";
+        return sema.type_error();
+    }
+
+    auto lmat = arg(0)->type().isa<MatrixType>();
+    auto rmat = arg(1)->type().isa<MatrixType>();
+    
+    if (lmat != rmat || !lmat || !lmat->is_vector() || lmat->rows() != 3) {
+        error(this) << "invalid operand types for the cross function\n";
+        return sema.type_error();
+    }
+
+    return sema.matrix_type(lmat->elem_type(), 3);
+}
+
+Type MatrixExpr::check_dot(TypeSema& sema) const {
+    if (num_args() != 2) {
+        error(this) << "incorrect number of arguments for the dot function\n";
+        return sema.type_error();
+    }
+
+    auto lmat = arg(0)->type().isa<MatrixType>();
+    auto rmat = arg(1)->type().isa<MatrixType>();
+    
+    if (lmat != rmat || !lmat || !lmat->is_vector()) {
+        error(this) << "invalid operand types for the dot function\n";
+        return sema.type_error();
+    }
+
+    return lmat->elem_type();
 }
 
 Type BlockExprBase::check(TypeSema& sema, TypeExpectation expected) const {

@@ -667,9 +667,43 @@ const Def* MatrixExpr::remit(CodeGen& cg) const {
             }
             return cg.world().definite_array(defs, loc());
         }
+        case MAT_INVERSE: return emit_inverse(cg, cg.remit(arg(0))); break;
+        case VEC_CROSS:   return emit_cross(cg, cg.remit(arg(0)), cg.remit(arg(1))); break;
+        case VEC_DOT:     return emit_dot(cg, cg.remit(arg(0)), cg.remit(arg(1))); break;
         default: break;
     }
     THORIN_UNREACHABLE;
+}
+
+const Def* MatrixExpr::emit_inverse(CodeGen& cg, const Def* def) const {
+    THORIN_UNREACHABLE;
+}
+
+const Def* MatrixExpr::emit_cross(CodeGen& cg, const Def* ldef, const Def* rdef) const {
+    Array<const Def*> defs(3);
+    for (int i = 0; i < 3; i++) {
+        int j = (i + 1) % 3, k = (i + 2) % 3;
+        defs[i] = cg.world().binop(ArithOp_sub,
+            cg.world().binop(ArithOp_mul,
+                cg.world().extract(ldef, j, loc()),
+                cg.world().extract(rdef, k, loc()), loc()),
+            cg.world().binop(ArithOp_mul,
+                cg.world().extract(ldef, k, loc()),
+                cg.world().extract(rdef, j, loc()), loc()), loc());
+    }
+    return cg.world().definite_array(defs, loc());
+}
+
+const Def* MatrixExpr::emit_dot(CodeGen& cg, const Def* ldef, const Def* rdef) const {
+    int n = arg(0)->type().as<MatrixType>()->rows();
+    const Def* sum = nullptr;
+    for (int i = 0; i < n; i++) {
+        auto mul = cg.world().binop(ArithOp_mul,
+            cg.world().extract(ldef, i, loc()),
+            cg.world().extract(rdef, i, loc()), loc());
+        sum = sum ? cg.world().binop(ArithOp_add, sum, mul, loc()) : mul;
+    }
+    return sum;
 }
 
 Value FieldExpr::lemit(CodeGen& cg) const {

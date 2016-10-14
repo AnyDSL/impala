@@ -1385,6 +1385,14 @@ private:
     Type check_vector_args(TypeSema&, uint32_t) const;
     Type check_matrix_args(TypeSema&, uint32_t, uint32_t) const;
 
+    Type check_inverse(TypeSema&) const;
+    Type check_cross(TypeSema&) const;
+    Type check_dot(TypeSema&) const;
+
+    const thorin::Def* emit_inverse(CodeGen&, const thorin::Def*) const;
+    const thorin::Def* emit_cross(CodeGen&, const thorin::Def*, const thorin::Def*) const;
+    const thorin::Def* emit_dot(CodeGen&, const thorin::Def*, const thorin::Def*) const;
+
     friend class CodeGen;
     friend class Parser;
     friend class TypeSema;
