@@ -916,6 +916,8 @@ Type InfixExpr::check_arith_op(TypeSema& sema) const {
     auto ltype = sema.check(lhs());
     auto rtype = sema.check(rhs());
 
+    if (ltype->is_error() || rtype->is_error()) return sema.type_error();
+
     auto lelem = matrix_elem_type(ltype);
     auto relem = matrix_elem_type(rtype);
     bool lscalar = ltype == lelem;
