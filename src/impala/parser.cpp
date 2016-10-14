@@ -746,7 +746,8 @@ const FnASTType* Parser::parse_fn_type() {
     });
 
     bool unused;
-    fn_type->ast_type_args_.emplace_back(parse_return_type(unused, true));
+    if (auto ret_type = parse_return_type(unused, true))
+        fn_type->ast_type_args_.emplace_back(ret_type);
 
     return fn_type;
 }
