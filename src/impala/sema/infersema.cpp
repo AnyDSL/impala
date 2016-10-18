@@ -240,7 +240,7 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
         }
     }
 
-    if (dst == src)            return dst;
+    if (dst == src && dst->is_known()) return dst;
     if (dst->isa<TypeError>()) return src; // guess the other one
     if (src->isa<TypeError>()) return dst; // dito
 
@@ -427,11 +427,10 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
         if (auto type_decl = decl()->isa<TypeDecl>()) {
             if (auto ast_type_param = type_decl->isa<ASTTypeParam>())
                 return sema.var(ast_type_param->lambda_depth_);
-            if (auto type = sema.find_type(type_decl)) {
-                if (auto lambda = type->isa<Lambda>())
-                    return sema.reduce(lambda, ast_type_args(), type_args_);
-                return type;
-            }
+            auto type = sema.find_type(type_decl);
+            if (auto lambda = type->isa<Lambda>())
+                return sema.reduce(lambda, ast_type_args(), type_args_);
+            return type;
         }
     }
 
