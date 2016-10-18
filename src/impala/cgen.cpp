@@ -163,6 +163,13 @@ private:
             return true;
         }
 
+        if (auto matrix_type = type.isa<MatrixType>()) {
+            if (!ctype_from_impala(matrix_type->elem_type(), ctype_prefix, ctype_suffix))
+                return false;
+            ctype_suffix = "[" + std::to_string(matrix_type->size()) + "]";
+            return true;
+        }
+
         return false;
     }
 
