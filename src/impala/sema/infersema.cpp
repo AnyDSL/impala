@@ -250,30 +250,31 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     if (dst->isa<UnknownType>()) return unify(src_repr, dst_repr)->type;
     if (src->isa<UnknownType>()) return unify(dst_repr, src_repr)->type;
 
-    if (dst->num_ops() == src->num_ops()) {
-        if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
-            if (auto src_owned_ptr_type = src->isa<OwnedPtrType>()) {
-                if (src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space()) {
-                    auto referenced_type = unify(dst_borrowed_ptr_type->referenced_type(), src_owned_ptr_type->referenced_type());
-                    return borrowed_ptr_type(referenced_type, dst_borrowed_ptr_type->addr_space());
-                }
+    if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
+        if (auto src_owned_ptr_type = src->isa<OwnedPtrType>()) {
+            if (src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space()) {
+                auto referenced_type = unify(dst_borrowed_ptr_type->referenced_type(), src_owned_ptr_type->referenced_type());
+                return borrowed_ptr_type(referenced_type, dst_borrowed_ptr_type->addr_space());
             }
         }
+    }
 
-        if (auto dst_indefinite_array_type = dst->isa<IndefiniteArrayType>()) {
-            if (auto src_definite_array_type = src->isa<DefiniteArrayType>()) {
-                auto elem_type = unify(dst_indefinite_array_type->elem_type(), src_definite_array_type->elem_type());
-                return indefinite_array_type(elem_type);
-            }
+    if (auto dst_indefinite_array_type = dst->isa<IndefiniteArrayType>()) {
+        if (auto src_definite_array_type = src->isa<DefiniteArrayType>()) {
+            auto elem_type = unify(dst_indefinite_array_type->elem_type(), src_definite_array_type->elem_type());
+            return indefinite_array_type(elem_type);
         }
+    }
 
-        if (dst->kind() == src->kind()) {
-            Array<const Type*> op(dst->num_ops());
-            for (size_t i = 0, e = op.size(); i != e; ++i)
-                op[i] = unify(dst->op(i), src->op(i));
+    if (dst->kind() == src->kind()) {
+        if (src->num_ops() < dst->num_ops())
+            std::swap(src, dst);
 
-            return dst->rebuild(op);
-        }
+        Array<const Type*> op(dst->num_ops());
+        for (size_t i = 0, e = op.size(); i != e; ++i)
+            op[i] = unify(dst->op(i), src->op(i));
+
+        return dst->rebuild(op);
     }
 
     return dst;
