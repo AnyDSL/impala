@@ -122,7 +122,7 @@ class CompilerOutputTest(Test):
         output = p.output
         if p.success() != self.positive:
             print("[FAIL] "+os.path.join(self.basedir, self.srcfile))
-            print("Output: "+p.output)
+            print("Output: "+p.output.decode('utf-8'))
             print
             return False
 
