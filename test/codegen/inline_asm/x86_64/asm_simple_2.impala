@@ -1,0 +1,13 @@
+fn main() -> int {
+    let a = 10;
+    let mut b: i32;
+    asm ("movl $1, %eax;"
+            "movl %eax, $0;"
+            "addl $$4, $0;"
+            :"=r"(b)        /* output */
+            :"r"(a)         /* input */
+            :"{eax}"        /* clobbered register */
+        );
+
+    if b == 14 { 0 } else { 1 }    
+}

@@ -1,0 +1,16 @@
+fn main() -> int {
+    let mut str = "I'm a string, get me out of here!\n";
+    let len = 34;
+
+    // prints a string
+    asm("syscall;"                      /* call kernel */
+        :: "{rax}"(1), "{rdi}"(1), "{rsi}"(&str), "{rdx}"(len)
+       );
+
+    // exits with 0
+    asm("syscall;"                      /* Enter kernel mode */
+        :: "{rax}"(60), "{rdi}"(0)
+       ); 
+
+    1
+}

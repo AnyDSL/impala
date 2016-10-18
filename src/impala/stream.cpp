@@ -559,4 +559,13 @@ std::ostream& ExprStmt::stream(std::ostream& os) const {
     return os;
 }
 
+std::ostream& AsmStmt::stream(std::ostream& os) const {
+    os << "asm(\"" << asm_template() << "\"";
+    stream_list(os << "\n\t: ",  outputs(), [&](const Elem& elem) { os << "\"" << elem.constraint() << "\"(" << elem.expr() << ")"; });
+    stream_list(os << "\n\t: ",   inputs(), [&](const Elem& elem) { os << "\"" << elem.constraint() << "\"(" << elem.expr() << ")"; });
+    stream_list(os << "\n\t: ", clobbers(), [&](const std::string& clobber) { os << "\"" << clobber << "\""; });
+    stream_list(os << "\n\t: ",  options(), [&](const std::string& option) { os << "\"" << option << "\""; });
+    return os << ");";
+}
+
 }
