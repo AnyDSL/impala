@@ -507,10 +507,10 @@ const Def* InfixExpr::emit(CodeGen& cg, TokenKind op, const Def* ldef, const Def
                 for (int j = 0; j < rows; j++) {
                     const Def* sum = nullptr;
                     for (int k = 0, n = rmat->rows(); k < n; k++) {
-                        auto mul = cg.world().binop(ArithOp_mul,
+                        auto mul = cg.world().arithop_mul(
                             cg.world().extract(ldef, transpose ? j : k * lrows + j, loc()),
                             cg.world().extract(rdef,                 i * rrows + k, loc()), loc());
-                        sum = sum ? cg.world().binop(ArithOp_add, sum, mul, loc()) : mul;
+                        sum = sum ? cg.world().arithop_add(sum, mul, loc()) : mul;
                     }
                     defs[transpose ? i : i * rows + j] = sum;
                 }
@@ -667,27 +667,92 @@ const Def* MatrixExpr::remit(CodeGen& cg) const {
             }
             return cg.world().definite_array(defs, loc());
         }
-        case MAT_INVERSE: return emit_inverse(cg, cg.remit(arg(0))); break;
-        case VEC_CROSS:   return emit_cross(cg, cg.remit(arg(0)), cg.remit(arg(1))); break;
-        case VEC_DOT:     return emit_dot(cg, cg.remit(arg(0)), cg.remit(arg(1))); break;
+        case MAT_INVERSE:       return emit_inverse(cg, cg.remit(arg(0))); break;
+        case MAT_DETERMINANT:   return emit_determinant(cg, cg.remit(arg(0))); break;
+        case VEC_CROSS:         return emit_cross(cg, cg.remit(arg(0)), cg.remit(arg(1))); break;
+        case VEC_DOT:           return emit_dot(cg, cg.remit(arg(0)), cg.remit(arg(1))); break;
         default: break;
     }
     THORIN_UNREACHABLE;
 }
 
+static const Def* submatrix(CodeGen& cg, int n, int row, int col, const Def* def, const Location& loc) {
+    // removes row and col from the given square matrix
+    Array<const Def*> defs((n - 1) * (n - 1));
+    for (int i = 0, p = 0; i < n; i++) {
+        if (i == col) continue;
+        for (int j = 0, q = 0; j < n; j++) {
+            if (j == row) continue;
+            defs[p * (n - 1) + q] = cg.world().extract(def, i * n + j, loc);
+            q++;
+        }
+        p++;
+    }
+    return cg.world().definite_array(defs, loc);
+}
+
+static const Def* determinant(CodeGen& cg, int n, const Def* def, const Location& loc) {
+    if (n == 1) return cg.world().extract(def, 0, loc);
+    if (n == 2) {
+        return cg.world().arithop_sub(
+            cg.world().arithop_mul(cg.world().extract(def, 0, loc),
+                                   cg.world().extract(def, 3, loc), loc),
+            cg.world().arithop_mul(cg.world().extract(def, 1, loc),
+                                   cg.world().extract(def, 2, loc), loc), loc);
+    }
+
+    const Def* sum = nullptr;
+    for (int i = 0; i < n; i++) {
+        auto mul = cg.world().arithop_mul(
+            cg.world().extract(def, i, loc),
+            determinant(cg, n - 1, submatrix(cg, n, i, 0, def, loc), loc), loc);
+        sum = sum ? cg.world().binop(i % 2 ? ArithOp_add : ArithOp_sub, sum, mul, loc) : mul;
+    }
+    return sum;
+}
+
+const Def* MatrixExpr::emit_determinant(CodeGen& cg, const Def* def) const {
+    return determinant(cg, arg(0)->type().as<MatrixType>()->rows(), def, loc());
+}
+
 const Def* MatrixExpr::emit_inverse(CodeGen& cg, const Def* def) const {
-    THORIN_UNREACHABLE;
+    // the formula used is A.t(com A) = (det A).Id
+    auto mat = arg(0)->type().as<MatrixType>();
+    int n = mat->rows();
+
+    // 1. compute (det A)
+    auto det = determinant(cg, n, def, loc());
+
+    // 2. compute t(com A)
+    Array<const Def*> elems(n * n);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            auto subdet = determinant(cg, n - 1, submatrix(cg, n, i, j, def, loc()), loc());
+            elems[i * n + j] = (i + j) % 2 ? cg.world().arithop_minus(subdet, loc()) : subdet;
+        }
+    }
+
+    // 3. compute det A == 0 ? 0 : 1/detA
+    auto elem = cg.convert(mat->elem_type());
+    auto zero = cg.world().zero(elem, loc());
+    auto one  = cg.world().literal(pf32(1.0f), loc());
+    auto cmp  = cg.world().cmp_eq(det, zero, loc());
+    auto inv  = cg.world().select(cmp, zero, cg.world().arithop_div(one, det, loc()), loc());
+
+    for (int i = 0; i < n * n; i++) elems[i] = cg.world().arithop_mul(elems[i], inv, loc());
+
+    return cg.world().definite_array(elems, loc());
 }
 
 const Def* MatrixExpr::emit_cross(CodeGen& cg, const Def* ldef, const Def* rdef) const {
     Array<const Def*> defs(3);
     for (int i = 0; i < 3; i++) {
         int j = (i + 1) % 3, k = (i + 2) % 3;
-        defs[i] = cg.world().binop(ArithOp_sub,
-            cg.world().binop(ArithOp_mul,
+        defs[i] = cg.world().arithop_sub(
+            cg.world().arithop_mul(
                 cg.world().extract(ldef, j, loc()),
                 cg.world().extract(rdef, k, loc()), loc()),
-            cg.world().binop(ArithOp_mul,
+            cg.world().arithop_mul(
                 cg.world().extract(ldef, k, loc()),
                 cg.world().extract(rdef, j, loc()), loc()), loc());
     }
@@ -698,10 +763,10 @@ const Def* MatrixExpr::emit_dot(CodeGen& cg, const Def* ldef, const Def* rdef) c
     int n = arg(0)->type().as<MatrixType>()->rows();
     const Def* sum = nullptr;
     for (int i = 0; i < n; i++) {
-        auto mul = cg.world().binop(ArithOp_mul,
+        auto mul = cg.world().arithop_mul(
             cg.world().extract(ldef, i, loc()),
             cg.world().extract(rdef, i, loc()), loc());
-        sum = sum ? cg.world().binop(ArithOp_add, sum, mul, loc()) : mul;
+        sum = sum ? cg.world().arithop_add(sum, mul, loc()) : mul;
     }
     return sum;
 }

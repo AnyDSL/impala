@@ -83,6 +83,7 @@
     case Token::MAT4X2: \
     case Token::MAT4X3: \
     case Token::MAT_INVERSE: \
+    case Token::MAT_DETERMINANT: \
     case Token::VEC_CROSS: \
     case Token::VEC_DOT
 

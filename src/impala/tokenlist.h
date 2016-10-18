@@ -121,9 +121,10 @@ IMPALA_MAT_KEY(MAT3X4, "mat3x4", 3, 4)
 IMPALA_MAT_KEY(MAT4X2, "mat4x2", 4, 2)
 IMPALA_MAT_KEY(MAT4X3, "mat4x3", 4, 3)
 
-IMPALA_MAT_KEY(MAT_INVERSE,   "inverse",   0, 0)
-IMPALA_MAT_KEY(VEC_DOT,       "dot",       0, 0)
-IMPALA_MAT_KEY(VEC_CROSS,     "cross",     0, 0)
+IMPALA_MAT_KEY(MAT_INVERSE,     "inverse",     0, 0)
+IMPALA_MAT_KEY(MAT_DETERMINANT, "determinant", 0, 0)
+IMPALA_MAT_KEY(VEC_DOT,         "dot",         0, 0)
+IMPALA_MAT_KEY(VEC_CROSS,       "cross",       0, 0)
 
 #undef IMPALA_MAT_KEY
 #undef IMPALA_KEY

@@ -1386,10 +1386,12 @@ private:
     Type check_matrix_args(TypeSema&, uint32_t, uint32_t) const;
 
     Type check_inverse(TypeSema&) const;
+    Type check_determinant(TypeSema&) const;
     Type check_cross(TypeSema&) const;
     Type check_dot(TypeSema&) const;
 
     const thorin::Def* emit_inverse(CodeGen&, const thorin::Def*) const;
+    const thorin::Def* emit_determinant(CodeGen&, const thorin::Def*) const;
     const thorin::Def* emit_cross(CodeGen&, const thorin::Def*, const thorin::Def*) const;
     const thorin::Def* emit_dot(CodeGen&, const thorin::Def*, const thorin::Def*) const;
 

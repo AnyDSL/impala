@@ -1333,9 +1333,10 @@ Type MatrixExpr::check(TypeSema& sema, TypeExpectation expected) const {
     } else {
         // special functions (e.g. dot, cross, ...) have rows = cols = 0
         switch (kind()) {
-            case Token::MAT_INVERSE:    return check_inverse(sema);
-            case Token::VEC_DOT:        return check_dot(sema);
-            case Token::VEC_CROSS:      return check_cross(sema);
+            case Token::MAT_INVERSE:     return check_inverse(sema);
+            case Token::MAT_DETERMINANT: return check_determinant(sema);
+            case Token::VEC_DOT:         return check_dot(sema);
+            case Token::VEC_CROSS:       return check_cross(sema);
             default: break;
         }
     }
@@ -1443,12 +1444,28 @@ Type MatrixExpr::check_inverse(TypeSema& sema) const {
 
     auto mat = arg(0)->type().isa<MatrixType>();
 
-    if (!mat || mat->is_vector() || mat->rows() != mat->cols()) {
+    if (!mat || mat->is_vector() || mat->rows() != mat->cols() || !sema.is_float(mat->elem_type())) {
         error(this) << "invalid operand type for the inverse function\n";
         return sema.type_error();
     }
 
     return mat;
+}
+
+Type MatrixExpr::check_determinant(TypeSema& sema) const {
+    if (num_args() != 1) {
+        error(this) << "incorrect number of arguments for the determinant function\n";
+        return sema.type_error();
+    }
+
+    auto mat = arg(0)->type().isa<MatrixType>();
+
+    if (!mat || mat->is_vector() || mat->rows() != mat->cols()) {
+        error(this) << "invalid operand type for the determinant function\n";
+        return sema.type_error();
+    }
+
+    return mat->elem_type();
 }
 
 Type MatrixExpr::check_cross(TypeSema& sema) const {
