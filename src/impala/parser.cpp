@@ -69,7 +69,23 @@
     case Token::L_BRACE: \
     case Token::RUN_BLOCK: \
     case Token::L_BRACKET: \
-    case Token::SIMD
+    case Token::SIMD: \
+    case Token::VEC2: \
+    case Token::VEC3: \
+    case Token::VEC4: \
+    case Token::MAT2X2: \
+    case Token::MAT3X3: \
+    case Token::MAT4X4: \
+    case Token::MAT2X3: \
+    case Token::MAT2X4: \
+    case Token::MAT3X2: \
+    case Token::MAT3X4: \
+    case Token::MAT4X2: \
+    case Token::MAT4X3: \
+    case Token::MAT_INVERSE: \
+    case Token::MAT_DETERMINANT: \
+    case Token::VEC_CROSS: \
+    case Token::VEC_DOT
 
 #define STMT_NOT_EXPR \
          Token::LET: \
@@ -190,16 +206,17 @@ public:
     void parse_return_param(Fn* fn);
 
     // types
-    const ASTType*      parse_type();
-    const ArrayASTType* parse_array_type();
-    const Typeof*       parse_typeof();
-    const ASTType*      parse_return_type(bool&);
-    const FnASTType*    parse_fn_type();
-    const PrimASTType*  parse_prim_type();
-    const PtrASTType*   parse_ptr_type();
-    const TupleASTType* parse_tuple_type();
-    const SimdASTType*  parse_simd_type();
-    const ASTTypeApp*   parse_type_app();
+    const ASTType*       parse_type();
+    const ArrayASTType*  parse_array_type();
+    const Typeof*        parse_typeof();
+    const ASTType*       parse_return_type(bool&);
+    const FnASTType*     parse_fn_type();
+    const PrimASTType*   parse_prim_type();
+    const PtrASTType*    parse_ptr_type();
+    const TupleASTType*  parse_tuple_type();
+    const SimdASTType*   parse_simd_type();
+    const MatrixASTType* parse_matrix_type();
+    const ASTTypeApp*    parse_type_app();
 
     enum class BodyMode { None, Optional, Mandatory };
 
@@ -229,6 +246,7 @@ public:
     const Expr*             parse_infix_expr(const Expr* lhs);
     const Expr*             parse_postfix_expr(const Expr* lhs);
     const Expr*             parse_primary_expr();
+    const MatrixExpr*       parse_matrix_expr();
     const LiteralExpr*      parse_literal_expr();
     const CharExpr*         parse_char_expr();
     const StrExpr*          parse_str_expr();
@@ -709,6 +727,21 @@ const ASTType* Parser::parse_type() {
         case Token::AND:
         case Token::ANDAND:     return parse_ptr_type();
         case Token::SIMD:       return parse_simd_type();
+
+        case Token::VEC2:
+        case Token::VEC3:
+        case Token::VEC4:
+        case Token::MAT2X2:
+        case Token::MAT3X3:
+        case Token::MAT4X4:
+        case Token::MAT2X3:
+        case Token::MAT2X4:
+        case Token::MAT3X2:
+        case Token::MAT3X4:
+        case Token::MAT4X2:
+        case Token::MAT4X3:
+            return parse_matrix_type();
+
         default:  {
             error("type", "");
             auto error_type = new ErrorASTType(prev_loc());
@@ -853,6 +886,21 @@ const SimdASTType* Parser::parse_simd_type() {
     simd->size_ = parse_integer("simd vector size");
     expect(Token::R_BRACKET, "simd type");
     return simd;
+}
+
+const MatrixASTType* Parser::parse_matrix_type() {
+    auto mat = loc(new MatrixASTType());
+    switch (la()) {
+#define IMPALA_MAT_KEY(tok, str, r, c) case Token:: tok : mat->rows_ = r; mat->cols_ = c; break;
+#include "impala/tokenlist.h"
+        default: THORIN_UNREACHABLE;
+    }
+    assert(mat->rows_ > 0 && mat->cols_ > 0);
+    lex();
+    expect(Token::L_BRACKET, "vector or matrix type");
+    mat->elem_type_ = parse_type();
+    expect(Token::R_BRACKET, "vector or matrix type");
+    return mat;
 }
 
 /*
@@ -1008,6 +1056,10 @@ const Expr* Parser::parse_primary_expr() {
             parse_comma_list("elements of a simd expression", Token::R_BRACKET, [&] { simd->args_.push_back(parse_expr()); });
             return simd;
         }
+#define IMPALA_MAT_KEY(tok, str, r, c) case Token:: tok:
+#include "impala/tokenlist.h"
+            return parse_matrix_expr();
+        
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype:
 #include "impala/tokenlist.h"
@@ -1064,6 +1116,19 @@ const Expr* Parser::parse_primary_expr() {
         case Token::RUN_BLOCK:  return parse_block_expr();
         default:                error("expression", ""); return new EmptyExpr(lex().loc());
     }
+}
+
+const MatrixExpr* Parser::parse_matrix_expr() {
+    auto vec = loc(new MatrixExpr());
+    switch (la()) {
+#define IMPALA_MAT_KEY(tok, str, r, c) case Token:: tok: vec->kind_ = MatrixExpr:: tok; break;
+#include "impala/tokenlist.h"
+        default: THORIN_UNREACHABLE;
+    }
+    lex();
+    expect(Token::L_PAREN, "vector expression");
+    parse_comma_list("elements of a vector expression", Token::R_PAREN, [&] { vec->args_.push_back(parse_expr()); });
+    return vec;
 }
 
 const LiteralExpr* Parser::parse_literal_expr() {

@@ -80,6 +80,12 @@ std::ostream& IndefiniteArrayTypeNode::stream(std::ostream& os) const { return s
 std::ostream& SimdTypeNode::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_type(), size()); }
 std::ostream& StructAbsTypeNode::stream(std::ostream& os) const { return os << struct_decl_->symbol(); }
 
+std::ostream& MatrixTypeNode::stream(std::ostream& os) const {
+    return is_vector() ?
+           streamf(os, "vec%[%]", rows(), elem_type()) :
+           streamf(os, "mat%x%[%]", rows(), cols(), elem_type());
+}
+
 std::ostream& StructAppTypeNode::stream(std::ostream& os) const {
     os << struct_abs_type()->struct_decl()->symbol();
     if (num_args() != 0)
@@ -115,6 +121,11 @@ std::ostream& PtrASTType::stream(std::ostream& os) const {
 std::ostream& DefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[% * %]", elem_type(), dim()); }
 std::ostream& IndefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[%]", elem_type()); }
 std::ostream& SimdASTType::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_type(), size()); }
+std::ostream& MatrixASTType::stream(std::ostream& os) const {
+    return is_vector() ?
+           streamf(os, "vec%[%]", rows(), elem_type()) :
+           streamf(os, "mat%x%[%]", rows(), cols(), elem_type());
+}
 
 std::ostream& TupleASTType::stream(std::ostream& os) const {
     return stream_list(os, args(), [&](const ASTType* type) { os << type; }, "(", ")");
@@ -379,6 +390,15 @@ std::ostream& IndefiniteArrayExpr::stream(std::ostream& os) const {
 
 std::ostream& SimdExpr::stream(std::ostream& os) const {
     return stream_list(os, args(), [&](const Expr* expr) { os << expr; }, "simd[", "]");
+}
+
+std::ostream& MatrixExpr::stream(std::ostream& os) const {
+    switch (kind()) {
+#define IMPALA_KEY_VEC(tok, str) case tok : os << str; break;
+#include "impala/tokenlist.h"
+        default: THORIN_UNREACHABLE;
+    }
+    return stream_list(os, args(), [&](const Expr* expr) { os << expr; }, "(", ")");
 }
 
 std::ostream& PrefixExpr::stream(std::ostream& os) const {

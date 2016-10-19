@@ -182,6 +182,10 @@ const thorin::Type* SimdTypeNode::convert(CodeGen& cg) const {
     return cg.world().type(scalar->as<thorin::PrimType>()->primtype_kind(), size());
 }
 
+const thorin::Type* MatrixTypeNode::convert(CodeGen& cg) const {
+    return cg.world().definite_array_type(cg.convert(elem_type()), size());
+}
+
 /*
  * Decls and Function
  */
@@ -466,16 +470,13 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             return cg.converge(this, x);
         }
         default:
-            const TokenKind op = (TokenKind) kind();
-
+            auto op = (TokenKind)kind();
             if (Token::is_assign(op)) {
                 Value lvar = cg.lemit(lhs());
                 const Def* rdef = cg.remit(rhs());
 
-                if (op != Token::ASGN) {
-                    TokenKind sop = Token::separate_assign(op);
-                    rdef = cg.world().binop(Token::to_binop(sop), lvar.load(loc()), rdef, loc());
-                }
+                if (op != Token::ASGN)
+                    rdef = emit(cg, Token::separate_assign(op), lvar.load(loc()), rdef);
 
                 lvar.store(rdef, loc());
                 return cg.world().tuple({}, loc());
@@ -483,8 +484,55 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
             const Def* ldef = cg.remit(lhs());
             const Def* rdef = cg.remit(rhs());
-            return cg.world().binop(Token::to_binop(op), ldef, rdef, loc());
+            return emit(cg, op, ldef, rdef);
     }
+}
+
+const Def* InfixExpr::emit(CodeGen& cg, TokenKind op, const Def* ldef, const Def* rdef) const {
+    if (lvec_ == SCALAR && rvec_ == SCALAR)
+        return cg.world().binop(Token::to_binop(op), ldef, rdef, loc());
+
+    if (kind() == MUL && lvec_ != SCALAR && rvec_ != SCALAR) {
+        auto lmat = lhs()->type().as<MatrixType>();
+        auto rmat = rhs()->type().as<MatrixType>();
+        if (!lmat->is_vector() || !rmat->is_vector()) {
+            // matrix-vector or vector-matrix multiplication
+            bool transpose = lmat->is_vector();
+            int rows = transpose ? lmat->cols() : lmat->rows();
+            int cols = rmat->cols();
+            int lrows = lmat->rows();
+            int rrows = rmat->rows();
+            Array<const Def*> defs(rows * cols);
+            for (int i = 0; i < cols; i++) {
+                for (int j = 0; j < rows; j++) {
+                    const Def* sum = nullptr;
+                    for (int k = 0, n = rmat->rows(); k < n; k++) {
+                        auto mul = cg.world().arithop_mul(
+                            cg.world().extract(ldef, transpose ? j : k * lrows + j, loc()),
+                            cg.world().extract(rdef,                 i * rrows + k, loc()), loc());
+                        sum = sum ? cg.world().arithop_add(sum, mul, loc()) : mul;
+                    }
+                    defs[transpose ? i : i * rows + j] = sum;
+                }
+            }
+            return cg.world().definite_array(defs, loc());
+        }
+    }
+
+    // component-wise ops and scalar vs. matrix/vector ops are handled here
+    typedef std::function<const Def*(int)> ExtractFn;
+    auto lextract = lvec_ == SCALAR ?
+        ExtractFn([&] (int i) { return ldef; }) :
+        ExtractFn([&] (int i) { return cg.world().extract(ldef, i, loc()); });
+    auto rextract = rvec_ == SCALAR ?
+        ExtractFn([&] (int i) { return rdef; }) :
+        ExtractFn([&] (int i) { return cg.world().extract(rdef, i, loc()); });
+
+    int n = (lvec_ != SCALAR ? lhs() : rhs())->type().as<MatrixType>()->size();
+    Array<const Def*> defs(n);
+    for (int i = 0; i < n; i++)
+        defs[i] = cg.world().binop(Token::to_binop(op), lextract(i), rextract(i), loc());
+    return cg.world().definite_array(defs, loc());
 }
 
 const Def* PostfixExpr::remit(CodeGen& cg) const {
@@ -577,11 +625,167 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
     THORIN_UNREACHABLE;
 }
 
+const Def* MatrixExpr::remit(CodeGen& cg) const {
+    switch (kind()) {
+        case VEC2:
+        case VEC3:
+        case VEC4:
+        case MAT2X2:
+        case MAT3X3:
+        case MAT4X4:
+        case MAT2X3:
+        case MAT2X4:
+        case MAT3X2:
+        case MAT3X4:
+        case MAT4X2:
+        case MAT4X3: {
+            auto mat = type().as<MatrixType>();
+            int i = 0, n = mat->size();
+            Array<const Def*> defs(n);
+            for (auto arg : args()) {
+                auto def = cg.remit(arg);
+                if (arg->type().isa<MatrixType>()) {
+                    for (int j = 0, m = def->size(); j < m; j++)
+                        defs[i++] = cg.world().extract(def, j, loc());
+                } else {
+                    defs[i++] = def;
+                }
+            }
+
+            if (i == 1) {
+                // repetition constructor, like so: vec4(1.0f)
+                if (mat->is_vector()) {
+                    for (; i < n; i++) defs[i] = defs[0];
+                } else {
+                    // for matrices, this means defs[0] * identity
+                    auto z = cg.world().zero(cg.convert(mat->elem_type()), loc());
+                    for (int i = 0, n = mat->rows(); i < n; i++) {
+                        for (int j = 0, m = mat->cols(); j < m; j++)
+                            defs[i * mat->cols() + j] = i == j ? defs[0] : z;
+                    }
+                }
+            }
+            return cg.world().definite_array(defs, loc());
+        }
+        case MAT_INVERSE:       return emit_inverse(cg, cg.remit(arg(0))); break;
+        case MAT_DETERMINANT:   return emit_determinant(cg, cg.remit(arg(0))); break;
+        case VEC_CROSS:         return emit_cross(cg, cg.remit(arg(0)), cg.remit(arg(1))); break;
+        case VEC_DOT:           return emit_dot(cg, cg.remit(arg(0)), cg.remit(arg(1))); break;
+        default: break;
+    }
+    THORIN_UNREACHABLE;
+}
+
+static const Def* submatrix(CodeGen& cg, int n, int row, int col, const Def* def, const Location& loc) {
+    // removes row and col from the given square matrix
+    Array<const Def*> defs((n - 1) * (n - 1));
+    for (int i = 0, p = 0; i < n; i++) {
+        if (i == col) continue;
+        for (int j = 0, q = 0; j < n; j++) {
+            if (j == row) continue;
+            defs[p * (n - 1) + q] = cg.world().extract(def, i * n + j, loc);
+            q++;
+        }
+        p++;
+    }
+    return cg.world().definite_array(defs, loc);
+}
+
+static const Def* determinant(CodeGen& cg, int n, const Def* def, const Location& loc) {
+    if (n == 1) return cg.world().extract(def, 0, loc);
+    if (n == 2) {
+        return cg.world().arithop_sub(
+            cg.world().arithop_mul(cg.world().extract(def, 0, loc),
+                                   cg.world().extract(def, 3, loc), loc),
+            cg.world().arithop_mul(cg.world().extract(def, 1, loc),
+                                   cg.world().extract(def, 2, loc), loc), loc);
+    }
+
+    const Def* sum = nullptr;
+    for (int i = 0; i < n; i++) {
+        auto mul = cg.world().arithop_mul(
+            cg.world().extract(def, i, loc),
+            determinant(cg, n - 1, submatrix(cg, n, i, 0, def, loc), loc), loc);
+        sum = sum ? cg.world().binop(i % 2 ? ArithOp_add : ArithOp_sub, sum, mul, loc) : mul;
+    }
+    return sum;
+}
+
+const Def* MatrixExpr::emit_determinant(CodeGen& cg, const Def* def) const {
+    return determinant(cg, arg(0)->type().as<MatrixType>()->rows(), def, loc());
+}
+
+const Def* MatrixExpr::emit_inverse(CodeGen& cg, const Def* def) const {
+    // the formula used is A.t(com A) = (det A).Id
+    auto mat = arg(0)->type().as<MatrixType>();
+    int n = mat->rows();
+
+    // 1. compute (det A)
+    auto det = determinant(cg, n, def, loc());
+
+    // 2. compute t(com A)
+    Array<const Def*> elems(n * n);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            auto subdet = determinant(cg, n - 1, submatrix(cg, n, i, j, def, loc()), loc());
+            elems[i * n + j] = (i + j) % 2 ? cg.world().arithop_minus(subdet, loc()) : subdet;
+        }
+    }
+
+    // 3. compute det A == 0 ? 0 : 1/detA
+    auto elem = cg.convert(mat->elem_type());
+    auto zero = cg.world().zero(elem, loc());
+    auto one  = cg.world().literal(pf32(1.0f), loc());
+    auto cmp  = cg.world().cmp_eq(det, zero, loc());
+    auto inv  = cg.world().select(cmp, zero, cg.world().arithop_div(one, det, loc()), loc());
+
+    for (int i = 0; i < n * n; i++) elems[i] = cg.world().arithop_mul(elems[i], inv, loc());
+
+    return cg.world().definite_array(elems, loc());
+}
+
+const Def* MatrixExpr::emit_cross(CodeGen& cg, const Def* ldef, const Def* rdef) const {
+    Array<const Def*> defs(3);
+    for (int i = 0; i < 3; i++) {
+        int j = (i + 1) % 3, k = (i + 2) % 3;
+        defs[i] = cg.world().arithop_sub(
+            cg.world().arithop_mul(
+                cg.world().extract(ldef, j, loc()),
+                cg.world().extract(rdef, k, loc()), loc()),
+            cg.world().arithop_mul(
+                cg.world().extract(ldef, k, loc()),
+                cg.world().extract(rdef, j, loc()), loc()), loc());
+    }
+    return cg.world().definite_array(defs, loc());
+}
+
+const Def* MatrixExpr::emit_dot(CodeGen& cg, const Def* ldef, const Def* rdef) const {
+    int n = arg(0)->type().as<MatrixType>()->rows();
+    const Def* sum = nullptr;
+    for (int i = 0; i < n; i++) {
+        auto mul = cg.world().arithop_mul(
+            cg.world().extract(ldef, i, loc()),
+            cg.world().extract(rdef, i, loc()), loc());
+        sum = sum ? cg.world().arithop_add(sum, mul, loc()) : mul;
+    }
+    return sum;
+}
+
 Value FieldExpr::lemit(CodeGen& cg) const {
     return Value::create_agg(cg.lemit(lhs()), cg.world().literal_qu32(index(), loc()));
 }
 
 const Def* FieldExpr::remit(CodeGen& cg) const {
+    if (lhs()->type().isa<MatrixType>()) {
+        int i = 0, n = swizzle().size();
+        auto def = cg.remit(lhs());
+        Array<const Def*> defs(n);
+        for (auto s : swizzle()) {
+            defs[i++] = cg.world().extract(def, s, loc());
+        }
+        return n > 1 ? cg.world().definite_array(defs, loc()) : defs[0];
+    }
+
     return cg.extract(cg.remit(lhs()), index(), loc());
 }
 

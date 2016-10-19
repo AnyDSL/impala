@@ -42,6 +42,7 @@ class OwnedPtrTypeNode;         typedef Proxy<OwnedPtrTypeNode>         OwnedPtr
 class PrimTypeNode;             typedef Proxy<PrimTypeNode>             PrimType;
 class PtrTypeNode;              typedef Proxy<PtrTypeNode>              PtrType;
 class SimdTypeNode;             typedef Proxy<SimdTypeNode>             SimdType;
+class MatrixTypeNode;           typedef Proxy<MatrixTypeNode>           MatrixType;
 class StructAbsTypeNode;        typedef Proxy<StructAbsTypeNode>        StructAbsType;
 class StructAppTypeNode;        typedef Proxy<StructAppTypeNode>        StructAppType;
 class TraitAbsNode;             typedef Proxy<TraitAbsNode>             TraitAbs;
@@ -162,6 +163,7 @@ enum Kind {
     Kind_noret,
     Kind_owned_ptr,
     Kind_simd,
+    Kind_matrix,
     Kind_struct_abs,
     Kind_struct_app,
     Kind_trait_abs,
@@ -659,6 +661,30 @@ private:
     virtual const thorin::Type* convert(CodeGen&) const override;
 
     const uint64_t size_;
+};
+
+class MatrixTypeNode : public ArrayTypeNode {
+public:
+    MatrixTypeNode(TypeTable& tt, Type elem_type, uint32_t rows, uint32_t cols)
+        : ArrayTypeNode(tt, Kind_matrix, { elem_type }), rows_(rows), cols_(cols)
+    {}
+
+    uint32_t rows() const { return rows_; }
+    uint32_t cols() const { return cols_; }
+    uint32_t size() const { return rows_ * cols_; }
+
+    bool is_vector() const { return cols_ == 1; }
+
+    virtual std::ostream& stream(std::ostream&) const override;
+    virtual bool is_subtype(const TypeNode*) const override;
+    virtual bool equal(const Unifiable*) const override;
+
+private:
+    virtual Type vinstantiate(SpecializeMap&) const override;
+    virtual const thorin::Type* convert(CodeGen&) const override;
+
+    uint32_t rows_;
+    uint32_t cols_;
 };
 
 /**

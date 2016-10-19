@@ -422,6 +422,25 @@ private:
     friend class Parser;
 };
 
+class MatrixASTType : public ArrayASTType {
+public:
+    uint32_t rows() const { return rows_; }
+    uint32_t cols() const { return cols_; }
+
+    bool is_vector() const { return cols_ == 1; }
+
+    virtual std::ostream& stream(std::ostream&) const override;
+    virtual void check(NameSema&) const override;
+    virtual void check(BorrowSema&) const override;
+
+private:
+    virtual Type check(TypeSema&) const override;
+
+    thorin::u32 rows_, cols_;
+
+    friend class Parser;
+};
+
 //------------------------------------------------------------------------------
 
 /*
@@ -1097,9 +1116,18 @@ private:
     virtual std::ostream& stream(std::ostream&) const override;
     virtual Type check(TypeSema&, TypeExpectation) const override;
 
+    Type check_arith_op(TypeSema&) const;
+    const thorin::Def* emit(CodeGen&, TokenKind, const thorin::Def*, const thorin::Def*) const;
+
     Kind kind_;
     AutoPtr<const Expr> lhs_;
     AutoPtr<const Expr> rhs_;
+
+    mutable enum VecOp {
+        SCALAR,
+        VECTOR,
+        MATRIX
+    } lvec_, rvec_;
 
     friend class Parser;
 };
@@ -1138,11 +1166,11 @@ public:
     const Identifier* identifier() const { return identifier_; }
     Symbol symbol() const { return identifier()->symbol(); }
     uint32_t index() const { return index_; }
+    const std::vector<uint32_t>& swizzle() const { return swizzle_; }
     virtual bool is_lvalue() const override;
     virtual void take_address() const override;
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
-    Type check_as_struct(TypeSema&, Type) const;
 
 private:
     virtual std::ostream& stream(std::ostream&) const override;
@@ -1150,9 +1178,13 @@ private:
     virtual thorin::Value lemit(CodeGen&) const override;
     virtual const thorin::Def* remit(CodeGen&) const override;
 
+    Type check_as_struct(TypeSema&, Type) const;
+    Type check_as_matrix(TypeSema&, Type) const;
+
     AutoPtr<const Expr> lhs_;
     AutoPtr<const Identifier> identifier_;
     mutable uint32_t index_ = uint32_t(-1);
+    mutable std::vector<uint32_t> swizzle_;
 
     friend class Parser;
     friend class MapExpr; // remove this
@@ -1332,6 +1364,42 @@ private:
     friend class Parser;
     friend class ForExpr;
     friend class TypeSema;
+};
+
+class MatrixExpr : public Expr, public Args {
+public:
+    enum Kind {
+#define IMPALA_MAT_KEY(tok, str, r, c) tok = Token:: tok,
+#include "tokenlist.h"
+    };
+
+    Kind kind() const { return kind_; }
+    virtual void check(NameSema&) const override;
+    virtual void check(BorrowSema&) const override;
+
+private:
+    virtual std::ostream& stream(std::ostream&) const override;
+    virtual Type check(TypeSema&, TypeExpectation) const override;
+    virtual const thorin::Def* remit(CodeGen&) const override;
+
+    Type check_vector_args(TypeSema&, uint32_t) const;
+    Type check_matrix_args(TypeSema&, uint32_t, uint32_t) const;
+
+    Type check_inverse(TypeSema&) const;
+    Type check_determinant(TypeSema&) const;
+    Type check_cross(TypeSema&) const;
+    Type check_dot(TypeSema&) const;
+
+    const thorin::Def* emit_inverse(CodeGen&, const thorin::Def*) const;
+    const thorin::Def* emit_determinant(CodeGen&, const thorin::Def*) const;
+    const thorin::Def* emit_cross(CodeGen&, const thorin::Def*, const thorin::Def*) const;
+    const thorin::Def* emit_dot(CodeGen&, const thorin::Def*, const thorin::Def*) const;
+
+    friend class CodeGen;
+    friend class Parser;
+    friend class TypeSema;
+
+    Kind kind_;
 };
 
 class StmtLikeExpr : public Expr {};

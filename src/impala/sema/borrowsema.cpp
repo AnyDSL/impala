@@ -76,6 +76,10 @@ void SimdASTType::check(BorrowSema& sema) const {
     elem_type()->check(sema);
 }
 
+void MatrixASTType::check(BorrowSema& sema) const {
+    elem_type()->check(sema);
+}
+
 //------------------------------------------------------------------------------
 
 
@@ -239,6 +243,11 @@ void MapExpr::check(BorrowSema& sema) const {
     lhs()->check(sema);
     for (auto type_arg : type_args())
         type_arg->check(sema);
+    for (auto arg : args())
+        arg->check(sema);
+}
+
+void MatrixExpr::check(BorrowSema& sema) const {
     for (auto arg : args())
         arg->check(sema);
 }
