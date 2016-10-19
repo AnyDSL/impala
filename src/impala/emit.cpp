@@ -772,7 +772,6 @@ const Def* MatrixExpr::emit_dot(CodeGen& cg, const Def* ldef, const Def* rdef) c
 }
 
 Value FieldExpr::lemit(CodeGen& cg) const {
-    assert(!lhs()->type().isa<MatrixType>());
     return Value::create_agg(cg.lemit(lhs()), cg.world().literal_qu32(index(), loc()));
 }
 

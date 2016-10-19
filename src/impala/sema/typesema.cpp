@@ -60,7 +60,7 @@ public:
         }
         return true;
     }
-    Type scalar_type(const Expr*);
+    Type scalar_type(Type);
     bool is_int(Type t);
     bool is_float(Type t);
     bool expect_int(const Expr*);
@@ -136,8 +136,7 @@ public:
 
 //------------------------------------------------------------------------------
 
-Type TypeSema::scalar_type(const Expr* e) {
-    Type t = e->type();
+Type TypeSema::scalar_type(Type t) {
     if (auto simd = t.isa<SimdType>()) {
         return simd->elem_type();
     }
@@ -154,8 +153,7 @@ bool TypeSema::is_float(Type t) {
 }
 
 bool TypeSema::expect_int(const Expr* expr) {
-    auto t = scalar_type(expr);
-
+    auto t = scalar_type(expr->type());
     if (!t->is_error() && !is_int(t)) {
         error(expr) << "expected integer type but found " << t << "\n";
         return false;
@@ -164,8 +162,7 @@ bool TypeSema::expect_int(const Expr* expr) {
 }
 
 bool TypeSema::expect_int_or_bool(const Expr* expr) {
-    auto t = scalar_type(expr);
-
+    auto t = scalar_type(expr->type());
     if (!t->is_error() && !t->is_bool() && !is_int(t)) {
         error(expr) << "expected integer or boolean type but found " << t << "\n";
         return false;
@@ -174,7 +171,8 @@ bool TypeSema::expect_int_or_bool(const Expr* expr) {
 }
 
 bool TypeSema::expect_num(Type t, const Expr* expr) {
-    if (!t->is_error() && !t->is_bool() && !is_int(t) && !is_float(t)) {
+    auto scalar = scalar_type(t);
+    if (!scalar->is_error() && !scalar->is_bool() && !is_int(scalar) && !is_float(scalar)) {
         error(expr) << "expected number type but found " << t << "\n";
         return false;
     }
@@ -182,7 +180,7 @@ bool TypeSema::expect_num(Type t, const Expr* expr) {
 }
 
 void TypeSema::expect_num(const Expr* expr) {
-    expect_num(scalar_type(expr), expr);
+    expect_num(expr->type(), expr);
 }
 
 Type TypeSema::expect_type(const Expr* expr, Type found_type, TypeExpectation expected) {
@@ -373,17 +371,15 @@ Type SimdASTType::check(TypeSema& sema) const {
 
 Type MatrixASTType::check(TypeSema& sema) const {
     auto type = sema.check(elem_type());
-    if (type.isa<PrimType>() || type.isa<SimdType>()) {
-        if (!sema.is_int(type) && !sema.is_float(type)) {
-            error(this) << "only floating point and integer types are supported for "
-                        << (is_vector() ? "vectors" : "matrices") << "\n";
-            return sema.type_error();
-        }
-        return sema.matrix_type(type, rows(), cols());
+    auto scalar = sema.scalar_type(type);
+
+    if (!sema.is_int(scalar) && !sema.is_float(scalar)) {
+        error(this) << "only floating point and integer types are supported for "
+                    << (is_vector() ? "vectors" : "matrices") << "\n";
+        return sema.type_error();
     }
 
-    error(this) << "vector or matrix types only support primitive or simd types\n";
-    return sema.type_error();
+    return sema.matrix_type(type, rows(), cols());
 }
 
 //------------------------------------------------------------------------------
@@ -928,7 +924,7 @@ Type InfixExpr::check_arith_op(TypeSema& sema) const {
 
     if (kind() == REM) {
         // For REM, the types must be integers
-        if (!sema.is_int(lelem) || !sema.is_int(relem)) {
+        if (!sema.is_int(sema.scalar_type(lelem)) || !sema.is_int(sema.scalar_type(relem))) {
             error(this) << "the modulus '%' operator is only valid on integers\n";
             return sema.type_error();
         }
@@ -1192,6 +1188,9 @@ Type FieldExpr::check_as_struct(TypeSema& sema, Type expected) const {
         ltype = sema.check(lhs());
     }
 
+    if (auto mat = ltype.isa<MatrixType>())
+        return check_as_matrix(sema, expected);
+
     if (auto struct_app = ltype.isa<StructAppType>()) {
         if (auto field_decl = struct_app->struct_abs_type()->struct_decl()->field_decl(symbol())) {
             index_ = field_decl->index();
@@ -1235,6 +1234,8 @@ Type FieldExpr::check_as_matrix(TypeSema& sema, Type expected) const {
             error(this) << "vector component '" << xyzw[len_src] << "' is out of bounds\n";
             return sema.type_error();
         }
+
+        if (len_dst == 1) index_ = len_src;
 
         return len_dst > 1 ? static_cast<Type>(sema.matrix_type(ltype->elem_type(), len_dst)) : ltype->elem_type();
     }
@@ -1354,7 +1355,8 @@ Type MatrixExpr::check_vector_args(TypeSema& sema, uint32_t rows) const {
     else
         elem_type = type;
 
-    if (!sema.is_int(elem_type) && !sema.is_float(elem_type)) {
+    auto scalar = sema.scalar_type(elem_type);
+    if (!sema.is_int(scalar) && !sema.is_float(scalar)) {
         error(this) << "only floating point and integer types are supported for vectors\n";
         return sema.type_error();
     }
@@ -1418,18 +1420,14 @@ Type MatrixExpr::check_matrix_args(TypeSema& sema, uint32_t rows, uint32_t cols)
         return sema.matrix_type(mat->elem_type(), rows, cols);
     }
 
-    if (!type.isa<PrimType>() && !type.isa<SimdType>()) {
-        error(this) << "incorrect type for matrix initializer\n";
-        return sema.type_error();
-    }
-
-    if (!sema.is_int(type) && !sema.is_float(type)) {
+    auto scalar = sema.scalar_type(type);
+    if (!sema.is_int(scalar) && !sema.is_float(scalar)) {
         error(this) << "only floating point and integer types are supported for matrices\n";
         return sema.type_error();
     }
 
     if (num_args() > 1 && num_args() != rows * cols) {
-        error(this) << "incorrect number of initializers for vector: got "
+        error(this) << "incorrect number of initializers for matrix: got "
                     << num_args() << ", expected " << rows * cols << "\n";
     }
 
@@ -1444,10 +1442,16 @@ Type MatrixExpr::check_inverse(TypeSema& sema) const {
 
     auto mat = arg(0)->type().isa<MatrixType>();
 
-    if (!mat || mat->is_vector() || mat->rows() != mat->cols() || !sema.is_float(mat->elem_type())) {
-        error(this) << "invalid operand type for the inverse function\n";
+    if (!mat || mat->is_vector() || mat->rows() != mat->cols()) {
+        error(this) << "invalid operand type for the inverse function: got "
+                    << arg(0)->type() << ", expected square matrix\n";
         return sema.type_error();
     }
+
+    if (!sema.is_float(sema.scalar_type(mat->elem_type()))) {
+        error(this) << "the inverse operation is only available for floating point matrices\n";
+        return sema.type_error();
+    } 
 
     return mat;
 }
