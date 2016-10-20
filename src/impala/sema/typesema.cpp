@@ -638,8 +638,9 @@ void ItemStmt::check(TypeSema& sema) const {
 void LetStmt::check(TypeSema& sema) const {
     auto type = sema.check(ptrn());
     if (init()) {
-        if (type != sema.check(init()))
-            error(this, "let pattern type does not match initializer type");
+        auto init_type = sema.check(init());
+        if (!is_subtype(init_type, type))
+            error(this, "let pattern type does not match initializer type, got '%' and '%'", type, init_type);
     } else {
         auto id_ptrn = ptrn()->isa<IdPtrn>();
         // Ptrns and non-mutable variables need an initialization
