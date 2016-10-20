@@ -322,6 +322,11 @@ void PrefixExpr::check(TypeSema& sema) const {
         case NOT:
             sema.expect_int_or_bool(rhs(), "unary '!'");
             return;
+        case HLT:
+        case RUN:
+            if (!rhs()->isa<MapExpr>())
+                error(this, "function call expected after partial evaluator command %", (TokenKind)kind());
+            return;
         default:
             return;
     }
