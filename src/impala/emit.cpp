@@ -513,9 +513,10 @@ const Def* StructExpr::remit(CodeGen& cg) const {
 
 Value TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
 
-const Def* TypeAppExpr::remit(CodeGen&) const {
-    assert(false && "TODO");
-    return nullptr;
+const Def* TypeAppExpr::remit(CodeGen& cg) const {
+    //assert(false && "TODO");
+    WLOG("TypeAppExpr::remit has not been implemented yet (in expression '%')!", this);
+    return cg.world().zero(cg.convert(type_arg(0)), loc());
 }
 
 Value MapExpr::lemit(CodeGen& cg) const {
