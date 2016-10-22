@@ -21,6 +21,7 @@ namespace thorin {
     class JumpTarget;
     class Continuation;
     class Param;
+    class Assembly;
 }
 
 namespace impala {
@@ -1676,6 +1677,65 @@ private:
 
     AutoPtr<const Ptrn> ptrn_;
     AutoPtr<const Expr> init_;
+
+    friend class Parser;
+};
+
+class AsmStmt : public Stmt {
+public:
+    class Elem {
+    public:
+        Elem(std::string constraint, const Expr* expr)
+            : constraint_(constraint)
+        {
+            dock(expr_, expr);
+        }
+
+        const std::string& constraint() const { return constraint_; }
+        const Expr* expr() const { return expr_; }
+
+    private:
+        std::string constraint_;
+        AutoPtr<const Expr> expr_;
+    };
+
+    const std::string& asm_template() const { return asm_template_; }
+    const std::deque<Elem>& outputs() const { return outputs_; }
+    const std::deque<Elem>&  inputs() const { return  inputs_; }
+    const Elem& output(size_t i) const { return outputs_[i]; }
+    const Elem&  input(size_t i) const { return  inputs_[i]; }
+    size_t num_outputs() const { return outputs().size(); }
+    size_t  num_inputs() const { return  inputs().size(); }
+    ArrayRef<std::string> clobbers() const { return clobbers_; }
+    ArrayRef<std::string> options() const { return options_; }
+
+    Array<std::string> output_constraints() const {
+        Array<std::string> result(num_outputs());
+        for (size_t i = 0, e = result.size(); i != e; ++i)
+            result[i] = output(i).constraint();
+        return result;
+    }
+
+    Array<std::string> input_constraints() const {
+        Array<std::string> result(num_inputs());
+        for (size_t i = 0, e = result.size(); i != e; ++i)
+            result[i] = input(i).constraint();
+        return result;
+    }
+
+    virtual std::ostream& stream(std::ostream&) const override;
+    virtual void check(NameSema&) const override;
+    virtual void check(InferSema&) const override;
+    virtual void check(BorrowSema&) const override;
+    virtual void check(TypeSema&) const override;
+    virtual void emit(CodeGen&) const override;
+
+private:
+    std::string asm_template_;
+    std::deque<Elem> outputs_;
+    std::deque<Elem>  inputs_;
+    std::vector<std::string> clobbers_;
+    std::vector<std::string> options_;
 
     friend class Parser;
 };

@@ -736,6 +736,34 @@ void LetStmt::emit(CodeGen& cg) const {
         cg.emit(ptrn(), init() ? cg.remit(init()) : cg.world().bottom(cg.convert(ptrn()->type()), ptrn()->loc()));
 }
 
+void AsmStmt::emit(CodeGen& cg) const {
+    Array<const thorin::Type*> outs(num_outputs());
+    for (size_t i = 0, e = num_outputs(); i != e; ++i)
+        outs[i] = cg.convert(output(i).expr()->type());
+
+    Array<const Def*> ins(num_inputs());
+    for (size_t i = 0, e = num_inputs(); i != e; ++i)
+        ins[i] = cg.remit(input(i).expr());
+
+    thorin::Assembly::Flags flags = thorin::Assembly::Flags::NoFlag;
+    for (const auto& option : options()) {
+        if (option == "volatile")
+            flags |= thorin::Assembly::Flags::HasSideEffects;
+        else if (option == "alignstack")
+            flags |= thorin::Assembly::Flags::IsAlignStack;
+        else if (option == "intel")
+            flags |= thorin::Assembly::Flags::IsIntelDialect;
+    }
+
+    auto assembly = cg.world().assembly(outs, cg.get_mem(), ins, asm_template(),
+            output_constraints(), input_constraints(), clobbers(), flags, loc());
+
+    size_t i = 0;
+    cg.set_mem(assembly->out(i++));
+    for (const auto& output: outputs())
+        cg.lemit(output.expr()).store(assembly->out(i++), loc());
+}
+
 //------------------------------------------------------------------------------
 
 void emit(World& world, const ModContents* mod) {

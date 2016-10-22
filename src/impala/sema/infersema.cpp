@@ -908,6 +908,11 @@ void LetStmt::check(InferSema& sema) const {
     }
 }
 
+void AsmStmt::check(InferSema& sema) const {
+    for (const auto& output : outputs()) sema.check(output.expr());
+    for (const auto&  input :  inputs()) sema.check( input.expr());
+}
+
 //------------------------------------------------------------------------------
 
 }

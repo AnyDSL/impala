@@ -290,6 +290,12 @@ void LetStmt::check(BorrowSema& sema) const {
         init()->check(sema);
     ptrn()->check(sema);
 }
+void AsmStmt::check(BorrowSema& sema) const {
+    for (const auto& output : outputs())
+        output.expr()->check(sema);
+    for (const auto& input : inputs())
+        input.expr()->check(sema);
+}
 
 //------------------------------------------------------------------------------
 

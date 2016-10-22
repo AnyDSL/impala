@@ -656,6 +656,27 @@ void LetStmt::check(TypeSema& sema) const {
     }
 }
 
+void check_correct_asm_type(const Type* t, const Expr *expr) {
+    if (!t->isa<PrimType>() && !t->isa<PtrType>() && !t->isa<SimdType>())
+        error(expr, "asm operand must have primitive, pointer or SIMD type, but it is %");
+}
+
+void AsmStmt::check(TypeSema& sema) const {
+    for (const auto& output : outputs()) {
+        if (!output.expr()->is_lvalue())
+            error(output.expr(), "output expression of an asm statement must be an lvalue");
+        check_correct_asm_type(sema.check(output.expr()), output.expr());
+    }
+
+    for (const auto& input : inputs())
+        check_correct_asm_type(sema.check(input.expr()), input.expr());
+
+    for (const auto& option : options()) {
+        if (option != "volatile" && option != "alignstack" && option != "intel")
+            error(this, "unsupported inline assembly option '%', only 'volatile', 'alignstack' and 'intel' supported", option);
+    }
+}
+
 //------------------------------------------------------------------------------
 
 }
