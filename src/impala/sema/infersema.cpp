@@ -757,9 +757,7 @@ const Type* FieldExpr::check(InferSema& sema) const {
             return struct_type->op(field_decl->index());
     }
 
-    return ltype->is_known()
-        ? static_cast<const Type*>(sema.type_error())
-        : static_cast<const Type*>(sema.unknown_type());
+    return ltype->is_known() ? sema.type_error() : sema.find_type(this);
 }
 
 const Type* TypeAppExpr::check(InferSema& sema) const {
