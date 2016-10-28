@@ -1003,6 +1003,8 @@ public:
     const std::vector<Symbol>& symbols() const { return symbols_; }
     const std::vector<thorin::u8>& values() const { return values_; }
 
+    virtual bool is_lvalue() const override;
+
     virtual std::ostream& stream(std::ostream&) const override;
     virtual void check(NameSema&) const override;
     virtual void check(BorrowSema&) const override;
@@ -1011,6 +1013,7 @@ public:
 private:
     virtual const Type* check(InferSema&) const override;
     virtual void check(TypeSema&) const override;
+    virtual thorin::Value lemit(CodeGen&) const override;
 
     std::vector<Symbol> symbols_;
     mutable std::vector<thorin::u8> values_;

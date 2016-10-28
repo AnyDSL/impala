@@ -85,6 +85,8 @@ bool IfExpr::has_else() const {
  * is_lvalue
  */
 
+bool StrExpr::is_lvalue() const { return true; }
+
 bool PathExpr::is_lvalue() const {
     if (value_decl()) {
         value_decl()->write();
