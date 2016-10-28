@@ -799,12 +799,13 @@ const Type* MapExpr::check(InferSema& sema) const {
 
     if (ltype->isa<FnType>()) {
         return sema.check_call(lhs(), args());
-    } else if (ltype->isa<UnknownType>()) {
+    }
+
+    for (int i = 0, n = num_args(); i < n; i++) sema.check(arg(i));
+
+    if (ltype->isa<UnknownType>()) {
         return type_;
     } else {
-        if (num_args() == 1)
-            sema.check(arg(0));
-
         if (auto array = ltype->isa<ArrayType>())
             return array->elem_type();
         else if (auto tuple_type = ltype->isa<TupleType>()) {
@@ -860,15 +861,19 @@ const Type* ForExpr::check(InferSema& sema) const {
             if (fn_for->num_ops() != 0) {
                 if (auto fn_ret = fn_for->ops().back()->isa<FnType>()) {
                     sema.constrain(break_decl_->type_, fn_ret); // inherit the type for break
-
-                    // copy over args and check call
-                    Array<const Expr*> args(map->args().size()+1);
-                    *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
-                    return sema.check_call(map->lhs(), args);
                 }
             }
+
+            // copy over args and check call
+            Array<const Expr*> args(map->args().size()+1);
+            *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
+            return sema.check_call(map->lhs(), args);
         }
+
+        for (int i = 0, n = map->num_args(); i < n; i++) { sema.check(map->arg(i)); }
     }
+
+    sema.check(fn_expr());
 
     return sema.unit();
 }

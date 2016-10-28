@@ -40,7 +40,7 @@ public:
     template<typename... Args> \
     void expect_##T(const Expr* expr, const char* fmt, Args... args) { \
         auto t = scalar_type(expr); \
-        if (!t->isa<TypeError>() && !(pred)) \
+        if (!t->isa<TypeError>() && t->is_known() && !(pred)) \
             error_msg(expr, what, t, fmt, args...); \
     }
 
