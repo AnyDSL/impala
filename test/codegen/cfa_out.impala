@@ -1,13 +1,13 @@
-fn out(fA: fn(fn(fn(fn(int)), fn(int))), fB: fn(fn(fn(fn(int)), fn(int)))) -> () {
+fn out(fA: fn(fn(fn(fn(int) -> !) -> !, fn(int) -> !) -> !) -> !, fB: fn(fn(fn(fn(int) -> !) -> !, fn(int) -> !) -> !) -> !) -> () {
 }
 
 fn main() -> int {
     let mut i = 42;
-    fn M(c: int) { return(c) }
-    fn N(c: int) { return(c) }
-    fn C(pc: fn(int)) { pc(i++) }
-    fn A(pa: fn(fn(fn(int)), fn(int))) { pa(C, M) }
-    fn B(pb: fn(fn(fn(int)), fn(int))) { pb(C, N) }
+    fn M(c: int) -> ! { return(c) }
+    fn N(c: int) -> ! { return(c) }
+    fn C(pc: fn(int) -> !) -> ! { pc(i++) }
+    fn A(pa: fn(fn(fn(int) -> !) -> !, fn(int) -> !) -> !) -> ! { pa(C, M) }
+    fn B(pb: fn(fn(fn(int) -> !) -> !, fn(int) -> !) -> !) -> ! { pb(C, N) }
 
     out(A, B);
     0

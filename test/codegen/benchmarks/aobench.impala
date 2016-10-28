@@ -49,7 +49,7 @@ static M_PI        = 3.14159265358979323846;
 static mut spheres: [Sphere * 3];
 static mut plane: Plane;
 
-fn range(a: int, b: int, body: fn(int, fn())) -> () {
+fn range(a: int, b: int, body: fn(int) -> ()) -> () {
     if a < b {
         body(a);
         range(a+1, b, body, return)

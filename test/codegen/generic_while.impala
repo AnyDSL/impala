@@ -1,14 +1,13 @@
 fn generic_while[L, B](l : L,
-                          head : fn(L, fn(B, bool)), 
-                          body : fn(B, fn(L)), 
-                          next : fn(B)) 
+                          head : fn(L) -> (B, bool),
+                          body : fn(B) -> L) -> B
 {
     head(l,
-        |b : B, cond : bool| {
+        |b : B, cond : bool| -> ! {
             if (cond) {
-                generic_while(body(b), head, body, next)
+                generic_while(body(b), head, body)
             } else {
-                next(b)
+                return(b)
             }
         }
     )
@@ -16,7 +15,7 @@ fn generic_while[L, B](l : L,
 
 fn main() -> int {
     if generic_while(/*counter*/ 0,
-                    |i : int, ret : fn(int, bool)| { ret(i, i < 42) },
+                    |i : int| -> (int, bool) { return(i, i < 42) },
                     |i : int| -> int { i + 1 }) == 42 {
         0 
     } else {

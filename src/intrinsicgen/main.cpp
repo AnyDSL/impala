@@ -8,7 +8,7 @@
 #include "impala/ast.h"
 #include "impala/impala.h"
 
-impala::Type llvm2impala(impala::TypeTable&, llvm::Type*);
+const impala::Type* llvm2impala(impala::TypeTable&, llvm::Type*);
 
 int main() {
     impala::Init init("dummy");
@@ -38,10 +38,11 @@ int main() {
         } else {
             if (auto itype = llvm2impala(*init.typetable, llvm::Intrinsic::getType(context, id))) {
                 std::cout << thorin::endl;
-                auto fn = itype.as<impala::FnType>();
+                auto fn = itype->as<impala::FnType>();
                 std::cout << "fn \"" << llvm_name << "\" " << name;
-                stream_list(std::cout, fn->args().skip_back(1), [&](impala::Type type) { std::cout << type; }, "(", ")");
-                if (fn->return_type()->is_noret())
+                stream_list(std::cout, fn->ops().skip_back(fn->num_ops()-1), [&](const impala::Type* type) { std::cout << type; }, "(", ")");
+                std::cout << " -> ";
+                if (fn->return_type()->isa<impala::NoRetType>())
                     std::cout << " -> !;";
                 else
                     std::cout << " -> " << fn->return_type() << ';';
@@ -51,7 +52,7 @@ int main() {
     std::cout << thorin::down << thorin::endl << '}' << thorin::endl;
 }
 
-impala::Type llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
+const impala::Type* llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
     if (auto int_type = llvm::dyn_cast<llvm::IntegerType>(type)) {
         switch (int_type->getBitWidth()) {
             case  1: return tt.type_bool();
@@ -68,22 +69,21 @@ impala::Type llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
     if (type->isDoubleTy()) return tt.type_f64();
 
     if (auto fn = llvm::dyn_cast<llvm::FunctionType>(type)) {
-        std::vector<impala::Type> param_types(fn->getNumParams()+1);
+        std::vector<const impala::Type*> param_types(fn->getNumParams()+1);
         bool valid = true;
         for (size_t i = 0, e = fn->getNumParams(); i != e; ++i) {
             auto t = llvm2impala(tt, fn->getParamType(i));
-            valid &= t;
-            if (valid)
-                param_types[i] = t;
+            valid &= bool(t);
+            if (valid) param_types[i] = t;
         }
 
-        auto ret = fn->getReturnType()->isVoidTy() ? (impala::Type)tt.tuple_type({}) : llvm2impala(tt, fn->getReturnType());
-        valid &= ret;
+        auto ret = fn->getReturnType()->isVoidTy() ? (const impala::Type*)tt.tuple_type({}) : llvm2impala(tt, fn->getReturnType());
+        valid &= bool(ret);
         if (valid) {
             param_types.back() = fn->getReturnType()->isVoidTy() ? tt.fn_type({}) : tt.fn_type({ret});
             return tt.fn_type(param_types);
         }
     }
 
-    return impala::Type();
+    return nullptr;
 }

@@ -1,5 +1,5 @@
 extern fn f(i: int) -> int {
-    let mut a = 0;
+    let mut a;
     if i == 1 {
         a = 23
     } else {

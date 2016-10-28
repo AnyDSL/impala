@@ -30,7 +30,7 @@ struct fbuf_t {
     len:  u64,
 }
 
-fn range(a: int, b: int, body: fn(int, fn())) -> () {
+fn range(a: int, b: int, body: fn(int) -> ()) -> () {
     if a < b {
         body(a);
         range(a+1, b, body, return)

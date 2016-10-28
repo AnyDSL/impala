@@ -104,7 +104,7 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
     if (err)
         switch (kind_) {
 #define IMPALA_LIT(itype, atype) \
-            case LIT_##itype: error(loc) << "literal out of range for type '" #itype "'\n"; return;
+            case LIT_##itype: error(loc, "literal out of range for type '%'," #itype); return;
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
@@ -263,13 +263,15 @@ Symbol Token::insert(TokenKind tok, const char* str) {
 
 //------------------------------------------------------------------------------
 
-std::ostream& operator << (std::ostream& os, const TokenKind& kind) {
+const char* Token::tok2str(TokenKind kind) {
     auto i = Token::tok2str_.find(kind);
     assert(i != Token::tok2str_.end() && "must be found");
-    return os << Symbol(i->second).str();
+    return Symbol(i->second).str();
 }
 
-std::ostream& operator << (std::ostream& os, const Token& tok) {
+std::ostream& operator<<(std::ostream& os, const TokenKind& kind) { return os << Token::tok2str(kind); }
+
+std::ostream& operator<<(std::ostream& os, const Token& tok) {
     const char* sym = tok.symbol().str();
     if (std::strcmp(sym, "") == 0)
         return os << Symbol(Token::tok2str_[tok.kind()]).str();
