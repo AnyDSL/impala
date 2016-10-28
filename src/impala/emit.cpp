@@ -514,9 +514,8 @@ const Def* StructExpr::remit(CodeGen& cg) const {
 Value TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
 
 const Def* TypeAppExpr::remit(CodeGen& cg) const {
-    //assert(false && "TODO");
-    WLOG("TypeAppExpr::remit has not been implemented yet (in expression '%')!", this);
-    return cg.world().zero(cg.convert(type_arg(0)), loc());
+    assert(false && "TODO");
+    THORIN_UNREACHABLE;
 }
 
 Value MapExpr::lemit(CodeGen& cg) const {
@@ -529,6 +528,8 @@ const Def* MapExpr::remit(CodeGen& cg) const { return remit(cg, None, Location()
 
 const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
     if (auto fn_type = lhs()->type()->isa<FnType>()) {
+        const Def* dst = nullptr;
+
         // Handle primops here
         if (auto type_expr = lhs()->isa<TypeAppExpr>()) { // Bitcast, sizeof and select are all polymorphic
             if (auto path = type_expr->lhs()->isa<PathExpr>()) {
@@ -541,13 +542,29 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             return cg.world().select(cg.remit(arg(0)), cg.remit(arg(1)), cg.remit(arg(2)), eval_loc);
                         } else if (name == "sizeof") {
                             return cg.world().size_of(cg.world().bottom(cg.convert(type_expr->type_arg(0)), eval_loc), eval_loc);
+                        } else if (name == "reserve_shared") {
+                            auto ptr_type = cg.convert(type());
+                            auto fn_type = cg.world().fn_type({
+                                cg.world().mem_type(), cg.world().type_qs32(),
+                                cg.world().fn_type({ cg.world().mem_type(), ptr_type }) });
+                            auto cont = cg.world().continuation(fn_type, loc(), "reserve_shared");
+                            cont->set_intrinsic();
+                            dst = cont;
+                        } else if (name == "atomic") {
+                            auto poly_type = cg.convert(type());
+                            auto fn_type = cg.world().fn_type({
+                                cg.world().mem_type(), cg.world().type_qu32(), cg.world().ptr_type(poly_type), poly_type,
+                                cg.world().fn_type({ cg.world().mem_type(), poly_type }) });
+                            auto cont = cg.world().continuation(fn_type, loc(), "atomic");
+                            cont->set_intrinsic();
+                            dst = cont;
                         }
                     }
                 }
             }
         }
 
-        auto dst = cg.remit(lhs());
+        dst = dst ? dst : cg.remit(lhs());
 
         std::vector<const Def*> defs;
         defs.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
