@@ -610,7 +610,7 @@ const Type* InfixExpr::check(InferSema& sema) const {
             sema.constrain(rhs(), ltype);
             if (auto simd = rhs()->type()->isa<SimdType>())
                 return sema.simd_type(sema.type_bool(), simd->dim());
-            return sema.type_bool();
+            return rhs()->type()->is_known() ? sema.type_bool() : sema.find_type(this);
         }
         case OROR:
         case ANDAND:
@@ -764,18 +764,20 @@ const Type* TypeAppExpr::check(InferSema& sema) const {
     if (auto type = sema.check(lhs())) {
         if (auto lambda = type->isa<Lambda>()) {
             auto num = sema.num_lambdas(lambda);
-            if (num_ast_type_args() <= num) {
+            if (type_args_.size() < num) {
+                assert(type_args_.empty());
+
                 for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
                     type_args_.push_back(sema.check(ast_type_arg(i)));
 
                 while (num_type_args() < num)
                     type_args_.push_back(sema.unknown_type());
-
-                for (auto& type_arg : type_args_)
-                    type_arg = sema.find_type(type_arg);
-
-                return sema.reduce(lambda, ast_type_args(), type_args_);
             }
+
+            for (auto& type_arg : type_args_)
+                type_arg = sema.find_type(type_arg);
+
+            return sema.reduce(lambda, ast_type_args(), type_args_);
         }
     }
     return sema.type_error();
@@ -788,7 +790,8 @@ const Type* MapExpr::check(InferSema& sema) const {
     auto ltype = sema.check(lhs());
 
     if (ltype->isa<Lambda>()) {
-        TypeAppExpr::create(lhs_);
+        if (!lhs_->isa<TypeAppExpr>())
+            TypeAppExpr::create(lhs_);
         ltype = sema.check(lhs());
     }
 
