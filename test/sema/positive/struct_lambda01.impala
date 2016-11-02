@@ -1,0 +1,9 @@
+struct B {
+  x : V
+}
+struct V {}
+type Fn = fn(fn(B) -> ()) -> ();
+fn foo(f : Fn) -> () {
+  f(|b| -> () {})
+}
+

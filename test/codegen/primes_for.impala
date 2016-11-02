@@ -2,14 +2,15 @@
 foreach that adds all primes smaller than 40
 expected result: 197
 */
-fn primes(n: int, body: fn(int, fn()), ret: fn()) {
+fn primes(n: int, body: fn(int) -> ()) -> () {
+    let ret = return;
     if n < 2 {
         ret()
     }
 
-    body(2, || {
-        fn loop(i: int) {
-            fn inner_loop(j: int) {
+    body(2, || -> ! {
+        fn loop(i: int) -> ! {
+            fn inner_loop(j: int) -> ! {
                 if j < i {
                     if i % j == 0 { 
                         loop(i + 1)
@@ -17,7 +18,7 @@ fn primes(n: int, body: fn(int, fn()), ret: fn()) {
                         inner_loop(j + 1)
                     }
                 } else {
-                    body(i, || loop(i+1))
+                    body(i, || -> ! loop(i+1))
                 }
             }
             if i < n {

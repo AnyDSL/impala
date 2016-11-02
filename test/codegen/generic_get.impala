@@ -1,8 +1,10 @@
 fn get[T]() -> T {
-    let tuple: (T, T);
+    let mut tuple: (T, T);
     tuple(0)
 }
 
 fn main() -> int {
-    if get() // TODO true or false expected?
+    let mut x = get();
+    x = 0;
+    x
 }

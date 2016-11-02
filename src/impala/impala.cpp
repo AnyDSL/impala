@@ -1,9 +1,5 @@
 #include "impala/impala.h"
 
-#include <iostream>
-
-#include "thorin/util/stream.h"
-
 #include "impala/ast.h"
 #include "impala/prec.h"
 #include "impala/symbol.h"
@@ -17,23 +13,23 @@ bool& fancy() { return fancy_output; }
 
 void init() { PrecTable::init(); Token::init(); }
 void destroy() { Symbol::destroy(); }
-void check(Init& init, const ModContents* mod, bool nossa) { name_analysis(mod); type_analysis(init, mod, nossa); }
+void check(Init& init, const ModContents* mod, bool nossa) {
+    name_analysis(mod);
+    type_inference(init, mod);
+    type_analysis(mod, nossa);
+    //borrow_check(mod);
+}
 
-int warnings = 0;
-int errors = 0;
+int global_num_warnings = 0;
+int global_num_errors = 0;
 
-std::ostream& warn (const ASTNode* n) { return warn (n->loc()); }
-std::ostream& error(const ASTNode* n) { return error(n->loc()); }
-std::ostream& warn (const thorin::Location& loc) { ++warnings; return streamf(std::cerr, "%: warning: ", loc); }
-std::ostream& error(const thorin::Location& loc) { ++errors;   return streamf(std::cerr, "%: error: "  , loc); }
+int num_warnings() { return global_num_warnings; }
+int num_errors() { return global_num_errors; }
 
-int num_warnings() { return warnings; }
-int num_errors() { return errors; }
-
-/*static*/ Type2Prec PrecTable::prefix_r;
-/*static*/ Type2Prec PrecTable::infix_l;
-/*static*/ Type2Prec PrecTable::infix_r;
-/*static*/ Type2Prec PrecTable::postfix_l;
+Type2Prec PrecTable::prefix_r;
+Type2Prec PrecTable::infix_l;
+Type2Prec PrecTable::infix_r;
+Type2Prec PrecTable::postfix_l;
 
 void PrecTable::init() {
 #define IMPALA_PREFIX(    tok, t_str,    r)  PrecTable::prefix_r[Token:: tok] = r;

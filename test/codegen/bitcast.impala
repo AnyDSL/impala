@@ -3,5 +3,5 @@ extern "thorin" {
 }
 
 fn main() -> int {
-    bitcast[int](0.f)
+    bitcast(0.f)
 }

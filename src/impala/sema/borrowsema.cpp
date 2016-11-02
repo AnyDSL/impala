@@ -25,7 +25,7 @@ private:
  * misc
  */
 
-void TypeParam::check(BorrowSema& sema) const {
+void ASTTypeParam::check(BorrowSema& sema) const {
     for (auto bound : bounds())
         bound->check(sema);
 }
@@ -41,39 +41,33 @@ void LocalDecl::check(BorrowSema& sema) const {
  * AST types
  */
 
-void TypeParamList::check_type_params(BorrowSema& sema) const {
-    for (auto type_param : type_params())
-        type_param->check(sema);
+void ASTTypeParamList::check_ast_type_params(BorrowSema& sema) const {
+    for (auto ast_type_param : ast_type_params())
+        ast_type_param->check(sema);
 }
 
 void ErrorASTType::check(BorrowSema&) const {}
 void PrimASTType::check(BorrowSema&) const {}
-void PtrASTType::check(BorrowSema& sema) const { referenced_type()->check(sema); }
-void IndefiniteArrayASTType::check(BorrowSema& sema) const { elem_type()->check(sema); }
-void DefiniteArrayASTType::check(BorrowSema& sema) const { elem_type()->check(sema); }
+void PtrASTType::check(BorrowSema& sema) const { referenced_ast_type()->check(sema); }
+void IndefiniteArrayASTType::check(BorrowSema& sema) const { elem_ast_type()->check(sema); }
+void DefiniteArrayASTType::check(BorrowSema& sema) const { elem_ast_type()->check(sema); }
+void SimdASTType::check(BorrowSema& sema) const { elem_ast_type()->check(sema); }
+void Typeof::check(BorrowSema& sema) const { expr()->check(sema); }
 
 void TupleASTType::check(BorrowSema& sema) const {
-    for (auto arg : args())
-        arg->check(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
 }
 
 void ASTTypeApp::check(BorrowSema& sema) const {
-    for (auto arg : args())
-        arg->check(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
 }
 
 void FnASTType::check(BorrowSema& sema) const {
-    check_type_params(sema);
-    for (auto arg : args())
-        arg->check(sema);
-}
-
-void Typeof::check(BorrowSema& sema) const {
-    expr()->check(sema);
-}
-
-void SimdASTType::check(BorrowSema& sema) const {
-    elem_type()->check(sema);
+    check_ast_type_params(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
 }
 
 //------------------------------------------------------------------------------
@@ -99,7 +93,7 @@ void ExternBlock::check(BorrowSema& sema) const {
 }
 
 void Typedef::check(BorrowSema& sema) const {
-    check_type_params(sema);
+    check_ast_type_params(sema);
     ast_type()->check(sema);
 }
 
@@ -113,7 +107,7 @@ void StaticItem::check(BorrowSema& sema) const {
 }
 
 void Fn::fn_check(BorrowSema& sema) const {
-    check_type_params(sema);
+    check_ast_type_params(sema);
     for (auto param : params()) {
         if (param->ast_type())
             param->ast_type()->check(sema);
@@ -131,7 +125,7 @@ void FnDecl::check(BorrowSema& sema) const {
 }
 
 void StructDecl::check(BorrowSema& sema) const {
-    check_type_params(sema);
+    check_ast_type_params(sema);
     for (auto field_decl : field_decls()) {
         field_decl->check(sema);
         field_table_[field_decl->symbol()] = field_decl;
@@ -143,7 +137,7 @@ void FieldDecl::check(BorrowSema& sema) const {
 }
 
 void TraitDecl::check(BorrowSema& sema) const {
-    check_type_params(sema);
+    check_ast_type_params(sema);
     for (auto t : super_traits())
         t->check(sema);
     for (auto method : methods()) {
@@ -153,7 +147,7 @@ void TraitDecl::check(BorrowSema& sema) const {
 }
 
 void ImplItem::check(BorrowSema& sema) const {
-    check_type_params(sema);
+    check_ast_type_params(sema);
     if (trait())
         trait()->check(sema);
     ast_type()->check(sema);
@@ -180,11 +174,11 @@ void CharExpr::check(BorrowSema&) const {}
 void StrExpr::check(BorrowSema&) const {}
 void FnExpr::check(BorrowSema& sema) const { fn_check(sema); }
 
-void PathElem::check(BorrowSema&) const {}
+void Path::Elem::check(BorrowSema&) const {}
 
 void Path::check(BorrowSema& sema) const {
-    for (auto path_elem : path_elems())
-        path_elem->check(sema);
+    for (auto elem : elems())
+        elem->check(sema);
 }
 
 void PathExpr::check(BorrowSema& sema) const {
@@ -202,11 +196,12 @@ void FieldExpr::check(BorrowSema& sema) const {
 
 void CastExpr::check(BorrowSema& sema) const {
     lhs()->check(sema);
-    ast_type()->check(sema);
+    //ast_type()->check(sema);
+    // TODO
 }
 
 void DefiniteArrayExpr::check(BorrowSema& sema) const {
-    for (auto arg : args())
+    for (const auto& arg : args())
         arg->check(sema);
 }
 
@@ -216,30 +211,34 @@ void RepeatedDefiniteArrayExpr::check(BorrowSema& sema) const {
 
 void IndefiniteArrayExpr::check(BorrowSema& sema) const {
     dim()->check(sema);
-    elem_type()->check(sema);
+    elem_ast_type()->check(sema);
 }
 
 void TupleExpr::check(BorrowSema& sema) const {
-    for (auto arg : args())
+    for (const auto& arg : args())
         arg->check(sema);
 }
 
 void SimdExpr::check(BorrowSema& sema) const {
-    for (auto arg : args())
+    for (const auto& arg : args())
         arg->check(sema);
 }
 
 void StructExpr::check(BorrowSema& sema) const {
-    path()->check(sema);
+    ast_type_app()->check(sema);
     for (const auto& elem : elems())
         elem.expr()->check(sema);
 }
 
+void TypeAppExpr::check(BorrowSema& sema) const {
+    lhs()->check(sema);
+    for (auto ast_type_arg : ast_type_args())
+        ast_type_arg->check(sema);
+}
+
 void MapExpr::check(BorrowSema& sema) const {
     lhs()->check(sema);
-    for (auto type_arg : type_args())
-        type_arg->check(sema);
-    for (auto arg : args())
+    for (const auto& arg : args())
         arg->check(sema);
 }
 
@@ -265,6 +264,22 @@ void ForExpr::check(BorrowSema& sema) const {
 //------------------------------------------------------------------------------
 
 /*
+ * patterns
+ */
+
+void TuplePtrn::check(BorrowSema& sema) const {
+    for (const auto& elem : elems()) {
+        elem->check(sema);
+    }
+}
+
+void IdPtrn::check(BorrowSema& sema) const {
+    local()->check(sema);
+}
+
+//------------------------------------------------------------------------------
+
+/*
  * statements
  */
 
@@ -273,7 +288,7 @@ void ItemStmt::check(BorrowSema& sema) const { item()->check(sema); }
 void LetStmt::check(BorrowSema& sema) const {
     if (init())
         init()->check(sema);
-    local()->check(sema);
+    ptrn()->check(sema);
 }
 void AsmStmt::check(BorrowSema& sema) const {
     for (const auto& output : outputs())

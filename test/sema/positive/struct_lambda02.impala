@@ -1,0 +1,10 @@
+
+type IterateTrianglesFn = fn (i32, fn (Tri) -> ()) -> ();
+
+struct Tri {
+  v0: fn () -> i32
+}
+
+fn iterate_triangles() -> IterateTrianglesFn {
+  |id, body| { }
+}
