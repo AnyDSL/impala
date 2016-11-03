@@ -152,10 +152,9 @@ class InvokeTest(Test):
 
         basename = os.path.splitext(self.srcfile)[0]
         self.ll_file = basename + ".ll"
-        self.bc_file = basename + ".bc"
         self.s_file = basename + ".s"
         self.exe_file = basename
-        self.tmp_files = [self.ll_file, self.bc_file, self.s_file, self.exe_file]
+        self.tmp_files = [self.ll_file, self.s_file, self.exe_file]
         self.benchmarks = benchmarks
 
         if compare is not None:
@@ -170,7 +169,7 @@ class InvokeTest(Test):
             yield ["clang", "-O3", InvokeTest.LIB_C, "-c"]
             yield ["clang", "-O3", "lib.o", self.ll_file, "-L", "/opt/local/lib", "-lm", "-lpcre", "-lgmp", "-s", "-o", self.exe_file]
         else:
-            yield ["llc", "-o", self.s_file, self.bc_file]
+            yield ["llc", "-o", self.s_file, self.ll_file]
             yield ["cc", "-o", self.exe_file, self.s_file, InvokeTest.LIB_C]
 
 
