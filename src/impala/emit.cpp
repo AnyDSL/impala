@@ -517,7 +517,7 @@ const Def* StructExpr::remit(CodeGen& cg) const {
 
 Value TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
 
-const Def* TypeAppExpr::remit(CodeGen& cg) const {
+const Def* TypeAppExpr::remit(CodeGen& /*cg*/) const {
     assert(false && "TODO");
     THORIN_UNREACHABLE;
 }

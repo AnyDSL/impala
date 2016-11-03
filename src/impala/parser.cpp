@@ -163,7 +163,7 @@ public:
      * The ending delimiter will @em not be eaten up by this method.
      * The list may also end with a comma.
      */
-    void nibble_comma_list(const char* context, Array<TokenKind> delimiters, std::function<void()> f) {
+    void nibble_comma_list(Array<TokenKind> delimiters, std::function<void()> f) {
         auto is_delimiter = [&] () {
             for (auto delimiter : delimiters)
                 if (la() == delimiter)
@@ -179,7 +179,7 @@ public:
 
     /// Like @p nibble_comma_list but there is only one @p delimiter which @em will be eaten up by this method.
     void parse_comma_list(const char* context, TokenKind delimiter, std::function<void()> f) {
-        nibble_comma_list(context, {delimiter}, f);
+        nibble_comma_list({delimiter}, f);
         expect(delimiter, context);
     }
 
@@ -1407,19 +1407,19 @@ const AsmStmt* Parser::parse_asm_stmt() {
     if (accept(Token::R_PAREN))      return asm_stmt;
 
 parse_outputs:
-    nibble_comma_list("asm statement", delimiters, [&]{ asm_stmt->outputs_.emplace_back(parse_asm_op()); });
+    nibble_comma_list(delimiters, [&]{ asm_stmt->outputs_.emplace_back(parse_asm_op()); });
     if (accept(Token::COLON))        goto parse_inputs;
     if (accept(Token::DOUBLE_COLON)) goto parse_clobbers;
     if (accept(Token::R_PAREN))      return asm_stmt;
 
 parse_inputs:
-    nibble_comma_list("asm statement", delimiters, [&]{ asm_stmt->inputs_.emplace_back(parse_asm_op()); });
+    nibble_comma_list(delimiters, [&]{ asm_stmt->inputs_.emplace_back(parse_asm_op()); });
     if (accept(Token::COLON))        goto parse_clobbers;
     if (accept(Token::DOUBLE_COLON)) goto parse_options;
     if (accept(Token::R_PAREN))      return asm_stmt;
 
 parse_clobbers:
-    nibble_comma_list("asm statement", {Token::COMMA, Token::R_PAREN}, [&]{ asm_stmt->clobbers_.emplace_back(parse_str()); });
+    nibble_comma_list({Token::COMMA, Token::R_PAREN}, [&]{ asm_stmt->clobbers_.emplace_back(parse_str()); });
     if (accept(Token::COLON))        goto parse_options;
     expect(Token::R_PAREN, "asm statement");
     return asm_stmt;

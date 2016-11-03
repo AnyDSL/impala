@@ -16,7 +16,6 @@ SET ( SOURCES
     parser.cpp
     prec.cpp
     prec.h
-    sema/borrowsema.cpp
     sema/infersema.cpp
     sema/namesema.cpp
     sema/type.cpp
