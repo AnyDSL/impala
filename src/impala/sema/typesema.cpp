@@ -180,6 +180,9 @@ const Type* Fn::check_body(TypeSema& sema) const {
             warning(param, "parameter '%' declared mutable but parameter is never written to", param->symbol());
     }
 
+    if (!body()->type()->isa<NoRetType>())
+        sema.expect_type(fn_type()->return_type(), body(), "return type");
+
     return body()->type();
 }
 
@@ -230,11 +233,8 @@ void FnDecl::check(TypeSema& sema) const {
     for (auto param : params())
         sema.check(param);
 
-    if (body() != nullptr) {
+    if (body() != nullptr)
         check_body(sema);
-        if (!body()->type()->isa<NoRetType>())
-            sema.expect_type(fn_type()->return_type(), body(), "return type");
-    }
 }
 
 void StaticItem::check(TypeSema& sema) const {
