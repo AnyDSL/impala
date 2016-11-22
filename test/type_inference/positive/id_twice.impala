@@ -1,0 +1,4 @@
+fn main() -> i32 {
+    let id = |x| x;
+    id(1i32) + id(1i32)
+}
