@@ -70,10 +70,10 @@ public:
         return constrain(ast_type, ast_type->check(*this));
     }
 
-    const Type* check_call(const Expr* lhs, ArrayRef<const Expr*> args);
-    const Type* check_call(const Expr* lhs, const std::deque<AutoPtr<const Expr>>& args) {
+    const Type* check_call(const Expr* lhs, ArrayRef<const Expr*> args, const Type* call_type);
+    const Type* check_call(const Expr* lhs, const std::deque<AutoPtr<const Expr>>& args, const Type* call_type) {
         Array<const Expr*> array(args.begin(), args.end());
-        return check_call(lhs, array);
+        return check_call(lhs, array, call_type);
     }
 
     const FnType* fn_type(const Type* type) {
@@ -718,7 +718,7 @@ const Type* StructExpr::check(InferSema& sema) const {
     return type;
 }
 
-const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args) {
+const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, const Type* call_type) {
     auto fn_type = lhs->type()->as<FnType>();
 
     for (auto arg : args)
@@ -738,8 +738,10 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args) {
             types[i] = coerce(fn_type->op(i), args[i]);
         types.back() = fn_type->ops().back();
         auto result = constrain(lhs, this->fn_type(types));
-        if (auto fn_type = result->isa<FnType>())
-            return fn_type->return_type();
+        if (result->is_known()) {
+            if (auto fn_type = result->isa<FnType>())
+                return fn_type->return_type();
+        } else return call_type;
     }
 
     return type_error();
@@ -801,7 +803,7 @@ const Type* MapExpr::check(InferSema& sema) const {
     }
 
     if (ltype->isa<FnType>()) {
-        return sema.check_call(lhs(), args());
+        return sema.check_call(lhs(), args(), type_);
     }
 
     for (int i = 0, n = num_args(); i < n; i++) sema.check(arg(i));
@@ -870,7 +872,7 @@ const Type* ForExpr::check(InferSema& sema) const {
             // copy over args and check call
             Array<const Expr*> args(map->args().size()+1);
             *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
-            return sema.check_call(map->lhs(), args);
+            return sema.check_call(map->lhs(), args, type_);
         }
 
         for (int i = 0, n = map->num_args(); i < n; i++) { sema.check(map->arg(i)); }
