@@ -1,0 +1,4 @@
+fn main() -> i32 {
+    let id: fn(i32, fn(i32)) = |x: i32| -> i32 x;
+    ((id(1)) + (id(1)))
+}
