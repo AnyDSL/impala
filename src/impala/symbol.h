@@ -33,11 +33,15 @@ private:
     void insert(const char* str);
 
     const char* str_;
-    typedef thorin::HashSet<const char*, StrHash, StrEqual> Table;
+    typedef thorin::HashSet<const char*, thorin::PtrSentinel<const char*>, StrHash, StrEqual> Table;
     static Table table_;
 };
 
 inline std::ostream& operator << (std::ostream& os, Symbol s) { return os << s.str(); }
+
+struct SymbolSentinel {
+    Symbol operator()() const { return Symbol((const char*)(1)); }
+};
 
 }
 

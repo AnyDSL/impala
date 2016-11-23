@@ -164,12 +164,12 @@ int Token::to_binop(Kind kind) {
  * static member variables
  */
 
-int                                                         Token::tok2op_[NUM_TOKENS];
-thorin::HashMap<Token::Kind, const char*, Token::KindHash>  Token::tok2str_;
-thorin::HashMap<Token::Kind, Symbol, Token::KindHash>       Token::tok2sym_;
-thorin::HashMap<Symbol, Token::Kind>                        Token::keywords_;
-thorin::HashMap<Symbol, Token::Kind>                        Token::sym2lit_;
-thorin::HashMap<Symbol, Token::Kind>                        Token::sym2flit_;
+int Token::tok2op_[Num_Tokens];
+Token::Kind2Str Token::tok2str_;
+Token::Kind2Sym Token::tok2sym_;
+Token::Sym2Kind Token::keywords_;
+Token::Sym2Kind Token::sym2lit_;
+Token::Sym2Kind Token::sym2flit_;
 
 /*
  * static methods
@@ -199,13 +199,13 @@ void Token::init() {
      * - register misc tokens
      */
 
-    for (size_t i = 0; i < NUM_TOKENS; ++i)
-        tok2op_[i] = NONE;
+    for (size_t i = 0; i < Num_Tokens; ++i)
+        tok2op_[i] = None;
 
-#define IMPALA_PREFIX(    tok, str, r   ) insert(tok, str); tok2op_[tok] |= PREFIX;
-#define IMPALA_POSTFIX(   tok, str,    l) insert(tok, str); tok2op_[tok] |= POSTFIX;
-#define IMPALA_INFIX(     tok, str, r, l) insert(tok, str); tok2op_[tok] |= INFIX;
-#define IMPALA_INFIX_ASGN(tok, str, r, l) insert(tok, str); tok2op_[tok] |= INFIX | ASGN_OP;
+#define IMPALA_PREFIX(    tok, str, r   ) insert(tok, str); tok2op_[tok] |= Prefix;
+#define IMPALA_POSTFIX(   tok, str,    l) insert(tok, str); tok2op_[tok] |= Postfix;
+#define IMPALA_INFIX(     tok, str, r, l) insert(tok, str); tok2op_[tok] |= Infix;
+#define IMPALA_INFIX_ASGN(tok, str, r, l) insert(tok, str); tok2op_[tok] |= Infix | Asgn_Op;
 #define IMPALA_MISC(      tok, str)       insert(tok, str);
 #define IMPALA_KEY(       tok, str)       insert_key(tok, str);
 #define IMPALA_LIT(       tok, atype)     tok2str_[LIT_##tok] = Symbol("<literal>").str();

@@ -30,6 +30,7 @@ class ASTType;
 class Decl;
 class Expr;
 class Fn;
+class FieldDecl;
 class FnDecl;
 class Item;
 class MapExpr;
@@ -46,7 +47,9 @@ template<class T> using AutoPtr    = thorin::AutoPtr<T>;
 template<class T> using AutoVector = thorin::AutoVector<T>;
 
 typedef AutoVector<const ASTType*> ASTTypes;
-typedef thorin::HashMap<Symbol, const FnDecl*> MethodTable;
+typedef thorin::HashMap<Symbol, const FnDecl*, SymbolSentinel> MethodTable;
+typedef thorin::HashMap<Symbol, const NamedItem*, SymbolSentinel> ItemTable;
+typedef thorin::HashMap<Symbol, const FieldDecl*, SymbolSentinel> FieldTable;
 
 //------------------------------------------------------------------------------
 
@@ -559,7 +562,7 @@ private:
 class ModContents : public ASTNode {
 public:
     const AutoVector<const Item*>& items() const { return items_; }
-    const thorin::HashMap<Symbol, const NamedItem*>& item_table() const { return item_table_; }
+    const ItemTable& item_table() const { return item_table_; }
     virtual std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const;
     void emit(CodeGen&) const;
@@ -569,7 +572,7 @@ private:
     void check(TypeSema&) const;
 
     AutoVector<const Item*> items_;
-    mutable thorin::HashMap<Symbol, const NamedItem*> item_table_;
+    mutable ItemTable item_table_;
 
     friend class Parser;
     friend class InferSema;
@@ -700,7 +703,7 @@ class StructDecl : public TypeDeclItem {
 public:
     size_t num_field_decls() const { return field_decls_.size(); }
     const AutoVector<const FieldDecl*>& field_decls() const { return field_decls_; }
-    const thorin::HashMap<Symbol, const FieldDecl*>& field_table() const { return field_table_; }
+    const FieldTable& field_table() const { return field_table_; }
     const FieldDecl* field_decl(size_t i) const { return field_decls_[i]; }
     const FieldDecl* field_decl(Symbol symbol) const { return thorin::find(field_table_, symbol); }
     const FieldDecl* field_decl(const Identifier* ident) const { return field_decl(ident->symbol()); }
@@ -714,7 +717,7 @@ private:
     virtual void emit_item(CodeGen&) const override;
 
     AutoVector<const FieldDecl*> field_decls_;
-    mutable thorin::HashMap<Symbol, const FieldDecl*> field_table_;
+    mutable FieldTable field_table_;
 
     friend class Parser;
 };
