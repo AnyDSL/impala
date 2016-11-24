@@ -36,11 +36,9 @@ public:
     };
 
     struct KindHash {
-        uint64_t operator()(Kind kind) const { return thorin::hash_value((int) kind); }
-    };
-
-    struct KindSentinel {
-         Kind operator()() const { return Sentinel; }
+        static uint64_t hash(Kind kind) { return uint64_t(kind); }
+        static bool eq(Kind k1, Kind k2) { return k1 == k2; }
+        static Kind sentinel() { return Sentinel; }
     };
 
     Token() {}
@@ -97,9 +95,9 @@ private:
     Kind kind_;
     thorin::Box box_;
 
-    typedef thorin::HashMap<Symbol, Kind, SymbolSentinel> Sym2Kind;
-    typedef thorin::HashMap<Kind, const char*, KindSentinel, KindHash> Kind2Str;
-    typedef thorin::HashMap<Kind, Symbol, KindSentinel, KindHash> Kind2Sym;
+    typedef thorin::HashMap<Symbol, Kind> Sym2Kind;
+    typedef thorin::HashMap<Kind, const char*, KindHash> Kind2Str;
+    typedef thorin::HashMap<Kind, Symbol, KindHash> Kind2Sym;
     static int tok2op_[Num_Tokens];
     static Kind2Str tok2str_;
     static Kind2Sym tok2sym_;

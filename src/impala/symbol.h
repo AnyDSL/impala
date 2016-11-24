@@ -9,8 +9,11 @@
 
 namespace impala {
 
-struct StrHash { uint64_t operator () (const char* s) const; };
-struct StrEqual { bool operator () (const char* s1, const char* s2) const { return std::strcmp(s1, s2) == 0; } };
+struct StrHash {
+    static uint64_t hash(const char* s);
+    static bool eq(const char* s1, const char* s2) { return std::strcmp(s1, s2) == 0; }
+    static const char* sentinel() { return (const char*)(1); }
+};
 
 class Symbol {
 public:
@@ -30,18 +33,20 @@ public:
     static void destroy();
 
 private:
+    Symbol(int /* just a dummy */)
+        : str_((const char*)(1))
+    {}
+
     void insert(const char* str);
 
     const char* str_;
-    typedef thorin::HashSet<const char*, thorin::PtrSentinel<const char*>, StrHash, StrEqual> Table;
+    typedef thorin::HashSet<const char*, StrHash> Table;
     static Table table_;
+
+    friend struct thorin::Hash<Symbol>;
 };
 
 inline std::ostream& operator << (std::ostream& os, Symbol s) { return os << s.str(); }
-
-struct SymbolSentinel {
-    Symbol operator()() const { return Symbol((const char*)(1)); }
-};
 
 }
 
@@ -49,7 +54,9 @@ namespace thorin {
 
 template<>
 struct Hash<impala::Symbol> {
-    uint64_t operator () (impala::Symbol symbol) const { return thorin::hash_value(symbol.str()); }
+    static uint64_t hash(impala::Symbol s) { return impala::StrHash::hash(s.str()); }
+    static bool eq(impala::Symbol s1, impala::Symbol s2) { return s1 == s2; }
+    static impala::Symbol sentinel() { return impala::Symbol(/*dummy*/23); }
 };
 
 }

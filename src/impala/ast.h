@@ -47,9 +47,9 @@ template<class T> using AutoPtr    = thorin::AutoPtr<T>;
 template<class T> using AutoVector = thorin::AutoVector<T>;
 
 typedef AutoVector<const ASTType*> ASTTypes;
-typedef thorin::HashMap<Symbol, const FnDecl*, SymbolSentinel> MethodTable;
-typedef thorin::HashMap<Symbol, const NamedItem*, SymbolSentinel> ItemTable;
-typedef thorin::HashMap<Symbol, const FieldDecl*, SymbolSentinel> FieldTable;
+typedef thorin::HashMap<Symbol, const FnDecl*> MethodTable;
+typedef thorin::HashMap<Symbol, const NamedItem*> ItemTable;
+typedef thorin::HashMap<Symbol, const FieldDecl*> FieldTable;
 
 //------------------------------------------------------------------------------
 

@@ -78,9 +78,10 @@ public:
         return decl->value_;
     }
     const thorin::Type* convert(const Type* type) {
-        if (thorin_type(type) == nullptr)
-            thorin_type(type) = convert_rec(type);
-        return thorin_type(type);
+        if (auto t = thorin_type(type))
+            return t;
+        auto t = convert_rec(type);
+        return thorin_type(type) = t;
     }
 
     void convert_ops(const Type*, std::vector<const thorin::Type*>& nops);
@@ -91,7 +92,7 @@ public:
 
     const Fn* cur_fn = nullptr;
     TypeMap<const thorin::Type*> impala2thorin_;
-    GIDMap<StructType, const thorin::StructType*> struct_type_impala2thorin_;
+    GIDMap<const StructType*, const thorin::StructType*> struct_type_impala2thorin_;
 };
 
 /*
@@ -125,8 +126,9 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         convert_ops(tuple_type, nops);
         return world().tuple_type(nops);
     } else if (auto struct_type = type->isa<StructType>()) {
-        thorin_struct_type(struct_type) = world().struct_type(struct_type->struct_decl()->symbol().str(), struct_type->num_ops());
-        thorin_type(type) = thorin_struct_type(struct_type);
+        auto s = world().struct_type(struct_type->struct_decl()->symbol().str(), struct_type->num_ops());
+        thorin_struct_type(struct_type) = s;
+        thorin_type(type) = s;
         size_t i = 0;
         for (auto op : struct_type->ops())
             thorin_struct_type(struct_type)->set(i++, convert(op));
