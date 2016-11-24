@@ -146,7 +146,7 @@ public:
     Location prev_loc() const { return prev_loc_; }
 
 #ifdef NDEBUG
-    Token eat(TokenKind kind) { return lex(); }
+    Token eat(TokenKind) { return lex(); }
 #else
     Token eat(TokenKind kind) { assert(kind == la() && "internal parser error"); return lex(); }
 #endif
