@@ -31,11 +31,14 @@ public:
         MUT, ID, END_OF_FILE,
         TYPE_app, TYPE_generic, TYPE_genericref, TYPE_error, TYPE_tuple, TYPE_definite_array, TYPE_indefinite_array,
         LIT_char, LIT_str,
-        NUM_TOKENS
+        Num_Tokens,
+        Sentinel,
     };
 
     struct KindHash {
-        uint64_t operator()(Kind kind) const { return thorin::hash_value((int) kind); }
+        static uint64_t hash(Kind kind) { return uint64_t(kind); }
+        static bool eq(Kind k1, Kind k2) { return k1 == k2; }
+        static Kind sentinel() { return Sentinel; }
     };
 
     Token() {}
@@ -52,11 +55,11 @@ public:
     operator Kind() const { return kind_; }
 
     enum Op {
-        NONE    = 0,
-        PREFIX  = 1,
-        INFIX   = 2,
-        POSTFIX = 4,
-        ASGN_OP = 8
+        None    = 0,
+        Prefix  = 1,
+        Infix   = 2,
+        Postfix = 4,
+        Asgn_Op = 8
     };
 
     bool is_stmt_like() const { return kind() == L_BRACE || kind() == IF || kind() == FOR || kind() == WHILE || kind() == WITH; }
@@ -68,10 +71,10 @@ public:
 
     static Kind sym2lit(Symbol sym);
     static Kind sym2flit(Symbol sym);
-    static bool is_prefix(Kind kind)  { return (tok2op_[kind] &  PREFIX) != 0; }
-    static bool is_infix(Kind kind)   { return (tok2op_[kind] &   INFIX) != 0; }
-    static bool is_postfix(Kind kind) { return (tok2op_[kind] & POSTFIX) != 0; }
-    static bool is_assign(Kind kind)  { return (tok2op_[kind] & ASGN_OP) != 0; }
+    static bool is_prefix(Kind kind)  { return (tok2op_[kind] &  Prefix) != 0; }
+    static bool is_infix(Kind kind)   { return (tok2op_[kind] &   Infix) != 0; }
+    static bool is_postfix(Kind kind) { return (tok2op_[kind] & Postfix) != 0; }
+    static bool is_assign(Kind kind)  { return (tok2op_[kind] & Asgn_Op) != 0; }
     static bool is_op(Kind kind)      { return is_prefix(kind) || is_infix(kind) || is_postfix(kind); }
     static bool is_rel(Kind kind);
     static Kind separate_assign(Kind kind);
@@ -92,12 +95,15 @@ private:
     Kind kind_;
     thorin::Box box_;
 
-    static int tok2op_[NUM_TOKENS];
-    static thorin::HashMap<Kind, const char*, KindHash> tok2str_;
-    static thorin::HashMap<Kind, Symbol, KindHash> tok2sym_;
-    static thorin::HashMap<Symbol, Kind> keywords_;
-    static thorin::HashMap<Symbol, Kind> sym2lit_; ///< Table of \em all (including floating) suffixes for literals.
-    static thorin::HashMap<Symbol, Kind> sym2flit_;///< Table of suffixes for \em floating point literals.
+    typedef thorin::HashMap<Symbol, Kind> Sym2Kind;
+    typedef thorin::HashMap<Kind, const char*, KindHash> Kind2Str;
+    typedef thorin::HashMap<Kind, Symbol, KindHash> Kind2Sym;
+    static int tok2op_[Num_Tokens];
+    static Kind2Str tok2str_;
+    static Kind2Sym tok2sym_;
+    static Sym2Kind keywords_;
+    static Sym2Kind sym2lit_; ///< Table of \em all (including floating) suffixes for literals.
+    static Sym2Kind sym2flit_;///< Table of suffixes for \em floating point literals.
 
     friend void init();
     friend std::ostream& operator<<(std::ostream& os, const Token& tok);
