@@ -223,7 +223,8 @@ public:
     Item*       parse_item();
     StaticItem* parse_static_item(Track, Visibility);
     EnumDecl*   parse_enum_decl(Track, Visibility);
-    FnDecl*     parse_fn_decl(BodyMode);
+    template<BodyMode mode>
+    FnDecl*     parse_fn_decl(Track, Visibility, bool is_extern, Symbol abi);
     ImplItem*   parse_impl(Track, Visibility);
     ModDecl*    parse_mod_decl(Track, Visibility);
     Item*       parse_extern_block_or_fn_decl(Track, Visibility);
@@ -440,6 +441,7 @@ Params Parser::parse_param_list(TokenKind delimiter, bool lambda) {
     return params;
 }
 
+#if 0
 const Param* Parser::parse_param(int i, bool lambda) {
     auto param = loc(new Param(cur_var_handle++));
     param->is_mut_ = accept(Token::MUT);
@@ -496,6 +498,7 @@ void Parser::parse_return_param(Fn* fn) {
         fn->params_.emplace_back(Param::create(cur_var_handle++, new Identifier("return", loc), loc, fn_type));
     }
 }
+#endif
 
 /*
  * items
@@ -508,7 +511,7 @@ Item* Parser::parse_item() {
     switch (la()) {
         case Token::ENUM:    return parse_enum_decl(t, vis);
         case Token::EXTERN:  return parse_extern_block_or_fn_decl(t, vis);
-        case Token::FN:      return parse_fn_decl(BodyMode::Mandatory, t, vis);
+        case Token::FN:      return parse_fn_decl<BodyMode::Mandatory>(t, vis, /*extern*/ false, /*abi*/ "");
         case Token::IMPL:    return parse_impl(t, vis);
         case Token::MOD:     return parse_mod_decl(t, vis);
         case Token::STATIC:  return parse_static_item(t, vis);
@@ -525,31 +528,25 @@ EnumDecl* Parser::parse_enum_decl(Track, Visibility) {
 }
 
 Item* Parser::parse_extern_block_or_fn_decl(Track t, Visibility vis) {
-    if (la() == Token::FN) {
-        auto fn_decl = parse_fn_decl(BodyMode::Mandatory);
-        fn_decl->is_extern_ = true;
-        item = fn_decl;
-    } else {
-        auto extern_block = new ExternBlock();
-        if (la() == Token::LIT_str)
-            extern_block->abi_ = lex().symbol();
-        expect(Token::L_BRACE, "opening brace of external block");
-        while (la() == Token::FN) {
-            auto fn_decl = parse_fn_decl(BodyMode::None);
-            fn_decl->is_extern_ = true;
-            fn_decl->abi_ = extern_block->abi_;
-            extern_block->fns_.emplace_back(fn_decl);
-        }
-        expect(Token::R_BRACE, "closing brace of external block");
-        extern_block->set_end(prev_loc().end());
-        item = extern_block;
-    }
+    if (la() == Token::FN)
+        return parse_fn_decl<BodyMode::Mandatory>(t, vis, /*extern*/ true, /*abi*/ "");
 
-    item->set_begin(begin);
-    return item;
+    Symbol abi;
+    if (la() == Token::LIT_str)
+        abi = lex().symbol();
+
+    expect(Token::L_BRACE, "opening brace of external block");
+    FnDecls fn_decls;
+    while (la() == Token::FN)
+        fn_decls.emplace_back(parse_fn_decl<BodyMode::None>(t, vis, /*extern*/ true, abi));
+    expect(Token::R_BRACE, "closing brace of external block");
+
+    return t.create<ExternBlock>(vis, abi, std::move(fn_decls));
 }
 
-FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
+#if 0
+template<BodyMode mode>
+FnDecl* Parser::parse_fn_decl(Track t, Visibility vis) {
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     auto fn_decl = loc(new FnDecl());
@@ -573,6 +570,7 @@ FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
 
     return fn_decl;
 }
+#endif
 
 ImplItem* Parser::parse_impl(Track t, Visibility vis) {
     eat(Token::IMPL);
@@ -588,58 +586,55 @@ ImplItem* Parser::parse_impl(Track t, Visibility vis) {
     expect(Token::L_BRACE, "impl");
     FnDecls methods;
     while (la() == Token::FN)
-        methods_.emplace_back(parse_fn_decl(BodyMode::Mandatory));
+        methods.emplace_back(parse_fn_decl<BodyMode::Mandatory>(t, vis, /*exter*/ false, /*abi*/ ""));
     expect(Token::R_BRACE, "closing brace of impl");
 
-    return t.create<Impl>(vis, std::move(ast_type_params), trait, ast_type, std::move(methods));
+    return t.create<ImplItem>(vis, std::move(ast_type_params), trait, ast_type, std::move(methods));
 }
 
 ModDecl* Parser::parse_mod_decl(Track t, Visibility vis) {
-    auto mod_decl = loc(new ModDecl());
     eat(Token::MOD);
-    mod_decl->identifier_ = try_id("module declaration");
-    parse_ast_type_params(mod_decl->ast_type_params_);
+    auto identifier = try_id("module declaration");
+    auto ast_type_params = parse_ast_type_params();
+    const ModContents* mod_contents = nullptr;
     if (accept(Token::L_BRACE)) {
-         mod_decl->mod_contents_ = parse_mod_contents();
+         mod_contents = parse_mod_contents();
         expect(Token::R_BRACE, "module");
     } else
         expect(Token::SEMICOLON, "module declaration");
 
-    return mod_decl;
+    return t.create<ModDecl>(vis, identifier, std::move(ast_type_params), mod_contents);
 }
 
 StaticItem* Parser::parse_static_item(Track t, Visibility vis) {
-    auto static_item = loc(new StaticItem());
     eat(Token::STATIC);
-    static_item->is_mut_ = accept(Token::MUT);
-    static_item->identifier_ = try_id("static item");
-    if (accept(Token::COLON))
-        static_item->ast_type_ = parse_type();
-    if (accept(Token::ASGN))
-        dock(static_item->init_, parse_expr());
+    bool mut = accept(Token::MUT);
+    auto identifier = try_id("static item");
+    auto ast_type = accept(Token::COLON) ? parse_type() : nullptr;
+    auto init = accept(Token::ASGN) ? parse_expr() : nullptr;
     expect(Token::SEMICOLON, "static item");
-    return static_item;
+    return t.create<StaticItem>(vis, mut, identifier, ast_type, init);
 }
 
 StructDecl* Parser::parse_struct_decl(Track t, Visibility vis) {
-    auto struct_decl = loc(new StructDecl());
     eat(Token::STRUCT);
-    struct_decl->identifier_ = try_id("struct declaration");
-    parse_ast_type_params(struct_decl->ast_type_params_);
+    auto identifier = try_id("struct declaration");
+    auto ast_type_params = parse_ast_type_params();
     expect(Token::L_BRACE, "struct declaration");
     int i = 0;
+    FieldDecls field_decls;
     parse_comma_list("closing brace of struct declaration", Token::R_BRACE, [&] {
-        struct_decl->field_decls_.emplace_back(parse_field_decl(i++));
+        field_decls.emplace_back(parse_field_decl(i++));
     });
-    return struct_decl;
+    return t.create<StructDecl>(vis, identifier, std::move(ast_type_params), std::move(field_decls));
 }
 
 TraitDecl* Parser::parse_trait_decl(Track t, Visibility vis) {
-    auto t = track();
     eat(Token::TRAIT);
     auto identifier_ = try_id("trait declaration");
-    parse_ast_type_params(trait_decl->ast_type_params_);
+    auto ast_type_params = parse_ast_type_params();
 
+    ASTTypeApps super_traits;
     if (accept(Token::COLON)) {
         parse_comma_list("trait declaration", Token::L_BRACE, [&] {
             trait_decl->super_traits_.emplace_back(parse_ast_type_app());
@@ -648,10 +643,11 @@ TraitDecl* Parser::parse_trait_decl(Track t, Visibility vis) {
         expect(Token::L_BRACE, "trait declaration");
 
     while (la() == Token::FN)
-        trait_decl->methods_.emplace_back(parse_fn_decl(BodyMode::Optional));
+        trait_decl->methods_.emplace_back(parse_fn_decl<BodyMode::Optional>(t, vis, /*exter*/ false, /*abi*/ ""));
 
     expect(Token::R_BRACE, "closing brace of trait declaration");
-    return trait_decl;
+
+    return t.create<TraitDecl>(vis, identifier, std::move(ast_type_params), std::move(super_traits), std::move(methods));
 }
 
 Typedef* Parser::parse_typedef(Track t, Visibility vis) {

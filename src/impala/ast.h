@@ -896,6 +896,15 @@ private:
 
 class TraitDecl : public NamedItem, public Decl, public ASTTypeParamList {
 public:
+    TraitDecl(Location location, Visibility visibility, const Identifier* identifier,
+              ASTTypeParams&& ast_type_params, ASTTypeApps&& super_traits, FnDecls&& methods)
+        : NamedItem(visibility)
+        , Decl(location, identifier)
+        , ASTTypeParamList(std::move(ast_type_params))
+        , super_traits_(std::move(super_traits))
+        , methods_(std::move(methods))
+    {}
+
     const ASTTypeApps& super_traits() const { return super_traits_; }
     const FnDecls& methods() const { return methods_; }
     const MethodTable& method_table() const { return method_table_; }
@@ -910,8 +919,8 @@ private:
     void check(TypeSema&) const override;
     void emit_item(CodeGen&) const override;
 
-    FnDecls methods_;
     ASTTypeApps super_traits_;
+    FnDecls methods_;
     mutable MethodTable method_table_;
 };
 

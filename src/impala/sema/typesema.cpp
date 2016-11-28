@@ -86,7 +86,7 @@ public:
     const Type* check(const Ptrn* p) { p->check(*this); return p->type(); }
     void check(const Stmt* n) { n->check(*this); }
     void check_call(const Expr* expr, ArrayRef<const Expr*> args);
-    void check_call(const Expr* expr, const std::deque<AutoPtr<const Expr>>& args) {
+    void check_call(const Expr* expr, const Exprs& args) {
         Array<const Expr*> array(args.begin(), args.end());
         check_call(expr, array);
     }
@@ -552,7 +552,7 @@ void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
 void BlockExprBase::check(TypeSema& sema) const {
     THORIN_PUSH(sema.cur_block_, this);
     for (const auto& stmt : stmts())
-        sema.check(stmt);
+        sema.check(stmt.get());
 
     sema.check(expr());
 
