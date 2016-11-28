@@ -221,15 +221,15 @@ public:
 
     // items
     Item*       parse_item();
-    StaticItem* parse_static_item();
-    EnumDecl*   parse_enum_decl();
+    StaticItem* parse_static_item(Track, Visibility);
+    EnumDecl*   parse_enum_decl(Track, Visibility);
     FnDecl*     parse_fn_decl(BodyMode);
-    ImplItem*   parse_impl();
-    ModDecl*    parse_mod_decl();
-    Item*       parse_extern_block_or_fn_decl();
-    StructDecl* parse_struct_decl();
-    TraitDecl*  parse_trait_decl();
-    Typedef*    parse_typedef();
+    ImplItem*   parse_impl(Track, Visibility);
+    ModDecl*    parse_mod_decl(Track, Visibility);
+    Item*       parse_extern_block_or_fn_decl(Track, Visibility);
+    StructDecl* parse_struct_decl(Track, Visibility);
+    TraitDecl*  parse_trait_decl(Track, Visibility);
+    Typedef*    parse_typedef(Track, Visibility);
 
     // item helpers
     const ModContents* parse_mod_contents();
@@ -396,8 +396,7 @@ int Parser::parse_addr_space() {
  */
 
 const Path::Elem* Parser::parse_path_elem() {
-    auto t = track();
-    return t.create<Path::Elem>(try_id("path"));
+    return track().create<Path::Elem>(try_id("path"));
 }
 
 const Path* Parser::parse_path() {
@@ -503,36 +502,29 @@ void Parser::parse_return_param(Fn* fn) {
  */
 
 Item* Parser::parse_item() {
-    Position begin = la().location().begin();
-    auto visibility = parse_visibility();
+    auto t = track();
+    auto vis = parse_visibility();
 
-    Item* item = nullptr;
     switch (la()) {
-        case Token::ENUM:    item = parse_enum_decl();                  break;
-        case Token::EXTERN:  item = parse_extern_block_or_fn_decl();    break;
-        case Token::FN:      item = parse_fn_decl(BodyMode::Mandatory); break;
-        case Token::IMPL:    item = parse_impl();                       break;
-        case Token::MOD:     item = parse_mod_decl();                   break;
-        case Token::STATIC:  item = parse_static_item();                break;
-        case Token::STRUCT:  item = parse_struct_decl();                break;
-        case Token::TRAIT:   item = parse_trait_decl();                 break;
-        case Token::TYPEDEF: item = parse_typedef();                    break;
+        case Token::ENUM:    return parse_enum_decl(t, vis);
+        case Token::EXTERN:  return parse_extern_block_or_fn_decl(t, vis);
+        case Token::FN:      return parse_fn_decl(BodyMode::Mandatory, t, vis);
+        case Token::IMPL:    return parse_impl(t, vis);
+        case Token::MOD:     return parse_mod_decl(t, vis);
+        case Token::STATIC:  return parse_static_item(t, vis);
+        case Token::STRUCT:  return parse_struct_decl(t, vis);
+        case Token::TRAIT:   return parse_trait_decl(t, vis);
+        case Token::TYPEDEF: return parse_typedef(t, vis);
         default: THORIN_UNREACHABLE;
     }
-
-    item->set_begin(begin);
-    item->visibility_ = visibility;
-    return item;
 }
 
-EnumDecl* Parser::parse_enum_decl() {
+EnumDecl* Parser::parse_enum_decl(Track, Visibility) {
     assert(false && "TODO");
     return 0;
 }
 
-Item* Parser::parse_extern_block_or_fn_decl() {
-    Position begin = eat(Token::EXTERN).location().begin();
-    Item* item;
+Item* Parser::parse_extern_block_or_fn_decl(Track t, Visibility vis) {
     if (la() == Token::FN) {
         auto fn_decl = parse_fn_decl(BodyMode::Mandatory);
         fn_decl->is_extern_ = true;
@@ -582,25 +574,27 @@ FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
     return fn_decl;
 }
 
-ImplItem* Parser::parse_impl() {
-    auto impl = loc(new ImplItem());
+ImplItem* Parser::parse_impl(Track t, Visibility vis) {
     eat(Token::IMPL);
-    parse_ast_type_params(impl->ast_type_params_);
+    auto ast_type_params = parse_ast_type_params();
+    const ASTType* ast_type = nullptr;
+    const ASTType* trait = nullptr;
     auto type = parse_type();
     if (accept(Token::FOR)) {
-        impl->trait_ = type;
-        impl->ast_type_ = parse_type();
+        trait = type;
+        ast_type = parse_type();
     } else
-        impl->ast_type_ = type;
+        ast_type = type;
     expect(Token::L_BRACE, "impl");
+    FnDecls methods;
     while (la() == Token::FN)
-        impl->methods_.emplace_back(parse_fn_decl(BodyMode::Mandatory));
+        methods_.emplace_back(parse_fn_decl(BodyMode::Mandatory));
     expect(Token::R_BRACE, "closing brace of impl");
 
-    return impl;
+    return t.create<Impl>(vis, std::move(ast_type_params), trait, ast_type, std::move(methods));
 }
 
-ModDecl* Parser::parse_mod_decl() {
+ModDecl* Parser::parse_mod_decl(Track t, Visibility vis) {
     auto mod_decl = loc(new ModDecl());
     eat(Token::MOD);
     mod_decl->identifier_ = try_id("module declaration");
@@ -614,7 +608,7 @@ ModDecl* Parser::parse_mod_decl() {
     return mod_decl;
 }
 
-StaticItem* Parser::parse_static_item() {
+StaticItem* Parser::parse_static_item(Track t, Visibility vis) {
     auto static_item = loc(new StaticItem());
     eat(Token::STATIC);
     static_item->is_mut_ = accept(Token::MUT);
@@ -627,7 +621,7 @@ StaticItem* Parser::parse_static_item() {
     return static_item;
 }
 
-StructDecl* Parser::parse_struct_decl() {
+StructDecl* Parser::parse_struct_decl(Track t, Visibility vis) {
     auto struct_decl = loc(new StructDecl());
     eat(Token::STRUCT);
     struct_decl->identifier_ = try_id("struct declaration");
@@ -640,10 +634,10 @@ StructDecl* Parser::parse_struct_decl() {
     return struct_decl;
 }
 
-TraitDecl* Parser::parse_trait_decl() {
-    auto trait_decl = loc(new TraitDecl);
+TraitDecl* Parser::parse_trait_decl(Track t, Visibility vis) {
+    auto t = track();
     eat(Token::TRAIT);
-    trait_decl->identifier_ = try_id("trait declaration");
+    auto identifier_ = try_id("trait declaration");
     parse_ast_type_params(trait_decl->ast_type_params_);
 
     if (accept(Token::COLON)) {
@@ -660,7 +654,7 @@ TraitDecl* Parser::parse_trait_decl() {
     return trait_decl;
 }
 
-Typedef* Parser::parse_typedef() {
+Typedef* Parser::parse_typedef(Track t, Visibility vis) {
     auto type_def = loc(new Typedef());
     eat(Token::TYPEDEF);
     type_def->identifier_ = try_id("type definition");
