@@ -35,7 +35,7 @@ public:
     }
 
     Continuation* create_continuation(const LocalDecl* decl) {
-        auto result = continuation(convert(decl->type())->as<thorin::FnType>(), decl->loc(), decl->symbol().str());
+        auto result = continuation(convert(decl->type())->as<thorin::FnType>(), decl->location(), decl->symbol().str());
         result->param(0)->name = "mem";
         decl->value_ = Value::create_val(*this, result);
         return result;
@@ -100,7 +100,7 @@ public:
  */
 
 void CodeGen::convert_ops(const Type* type, std::vector<const thorin::Type*>& nops) {
-    for (auto op : type->ops())
+    for (const auto& op : type->ops())
         nops.push_back(convert(op));
 }
 
@@ -130,7 +130,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         thorin_struct_type(struct_type) = s;
         thorin_type(type) = s;
         size_t i = 0;
-        for (auto op : struct_type->ops())
+        for (const auto& op : struct_type->ops())
             thorin_struct_type(struct_type)->set(i++, convert(op));
         thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
         return thorin_struct_type(struct_type);
@@ -155,12 +155,12 @@ Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
 
     if (is_mut()) {
         if (is_address_taken())
-            value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), loc(), symbol().str()));
+            value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), location(), symbol().str()));
         else
             value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str());
 
         if (init)
-            value_.store(init, loc());
+            value_.store(init, location());
     } else
         value_ = Value::create_val(cg, init);
 
@@ -185,10 +185,10 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
     frame_ = cg.create_frame(loc);
 
     // name params and setup store locations
-    for (auto param : params()) {
+    for (const auto& param : params()) {
         auto p = continuation()->param(i++);
         p->name = param->symbol().str();
-        cg.emit(param, p);
+        cg.emit(param.get(), p);
     }
     assert(i == continuation()->num_params());
     if (continuation()->num_params() != 0 && continuation()->params().back()->type()->isa<thorin::FnType>())
@@ -219,8 +219,8 @@ void ValueItem::emit_item(CodeGen& cg) const {
 }
 
 void ModContents::emit(CodeGen& cg) const {
-    for (auto item : items())
-        cg.emit(item);
+    for (const auto& item : items())
+        cg.emit(item.get());
 }
 
 static bool is_primop(const Symbol& name) {
@@ -236,7 +236,7 @@ Value FnDecl::emit(CodeGen& cg, const Def*) const {
         return value_;
 
     // create thorin function
-    value_ = Value::create_val(cg, emit_head(cg, loc()));
+    value_ = Value::create_val(cg, emit_head(cg, location()));
     if (is_extern() && abi() == "")
         continuation_->make_external();
 
@@ -246,12 +246,12 @@ Value FnDecl::emit(CodeGen& cg, const Def*) const {
     }
 
     if (body())
-        emit_body(cg, loc());
+        emit_body(cg, location());
     return value_;
 }
 
 void ExternBlock::emit_item(CodeGen& cg) const {
-    for (auto fn : fns()) {
+    for (const auto& fn : fns()) {
         cg.emit(static_cast<const ValueDecl*>(fn), nullptr); // TODO use init
         auto continuation = fn->continuation();
         if (abi() == "\"C\"")
@@ -413,14 +413,14 @@ void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
 void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
     switch (kind()) {
         case ANDAND: {
-            JumpTarget x(rhs()->loc().begin(), "and_extra");
+            JumpTarget x(rhs()->location().begin(), "and_extra");
             cg.emit_branch(lhs(), x, f);
             if (cg.enter(x))
                 cg.emit_branch(rhs(), t, f);
             return;
         }
         case OROR: {
-            JumpTarget x(rhs()->loc().begin(), "or_extra");
+            JumpTarget x(rhs()->location().begin(), "or_extra");
             cg.emit_branch(lhs(), t, x);
             if (cg.enter(x))
                 cg.emit_branch(rhs(), t, f);
@@ -435,16 +435,16 @@ void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
 const Def* InfixExpr::remit(CodeGen& cg) const {
     switch (kind()) {
         case ANDAND: {
-            JumpTarget t(lhs()->loc().begin(), "and_true"), f(rhs()->loc().begin(), "and_false"), x(loc().end(), "and_exit");
+            JumpTarget t(lhs()->location().begin(), "and_true"), f(rhs()->location().begin(), "and_false"), x(loc().end(), "and_exit");
             cg.emit_branch(lhs(), t, f);
             if (cg.enter(t)) cg.emit_jump(rhs(), x);
-            if (cg.enter(f)) cg.emit_jump_boolean(false, x, lhs()->loc().end());
+            if (cg.enter(f)) cg.emit_jump_boolean(false, x, lhs()->location().end());
             return cg.converge(this, x);
         }
         case OROR: {
-            JumpTarget t(lhs()->loc().begin(), "or_true"), f(rhs()->loc().begin(), "or_false"), x(loc().end(), "or_exit");
+            JumpTarget t(lhs()->location().begin(), "or_true"), f(rhs()->location().begin(), "or_false"), x(loc().end(), "or_exit");
             cg.emit_branch(lhs(), t, f);
-            if (cg.enter(t)) cg.emit_jump_boolean(true, x, rhs()->loc().end());
+            if (cg.enter(t)) cg.emit_jump_boolean(true, x, rhs()->location().end());
             if (cg.enter(f)) cg.emit_jump(rhs(), x);
             return cg.converge(this, x);
         }
@@ -607,7 +607,7 @@ const Def* FieldExpr::remit(CodeGen& cg) const {
 }
 
 const Def* BlockExprBase::remit(CodeGen& cg) const {
-    for (auto stmt : stmts())
+    for (const auto& stmt : stmts())
         cg.emit(stmt);
     return cg.remit(expr());
 }
@@ -646,7 +646,7 @@ const Def* RunBlockExpr::remit(CodeGen& cg) const {
 }
 
 void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
-    JumpTarget t(then_expr()->loc().begin(), "if_then"), f(else_expr()->loc().begin(), "if_else");
+    JumpTarget t(then_expr()->location().begin(), "if_then"), f(else_expr()->location().begin(), "if_else");
     cg.emit_branch(cond(), t, f);
     if (cg.enter(t))
         cg.emit_jump(then_expr(), x);
@@ -670,17 +670,17 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
 }
 
 void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
-    JumpTarget head_bb(cond()->loc().begin(), "while_head"), body_bb(body()->loc().begin(), "while_body");
+    JumpTarget head_bb(cond()->location().begin(), "while_head"), body_bb(body()->location().begin(), "while_body");
     auto continue_continuation = cg.create_continuation(continue_decl());
 
-    cg.jump(head_bb, cond()->loc().end());
+    cg.jump(head_bb, cond()->location().end());
     cg.enter_unsealed(head_bb);
     cg.emit_branch(cond(), body_bb, exit_bb);
     if (cg.enter(body_bb)) {
         cg.remit(body());
-        cg.jump_to_continuation(continue_continuation, cond()->loc().end());
+        cg.jump_to_continuation(continue_continuation, cond()->location().end());
     }
-    cg.jump(head_bb, cond()->loc().end());
+    cg.jump(head_bb, cond()->location().end());
     head_bb.seal();
     cg.enter(exit_bb);
 }
@@ -708,7 +708,7 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun, break_continuation, loc());
 
     defs.front() = cg.get_mem(); // now get the current memory monad
-    cg.call(fun, defs, nullptr, map_expr->loc());
+    cg.call(fun, defs, nullptr, map_expr->location());
 
     cg.set_continuation(break_continuation);
     if (break_continuation->num_params() == 2)
@@ -756,7 +756,7 @@ void ItemStmt::emit(CodeGen& cg) const {
 
 void LetStmt::emit(CodeGen& cg) const {
     if (cg.is_reachable())
-        cg.emit(ptrn(), init() ? cg.remit(init()) : cg.world().bottom(cg.convert(ptrn()->type()), ptrn()->loc()));
+        cg.emit(ptrn(), init() ? cg.remit(init()) : cg.world().bottom(cg.convert(ptrn()->type()), ptrn()->location()));
 }
 
 void AsmStmt::emit(CodeGen& cg) const {

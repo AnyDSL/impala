@@ -117,15 +117,15 @@ const char* tok2str(const T* expr) { return Token::tok2str(token_kind(expr)); }
  */
 
 const Var* ASTTypeParam::check(TypeSema& sema) const {
-    for (auto bound : bounds())
-        sema.check(bound);
+    for (const auto& bound : bounds())
+        sema.check(bound.get());
 
     return var();
 }
 
 void ASTTypeParamList::check_ast_type_params(TypeSema& sema) const {
-    for (auto ast_type_param : ast_type_params())
-        sema.check(ast_type_param);
+    for (const auto& ast_type_param : ast_type_params())
+        sema.check(ast_type_param.get());
 }
 
 //------------------------------------------------------------------------------
@@ -146,14 +146,14 @@ void SimdASTType::check(TypeSema& sema) const {
 }
 
 void TupleASTType::check(TypeSema& sema) const {
-    for (auto ast_type_arg : ast_type_args())
-        sema.check(ast_type_arg);
+    for (const auto& ast_type_arg : ast_type_args())
+        sema.check(ast_type_arg.get());
 }
 
 void FnASTType::check(TypeSema& sema) const {
     check_ast_type_params(sema);
-    for (auto ast_type_arg : ast_type_args())
-        sema.check(ast_type_arg);
+    for (const auto& ast_type_arg : ast_type_args())
+        sema.check(ast_type_arg.get());
 }
 
 void ASTTypeApp::check(TypeSema&) const {
@@ -175,9 +175,9 @@ void LocalDecl::check(TypeSema& sema) const {
 const Type* Fn::check_body(TypeSema& sema) const {
     sema.check(body());
 
-    for (auto param : params()) {
+    for (const auto& param : params()) {
         if (param->is_mut() && !param->is_written())
-            warning(param, "parameter '%' declared mutable but parameter is never written to", param->symbol());
+            warning(param.get(), "parameter '%' declared mutable but parameter is never written to", param->symbol());
     }
 
     if (!body()->type()->isa<NoRetType>())
@@ -198,8 +198,8 @@ void ModDecl::check(TypeSema& sema) const {
 }
 
 void ModContents::check(TypeSema& sema) const {
-    for (auto item : items())
-        sema.check(item);
+    for (const auto& item : items())
+        sema.check(item.get());
 }
 
 void ExternBlock::check(TypeSema& sema) const {
@@ -208,8 +208,8 @@ void ExternBlock::check(TypeSema& sema) const {
             error(this, "unknown extern specification");  // TODO: better location
     }
 
-    for (auto fn : fns())
-        sema.check(fn);
+    for (const auto& fn_decl : fn_decls())
+        sema.check(fn_decl.get());
 }
 
 void Typedef::check(TypeSema& sema) const {
@@ -221,8 +221,8 @@ void EnumDecl::check(TypeSema&) const { /*TODO*/ }
 
 void StructDecl::check(TypeSema& sema) const {
     check_ast_type_params(sema);
-    for (auto field_decl : field_decls())
-        sema.check(field_decl);
+    for (const auto& field_decl : field_decls())
+        sema.check(field_decl.get());
 }
 
 void FieldDecl::check(TypeSema& sema) const { sema.check(ast_type()); }
@@ -230,8 +230,8 @@ void FieldDecl::check(TypeSema& sema) const { sema.check(ast_type()); }
 void FnDecl::check(TypeSema& sema) const {
     THORIN_PUSH(sema.cur_fn_, this);
     check_ast_type_params(sema);
-    for (auto param : params())
-        sema.check(param);
+    for (const auto& param : params())
+        sema.check(param.get());
 
     if (body() != nullptr)
         check_body(sema);
@@ -246,11 +246,11 @@ void StaticItem::check(TypeSema& sema) const {
 void TraitDecl::check(TypeSema& sema) const {
     check_ast_type_params(sema);
 
-    for (auto type_app : super_traits())
-        sema.check(type_app);
+    for (const auto& type_app : super_traits())
+        sema.check(type_app.get());
 
-    for (auto method : methods())
-        sema.check(method);
+    for (const auto& method : methods())
+        sema.check(method.get());
 }
 
 void ImplItem::check(TypeSema& sema) const {
@@ -259,8 +259,8 @@ void ImplItem::check(TypeSema& sema) const {
 
     if (trait()) {
         if (trait()->isa<ASTTypeApp>()) {
-            for (auto type_param : ast_type_params())
-                sema.check(type_param);
+            for (const auto& type_param : ast_type_params())
+                sema.check(type_param.get());
         } else
             error(trait(), "expected trait instance");
     }
@@ -432,7 +432,7 @@ void CastExpr::check(TypeSema& sema) const {
 
 void TupleExpr::check(TypeSema& sema) const {
     for (const auto& arg : args())
-        sema.check(arg);
+        sema.check(arg.get());
 }
 
 void RepeatedDefiniteArrayExpr::check(TypeSema& sema) const { sema.check(value()); }
@@ -449,9 +449,9 @@ void DefiniteArrayExpr::check(TypeSema& sema) const {
         elem_type = definite_array_type->elem_type();
 
     for (const auto& arg : args()) {
-        sema.check(arg);
+        sema.check(arg.get());
         if (elem_type)
-            sema.expect_type(elem_type, arg, "element of definite array expression");
+            sema.expect_type(elem_type, arg.get(), "element of definite array expression");
     }
 }
 
@@ -461,9 +461,9 @@ void SimdExpr::check(TypeSema& sema) const {
         elem_type = simd_type->elem_type();
 
     for (const auto& arg : args()) {
-        sema.check(arg);
+        sema.check(arg.get());
         if (elem_type)
-            sema.expect_type(elem_type, arg, "element of simd expression");
+            sema.expect_type(elem_type, arg.get(), "element of simd expression");
     }
 }
 
@@ -514,7 +514,7 @@ void TypeAppExpr::check(TypeSema& /*sema*/) const {
 void MapExpr::check(TypeSema& sema) const {
     auto ltype = sema.check(lhs());
     for (const auto& arg : args())
-        sema.check(arg);
+        sema.check(arg.get());
 
     if (ltype->isa<FnType>()) {
         sema.check_call(lhs(), args());
@@ -551,12 +551,12 @@ void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
 
 void BlockExprBase::check(TypeSema& sema) const {
     THORIN_PUSH(sema.cur_block_, this);
-    for (auto stmt : stmts())
+    for (const auto& stmt : stmts())
         sema.check(stmt);
 
     sema.check(expr());
 
-    for (auto local : locals_) {
+    for (const auto& local : locals_) {
         if (local->is_mut() && !local->is_written())
             warning(local, "variable '%' declared mutable but variable is never written to", local->symbol());
     }

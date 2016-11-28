@@ -6,6 +6,7 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
+#if 0
 const Param* Param::create(size_t var_handle, const Identifier* identifier, const Location& loc, const ASTType* fn_type) {
     auto param = new Param(var_handle);
     param->is_mut_ = false;
@@ -37,6 +38,8 @@ const TypeAppExpr* TypeAppExpr::create(const Expr* expr) {
     insert(type_app_expr, type_app_expr->lhs_, expr);
     return type_app_expr;
 }
+
+#endif
 
 const char* Visibility::str() {
     if (visibility_ == Pub)  return "pub ";

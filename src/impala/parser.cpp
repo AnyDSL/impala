@@ -114,19 +114,18 @@ namespace impala {
 
 class Parser;
 
-template<class T>
-class Loc {
+class Track {
 public:
-    inline Loc(Parser& parser, T* node);
-    inline ~Loc();
+    Track(Parser& parser)
+        : parser_(parser)
+        , location_(parser.prev_loc().begin())
+    {}
 
-    operator T*() const { return node_; }
-    T* operator -> () const { return node_; }
-    T* get() const { return node_; }
+    operator Location() const { return {location_.begin(), parser_.prev_loc().end()}; }
 
 private:
     Parser& parser_;
-    T* node_;
+    Location location_;
 };
 
 class Parser {
@@ -155,8 +154,7 @@ public:
     bool expect(TokenKind tok, const std::string& context);
     void error(const std::string& what, const std::string& context) { error(what, context, la()); }
     void error(const std::string& what, const std::string& context, const Token& tok);
-    template<class T>
-    Loc<T> loc(T* node) { return Loc<T>(*this, node); }
+    Track track() { return track(this); }
 
     /**
      * Parses a list of comma-separated items till one of the @p delimiters have been found.
@@ -273,7 +271,8 @@ public:
 private:
     Token lex();        ///< Consume next Token in input stream, fill look-ahead buffer, return consumed Token.
 
-    const LocalDecl* create_continuation_decl(const char* name, bool set_type) {
+    const LocalDecl* create_continuation_decl(const char* /*name*/, bool /*set_type*/) {
+#if 0
         auto decl = loc(new LocalDecl(cur_var_handle++));
         decl->is_mut_ = false;
         decl->identifier_ = new Identifier(name, prev_loc_);
@@ -281,6 +280,7 @@ private:
         decl->ast_type_ = set_type ? new FnASTType(prev_loc()) : nullptr;
         return decl;
     }
+#endif
 
     Lexer lexer;        ///< invoked in order to get next token
     Token lookahead[3]; ///< SLL(3) look ahead
@@ -288,18 +288,6 @@ private:
     bool no_bars_;
     Location prev_loc_;
 };
-
-//------------------------------------------------------------------------------
-
-template<class T>
-Loc<T>::Loc(Parser& parser, T* node)
-    : parser_(parser)
-    , node_(node)
-{
-    node_->set_begin(parser_.la().loc().begin());
-}
-template<class T>
-Loc<T>::~Loc() { node_->set_end(parser_.prev_loc().end()); }
 
 //------------------------------------------------------------------------------
 
@@ -496,7 +484,7 @@ const Param* Parser::parse_param(int i, bool lambda) {
 void Parser::parse_return_param(Fn* fn) {
     auto fn_type = parse_return_type(fn->is_continuation_, false);
     if (!fn->is_continuation()) {
-        auto loc = fn_type ? fn_type->loc() : prev_loc();
+        auto loc = fn_type ? fn_type->location() : prev_loc();
         fn->params_.emplace_back(Param::create(cur_var_handle++, new Identifier("return", loc), loc, fn_type));
     }
 }
@@ -826,7 +814,7 @@ const PtrASTType* Parser::parse_ptr_type() {
         outer->kind_ = PtrASTType::Borrowed;
         outer->referenced_ast_type_ = inner;
         inner->set_loc(begin, prev_loc().end());
-        outer->loc_ = inner->loc();
+        outer->loc_ = inner->location();
         return outer;
     }
     auto ptr_type = loc(new PtrASTType());
@@ -861,7 +849,7 @@ const ASTTypeApp* Parser::parse_ast_type_app() {
 
 const ASTTypeApp* Parser::parse_ast_type_app(const Path* path) {
     auto ast_type_app = loc(new ASTTypeApp());
-    ast_type_app->set_begin(path->loc().begin());
+    ast_type_app->set_begin(path->location().begin());
     ast_type_app->path_ = path;
     if (accept(Token::L_BRACKET)) {
         parse_comma_list("type arguments for type application", Token::R_BRACKET, [&] {
@@ -949,7 +937,7 @@ const Expr* Parser::parse_infix_expr(const Expr* lhs) {
     expr->kind_ = (InfixExpr::Kind) kind;
     dock(expr->lhs_, lhs);
     dock(expr->rhs_, parse_expr(PrecTable::infix_r[kind]));
-    expr->set_loc(lhs->loc().begin(), expr->rhs()->loc().end());
+    expr->set_loc(lhs->location().begin(), expr->rhs()->location().end());
     return expr;
 }
 
@@ -958,7 +946,7 @@ const MapExpr* Parser::parse_map_expr(const Expr* lhs) {
     auto map = new MapExpr();
     dock(map->lhs_, lhs);
     parse_comma_list("arguments of a map expression", Token::R_PAREN, [&] { map->append(parse_expr()); });
-    map->set_loc(lhs->loc().begin(), prev_loc().end());
+    map->set_loc(lhs->location().begin(), prev_loc().end());
     return map;
 }
 
@@ -967,7 +955,7 @@ const TypeAppExpr* Parser::parse_type_app_expr(const Expr* lhs) {
     auto type_app_expr = new TypeAppExpr();
     dock(type_app_expr->lhs_, lhs);
     parse_comma_list("type arguments of a map expression", Token::R_BRACKET, [&] { type_app_expr->ast_type_args_.emplace_back(parse_type()); });
-    type_app_expr->set_loc(lhs->loc().begin(), prev_loc().end());
+    type_app_expr->set_loc(lhs->location().begin(), prev_loc().end());
     return type_app_expr;
 }
 
@@ -980,7 +968,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
             auto expr = new PostfixExpr();
             dock(expr->lhs_, lhs);
             expr->kind_ = (PostfixExpr::Kind) lex().kind();
-            expr->set_loc(lhs->loc().begin(), prev_loc().end());
+            expr->set_loc(lhs->location().begin(), prev_loc().end());
             return expr;
         }
         case Token::DOT: {
@@ -988,7 +976,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
             auto field = new FieldExpr();
             dock(field->lhs_, lhs);
             field->identifier_ = try_id("field expression");
-            field->set_loc(lhs->loc().begin(), prev_loc().end());
+            field->set_loc(lhs->location().begin(), prev_loc().end());
             return field;
         }
         case Token::AS: {
@@ -996,7 +984,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
             auto expr = new ExplicitCastExpr();
             dock(expr->lhs_, lhs);
             expr->ast_type_ = parse_type();
-            expr->set_loc(lhs->loc().begin(), prev_loc().end());
+            expr->set_loc(lhs->location().begin(), prev_loc().end());
             return expr;
         }
         default: THORIN_UNREACHABLE;
@@ -1076,8 +1064,8 @@ const Expr* Parser::parse_primary_expr() {
                     dock(map->lhs_, type_app_expr);
                     parse_comma_list("arguments of a map expression", Token::R_PAREN, [&] { map->append(parse_expr()); });
 
-                    type_app_expr->set_loc(path->loc().begin(), prev_loc().end());
-                    map->set_loc(path->loc().begin(), prev_loc().end());
+                    type_app_expr->set_loc(path->location().begin(), prev_loc().end());
+                    map->set_loc(path->location().begin(), prev_loc().end());
 
                     return map;
                 } else if (accept(Token::L_BRACE)) {
@@ -1093,8 +1081,8 @@ const Expr* Parser::parse_primary_expr() {
                         struct_expr->elems_.emplace_back(symbol, parse_expr());
                     });
 
-                    ast_type_app->set_loc(path->loc().begin(), prev_loc().end());
-                    struct_expr->set_loc(path->loc().begin(), prev_loc().end());
+                    ast_type_app->set_loc(path->location().begin(), prev_loc().end());
+                    struct_expr->set_loc(path->location().begin(), prev_loc().end());
 
                     return struct_expr;
                 }
@@ -1113,8 +1101,8 @@ const Expr* Parser::parse_primary_expr() {
                     struct_expr->elems_.emplace_back(symbol, parse_expr());
                 });
 
-                ast_type_app->set_loc(path->loc().begin(), prev_loc().end());
-                struct_expr->set_loc(path->loc().begin(), prev_loc().end());
+                ast_type_app->set_loc(path->location().begin(), prev_loc().end());
+                struct_expr->set_loc(path->location().begin(), prev_loc().end());
 
                 return struct_expr;
             }
@@ -1297,7 +1285,7 @@ const BlockExprBase* Parser::parse_block_expr() {
                 auto expr = parse_expr();
                 if (accept(Token::SEMICOLON) || (stmt_like && la() != Token::R_BRACE)) {
                     auto expr_stmt = new ExprStmt();
-                    expr_stmt->set_loc(expr->loc().begin(), prev_loc().end());
+                    expr_stmt->set_loc(expr->location().begin(), prev_loc().end());
                     dock(expr_stmt->expr_, expr);
                     stmts.emplace_back(expr_stmt);
                     continue;

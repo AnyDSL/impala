@@ -25,7 +25,7 @@ std::ostream& IndefiniteArrayASTType::stream(std::ostream& os) const { return st
 std::ostream& SimdASTType::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_ast_type(), size()); }
 
 std::ostream& TupleASTType::stream(std::ostream& os) const {
-    return stream_list(os, ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "(", ")");
+    return stream_list(os, ast_type_args(), [&](const auto& ast_type) { os << ast_type.get(); }, "(", ")");
 }
 
 std::ostream& FnASTType::stream(std::ostream& os) const {
@@ -35,7 +35,7 @@ std::ostream& FnASTType::stream(std::ostream& os) const {
     if (ret != nullptr) {
         os << " -> ";
         if (ret->num_ast_type_args() == 1)
-            os << ret->ast_type_args().front();
+            os << ret->ast_type_args().front().get();
         else
             stream_list(os, ret->ast_type_args(), [&](const ASTType* ast_type) { os << ast_type; }, "(", ")");
     }
@@ -138,7 +138,7 @@ std::ostream& ExternBlock::stream(std::ostream& os) const {
     if (!abi_.empty())
         os << abi_.str() << ' ';
     os << '{' << up << endl;
-    stream_list(os, fns(), [&](const FnDecl* fn) { os << fn; }, "", "", "", true);
+    stream_list(os, fn_decls(), [&](const auto& fn_decl) { os << fn_decl.get(); }, "", "", "", true);
     return os << down << endl << '}';
 }
 
@@ -433,7 +433,7 @@ std::ostream& FnExpr::stream(std::ostream& os) const {
 
     if (has_return_type) {
         os << "-> ";
-        auto ret = params().back();
+        auto ret = params().back().get();
         if (ret->type()) {
             auto rettype = ret->type()->as<FnType>();
             if (rettype->num_ops() == 1)
