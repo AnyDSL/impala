@@ -198,20 +198,21 @@ public:
     typedef std::deque<std::unique_ptr<const Elem>> Elems;
 
     // HACK
-    Path(const Identifier* identifier)
+    Path(bool global, const Identifier* identifier)
         : ASTNode(identifier->location())
+        , global_(global)
     {
         elems_.emplace_back(std::make_unique<Elem>(identifier));
     }
 
-    bool is_global() const { return is_global_; }
+    bool is_global() const { return global_; }
     const Elems& elems() const { return elems_; }
     const Decl* decl() const { return elems().back()->decl(); }
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const;
 
 private:
-    bool is_global_;
+    bool global_;
     Elems elems_;
 };
 
@@ -560,6 +561,11 @@ protected:
 
 class ASTTypeParam : public TypeDecl {
 public:
+    ASTTypeParam(Location location, const Identifier* identifier, ASTTypes&& bounds)
+        : TypeDecl(location, identifier)
+        , bounds_(std::move(bounds))
+    {}
+
     size_t num_bounds() const { return bounds().size(); }
     const ASTTypes& bounds() const { return bounds_; }
     int lambda_depth() const { return lambda_depth_; }

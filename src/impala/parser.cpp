@@ -114,20 +114,6 @@ namespace impala {
 
 class Parser;
 
-class Track {
-public:
-    Track(Parser& parser)
-        : parser_(parser)
-        , location_(parser.prev_loc().begin())
-    {}
-
-    operator Location() const { return {location_.begin(), parser_.prev_loc().end()}; }
-
-private:
-    Parser& parser_;
-    Location location_;
-};
-
 class Parser {
 public:
     Parser(std::istream& stream, const char* filename)
@@ -154,7 +140,26 @@ public:
     bool expect(TokenKind tok, const std::string& context);
     void error(const std::string& what, const std::string& context) { error(what, context, la()); }
     void error(const std::string& what, const std::string& context, const Token& tok);
-    Track track() { return track(this); }
+
+    class Track {
+    public:
+        Track(Parser& parser)
+            : parser_(parser)
+            , location_(parser_.la().location().begin())
+        {}
+
+        template<class T, class... Args>
+        T* create(Args&&... args) {
+            location_.set_end(parser_.prev_loc().end());
+            return new T(location_, std::forward<Args>(args)...);
+        }
+
+    private:
+        Parser& parser_;
+        Location location_;
+    };
+
+    Track track() { return Track(*this); }
 
     /**
      * Parses a list of comma-separated items till one of the @p delimiters have been found.
@@ -279,8 +284,9 @@ private:
         decl->set_loc(prev_loc_);
         decl->ast_type_ = set_type ? new FnASTType(prev_loc()) : nullptr;
         return decl;
-    }
 #endif
+        return nullptr;
+    }
 
     Lexer lexer;        ///< invoked in order to get next token
     Token lookahead[3]; ///< SLL(3) look ahead
@@ -309,7 +315,7 @@ Token Parser::lex() {
     lookahead[0] = lookahead[1]; // copy over LA2 to LA1
     lookahead[1] = lookahead[2]; // copy over LA3 to LA2
     lookahead[2] = lexer.lex();  // fill new LA3
-    prev_loc_ = result.loc();    // remember previous location
+    prev_loc_ = result.location();    // remember previous location
     return result;
 }
 
@@ -333,7 +339,7 @@ bool Parser::expect(TokenKind tok, const std::string& context) {
 }
 
 void Parser::error(const std::string& what, const std::string& context, const Token& tok) {
-    impala::error(tok.loc(), "expected %, got '%'%", what, tok,
+    impala::error(tok.location(), "expected %, got '%'%", what, tok,
             context.empty() ? "" : std::string(" while parsing ") + context.c_str());
 }
 
@@ -343,14 +349,13 @@ const Identifier* Parser::try_id(const std::string& what) {
         name = lex();
     else {
         error("identifier", what);
-        name = Token(la().loc(), "<error>");
+        name = Token(la().location(), "<error>");
     }
 
     return new Identifier(name);
 }
 
 Visibility Parser::parse_visibility() {
-    Visibility visibility;
     switch (la()) {
         case VISIBILITY: return Visibility(lex().kind());
         default:         return Visibility(Visibility::None);
@@ -447,7 +452,7 @@ const Param* Parser::parse_param(int i, bool lambda) {
                 type = parse_type();
                 break;
             default:
-                identifier = new Identifier("<error>", tok.loc());
+                identifier = new Identifier("<error>", tok.location());
                 error("identifier", "parameter");
         }
     }
@@ -465,7 +470,7 @@ const Param* Parser::parse_param(int i, bool lambda) {
         if (type == nullptr) {
             // we assume that the identifier refers to a type
             auto type_app = new ASTTypeApp();
-            type_app->set_loc(tok.loc());
+            type_app->set_loc(tok.location());
             type_app->path_ = new Path(identifier);
             type = type_app;
         }
@@ -482,9 +487,9 @@ const Param* Parser::parse_param(int i, bool lambda) {
 }
 
 void Parser::parse_return_param(Fn* fn) {
-    auto fn_type = parse_return_type(fn->is_continuation_, false);
+    auto fn_type = parse_return_type(fn->is_continuation(), false);
     if (!fn->is_continuation()) {
-        auto loc = fn_type ? fn_type->location() : prev_loc();
+        auto location = fn_type ? fn_type->location() : prev_loc();
         fn->params_.emplace_back(Param::create(cur_var_handle++, new Identifier("return", loc), loc, fn_type));
     }
 }
@@ -494,7 +499,7 @@ void Parser::parse_return_param(Fn* fn) {
  */
 
 Item* Parser::parse_item() {
-    Position begin = la().loc().begin();
+    Position begin = la().location().begin();
     auto visibility = parse_visibility();
 
     Item* item = nullptr;
@@ -522,7 +527,7 @@ EnumDecl* Parser::parse_enum_decl() {
 }
 
 Item* Parser::parse_extern_block_or_fn_decl() {
-    Position begin = eat(Token::EXTERN).loc().begin();
+    Position begin = eat(Token::EXTERN).location().begin();
     Item* item;
     if (la() == Token::FN) {
         auto fn_decl = parse_fn_decl(BodyMode::Mandatory);
@@ -728,7 +733,7 @@ const ASTType* Parser::parse_type() {
 }
 
 const ArrayASTType* Parser::parse_array_type() {
-    auto begin = la().loc().begin();
+    auto begin = la().location().begin();
     eat(Token::L_BRACKET);
     const ASTType* elem_ast_type = parse_type();
     if (accept(Token::MUL)) {
@@ -804,7 +809,7 @@ const PrimASTType* Parser::parse_prim_type() {
 
 const PtrASTType* Parser::parse_ptr_type() {
     if (la() == Token::ANDAND) {
-        auto begin = la().loc().begin();
+        auto begin = la().location().begin();
         auto inner = new PtrASTType();
         lex();
         inner->kind_ = accept(Token::MUT) ? PtrASTType::Mut : PtrASTType::Borrowed;
@@ -994,7 +999,7 @@ const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
 const Expr* Parser::parse_primary_expr() {
     switch (la()) {
         case Token::L_PAREN: {
-            auto begin = lex().loc().begin();
+            auto begin = lex().location().begin();
             auto expr = parse_expr();
             if (accept(Token::COMMA)) {
                 auto tuple = new TupleExpr();
@@ -1009,7 +1014,7 @@ const Expr* Parser::parse_primary_expr() {
             }
         }
         case Token::L_BRACKET: {
-            auto begin = lex().loc().begin();
+            auto begin = lex().location().begin();
             auto expr = parse_expr();
             if (accept(Token::COLON)) {
                 auto indefinite_array_expr = new IndefiniteArrayExpr();
@@ -1114,7 +1119,7 @@ const Expr* Parser::parse_primary_expr() {
         case Token::WHILE:      return parse_while_expr();
         case Token::L_BRACE:
         case Token::RUN_BLOCK:  return parse_block_expr();
-        default:                error("expression", ""); return new EmptyExpr(lex().loc());
+        default:                error("expression", ""); return new EmptyExpr(lex().location());
     }
 }
 
@@ -1123,13 +1128,13 @@ const LiteralExpr* Parser::parse_literal_expr() {
     Box box;
 
     switch (la()) {
-        case Token::TRUE:       return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, Box(true));
-        case Token::FALSE:      return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, Box(false));
+        case Token::TRUE:       return new LiteralExpr(lex().location(), LiteralExpr::LIT_bool, Box(true));
+        case Token::FALSE:      return new LiteralExpr(lex().location(), LiteralExpr::LIT_bool, Box(false));
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype: { \
             kind = LiteralExpr::LIT_##itype; \
             Box box = la().box(); \
-            return new LiteralExpr(lex().loc(), kind, box); \
+            return new LiteralExpr(lex().location(), kind, box); \
         }
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
@@ -1148,7 +1153,7 @@ thorin::u8 Parser::char_value(const char*& p) {
         case '\\': value = '\\'; break;
         default:
             // TODO make location precise inside strings, reduce redundancy for single chars
-            impala::error(la().loc(), "expected valid escape sequence, got '\\%' while parsing %", *(p-1), la());
+            impala::error(la().location(), "expected valid escape sequence, got '\\%' while parsing %", *(p-1), la());
         }
     } else
         value = thorin::u8(*(p-1));
@@ -1172,7 +1177,7 @@ const CharExpr* Parser::parse_char_expr() {
     } else
         error("a character", "character constant");
 
-    return new CharExpr(lex().loc(), symbol, value);
+    return new CharExpr(lex().location(), symbol, value);
 }
 
 const StrExpr* Parser::parse_str_expr() {
