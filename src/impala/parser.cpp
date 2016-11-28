@@ -198,10 +198,10 @@ public:
     const Path::Elem* parse_path_elem();
 
     // parameters
-    void parse_ast_type_params(AutoVector<const ASTTypeParam*>&);
+    ASTTypeParams parse_ast_type_params();
     const ASTTypeParam* parse_ast_type_param();
     const Param* parse_param(int i, bool lambda);
-    void parse_param_list(AutoVector<const Param*>& params, TokenKind delimiter, bool lambda);
+    Params parse_param_list(TokenKind delimiter, bool lambda);
     void parse_return_param(Fn* fn);
 
     // types
@@ -396,45 +396,49 @@ int Parser::parse_addr_space() {
  */
 
 const Path::Elem* Parser::parse_path_elem() {
-    auto elem = loc(new Path::Elem());
-    elem->identifier_ = try_id("path");
-    return elem;
+    auto t = track();
+    return t.create<Path::Elem>(try_id("path"));
 }
 
 const Path* Parser::parse_path() {
-    auto path = loc(new Path());
-    path->is_global_ = accept(Token::DOUBLE_COLON);
+    auto t = track();
+    bool is_global = accept(Token::DOUBLE_COLON);
+    Path::Elems elems;
     do {
-        path->elems_.emplace_back(parse_path_elem());
+        elems.emplace_back(parse_path_elem());
     } while (accept(Token::DOUBLE_COLON));
-    return path;
+    return t.create<Path>(is_global, std::move(elems));
 }
 
 /*
  * parameters
  */
 
-void Parser::parse_ast_type_params(AutoVector<const ASTTypeParam*>& ast_type_params) {
+ASTTypeParams Parser::parse_ast_type_params() {
+    ASTTypeParams ast_type_params;
     if (accept(Token::L_BRACKET))
         parse_comma_list("type parameter list", Token::R_BRACKET, [&] { ast_type_params.emplace_back(parse_ast_type_param()); });
+    return ast_type_params;
 }
 
 const ASTTypeParam* Parser::parse_ast_type_param() {
-    auto ast_type_param = loc(new ASTTypeParam());
-    ast_type_param->identifier_ = try_id("type parameter");
-
+    auto t = track();
+    auto identifier = try_id("type parameter");
+    ASTTypes bounds;
     if (accept(Token::COLON)) {
-        do
-            ast_type_param->bounds_.emplace_back(parse_type());
-        while (accept(Token::ADD));
+        do {
+            bounds.emplace_back(parse_type());
+        } while (accept(Token::ADD));
     }
 
-    return ast_type_param;
+    return t.create<ASTTypeParam>(identifier, bounds);
 }
 
-void Parser::parse_param_list(AutoVector<const Param*>& params, TokenKind delimiter, bool lambda) {
+Params Parser::parse_param_list(TokenKind delimiter, bool lambda) {
+    Params params;
     int i = 0;
     parse_comma_list("parameter list", delimiter, [&] { params.emplace_back(parse_param(i++, lambda)); });
+    return params;
 }
 
 const Param* Parser::parse_param(int i, bool lambda) {
@@ -561,9 +565,9 @@ FnDecl* Parser::parse_fn_decl(BodyMode body_mode) {
     if (la() == Token::LIT_str)
         fn_decl->export_name_ = new Identifier(lex());
     fn_decl->identifier_ = try_id("function name");
-    parse_ast_type_params(fn_decl->ast_type_params_);
+    auto ast_type_params = parse_ast_type_params;
     expect(Token::L_PAREN, "function head");
-    parse_param_list(fn_decl->params_, Token::R_PAREN, false);
+    auto params = parse_param_list(Token::R_PAREN, false);
     parse_return_param(fn_decl);
 
     switch (body_mode) {
