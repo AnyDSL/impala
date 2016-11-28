@@ -32,7 +32,7 @@ struct Init {
     thorin::AutoPtr<TypeTable> typetable;
 };
 
-void parse(ModContents*, std::istream&, const char*);
+std::unique_ptr<const ModContents> parse(std::istream&, const char*);
 void name_analysis(const ModContents*);
 void type_inference(Init&, const ModContents*);
 void type_analysis(const ModContents*, bool nossa);

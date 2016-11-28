@@ -588,7 +588,7 @@ void ForExpr::check(TypeSema& sema) const {
     if (auto map = forexpr->isa<MapExpr>()) {
         auto ltype = sema.check(map->lhs());
         for (const auto& arg : map->args())
-            sema.check(arg);
+            sema.check(arg.get());
         sema.check(fn_expr());
 
         if (auto fn_for = ltype->isa<FnType>()) {

@@ -357,7 +357,7 @@ void SimdExpr::check(NameSema& sema) const {
 void StructExpr::check(NameSema& sema) const {
     ast_type_app()->check(sema);
     for (const auto& elem : elems())
-        elem.expr()->check(sema);
+        elem->expr()->check(sema);
 }
 
 void TypeAppExpr::check(NameSema& sema) const {

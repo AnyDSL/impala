@@ -16,11 +16,11 @@
 #include "impala/sema/type.h"
 
 namespace thorin {
-    class Enter;
-    class JumpTarget;
-    class Continuation;
-    class Param;
-    class Assembly;
+
+class JumpTarget;
+class Continuation;
+class Param;
+
 }
 
 namespace impala {
@@ -64,6 +64,8 @@ typedef std::vector<thorin::u8> Chars;
 typedef thorin::HashMap<Symbol, const FieldDecl*> FieldTable;
 typedef thorin::HashMap<Symbol, const FnDecl*> MethodTable;
 typedef thorin::HashMap<Symbol, const NamedItem*> ItemTable;
+
+const Expr* dock(std::unique_ptr<const Expr>& dst, const Expr* src);
 
 //------------------------------------------------------------------------------
 
@@ -129,6 +131,10 @@ protected:
 
 class ASTNode : public thorin::MagicCast<ASTNode>, public thorin::Streamable  {
 public:
+    ASTNode() = delete;
+    ASTNode(const ASTNode&) = delete;
+    ASTNode(ASTNode&&) = delete;
+
     ASTNode(Location location)
         : location_(location)
     {}
@@ -185,8 +191,8 @@ public:
         const Identifier* identifier() const { return identifier_.get(); }
         Symbol symbol() const { return identifier()->symbol(); }
         const Decl* decl() const { return decl_; }
-        std::ostream& stream(std::ostream&) const override;
         void check(NameSema&) const;
+        std::ostream& stream(std::ostream&) const override;
 
     private:
         std::unique_ptr<const Identifier> identifier_;
@@ -197,13 +203,19 @@ public:
 
     typedef std::deque<std::unique_ptr<const Elem>> Elems;
 
-    // HACK
-    Path(bool global, const Identifier* identifier)
-        : ASTNode(identifier->location())
+    Path(Location location, bool global, Elems&& elems)
+        : ASTNode(location)
         , global_(global)
-    {
-        elems_.emplace_back(std::make_unique<Elem>(identifier));
-    }
+        , elems_(std::move(elems))
+    {}
+
+    //// HACK
+    //Path(Location location, bool global, const Identifier* identifier)
+        //: ASTNode(location)
+        //, global_(global)
+    //{
+        //elems_.emplace_back(std::make_unique<Elem>(identifier));
+    //}
 
     bool is_global() const { return global_; }
     const Elems& elems() const { return elems_; }
@@ -348,7 +360,7 @@ private:
     const Type* check(InferSema&) const override;
     void check(TypeSema&) const override;
 
-    thorin::u64 dim_;
+    uint64_t dim_;
 };
 
 class CompoundASTType : public ASTType {
@@ -424,6 +436,11 @@ private:
 
 class Typeof : public ASTType {
 public:
+    Typeof(Location location, const Expr* expr)
+        : ASTType(location)
+        , expr_(dock(expr_, expr))
+    {}
+
     const Expr* expr() const { return expr_.get(); }
 
     std::ostream& stream(std::ostream&) const override;
@@ -438,6 +455,11 @@ private:
 
 class SimdASTType : public ArrayASTType {
 public:
+    SimdASTType(Location location, const ASTType* elem_ast_type, uint64_t size)
+        : ArrayASTType(location, elem_ast_type)
+        , size_(size)
+    {}
+
     uint64_t size() const { return size_; }
 
     std::ostream& stream(std::ostream&) const override;
@@ -447,7 +469,7 @@ private:
     const Type* check(InferSema&) const override;
     void check(TypeSema&) const override;
 
-    thorin::u64 size_;
+    uint64_t size_;
 };
 
 //------------------------------------------------------------------------------
@@ -644,6 +666,11 @@ private:
 
 class ModContents : public ASTNode {
 public:
+    ModContents(Location location, Items&& items)
+        : ASTNode(location)
+        , items_(std::move(items))
+    {}
+
     const Items& items() const { return items_; }
     const ItemTable& item_table() const { return item_table_; }
     std::ostream& stream(std::ostream&) const override;
@@ -703,7 +730,7 @@ public:
     TypeDeclItem(Location location, Visibility visibility,
                  const Identifier* identifier, ASTTypeParams&& ast_type_params)
         : NamedItem(visibility)
-        , TypeDecl(location, std::move(identifier))
+        , TypeDecl(location, identifier)
         , ASTTypeParamList(std::move(ast_type_params))
     {}
 
@@ -715,7 +742,7 @@ public:
     ValueItem(Location location, Visibility visibility, bool mut,
               const Identifier* identifier, const ASTType* ast_type)
         : NamedItem(visibility)
-        , ValueDecl(location, mut, std::move(identifier), std::move(ast_type))
+        , ValueDecl(location, mut, identifier, std::move(ast_type))
     {}
 
     const Identifier* item_identifier() const override { return ValueDecl::identifier(); }
@@ -728,7 +755,7 @@ class ModDecl : public TypeDeclItem {
 public:
     ModDecl(Location location, Visibility visibility, const Identifier* identifier,
             ASTTypeParams&& ast_type_params, const ModContents* mod_contents)
-        : TypeDeclItem(location, visibility, std::move(identifier), std::move(ast_type_params))
+        : TypeDeclItem(location, visibility, identifier, std::move(ast_type_params))
         , mod_contents_(std::move(mod_contents))
     {}
 
@@ -771,6 +798,12 @@ private:
 
 class Typedef : public TypeDeclItem {
 public:
+    Typedef(Location location, Visibility visibility, const Identifier* identifier,
+            ASTTypeParams&& ast_type_params, const ASTType* ast_type)
+        : TypeDeclItem(location, visibility, identifier, std::move(ast_type_params))
+        , ast_type_(ast_type)
+    {}
+
     const ASTType* ast_type() const { return ast_type_.get(); }
 
     std::ostream& stream(std::ostream&) const override;
@@ -788,7 +821,7 @@ class FieldDecl : public TypeableDecl {
 public:
     FieldDecl(Location location, size_t index, Visibility visibility,
               const Identifier* identifier, const ASTType* ast_type)
-        : TypeableDecl(location, std::move(identifier))
+        : TypeableDecl(location, identifier)
         , index_(index)
         , visibility_(visibility)
         , ast_type_(std::move(ast_type))
@@ -815,6 +848,12 @@ private:
 
 class StructDecl : public TypeDeclItem {
 public:
+    StructDecl(Location location, Visibility visibility, const Identifier* identifier,
+               ASTTypeParams&& ast_type_params, FieldDecls&& field_decls)
+        : TypeDeclItem(location, visibility, identifier, std::move(ast_type_params))
+        , field_decls_(std::move(field_decls))
+    {}
+
     size_t num_field_decls() const { return field_decls_.size(); }
     const FieldDecls& field_decls() const { return field_decls_; }
     const FieldTable& field_table() const { return field_table_; }
@@ -849,7 +888,7 @@ class StaticItem : public ValueItem {
 public:
     StaticItem(Location location, Visibility visibility, bool mut, const Identifier* identifier,
                const ASTType* ast_type, const Expr* init)
-        : ValueItem(location, visibility, mut, std::move(identifier), std::move(ast_type))
+        : ValueItem(location, visibility, mut, identifier, std::move(ast_type))
         , init_(std::move(init))
     {}
 
@@ -996,12 +1035,10 @@ private:
 protected:
     mutable const thorin::Def* extra_ = nullptr; ///< Needed to propagate extend of indefinite arrays.
 
-    friend void dock(std::unique_ptr<const Expr>& /*dst*/, const Expr* /*src*/) {
-#if 0
+    friend const Expr* dock(std::unique_ptr<const Expr>& dst, const Expr* src) {
         assert(src->docker_ == nullptr);
-        dst.reset(src);
-        src->docker_= &dst;
-#endif
+        src->docker_ = &dst;
+        return src;
     }
 
     friend void insert(const Expr* /*nexpr*/, std::unique_ptr<const Expr>& /*nexpr_dock*/, const Expr* /*child*/) {
@@ -1022,14 +1059,14 @@ protected:
 /// Use as mixin for anything which uses args: (expr_1, ..., expr_n)
 class Args {
 public:
+    Args(Exprs&& args)
+        : args_(std::move(args))
+    {}
+
     const Exprs& args() const { return args_; }
     const Expr* arg(size_t i) const { assert(i < args_.size()); return args_[i].get(); }
     size_t num_args() const { return args_.size(); }
     std::ostream& stream_args(std::ostream& p) const;
-    void append(const Expr* expr) {
-        args_.emplace_back(nullptr);
-        dock(args_.back(), expr);
-    }
 
 protected:
     Exprs args_;
@@ -1244,7 +1281,7 @@ private:
 
 /**
  * Just for expr++ and expr--.
- * For indexing/function calls use \p MapExpr.
+ * For indexing/function calls use @p MapExpr.
  */
 class PostfixExpr : public Expr {
 public:
@@ -1364,6 +1401,11 @@ private:
 
 class DefiniteArrayExpr : public Expr, public Args {
 public:
+    DefiniteArrayExpr(Location location, Exprs&& args)
+        : Expr(location)
+        , Args(std::move(args))
+    {}
+
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
 
@@ -1393,7 +1435,7 @@ private:
     const thorin::Def* remit(CodeGen&) const override;
 
     std::unique_ptr<const Expr> value_;
-    thorin::u64 count_;
+    uint64_t count_;
 };
 
 class IndefiniteArrayExpr : public Expr {
@@ -1421,8 +1463,9 @@ private:
 
 class TupleExpr : public Expr, public Args {
 public:
-    TupleExpr(Location location)
+    TupleExpr(Location location, Exprs&& args)
         : Expr(location)
+        , Args(std::move(args))
     {}
 
     std::ostream& stream(std::ostream&) const override;
@@ -1436,8 +1479,9 @@ private:
 
 class SimdExpr : public Expr, public Args {
 public:
-    SimdExpr(Location location)
+    SimdExpr(Location location, Exprs&& args)
         : Expr(location)
+        , Args(std::move(args))
     {}
 
     std::ostream& stream(std::ostream&) const override;
@@ -1451,21 +1495,19 @@ private:
 
 class StructExpr : public Expr {
 public:
-    class Elem {
+    class Elem : public ASTNode {
     public:
-        Elem(const Elem&) = delete;
-        Elem& operator=(Elem) = delete;
-
-        Elem(const Identifier* identifier, const Expr* expr)
-            : identifier_(identifier)
-        {
-            dock(expr_, expr);
-        }
+        Elem(Location location, const Identifier* identifier, const Expr* expr)
+            : ASTNode(location)
+            , identifier_(identifier)
+            , expr_(dock(expr_, expr))
+        {}
 
         const Identifier* identifier() const { return identifier_.get(); }
         Symbol symbol() const { return identifier()->symbol(); }
         const Expr* expr() const { return expr_.get(); }
         const FieldDecl* field_decl() const { return field_decl_; }
+        std::ostream& stream(std::ostream&) const override;
 
     private:
         std::unique_ptr<const Identifier> identifier_;
@@ -1475,9 +1517,17 @@ public:
         friend class StructExpr;
     };
 
+    typedef std::deque<std::unique_ptr<const Elem>> Elems;
+
+    StructExpr(Location location, const ASTTypeApp* ast_type_app, Elems&& elems)
+        : Expr(location)
+        , ast_type_app_(ast_type_app)
+        , elems_(std::move(elems))
+    {}
+
     const ASTTypeApp* ast_type_app() const { return ast_type_app_.get(); }
     size_t num_elems() const { return elems_.size(); }
-    const std::deque<Elem>& elems() const { return elems_; }
+    const Elems& elems() const { return elems_; }
 
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
@@ -1488,11 +1538,17 @@ private:
     const thorin::Def* remit(CodeGen&) const override;
 
     std::unique_ptr<const ASTTypeApp> ast_type_app_;
-    std::deque<Elem> elems_;
+    Elems elems_;
 };
 
 class TypeAppExpr : public Expr {
 public:
+    TypeAppExpr(Location location, const Expr* lhs, ASTTypes&& ast_type_args)
+        : Expr(location)
+        , lhs_(dock(lhs_, lhs))
+        , ast_type_args_(std::move(ast_type_args))
+    {}
+
     static const TypeAppExpr* create(const Expr*);
 
     const Expr* lhs() const { return lhs_.get(); }
@@ -1521,6 +1577,12 @@ private:
 
 class MapExpr : public Expr, public Args {
 public:
+    MapExpr(Location location, const Expr* lhs, Exprs&& args)
+        : Expr(location)
+        , Args(std::move(args))
+        , lhs_(lhs)
+    {}
+
     enum State {
         None, Run, Hlt
     };
@@ -1559,7 +1621,7 @@ public:
     BlockExprBase(Location location, Stmts&& stmts, const Expr* expr)
         : StmtLikeExpr(location)
         , stmts_(std::move(stmts))
-        , expr_(expr)
+        , expr_(dock(expr_, expr))
     {}
 
     const Stmts& stmts() const { return stmts_; }
@@ -1592,10 +1654,8 @@ public:
     {}
 
     BlockExpr(Location location)
-        : BlockExprBase(location, Stmts(), nullptr)
-    {
-        dock(expr_, new EmptyExpr(location)); // TODO
-    }
+        : BlockExprBase(location, Stmts(), new EmptyExpr(location))
+    {}
 
     const char* prefix() const override { return "{"; }
 };
@@ -1746,8 +1806,8 @@ private:
 
 class IdPtrn : public Ptrn {
 public:
-    IdPtrn(Location location, const LocalDecl* local)
-        : Ptrn(location)
+    IdPtrn(const LocalDecl* local)
+        : Ptrn(local->location())
         , local_(local)
     {}
 
@@ -1852,23 +1912,24 @@ private:
 
 class AsmStmt : public Stmt {
 public:
-    class Elem {
+    class Elem : public ASTNode {
     public:
-        Elem(std::string&& constraint, const Expr* expr)
-            : constraint_(std::move(constraint))
-        {
-            dock(expr_, expr); // TODO
-        }
+        Elem(Location location, std::string&& constraint, const Expr* expr)
+            : ASTNode(location)
+            , constraint_(std::move(constraint))
+            , expr_(dock(expr_, expr))
+        {}
 
         const std::string& constraint() const { return constraint_; }
         const Expr* expr() const { return expr_.get(); }
+        std::ostream& stream(std::ostream&) const override;
 
     private:
         std::string constraint_;
         std::unique_ptr<const Expr> expr_;
     };
 
-    typedef std::deque<Elem> Elems;
+    typedef std::deque<std::unique_ptr<const Elem>> Elems;
 
     AsmStmt(Location location, std::string&& asm_template, Elems&& outputs, Elems&& inputs,
             Strings&& clobbers, Strings&& options)
@@ -1881,10 +1942,10 @@ public:
     {}
 
     const std::string& asm_template() const { return asm_template_; }
-    const std::deque<Elem>& outputs() const { return outputs_; }
-    const std::deque<Elem>&  inputs() const { return  inputs_; }
-    const Elem& output(size_t i) const { return outputs_[i]; }
-    const Elem&  input(size_t i) const { return  inputs_[i]; }
+    const Elems& outputs() const { return outputs_; }
+    const Elems&  inputs() const { return  inputs_; }
+    const Elem* output(size_t i) const { return outputs_[i].get(); }
+    const Elem*  input(size_t i) const { return  inputs_[i].get(); }
     size_t num_outputs() const { return outputs().size(); }
     size_t  num_inputs() const { return  inputs().size(); }
     ArrayRef<std::string> clobbers() const { return clobbers_; }
@@ -1893,14 +1954,14 @@ public:
     Array<std::string> output_constraints() const {
         Array<std::string> result(num_outputs());
         for (size_t i = 0, e = result.size(); i != e; ++i)
-            result[i] = output(i).constraint();
+            result[i] = output(i)->constraint();
         return result;
     }
 
     Array<std::string> input_constraints() const {
         Array<std::string> result(num_inputs());
         for (size_t i = 0, e = result.size(); i != e; ++i)
-            result[i] = input(i).constraint();
+            result[i] = input(i)->constraint();
         return result;
     }
 
@@ -1912,8 +1973,8 @@ public:
 
 private:
     std::string asm_template_;
-    std::deque<Elem> outputs_;
-    std::deque<Elem>  inputs_;
+    Elems outputs_;
+    Elems inputs_;
     std::vector<std::string> clobbers_;
     std::vector<std::string> options_;
 };

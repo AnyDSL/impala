@@ -215,27 +215,22 @@ public:
     const TupleASTType* parse_tuple_type();
     const SimdASTType*  parse_simd_type();
     const ASTTypeApp*   parse_ast_type_app();
-    const ASTTypeApp*   parse_ast_type_app(const Path*);
 
     enum class BodyMode { None, Optional, Mandatory };
 
-    // items
-    Item*       parse_item();
-    StaticItem* parse_static_item(Track, Visibility);
-    EnumDecl*   parse_enum_decl(Track, Visibility);
-    template<BodyMode mode>
-    FnDecl*     parse_fn_decl(Track, Visibility, bool is_extern, Symbol abi);
-    ImplItem*   parse_impl(Track, Visibility);
-    ModDecl*    parse_mod_decl(Track, Visibility);
-    Item*       parse_extern_block_or_fn_decl(Track, Visibility);
-    StructDecl* parse_struct_decl(Track, Visibility);
-    TraitDecl*  parse_trait_decl(Track, Visibility);
-    Typedef*    parse_typedef(Track, Visibility);
-
-    // item helpers
+    // items + helpers
+    const Item*        parse_item();
+    const StaticItem*  parse_static_item(Track, Visibility);
+    const EnumDecl*    parse_enum_decl(Track, Visibility);
+    const FnDecl*      parse_fn_decl(BodyMode, Track, Visibility, bool is_extern, Symbol abi);
+    const ImplItem*    parse_impl(Track, Visibility);
+    const ModDecl*     parse_mod_decl(Track, Visibility);
     const ModContents* parse_mod_contents();
-    void parse_mod_contents(ModContents*);
-    const FieldDecl* parse_field_decl(const int i);
+    const Item*        parse_extern_block_or_fn_decl(Track, Visibility);
+    const StructDecl*  parse_struct_decl(Track, Visibility);
+    const FieldDecl*   parse_field_decl(const size_t i);
+    const TraitDecl*   parse_trait_decl(Track, Visibility);
+    const Typedef*     parse_typedef(Track, Visibility);
 
     // expressions
     bool is_infix();
@@ -243,10 +238,10 @@ public:
     const Expr*             parse_expr() { return parse_expr(BOTTOM, false); }
     const Expr*             parse_expr(Prec prec, bool no_bars) { THORIN_PUSH(no_bars_, no_bars); return parse_expr(prec); }
     const Expr*             parse_prefix_expr();
-    const Expr*             parse_infix_expr(const Expr* lhs);
-    const Expr*             parse_postfix_expr(const Expr* lhs);
-    const MapExpr*          parse_map_expr(const Expr* lhs);
-    const TypeAppExpr*      parse_type_app_expr(const Expr* lhs);
+    const Expr*             parse_infix_expr(Track, const Expr* lhs);
+    const Expr*             parse_postfix_expr(Track, const Expr* lhs);
+    const MapExpr*          parse_map_expr(Track, const Expr* lhs);
+    const TypeAppExpr*      parse_type_app_expr(Track, const Expr* lhs);
     const Expr*             parse_primary_expr();
     const LiteralExpr*      parse_literal_expr();
     const CharExpr*         parse_char_expr();
@@ -272,7 +267,7 @@ public:
 
     // helpers
     std::string parse_str();
-    AsmStmt::Elem parse_asm_op();
+    const AsmStmt::Elem* parse_asm_op();
 
 private:
     Token lex();        ///< Consume next Token in input stream, fill look-ahead buffer, return consumed Token.
@@ -298,11 +293,12 @@ private:
 
 //------------------------------------------------------------------------------
 
-void parse(ModContents* mod_contents, std::istream& i, const char* filename) {
-    Parser parser(i, filename);
-    parser.parse_mod_contents(mod_contents);
+std::unique_ptr<const ModContents> parse(std::istream& is, const char* filename) {
+    Parser parser(is, filename);
+    auto mod_contents = parser.parse_mod_contents();
     if (parser.la() != Token::END_OF_FILE)
         parser.error("module item", "module contents");
+    return std::unique_ptr<const ModContents>(mod_contents);
 }
 
 //------------------------------------------------------------------------------
@@ -397,7 +393,7 @@ int Parser::parse_addr_space() {
  */
 
 const Path::Elem* Parser::parse_path_elem() {
-    return track().create<Path::Elem>(try_id("path"));
+    return new Path::Elem(try_id("path"));
 }
 
 const Path* Parser::parse_path() {
@@ -431,7 +427,7 @@ const ASTTypeParam* Parser::parse_ast_type_param() {
         } while (accept(Token::ADD));
     }
 
-    return t.create<ASTTypeParam>(identifier, bounds);
+    return t.create<ASTTypeParam>(identifier, std::move(bounds));
 }
 
 Params Parser::parse_param_list(TokenKind delimiter, bool lambda) {
@@ -504,14 +500,14 @@ void Parser::parse_return_param(Fn* fn) {
  * items
  */
 
-Item* Parser::parse_item() {
+const Item* Parser::parse_item() {
     auto t = track();
     auto vis = parse_visibility();
 
     switch (la()) {
         case Token::ENUM:    return parse_enum_decl(t, vis);
         case Token::EXTERN:  return parse_extern_block_or_fn_decl(t, vis);
-        case Token::FN:      return parse_fn_decl<BodyMode::Mandatory>(t, vis, /*extern*/ false, /*abi*/ "");
+        case Token::FN:      return parse_fn_decl(BodyMode::Mandatory, t, vis, /*extern*/ false, /*abi*/ "");
         case Token::IMPL:    return parse_impl(t, vis);
         case Token::MOD:     return parse_mod_decl(t, vis);
         case Token::STATIC:  return parse_static_item(t, vis);
@@ -522,14 +518,14 @@ Item* Parser::parse_item() {
     }
 }
 
-EnumDecl* Parser::parse_enum_decl(Track, Visibility) {
+const EnumDecl* Parser::parse_enum_decl(Track, Visibility) {
     assert(false && "TODO");
     return 0;
 }
 
-Item* Parser::parse_extern_block_or_fn_decl(Track t, Visibility vis) {
+const Item* Parser::parse_extern_block_or_fn_decl(Track t, Visibility vis) {
     if (la() == Token::FN)
-        return parse_fn_decl<BodyMode::Mandatory>(t, vis, /*extern*/ true, /*abi*/ "");
+        return parse_fn_decl(BodyMode::Mandatory, t, vis, /*extern*/ true, /*abi*/ "");
 
     Symbol abi;
     if (la() == Token::LIT_str)
@@ -538,15 +534,14 @@ Item* Parser::parse_extern_block_or_fn_decl(Track t, Visibility vis) {
     expect(Token::L_BRACE, "opening brace of external block");
     FnDecls fn_decls;
     while (la() == Token::FN)
-        fn_decls.emplace_back(parse_fn_decl<BodyMode::None>(t, vis, /*extern*/ true, abi));
+        fn_decls.emplace_back(parse_fn_decl(BodyMode::None, t, vis, /*extern*/ true, abi));
     expect(Token::R_BRACE, "closing brace of external block");
 
     return t.create<ExternBlock>(vis, abi, std::move(fn_decls));
 }
 
 #if 0
-template<BodyMode mode>
-FnDecl* Parser::parse_fn_decl(Track t, Visibility vis) {
+FnDecl* Parser::parse_fn_decl(BodyMode mode, Track t, Visibility vis) {
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     auto fn_decl = loc(new FnDecl());
@@ -572,7 +567,7 @@ FnDecl* Parser::parse_fn_decl(Track t, Visibility vis) {
 }
 #endif
 
-ImplItem* Parser::parse_impl(Track t, Visibility vis) {
+const ImplItem* Parser::parse_impl(Track t, Visibility vis) {
     eat(Token::IMPL);
     auto ast_type_params = parse_ast_type_params();
     const ASTType* ast_type = nullptr;
@@ -586,13 +581,13 @@ ImplItem* Parser::parse_impl(Track t, Visibility vis) {
     expect(Token::L_BRACE, "impl");
     FnDecls methods;
     while (la() == Token::FN)
-        methods.emplace_back(parse_fn_decl<BodyMode::Mandatory>(t, vis, /*exter*/ false, /*abi*/ ""));
+        methods.emplace_back(parse_fn_decl(BodyMode::Mandatory, t, vis, /*exter*/ false, /*abi*/ ""));
     expect(Token::R_BRACE, "closing brace of impl");
 
     return t.create<ImplItem>(vis, std::move(ast_type_params), trait, ast_type, std::move(methods));
 }
 
-ModDecl* Parser::parse_mod_decl(Track t, Visibility vis) {
+const ModDecl* Parser::parse_mod_decl(Track t, Visibility vis) {
     eat(Token::MOD);
     auto identifier = try_id("module declaration");
     auto ast_type_params = parse_ast_type_params();
@@ -606,7 +601,26 @@ ModDecl* Parser::parse_mod_decl(Track t, Visibility vis) {
     return t.create<ModDecl>(vis, identifier, std::move(ast_type_params), mod_contents);
 }
 
-StaticItem* Parser::parse_static_item(Track t, Visibility vis) {
+const ModContents* Parser::parse_mod_contents() {
+    auto t = track();
+    Items items;
+    while (true) {
+        cur_var_handle = 2; // HACK
+        switch (la()) {
+            case VISIBILITY:
+            case ITEM:
+                items.emplace_back(parse_item());
+                continue;
+            case Token::SEMICOLON:
+                lex();
+                continue;
+            default:
+                return t.create<ModContents>(std::move(items));
+        }
+    }
+}
+
+const StaticItem* Parser::parse_static_item(Track t, Visibility vis) {
     eat(Token::STATIC);
     bool mut = accept(Token::MUT);
     auto identifier = try_id("static item");
@@ -616,12 +630,12 @@ StaticItem* Parser::parse_static_item(Track t, Visibility vis) {
     return t.create<StaticItem>(vis, mut, identifier, ast_type, init);
 }
 
-StructDecl* Parser::parse_struct_decl(Track t, Visibility vis) {
+const StructDecl* Parser::parse_struct_decl(Track t, Visibility vis) {
     eat(Token::STRUCT);
     auto identifier = try_id("struct declaration");
     auto ast_type_params = parse_ast_type_params();
     expect(Token::L_BRACE, "struct declaration");
-    int i = 0;
+    size_t i = 0;
     FieldDecls field_decls;
     parse_comma_list("closing brace of struct declaration", Token::R_BRACE, [&] {
         field_decls.emplace_back(parse_field_decl(i++));
@@ -629,73 +643,44 @@ StructDecl* Parser::parse_struct_decl(Track t, Visibility vis) {
     return t.create<StructDecl>(vis, identifier, std::move(ast_type_params), std::move(field_decls));
 }
 
-TraitDecl* Parser::parse_trait_decl(Track t, Visibility vis) {
+const FieldDecl* Parser::parse_field_decl(const size_t i) {
+    auto t = track();
+    auto vis = parse_visibility();
+    auto identifier = try_id("struct field");
+    expect(Token::COLON, "struct field");
+    auto ast_type = parse_type();
+    return t.create<FieldDecl>(i, vis, identifier, ast_type);
+}
+
+const TraitDecl* Parser::parse_trait_decl(Track t, Visibility vis) {
     eat(Token::TRAIT);
-    auto identifier_ = try_id("trait declaration");
+    auto identifier = try_id("trait declaration");
     auto ast_type_params = parse_ast_type_params();
 
     ASTTypeApps super_traits;
     if (accept(Token::COLON)) {
         parse_comma_list("trait declaration", Token::L_BRACE, [&] {
-            trait_decl->super_traits_.emplace_back(parse_ast_type_app());
+            super_traits.emplace_back(parse_ast_type_app());
         });
-    } else
-        expect(Token::L_BRACE, "trait declaration");
+    }
 
+    expect(Token::L_BRACE, "trait declaration");
+    FnDecls methods;
     while (la() == Token::FN)
-        trait_decl->methods_.emplace_back(parse_fn_decl<BodyMode::Optional>(t, vis, /*exter*/ false, /*abi*/ ""));
-
+        methods.emplace_back(parse_fn_decl(BodyMode::Optional, t, vis, /*exter*/ false, /*abi*/ ""));
     expect(Token::R_BRACE, "closing brace of trait declaration");
 
     return t.create<TraitDecl>(vis, identifier, std::move(ast_type_params), std::move(super_traits), std::move(methods));
 }
 
-Typedef* Parser::parse_typedef(Track t, Visibility vis) {
-    auto type_def = loc(new Typedef());
+const Typedef* Parser::parse_typedef(Track t, Visibility vis) {
     eat(Token::TYPEDEF);
-    type_def->identifier_ = try_id("type definition");
-    parse_ast_type_params(type_def->ast_type_params_);
+    auto identifier = try_id("type definition");
+    auto ast_type_params = parse_ast_type_params();
     expect(Token::ASGN, "type definition");
-    type_def->ast_type_ = parse_type();
+    auto ast_type = parse_type();
     expect(Token::SEMICOLON, "type definition");
-    return type_def;
-}
-
-/*
- * item helpers
- */
-
-const ModContents* Parser::parse_mod_contents() {
-    auto mod_contents = loc(new ModContents());
-    parse_mod_contents(mod_contents);
-    return mod_contents;
-}
-
-void Parser::parse_mod_contents(ModContents* mod_contents) {
-    while (true) {
-        cur_var_handle = 2; // HACK
-        switch (la()) {
-            case VISIBILITY:
-            case ITEM:
-                mod_contents->items_.emplace_back(parse_item());
-                continue;
-            case Token::SEMICOLON:
-                lex();
-                continue;
-            default:
-                return;
-        }
-    }
-}
-
-const FieldDecl* Parser::parse_field_decl(const int i) {
-    auto field_decl = loc(new FieldDecl);
-    field_decl->index_ = i;
-    field_decl->visibility_ = parse_visibility();
-    field_decl->identifier_ = try_id("struct field");
-    expect(Token::COLON, "struct field");
-    field_decl->ast_type_ = parse_type();
-    return field_decl;
+    return t.create<Typedef>(vis, identifier, std::move(ast_type_params), ast_type);
 }
 
 /*
@@ -719,49 +704,43 @@ const ASTType* Parser::parse_type() {
         case Token::SIMD:       return parse_simd_type();
         default:  {
             error("type", "");
-            auto error_type = loc(new ErrorASTType());
-            lex();
-            return error_type;
+            return new ErrorASTType(prev_loc());
         }
     }
 }
 
 const ArrayASTType* Parser::parse_array_type() {
-    auto begin = la().location().begin();
+    auto t = track();
     eat(Token::L_BRACKET);
-    const ASTType* elem_ast_type = parse_type();
+    auto elem_ast_type = parse_type();
     if (accept(Token::MUL)) {
-        auto definite_array = new DefiniteArrayASTType();
-        definite_array->elem_ast_type_ = elem_ast_type;
-        definite_array->dim_ = parse_integer("definite array type");
+        auto dim = parse_integer("definite array type");
         expect(Token::R_BRACKET, "definite array type");
-        definite_array->set_loc(begin, prev_loc().end());
-        return definite_array;
+        return t.create<DefiniteArrayASTType>(elem_ast_type, dim);
     }
 
-    auto indefinite_array = new IndefiniteArrayASTType();
-    indefinite_array->elem_ast_type_ = elem_ast_type;
     expect(Token::R_BRACKET, "indefinite array type");
-    indefinite_array->set_loc(begin, prev_loc().end());
-    return indefinite_array;
+    return t.create<IndefiniteArrayASTType>(elem_ast_type);
 }
 
 const FnASTType* Parser::parse_fn_type() {
-    auto fn_type = loc(new FnASTType());
+    auto t = track();
     eat(Token::FN);
-    parse_ast_type_params(fn_type->ast_type_params_);
+    auto ast_type_params = parse_ast_type_params();
+    ASTTypes ast_type_args;
     expect(Token::L_PAREN, "function type");
     parse_comma_list("closing parenthesis of function type", Token::R_PAREN, [&] {
-        fn_type->ast_type_args_.emplace_back(parse_type());
+        ast_type_args.emplace_back(parse_type());
     });
 
     bool unused;
     if (auto ret_type = parse_return_type(unused, true))
-        fn_type->ast_type_args_.emplace_back(ret_type);
+        ast_type_args.emplace_back(ret_type);
 
-    return fn_type;
+    return t.create<FnASTType>(std::move(ast_type_params), std::move(ast_type_args));
 }
 
+#if 0
 const ASTType* Parser::parse_return_type(bool& is_continuation, bool mandatory) {
     is_continuation = false;
     if (accept(Token::ARROW)) {
@@ -794,88 +773,79 @@ const ASTType* Parser::parse_return_type(bool& is_continuation, bool mandatory) 
 
     return nullptr;
 }
+#endif
 
 const PrimASTType* Parser::parse_prim_type() {
-    auto prim_type = loc(new PrimASTType());
-    prim_type->kind_ = (PrimASTType::Kind) lex().kind();
-    return prim_type;
+    return track().create<PrimASTType>((PrimASTType::Kind) lex().kind());
 }
 
 const PtrASTType* Parser::parse_ptr_type() {
-    if (la() == Token::ANDAND) {
-        auto begin = la().location().begin();
-        auto inner = new PtrASTType();
-        lex();
-        inner->kind_ = accept(Token::MUT) ? PtrASTType::Mut : PtrASTType::Borrowed;
-        inner->addr_space_ = parse_addr_space();
-        inner->referenced_ast_type_ = parse_type();
-        auto outer = new PtrASTType();
-        outer->kind_ = PtrASTType::Borrowed;
-        outer->referenced_ast_type_ = inner;
-        inner->set_loc(begin, prev_loc().end());
-        outer->loc_ = inner->location();
-        return outer;
+    auto t = track();
+    if (accept(Token::ANDAND)) {
+        auto kind = accept(Token::MUT) ? PtrASTType::Mut : PtrASTType::Borrowed;
+        auto addr_space = parse_addr_space();
+        auto referenced_ast_type = parse_type();
+        return t.create<PtrASTType>(PtrASTType::Borrowed, 0, t.create<PtrASTType>(kind, addr_space, referenced_ast_type));
     }
-    auto ptr_type = loc(new PtrASTType());
 
+    PtrASTType::Kind kind;
     if (accept(Token::TILDE))
-        ptr_type->kind_ = PtrASTType::Owned;
+        kind = PtrASTType::Owned;
     else {
         eat(Token::AND);
         if (accept(Token::MUT))
-            ptr_type->kind_ = PtrASTType::Mut;
+            kind = PtrASTType::Mut;
         else
-            ptr_type->kind_ = PtrASTType::Borrowed;
+            kind = PtrASTType::Borrowed;
     }
 
-    ptr_type->addr_space_ = parse_addr_space();
-    ptr_type->referenced_ast_type_ = parse_type();
-    return ptr_type;
+    auto addr_space = parse_addr_space();
+    auto referenced_ast_type = parse_type();
+    return t.create<PtrASTType>(kind, addr_space, referenced_ast_type);
 }
 
 const TupleASTType* Parser::parse_tuple_type() {
-    auto tuple_type = loc(new TupleASTType());
+    auto t = track();
     eat(Token::L_PAREN);
+    ASTTypes ast_type_args;
     parse_comma_list("closing parenthesis of tuple type", Token::R_PAREN, [&] {
-        tuple_type->ast_type_args_.emplace_back(parse_type());
+        ast_type_args.emplace_back(parse_type());
     });
-    return tuple_type;
+    return t.create<TupleASTType>(std::move(ast_type_args));
 }
 
 const ASTTypeApp* Parser::parse_ast_type_app() {
-    return parse_ast_type_app(parse_path());
-}
+    auto t = track();
+    auto path = parse_path();
 
-const ASTTypeApp* Parser::parse_ast_type_app(const Path* path) {
-    auto ast_type_app = loc(new ASTTypeApp());
-    ast_type_app->set_begin(path->location().begin());
-    ast_type_app->path_ = path;
+    ASTTypes ast_type_args;
     if (accept(Token::L_BRACKET)) {
         parse_comma_list("type arguments for type application", Token::R_BRACKET, [&] {
-            ast_type_app->ast_type_args_.emplace_back(parse_type());
+            ast_type_args.emplace_back(parse_type());
         });
     }
-    return ast_type_app;
+
+    return t.create<ASTTypeApp>(path, std::move(ast_type_args));
 }
 
 const Typeof* Parser::parse_typeof() {
-    auto typeof = loc(new Typeof());
+    auto t = track();
     eat(Token::TYPEOF);
     expect(Token::L_PAREN, "typeof");
-    dock(typeof->expr_, parse_expr());
+    auto expr = parse_expr();
     expect(Token::R_PAREN, "typeof");
-    return typeof;
+    return t.create<Typeof>(expr);
 }
 
 const SimdASTType* Parser::parse_simd_type() {
-    auto simd = loc(new SimdASTType());
+    auto t = track();
     eat(Token::SIMD);
     expect(Token::L_BRACKET, "simd type");
-    simd->elem_ast_type_ = parse_type();
+    auto elem_ast_type = parse_type();
     expect(Token::MUL, "simd type");
-    simd->size_ = parse_integer("simd vector size");
+    auto size = parse_integer("simd vector size");
     expect(Token::R_BRACKET, "simd type");
-    return simd;
+    return t.create<SimdASTType>(elem_ast_type, size);
 }
 
 /*
@@ -890,6 +860,7 @@ bool Parser::is_infix() {
 }
 
 const Expr* Parser::parse_expr(Prec prec) {
+    auto t = track();
     auto lhs = la().is_prefix() ? parse_prefix_expr() : parse_primary_expr();
 
     if (lhs->isa<StmtLikeExpr>())
@@ -905,12 +876,12 @@ const Expr* Parser::parse_expr(Prec prec) {
             if (prec > PrecTable::infix_l[la()])
                 break;
 
-            lhs = parse_infix_expr(lhs);
+            lhs = parse_infix_expr(t, lhs);
         } else if ( la().is_postfix() ) {
             if (prec > PrecTable::postfix_l[la()])
                 break;
 
-            lhs = parse_postfix_expr(lhs);
+            lhs = parse_postfix_expr(t, lhs);
         } else
             break;
     }
@@ -922,123 +893,96 @@ const Expr* Parser::parse_prefix_expr() {
     if (la() == Token::OR || la() == Token::OROR)
         return parse_fn_expr();
 
-    auto expr = loc(new PrefixExpr());
+    auto t = track();
     auto kind = lex().kind();
-    expr->kind_ = (PrefixExpr::Kind) kind;
-    dock(expr->rhs_, parse_expr(PrecTable::prefix_r[kind]));
+    auto rhs = parse_expr(PrecTable::prefix_r[kind]);
 
-    return expr;
+    return t.create<PrefixExpr>((PrefixExpr::Kind) kind, rhs);
 }
 
-const Expr* Parser::parse_infix_expr(const Expr* lhs) {
-    auto expr = new InfixExpr();
+const Expr* Parser::parse_infix_expr(Track t, const Expr* lhs) {
     auto kind = lex().kind();
-    expr->kind_ = (InfixExpr::Kind) kind;
-    dock(expr->lhs_, lhs);
-    dock(expr->rhs_, parse_expr(PrecTable::infix_r[kind]));
-    expr->set_loc(lhs->location().begin(), expr->rhs()->location().end());
-    return expr;
+    auto rhs = parse_expr(PrecTable::infix_r[kind]);
+    return t.create<InfixExpr>(lhs, (InfixExpr::Kind) kind, rhs);
 }
 
-const MapExpr* Parser::parse_map_expr(const Expr* lhs) {
+const MapExpr* Parser::parse_map_expr(Track t, const Expr* lhs) {
     eat(Token::L_PAREN);
-    auto map = new MapExpr();
-    dock(map->lhs_, lhs);
-    parse_comma_list("arguments of a map expression", Token::R_PAREN, [&] { map->append(parse_expr()); });
-    map->set_loc(lhs->location().begin(), prev_loc().end());
-    return map;
+    Exprs args;
+    parse_comma_list("arguments of a map expression", Token::R_PAREN, [&] { args.emplace_back(parse_expr()); });
+    return t.create<MapExpr>(lhs, std::move(args));
 }
 
-const TypeAppExpr* Parser::parse_type_app_expr(const Expr* lhs) {
+const TypeAppExpr* Parser::parse_type_app_expr(Track t, const Expr* lhs) {
     eat(Token::L_BRACKET);
-    auto type_app_expr = new TypeAppExpr();
-    dock(type_app_expr->lhs_, lhs);
-    parse_comma_list("type arguments of a map expression", Token::R_BRACKET, [&] { type_app_expr->ast_type_args_.emplace_back(parse_type()); });
-    type_app_expr->set_loc(lhs->location().begin(), prev_loc().end());
-    return type_app_expr;
+    ASTTypes ast_type_args;
+    parse_comma_list("type arguments of a map expression", Token::R_BRACKET, [&] { ast_type_args.emplace_back(parse_type()); });
+    return t.create<TypeAppExpr>(lhs, std::move(ast_type_args));
 }
 
-const Expr* Parser::parse_postfix_expr(const Expr* lhs) {
+const Expr* Parser::parse_postfix_expr(Track t, const Expr* lhs) {
     switch (la()) {
-        case Token::L_BRACKET: return parse_type_app_expr(lhs);
-        case Token::L_PAREN:   return parse_map_expr(lhs);
+        case Token::L_BRACKET: return parse_type_app_expr(t, lhs);
+        case Token::L_PAREN:   return parse_map_expr(t, lhs);
         case Token::DEC:
         case Token::INC: {
-            auto expr = new PostfixExpr();
-            dock(expr->lhs_, lhs);
-            expr->kind_ = (PostfixExpr::Kind) lex().kind();
-            expr->set_loc(lhs->location().begin(), prev_loc().end());
-            return expr;
+            auto kind = (PostfixExpr::Kind) lex().kind();
+            return t.create<PostfixExpr>(lhs, kind);
         }
         case Token::DOT: {
             lex();
-            auto field = new FieldExpr();
-            dock(field->lhs_, lhs);
-            field->identifier_ = try_id("field expression");
-            field->set_loc(lhs->location().begin(), prev_loc().end());
-            return field;
+            auto identifier = try_id("field expression");
+            return t.create<FieldExpr>(lhs, identifier);
         }
         case Token::AS: {
             lex();
-            auto expr = new ExplicitCastExpr();
-            dock(expr->lhs_, lhs);
-            expr->ast_type_ = parse_type();
-            expr->set_loc(lhs->location().begin(), prev_loc().end());
-            return expr;
+            auto ast_type = parse_type();
+            return t.create<ExplicitCastExpr>(lhs, ast_type);
         }
         default: THORIN_UNREACHABLE;
     }
 }
 
 const Expr* Parser::parse_primary_expr() {
+    auto t = track();
     switch (la()) {
         case Token::L_PAREN: {
-            auto begin = lex().location().begin();
             auto expr = parse_expr();
             if (accept(Token::COMMA)) {
-                auto tuple = new TupleExpr();
-                tuple->set_begin(begin);
-                tuple->append(expr);
-                parse_comma_list("elements of a tuple expression", Token::R_PAREN, [&] { tuple->append(parse_expr()); });
-                tuple->set_end(prev_loc().end());
-                return tuple;
+                Exprs args;
+                args.emplace_back(expr);
+                parse_comma_list("elements of a tuple expression", Token::R_PAREN, [&] { args.emplace_back(parse_expr()); });
+                return t.create<TupleExpr>(std::move(args));
             } else {
                 expect(Token::R_PAREN, "primary expression");
                 return expr;
             }
         }
         case Token::L_BRACKET: {
-            auto begin = lex().location().begin();
             auto expr = parse_expr();
             if (accept(Token::COLON)) {
-                auto indefinite_array_expr = new IndefiniteArrayExpr();
-                dock(indefinite_array_expr->dim_, expr);
-                indefinite_array_expr->elem_ast_type_ = parse_type();
+                auto elem_ast_type = parse_type();
                 expect(Token::R_BRACKET, "indefinite array expression");
-                indefinite_array_expr->set_loc(begin, prev_loc().end());
-                return indefinite_array_expr;
+                return t.create<IndefiniteArrayExpr>(expr, elem_ast_type);
             }
+
             if (accept(Token::COMMA) && accept(Token::DOTDOT)) {
-                auto repeated_array_expr = loc(new RepeatedDefiniteArrayExpr());
-                repeated_array_expr->set_begin(begin);
-                dock(repeated_array_expr->value_, expr);
-                repeated_array_expr->count_ = parse_integer("repeated array expression");
+                auto count = parse_integer("repeated array expression");
                 expect(Token::R_BRACKET, "repeated array expression");
-                return repeated_array_expr;
+                return t.create<RepeatedDefiniteArrayExpr>(expr, count);
             }
-            auto array = new DefiniteArrayExpr();
-            array->set_begin(begin);
-            array->append(expr);
-            parse_comma_list("elements of an array expression", Token::R_BRACKET, [&] { array->append(parse_expr()); });
-            array->set_end(prev_loc().end());
-            return array;
+
+            Exprs args;
+            args.emplace_back(expr);
+            parse_comma_list("elements of an array expression", Token::R_BRACKET, [&] { args.emplace_back(parse_expr()); });
+            return t.create<DefiniteArrayExpr>(std::move(args));
         }
         case Token::SIMD: {
-            auto simd = loc(new SimdExpr());
             eat(Token::SIMD);
             expect(Token::L_BRACKET, "simd expression");
-            parse_comma_list("elements of a simd expression", Token::R_BRACKET, [&] { simd->append(parse_expr()); });
-            return simd;
+            Exprs args;
+            parse_comma_list("elements of a simd expression", Token::R_BRACKET, [&] { args.emplace_back(parse_expr()); });
+            return t.create<SimdExpr>(std::move(args));
         }
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype:
@@ -1055,55 +999,37 @@ const Expr* Parser::parse_primary_expr() {
                 parse_comma_list("type arguments", Token::R_BRACKET, [&] { ast_type_args.emplace_back(parse_type()); });
 
                 if (accept(Token::L_PAREN)) {   // type app expression + map expression
-                    auto type_app_expr = new TypeAppExpr();
-                    dock(type_app_expr->lhs_, new PathExpr(path));
-                    swap(type_app_expr->ast_type_args_, ast_type_args);
-
-                    auto map = new MapExpr();
-                    dock(map->lhs_, type_app_expr);
-                    parse_comma_list("arguments of a map expression", Token::R_PAREN, [&] { map->append(parse_expr()); });
-
-                    type_app_expr->set_loc(path->location().begin(), prev_loc().end());
-                    map->set_loc(path->location().begin(), prev_loc().end());
-
-                    return map;
+                    auto type_app_expr = t.create<TypeAppExpr>(new PathExpr(path), std::move(ast_type_args));
+                    Exprs args;
+                    parse_comma_list("arguments of a map expression", Token::R_PAREN, [&] { args.emplace_back(parse_expr()); });
+                    return t.create<MapExpr>(type_app_expr, std::move(args));
                 } else if (accept(Token::L_BRACE)) {
-                    auto ast_type_app = new ASTTypeApp();
-                    ast_type_app->path_ = path;
-                    swap(ast_type_app->ast_type_args_, ast_type_args);
-
-                    auto struct_expr = new StructExpr();
-                    struct_expr->ast_type_app_ = ast_type_app;
+                    auto ast_type_app = t.create<ASTTypeApp>(path, std::move(ast_type_args));
+                    StructExpr::Elems elems;
                     parse_comma_list("elements of struct expression", Token::R_BRACE, [&] {
+                        auto t = track();
                         auto symbol = try_id("identifier in struct expression");
                         expect(Token::COLON, "struct expression");
-                        struct_expr->elems_.emplace_back(symbol, parse_expr());
+                        elems.emplace_back(t.create<StructExpr::Elem>(symbol, parse_expr()));
                     });
 
-                    ast_type_app->set_loc(path->location().begin(), prev_loc().end());
-                    struct_expr->set_loc(path->location().begin(), prev_loc().end());
-
-                    return struct_expr;
+                    return t.create<StructExpr>(ast_type_app, std::move(elems));
                 }
             }
             if (la(0) == Token::L_BRACE && (la(1) == Token::ID && la(2) == Token::COLON)) {
                 eat(Token::L_BRACE);
 
-                auto ast_type_app = new ASTTypeApp();
-                ast_type_app->path_ = path;
+                auto ast_type_app = t.create<ASTTypeApp>(path, ASTTypes());
 
-                auto struct_expr = new StructExpr();
-                struct_expr->ast_type_app_ = ast_type_app;
+                StructExpr::Elems elems;
                 parse_comma_list("elements of struct expression", Token::R_BRACE, [&] {
+                    auto t = track();
                     auto symbol = try_id("identifier in struct expression");
                     expect(Token::COLON, "struct expression");
-                    struct_expr->elems_.emplace_back(symbol, parse_expr());
+                    elems.emplace_back(t.create<StructExpr::Elem>(symbol, parse_expr()));
                 });
 
-                ast_type_app->set_loc(path->location().begin(), prev_loc().end());
-                struct_expr->set_loc(path->location().begin(), prev_loc().end());
-
-                return struct_expr;
+                return t.create<StructExpr>(ast_type_app, std::move(elems));
             }
             return new PathExpr(path);
         }
@@ -1174,6 +1100,7 @@ const CharExpr* Parser::parse_char_expr() {
     return new CharExpr(lex().location(), symbol, value);
 }
 
+#if 0
 const StrExpr* Parser::parse_str_expr() {
     auto str_expr = loc(new StrExpr());
     do {
@@ -1207,27 +1134,30 @@ const FnExpr* Parser::parse_fn_expr() {
     dock(fn_expr->body_, parse_expr());
     return fn_expr;
 }
+#endif
 
 const IfExpr* Parser::parse_if_expr() {
-    auto if_expr = loc(new IfExpr());
+    auto t = track();
     eat(Token::IF);
-    dock(if_expr->cond_, parse_expr());
-    dock(if_expr->then_expr_, try_block_expr("consequence of an if expression"));
+    auto cond =  parse_expr();
+    auto then_expr = try_block_expr("consequence of an if expression");
+    const Expr* else_expr = nullptr;
     if (accept(Token::ELSE)) {
         switch (la()) {
-            case Token::IF:         dock(if_expr->else_expr_, parse_if_expr()); break;
+            case Token::IF:         else_expr =  parse_if_expr(); break;
             case Token::L_BRACE:
-            case Token::RUN_BLOCK:  dock(if_expr->else_expr_, parse_block_expr()); break;
+            case Token::RUN_BLOCK:  else_expr =  parse_block_expr(); break;
             default:
                 error("block or if expression", "alternative of an if expression");
         }
     }
 
-    if (if_expr->else_expr_ == nullptr)
-        dock(if_expr->else_expr_, new BlockExpr(prev_loc()));
-    return if_expr;
+    if (else_expr == nullptr)
+        else_expr = new BlockExpr(prev_loc());
+    return t.create<IfExpr>(cond, then_expr, else_expr);
 }
 
+#if 0
 const ForExpr* Parser::parse_for_expr() {
     auto for_expr = loc(new ForExpr());
     eat(Token::FOR);
@@ -1260,43 +1190,47 @@ const ForExpr* Parser::parse_with_expr() {
     dock(fn_expr->body_, try_block_expr("body of with statement"));
     return with_expr;
 }
+#endif
 
 const WhileExpr* Parser::parse_while_expr() {
-    auto while_expr = loc(new WhileExpr());
+    auto t = track();
     eat(Token::WHILE);
-    dock(while_expr->cond_, parse_expr());
-    while_expr->break_decl_ = create_continuation_decl("break", true);
-    while_expr->continue_decl_ = create_continuation_decl("continue", true);
-    dock(while_expr->body_, try_block_expr("body of while loop"));
-    return while_expr;
+    auto cond = parse_expr();
+    // TODO
+    //while_expr->break_decl_ = create_continuation_decl("break", true);
+    //while_expr->continue_decl_ = create_continuation_decl("continue", true);
+    auto body = try_block_expr("body of while loop");
+    return t.create<WhileExpr>(cond, body);
 }
 
 const BlockExprBase* Parser::parse_block_expr() {
     assert(la() == Token::L_BRACE || la() == Token::RUN_BLOCK);
-    auto block = loc(lex() == Token::L_BRACE ? (BlockExprBase*) new BlockExpr() : (BlockExprBase*) new RunBlockExpr());
-    auto& stmts = block->stmts_;
+    auto t = track();
+    bool run = accept(Token::RUN_BLOCK);
+    Stmts stmts;
+    const Expr* expr = nullptr;
     while (true) {
         switch (la()) {
             case Token::SEMICOLON:  lex(); continue; // ignore semicolon
             case STMT_NOT_EXPR:     stmts.emplace_back(parse_stmt_not_expr()); continue;
             case EXPR: {
+                auto u = track();
                 bool stmt_like = la().is_stmt_like();
-                auto expr = parse_expr();
+                expr = parse_expr();
                 if (accept(Token::SEMICOLON) || (stmt_like && la() != Token::R_BRACE)) {
-                    auto expr_stmt = new ExprStmt();
-                    expr_stmt->set_loc(expr->location().begin(), prev_loc().end());
-                    dock(expr_stmt->expr_, expr);
-                    stmts.emplace_back(expr_stmt);
+                    stmts.emplace_back(u.create<ExprStmt>(expr));
                     continue;
-                } else
-                    dock(block->expr_, expr);
+                }
                 // FALLTHROUGH
             }
             default:
                 expect(Token::R_BRACE, "block expression");
-                if (block->expr_ == nullptr)
-                    dock(block->expr_, new EmptyExpr(prev_loc()));
-                return block;
+                if (expr == nullptr)
+                    expr = new EmptyExpr(prev_loc());
+                if (run)
+                    t.create<RunBlockExpr>(std::move(stmts), expr);
+                else
+                    t.create<BlockExpr>(std::move(stmts), expr);
         }
     }
     THORIN_UNREACHABLE;
@@ -1319,31 +1253,28 @@ const BlockExprBase* Parser::try_block_expr(const std::string& context) {
  */
 
 const Ptrn* Parser::parse_ptrn() {
-    if (la() == Token::L_PAREN) {
+    if (la() == Token::L_PAREN)
         return parse_tuple_ptrn();
-    } else {
+    else
         return parse_id_ptrn();
-    }
 }
 
 const TuplePtrn* Parser::parse_tuple_ptrn() {
-    auto tuple_ptrn = loc(new TuplePtrn());
+    auto t = track();
     eat(Token::L_PAREN);
+    Ptrns elems;
     parse_comma_list("closing parenthesis of tuple pattern", Token::R_PAREN, [&] {
-        tuple_ptrn->elems_.emplace_back(parse_ptrn());
+        elems.emplace_back(parse_ptrn());
     });
-    return tuple_ptrn;
+    return t.create<TuplePtrn>(std::move(elems));
 }
 
 const IdPtrn* Parser::parse_id_ptrn() {
-    auto id_ptrn = loc(new IdPtrn());
-    auto local = loc(new LocalDecl(cur_var_handle++));
-    local->is_mut_ = accept(Token::MUT);
-    local->identifier_ = try_id("local variable in let binding");
-    if (accept(Token::COLON))
-        local->ast_type_ = parse_type();
-    id_ptrn->local_ = local.get();
-    return id_ptrn;
+    auto t = track();
+    auto mut = accept(Token::MUT);
+    auto identifier = try_id("local variable in let binding");
+    auto ast_type = accept(Token::COLON) ? parse_type() : nullptr;
+    return new IdPtrn(t.create<LocalDecl>(cur_var_handle++, mut, identifier, ast_type));
 }
 
 /*
@@ -1360,60 +1291,63 @@ const Stmt* Parser::parse_stmt_not_expr() {
 }
 
 const LetStmt* Parser::parse_let_stmt() {
-    auto let_stmt = loc(new LetStmt());
+    auto t = track();
     eat(Token::LET);
-    let_stmt->ptrn_ = parse_ptrn();
-    if (accept(Token::ASGN))
-        dock(let_stmt->init_, parse_expr());
+    auto ptrn = parse_ptrn();
+    auto init = accept(Token::ASGN) ? parse_expr() : nullptr;
     expect(Token::SEMICOLON, "the end of an let statement");
-    return let_stmt;
+    return t.create<LetStmt>(ptrn, init);
 }
 
 const ItemStmt* Parser::parse_item_stmt() {
-    auto item_stmt = loc(new ItemStmt());
-    item_stmt->item_ = parse_item();
-    return item_stmt;
+    return track().create<ItemStmt>(parse_item());
 }
 
-AsmStmt::Elem Parser::parse_asm_op() {
-    auto str = parse_str();
+const AsmStmt::Elem* Parser::parse_asm_op() {
+    auto t = track();
+    auto constraint = parse_str();
     auto expr = parse_expr();
-    return AsmStmt::Elem(str, expr);
+    return t.create<AsmStmt::Elem>(std::move(constraint), expr);
 }
 
 const AsmStmt* Parser::parse_asm_stmt() {
     static const Array<TokenKind> delimiters = {Token::COLON, Token::DOUBLE_COLON, Token::R_PAREN};
 
-    auto asm_stmt = loc(new AsmStmt());
+    auto t = track();
     eat(Token::ASM);
     expect(Token::L_PAREN, "asm statement");
-    asm_stmt->asm_template_ = parse_str();
+    auto asm_template = parse_str();
+    AsmStmt::Elems outputs, inputs;
+    Strings clobbers, options;
 
     if (accept(Token::COLON))        goto parse_outputs;
     if (accept(Token::DOUBLE_COLON)) goto parse_inputs;
-    if (accept(Token::R_PAREN))      return asm_stmt;
+    if (accept(Token::R_PAREN))      goto out;
 
 parse_outputs:
-    nibble_comma_list(delimiters, [&]{ asm_stmt->outputs_.emplace_back(parse_asm_op()); });
+    nibble_comma_list(delimiters, [&]{ outputs.emplace_back(parse_asm_op()); });
     if (accept(Token::COLON))        goto parse_inputs;
     if (accept(Token::DOUBLE_COLON)) goto parse_clobbers;
-    if (accept(Token::R_PAREN))      return asm_stmt;
+    if (accept(Token::R_PAREN))      goto out;
 
 parse_inputs:
-    nibble_comma_list(delimiters, [&]{ asm_stmt->inputs_.emplace_back(parse_asm_op()); });
+    nibble_comma_list(delimiters, [&]{ inputs.emplace_back(parse_asm_op()); });
     if (accept(Token::COLON))        goto parse_clobbers;
     if (accept(Token::DOUBLE_COLON)) goto parse_options;
-    if (accept(Token::R_PAREN))      return asm_stmt;
+    if (accept(Token::R_PAREN))      goto out;
 
 parse_clobbers:
-    nibble_comma_list({Token::COMMA, Token::R_PAREN}, [&]{ asm_stmt->clobbers_.emplace_back(parse_str()); });
+    nibble_comma_list({Token::COMMA, Token::R_PAREN}, [&]{ clobbers.emplace_back(parse_str()); });
     if (accept(Token::COLON))        goto parse_options;
     expect(Token::R_PAREN, "asm statement");
-    return asm_stmt;
+    goto out;
 
 parse_options:
-    parse_comma_list("asm statement", Token::R_PAREN, [&]{ asm_stmt->options_.emplace_back(parse_str()); });
-    return asm_stmt;
+    parse_comma_list("asm statement", Token::R_PAREN, [&]{ options.emplace_back(parse_str()); });
+
+out:
+    return t.create<AsmStmt>(std::move(asm_template), std::move(outputs), std::move(inputs),
+                             std::move(clobbers), std::move(options));
 }
 
 // TODO: merge this code with StrExpr

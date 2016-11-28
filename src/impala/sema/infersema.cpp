@@ -456,7 +456,7 @@ void ModContents::check(InferSema& sema) const {
 
 void ExternBlock::check(InferSema& sema) const {
     for (const auto& fn_decl : fn_decls())
-        sema.check(fn.get());
+        sema.check(fn_decl.get());
 }
 
 void Typedef::check(InferSema& sema) const {
@@ -564,7 +564,7 @@ const Type* FnExpr::check(InferSema& sema) const {
     if (body_type->isa<NoRetType>() || body_type->isa<UnknownType>())
         return sema.fn_type(param_types);
     else {
-        param_types.back() = sema.constrain(params().back(), sema.fn_type(body_type));
+        param_types.back() = sema.constrain(params().back().get(), sema.fn_type(body_type));
         return sema.fn_type(param_types);
     }
 }
@@ -666,10 +666,10 @@ const Type* DefiniteArrayExpr::check(InferSema& sema) const {
         expected_elem_type = sema.type_error();
 
     for (const auto& arg : args())
-        sema.check(arg);
+        sema.check(arg.get());
 
     for (const auto& arg : args())
-        expected_elem_type = sema.coerce(expected_elem_type, arg);
+        expected_elem_type = sema.coerce(expected_elem_type, arg.get());
 
     return sema.definite_array_type(expected_elem_type, num_args());
 }
@@ -684,10 +684,10 @@ const Type* SimdExpr::check(InferSema& sema) const {
         expected_elem_type = sema.type_error();
 
     for (const auto& arg : args())
-        sema.check(arg);
+        sema.check(arg.get());
 
     for (const auto& arg : args())
-        expected_elem_type = sema.coerce(expected_elem_type, arg);
+        expected_elem_type = sema.coerce(expected_elem_type, arg.get());
 
     return sema.simd_type(expected_elem_type, num_args());
 }
@@ -713,7 +713,7 @@ const Type* StructExpr::check(InferSema& sema) const {
     auto type = sema.check(ast_type_app());
 
     for (const auto& elem : elems())
-        sema.check(elem.expr());
+        sema.check(elem->expr());
 
     return type;
 }

@@ -513,7 +513,7 @@ const Def* SimdExpr::remit(CodeGen& cg) const {
 const Def* StructExpr::remit(CodeGen& cg) const {
     Array<const Def*> defs(num_elems());
     for (const auto& elem : elems())
-        defs[elem.field_decl()->index()] = cg.remit(elem.expr());
+        defs[elem->field_decl()->index()] = cg.remit(elem->expr());
     return cg.world().struct_agg(cg.convert(type())->as<thorin::StructType>(), defs, location());
 }
 
@@ -751,11 +751,11 @@ void LetStmt::emit(CodeGen& cg) const {
 void AsmStmt::emit(CodeGen& cg) const {
     Array<const thorin::Type*> outs(num_outputs());
     for (size_t i = 0, e = num_outputs(); i != e; ++i)
-        outs[i] = cg.convert(output(i).expr()->type());
+        outs[i] = cg.convert(output(i)->expr()->type());
 
     Array<const Def*> ins(num_inputs());
     for (size_t i = 0, e = num_inputs(); i != e; ++i)
-        ins[i] = cg.remit(input(i).expr());
+        ins[i] = cg.remit(input(i)->expr());
 
     thorin::Assembly::Flags flags = thorin::Assembly::Flags::NoFlag;
     for (const auto& option : options()) {
@@ -773,7 +773,7 @@ void AsmStmt::emit(CodeGen& cg) const {
     size_t i = 0;
     cg.set_mem(assembly->out(i++));
     for (const auto& output: outputs())
-        cg.lemit(output.expr()).store(assembly->out(i++), location());
+        cg.lemit(output->expr()).store(assembly->out(i++), location());
 }
 
 //------------------------------------------------------------------------------
