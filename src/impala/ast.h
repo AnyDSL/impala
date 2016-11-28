@@ -655,7 +655,7 @@ protected:
 
 private:
     std::unique_ptr<const Expr> body_;
-    bool is_continuation_;
+    bool is_continuation_; //< TODO remove this!!!
 };
 
 //------------------------------------------------------------------------------
