@@ -61,7 +61,7 @@ enum Prec {
     NUM_PREC
 };
 
-typedef Prec Type2Prec[Token::NUM_TOKENS];
+typedef Prec Type2Prec[Token::Num_Tokens];
 
 struct BinPrec {
     Prec l;
@@ -71,7 +71,7 @@ struct BinPrec {
     BinPrec(Prec l, Prec r) : l(l), r(r) {}
 };
 
-typedef BinPrec Type2BinPrec[Token::NUM_TOKENS];
+typedef BinPrec Type2BinPrec[Token::Num_Tokens];
 
 struct PrecTable {
     static Type2Prec prefix_r; ///< Right precedence -- for unary prefix operators.

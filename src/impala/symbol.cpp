@@ -5,7 +5,9 @@
 
 namespace impala {
 
-uint64_t StrHash::operator () (const char* s) const {
+Symbol::Table Symbol::table_;
+
+uint64_t StrHash::hash(const char* s) {
     uint64_t seed = thorin::hash_begin();
     const char* i = s;
 
@@ -13,8 +15,6 @@ uint64_t StrHash::operator () (const char* s) const {
         seed = thorin::hash_combine(seed, *i++);
     return thorin::hash_combine(seed, i-s);
 }
-
-Symbol::Table Symbol::table_;
 
 #ifdef _MSC_VER
 static const char* duplicate(const char* s) { return _strdup(s); }

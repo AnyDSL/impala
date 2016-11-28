@@ -1,4 +1,4 @@
-#include <sstream>
+#include <memory>
 
 #include "thorin/util/array.h"
 #include "thorin/util/iterator.h"
@@ -119,8 +119,8 @@ private:
      */
     Representative* unify_by_rank(Representative* x, Representative* y);
 
-    TypeMap<Representative> representatives_;
-    GIDMap<Lambda, const Lambda*> old2new_;
+    TypeMap<std::unique_ptr<Representative>> representatives_;
+    GIDMap<const Lambda*, const Lambda*> old2new_;
     bool todo_ = true;
 
     friend void type_inference(Init&, const ModContents*);
@@ -289,11 +289,11 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
 auto InferSema::representative(const Type* type) -> Representative* {
     auto i = representatives_.find(type);
     if (i == representatives_.end()) {
-        auto p = representatives_.emplace(type, type);
+        auto p = representatives_.emplace(type, std::make_unique<Representative>(type));
         assert_unused(p.second);
         i = p.first;
     }
-    return &i->second;
+    return &*i->second;
 }
 
 auto InferSema::find(Representative* repr) -> Representative* {
