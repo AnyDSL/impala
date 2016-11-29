@@ -77,7 +77,7 @@ public:
     // check wrappers
 
     const Var* check(const ASTTypeParam* ast_type_param) { ast_type_param->check(*this); return ast_type_param->var(); }
-    void check(const ModContents* n) { n->check(*this); }
+    void check(const Module* module) { module->check(*this); }
     const Type* check(const FieldDecl* n) { n->check(*this); return n->type(); }
     const Type* check(const LocalDecl* local) { local->check(*this); return local->type(); }
     const Type* check(const ASTType* ast_type) { ast_type->check(*this); return ast_type->type(); }
@@ -101,9 +101,9 @@ public:
     const Fn* cur_fn_ = nullptr;
 };
 
-void type_analysis(const ModContents* mod, bool nossa) {
+void type_analysis(const Module* module, bool nossa) {
     TypeSema sema(nossa);
-    sema.check(mod);
+    sema.check(module);
 }
 
 template<class T>
@@ -194,12 +194,10 @@ const Type* Fn::check_body(TypeSema& sema) const {
  * items
  */
 
-void ModDecl::check(TypeSema& sema) const {
-    if (mod_contents())
-        sema.check(mod_contents());
+void ModuleDecl::check(TypeSema&) const {
 }
 
-void ModContents::check(TypeSema& sema) const {
+void Module::check(TypeSema& sema) const {
     for (const auto& item : items())
         sema.check(item.get());
 }

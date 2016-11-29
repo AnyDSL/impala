@@ -216,12 +216,13 @@ public:
 
     // items + helpers
     const Item*        parse_item();
+    Items              parse_items();
     const StaticItem*  parse_static_item(Tracker, Visibility);
     const EnumDecl*    parse_enum_decl(Tracker, Visibility);
     const FnDecl*      parse_fn_decl(BodyMode, Tracker, Visibility, bool is_extern, Symbol abi);
     const ImplItem*    parse_impl(Tracker, Visibility);
-    const ModDecl*     parse_mod_decl(Tracker, Visibility);
-    const ModContents* parse_mod_contents();
+    const Item*        parse_module_or_module_decl(Tracker, Visibility);
+    const Module*      parse_module();
     const Item*        parse_extern_block_or_fn_decl(Tracker, Visibility);
     const StructDecl*  parse_struct_decl(Tracker, Visibility);
     const FieldDecl*   parse_field_decl(const size_t i);
@@ -284,12 +285,12 @@ private:
 
 //------------------------------------------------------------------------------
 
-std::unique_ptr<const ModContents> parse(std::istream& is, const char* filename) {
+Items parse(std::istream& is, const char* filename) {
     Parser parser(is, filename);
-    auto mod_contents = parser.parse_mod_contents();
+    auto items = parser.parse_items();
     if (parser.la() != Token::END_OF_FILE)
         parser.error("module item", "module contents");
-    return std::unique_ptr<const ModContents>(mod_contents);
+    return items;
 }
 
 //------------------------------------------------------------------------------
@@ -495,7 +496,7 @@ const Item* Parser::parse_item() {
         case Token::EXTERN:  return parse_extern_block_or_fn_decl(tracker, vis);
         case Token::FN:      return parse_fn_decl(BodyMode::Mandatory, tracker, vis, /*extern*/ false, /*abi*/ "");
         case Token::IMPL:    return parse_impl(tracker, vis);
-        case Token::MOD:     return parse_mod_decl(tracker, vis);
+        case Token::MOD:     return parse_module_or_module_decl(tracker, vis);
         case Token::STATIC:  return parse_static_item(tracker, vis);
         case Token::STRUCT:  return parse_struct_decl(tracker, vis);
         case Token::TRAIT:   return parse_trait_decl(tracker, vis);
@@ -573,22 +574,21 @@ const ImplItem* Parser::parse_impl(Tracker tracker, Visibility vis) {
     return new ImplItem(tracker, vis, std::move(ast_type_params), trait, ast_type, std::move(methods));
 }
 
-const ModDecl* Parser::parse_mod_decl(Tracker tracker, Visibility vis) {
+const Item* Parser::parse_module_or_module_decl(Tracker tracker, Visibility vis) {
     eat(Token::MOD);
     auto identifier = try_id("module declaration");
     auto ast_type_params = parse_ast_type_params();
-    const ModContents* mod_contents = nullptr;
     if (accept(Token::L_BRACE)) {
-         mod_contents = parse_mod_contents();
+        auto items = parse_items();
         expect(Token::R_BRACE, "module");
-    } else
+        return new Module(tracker, vis, identifier, std::move(ast_type_params), std::move(items));
+    } else {
         expect(Token::SEMICOLON, "module declaration");
-
-    return new ModDecl(tracker, vis, identifier, std::move(ast_type_params), mod_contents);
+        return new ModuleDecl(tracker, vis, identifier, std::move(ast_type_params));
+    }
 }
 
-const ModContents* Parser::parse_mod_contents() {
-    auto tracker = track();
+Items Parser::parse_items() {
     Items items;
     while (true) {
         cur_var_handle = 2; // HACK
@@ -601,7 +601,7 @@ const ModContents* Parser::parse_mod_contents() {
                 lex();
                 continue;
             default:
-                return new ModContents(tracker, std::move(items));
+                return items;
         }
     }
 }

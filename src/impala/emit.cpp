@@ -218,7 +218,7 @@ void ValueItem::emit_item(CodeGen& cg) const {
     cg.emit(static_cast<const ValueDecl*>(this), nullptr);
 }
 
-void ModContents::emit(CodeGen& cg) const {
+void Module::emit_item(CodeGen& cg) const {
     for (const auto& item : items())
         cg.emit(item.get());
 }
@@ -263,7 +263,7 @@ void ExternBlock::emit_item(CodeGen& cg) const {
     }
 }
 
-void ModDecl::emit_item(CodeGen&) const {
+void ModuleDecl::emit_item(CodeGen&) const {
 }
 
 void ImplItem::emit_item(CodeGen& cg) const {
@@ -778,9 +778,9 @@ void AsmStmt::emit(CodeGen& cg) const {
 
 //------------------------------------------------------------------------------
 
-void emit(World& world, const ModContents* mod) {
+void emit(World& world, const Module* mod) {
     CodeGen cg(world);
-    mod->emit(cg);
+    mod->emit_item(cg);
     clear_value_numbering_table(world);
 }
 

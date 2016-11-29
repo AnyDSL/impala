@@ -175,14 +175,10 @@ void FnASTType::check(NameSema& sema) const {
  * items
  */
 
-void ModDecl::check(NameSema& sema) const {
-    sema.push_scope();
-    if (mod_contents())
-        mod_contents()->check(sema);
-    sema.pop_scope();
-}
+void ModuleDecl::check(NameSema& ) const {}
 
-void ModContents::check(NameSema& sema) const {
+void Module::check(NameSema& sema) const {
+    sema.push_scope();
     for (const auto& item : items()) {
         sema.check_head(item.get());
         if (auto named_item = item->isa<NamedItem>())
@@ -190,6 +186,7 @@ void ModContents::check(NameSema& sema) const {
     }
     for (const auto& item : items())
         item->check(sema);
+    sema.pop_scope();
 }
 
 void ExternBlock::check(NameSema& sema) const {
@@ -433,9 +430,9 @@ void AsmStmt::check(NameSema& sema) const {
 
 //------------------------------------------------------------------------------
 
-void name_analysis(const ModContents* mod) {
+void name_analysis(const Module* module) {
     NameSema sema;
-    mod->check(sema);
+    module->check(sema);
 }
 
 //------------------------------------------------------------------------------

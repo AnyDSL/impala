@@ -47,7 +47,6 @@ public:
 
     // check wrappers
 
-    void check(const ModContents* n) { n->check(*this); }
     const Type* check(const LocalDecl* local) {
         auto type = local->check(*this);
         constrain(local, type);
@@ -125,7 +124,7 @@ private:
     GIDMap<const Lambda*, const Lambda*> old2new_;
     bool todo_ = true;
 
-    friend void type_inference(Init&, const ModContents*);
+    friend void type_inference(Init&, const Module*);
 };
 
 //------------------------------------------------------------------------------
@@ -337,14 +336,14 @@ auto InferSema::unify_by_rank(Representative* x, Representative* y) -> Represent
 
 //------------------------------------------------------------------------------
 
-void type_inference(Init& init, const ModContents* mod) {
+void type_inference(Init& init, const Module* module) {
     auto sema = new InferSema();
     init.typetable = sema;
 
     int i = 0;
     for (;sema->todo_; ++i) {
         sema->todo_ = false;
-        sema->check(mod);
+        sema->check(module);
     }
 
     DLOG("iterations needed for type inference: %", i);
@@ -446,12 +445,10 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
  * items
  */
 
-void ModDecl::check(InferSema& sema) const {
-    if (mod_contents())
-        sema.check(mod_contents());
+void ModuleDecl::check(InferSema&) const {
 }
 
-void ModContents::check(InferSema& sema) const {
+void Module::check(InferSema& sema) const {
     for (const auto& item : items())
         sema.check(item.get());
 }

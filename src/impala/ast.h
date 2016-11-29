@@ -33,7 +33,6 @@ class Expr;
 class FieldDecl;
 class Fn;
 class FnDecl;
-class Item;
 class LocalDecl;
 class MapExpr;
 class NamedItem;
@@ -57,7 +56,6 @@ typedef std::vector<std::unique_ptr<const ASTTypeApp>> ASTTypeApps;
 typedef std::vector<std::unique_ptr<const ASTTypeParam>> ASTTypeParams;
 typedef std::vector<std::unique_ptr<const FieldDecl>> FieldDecls;
 typedef std::vector<std::unique_ptr<const FnDecl>> FnDecls;
-typedef std::vector<std::unique_ptr<const Item>> Items;
 typedef std::vector<std::unique_ptr<const Param>> Params;
 typedef std::vector<std::unique_ptr<const Stmt>> Stmts;
 typedef std::vector<char> Chars;
@@ -680,30 +678,6 @@ private:
  * items
  */
 
-class ModContents : public ASTNode {
-public:
-    ModContents(Location location, Items&& items)
-        : ASTNode(location)
-        , items_(std::move(items))
-    {}
-
-    const Items& items() const { return items_; }
-    const ItemTable& item_table() const { return item_table_; }
-    std::ostream& stream(std::ostream&) const override;
-    void check(NameSema&) const;
-    void emit(CodeGen&) const;
-
-private:
-    void check(InferSema&) const;
-    void check(TypeSema&) const;
-
-    Items items_;
-    mutable ItemTable item_table_;
-
-    friend class InferSema;
-    friend class TypeSema;
-};
-
 class Item : public thorin::MagicCast<Item> {
 public:
     Item(Visibility visibility)
@@ -767,15 +741,41 @@ private:
     void emit_item(CodeGen&) const override;
 };
 
-class ModDecl : public TypeDeclItem {
+class Module : public TypeDeclItem {
 public:
-    ModDecl(Location location, Visibility visibility, const Identifier* identifier,
-            ASTTypeParams&& ast_type_params, const ModContents* mod_contents)
+    Module(Location location, Visibility visibility, const Identifier* identifier,
+           ASTTypeParams&& ast_type_params, Items&& items)
         : TypeDeclItem(location, visibility, identifier, std::move(ast_type_params))
-        , mod_contents_(std::move(mod_contents))
+        , items_(std::move(items))
     {}
 
-    const ModContents* mod_contents() const { return mod_contents_.get(); }
+    Module(const char* first_file_name, Items&& items)
+        : TypeDeclItem({first_file_name, 1, 1, 1, 1}, Visibility::Pub, nullptr, ASTTypeParams())
+        , items_(std::move(items))
+    {
+        // TODO add location
+        //if (!items.empty())
+    }
+
+    const Items& items() const { return items_; }
+    const ItemTable& item_table() const { return item_table_; }
+
+    void check(NameSema&) const override;
+    void check(InferSema&) const override;
+    void check(TypeSema&) const override;
+    void emit_item(CodeGen&) const override;
+    std::ostream& stream(std::ostream&) const override;
+
+private:
+    Items items_;
+    mutable ItemTable item_table_;
+};
+
+class ModuleDecl : public TypeDeclItem {
+public:
+    ModuleDecl(Location location, Visibility vis, const Identifier* identifier, ASTTypeParams&& ast_type_params)
+        : TypeDeclItem(location, vis, identifier, std::move(ast_type_params))
+    {}
 
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
@@ -784,8 +784,6 @@ private:
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
     void emit_item(CodeGen&) const override;
-
-    std::unique_ptr<const ModContents> mod_contents_;
 };
 
 class ExternBlock : public ASTNode, public Item {

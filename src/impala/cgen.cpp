@@ -210,7 +210,7 @@ private:
 public:
     bool needs_vectors = false;
 
-    void process_module(const ModContents* mod) {
+    void process_module(const Module* mod) {
         for (const auto& item : mod->items()) {
             if (auto decl = item->isa<FnDecl>())
                 process_fn_decl(decl);
@@ -318,7 +318,7 @@ public:
     }
 };
 
-bool generate_c_interface(const ModContents* mod, const CGenOptions& opts, std::ostream& o) {
+bool generate_c_interface(const Module* mod, const CGenOptions& opts, std::ostream& o) {
     if (opts.fns_only && opts.structs_only)
         return false;
 

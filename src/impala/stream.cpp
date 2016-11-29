@@ -121,16 +121,12 @@ std::ostream& ValueDecl::stream(std::ostream& os) const {
  * items + item helpers
  */
 
-std::ostream& ModContents::stream(std::ostream& os) const {
+std::ostream& Module::stream(std::ostream& os) const {
     return stream_list(os, items(), [&](const auto& item) { os << item.get() << endl; }, "", "", "", true);
 }
 
-std::ostream& ModDecl::stream(std::ostream& os) const {
-    stream_ast_type_params(os << "mod " << symbol());
-    if (mod_contents()) {
-        return os << " {" << up << endl << mod_contents() << down << endl << "}";
-    } else
-        return os << ';';
+std::ostream& ModuleDecl::stream(std::ostream& os) const {
+    return stream_ast_type_params(os << "mod " << symbol()) << ';';
 }
 
 std::ostream& ExternBlock::stream(std::ostream& os) const {
