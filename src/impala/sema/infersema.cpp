@@ -71,8 +71,10 @@ public:
     }
 
     const Type* check_call(const Expr* lhs, ArrayRef<const Expr*> args, const Type* call_type);
-    const Type* check_call(const Expr* lhs, const std::deque<AutoPtr<const Expr>>& args, const Type* call_type) {
-        Array<const Expr*> array(args.begin(), args.end());
+    const Type* check_call(const Expr* lhs, const Exprs& args, const Type* call_type) {
+        Array<const Expr*> array(args.size());
+        for (size_t i = 0, e = args.size(); i != e; ++i)
+            array[i] = args[i].get();
         return check_call(lhs, array, call_type);
     }
 
@@ -208,7 +210,7 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
             check(src);
         }
         if (is_subtype(t, src->type_) && t != src->type())
-            new ImplicitCastExpr(src, t);
+            ImplicitCastExpr::create(src, t);
     }
 
     return t;
@@ -647,12 +649,12 @@ const Type* PostfixExpr::check(InferSema& sema) const {
 }
 
 const Type* ExplicitCastExpr::check(InferSema& sema) const {
-    sema.check(lhs());
+    sema.check(src());
     return sema.check(ast_type());
 }
 
 const Type* ImplicitCastExpr::check(InferSema& sema) const {
-    sema.check(lhs());
+    sema.check(src());
     return type();
 }
 
@@ -793,12 +795,12 @@ const Type* MapExpr::check(InferSema& sema) const {
 
     if (ltype->isa<Lambda>()) {
         if (!lhs_->isa<TypeAppExpr>())
-            TypeAppExpr::create(lhs_);
+            TypeAppExpr::create(lhs());
         ltype = sema.check(lhs());
     }
 
     if (ltype->isa<PtrType>()) {
-        PrefixExpr::create_deref(lhs_);
+        PrefixExpr::create_deref(lhs());
         ltype = sema.check(lhs());
     }
 
@@ -824,7 +826,7 @@ const Type* MapExpr::check(InferSema& sema) const {
 
 const Type* BlockExprBase::check(InferSema& sema) const {
     for (const auto& stmt : stmts())
-        sema.check(stmt);
+        sema.check(stmt.get());
 
     return expr() ? sema.check(expr()) : sema.unit()->as<Type>();
 }
@@ -869,12 +871,15 @@ const Type* ForExpr::check(InferSema& sema) const {
             }
 
             // copy over args and check call
-            Array<const Expr*> args(map->args().size()+1);
-            *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
+            Array<const Expr*> args(map->num_args() + 1);
+            for (size_t i = 0, e = map->num_args(); i != e; ++i)
+                args[i] = map->arg(i);
+            args.back() = fn_expr();
             return sema.check_call(map->lhs(), args, type_);
         }
 
-        for (int i = 0, n = map->num_args(); i < n; i++) { sema.check(map->arg(i)); }
+        for (size_t i = 0, e = map->num_args(); i != e; ++i)
+            sema.check(map->arg(i));
     }
 
     sema.check(fn_expr());
@@ -918,8 +923,8 @@ void LetStmt::check(InferSema& sema) const {
 }
 
 void AsmStmt::check(InferSema& sema) const {
-    for (const auto& output : outputs()) sema.check(output.expr());
-    for (const auto&  input :  inputs()) sema.check( input.expr());
+    for (const auto& output : outputs()) sema.check(output->expr());
+    for (const auto&  input :  inputs()) sema.check( input->expr());
 }
 
 //------------------------------------------------------------------------------

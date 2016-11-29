@@ -87,7 +87,9 @@ public:
     void check(const Stmt* n) { n->check(*this); }
     void check_call(const Expr* expr, ArrayRef<const Expr*> args);
     void check_call(const Expr* expr, const Exprs& args) {
-        Array<const Expr*> array(args.begin(), args.end());
+        Array<const Expr*> array(args.size());
+        for (size_t i = 0, e = args.size(); i != e; ++i)
+            array[i] = args[i].get();
         check_call(expr, array);
     }
 
@@ -405,7 +407,7 @@ void CastExpr::check(TypeSema& sema) const {
     if (auto explicit_cast_expr = isa<ExplicitCastExpr>())
         sema.check(explicit_cast_expr->ast_type());
 
-    auto src_type = sema.check(lhs());
+    auto src_type = sema.check(src());
     auto dst_type = type();
 
     // TODO be consistent: dst is first argument, src ist second argument
@@ -475,15 +477,15 @@ void StructExpr::check(TypeSema& sema) const {
         for (const auto& elem : elems()) {
             sema.check(elem->expr());
 
-            if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
-                elem.field_decl_ = field_decl;
+            if (auto field_decl = struct_decl->field_decl(elem->symbol())) {
+                elem->field_decl_ = field_decl;
 
                 if (!thorin::visit(done, field_decl))
-                    sema.expect_type(struct_type->op(field_decl->index()), elem.expr(), "initialization type for field");
+                    sema.expect_type(struct_type->op(field_decl->index()), elem->expr(), "initialization type for field");
                 else
-                    error(elem.expr(), "field '%' specified more than once", elem.symbol());
+                    error(elem->expr(), "field '%' specified more than once", elem->symbol());
             } else
-                error(elem.expr(), "structure '%' has no field named '%'", struct_decl->symbol(), elem.symbol());
+                error(elem->expr(), "structure '%' has no field named '%'", struct_decl->symbol(), elem->symbol());
         }
 
         if (done.size() != struct_decl->field_table().size()) {
@@ -594,9 +596,12 @@ void ForExpr::check(TypeSema& sema) const {
         if (auto fn_for = ltype->isa<FnType>()) {
             if (fn_for->num_ops() != 0) {
                 if (fn_for->ops().back()->isa<FnType>()) {
-                    // copy over args and check call
-                    Array<const Expr*> args(map->args().size()+1);
-                    *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
+                    // TODO remove copy & paste code
+                    // copy over args and check call --
+                    Array<const Expr*> args(map->num_args() + 1);
+                    for (size_t i = 0, e = map->num_args(); i != e; ++i)
+                        args[i] = map->arg(i);
+                    args.back() = fn_expr();
                     sema.check_call(map->lhs(), args);
                     return;
                 }
@@ -615,7 +620,7 @@ void ForExpr::check(TypeSema& sema) const {
 
 void TuplePtrn::check(TypeSema& sema) const {
     for (const auto& elem : elems()) {
-        sema.check(elem);
+        sema.check(elem.get());
     }
 }
 
@@ -664,13 +669,13 @@ void check_correct_asm_type(const Type* t, const Expr *expr) {
 
 void AsmStmt::check(TypeSema& sema) const {
     for (const auto& output : outputs()) {
-        if (!output.expr()->is_lvalue())
-            error(output.expr(), "output expression of an asm statement must be an lvalue");
-        check_correct_asm_type(sema.check(output.expr()), output.expr());
+        if (!output->expr()->is_lvalue())
+            error(output->expr(), "output expression of an asm statement must be an lvalue");
+        check_correct_asm_type(sema.check(output->expr()), output->expr());
     }
 
     for (const auto& input : inputs())
-        check_correct_asm_type(sema.check(input.expr()), input.expr());
+        check_correct_asm_type(sema.check(input->expr()), input->expr());
 
     for (const auto& option : options()) {
         if (option != "volatile" && option != "alignstack" && option != "intel")

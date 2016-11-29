@@ -345,7 +345,7 @@ const Def* StrExpr::remit(CodeGen& cg) const {
 }
 
 const Def* CastExpr::remit(CodeGen& cg) const {
-    auto def = cg.remit(lhs());
+    auto def = cg.remit(src());
     auto thorin_type = cg.convert(type());
     return cg.world().convert(thorin_type, def, location());
 }

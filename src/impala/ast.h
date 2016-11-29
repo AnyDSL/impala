@@ -1059,13 +1059,11 @@ protected:
         return src;
     }
 
-    friend void insert(const Expr* /*nexpr*/, std::unique_ptr<const Expr>& /*nexpr_dock*/, const Expr* /*child*/) {
-#if 0
+    friend void insert(const Expr* nexpr, std::unique_ptr<const Expr>& nexpr_dock, const Expr* child) {
         nexpr_dock.reset(nexpr);
         swap(nexpr_dock, *child->docker_); // nexpr_dock -> *child->docker_, *child->docker -> nexpr
         nexpr->docker_ = child->docker_;
         child->docker_ = &nexpr_dock;
-#endif
     }
 
     friend class Args;
@@ -1247,9 +1245,14 @@ public:
         , rhs_(dock(rhs_, rhs))
     {}
 
-    static const PrefixExpr* create(const Expr* child, const Kind kind);
-    static const PrefixExpr* create_deref(const Expr* child) { return create(child, MUL); }
-    static const PrefixExpr* create_addrof(const Expr* child) { return create(child, AND); }
+    static const PrefixExpr* create(const Expr* rhs, const Kind kind) {
+        auto deref = new PrefixExpr(rhs->location(), kind, nullptr);
+        insert(deref, deref->rhs_, rhs);
+        return deref;
+    }
+
+    static const PrefixExpr* create_deref(const Expr* rhs) { return create(rhs, MUL); }
+    static const PrefixExpr* create_addrof(const Expr* rhs) { return create(rhs, AND); }
 
     const Expr* rhs() const { return rhs_.get(); }
     Kind kind() const { return kind_; }
@@ -1375,12 +1378,12 @@ private:
 
 class CastExpr : public Expr {
 public:
-    CastExpr(Location location, const Expr* lhs)
+    CastExpr(Location location, const Expr* src)
         : Expr(location)
-        , lhs_(dock(lhs_, lhs))
+        , src_(dock(src_, src))
     {}
 
-    const Expr* lhs() const { return lhs_.get(); }
+    const Expr* src() const { return src_.get(); }
 
     bool is_lvalue() const override;
 
@@ -1391,13 +1394,13 @@ private:
     const thorin::Def* remit(CodeGen&) const override;
 
 protected:
-    std::unique_ptr<const Expr> lhs_;
+    std::unique_ptr<const Expr> src_;
 };
 
 class ExplicitCastExpr : public CastExpr {
 public:
-    ExplicitCastExpr(Location location, const Expr* lhs, const ASTType* ast_type)
-        : CastExpr(location, lhs)
+    ExplicitCastExpr(Location location, const Expr* src, const ASTType* ast_type)
+        : CastExpr(location, src)
         , ast_type_(ast_type)
     {}
 
@@ -1414,10 +1417,15 @@ private:
 class ImplicitCastExpr : public CastExpr {
 public:
     ImplicitCastExpr(const Expr* src, const Type* type)
-        : CastExpr(src->location(), nullptr)
+        : CastExpr(src->location(), src)
     {
-        insert(this, lhs_, src); // TODO
         type_ = type;
+    }
+
+    static const ImplicitCastExpr* create(const Expr* src, const Type* type) {
+        auto implicit_cast_expr = new ImplicitCastExpr(src, type);
+        insert(implicit_cast_expr, implicit_cast_expr->src_, src);
+        return implicit_cast_expr;
     }
 
     void check(NameSema&) const override { THORIN_UNREACHABLE; }
@@ -1576,7 +1584,11 @@ public:
         , ast_type_args_(std::move(ast_type_args))
     {}
 
-    static const TypeAppExpr* create(const Expr*);
+    static const TypeAppExpr* create(const Expr* lhs) {
+        auto type_app_expr = new TypeAppExpr(lhs->location(), lhs, ASTTypes());
+        insert(type_app_expr, type_app_expr->lhs_, lhs);
+        return type_app_expr;
+    }
 
     const Expr* lhs() const { return lhs_.get(); }
     const ASTTypes& ast_type_args() const { return ast_type_args_; }
