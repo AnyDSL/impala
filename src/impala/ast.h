@@ -640,7 +640,7 @@ public:
     Fn(ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
         : ASTTypeParamList(std::move(ast_type_params))
         , params_(std::move(params))
-        , body_(body)
+        , body_(dock(body_, body))
     {}
 
     const Param* param(size_t i) const { return params_[i].get(); }
@@ -905,7 +905,7 @@ public:
     StaticItem(Location location, Visibility visibility, bool mut, const Identifier* identifier,
                const ASTType* ast_type, const Expr* init)
         : ValueItem(location, visibility, mut, identifier, std::move(ast_type))
-        , init_(std::move(init))
+        , init_(dock(init_, init))
     {}
 
     const Expr* init() const { return init_.get(); }
@@ -1052,8 +1052,10 @@ protected:
     mutable const thorin::Def* extra_ = nullptr; ///< Needed to propagate extend of indefinite arrays.
 
     friend const Expr* dock(std::unique_ptr<const Expr>& dst, const Expr* src) {
-        assert(src->docker_ == nullptr);
-        src->docker_ = &dst;
+        if (src) {
+            assert(src->docker_ == nullptr);
+            src->docker_ = &dst;
+        }
         return src;
     }
 
@@ -1066,6 +1068,7 @@ protected:
 #endif
     }
 
+    friend class Args;
     friend class CodeGen;
     friend class IfExpr;
     friend class InferSema;
@@ -1077,7 +1080,10 @@ class Args {
 public:
     Args(Exprs&& args)
         : args_(std::move(args))
-    {}
+    {
+        for (auto& arg : args)
+            arg->docker_ = &arg;
+    }
 
     const Exprs& args() const { return args_; }
     const Expr* arg(size_t i) const { assert(i < args_.size()); return args_[i].get(); }
@@ -1238,7 +1244,7 @@ public:
     PrefixExpr(Location location, Kind kind, const Expr* rhs)
         : Expr(location)
         , kind_(kind)
-        , rhs_(rhs)
+        , rhs_(dock(rhs_, rhs))
     {}
 
     static const PrefixExpr* create(const Expr* child, const Kind kind);
@@ -1276,8 +1282,8 @@ public:
     InfixExpr(Location location, const Expr* lhs, Kind kind, const Expr* rhs)
         : Expr(location)
         , kind_(kind)
-        , lhs_(lhs)
-        , rhs_(rhs)
+        , lhs_(dock(lhs_, lhs))
+        , rhs_(dock(rhs_, rhs))
     {}
 
     Kind kind() const { return kind_; }
@@ -1314,7 +1320,7 @@ public:
     PostfixExpr(Location location, const Expr* lhs, Kind kind)
         : Expr(location)
         , kind_(kind)
-        , lhs_(lhs)
+        , lhs_(dock(lhs_, lhs))
     {}
 
     Kind kind() const { return kind_; }
@@ -1338,7 +1344,7 @@ class FieldExpr : public Expr {
 public:
     FieldExpr(Location location, const Expr* lhs, const Identifier* identifier)
         : Expr(location)
-        , lhs_(lhs)
+        , lhs_(dock(lhs_, lhs))
         , identifier_(identifier)
     {}
 
@@ -1371,7 +1377,7 @@ class CastExpr : public Expr {
 public:
     CastExpr(Location location, const Expr* lhs)
         : Expr(location)
-        , lhs_(lhs)
+        , lhs_(dock(lhs_, lhs))
     {}
 
     const Expr* lhs() const { return lhs_.get(); }
@@ -1440,7 +1446,7 @@ class RepeatedDefiniteArrayExpr : public Expr {
 public:
     RepeatedDefiniteArrayExpr(Location location, const Expr* value, uint64_t count)
         : Expr(location)
-        , value_(value)
+        , value_(dock(value_, value))
         , count_(count)
     {}
 
@@ -1463,7 +1469,7 @@ class IndefiniteArrayExpr : public Expr {
 public:
     IndefiniteArrayExpr(Location location, const Expr* dim, const ASTType* elem_ast_type)
         : Expr(location)
-        , dim_(dim)
+        , dim_(dock(dim_, dim))
         , elem_ast_type_(elem_ast_type)
     {}
 
@@ -1601,7 +1607,7 @@ public:
     MapExpr(Location location, const Expr* lhs, Exprs&& args)
         : Expr(location)
         , Args(std::move(args))
-        , lhs_(lhs)
+        , lhs_(dock(lhs_, lhs))
     {}
 
     enum State {
@@ -1697,9 +1703,9 @@ class IfExpr : public StmtLikeExpr {
 public:
     IfExpr(Location location, const Expr* cond, const Expr* then_expr, const Expr* else_expr)
         : StmtLikeExpr(location)
-        , cond_(cond)
-        , then_expr_(then_expr)
-        , else_expr_(else_expr)
+        , cond_(dock(cond_, cond))
+        , then_expr_(dock(then_expr_, then_expr))
+        , else_expr_(dock(else_expr_, else_expr))
     {}
 
     const Expr* cond() const { return cond_.get(); }
@@ -1729,8 +1735,8 @@ public:
               const Expr* body, const LocalDecl* break_decl)
         : StmtLikeExpr(location)
         , continue_decl_(continue_decl)
-        , cond_(cond)
-        , body_(body)
+        , cond_(dock(cond_, cond))
+        , body_(dock(body_, body))
         , break_decl_(break_decl)
     {}
 
@@ -1760,8 +1766,8 @@ class ForExpr : public StmtLikeExpr {
 public:
     ForExpr(Location location, const Expr* fn_expr, const Expr* expr, const LocalDecl* break_decl)
         : StmtLikeExpr(location)
-        , fn_expr_(fn_expr)
-        , expr_(expr)
+        , fn_expr_(dock(fn_expr_, fn_expr))
+        , expr_(dock(expr_, expr))
         , break_decl_(break_decl)
     {}
 
@@ -1876,7 +1882,7 @@ class ExprStmt : public Stmt {
 public:
     ExprStmt(Location location, const Expr* expr)
         : Stmt(location)
-        , expr_(expr)
+        , expr_(dock(expr_, expr))
     {}
 
     const Expr* expr() const { return expr_.get(); }
@@ -1917,7 +1923,7 @@ public:
     LetStmt(Location location, const Ptrn* ptrn, const Expr* init)
         : Stmt(location)
         , ptrn_(ptrn)
-        , init_(init)
+        , init_(dock(init_, init))
     {}
 
     const Ptrn* ptrn() const { return ptrn_.get(); }

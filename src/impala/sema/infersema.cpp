@@ -750,7 +750,7 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, c
 const Type* FieldExpr::check(InferSema& sema) const {
     auto ltype = sema.check(lhs());
     if (ltype->isa<PtrType>()) {
-        PrefixExpr::create_deref(lhs_);
+        PrefixExpr::create_deref(lhs_.get());
         ltype = sema.check(lhs());
     }
 
@@ -776,7 +776,7 @@ const Type* TypeAppExpr::check(InferSema& sema) const {
                     type_args_.push_back(sema.unknown_type());
             }
 
-            for (const auto&& type_arg : type_args_)
+            for (auto& type_arg : type_args_)
                 type_arg = sema.find_type(type_arg);
 
             return sema.reduce(lambda, ast_type_args(), type_args_);
@@ -802,9 +802,8 @@ const Type* MapExpr::check(InferSema& sema) const {
         ltype = sema.check(lhs());
     }
 
-    if (ltype->isa<FnType>()) {
+    if (ltype->isa<FnType>())
         return sema.check_call(lhs(), args(), type_);
-    }
 
     for (int i = 0, n = num_args(); i < n; i++) sema.check(arg(i));
 
