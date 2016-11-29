@@ -1088,24 +1088,27 @@ const CharExpr* Parser::parse_char_expr() {
     return new CharExpr(lex().location(), symbol, value);
 }
 
-#if 0
 const StrExpr* Parser::parse_str_expr() {
-    auto str_expr = loc(new StrExpr());
+    auto tracker = track();
+    Symbols symbols;
+    std::vector<char> values;
     do {
-        str_expr->symbols_.emplace_back(la().symbol());
+       symbols.emplace_back(la().symbol());
 
-        const char* p = str_expr->symbols_.back().str();
+        const char* p = symbols.back().str();
         assert(*p == '"');
         ++p;
         while (*p != '"')
-            str_expr->values_.emplace_back(char_value(p));
+            values.emplace_back(char_value(p));
         assert(p[1] == '\0');
         lex();
     } while (la() == Token::LIT_str);
-    str_expr->values_.emplace_back('\0');
-    return str_expr;
+    values.emplace_back('\0');
+
+    return new StrExpr(tracker, std::move(symbols), std::move(values));
 }
 
+#if 0
 const FnExpr* Parser::parse_fn_expr() {
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
 

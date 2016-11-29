@@ -1161,9 +1161,10 @@ private:
 
 class StrExpr : public Expr {
 public:
-    StrExpr(Location location, Symbols symbols)
+    StrExpr(Location location, Symbols&& symbols, std::vector<char>&& values)
         : Expr(location)
-        , symbols_(symbols)
+        , symbols_(std::move(symbols))
+        , values_(std::move(values))
     {}
 
     const Symbols& symbols() const { return symbols_; }
