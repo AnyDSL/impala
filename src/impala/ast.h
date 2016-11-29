@@ -209,6 +209,12 @@ public:
         , elems_(std::move(elems))
     {}
 
+    Path(const Identifier* identifier)
+        : Path(identifier->location(), false, Elems())
+    {
+        elems_.emplace_back(new Elem(identifier));
+    }
+
     //// HACK
     //Path(Location location, bool global, const Identifier* identifier)
         //: ASTNode(location)
@@ -400,6 +406,10 @@ public:
         , path_(path)
     {}
 
+    ASTTypeApp(Location location, const Path* path)
+        : ASTTypeApp(location, path, ASTTypes())
+    {}
+
     const Path* path() const { return path_.get(); }
     const Identifier* identifier() const { return path()->elems().back()->identifier(); }
     Symbol symbol() const { return identifier()->symbol(); }
@@ -548,10 +558,13 @@ protected:
 /// Base class for all values which may be mutated within a function.
 class LocalDecl : public ValueDecl {
 public:
-    LocalDecl(Location location, size_t handle, bool mut,
-              const Identifier* identifier, const ASTType* ast_type)
+    LocalDecl(Location location, size_t handle, bool mut, const Identifier* identifier, const ASTType* ast_type)
         : ValueDecl(location, mut, identifier, ast_type)
         , handle_(handle)
+    {}
+
+    LocalDecl(Location location, size_t handle, const Identifier* identifier, const ASTType* ast_type)
+        : LocalDecl(location, handle, /*mut*/ false, identifier, ast_type)
     {}
 
     size_t handle() const { return handle_; }
@@ -611,12 +624,13 @@ public: // HACK
 
 class Param : public LocalDecl {
 public:
-    Param(Location location, size_t handle, bool mut,
-          const Identifier* identifier, const ASTType* ast_type)
+    Param(Location location, size_t handle, bool mut, const Identifier* identifier, const ASTType* ast_type)
         : LocalDecl(location, handle, mut, identifier, ast_type)
     {}
 
-    static const Param* create(size_t var_handle, const Identifier*, const Location&, const ASTType* fn_type);
+    Param(Location location, size_t handle, const Identifier* identifier, const ASTType* ast_type)
+        : LocalDecl(location, handle, /*mut*/ false, identifier, ast_type)
+    {}
 
     friend class Fn;
 };
@@ -656,6 +670,8 @@ protected:
 private:
     std::unique_ptr<const Expr> body_;
     bool is_continuation_; //< TODO remove this!!!
+
+    friend class Parser;
 };
 
 //------------------------------------------------------------------------------

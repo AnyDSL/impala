@@ -7,15 +7,6 @@ namespace impala {
 //------------------------------------------------------------------------------
 
 #if 0
-const Param* Param::create(size_t var_handle, const Identifier* identifier, const Location& loc, const ASTType* fn_type) {
-    auto param = new Param(var_handle);
-    param->is_mut_ = false;
-    param->identifier_ = identifier;
-    param->ast_type_ = fn_type;
-    param->set_loc(loc);
-    return param;
-}
-
 const ImplicitCastExpr* ImplicitCastExpr::create(const Expr* expr, const Type* type) {
     auto implicit_cast_expr = new ImplicitCastExpr();
     implicit_cast_expr->type_ = type;

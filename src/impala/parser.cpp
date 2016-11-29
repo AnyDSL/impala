@@ -276,7 +276,7 @@ private:
     const LocalDecl* create_continuation_decl(const char* name, bool set_type) {
         auto identifier = new Identifier(prev_loc(), name);
         auto ast_type = set_type ? new FnASTType(prev_loc(), ASTTypeParams(), ASTTypes()) : nullptr;
-        return new LocalDecl(prev_loc(), cur_var_handle++, /*mut*/ false, identifier, ast_type);
+        return new LocalDecl(prev_loc(), cur_var_handle++, identifier, ast_type);
     }
 
     Lexer lexer_;        ///< invoked in order to get next token
@@ -432,12 +432,12 @@ Params Parser::parse_param_list(TokenKind delimiter, bool lambda) {
     return params;
 }
 
-#if 0
 const Param* Parser::parse_param(int i, bool lambda) {
-    auto param = loc(new Param(cur_var_handle++));
-    param->is_mut_ = accept(Token::MUT);
+    auto t = track();
+    bool mut = accept(Token::MUT);
     const Identifier* identifier = nullptr;
     const ASTType* type = nullptr;
+    const ASTType* ast_type = nullptr;
     Token tok = la();
 
     if (tok == Token::ID)
@@ -448,7 +448,7 @@ const Param* Parser::parse_param(int i, bool lambda) {
                 type = parse_type();
                 break;
             default:
-                identifier = new Identifier("<error>", tok.location());
+                identifier = new Identifier(tok.location(), "<error>");
                 error("identifier", "parameter");
         }
     }
@@ -456,40 +456,35 @@ const Param* Parser::parse_param(int i, bool lambda) {
     if (accept(Token::COLON)) {
         if (type)
             error("identifier", "parameter", tok);
-        param->identifier_ = identifier;
-        param->ast_type_ = parse_type();
+        ast_type = parse_type();
     } else if (lambda) {
         if (type)
             error("identifier", "parameter", tok);
-        param->identifier_ = identifier;
     } else {
         if (type == nullptr) {
             // we assume that the identifier refers to a type
-            auto type_app = new ASTTypeApp();
-            type_app->set_loc(tok.location());
-            type_app->path_ = new Path(identifier);
-            type = type_app;
+            type = new ASTTypeApp(tok.location(), new Path(identifier));
+            identifier = nullptr;
         }
-        param->ast_type_ = type;
+        ast_type = type;
     }
 
-    if (param->identifier_ == nullptr) {
+    if (identifier == nullptr) {
         std::ostringstream oss;
         oss << '<' << i << ">";
-        param->identifier_ = new Identifier(oss.str().c_str(), prev_loc());
+        identifier = new Identifier(prev_loc(), oss.str().c_str());
     }
 
-    return param;
+    return t.create<Param>(cur_var_handle++, mut, identifier, ast_type);
 }
 
 void Parser::parse_return_param(Fn* fn) {
-    auto fn_type = parse_return_type(fn->is_continuation(), false);
+    auto fn_type = parse_return_type(fn->is_continuation_, false);
     if (!fn->is_continuation()) {
         auto location = fn_type ? fn_type->location() : prev_loc();
-        fn->params_.emplace_back(Param::create(cur_var_handle++, new Identifier("return", loc), loc, fn_type));
+        fn->params_.emplace_back(new Param(location, cur_var_handle++, new Identifier(location, "return"), fn_type));
     }
 }
-#endif
 
 /*
  * items
@@ -1159,7 +1154,7 @@ const ForExpr* Parser::parse_for_expr() {
     auto params = (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
                 ? parse_param_list(Token::IN, true)
                 : Params();
-    params.emplace_back(new Param(prev_loc(), cur_var_handle++, /*mut*/ false, new Identifier(prev_loc(), "continue"), nullptr));
+    params.emplace_back(new Param(prev_loc(), cur_var_handle++, new Identifier(prev_loc(), "continue"), nullptr));
     //fn_expr->is_continuation_ = false;
     auto expr = parse_expr();
     auto body = try_block_expr("body of for loop");
@@ -1176,7 +1171,7 @@ const ForExpr* Parser::parse_with_expr() {
     auto params = (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
                 ? parse_param_list(Token::IN, true)
                 : Params();
-    params.emplace_back(new Param(prev_loc(), cur_var_handle++, /*mut*/ false, new Identifier(prev_loc(), "break"), nullptr));
+    params.emplace_back(new Param(prev_loc(), cur_var_handle++, new Identifier(prev_loc(), "break"), nullptr));
     auto expr = parse_expr();
     auto body = try_block_expr("body of with statement");
     auto break_decl = create_continuation_decl("_", /*set type during InferSema*/ false);
