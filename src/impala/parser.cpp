@@ -1197,11 +1197,11 @@ const BlockExprBase* Parser::parse_block_expr() {
             case Token::SEMICOLON:  lex(); continue; // ignore semicolon
             case STMT_NOT_EXPR:     stmts.emplace_back(parse_stmt_not_expr()); continue;
             case EXPR: {
-                auto u = track();
+                auto tracker = track();
                 bool stmt_like = la().is_stmt_like();
                 expr = parse_expr();
                 if (accept(Token::SEMICOLON) || (stmt_like && la() != Token::R_BRACE)) {
-                    stmts.emplace_back(new ExprStmt(u, expr));
+                    stmts.emplace_back(new ExprStmt(tracker, expr));
                     continue;
                 }
                 // FALLTHROUGH
