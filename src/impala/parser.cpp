@@ -216,7 +216,7 @@ public:
 
     // items + helpers
     const Item*        parse_item();
-    Items              parse_items();
+    void               parse_items(Items&);
     const StaticItem*  parse_static_item(Tracker, Visibility);
     const EnumDecl*    parse_enum_decl(Tracker, Visibility);
     const FnDecl*      parse_fn_decl(BodyMode, Tracker, Visibility, bool is_extern, Symbol abi);
@@ -285,12 +285,11 @@ private:
 
 //------------------------------------------------------------------------------
 
-Items parse(std::istream& is, const char* filename) {
+void parse(Items& items, std::istream& is, const char* filename) {
     Parser parser(is, filename);
-    auto items = parser.parse_items();
+    parser.parse_items(items);
     if (parser.la() != Token::END_OF_FILE)
         parser.error("module item", "module contents");
-    return items;
 }
 
 //------------------------------------------------------------------------------
@@ -527,32 +526,30 @@ const Item* Parser::parse_extern_block_or_fn_decl(Tracker tracker, Visibility vi
     return new ExternBlock(tracker, vis, abi, std::move(fn_decls));
 }
 
-#if 0
-FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility vis) {
+const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility vis, bool is_extern, Symbol abi) {
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
 
-    auto fn_decl = loc(new FnDecl());
     eat(Token::FN);
-    if (la() == Token::LIT_str)
-        fn_decl->export_name_ = new Identifier(lex());
-    fn_decl->identifier_ = try_id("function name");
-    auto ast_type_params = parse_ast_type_params;
+    auto export_name = la() == Token::LIT_str ? new Identifier(lex()) : nullptr;
+    auto identifier = try_id("function name");
+    auto ast_type_params = parse_ast_type_params();
     expect(Token::L_PAREN, "function head");
     auto params = parse_param_list(Token::R_PAREN, false);
-    parse_return_param(fn_decl);
+    //parse_return_param(fn_decl);
+    const Expr* body = nullptr;
 
-    switch (body_mode) {
+    switch (mode) {
         case BodyMode::None:      expect(Token::SEMICOLON, "function declaration"); break;
-        case BodyMode::Mandatory: dock(fn_decl->body_, try_block_expr("body of function")); break;
+        case BodyMode::Mandatory: body = try_block_expr("body of function"); break;
         case BodyMode::Optional:
             if (!accept(Token::SEMICOLON))
-                dock(fn_decl->body_, try_block_expr("body of function"));
+                body = try_block_expr("body of function");
             break;
     }
 
-    return fn_decl;
+    return new FnDecl(tracker, vis, is_extern, abi, export_name, identifier, std::move(ast_type_params),
+                      std::move(params), body);
 }
-#endif
 
 const ImplItem* Parser::parse_impl(Tracker tracker, Visibility vis) {
     eat(Token::IMPL);
@@ -579,7 +576,8 @@ const Item* Parser::parse_module_or_module_decl(Tracker tracker, Visibility vis)
     auto identifier = try_id("module declaration");
     auto ast_type_params = parse_ast_type_params();
     if (accept(Token::L_BRACE)) {
-        auto items = parse_items();
+        Items items;
+        parse_items(items);
         expect(Token::R_BRACE, "module");
         return new Module(tracker, vis, identifier, std::move(ast_type_params), std::move(items));
     } else {
@@ -588,8 +586,7 @@ const Item* Parser::parse_module_or_module_decl(Tracker tracker, Visibility vis)
     }
 }
 
-Items Parser::parse_items() {
-    Items items;
+void Parser::parse_items(Items& items) {
     while (true) {
         cur_var_handle = 2; // HACK
         switch (la()) {
@@ -601,7 +598,7 @@ Items Parser::parse_items() {
                 lex();
                 continue;
             default:
-                return items;
+                return;
         }
     }
 }
@@ -1108,24 +1105,22 @@ const StrExpr* Parser::parse_str_expr() {
     return new StrExpr(tracker, std::move(symbols), std::move(values));
 }
 
-#if 0
 const FnExpr* Parser::parse_fn_expr() {
+    auto tracker = track();
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
 
-    auto fn_expr = loc(new FnExpr());
-
+    Params params;
     if (accept(Token::OR))
-        parse_param_list(fn_expr->params_, Token::OR, true);
+        params = parse_param_list(Token::OR, true);
     else
         expect(Token::OROR, "parameter list of function expression");
 
-    parse_return_param(fn_expr);
+    //parse_return_param(fn_expr);
     // TODO pull this up into Fn - it's missing for parse_fn_decl
-    fn_expr->ret_var_handle_ = cur_var_handle++; // reserve one handle - we might later on add another return param
-    dock(fn_expr->body_, parse_expr());
-    return fn_expr;
+    //fn_expr->ret_var_handle_ = cur_var_handle++; // reserve one handle - we might later on add another return param
+    auto body = parse_expr();
+    return new FnExpr(tracker, std::move(params), body);
 }
-#endif
 
 const IfExpr* Parser::parse_if_expr() {
     auto tracker = track();
@@ -1160,7 +1155,7 @@ const ForExpr* Parser::parse_for_expr() {
     auto expr = parse_expr();
     auto body = try_block_expr("body of for loop");
     auto break_decl = create_continuation_decl("break", /*set type during InferSema*/ false);
-    return new ForExpr(tracker, new FnExpr(tracker, ASTTypeParams(), std::move(params), body), expr, break_decl);
+    return new ForExpr(tracker, new FnExpr(tracker, std::move(params), body), expr, break_decl);
 }
 
 const ForExpr* Parser::parse_with_expr() {
@@ -1176,7 +1171,7 @@ const ForExpr* Parser::parse_with_expr() {
     auto expr = parse_expr();
     auto body = try_block_expr("body of with statement");
     auto break_decl = create_continuation_decl("_", /*set type during InferSema*/ false);
-    return new ForExpr(tracker, new FnExpr(tracker, ASTTypeParams(), std::move(params), body), expr, break_decl);
+    return new ForExpr(tracker, new FnExpr(tracker, std::move(params), body), expr, break_decl);
 }
 
 const WhileExpr* Parser::parse_while_expr() {

@@ -921,6 +921,14 @@ private:
 
 class FnDecl : public ValueItem, public Fn {
 public:
+    FnDecl(Location location, Visibility visibility, bool is_extern, Symbol abi, bool mut,
+           const Identifier* identifier, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
+        : ValueItem(location, visibility, mut, identifier, nullptr/*TODO*/)
+        , Fn(std::move(ast_type_params), std::move(params), body)
+        , is_extern_(is_extern)
+        , abi_(abi)
+    {}
+
     bool is_extern() const { return is_extern_; }
     Symbol abi() const { return abi_; }
 
@@ -1187,9 +1195,9 @@ private:
 
 class FnExpr : public Expr, public Fn {
 public:
-    FnExpr(Location location, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
+    FnExpr(Location location, Params&& params, const Expr* body)
         : Expr(location)
-        , Fn(std::move(ast_type_params), std::move(params), body)
+        , Fn(ASTTypeParams(), std::move(params), body)
     {}
 
     const FnType* fn_type() const override { return type()->as<FnType>(); }
@@ -1541,7 +1549,7 @@ public:
         Symbol symbol() const { return identifier()->symbol(); }
         const Expr* expr() const { return expr_.get(); }
         const FieldDecl* field_decl() const { return field_decl_; }
-        std::ostream& stream(std::ostream&) const override;
+        std::ostream& stream(std::ostream&) const override { assert(false && "TODO"); }
 
     private:
         std::unique_ptr<const Identifier> identifier_;
@@ -1964,7 +1972,7 @@ public:
 
         const std::string& constraint() const { return constraint_; }
         const Expr* expr() const { return expr_.get(); }
-        std::ostream& stream(std::ostream&) const override;
+        std::ostream& stream(std::ostream&) const override { assert(false && "TODO"); }
 
     private:
         std::string constraint_;
