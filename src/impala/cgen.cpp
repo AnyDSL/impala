@@ -101,7 +101,7 @@ private:
         // Structure types
         if (auto struct_type = type->isa<StructType>()) {
             const StructDecl* decl = struct_type->struct_decl();
-            ctype_prefix = "struct " + std::string(decl->item_symbol().str());
+            ctype_prefix = "struct " + std::string(decl->symbol().str());
             ctype_suffix = "";
             return true;
         }
@@ -256,7 +256,7 @@ public:
         assert(order.size() == export_structs.size());
 
         for (auto st : order) {
-            o << "struct " << st->item_symbol().str() << " {\n";
+            o << "struct " << st->symbol().str() << " {\n";
             for (const auto& field : st->field_decls()) {
                 auto type = field->type();
 
@@ -290,7 +290,7 @@ public:
                 return false;
             }
 
-            o << return_pref << ' ' << fn->item_symbol().str() << '(';
+            o << return_pref << ' ' << fn->symbol().str() << '(';
 
             // Generate all arguments except the last one which is the implicit continuation
             for (size_t i = 0, e = fn_type->num_ops() - 1; i != e; ++i) {

@@ -68,11 +68,11 @@ public:
 #endif
     }
     void emit(const Ptrn* ptrn, const thorin::Def* def) { ptrn->emit(*this, def); }
-    Value emit(const ValueDecl* decl) {
+    Value emit(const Decl* decl) {
         assert(decl->value_.kind() != thorin::Value::Empty);
         return decl->value_;
     }
-    Value emit(const ValueDecl* decl, const Def* init) {
+    Value emit(const Decl* decl, const Def* init) {
         if (!decl->value_)
             decl->value_ = decl->emit(*this, init);
         return decl->value_;

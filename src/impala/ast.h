@@ -181,9 +181,9 @@ class Path : public ASTNode {
 public:
     class Elem : public ASTNode {
     public:
-        Elem(const Identifier* identifier)
-            : ASTNode(identifier->location())
-            , identifier_(identifier)
+        Elem(const Identifier* id)
+            : ASTNode(id->location())
+            , identifier_(id)
         {}
 
         const Identifier* identifier() const { return identifier_.get(); }
@@ -207,18 +207,18 @@ public:
         , elems_(std::move(elems))
     {}
 
-    Path(const Identifier* identifier)
-        : Path(identifier->location(), false, Elems())
+    Path(const Identifier* id)
+        : Path(id->location(), false, Elems())
     {
-        elems_.emplace_back(new Elem(identifier));
+        elems_.emplace_back(new Elem(id));
     }
 
     //// HACK
-    //Path(Location location, bool global, const Identifier* identifier)
+    //Path(Location location, bool global, const Identifier* id)
         //: ASTNode(location)
         //, global_(global)
     //{
-        //elems_.emplace_back(std::make_unique<Elem>(identifier));
+        //elems_.emplace_back(std::make_unique<Elem>(id));
     //}
 
     bool is_global() const { return global_; }
@@ -491,83 +491,88 @@ private:
  * declarations
  */
 
-/// Base class for all entities which have a \p symbol_.
-class Decl : public ASTNode {
+/// Base class for all entities which have a @p symbol_.
+class Decl : public Typeable, public ASTNode {
 public:
-    Decl(Location location, const Identifier* identifier)
+    enum Tag {
+        NoDecl,
+        NamedDecl,     ///< Just has an @p Identifier.
+        TypeableDecl,  ///< Must have a @p Type assigned.
+        TypeDecl,      ///< Represents a type definition like @p StructDecl or @p Typedef.
+        ValueDecl,     ///< Represents something which is a value at run time.
+    };
+
+    /// General constructor.
+    Decl(Tag tag, Location location, bool mut, const Identifier* id, const ASTType* ast_type)
         : ASTNode(location)
-        , identifier_(identifier)
+        , tag_(tag)
+        , identifier_(id)
+        , ast_type_(ast_type)
+        , mut_(mut)
+        , is_written_(false)
     {}
 
-    const Identifier* identifier() const { return identifier_.get(); }
-    Symbol symbol() const { return identifier_->symbol(); }
+    /// @p NoDecl.
+    Decl(Location location)
+        : Decl(NoDecl, location, false, nullptr, nullptr)
+    {}
+
+    /// @p TypeableDecl, @p TypeDecl or @p ValueDecl.
+    Decl(Tag tag, Location location, const Identifier* id)
+        : Decl(tag, location, false, id, nullptr)
+    {}
+
+    /// @p ValueDecl.
+    Decl(Location location, bool mut, const Identifier* id, const ASTType* ast_type)
+        : Decl(ValueDecl, location, mut, id, ast_type)
+    {}
+
+    // tag
+    Tag tag() const { return tag_; }
+    bool is_no_decl() const { return tag() == NoDecl; }
+    bool is_type_decl() const { return tag() == TypeDecl; }
+    bool is_value_decl() const { return tag() == ValueDecl; }
+
+    // identifier
+    const Identifier* identifier() const { assert(!is_no_decl()); return identifier_.get(); }
+    Symbol symbol() const { assert(!is_no_decl()); return identifier_->symbol(); }
+    bool is_anonymous() const { assert(!is_no_decl()); return symbol() == Symbol() || symbol().str()[0] == '<'; }
     size_t depth() const { return depth_; }
     const Decl* shadows() const { return shadows_; }
 
-protected:
+    // ValueDecl
+    const ASTType* ast_type() const { assert(is_value_decl()); return ast_type_.get(); } ///< Original \p ASTType.
+    bool is_mut() const { assert(is_value_decl()); return mut_; }
+    bool is_written() const { assert(is_value_decl()); return is_written_; }
+    void write() const { assert(is_value_decl()); is_written_ = true; }
+
+private:
+    Tag tag_;
     std::unique_ptr<const Identifier> identifier_;
-
-private:
-    mutable const Decl* shadows_;
-    mutable size_t depth_;
-
-    friend class NameSema;
-};
-
-/// Base class for all declarations which must have a \p Type assigned.
-class TypeableDecl : public Decl, public Typeable {
-protected:
-    TypeableDecl(Location location, const Identifier* identifier)
-        : Decl(location, identifier)
-    {}
-};
-
-/// Base class for all declarations which represent a type definition.
-class TypeDecl : public TypeableDecl {
-protected:
-    TypeDecl(Location location, const Identifier* identifier)
-        : TypeableDecl(location, identifier)
-    {}
-};
-
-/// Base class for all declarations which represent a value.
-class ValueDecl : public TypeableDecl {
-public:
-    ValueDecl(Location location, bool mut, const Identifier* identifier, const ASTType* ast_type)
-        : TypeableDecl(location, identifier)
-        , ast_type_(ast_type)
-        , mut_(mut)
-    {}
-
-    const ASTType* ast_type() const { return ast_type_.get(); } ///< Original \p ASTType.
-    bool is_mut() const { return mut_; }
-    bool is_written() const { return is_written_; }
-    void write() const { is_written_ = true; }
-    bool is_anonymous() const { return symbol() == Symbol() || symbol().str()[0] == '<'; }
-    std::ostream& stream(std::ostream&) const override;
-
-private:
-    virtual thorin::Value emit(CodeGen&, const thorin::Def* init) const = 0;
-
-protected:
     std::unique_ptr<const ASTType> ast_type_;
     mutable thorin::Value value_;
-    bool mut_;
-    mutable bool is_written_ = false;
+    mutable const Decl* shadows_;
+    mutable unsigned depth_      : 24;
+    unsigned mut_                :  1;
+    mutable unsigned is_written_ :  1;
 
+    friend class NameSema;
     friend class CodeGen;
 };
 
+    //virtual thorin::Value emit(CodeGen&, const thorin::Def* init) const = 0;
+    //friend class CodeGen;
+
 /// Base class for all values which may be mutated within a function.
-class LocalDecl : public ValueDecl {
+class LocalDecl : public Decl {
 public:
-    LocalDecl(Location location, size_t handle, bool mut, const Identifier* identifier, const ASTType* ast_type)
-        : ValueDecl(location, mut, identifier, ast_type)
+    LocalDecl(Location location, size_t handle, bool mut, const Identifier* id, const ASTType* ast_type)
+        : Decl(location, mut, id, ast_type)
         , handle_(handle)
     {}
 
-    LocalDecl(Location location, size_t handle, const Identifier* identifier, const ASTType* ast_type)
-        : LocalDecl(location, handle, /*mut*/ false, identifier, ast_type)
+    LocalDecl(Location location, size_t handle, const Identifier* id, const ASTType* ast_type)
+        : LocalDecl(location, handle, /*mut*/ false, id, ast_type)
     {}
 
     size_t handle() const { return handle_; }
@@ -579,7 +584,7 @@ public:
 private:
     const Type* check(InferSema&) const;
     void check(TypeSema&) const;
-    thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
+    //thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
 protected:
     size_t handle_;
@@ -597,10 +602,10 @@ protected:
  * parameters and Fn
  */
 
-class ASTTypeParam : public TypeDecl {
+class ASTTypeParam : public Decl {
 public:
-    ASTTypeParam(Location location, const Identifier* identifier, ASTTypes&& bounds)
-        : TypeDecl(location, identifier)
+    ASTTypeParam(Location location, const Identifier* id, ASTTypes&& bounds)
+        : Decl(TypeDecl, location, id)
         , bounds_(std::move(bounds))
     {}
 
@@ -627,12 +632,12 @@ public: // HACK
 
 class Param : public LocalDecl {
 public:
-    Param(Location location, size_t handle, bool mut, const Identifier* identifier, const ASTType* ast_type)
-        : LocalDecl(location, handle, mut, identifier, ast_type)
+    Param(Location location, size_t handle, bool mut, const Identifier* id, const ASTType* ast_type)
+        : LocalDecl(location, handle, mut, id, ast_type)
     {}
 
-    Param(Location location, size_t handle, const Identifier* identifier, const ASTType* ast_type)
-        : LocalDecl(location, handle, /*mut*/ false, identifier, ast_type)
+    Param(Location location, size_t handle, const Identifier* id, const ASTType* ast_type)
+        : LocalDecl(location, handle, /*mut*/ false, id, ast_type)
     {}
 
     friend class Fn;
@@ -683,21 +688,33 @@ private:
  * items
  */
 
-class Item : public thorin::MagicCast<Item> {
+class Item : public Decl {
 public:
-    Item(Visibility visibility)
-        : visibility_(visibility)
+    /// @p NoDecl.
+    Item(Location location, Visibility vis)
+        : Decl(location)
+        , visibility_(vis)
     {}
 
-    virtual ~Item() {}
+    /// @p TypeableDecl, @p TypeDecl or @p ValueDecl.
+    Item(Tag tag, Location location, Visibility vis, const Identifier* id)
+        : Decl(tag, location, id)
+        , visibility_(vis)
+    {}
 
-    Visibility visibility() const { return  visibility_; }
+    /// @p ValueDecl.
+    Item(Location location, Visibility vis, bool mut, const Identifier* id, const ASTType* ast_type)
+        : Decl(ValueDecl, location, mut, id, ast_type)
+        , visibility_(vis)
+    {}
+
+    Visibility visibility() const { return visibility_; }
     virtual void check(NameSema&) const = 0;
 
 private:
     virtual void check(InferSema&) const = 0;
     virtual void check(TypeSema&) const = 0;
-    virtual void emit_item(CodeGen&) const = 0;
+    virtual void emit(CodeGen&) const = 0;
 
     Visibility visibility_;
 #ifndef NDEBUG
@@ -710,53 +727,32 @@ private:
     friend class CodeGen;
 };
 
-class NamedItem : public Item {
+class TypeDeclItem : public Item, public ASTTypeParamList {
 public:
-    NamedItem(Visibility visibility)
-        : Item(visibility)
-    {}
-
-    virtual const Identifier* item_identifier() const = 0;
-    Symbol item_symbol() const { return item_identifier()->symbol(); }
-};
-
-class TypeDeclItem : public NamedItem, public TypeDecl, public ASTTypeParamList {
-public:
-    TypeDeclItem(Location location, Visibility visibility,
-                 const Identifier* identifier, ASTTypeParams&& ast_type_params)
-        : NamedItem(visibility)
-        , TypeDecl(location, identifier)
+    TypeDeclItem(Location location, Visibility vis, const Identifier* id, ASTTypeParams&& ast_type_params)
+        : Item(TypeDecl, location,  vis, id)
         , ASTTypeParamList(std::move(ast_type_params))
     {}
-
-    const Identifier* item_identifier() const override { return TypeDecl::identifier(); }
 };
 
-class ValueItem : public NamedItem, public ValueDecl {
+class ValueItem : public Item {
 public:
-    ValueItem(Location location, Visibility visibility, bool mut,
-              const Identifier* identifier, const ASTType* ast_type)
-        : NamedItem(visibility)
-        , ValueDecl(location, mut, identifier, std::move(ast_type))
+    ValueItem(Location location, Visibility vis, bool mut, const Identifier* id, const ASTType* ast_type)
+        : Item(location, vis, mut, id, ast_type)
     {}
 
-    const Identifier* item_identifier() const override { return ValueDecl::identifier(); }
-
-private:
-    void emit_item(CodeGen&) const override;
+    void emit(CodeGen&) const override;
 };
 
 class Module : public TypeDeclItem {
 public:
-    Module(Location location, Visibility visibility, const Identifier* identifier,
-           ASTTypeParams&& ast_type_params, Items&& items)
-        : TypeDeclItem(location, visibility, identifier, std::move(ast_type_params))
+    Module(Location location, Visibility vis, const Identifier* id, ASTTypeParams&& ast_type_params, Items&& items)
+        : TypeDeclItem(location, vis, id, std::move(ast_type_params))
         , items_(std::move(items))
     {}
 
     Module(const char* first_file_name, Items&& items = Items())
-        : TypeDeclItem({first_file_name, 1, 1, 1, 1}, Visibility::Pub, nullptr, ASTTypeParams())
-        , items_(std::move(items))
+        : Module({first_file_name, 1, 1, 1, 1}, Visibility::Pub, nullptr, ASTTypeParams(), std::move(items))
     {
         // TODO add location
         //if (!items.empty())
@@ -768,7 +764,7 @@ public:
     void check(NameSema&) const override;
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
-    void emit_item(CodeGen&) const override;
+    void emit(CodeGen&) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -778,8 +774,8 @@ private:
 
 class ModuleDecl : public TypeDeclItem {
 public:
-    ModuleDecl(Location location, Visibility vis, const Identifier* identifier, ASTTypeParams&& ast_type_params)
-        : TypeDeclItem(location, vis, identifier, std::move(ast_type_params))
+    ModuleDecl(Location location, Visibility vis, const Identifier* id, ASTTypeParams&& ast_type_params)
+        : TypeDeclItem(location, vis, id, std::move(ast_type_params))
     {}
 
     std::ostream& stream(std::ostream&) const override;
@@ -788,14 +784,13 @@ public:
 private:
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
-    void emit_item(CodeGen&) const override;
+    void emit(CodeGen&) const override;
 };
 
-class ExternBlock : public ASTNode, public Item {
+class ExternBlock : public Item {
 public:
-    ExternBlock(Location location, Visibility visibility, Symbol abi, FnDecls&& fn_decls)
-        : ASTNode(location)
-        , Item(visibility)
+    ExternBlock(Location location, Visibility vis, Symbol abi, FnDecls&& fn_decls)
+        : Item(location, vis)
         , abi_(abi)
         , fn_decls_(std::move(fn_decls))
     {}
@@ -809,7 +804,7 @@ public:
 private:
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
-    void emit_item(CodeGen&) const override;
+    void emit(CodeGen&) const override;
 
     Symbol abi_;
     FnDecls fn_decls_;
@@ -817,9 +812,9 @@ private:
 
 class Typedef : public TypeDeclItem {
 public:
-    Typedef(Location location, Visibility visibility, const Identifier* identifier,
+    Typedef(Location location, Visibility vis, const Identifier* id,
             ASTTypeParams&& ast_type_params, const ASTType* ast_type)
-        : TypeDeclItem(location, visibility, identifier, std::move(ast_type_params))
+        : TypeDeclItem(location, vis, id, std::move(ast_type_params))
         , ast_type_(ast_type)
     {}
 
@@ -831,18 +826,17 @@ public:
 private:
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
-    void emit_item(CodeGen&) const override;
+    void emit(CodeGen&) const override;
 
     std::unique_ptr<const ASTType> ast_type_;
 };
 
-class FieldDecl : public TypeableDecl {
+class FieldDecl : public Decl {
 public:
-    FieldDecl(Location location, size_t index, Visibility visibility,
-              const Identifier* identifier, const ASTType* ast_type)
-        : TypeableDecl(location, identifier)
+    FieldDecl(Location location, size_t index, Visibility vis, const Identifier* id, const ASTType* ast_type)
+        : Decl(TypeableDecl, location, id)
         , index_(index)
-        , visibility_(visibility)
+        , visibility_(vis)
         , ast_type_(std::move(ast_type))
     {}
 
@@ -867,9 +861,9 @@ private:
 
 class StructDecl : public TypeDeclItem {
 public:
-    StructDecl(Location location, Visibility visibility, const Identifier* identifier,
+    StructDecl(Location location, Visibility vis, const Identifier* id,
                ASTTypeParams&& ast_type_params, FieldDecls&& field_decls)
-        : TypeDeclItem(location, visibility, identifier, std::move(ast_type_params))
+        : TypeDeclItem(location, vis, id, std::move(ast_type_params))
         , field_decls_(std::move(field_decls))
     {}
 
@@ -886,7 +880,7 @@ public:
 private:
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
-    void emit_item(CodeGen&) const override;
+    void emit(CodeGen&) const override;
 
     FieldDecls field_decls_;
     mutable FieldTable field_table_;
@@ -900,14 +894,14 @@ public:
 private:
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
-    void emit_item(CodeGen&) const override;
+    void emit(CodeGen&) const override;
 };
 
 class StaticItem : public ValueItem {
 public:
-    StaticItem(Location location, Visibility visibility, bool mut, const Identifier* identifier,
+    StaticItem(Location location, Visibility vis, bool mut, const Identifier* id,
                const ASTType* ast_type, const Expr* init)
-        : ValueItem(location, visibility, mut, identifier, std::move(ast_type))
+        : ValueItem(location, vis, mut, id, std::move(ast_type))
         , init_(dock(init_, init))
     {}
 
@@ -919,16 +913,16 @@ public:
 private:
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
-    thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
+    //thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
     std::unique_ptr<const Expr> init_;
 };
 
 class FnDecl : public ValueItem, public Fn {
 public:
-    FnDecl(Location location, Visibility visibility, bool is_extern, Symbol abi, bool mut,
-           const Identifier* identifier, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
-        : ValueItem(location, visibility, mut, identifier, nullptr/*TODO*/)
+    FnDecl(Location location, Visibility vis, bool is_extern, Symbol abi, bool mut,
+           const Identifier* id, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
+        : ValueItem(location, vis, mut, id, nullptr/*TODO*/)
         , Fn(std::move(ast_type_params), std::move(params), body)
         , is_extern_(is_extern)
         , abi_(abi)
@@ -950,7 +944,7 @@ public:
 private:
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
-    thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
+    //thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
     std::unique_ptr<const Identifier> export_name_;
     bool is_extern_ = false;
@@ -960,12 +954,11 @@ private:
     friend class TypeSema;
 };
 
-class TraitDecl : public NamedItem, public Decl, public ASTTypeParamList {
+class TraitDecl : public Item, public ASTTypeParamList {
 public:
-    TraitDecl(Location location, Visibility visibility, const Identifier* identifier,
+    TraitDecl(Location location, Visibility vis, const Identifier* id,
               ASTTypeParams&& ast_type_params, ASTTypeApps&& super_traits, FnDecls&& methods)
-        : NamedItem(visibility)
-        , Decl(location, identifier)
+        : Item(TypeDecl, location, vis, id)
         , ASTTypeParamList(std::move(ast_type_params))
         , super_traits_(std::move(super_traits))
         , methods_(std::move(methods))
@@ -975,27 +968,24 @@ public:
     const FnDecls& methods() const { return methods_; }
     const MethodTable& method_table() const { return method_table_; }
 
-    const Identifier* item_identifier() const override { return Decl::identifier(); }
-
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
 
 private:
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
-    void emit_item(CodeGen&) const override;
+    void emit(CodeGen&) const override;
 
     ASTTypeApps super_traits_;
     FnDecls methods_;
     mutable MethodTable method_table_;
 };
 
-class ImplItem : public ASTNode, public Item, public ASTTypeParamList {
+class ImplItem : public Item, public ASTTypeParamList {
 public:
-    ImplItem(Location location, Visibility visibility, ASTTypeParams&& ast_type_params,
+    ImplItem(Location location, Visibility vis, ASTTypeParams&& ast_type_params,
              const ASTType* trait, const ASTType* ast_type, FnDecls&& methods)
-        : ASTNode(location)
-        , Item(visibility)
+        : Item(location, vis)
         , ASTTypeParamList(std::move(ast_type_params))
         , trait_(std::move(trait))
         , ast_type_(std::move(ast_type))
@@ -1016,7 +1006,7 @@ public:
 private:
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
-    void emit_item(CodeGen&) const override;
+    void emit(CodeGen&) const override;
 
     std::unique_ptr<const ASTType> trait_;
     std::unique_ptr<const ASTType> ast_type_;
@@ -1227,7 +1217,7 @@ public:
     {}
 
     const Path* path() const { return path_.get(); }
-    const ValueDecl* value_decl() const { return value_decl_; }
+    const Decl* value_decl() const { return decl_ && decl_->is_value_decl() ? decl_ : nullptr; }
 
     bool is_lvalue() const override;
     void take_address() const override;
@@ -1241,7 +1231,7 @@ private:
     thorin::Value lemit(CodeGen&) const override;
 
     std::unique_ptr<const Path> path_;
-    mutable const ValueDecl* value_decl_ = nullptr; ///< Declaration of the variable in use.
+    mutable const Decl* decl_ = nullptr; ///< Declaration of the variable in use.
 };
 
 class PrefixExpr : public Expr {
@@ -1357,10 +1347,10 @@ private:
 
 class FieldExpr : public Expr {
 public:
-    FieldExpr(Location location, const Expr* lhs, const Identifier* identifier)
+    FieldExpr(Location location, const Expr* lhs, const Identifier* id)
         : Expr(location)
         , lhs_(dock(lhs_, lhs))
-        , identifier_(identifier)
+        , identifier_(id)
     {}
 
     const Expr* lhs() const { return lhs_.get(); }
@@ -1544,9 +1534,9 @@ class StructExpr : public Expr {
 public:
     class Elem : public ASTNode {
     public:
-        Elem(Location location, const Identifier* identifier, const Expr* expr)
+        Elem(Location location, const Identifier* id, const Expr* expr)
             : ASTNode(location)
-            , identifier_(identifier)
+            , identifier_(id)
             , expr_(dock(expr_, expr))
         {}
 
