@@ -510,6 +510,7 @@ const EnumDecl* Parser::parse_enum_decl(Tracker, Visibility) {
 }
 
 const Item* Parser::parse_extern_block_or_fn_decl(Tracker tracker, Visibility vis) {
+    eat(Token::EXTERN);
     if (la() == Token::FN)
         return parse_fn_decl(BodyMode::Mandatory, tracker, vis, /*extern*/ true, /*abi*/ "");
 
