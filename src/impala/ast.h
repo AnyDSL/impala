@@ -60,7 +60,7 @@ typedef std::vector<std::unique_ptr<const FnDecl>> FnDecls;
 typedef std::vector<std::unique_ptr<const Item>> Items;
 typedef std::vector<std::unique_ptr<const Param>> Params;
 typedef std::vector<std::unique_ptr<const Stmt>> Stmts;
-typedef std::vector<thorin::u8> Chars;
+typedef std::vector<char> Chars;
 typedef thorin::HashMap<Symbol, const FieldDecl*> FieldTable;
 typedef thorin::HashMap<Symbol, const FnDecl*> MethodTable;
 typedef thorin::HashMap<Symbol, const NamedItem*> ItemTable;
@@ -1140,14 +1140,14 @@ private:
 
 class CharExpr : public Expr {
 public:
-    CharExpr(Location location, Symbol symbol, thorin::u8 value)
+    CharExpr(Location location, Symbol symbol, char value)
         : Expr(location)
         , symbol_(symbol)
         , value_(value)
     {}
 
     Symbol symbol() const { return symbol_; }
-    thorin::u8 value() const { return value_; }
+    char value() const { return value_; }
 
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
@@ -1158,7 +1158,7 @@ private:
     void check(TypeSema&) const override;
 
     Symbol symbol_;
-    thorin::u8 value_;
+    char value_;
 };
 
 class StrExpr : public Expr {
@@ -1169,7 +1169,7 @@ public:
     {}
 
     const Symbols& symbols() const { return symbols_; }
-    const std::vector<thorin::u8>& values() const { return values_; }
+    const std::vector<char>& values() const { return values_; }
 
     bool is_lvalue() const override;
 
@@ -1183,7 +1183,7 @@ private:
     thorin::Value lemit(CodeGen&) const override;
 
     Symbols symbols_;
-    mutable std::vector<thorin::u8> values_;
+    mutable std::vector<char> values_;
 };
 
 class FnExpr : public Expr, public Fn {

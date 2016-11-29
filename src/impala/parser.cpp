@@ -187,7 +187,7 @@ public:
     Visibility parse_visibility();
     u64 parse_integer(const char* what);
     int parse_addr_space();
-    thorin::u8 char_value(const char*& p);
+    char char_value(const char*& p);
 
     // paths
     const Path* parse_path();
@@ -1049,8 +1049,8 @@ const LiteralExpr* Parser::parse_literal_expr() {
     }
 }
 
-thorin::u8 Parser::char_value(const char*& p) {
-    thorin::u8 value = 0;
+char Parser::char_value(const char*& p) {
+    char value = 0;
     if (*p++ == '\\') {
         switch (*p++) {
         case '0':  value = '\0'; break;
@@ -1064,7 +1064,7 @@ thorin::u8 Parser::char_value(const char*& p) {
             impala::error(la().location(), "expected valid escape sequence, got '\\%' while parsing %", *(p-1), la());
         }
     } else
-        value = thorin::u8(*(p-1));
+        value = *(p-1);
 
     return value;
 }
@@ -1074,7 +1074,7 @@ const CharExpr* Parser::parse_char_expr() {
     const char* p = symbol.str();
     assert(*p == '\'');
     ++p;
-    thorin::u8 value = 0;
+    char value = 0;
     if (*p != '\'') {
         value = char_value(p);
 
