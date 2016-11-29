@@ -272,7 +272,7 @@ private:
 
     const LocalDecl* create_continuation_decl(const char* name, bool set_type) {
         auto identifier = new Identifier(prev_loc(), name);
-        auto ast_type = set_type ? new FnASTType(prev_loc(), ASTTypeParams(), ASTTypes()) : nullptr;
+        auto ast_type = set_type ? new FnASTType(prev_loc()) : nullptr;
         return new LocalDecl(prev_loc(), cur_var_handle++, identifier, ast_type);
     }
 
@@ -723,8 +723,9 @@ const FnASTType* Parser::parse_fn_type() {
     return new FnASTType(tracker, std::move(ast_type_params), std::move(ast_type_args));
 }
 
-#if 0
 const ASTType* Parser::parse_return_type(bool& is_continuation, bool mandatory) {
+    auto tracker = track();
+    ASTTypes ast_type_args;
     is_continuation = false;
     if (accept(Token::ARROW)) {
         if (accept(Token::NOT)) {
@@ -732,31 +733,27 @@ const ASTType* Parser::parse_return_type(bool& is_continuation, bool mandatory) 
             return nullptr;
         }
 
-        auto ret_type = loc(new FnASTType());
-        if (accept(Token::L_PAREN)) {                   // in-place tuple
+        if (accept(Token::L_PAREN)) {   // in-place tuple
             parse_comma_list("closing parenthesis of return type list", Token::R_PAREN, [&] {
-                ret_type->ast_type_args_.emplace_back(parse_type());
+                ast_type_args.emplace_back(parse_type());
             });
         } else {
             auto type = parse_type();
             assert(!type->isa<TupleASTType>());
-            ret_type->ast_type_args_.emplace_back(type);
+            ast_type_args.emplace_back(type);
         }
-        return ret_type;
+
+        return new FnASTType(tracker, std::move(ast_type_args));
     }
 
     if (mandatory) {
         error("return type", "function type");
-
-        // return a type that can be printed and checked
-        auto ret_type = loc(new FnASTType());
-        ret_type->ast_type_args_.emplace_back(loc(new ErrorASTType()));
-        return ret_type;
+        ast_type_args.emplace_back(new ErrorASTType(tracker));
+        return new FnASTType(tracker, std::move(ast_type_args));
     }
 
     return nullptr;
 }
-#endif
 
 const PrimASTType* Parser::parse_prim_type() {
     auto tracker = track();

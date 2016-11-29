@@ -432,6 +432,11 @@ public:
         , CompoundASTType(location, std::move(ast_type_args))
     {}
 
+    FnASTType(Location location, ASTTypes&& ast_type_args = ASTTypes())
+        : ASTTypeParamList(ASTTypeParams())
+        , CompoundASTType(location, std::move(ast_type_args))
+    {}
+
     const FnASTType* ret_fn_ast_type() const;
 
     std::ostream& stream(std::ostream&) const override;
@@ -749,7 +754,7 @@ public:
         , items_(std::move(items))
     {}
 
-    Module(const char* first_file_name, Items&& items)
+    Module(const char* first_file_name, Items&& items = Items())
         : TypeDeclItem({first_file_name, 1, 1, 1, 1}, Visibility::Pub, nullptr, ASTTypeParams())
         , items_(std::move(items))
     {

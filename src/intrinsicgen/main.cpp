@@ -12,8 +12,8 @@ const impala::Type* llvm2impala(impala::TypeTable&, llvm::Type*);
 
 int main() {
     impala::Init init("dummy");
-    auto prg = make_unique<impala::ModContents>({"dummy.impala", 1, 1, 1, 1}, Items());
-    check(init, prg, false);
+    auto module = std::make_unique<impala::Module>("dummy.impala");
+    check(init, module.get(), false);
 
     auto& context = llvm::getGlobalContext();
     int num = llvm::Intrinsic::num_intrinsics - 1;
