@@ -1168,6 +1168,11 @@ private:
 
 class FnExpr : public Expr, public Fn {
 public:
+    FnExpr(Location location, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
+        : Expr(location)
+        , Fn(std::move(ast_type_params), std::move(params), body)
+    {}
+
     const FnType* fn_type() const override { return type()->as<FnType>(); }
     Symbol fn_symbol() const override { return Symbol("lambda"); }
 
@@ -1704,10 +1709,13 @@ private:
 
 class WhileExpr : public StmtLikeExpr {
 public:
-    WhileExpr(Location location, const Expr* cond, const Expr* body)
+    WhileExpr(Location location, const LocalDecl* continue_decl, const Expr* cond,
+              const Expr* body, const LocalDecl* break_decl)
         : StmtLikeExpr(location)
+        , continue_decl_(continue_decl)
         , cond_(cond)
         , body_(body)
+        , break_decl_(break_decl)
     {}
 
     const Expr* cond() const { return cond_.get(); }
@@ -1726,18 +1734,19 @@ private:
     const Type* check(InferSema&) const override;
     void check(TypeSema&) const override;
 
+    std::unique_ptr<const LocalDecl> continue_decl_;
     std::unique_ptr<const Expr> cond_;
     std::unique_ptr<const Expr> body_;
     std::unique_ptr<const LocalDecl> break_decl_;
-    std::unique_ptr<const LocalDecl> continue_decl_;
 };
 
 class ForExpr : public StmtLikeExpr {
 public:
-    ForExpr(Location location, const Expr* fn_expr, const Expr* expr)
+    ForExpr(Location location, const Expr* fn_expr, const Expr* expr, const LocalDecl* break_decl)
         : StmtLikeExpr(location)
         , fn_expr_(fn_expr)
         , expr_(expr)
+        , break_decl_(break_decl)
     {}
 
     const FnExpr* fn_expr() const { return fn_expr_.get()->as<FnExpr>(); }

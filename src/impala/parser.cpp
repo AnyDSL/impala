@@ -117,17 +117,17 @@ class Parser;
 class Parser {
 public:
     Parser(std::istream& stream, const char* filename)
-        : lexer(stream, filename)
+        : lexer_(stream, filename)
         , cur_var_handle(2) // reserve 1 for conditionals, 0 for mem
         , no_bars_(false)
     {
-        lookahead[0] = lexer.lex();
-        lookahead[1] = lexer.lex();
-        lookahead[2] = lexer.lex();
+        lookahead_[0] = lexer_.lex();
+        lookahead_[1] = lexer_.lex();
+        lookahead_[2] = lexer_.lex();
         prev_loc_ = Location(filename, 1, 1, 1, 1);
     }
 
-    const Token& la(size_t i = 0) const { assert(i < 3); return lookahead[i]; }
+    const Token& la(size_t i = 0) const { assert(i < 3); return lookahead_[i]; }
     Location prev_loc() const { return prev_loc_; }
 
 #ifdef NDEBUG
@@ -270,22 +270,17 @@ public:
     const AsmStmt::Elem* parse_asm_op();
 
 private:
-    Token lex();        ///< Consume next Token in input stream, fill look-ahead buffer, return consumed Token.
+    /// Consume next Token in input stream, fill look-ahead buffer, return consumed Token.
+    Token lex();
 
-    const LocalDecl* create_continuation_decl(const char* /*name*/, bool /*set_type*/) {
-#if 0
-        auto decl = loc(new LocalDecl(cur_var_handle++));
-        decl->is_mut_ = false;
-        decl->identifier_ = new Identifier(name, prev_loc_);
-        decl->set_loc(prev_loc_);
-        decl->ast_type_ = set_type ? new FnASTType(prev_loc()) : nullptr;
-        return decl;
-#endif
-        return nullptr;
+    const LocalDecl* create_continuation_decl(const char* name, bool set_type) {
+        auto identifier = new Identifier(prev_loc(), name);
+        auto ast_type = set_type ? new FnASTType(prev_loc(), ASTTypeParams(), ASTTypes()) : nullptr;
+        return new LocalDecl(prev_loc(), cur_var_handle++, /*mut*/ false, identifier, ast_type);
     }
 
-    Lexer lexer;        ///< invoked in order to get next token
-    Token lookahead[3]; ///< SLL(3) look ahead
+    Lexer lexer_;        ///< invoked in order to get next token
+    Token lookahead_[3]; ///< SLL(3) look ahead
     size_t cur_var_handle;
     bool no_bars_;
     Location prev_loc_;
@@ -308,11 +303,11 @@ std::unique_ptr<const ModContents> parse(std::istream& is, const char* filename)
  */
 
 Token Parser::lex() {
-    Token result = lookahead[0]; // remember result
-    lookahead[0] = lookahead[1]; // copy over LA2 to LA1
-    lookahead[1] = lookahead[2]; // copy over LA3 to LA2
-    lookahead[2] = lexer.lex();  // fill new LA3
-    prev_loc_ = result.location();    // remember previous location
+    Token result = lookahead_[0];  // remember result
+    lookahead_[0] = lookahead_[1]; // copy over LA2 to LA1
+    lookahead_[1] = lookahead_[2]; // copy over LA3 to LA2
+    lookahead_[2] = lexer_.lex();  // fill new LA3
+    prev_loc_ = result.location(); // remember previous location
     return result;
 }
 
@@ -1157,50 +1152,45 @@ const IfExpr* Parser::parse_if_expr() {
     return t.create<IfExpr>(cond, then_expr, else_expr);
 }
 
-#if 0
 const ForExpr* Parser::parse_for_expr() {
-    auto for_expr = loc(new ForExpr());
-    eat(Token::FOR);
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
-    auto fn_expr = loc(new FnExpr());
-    dock(for_expr->fn_expr_, fn_expr.get());
-    if (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
-        parse_param_list(fn_expr->params_, Token::IN, true);
-    fn_expr->params_.emplace_back(Param::create(cur_var_handle++, new Identifier("continue", prev_loc()), prev_loc(), nullptr));
-    fn_expr->is_continuation_ = false;
-    for_expr->break_decl_ = create_continuation_decl("break", /*set type during InferSema*/ false);
-    dock(for_expr->expr_, parse_expr());
-    dock(fn_expr->body_, try_block_expr("body of for loop"));
-    return for_expr;
+    auto t = track();
+    eat(Token::FOR);
+    auto params = (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
+                ? parse_param_list(Token::IN, true)
+                : Params();
+    params.emplace_back(new Param(prev_loc(), cur_var_handle++, /*mut*/ false, new Identifier(prev_loc(), "continue"), nullptr));
+    //fn_expr->is_continuation_ = false;
+    auto expr = parse_expr();
+    auto body = try_block_expr("body of for loop");
+    auto break_decl = create_continuation_decl("break", /*set type during InferSema*/ false);
+    return t.create<ForExpr>(t.create<FnExpr>(ASTTypeParams(), std::move(params), body), expr, break_decl);
 }
 
 const ForExpr* Parser::parse_with_expr() {
     // With-expressions are like for-expressions except that
     // they have no continue statement, and their break statement
     // behaves just as a continue statement in a for-expression would
-    auto with_expr = loc(new ForExpr());
+    auto t = track();
     eat(Token::WITH);
-    auto fn_expr = loc(new FnExpr());
-    dock(with_expr->fn_expr_, fn_expr.get());
-    if (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
-        parse_param_list(fn_expr->params_, Token::IN, true);
-    fn_expr->params_.emplace_back(Param::create(cur_var_handle++, new Identifier("break", prev_loc()), prev_loc(), nullptr));
-    with_expr->break_decl_ = create_continuation_decl("_", /*set type during InferSema*/ false);
-    dock(with_expr->expr_, parse_expr());
-    dock(fn_expr->body_, try_block_expr("body of with statement"));
-    return with_expr;
+    auto params = (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
+                ? parse_param_list(Token::IN, true)
+                : Params();
+    params.emplace_back(new Param(prev_loc(), cur_var_handle++, /*mut*/ false, new Identifier(prev_loc(), "break"), nullptr));
+    auto expr = parse_expr();
+    auto body = try_block_expr("body of with statement");
+    auto break_decl = create_continuation_decl("_", /*set type during InferSema*/ false);
+    return t.create<ForExpr>(t.create<FnExpr>(ASTTypeParams(), std::move(params), body), expr, break_decl);
 }
-#endif
 
 const WhileExpr* Parser::parse_while_expr() {
     auto t = track();
     eat(Token::WHILE);
+    auto continue_decl = create_continuation_decl("continue", true);
     auto cond = parse_expr();
-    // TODO
-    //while_expr->break_decl_ = create_continuation_decl("break", true);
-    //while_expr->continue_decl_ = create_continuation_decl("continue", true);
     auto body = try_block_expr("body of while loop");
-    return t.create<WhileExpr>(cond, body);
+    auto break_decl = create_continuation_decl("break", true);
+    return t.create<WhileExpr>(continue_decl, cond, body, break_decl);
 }
 
 const BlockExprBase* Parser::parse_block_expr() {
