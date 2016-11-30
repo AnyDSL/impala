@@ -60,7 +60,7 @@ public:
             error(expr, "lvalue required for %", os.str());
     }
 
-    void expect_known(const ValueDecl* value_decl) {
+    void expect_known(const Decl* value_decl) {
         if (!value_decl->type()->is_known()) {
             if (value_decl->symbol() == "return")
                 error(value_decl, "cannot infer a return type, maybe you forgot to mark the function with '-> !'?");
@@ -159,7 +159,7 @@ void FnASTType::check(TypeSema& sema) const {
 }
 
 void ASTTypeApp::check(TypeSema&) const {
-    if (!decl() || !decl()->isa<TypeDecl>())
+    if (!decl() || !decl()->is_type_decl())
         error(identifier(), "'%' does not name a type", symbol());
 }
 

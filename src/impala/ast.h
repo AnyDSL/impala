@@ -35,7 +35,6 @@ class Fn;
 class FnDecl;
 class LocalDecl;
 class MapExpr;
-class NamedItem;
 class Param;
 class Ptrn;
 class Stmt;
@@ -61,7 +60,7 @@ typedef std::vector<std::unique_ptr<const Stmt>> Stmts;
 typedef std::vector<char> Chars;
 typedef thorin::HashMap<Symbol, const FieldDecl*> FieldTable;
 typedef thorin::HashMap<Symbol, const FnDecl*> MethodTable;
-typedef thorin::HashMap<Symbol, const NamedItem*> ItemTable;
+typedef thorin::HashMap<Symbol, const Item*> Symbol2Item;
 
 const Expr* dock(std::unique_ptr<const Expr>& dst, const Expr* src);
 
@@ -167,7 +166,7 @@ public:
     {}
 
     Symbol symbol() const { return symbol_; }
-    virtual std::ostream& stream(std::ostream&) const;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     Symbol symbol_;
@@ -509,7 +508,8 @@ public:
         , identifier_(id)
         , ast_type_(ast_type)
         , mut_(mut)
-        , is_written_(false)
+        , written_(false)
+        , done_(false)
     {}
 
     /// @p NoDecl.
@@ -530,6 +530,7 @@ public:
     // tag
     Tag tag() const { return tag_; }
     bool is_no_decl() const { return tag() == NoDecl; }
+    bool is_named_decl() const { return tag() == NamedDecl; }
     bool is_type_decl() const { return tag() == TypeDecl; }
     bool is_value_decl() const { return tag() == ValueDecl; }
 
@@ -537,31 +538,32 @@ public:
     const Identifier* identifier() const { assert(!is_no_decl()); return identifier_.get(); }
     Symbol symbol() const { assert(!is_no_decl()); return identifier_->symbol(); }
     bool is_anonymous() const { assert(!is_no_decl()); return symbol() == Symbol() || symbol().str()[0] == '<'; }
-    size_t depth() const { return depth_; }
-    const Decl* shadows() const { return shadows_; }
+    size_t depth() const { assert(!is_no_decl()); return depth_; }
+    const Decl* shadows() const { assert(!is_no_decl()); return shadows_; }
 
     // ValueDecl
     const ASTType* ast_type() const { assert(is_value_decl()); return ast_type_.get(); } ///< Original \p ASTType.
     bool is_mut() const { assert(is_value_decl()); return mut_; }
-    bool is_written() const { assert(is_value_decl()); return is_written_; }
-    void write() const { assert(is_value_decl()); is_written_ = true; }
+    bool is_written() const { assert(is_value_decl()); return written_; }
+    void write() const { assert(is_value_decl()); written_ = true; }
+    virtual thorin::Value emit(CodeGen&, const thorin::Def*) const { THORIN_UNREACHABLE; }
 
 private:
     Tag tag_;
     std::unique_ptr<const Identifier> identifier_;
     std::unique_ptr<const ASTType> ast_type_;
+
+protected:
     mutable thorin::Value value_;
     mutable const Decl* shadows_;
-    mutable unsigned depth_      : 24;
-    unsigned mut_                :  1;
-    mutable unsigned is_written_ :  1;
+    mutable unsigned depth_   : 24;
+    unsigned mut_             :  1;
+    mutable unsigned written_ :  1;
+    mutable unsigned done_    :  1; ///< Used during @p CodeGen.
 
     friend class NameSema;
     friend class CodeGen;
 };
-
-    //virtual thorin::Value emit(CodeGen&, const thorin::Def* init) const = 0;
-    //friend class CodeGen;
 
 /// Base class for all values which may be mutated within a function.
 class LocalDecl : public Decl {
@@ -580,11 +582,12 @@ public:
     const Fn* fn() const { return fn_; }
     void take_address() const { is_address_taken_ = true; }
     void check(NameSema&) const;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const;
     void check(TypeSema&) const;
-    //thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
+    thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
 protected:
     size_t handle_;
@@ -593,7 +596,7 @@ protected:
 
     friend class InferSema;
     friend class TypeSema;
-    friend class ValueDecl;
+    friend class CodeGen;
 };
 
 //------------------------------------------------------------------------------
@@ -759,7 +762,7 @@ public:
     }
 
     const Items& items() const { return items_; }
-    const ItemTable& item_table() const { return item_table_; }
+    const Symbol2Item& symbol2item() const { return symbol2item_; }
 
     void check(NameSema&) const override;
     void check(InferSema&) const override;
@@ -769,7 +772,7 @@ public:
 
 private:
     Items items_;
-    mutable ItemTable item_table_;
+    mutable Symbol2Item symbol2item_;
 };
 
 class ModuleDecl : public TypeDeclItem {
@@ -913,7 +916,7 @@ public:
 private:
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
-    //thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
+    thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
     std::unique_ptr<const Expr> init_;
 };
@@ -944,7 +947,7 @@ public:
 private:
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
-    //thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
+    thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
     std::unique_ptr<const Identifier> export_name_;
     bool is_extern_ = false;
@@ -1035,8 +1038,6 @@ public:
     virtual bool is_lvalue() const { return false; }
     virtual bool has_side_effect() const { return false; }
     virtual void take_address() const {}
-
-    virtual std::ostream& stream(std::ostream&) const = 0;
     virtual void check(NameSema&) const = 0;
 
 private:
@@ -1217,7 +1218,7 @@ public:
     {}
 
     const Path* path() const { return path_.get(); }
-    const Decl* value_decl() const { return decl_ && decl_->is_value_decl() ? decl_ : nullptr; }
+    const Decl* value_decl() const { return value_decl_; }
 
     bool is_lvalue() const override;
     void take_address() const override;
@@ -1231,7 +1232,7 @@ private:
     thorin::Value lemit(CodeGen&) const override;
 
     std::unique_ptr<const Path> path_;
-    mutable const Decl* decl_ = nullptr; ///< Declaration of the variable in use.
+    mutable const Decl* value_decl_ = nullptr; ///< Declaration of the variable in use.
 };
 
 class PrefixExpr : public Expr {

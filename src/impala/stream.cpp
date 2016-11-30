@@ -104,7 +104,7 @@ std::ostream& Fn::stream_params(std::ostream& os, bool returning) const {
 
 }
 
-std::ostream& ValueDecl::stream(std::ostream& os) const {
+std::ostream& LocalDecl::stream(std::ostream& os) const {
     os << (is_mut() ? "mut " : "" );
     if (!is_anonymous()) {
         os << symbol();
@@ -175,9 +175,9 @@ std::ostream& FieldDecl::stream(std::ostream& os) const {
 }
 
 std::ostream& StaticItem::stream(std::ostream& os) const {
-    ValueDecl::stream(os << "static ");
+    streamf(os, "static % %: %", is_mut() ? "mut " : "", identifier(), type() ? type()->to_string() : ast_type()->to_string());
     if (init())
-        os << " = " << init();
+        streamf(os, " = %", init());
     return os << ";";
 }
 

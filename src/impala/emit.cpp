@@ -62,7 +62,7 @@ public:
     void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }
     void emit(const Item* item) {
         assert(!item->done_);
-        item->emit_item(*this);
+        item->emit(*this);
 #ifndef NDEBUG
         item->done_ = true;
 #endif
@@ -214,11 +214,11 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
  * items
  */
 
-void ValueItem::emit_item(CodeGen& cg) const {
-    cg.emit(static_cast<const ValueDecl*>(this), nullptr);
+void ValueItem::emit(CodeGen& cg) const {
+    cg.emit(this, nullptr);
 }
 
-void Module::emit_item(CodeGen& cg) const {
+void Module::emit(CodeGen& cg) const {
     for (const auto& item : items())
         cg.emit(item.get());
 }
@@ -250,9 +250,9 @@ Value FnDecl::emit(CodeGen& cg, const Def*) const {
     return value_;
 }
 
-void ExternBlock::emit_item(CodeGen& cg) const {
+void ExternBlock::emit(CodeGen& cg) const {
     for (const auto& fn_decl : fn_decls()) {
-        cg.emit(static_cast<const ValueDecl*>(fn_decl.get()), nullptr); // TODO use init
+        cg.emit(fn_decl.get(), nullptr); // TODO use init
         auto continuation = fn_decl->continuation();
         if (abi() == "\"C\"")
             continuation->cc() = thorin::CC::C;
@@ -263,16 +263,16 @@ void ExternBlock::emit_item(CodeGen& cg) const {
     }
 }
 
-void ModuleDecl::emit_item(CodeGen&) const {
+void ModuleDecl::emit(CodeGen&) const {
 }
 
-void ImplItem::emit_item(CodeGen& cg) const {
+void ImplItem::emit(CodeGen& cg) const {
     if (def_)
         return;
 
     Array<const Def*> args(num_methods());
     for (size_t i = 0, e = args.size(); i != e; ++i) {
-        cg.emit(static_cast<const ValueDecl*>(method(i)), nullptr); // TODO use init
+        cg.emit(method(i), nullptr); // TODO use init
         args[i] = method(i)->continuation();
     }
 
@@ -290,12 +290,12 @@ Value StaticItem::emit(CodeGen& cg, const Def* init) const {
     return Value::create_ptr(cg, cg.world().global(init, location(), true, symbol().str()));
 }
 
-void StructDecl::emit_item(CodeGen& cg) const {
+void StructDecl::emit(CodeGen& cg) const {
     cg.convert(type());
 }
 
-void TraitDecl::emit_item(CodeGen&) const {}
-void Typedef::emit_item(CodeGen&) const {}
+void TraitDecl::emit(CodeGen&) const {}
+void Typedef::emit(CodeGen&) const {}
 
 /*
  * expressions
@@ -780,7 +780,7 @@ void AsmStmt::emit(CodeGen& cg) const {
 
 void emit(World& world, const Module* mod) {
     CodeGen cg(world);
-    mod->emit_item(cg);
+    mod->emit(cg);
     clear_value_numbering_table(world);
 }
 

@@ -181,8 +181,8 @@ void Module::check(NameSema& sema) const {
     sema.push_scope();
     for (const auto& item : items()) {
         sema.check_head(item.get());
-        if (auto named_item = item->isa<NamedItem>())
-            item_table_[named_item->item_symbol()] = named_item;
+        if (item->is_named_decl())
+            symbol2item_[item->symbol()] = item.get();
     }
     for (const auto& item : items())
         item->check(sema);
@@ -307,14 +307,15 @@ void Path::check(NameSema& sema) const {
 void PathExpr::check(NameSema& sema) const {
     path()->check(sema);
     if (path()->decl()) {
-        value_decl_ = path()->decl()->isa<ValueDecl>();
-        if (!value_decl_)
+        if (path()->decl()->is_value_decl())
+            value_decl_ = path()->decl();
+        else
             error(this, "'%' is not a value", path());
     }
 }
 
-void PrefixExpr::check(NameSema& sema) const  {                     rhs()->check(sema); }
-void InfixExpr::check(NameSema& sema) const   { lhs()->check(sema); rhs()->check(sema); }
+void PrefixExpr ::check(NameSema& sema) const {                     rhs()->check(sema); }
+void InfixExpr  ::check(NameSema& sema) const { lhs()->check(sema); rhs()->check(sema); }
 void PostfixExpr::check(NameSema& sema) const { lhs()->check(sema); }
 
 void FieldExpr::check(NameSema& sema) const {

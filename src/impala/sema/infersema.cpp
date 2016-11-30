@@ -425,15 +425,13 @@ const Type* FnASTType::check(InferSema& sema) const {
 const Type* Typeof::check(InferSema& sema) const { return sema.check(expr()); }
 
 const Type* ASTTypeApp::check(InferSema& sema) const {
-    if (decl()) {
-        if (auto type_decl = decl()->isa<TypeDecl>()) {
-            if (auto ast_type_param = type_decl->isa<ASTTypeParam>())
-                return sema.var(ast_type_param->lambda_depth_);
-            auto type = sema.find_type(type_decl);
-            if (auto lambda = type->isa<Lambda>())
-                return sema.reduce(lambda, ast_type_args(), type_args_);
-            return type;
-        }
+    if (decl() && decl()->is_type_decl()) {
+        if (auto ast_type_param = decl()->isa<ASTTypeParam>())
+            return sema.var(ast_type_param->lambda_depth_);
+        auto type = sema.find_type(decl());
+        if (auto lambda = type->isa<Lambda>())
+            return sema.reduce(lambda, ast_type_args(), type_args_);
+        return type;
     }
 
     return sema.type_error();
