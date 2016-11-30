@@ -370,23 +370,13 @@ std::ostream& CastExpr::stream(std::ostream& os) const {
     return close(os, open_state);
 }
 
-#if 0
-std::ostream& TypeArgs::stream_ast_type_args(std::ostream& os) const {
-    if (num_ast_type_args() != 0)
-        return stream_list(os, ast_type_args(), [&](const auto& ast_type) { os << ast_type.get(); }, "[", "]");
-    return os;
+std::ostream& StructExpr::Elem::stream(std::ostream& os) const {
+    return streamf(os, "%: %", symbol(), expr());
 }
-
-std::ostream& TypeArgs::stream_type_args(std::ostream& os) const {
-    if (num_type_args() != 0)
-        return stream_list(os, type_args(), [&](const Type* type) { os << type; }, "[", "]", ", ", false);
-    return os;
-}
-#endif
 
 std::ostream& StructExpr::stream(std::ostream& os) const {
     ast_type_app()->stream(os);
-    return stream_list(os, elems(), [&](const auto& elem) { os << elem->symbol() << ": " << elem->expr(); }, "{", "}");
+    return stream_list(os, elems(), [&](const auto& elem) { os << elem.get(); }, "{", "}");
 }
 
 std::ostream& TypeAppExpr::stream(std::ostream& os) const {
@@ -499,10 +489,14 @@ std::ostream& ExprStmt::stream(std::ostream& os) const {
     return os;
 }
 
+std::ostream& AsmStmt::Elem::stream(std::ostream& os) const {
+    return streamf(os, "\"%\"(%)", constraint(), expr());
+}
+
 std::ostream& AsmStmt::stream(std::ostream& os) const {
     os << "asm(\"" << asm_template() << "\"";
-    stream_list(os << "\n\t: ",  outputs(), [&](const auto& elem) { os << "\"" << elem->constraint() << "\"(" << elem->expr() << ")"; });
-    stream_list(os << "\n\t: ",   inputs(), [&](const auto& elem) { os << "\"" << elem->constraint() << "\"(" << elem->expr() << ")"; });
+    stream_list(os << "\n\t: ",  outputs(), [&](const auto& elem) { os << elem.get(); });
+    stream_list(os << "\n\t: ",   inputs(), [&](const auto& elem) { os << elem.get(); });
     stream_list(os << "\n\t: ", clobbers(), [&](const auto& clobber) { os << "\"" << clobber << "\""; });
     stream_list(os << "\n\t: ",  options(), [&](const auto& option) { os << "\"" << option << "\""; });
     return os << ");";

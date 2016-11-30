@@ -744,11 +744,10 @@ public:
     {}
 
     Module(const char* first_file_name, Items&& items = Items())
-        : Module({first_file_name, 1, 1, 1, 1}, Visibility::Pub, nullptr, ASTTypeParams(), std::move(items))
-    {
-        // TODO add location
-        //if (!items.empty())
-    }
+        : Module({{first_file_name, 1, 1},
+                 items.empty() ? thorin::Position(first_file_name, 1, 1) : items.back()->location().end()},
+                 Visibility::Pub, nullptr, ASTTypeParams(), std::move(items))
+    {}
 
     const Items& items() const { return items_; }
     const Symbol2Item& symbol2item() const { return symbol2item_; }
@@ -1540,7 +1539,7 @@ public:
         Symbol symbol() const { return identifier()->symbol(); }
         const Expr* expr() const { return expr_.get(); }
         const FieldDecl* field_decl() const { return field_decl_; }
-        std::ostream& stream(std::ostream&) const override { assert(false && "TODO"); }
+        std::ostream& stream(std::ostream&) const override;
 
     private:
         std::unique_ptr<const Identifier> identifier_;
@@ -1961,7 +1960,7 @@ public:
 
         const std::string& constraint() const { return constraint_; }
         const Expr* expr() const { return expr_.get(); }
-        std::ostream& stream(std::ostream&) const override { assert(false && "TODO"); }
+        std::ostream& stream(std::ostream&) const override;
 
     private:
         std::string constraint_;
