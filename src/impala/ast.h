@@ -212,14 +212,6 @@ public:
         elems_.emplace_back(new Elem(id));
     }
 
-    //// HACK
-    //Path(Location location, bool global, const Identifier* id)
-        //: ASTNode(location)
-        //, global_(global)
-    //{
-        //elems_.emplace_back(std::make_unique<Elem>(id));
-    //}
-
     bool is_global() const { return global_; }
     const Elems& elems() const { return elems_; }
     const Decl* decl() const { return elems().back()->decl(); }

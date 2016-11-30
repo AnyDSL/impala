@@ -124,31 +124,31 @@ public:
         lookahead_[0] = lexer_.lex();
         lookahead_[1] = lexer_.lex();
         lookahead_[2] = lexer_.lex();
-        prev_loc_ = Location(filename, 1, 1, 1, 1);
+        prev_location_ = Location(filename, 1, 1, 1, 1);
     }
 
-    const Token& la(size_t i = 0) const { assert(i < 3); return lookahead_[i]; }
-    Location prev_loc() const { return prev_loc_; }
+    const Token& lookahead(size_t i = 0) const { assert(i < 3); return lookahead_[i]; }
+    Location prev_location() const { return prev_location_; }
 
 #ifdef NDEBUG
     Token eat(TokenKind) { return lex(); }
 #else
-    Token eat(TokenKind kind) { assert(kind == la() && "internal parser error"); return lex(); }
+    Token eat(TokenKind kind) { assert(kind == lookahead() && "internal parser error"); return lex(); }
 #endif
 
     bool accept(TokenKind tok);
     bool expect(TokenKind tok, const std::string& context);
-    void error(const std::string& what, const std::string& context) { error(what, context, la()); }
+    void error(const std::string& what, const std::string& context) { error(what, context, lookahead()); }
     void error(const std::string& what, const std::string& context, const Token& tok);
 
     class Tracker {
     public:
         Tracker(Parser& parser)
             : parser_(parser)
-            , location_(parser_.la().location().begin())
+            , location_(parser_.lookahead().location().begin())
         {}
 
-        operator Location() const { return {location_.begin(), parser_.prev_loc().end()}; }
+        operator Location() const { return {location_.begin(), parser_.prev_location().end()}; }
 
     private:
         Parser& parser_;
@@ -156,6 +156,9 @@ public:
     };
 
     Tracker track() { return Tracker(*this); }
+
+    template<class T, class... Args>
+    const T* create(Args&&... args) { return new T(prev_location(), std::forward<Args>(args)...); }
 
     /**
      * Parses a list of comma-separated items till one of the @p delimiters have been found.
@@ -165,7 +168,7 @@ public:
     void nibble_comma_list(Array<TokenKind> delimiters, std::function<void()> f) {
         auto is_delimiter = [&] () {
             for (auto delimiter : delimiters)
-                if (la() == delimiter)
+                if (lookahead() == delimiter)
                     return true;
             return false;
         };
@@ -183,7 +186,7 @@ public:
     }
 
     // misc
-    const Identifier* try_id(const std::string& what);
+    const Identifier* try_identifier(const std::string& what);
     Visibility parse_visibility();
     u64 parse_integer(const char* what);
     int parse_addr_space();
@@ -199,6 +202,11 @@ public:
     const Param* parse_param(int i, bool lambda);
     Params parse_param_list(TokenKind delimiter, bool lambda);
     void parse_return_param(Fn* fn);
+
+    bool param_list() {
+        return lookahead(0) == Token::IN || lookahead(0) == Token::MUT
+            || lookahead(1) == Token::COLON || lookahead(1) == Token::COMMA || lookahead(1) == Token::IN;
+    }
 
     // types
     const ASTType*      parse_type();
@@ -271,16 +279,16 @@ private:
     Token lex();
 
     const LocalDecl* create_continuation_decl(const char* name, bool set_type) {
-        auto identifier = new Identifier(prev_loc(), name);
-        auto ast_type = set_type ? new FnASTType(prev_loc()) : nullptr;
-        return new LocalDecl(prev_loc(), cur_var_handle++, identifier, ast_type);
+        auto identifier = create<Identifier>(name);
+        auto ast_type = set_type ? create<FnASTType>() : nullptr;
+        return create<LocalDecl>(cur_var_handle++, identifier, ast_type);
     }
 
     Lexer lexer_;        ///< invoked in order to get next token
     Token lookahead_[3]; ///< SLL(3) look ahead
     size_t cur_var_handle;
     bool no_bars_;
-    Location prev_loc_;
+    Location prev_location_;
 };
 
 //------------------------------------------------------------------------------
@@ -288,7 +296,7 @@ private:
 void parse(Items& items, std::istream& is, const char* filename) {
     Parser parser(is, filename);
     parser.parse_items(items);
-    if (parser.la() != Token::END_OF_FILE)
+    if (parser.lookahead() != Token::END_OF_FILE)
         parser.error("module item", "module contents");
 }
 
@@ -303,19 +311,19 @@ Token Parser::lex() {
     lookahead_[0] = lookahead_[1]; // copy over LA2 to LA1
     lookahead_[1] = lookahead_[2]; // copy over LA3 to LA2
     lookahead_[2] = lexer_.lex();  // fill new LA3
-    prev_loc_ = result.location(); // remember previous location
+    prev_location_ = result.location(); // remember previous location
     return result;
 }
 
 bool Parser::accept(TokenKind type) {
-    if (type != la())
+    if (type != lookahead())
         return false;
     lex();
     return true;
 }
 
 bool Parser::expect(TokenKind tok, const std::string& context) {
-    if (la() == tok) {
+    if (lookahead() == tok) {
         lex();
         return true;
     } else {
@@ -331,20 +339,20 @@ void Parser::error(const std::string& what, const std::string& context, const To
             context.empty() ? "" : std::string(" while parsing ") + context.c_str());
 }
 
-const Identifier* Parser::try_id(const std::string& what) {
+const Identifier* Parser::try_identifier(const std::string& what) {
     Token name;
-    if (la() == Token::ID)
+    if (lookahead() == Token::ID)
         name = lex();
     else {
         error("identifier", what);
-        name = Token(la().location(), "<error>");
+        name = Token(lookahead().location(), "<error>");
     }
 
     return new Identifier(name);
 }
 
 Visibility Parser::parse_visibility() {
-    switch (la()) {
+    switch (lookahead()) {
         case VISIBILITY: return Visibility(lex().kind());
         default:         return Visibility(Visibility::None);
     }
@@ -352,15 +360,15 @@ Visibility Parser::parse_visibility() {
 
 u64 Parser::parse_integer(const char* what) {
     u64 dim;
-    switch (la()) {
-        case Token::LIT_i8:   dim = la().box().get_s8();  break;
-        case Token::LIT_i16:  dim = la().box().get_s16(); break;
-        case Token::LIT_i32:  dim = la().box().get_s32(); break;
-        case Token::LIT_i64:  dim = la().box().get_s64(); break;
-        case Token::LIT_u8:   dim = la().box().get_u8();  break;
-        case Token::LIT_u16:  dim = la().box().get_u16(); break;
-        case Token::LIT_u32:  dim = la().box().get_u32(); break;
-        case Token::LIT_u64:  dim = la().box().get_u64(); break;
+    switch (lookahead()) {
+        case Token::LIT_i8:   dim = lookahead().box().get_s8();  break;
+        case Token::LIT_i16:  dim = lookahead().box().get_s16(); break;
+        case Token::LIT_i32:  dim = lookahead().box().get_s32(); break;
+        case Token::LIT_i64:  dim = lookahead().box().get_s64(); break;
+        case Token::LIT_u8:   dim = lookahead().box().get_u8();  break;
+        case Token::LIT_u16:  dim = lookahead().box().get_u16(); break;
+        case Token::LIT_u32:  dim = lookahead().box().get_u32(); break;
+        case Token::LIT_u64:  dim = lookahead().box().get_u64(); break;
         default:
             dim = 0;
             error("integer literal", what);
@@ -370,7 +378,7 @@ u64 Parser::parse_integer(const char* what) {
 }
 
 int Parser::parse_addr_space() {
-    if (la(0) == Token::L_BRACKET && la(1) == Token::LIT_i32) {
+    if (lookahead(0) == Token::L_BRACKET && lookahead(1) == Token::LIT_i32) {
         eat(Token::L_BRACKET);
         int addr_space = parse_integer("address space");
         expect(Token::R_BRACKET, "address space annotation");
@@ -384,7 +392,7 @@ int Parser::parse_addr_space() {
  */
 
 const Path::Elem* Parser::parse_path_elem() {
-    return new Path::Elem(try_id("path"));
+    return new Path::Elem(try_identifier("path"));
 }
 
 const Path* Parser::parse_path() {
@@ -410,7 +418,7 @@ ASTTypeParams Parser::parse_ast_type_params() {
 
 const ASTTypeParam* Parser::parse_ast_type_param() {
     auto tracker = track();
-    auto identifier = try_id("type parameter");
+    auto identifier = try_identifier("type parameter");
     ASTTypes bounds;
     if (accept(Token::COLON)) {
         do {
@@ -434,7 +442,7 @@ const Param* Parser::parse_param(int i, bool lambda) {
     const Identifier* identifier = nullptr;
     const ASTType* type = nullptr;
     const ASTType* ast_type = nullptr;
-    Token tok = la();
+    Token tok = lookahead();
 
     if (tok == Token::ID)
         identifier = new Identifier(lex());
@@ -468,7 +476,7 @@ const Param* Parser::parse_param(int i, bool lambda) {
     if (identifier == nullptr) {
         std::ostringstream oss;
         oss << '<' << i << ">";
-        identifier = new Identifier(prev_loc(), oss.str().c_str());
+        identifier = create<Identifier>(oss.str().c_str());
     }
 
     return new Param(tracker, cur_var_handle++, mut, identifier, ast_type);
@@ -477,7 +485,7 @@ const Param* Parser::parse_param(int i, bool lambda) {
 void Parser::parse_return_param(Fn* fn) {
     auto fn_type = parse_return_type(fn->is_continuation_, false);
     if (!fn->is_continuation()) {
-        auto location = fn_type ? fn_type->location() : prev_loc();
+        auto location = fn_type ? fn_type->location() : prev_location();
         fn->params_.emplace_back(new Param(location, cur_var_handle++, new Identifier(location, "return"), fn_type));
     }
 }
@@ -490,7 +498,7 @@ const Item* Parser::parse_item() {
     auto tracker = track();
     auto vis = parse_visibility();
 
-    switch (la()) {
+    switch (lookahead()) {
         case Token::ENUM:    return parse_enum_decl(tracker, vis);
         case Token::EXTERN:  return parse_extern_block_or_fn_decl(tracker, vis);
         case Token::FN:      return parse_fn_decl(BodyMode::Mandatory, tracker, vis, /*extern*/ false, /*abi*/ "");
@@ -511,16 +519,16 @@ const EnumDecl* Parser::parse_enum_decl(Tracker, Visibility) {
 
 const Item* Parser::parse_extern_block_or_fn_decl(Tracker tracker, Visibility vis) {
     eat(Token::EXTERN);
-    if (la() == Token::FN)
+    if (lookahead() == Token::FN)
         return parse_fn_decl(BodyMode::Mandatory, tracker, vis, /*extern*/ true, /*abi*/ "");
 
     Symbol abi;
-    if (la() == Token::LIT_str)
+    if (lookahead() == Token::LIT_str)
         abi = lex().symbol();
 
     expect(Token::L_BRACE, "opening brace of external block");
     FnDecls fn_decls;
-    while (la() == Token::FN)
+    while (lookahead() == Token::FN)
         fn_decls.emplace_back(parse_fn_decl(BodyMode::None, tracker, vis, /*extern*/ true, abi));
     expect(Token::R_BRACE, "closing brace of external block");
 
@@ -531,8 +539,8 @@ const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility v
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     eat(Token::FN);
-    auto export_name = la() == Token::LIT_str ? new Identifier(lex()) : nullptr;
-    auto identifier = try_id("function name");
+    auto export_name = lookahead() == Token::LIT_str ? new Identifier(lex()) : nullptr;
+    auto identifier = try_identifier("function name");
     auto ast_type_params = parse_ast_type_params();
     expect(Token::L_PAREN, "function head");
     auto params = parse_param_list(Token::R_PAREN, false);
@@ -565,7 +573,7 @@ const ImplItem* Parser::parse_impl(Tracker tracker, Visibility vis) {
         ast_type = type;
     expect(Token::L_BRACE, "impl");
     FnDecls methods;
-    while (la() == Token::FN)
+    while (lookahead() == Token::FN)
         methods.emplace_back(parse_fn_decl(BodyMode::Mandatory, tracker, vis, /*exter*/ false, /*abi*/ ""));
     expect(Token::R_BRACE, "closing brace of impl");
 
@@ -574,7 +582,7 @@ const ImplItem* Parser::parse_impl(Tracker tracker, Visibility vis) {
 
 const Item* Parser::parse_module_or_module_decl(Tracker tracker, Visibility vis) {
     eat(Token::MOD);
-    auto identifier = try_id("module declaration");
+    auto identifier = try_identifier("module declaration");
     auto ast_type_params = parse_ast_type_params();
     if (accept(Token::L_BRACE)) {
         Items items;
@@ -590,7 +598,7 @@ const Item* Parser::parse_module_or_module_decl(Tracker tracker, Visibility vis)
 void Parser::parse_items(Items& items) {
     while (true) {
         cur_var_handle = 2; // HACK
-        switch (la()) {
+        switch (lookahead()) {
             case VISIBILITY:
             case ITEM:
                 items.emplace_back(parse_item());
@@ -607,7 +615,7 @@ void Parser::parse_items(Items& items) {
 const StaticItem* Parser::parse_static_item(Tracker tracker, Visibility vis) {
     eat(Token::STATIC);
     bool mut = accept(Token::MUT);
-    auto identifier = try_id("static item");
+    auto identifier = try_identifier("static item");
     auto ast_type = accept(Token::COLON) ? parse_type() : nullptr;
     auto init = accept(Token::ASGN) ? parse_expr() : nullptr;
     expect(Token::SEMICOLON, "static item");
@@ -616,7 +624,7 @@ const StaticItem* Parser::parse_static_item(Tracker tracker, Visibility vis) {
 
 const StructDecl* Parser::parse_struct_decl(Tracker tracker, Visibility vis) {
     eat(Token::STRUCT);
-    auto identifier = try_id("struct declaration");
+    auto identifier = try_identifier("struct declaration");
     auto ast_type_params = parse_ast_type_params();
     expect(Token::L_BRACE, "struct declaration");
     size_t i = 0;
@@ -630,7 +638,7 @@ const StructDecl* Parser::parse_struct_decl(Tracker tracker, Visibility vis) {
 const FieldDecl* Parser::parse_field_decl(const size_t i) {
     auto tracker = track();
     auto vis = parse_visibility();
-    auto identifier = try_id("struct field");
+    auto identifier = try_identifier("struct field");
     expect(Token::COLON, "struct field");
     auto ast_type = parse_type();
     return new FieldDecl(tracker, i, vis, identifier, ast_type);
@@ -638,7 +646,7 @@ const FieldDecl* Parser::parse_field_decl(const size_t i) {
 
 const TraitDecl* Parser::parse_trait_decl(Tracker tracker, Visibility vis) {
     eat(Token::TRAIT);
-    auto identifier = try_id("trait declaration");
+    auto identifier = try_identifier("trait declaration");
     auto ast_type_params = parse_ast_type_params();
 
     ASTTypeApps super_traits;
@@ -650,7 +658,7 @@ const TraitDecl* Parser::parse_trait_decl(Tracker tracker, Visibility vis) {
 
     expect(Token::L_BRACE, "trait declaration");
     FnDecls methods;
-    while (la() == Token::FN)
+    while (lookahead() == Token::FN)
         methods.emplace_back(parse_fn_decl(BodyMode::Optional, tracker, vis, /*exter*/ false, /*abi*/ ""));
     expect(Token::R_BRACE, "closing brace of trait declaration");
 
@@ -659,7 +667,7 @@ const TraitDecl* Parser::parse_trait_decl(Tracker tracker, Visibility vis) {
 
 const Typedef* Parser::parse_typedef(Tracker tracker, Visibility vis) {
     eat(Token::TYPEDEF);
-    auto identifier = try_id("type definition");
+    auto identifier = try_identifier("type definition");
     auto ast_type_params = parse_ast_type_params();
     expect(Token::ASGN, "type definition");
     auto ast_type = parse_type();
@@ -672,7 +680,7 @@ const Typedef* Parser::parse_typedef(Tracker tracker, Visibility vis) {
  */
 
 const ASTType* Parser::parse_type() {
-    switch (la()) {
+    switch (lookahead()) {
 #define IMPALA_TYPE(itype, atype) \
         case Token::TYPE_##itype:
 #include "impala/tokenlist.h"
@@ -688,7 +696,7 @@ const ASTType* Parser::parse_type() {
         case Token::SIMD:       return parse_simd_type();
         default:  {
             error("type", "");
-            return new ErrorASTType(prev_loc());
+            return create<ErrorASTType>();
         }
     }
 }
@@ -836,15 +844,15 @@ const SimdASTType* Parser::parse_simd_type() {
  */
 
 bool Parser::is_infix() {
-    bool infix = la().is_infix();
+    bool infix = lookahead().is_infix();
     if (no_bars_ && infix)
-        return la() != Token::OR && la() != Token::OROR;
+        return lookahead() != Token::OR && lookahead() != Token::OROR;
     return infix;
 }
 
 const Expr* Parser::parse_expr(Prec prec) {
     auto tracker = track();
-    auto lhs = la().is_prefix() ? parse_prefix_expr() : parse_primary_expr();
+    auto lhs = lookahead().is_prefix() ? parse_prefix_expr() : parse_primary_expr();
 
     if (lhs->isa<StmtLikeExpr>())
         return lhs; // bail out for stmt-like expressions
@@ -856,12 +864,12 @@ const Expr* Parser::parse_expr(Prec prec) {
          */
 
         if (is_infix()) {
-            if (prec > PrecTable::infix_l[la()])
+            if (prec > PrecTable::infix_l[lookahead()])
                 break;
 
             lhs = parse_infix_expr(tracker, lhs);
-        } else if ( la().is_postfix() ) {
-            if (prec > PrecTable::postfix_l[la()])
+        } else if ( lookahead().is_postfix() ) {
+            if (prec > PrecTable::postfix_l[lookahead()])
                 break;
 
             lhs = parse_postfix_expr(tracker, lhs);
@@ -873,7 +881,7 @@ const Expr* Parser::parse_expr(Prec prec) {
 }
 
 const Expr* Parser::parse_prefix_expr() {
-    if (la() == Token::OR || la() == Token::OROR)
+    if (lookahead() == Token::OR || lookahead() == Token::OROR)
         return parse_fn_expr();
 
     auto tracker = track();
@@ -904,7 +912,7 @@ const TypeAppExpr* Parser::parse_type_app_expr(Tracker tracker, const Expr* lhs)
 }
 
 const Expr* Parser::parse_postfix_expr(Tracker tracker, const Expr* lhs) {
-    switch (la()) {
+    switch (lookahead()) {
         case Token::L_BRACKET: return parse_type_app_expr(tracker, lhs);
         case Token::L_PAREN:   return parse_map_expr(tracker, lhs);
         case Token::DEC:
@@ -914,7 +922,7 @@ const Expr* Parser::parse_postfix_expr(Tracker tracker, const Expr* lhs) {
         }
         case Token::DOT: {
             lex();
-            auto identifier = try_id("field expression");
+            auto identifier = try_identifier("field expression");
             return new FieldExpr(tracker, lhs, identifier);
         }
         case Token::AS: {
@@ -928,7 +936,7 @@ const Expr* Parser::parse_postfix_expr(Tracker tracker, const Expr* lhs) {
 
 const Expr* Parser::parse_primary_expr() {
     auto tracker = track();
-    switch (la()) {
+    switch (lookahead()) {
         case Token::L_PAREN: {
             auto expr = parse_expr();
             if (accept(Token::COMMA)) {
@@ -991,7 +999,7 @@ const Expr* Parser::parse_primary_expr() {
                     StructExpr::Elems elems;
                     parse_comma_list("elements of struct expression", Token::R_BRACE, [&] {
                         auto tracker = track();
-                        auto symbol = try_id("identifier in struct expression");
+                        auto symbol = try_identifier("identifier in struct expression");
                         expect(Token::COLON, "struct expression");
                         elems.emplace_back(new StructExpr::Elem(tracker, symbol, parse_expr()));
                     });
@@ -999,7 +1007,7 @@ const Expr* Parser::parse_primary_expr() {
                     return new StructExpr(tracker, ast_type_app, std::move(elems));
                 }
             }
-            if (la(0) == Token::L_BRACE && (la(1) == Token::ID && la(2) == Token::COLON)) {
+            if (lookahead(0) == Token::L_BRACE && (lookahead(1) == Token::ID && lookahead(2) == Token::COLON)) {
                 eat(Token::L_BRACE);
 
                 auto ast_type_app = new ASTTypeApp(tracker, path, ASTTypes());
@@ -1007,7 +1015,7 @@ const Expr* Parser::parse_primary_expr() {
                 StructExpr::Elems elems;
                 parse_comma_list("elements of struct expression", Token::R_BRACE, [&] {
                     auto tracker = track();
-                    auto symbol = try_id("identifier in struct expression");
+                    auto symbol = try_identifier("identifier in struct expression");
                     expect(Token::COLON, "struct expression");
                     elems.emplace_back(new StructExpr::Elem(tracker, symbol, parse_expr()));
                 });
@@ -1030,13 +1038,13 @@ const LiteralExpr* Parser::parse_literal_expr() {
     LiteralExpr::Kind kind;
     Box box;
 
-    switch (la()) {
+    switch (lookahead()) {
         case Token::TRUE:       return new LiteralExpr(lex().location(), LiteralExpr::LIT_bool, Box(true));
         case Token::FALSE:      return new LiteralExpr(lex().location(), LiteralExpr::LIT_bool, Box(false));
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype: { \
             kind = LiteralExpr::LIT_##itype; \
-            Box box = la().box(); \
+            Box box = lookahead().box(); \
             return new LiteralExpr(lex().location(), kind, box); \
         }
 #include "impala/tokenlist.h"
@@ -1056,7 +1064,7 @@ char Parser::char_value(const char*& p) {
         case '\\': value = '\\'; break;
         default:
             // TODO make location precise inside strings, reduce redundancy for single chars
-            impala::error(la().location(), "expected valid escape sequence, got '\\%' while parsing %", *(p-1), la());
+            impala::error(lookahead().location(), "expected valid escape sequence, got '\\%' while parsing %", *(p-1), lookahead());
         }
     } else
         value = *(p-1);
@@ -1065,7 +1073,7 @@ char Parser::char_value(const char*& p) {
 }
 
 const CharExpr* Parser::parse_char_expr() {
-    auto symbol = la().symbol();
+    auto symbol = lookahead().symbol();
     const char* p = symbol.str();
     assert(*p == '\'');
     ++p;
@@ -1088,7 +1096,7 @@ const StrExpr* Parser::parse_str_expr() {
     Symbols symbols;
     std::vector<char> values;
     do {
-       symbols.emplace_back(la().symbol());
+       symbols.emplace_back(lookahead().symbol());
 
         const char* p = symbols.back().str();
         assert(*p == '"');
@@ -1097,7 +1105,7 @@ const StrExpr* Parser::parse_str_expr() {
             values.emplace_back(char_value(p));
         assert(p[1] == '\0');
         lex();
-    } while (la() == Token::LIT_str);
+    } while (lookahead() == Token::LIT_str);
     values.emplace_back('\0');
 
     return new StrExpr(tracker, std::move(symbols), std::move(values));
@@ -1127,7 +1135,7 @@ const IfExpr* Parser::parse_if_expr() {
     auto then_expr = try_block_expr("consequence of an if expression");
     const Expr* else_expr = nullptr;
     if (accept(Token::ELSE)) {
-        switch (la()) {
+        switch (lookahead()) {
             case Token::IF:         else_expr =  parse_if_expr(); break;
             case Token::L_BRACE:
             case Token::RUN_BLOCK:  else_expr =  parse_block_expr(); break;
@@ -1137,7 +1145,7 @@ const IfExpr* Parser::parse_if_expr() {
     }
 
     if (else_expr == nullptr)
-        else_expr = new BlockExpr(prev_loc());
+        else_expr = create<BlockExpr>();
     return new IfExpr(tracker, cond, then_expr, else_expr);
 }
 
@@ -1145,10 +1153,8 @@ const ForExpr* Parser::parse_for_expr() {
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
     auto tracker = track();
     eat(Token::FOR);
-    auto params = (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
-                ? parse_param_list(Token::IN, true)
-                : Params();
-    params.emplace_back(new Param(prev_loc(), cur_var_handle++, new Identifier(prev_loc(), "continue"), nullptr));
+    auto params = param_list() ? parse_param_list(Token::IN, true) : Params();
+    params.emplace_back(create<Param>(cur_var_handle++, create<Identifier>("continue"), nullptr));
     //fn_expr->is_continuation_ = false;
     auto expr = parse_expr();
     auto body = try_block_expr("body of for loop");
@@ -1162,10 +1168,8 @@ const ForExpr* Parser::parse_with_expr() {
     // behaves just as a continue statement in a for-expression would
     auto tracker = track();
     eat(Token::WITH);
-    auto params = (la(0) == Token::IN || la(0) == Token::MUT || la(1) == Token::COLON || la(1) == Token::COMMA || la(1) == Token::IN)
-                ? parse_param_list(Token::IN, true)
-                : Params();
-    params.emplace_back(new Param(prev_loc(), cur_var_handle++, new Identifier(prev_loc(), "break"), nullptr));
+    auto params = param_list() ? parse_param_list(Token::IN, true) : Params();
+    params.emplace_back(create<Param>(cur_var_handle++, create<Identifier>("break"), nullptr));
     auto expr = parse_expr();
     auto body = try_block_expr("body of with statement");
     auto break_decl = create_continuation_decl("_", /*set type during InferSema*/ false);
@@ -1183,20 +1187,20 @@ const WhileExpr* Parser::parse_while_expr() {
 }
 
 const BlockExprBase* Parser::parse_block_expr() {
-    assert(la() == Token::L_BRACE || la() == Token::RUN_BLOCK);
+    assert(lookahead() == Token::L_BRACE || lookahead() == Token::RUN_BLOCK);
     auto tracker = track();
     bool run = accept(Token::RUN_BLOCK);
     Stmts stmts;
     const Expr* expr = nullptr;
     while (true) {
-        switch (la()) {
+        switch (lookahead()) {
             case Token::SEMICOLON:  lex(); continue; // ignore semicolon
             case STMT_NOT_EXPR:     stmts.emplace_back(parse_stmt_not_expr()); continue;
             case EXPR: {
                 auto tracker = track();
-                bool stmt_like = la().is_stmt_like();
+                bool stmt_like = lookahead().is_stmt_like();
                 expr = parse_expr();
-                if (accept(Token::SEMICOLON) || (stmt_like && la() != Token::R_BRACE)) {
+                if (accept(Token::SEMICOLON) || (stmt_like && lookahead() != Token::R_BRACE)) {
                     stmts.emplace_back(new ExprStmt(tracker, expr));
                     continue;
                 }
@@ -1205,7 +1209,7 @@ const BlockExprBase* Parser::parse_block_expr() {
             default:
                 expect(Token::R_BRACE, "block expression");
                 if (expr == nullptr)
-                    expr = new EmptyExpr(prev_loc());
+                    expr = create<EmptyExpr>();
                 if (run)
                     new RunBlockExpr(tracker, std::move(stmts), expr);
                 else
@@ -1217,13 +1221,13 @@ const BlockExprBase* Parser::parse_block_expr() {
 }
 
 const BlockExprBase* Parser::try_block_expr(const std::string& context) {
-    switch (la()) {
+    switch (lookahead()) {
         case Token::L_BRACE:
         case Token::RUN_BLOCK:
             return parse_block_expr();
         default:
             error("block expression", context);
-            return new BlockExpr(prev_loc());
+            return create<BlockExpr>();
     }
 }
 
@@ -1232,7 +1236,7 @@ const BlockExprBase* Parser::try_block_expr(const std::string& context) {
  */
 
 const Ptrn* Parser::parse_ptrn() {
-    if (la() == Token::L_PAREN)
+    if (lookahead() == Token::L_PAREN)
         return parse_tuple_ptrn();
     else
         return parse_id_ptrn();
@@ -1251,7 +1255,7 @@ const TuplePtrn* Parser::parse_tuple_ptrn() {
 const IdPtrn* Parser::parse_id_ptrn() {
     auto tracker = track();
     auto mut = accept(Token::MUT);
-    auto identifier = try_id("local variable in let binding");
+    auto identifier = try_identifier("local variable in let binding");
     auto ast_type = accept(Token::COLON) ? parse_type() : nullptr;
     return new IdPtrn(new LocalDecl(tracker, cur_var_handle++, mut, identifier, ast_type));
 }
@@ -1261,7 +1265,7 @@ const IdPtrn* Parser::parse_id_ptrn() {
  */
 
 const Stmt* Parser::parse_stmt_not_expr() {
-    switch (la()) {
+    switch (lookahead()) {
         case ITEM:       return parse_item_stmt();
         case Token::LET: return parse_let_stmt();
         case Token::ASM: return parse_asm_stmt();
@@ -1335,7 +1339,7 @@ out:
 std::string Parser::parse_str() {
     std::string str;
     do {
-        std::string res = la().symbol().str() + 1;
+        std::string res = lookahead().symbol().str() + 1;
         // replaces special characters
         for (size_t i = 0; i < res.length() - 1; ++i) {
             if (res[i] != '\\') {
@@ -1350,7 +1354,7 @@ std::string Parser::parse_str() {
             }
         }
         lex();
-    } while (la() == Token::LIT_str);
+    } while (lookahead() == Token::LIT_str);
     return str;
 }
 
