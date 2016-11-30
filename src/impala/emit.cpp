@@ -541,7 +541,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
             if (auto path = type_expr->lhs()->isa<PathExpr>()) {
                 if (auto fn_decl = path->value_decl()->isa<FnDecl>()) {
                     if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {
-                        auto name = fn_decl->symbol();
+                        auto name = fn_decl->fn_symbol().remove_quotation();
                         if (name == "bitcast") {
                             return cg.world().bitcast(cg.convert(type_expr->type_arg(0)), cg.remit(arg(0)), eval_loc);
                         } else if (name == "select") {
@@ -558,10 +558,20 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             dst = cont;
                         } else if (name == "atomic") {
                             auto poly_type = cg.convert(type());
+                            auto ptr_type = cg.convert(arg(1)->type());
                             auto fn_type = cg.world().fn_type({
-                                cg.world().mem_type(), cg.world().type_qu32(), cg.world().ptr_type(poly_type), poly_type,
+                                cg.world().mem_type(), cg.world().type_pu32(), ptr_type, poly_type,
                                 cg.world().fn_type({ cg.world().mem_type(), poly_type }) });
                             auto cont = cg.world().continuation(fn_type, loc(), "atomic");
+                            cont->set_intrinsic();
+                            dst = cont;
+                        } else if (name == "cmpxchg") {
+                            auto ptr_type = cg.convert(arg(0)->type());
+                            auto poly_type = ptr_type->as<thorin::PtrType>()->referenced_type();
+                            auto fn_type = cg.world().fn_type({
+                                cg.world().mem_type(), ptr_type, poly_type, poly_type,
+                                cg.world().fn_type({ cg.world().mem_type(), poly_type, cg.world().type_bool() }) });
+                            auto cont = cg.world().continuation(fn_type, loc(), "cmpxchg");
                             cont->set_intrinsic();
                             dst = cont;
                         }
