@@ -1192,8 +1192,7 @@ const WhileExpr* Parser::parse_while_expr() {
 
 const BlockExprBase* Parser::parse_block_expr() {
     auto tracker = track();
-    bool run = accept(Token::RUN_BLOCK);
-    eat(Token::L_BRACE);
+    bool run = accept(Token::RUN_BLOCK) ? true : (eat(Token::L_BRACE), false);
     Stmts stmts;
     const Expr* block_expr = nullptr;
     while (true) {
