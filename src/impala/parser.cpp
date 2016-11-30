@@ -188,7 +188,7 @@ public:
     // misc
     const Identifier* try_identifier(const std::string& what);
     Visibility parse_visibility();
-    u64 parse_integer(const char* what);
+    uint64_t parse_integer(const char* what);
     int parse_addr_space();
     char char_value(const char*& p);
 
@@ -201,7 +201,7 @@ public:
     const ASTTypeParam* parse_ast_type_param();
     const Param* parse_param(int i, bool lambda);
     Params parse_param_list(TokenKind delimiter, bool lambda);
-    void parse_return_param(Fn* fn);
+    const Param* parse_return_param();
 
     bool param_list() {
         return lookahead(0) == Token::IN || lookahead(0) == Token::MUT
@@ -358,23 +358,20 @@ Visibility Parser::parse_visibility() {
     }
 }
 
-u64 Parser::parse_integer(const char* what) {
-    u64 dim;
+uint64_t Parser::parse_integer(const char* what) {
     switch (lookahead()) {
-        case Token::LIT_i8:   dim = lookahead().box().get_s8();  break;
-        case Token::LIT_i16:  dim = lookahead().box().get_s16(); break;
-        case Token::LIT_i32:  dim = lookahead().box().get_s32(); break;
-        case Token::LIT_i64:  dim = lookahead().box().get_s64(); break;
-        case Token::LIT_u8:   dim = lookahead().box().get_u8();  break;
-        case Token::LIT_u16:  dim = lookahead().box().get_u16(); break;
-        case Token::LIT_u32:  dim = lookahead().box().get_u32(); break;
-        case Token::LIT_u64:  dim = lookahead().box().get_u64(); break;
+        case Token::LIT_i8:  lex(); return lookahead().box().get_s8();
+        case Token::LIT_i16: lex(); return lookahead().box().get_s16();
+        case Token::LIT_i32: lex(); return lookahead().box().get_s32();
+        case Token::LIT_i64: lex(); return lookahead().box().get_s64();
+        case Token::LIT_u8:  lex(); return lookahead().box().get_u8();
+        case Token::LIT_u16: lex(); return lookahead().box().get_u16();
+        case Token::LIT_u32: lex(); return lookahead().box().get_u32();
+        case Token::LIT_u64: lex(); return lookahead().box().get_u64();
         default:
-            dim = 0;
             error("integer literal", what);
+            return 0;
     }
-    lex();
-    return dim;
 }
 
 int Parser::parse_addr_space() {
@@ -482,12 +479,15 @@ const Param* Parser::parse_param(int i, bool lambda) {
     return new Param(tracker, cur_var_handle++, mut, identifier, ast_type);
 }
 
-void Parser::parse_return_param(Fn* fn) {
-    auto fn_type = parse_return_type(fn->is_continuation_, false);
-    if (!fn->is_continuation()) {
+const Param* Parser::parse_return_param() {
+    bool is_continuation;
+    auto fn_type = parse_return_type(is_continuation, /*mandatory*/ false);
+
+    if (!is_continuation) {
         auto location = fn_type ? fn_type->location() : prev_location();
-        fn->params_.emplace_back(new Param(location, cur_var_handle++, new Identifier(location, "return"), fn_type));
-    }
+        return new Param(location, cur_var_handle++, new Identifier(location, "return"), fn_type);
+    } else
+        return nullptr;
 }
 
 /*
@@ -544,9 +544,10 @@ const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility v
     auto ast_type_params = parse_ast_type_params();
     expect(Token::L_PAREN, "function head");
     auto params = parse_param_list(Token::R_PAREN, false);
-    //parse_return_param(fn_decl);
-    const Expr* body = nullptr;
+    if (auto ret_param = parse_return_param())
+        params.emplace_back(ret_param);
 
+    const Expr* body = nullptr;
     switch (mode) {
         case BodyMode::None:      expect(Token::SEMICOLON, "function declaration"); break;
         case BodyMode::Mandatory: body = try_block_expr("body of function"); break;
@@ -726,7 +727,7 @@ const FnASTType* Parser::parse_fn_type() {
     });
 
     bool unused;
-    if (auto ret_type = parse_return_type(unused, true))
+    if (auto ret_type = parse_return_type(unused, /*mandatory*/ true))
         ast_type_args.emplace_back(ret_type);
 
     return new FnASTType(tracker, std::move(ast_type_params), std::move(ast_type_args));
@@ -938,6 +939,7 @@ const Expr* Parser::parse_primary_expr() {
     auto tracker = track();
     switch (lookahead()) {
         case Token::L_PAREN: {
+            lex();
             auto expr = parse_expr();
             if (accept(Token::COMMA)) {
                 Exprs args;
@@ -950,6 +952,7 @@ const Expr* Parser::parse_primary_expr() {
             }
         }
         case Token::L_BRACKET: {
+            lex();
             auto expr = parse_expr();
             if (accept(Token::COLON)) {
                 auto elem_ast_type = parse_type();
@@ -969,7 +972,7 @@ const Expr* Parser::parse_primary_expr() {
             return new DefiniteArrayExpr(tracker, std::move(args));
         }
         case Token::SIMD: {
-            eat(Token::SIMD);
+            lex();;
             expect(Token::L_BRACKET, "simd expression");
             Exprs args;
             parse_comma_list("elements of a simd expression", Token::R_BRACKET, [&] { args.emplace_back(parse_expr()); });
@@ -1112,8 +1115,8 @@ const StrExpr* Parser::parse_str_expr() {
 }
 
 const FnExpr* Parser::parse_fn_expr() {
-    auto tracker = track();
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
+    auto tracker = track();
 
     Params params;
     if (accept(Token::OR))
@@ -1121,10 +1124,11 @@ const FnExpr* Parser::parse_fn_expr() {
     else
         expect(Token::OROR, "parameter list of function expression");
 
-    //parse_return_param(fn_expr);
-    // TODO pull this up into Fn - it's missing for parse_fn_decl
-    //fn_expr->ret_var_handle_ = cur_var_handle++; // reserve one handle - we might later on add another return param
+    if (auto ret_param = parse_return_param())
+        params.emplace_back(ret_param);
+
     auto body = parse_expr();
+
     return new FnExpr(tracker, std::move(params), body);
 }
 
@@ -1187,9 +1191,9 @@ const WhileExpr* Parser::parse_while_expr() {
 }
 
 const BlockExprBase* Parser::parse_block_expr() {
-    assert(lookahead() == Token::L_BRACE || lookahead() == Token::RUN_BLOCK);
     auto tracker = track();
     bool run = accept(Token::RUN_BLOCK);
+    eat(Token::L_BRACE);
     Stmts stmts;
     const Expr* expr = nullptr;
     while (true) {
@@ -1211,13 +1215,11 @@ const BlockExprBase* Parser::parse_block_expr() {
                 if (expr == nullptr)
                     expr = create<EmptyExpr>();
                 if (run)
-                    new RunBlockExpr(tracker, std::move(stmts), expr);
+                    return new RunBlockExpr(tracker, std::move(stmts), expr);
                 else
-                    new BlockExpr(tracker, std::move(stmts), expr);
+                    return new BlockExpr(tracker, std::move(stmts), expr);
         }
     }
-    THORIN_UNREACHABLE;
-    return nullptr;
 }
 
 const BlockExprBase* Parser::try_block_expr(const std::string& context) {

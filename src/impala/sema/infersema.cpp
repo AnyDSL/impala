@@ -497,7 +497,8 @@ void FnDecl::check(InferSema& sema) const {
     Array<const Type*> param_types(num_params());
     size_t e = num_params();
     // TODO remove wild hack to reduce Typedef'd tuple types to argument lists of return continuations
-    if (!is_continuation()) {
+    //if (!is_continuation()) {
+    if (false) {
         auto ret_type = sema.check(param(e - 1));
         if (ret_type->num_ops() == 1) {
             if (auto ret_tuple_type = ret_type->op(0)->isa<TupleType>()) {

@@ -659,8 +659,6 @@ public:
     thorin::Continuation* emit_head(CodeGen&, const Location&) const;
     void emit_body(CodeGen&, const Location& loc) const;
 
-    bool is_continuation() const { return is_continuation_; }
-
     virtual const FnType* fn_type() const = 0;
     virtual Symbol fn_symbol() const = 0;
 
@@ -672,7 +670,6 @@ protected:
 
 private:
     std::unique_ptr<const Expr> body_;
-    bool is_continuation_; //< TODO remove this!!!
 
     friend class Parser;
 };
@@ -1073,7 +1070,7 @@ public:
     Args(Exprs&& args)
         : args_(std::move(args))
     {
-        for (auto& arg : args)
+        for (auto& arg : args_)
             arg->docker_ = &arg;
     }
 
