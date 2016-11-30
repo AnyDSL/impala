@@ -146,9 +146,9 @@ private:
     Location location_;
 };
 
-template<typename... Args>
+template<class... Args>
 std::ostream& warning(const ASTNode* n, const char* fmt, Args... args) { return warning(n->location(), fmt, args...); }
-template<typename... Args>
+template<class... Args>
 std::ostream& error  (const ASTNode* n, const char* fmt, Args... args) { return error  (n->location(), fmt, args...); }
 
 //------------------------------------------------------------------------------
@@ -912,12 +912,13 @@ private:
 
 class FnDecl : public ValueItem, public Fn {
 public:
-    FnDecl(Location location, Visibility vis, bool is_extern, Symbol abi, bool mut,
+    FnDecl(Location location, Visibility vis, bool is_extern, Symbol abi, Symbol export_name,
            const Identifier* id, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
-        : ValueItem(location, vis, mut, id, nullptr/*TODO*/)
+        : ValueItem(location, vis, /*mut*/ false, id, /*ast_type*/ nullptr)
         , Fn(std::move(ast_type_params), std::move(params), body)
-        , is_extern_(is_extern)
         , abi_(abi)
+        , export_name_(export_name)
+        , is_extern_(is_extern)
     {}
 
     bool is_extern() const { return is_extern_; }
@@ -929,7 +930,7 @@ public:
             t = lambda->body();
         return t->as<FnType>();
     }
-    Symbol fn_symbol() const override { return export_name_ ? export_name_->symbol() : identifier()->symbol(); }
+    Symbol fn_symbol() const override { return export_name_ != "" ? export_name_ : identifier()->symbol(); }
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
 
@@ -938,9 +939,9 @@ private:
     void check(TypeSema&) const override;
     thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
-    std::unique_ptr<const Identifier> export_name_;
-    bool is_extern_ = false;
     Symbol abi_;
+    Symbol export_name_;
+    bool is_extern_ = false;
 
     friend class InferSema;
     friend class TypeSema;
@@ -1037,6 +1038,7 @@ private:
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
 
+public:
     mutable std::unique_ptr<const Expr>* docker_ = nullptr;
 
 protected:
@@ -1050,12 +1052,8 @@ protected:
         return src;
     }
 
-    friend void insert(const Expr* nexpr, std::unique_ptr<const Expr>& nexpr_dock, const Expr* child) {
-        nexpr_dock.reset(nexpr);
-        swap(nexpr_dock, *child->docker_); // nexpr_dock -> *child->docker_, *child->docker -> nexpr
-        nexpr->docker_ = child->docker_;
-        child->docker_ = &nexpr_dock;
-    }
+    template<class T, class...Args>
+    friend const T* insert(const Expr* expr, Args&&... args);
 
     friend class Args;
     friend class CodeGen;
@@ -1063,6 +1061,18 @@ protected:
     friend class InferSema;
     friend class TypeSema;
 };
+
+template<class T, class...Args>
+const T* insert(const Expr* expr, Args&&... args) {
+    std::unique_ptr<const Expr> ptr;
+    auto parent = expr->docker_;
+    parent->release();
+    expr->docker_ = nullptr;
+    auto new_expr = new T(std::forward<Args>(args)...);
+    parent->reset(new_expr);
+    new_expr->docker_ = parent;
+    return new_expr;
+}
 
 /// Use as mixin for anything which uses args: (expr_1, ..., expr_n)
 class Args {
@@ -1238,9 +1248,7 @@ public:
     {}
 
     static const PrefixExpr* create(const Expr* rhs, const Kind kind) {
-        auto deref = new PrefixExpr(rhs->location(), kind, nullptr);
-        insert(deref, deref->rhs_, rhs);
-        return deref;
+        return insert<PrefixExpr>(rhs, rhs->location(), kind, rhs);
     }
 
     static const PrefixExpr* create_deref(const Expr* rhs) { return create(rhs, MUL); }
@@ -1415,9 +1423,7 @@ public:
     }
 
     static const ImplicitCastExpr* create(const Expr* src, const Type* type) {
-        auto implicit_cast_expr = new ImplicitCastExpr(src, type);
-        insert(implicit_cast_expr, implicit_cast_expr->src_, src);
-        return implicit_cast_expr;
+        return insert<ImplicitCastExpr>(src, src, type);
     }
 
     void check(NameSema&) const override { THORIN_UNREACHABLE; }
@@ -1577,9 +1583,7 @@ public:
     {}
 
     static const TypeAppExpr* create(const Expr* lhs) {
-        auto type_app_expr = new TypeAppExpr(lhs->location(), lhs, ASTTypes());
-        insert(type_app_expr, type_app_expr->lhs_, lhs);
-        return type_app_expr;
+        return insert<TypeAppExpr>(lhs, lhs->location(), lhs, ASTTypes());
     }
 
     const Expr* lhs() const { return lhs_.get(); }

@@ -143,7 +143,7 @@ std::ostream& FnDecl::stream(std::ostream& os) const {
         os << "extern ";
     os << "fn ";
     if (export_name_)
-        os << export_name_->symbol() << ' ';
+        os << export_name_ << ' ';
     stream_ast_type_params(os << symbol());
 
     const FnASTType* ret = nullptr;

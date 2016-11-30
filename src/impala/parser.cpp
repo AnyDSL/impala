@@ -360,14 +360,14 @@ Visibility Parser::parse_visibility() {
 
 uint64_t Parser::parse_integer(const char* what) {
     switch (lookahead()) {
-        case Token::LIT_i8:  lex(); return lookahead().box().get_s8();
-        case Token::LIT_i16: lex(); return lookahead().box().get_s16();
-        case Token::LIT_i32: lex(); return lookahead().box().get_s32();
-        case Token::LIT_i64: lex(); return lookahead().box().get_s64();
-        case Token::LIT_u8:  lex(); return lookahead().box().get_u8();
-        case Token::LIT_u16: lex(); return lookahead().box().get_u16();
-        case Token::LIT_u32: lex(); return lookahead().box().get_u32();
-        case Token::LIT_u64: lex(); return lookahead().box().get_u64();
+        case Token::LIT_i8:  return lex().box().get_s8();
+        case Token::LIT_i16: return lex().box().get_s16();
+        case Token::LIT_i32: return lex().box().get_s32();
+        case Token::LIT_i64: return lex().box().get_s64();
+        case Token::LIT_u8:  return lex().box().get_u8();
+        case Token::LIT_u16: return lex().box().get_u16();
+        case Token::LIT_u32: return lex().box().get_u32();
+        case Token::LIT_u64: return lex().box().get_u64();
         default:
             error("integer literal", what);
             return 0;
@@ -539,7 +539,7 @@ const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility v
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     eat(Token::FN);
-    auto export_name = lookahead() == Token::LIT_str ? new Identifier(lex()) : nullptr;
+    auto export_name = lookahead() == Token::LIT_str ? lex().symbol() : Symbol();
     auto identifier = try_identifier("function name");
     auto ast_type_params = parse_ast_type_params();
     expect(Token::L_PAREN, "function head");
@@ -1195,7 +1195,7 @@ const BlockExprBase* Parser::parse_block_expr() {
     bool run = accept(Token::RUN_BLOCK);
     eat(Token::L_BRACE);
     Stmts stmts;
-    const Expr* expr = nullptr;
+    const Expr* block_expr = nullptr;
     while (true) {
         switch (lookahead()) {
             case Token::SEMICOLON:  lex(); continue; // ignore semicolon
@@ -1203,21 +1203,22 @@ const BlockExprBase* Parser::parse_block_expr() {
             case EXPR: {
                 auto tracker = track();
                 bool stmt_like = lookahead().is_stmt_like();
-                expr = parse_expr();
+                auto expr = parse_expr();
                 if (accept(Token::SEMICOLON) || (stmt_like && lookahead() != Token::R_BRACE)) {
                     stmts.emplace_back(new ExprStmt(tracker, expr));
                     continue;
                 }
+                block_expr = expr;
                 // FALLTHROUGH
             }
             default:
                 expect(Token::R_BRACE, "block expression");
-                if (expr == nullptr)
-                    expr = create<EmptyExpr>();
+                if (block_expr == nullptr)
+                    block_expr = create<EmptyExpr>();
                 if (run)
-                    return new RunBlockExpr(tracker, std::move(stmts), expr);
+                    return new RunBlockExpr(tracker, std::move(stmts), block_expr);
                 else
-                    return new BlockExpr(tracker, std::move(stmts), expr);
+                    return new BlockExpr(tracker, std::move(stmts), block_expr);
         }
     }
 }

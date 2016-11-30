@@ -30,12 +30,13 @@ public:
     void pop_scope();                                            ///< Discards current scope.
 
     void check_head(const Item* item) {
-        if (auto decl = dynamic_cast<const Decl*>(item)) // TODO
-            insert(decl);
-        else if (const auto& extern_block = item->isa<ExternBlock>()) {
-            for (const auto& fn_decl : extern_block->fn_decls())
-                insert(fn_decl.get());
-        }
+        if (item->is_no_decl()) {
+            if (const auto& extern_block = item->isa<ExternBlock>()) {
+                for (const auto& fn_decl : extern_block->fn_decls())
+                    insert(fn_decl.get());
+            }
+        } else
+            insert(item);
     }
 
 private:
