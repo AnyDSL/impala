@@ -4,9 +4,8 @@
 #include "thorin/continuation.h"
 #include "thorin/primop.h"
 #include "thorin/type.h"
-#include "thorin/util/array.h"
-#include "thorin/util/push.h"
 #include "thorin/world.h"
+#include "thorin/util/array.h"
 
 using namespace thorin;
 

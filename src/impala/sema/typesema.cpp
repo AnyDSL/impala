@@ -1,7 +1,5 @@
 #include <sstream>
 
-#include "thorin/util/push.h"
-
 #include "impala/ast.h"
 #include "impala/impala.h"
 #include "impala/sema/typetable.h"
