@@ -608,7 +608,8 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
 }
 
 Value FieldExpr::lemit(CodeGen& cg) const {
-    return Value::create_agg(cg.lemit(lhs()), cg.world().literal_qu32(index(), loc()));
+    auto value = cg.lemit(lhs());
+    return Value::create_agg(value, cg.world().literal_qu32(index(), loc()));
 }
 
 const Def* FieldExpr::remit(CodeGen& cg) const {
