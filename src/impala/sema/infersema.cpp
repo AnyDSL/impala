@@ -736,10 +736,10 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, c
             types[i] = coerce(fn_type->op(i), args[i]);
         types.back() = fn_type->ops().back();
         auto result = constrain(lhs, this->fn_type(types));
-        if (result->is_known()) {
-            if (auto fn_type = result->isa<FnType>())
-                return fn_type->return_type();
-        } else return call_type;
+        if (auto fn_type = result->isa<FnType>())
+            return fn_type->return_type();
+        else
+            return call_type;
     }
 
     return type_error();
