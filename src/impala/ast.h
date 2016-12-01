@@ -6,7 +6,6 @@
 #include "thorin/irbuilder.h"
 #include "thorin/util/array.h"
 #include "thorin/util/assert.h"
-#include "thorin/util/autoptr.h"
 #include "thorin/util/cast.h"
 #include "thorin/util/location.h"
 #include "thorin/util/types.h"

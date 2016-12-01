@@ -3,7 +3,6 @@
 #include "thorin/util/array.h"
 #include "thorin/util/iterator.h"
 #include "thorin/util/log.h"
-#include "thorin/util/push.h"
 
 #include "impala/ast.h"
 #include "impala/impala.h"

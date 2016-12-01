@@ -5,7 +5,6 @@
 #include "thorin/primop.h"
 #include "thorin/type.h"
 #include "thorin/util/array.h"
-#include "thorin/util/push.h"
 #include "thorin/world.h"
 
 using namespace thorin;
