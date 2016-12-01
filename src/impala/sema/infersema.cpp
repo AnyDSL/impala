@@ -120,7 +120,6 @@ private:
     Representative* unify_by_rank(Representative* x, Representative* y);
 
     TypeMap<std::unique_ptr<Representative>> representatives_;
-    GIDMap<const Lambda*, const Lambda*> old2new_;
     bool todo_ = true;
 
     friend void type_inference(Init&, const Module*);
