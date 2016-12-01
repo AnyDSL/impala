@@ -22,6 +22,7 @@ public:
     Symbol(const std::string& str) { insert(str.c_str()); }
 
     const char* str() const { return str_; }
+    operator bool() const { return *this != Symbol(""); }
     bool operator == (Symbol symbol) const { return str() == symbol.str(); }
     bool operator != (Symbol symbol) const { return str() != symbol.str(); }
     bool operator == (const char* s) const { return str() == Symbol(s).str(); }

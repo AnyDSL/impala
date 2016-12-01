@@ -12,7 +12,9 @@
 
 namespace impala {
 
-class Token : public thorin::HasLocation {
+using thorin::Location;
+
+class Token {
 public:
     enum Kind {
         // !!! DO NOT CHANGE THIS ORDER !!!
@@ -43,12 +45,13 @@ public:
 
     Token() {}
     /// Create an operator token
-    Token(const thorin::Location& loc, Kind tok);
+    Token(Location location, Kind tok);
     /// Create an identifier or a keyword (depends on \p str)
-    Token(const thorin::Location& loc, const std::string& str);
+    Token(Location location, const std::string& str);
     /// Create a literal
-    Token(const thorin::Location& loc, Kind type, const std::string& str);
+    Token(Location location, Kind type, const std::string& str);
 
+    Location location() const { return location_; }
     Symbol symbol() const { return symbol_; }
     thorin::Box box() const { return box_; }
     Kind kind() const { return kind_; }
@@ -91,6 +94,7 @@ private:
     static Symbol insert(Kind tok, const char* str);
     static void insert_key(Kind tok, const char* str);
 
+    Location location_;
     Symbol symbol_;
     Kind kind_;
     thorin::Box box_;

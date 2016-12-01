@@ -2,7 +2,9 @@
 #define IMPALA_IMPALA_H
 
 #include <iostream>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "thorin/world.h"
 #include "thorin/util/stream.h"
@@ -15,7 +17,9 @@ namespace impala {
 bool& fancy();
 
 class ASTNode;
-class ModContents;
+class Item;
+class Module;
+typedef std::vector<std::unique_ptr<const Item>> Items;
 
 void init();
 void destroy();
@@ -29,16 +33,16 @@ struct Init {
     ~Init() { destroy(); }
 
     thorin::World world;
-    thorin::AutoPtr<TypeTable> typetable;
+    std::unique_ptr<TypeTable> typetable;
 };
 
-void parse(ModContents*, std::istream&, const char*);
-void name_analysis(const ModContents*);
-void type_inference(Init&, const ModContents*);
-void type_analysis(const ModContents*, bool nossa);
+void parse(Items&, std::istream&, const char*);
+void name_analysis(const Module*);
+void type_inference(Init&, const Module*);
+void type_analysis(const Module*, bool nossa);
 //void borrow_check(const ModContents*);
-void check(Init&, const ModContents*, bool nossa);
-void emit(thorin::World&, const ModContents*);
+void check(Init&, const Module*, bool nossa);
+void emit(thorin::World&, const Module*);
 
 enum Prec {
     BOTTOM,

@@ -6,38 +6,6 @@ namespace impala {
 
 //------------------------------------------------------------------------------
 
-const Param* Param::create(size_t var_handle, const Identifier* identifier, const Location& loc, const ASTType* fn_type) {
-    auto param = new Param(var_handle);
-    param->is_mut_ = false;
-    param->identifier_ = identifier;
-    param->ast_type_ = fn_type;
-    param->set_loc(loc);
-    return param;
-}
-
-const ImplicitCastExpr* ImplicitCastExpr::create(const Expr* expr, const Type* type) {
-    auto implicit_cast_expr = new ImplicitCastExpr();
-    implicit_cast_expr->type_ = type;
-    implicit_cast_expr->set_loc(expr->loc());
-    insert(implicit_cast_expr, implicit_cast_expr->lhs_, expr);
-    return implicit_cast_expr;
-}
-
-const PrefixExpr* PrefixExpr::create(const Expr* expr, const Kind kind) {
-    auto deref = new PrefixExpr();
-    deref->set_loc(expr->loc());
-    deref->kind_ = kind;
-    insert(deref, deref->rhs_, expr);
-    return deref;
-}
-
-const TypeAppExpr* TypeAppExpr::create(const Expr* expr) {
-    auto type_app_expr = new TypeAppExpr();
-    type_app_expr->set_loc(expr->loc());
-    insert(type_app_expr, type_app_expr->lhs_, expr);
-    return type_app_expr;
-}
-
 const char* Visibility::str() {
     if (visibility_ == Pub)  return "pub ";
     if (visibility_ == Priv) return "priv ";
@@ -103,7 +71,7 @@ bool MapExpr::is_lvalue() const {
 
 bool PrefixExpr::is_lvalue() const { return kind() == MUL; }
 bool FieldExpr::is_lvalue() const { return lhs()->is_lvalue() || lhs()->type()->isa<PtrType>(); }
-bool CastExpr::is_lvalue() const { return lhs()->is_lvalue(); }
+bool CastExpr::is_lvalue() const { return src()->is_lvalue(); }
 
 //------------------------------------------------------------------------------
 

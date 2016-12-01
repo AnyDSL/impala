@@ -12,9 +12,8 @@ const impala::Type* llvm2impala(impala::TypeTable&, llvm::Type*);
 
 int main() {
     impala::Init init("dummy");
-    thorin::AutoPtr<impala::ModContents> prg = new impala::ModContents();
-    prg->set_loc(thorin::Location("dummy", 1, 1, 1, 1));
-    check(init, prg, false);
+    auto module = std::make_unique<impala::Module>("dummy.impala");
+    check(init, module.get(), false);
 
     auto& context = llvm::getGlobalContext();
     int num = llvm::Intrinsic::num_intrinsics - 1;

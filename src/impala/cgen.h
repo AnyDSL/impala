@@ -28,7 +28,7 @@ struct CGenOptions {
  * @param o The stream to use as output.
  * @return true on success, otherwise false
  */
-bool generate_c_interface(const ModContents* mod, const CGenOptions& opts = CGenOptions(), std::ostream& o = std::cout);
+bool generate_c_interface(const Module* mod, const CGenOptions& opts = CGenOptions(), std::ostream& o = std::cout);
 
 }
 

@@ -18,7 +18,7 @@ class InferSema : public TypeTable {
 public:
     // helpers
 
-    const Type* reduce(const Lambda* lambda, ArrayRef<const ASTType*> ast_type_args, std::vector<const Type*>& type_args);
+    const Type* reduce(const Lambda* lambda, ASTTypeArgs ast_type_args, std::vector<const Type*>& type_args);
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
     const Type* close(int num_lambdas, const Type* body);
     size_t num_lambdas(const Lambda* lambda);
@@ -46,7 +46,6 @@ public:
 
     // check wrappers
 
-    void check(const ModContents* n) { n->check(*this); }
     const Type* check(const LocalDecl* local) {
         auto type = local->check(*this);
         constrain(local, type);
@@ -70,8 +69,10 @@ public:
     }
 
     const Type* check_call(const Expr* lhs, ArrayRef<const Expr*> args, const Type* call_type);
-    const Type* check_call(const Expr* lhs, const std::deque<AutoPtr<const Expr>>& args, const Type* call_type) {
-        Array<const Expr*> array(args.begin(), args.end());
+    const Type* check_call(const Expr* lhs, const Exprs& args, const Type* call_type) {
+        Array<const Expr*> array(args.size());
+        for (size_t i = 0, e = args.size(); i != e; ++i)
+            array[i] = args[i].get();
         return check_call(lhs, array, call_type);
     }
 
@@ -119,10 +120,9 @@ private:
     Representative* unify_by_rank(Representative* x, Representative* y);
 
     TypeMap<std::unique_ptr<Representative>> representatives_;
-    GIDMap<const Lambda*, const Lambda*> old2new_;
     bool todo_ = true;
 
-    friend void type_inference(Init&, const ModContents*);
+    friend void type_inference(Init&, const Module*);
 };
 
 //------------------------------------------------------------------------------
@@ -131,11 +131,11 @@ private:
  * helpers
  */
 
-const Type* InferSema::reduce(const Lambda* lambda, ArrayRef<const ASTType*> ast_type_args, std::vector<const Type*>& type_args) {
+const Type* InferSema::reduce(const Lambda* lambda, ASTTypeArgs ast_type_args, std::vector<const Type*>& type_args) {
     auto num = num_lambdas(lambda);
     if (ast_type_args.size() <= num) {
         for (size_t i = 0, e = ast_type_args.size(); i != e; ++i)
-            constrain(type_args[i], check(ast_type_args[i]));
+            constrain(type_args[i], check(ast_type_args[i].get()));
 
         while (type_args.size() < num)
             type_args.push_back(unknown_type());
@@ -154,7 +154,7 @@ const Type* InferSema::reduce(const Lambda* lambda, ArrayRef<const ASTType*> ast
 void InferSema::fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args) {
     for (size_t i = 0, e = type_args.size(); i != e; ++i) {
         if (i < ast_type_args.size())
-            constrain(type_args[i], check(ast_type_args[i]));
+            constrain(type_args[i], check(ast_type_args[i].get()));
         else if (!type_args[i])
             type_args[i] = unknown_type();
     }
@@ -334,14 +334,14 @@ auto InferSema::unify_by_rank(Representative* x, Representative* y) -> Represent
 
 //------------------------------------------------------------------------------
 
-void type_inference(Init& init, const ModContents* mod) {
+void type_inference(Init& init, const Module* module) {
     auto sema = new InferSema();
-    init.typetable = sema;
+    init.typetable.reset(sema);
 
     int i = 0;
     for (;sema->todo_; ++i) {
         sema->todo_ = false;
-        sema->check(mod);
+        sema->check(module);
     }
 
     DLOG("iterations needed for type inference: %", i);
@@ -354,14 +354,14 @@ void type_inference(Init& init, const ModContents* mod) {
  */
 
 const Var* ASTTypeParam::check(InferSema& sema) const {
-    for (auto bound : bounds())
-        sema.check(bound);
+    for (const auto& bound : bounds())
+        sema.check(bound.get());
     return sema.var(lambda_depth());
 }
 
 void ASTTypeParamList::check_ast_type_params(InferSema& sema) const {
-    for (auto ast_type_param : ast_type_params())
-        sema.check(ast_type_param);
+    for (const auto& ast_type_param : ast_type_params())
+        sema.check(ast_type_param.get());
 }
 
 const Type* LocalDecl::check(InferSema& sema) const {
@@ -423,15 +423,13 @@ const Type* FnASTType::check(InferSema& sema) const {
 const Type* Typeof::check(InferSema& sema) const { return sema.check(expr()); }
 
 const Type* ASTTypeApp::check(InferSema& sema) const {
-    if (decl()) {
-        if (auto type_decl = decl()->isa<TypeDecl>()) {
-            if (auto ast_type_param = type_decl->isa<ASTTypeParam>())
-                return sema.var(ast_type_param->lambda_depth_);
-            auto type = sema.find_type(type_decl);
-            if (auto lambda = type->isa<Lambda>())
-                return sema.reduce(lambda, ast_type_args(), type_args_);
-            return type;
-        }
+    if (decl() && decl()->is_type_decl()) {
+        if (auto ast_type_param = decl()->isa<ASTTypeParam>())
+            return sema.var(ast_type_param->lambda_depth_);
+        auto type = sema.find_type(decl());
+        if (auto lambda = type->isa<Lambda>())
+            return sema.reduce(lambda, ast_type_args(), type_args_);
+        return type;
     }
 
     return sema.type_error();
@@ -443,19 +441,17 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
  * items
  */
 
-void ModDecl::check(InferSema& sema) const {
-    if (mod_contents())
-        sema.check(mod_contents());
+void ModuleDecl::check(InferSema&) const {
 }
 
-void ModContents::check(InferSema& sema) const {
-    for (auto item : items())
-        sema.check(item);
+void Module::check(InferSema& sema) const {
+    for (const auto& item : items())
+        sema.check(item.get());
 }
 
 void ExternBlock::check(InferSema& sema) const {
-    for (auto fn : fns())
-        sema.check(fn);
+    for (const auto& fn_decl : fn_decls())
+        sema.check(fn_decl.get());
 }
 
 void Typedef::check(InferSema& sema) const {
@@ -466,7 +462,7 @@ void Typedef::check(InferSema& sema) const {
         // TODO parametric Typedefs
 #if 0
         auto abs = sema.typedef_abs(sema.type(ast_type())); // TODO might be nullptr
-        for (auto lambda : lambdas())
+        for (const auto& lambda : lambdas())
             abs->bind(lambda->lambda());
 #endif
     } else
@@ -498,8 +494,9 @@ void FnDecl::check(InferSema& sema) const {
 
     Array<const Type*> param_types(num_params());
     size_t e = num_params();
+
     // TODO remove wild hack to reduce Typedef'd tuple types to argument lists of return continuations
-    if (!is_continuation()) {
+    if (num_params() > 0 && param(e - 1)->type() && param(e - 1)->type()->isa<FnType>()) {
         auto ret_type = sema.check(param(e - 1));
         if (ret_type->num_ops() == 1) {
             if (auto ret_tuple_type = ret_type->op(0)->isa<TupleType>()) {
@@ -523,6 +520,8 @@ void FnDecl::check(InferSema& sema) const {
 }
 
 void StaticItem::check(InferSema& sema) const {
+    if (type_ == nullptr)
+        type_ = sema.unknown_type();
     if (ast_type())
         sema.constrain(this, sema.check(ast_type()));
     if (init())
@@ -563,7 +562,7 @@ const Type* FnExpr::check(InferSema& sema) const {
     if (body_type->isa<NoRetType>() || body_type->isa<UnknownType>())
         return sema.fn_type(param_types);
     else {
-        param_types.back() = sema.constrain(params().back(), sema.fn_type(body_type));
+        param_types.back() = sema.constrain(params().back().get(), sema.fn_type(body_type));
         return sema.fn_type(param_types);
     }
 }
@@ -646,12 +645,12 @@ const Type* PostfixExpr::check(InferSema& sema) const {
 }
 
 const Type* ExplicitCastExpr::check(InferSema& sema) const {
-    sema.check(lhs());
+    sema.check(src());
     return sema.check(ast_type());
 }
 
 const Type* ImplicitCastExpr::check(InferSema& sema) const {
-    sema.check(lhs());
+    sema.check(src());
     return type();
 }
 
@@ -665,10 +664,10 @@ const Type* DefiniteArrayExpr::check(InferSema& sema) const {
         expected_elem_type = sema.type_error();
 
     for (const auto& arg : args())
-        sema.check(arg);
+        sema.check(arg.get());
 
     for (const auto& arg : args())
-        expected_elem_type = sema.coerce(expected_elem_type, arg);
+        expected_elem_type = sema.coerce(expected_elem_type, arg.get());
 
     return sema.definite_array_type(expected_elem_type, num_args());
 }
@@ -683,10 +682,10 @@ const Type* SimdExpr::check(InferSema& sema) const {
         expected_elem_type = sema.type_error();
 
     for (const auto& arg : args())
-        sema.check(arg);
+        sema.check(arg.get());
 
     for (const auto& arg : args())
-        expected_elem_type = sema.coerce(expected_elem_type, arg);
+        expected_elem_type = sema.coerce(expected_elem_type, arg.get());
 
     return sema.simd_type(expected_elem_type, num_args());
 }
@@ -712,7 +711,7 @@ const Type* StructExpr::check(InferSema& sema) const {
     auto type = sema.check(ast_type_app());
 
     for (const auto& elem : elems())
-        sema.check(elem.expr());
+        sema.check(elem->expr());
 
     return type;
 }
@@ -720,7 +719,7 @@ const Type* StructExpr::check(InferSema& sema) const {
 const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, const Type* call_type) {
     auto fn_type = lhs->type()->as<FnType>();
 
-    for (auto arg : args)
+    for (const auto& arg : args)
         check(arg);
 
     if (args.size() == fn_type->num_ops()) {
@@ -737,10 +736,10 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, c
             types[i] = coerce(fn_type->op(i), args[i]);
         types.back() = fn_type->ops().back();
         auto result = constrain(lhs, this->fn_type(types));
-        if (result->is_known()) {
-            if (auto fn_type = result->isa<FnType>())
-                return fn_type->return_type();
-        } else return call_type;
+        if (auto fn_type = result->isa<FnType>())
+            return fn_type->return_type();
+        else
+            return call_type;
     }
 
     return type_error();
@@ -749,7 +748,7 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, c
 const Type* FieldExpr::check(InferSema& sema) const {
     auto ltype = sema.check(lhs());
     if (ltype->isa<PtrType>()) {
-        PrefixExpr::create_deref(lhs_);
+        PrefixExpr::create_deref(lhs_.get());
         ltype = sema.check(lhs());
     }
 
@@ -792,18 +791,17 @@ const Type* MapExpr::check(InferSema& sema) const {
 
     if (ltype->isa<Lambda>()) {
         if (!lhs_->isa<TypeAppExpr>())
-            TypeAppExpr::create(lhs_);
+            TypeAppExpr::create(lhs());
         ltype = sema.check(lhs());
     }
 
     if (ltype->isa<PtrType>()) {
-        PrefixExpr::create_deref(lhs_);
+        PrefixExpr::create_deref(lhs());
         ltype = sema.check(lhs());
     }
 
-    if (ltype->isa<FnType>()) {
+    if (ltype->isa<FnType>())
         return sema.check_call(lhs(), args(), type_);
-    }
 
     for (int i = 0, n = num_args(); i < n; i++) sema.check(arg(i));
 
@@ -823,8 +821,8 @@ const Type* MapExpr::check(InferSema& sema) const {
 }
 
 const Type* BlockExprBase::check(InferSema& sema) const {
-    for (auto stmt : stmts())
-        sema.check(stmt);
+    for (const auto& stmt : stmts())
+        sema.check(stmt.get());
 
     return expr() ? sema.check(expr()) : sema.unit()->as<Type>();
 }
@@ -869,12 +867,15 @@ const Type* ForExpr::check(InferSema& sema) const {
             }
 
             // copy over args and check call
-            Array<const Expr*> args(map->args().size()+1);
-            *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
+            Array<const Expr*> args(map->num_args() + 1);
+            for (size_t i = 0, e = map->num_args(); i != e; ++i)
+                args[i] = map->arg(i);
+            args.back() = fn_expr();
             return sema.check_call(map->lhs(), args, type_);
         }
 
-        for (int i = 0, n = map->num_args(); i < n; i++) { sema.check(map->arg(i)); }
+        for (size_t i = 0, e = map->num_args(); i != e; ++i)
+            sema.check(map->arg(i));
     }
 
     sema.check(fn_expr());
@@ -918,8 +919,8 @@ void LetStmt::check(InferSema& sema) const {
 }
 
 void AsmStmt::check(InferSema& sema) const {
-    for (const auto& output : outputs()) sema.check(output.expr());
-    for (const auto&  input :  inputs()) sema.check( input.expr());
+    for (const auto& output : outputs()) sema.check(output->expr());
+    for (const auto&  input :  inputs()) sema.check( input->expr());
 }
 
 //------------------------------------------------------------------------------

@@ -14,14 +14,14 @@ using namespace thorin;
 
 namespace impala {
 
-Token::Token(const Location& loc, Kind tok)
-    : HasLocation(loc)
+Token::Token(Location location, Kind tok)
+    : location_(location)
     , symbol_(tok2sym_[tok])
     , kind_(tok)
 {}
 
-Token::Token(const Location& loc, const std::string& str)
-    : HasLocation(loc)
+Token::Token(Location location, const std::string& str)
+    : location_(location)
     , symbol_(str)
 {
     assert(!str.empty());
@@ -37,8 +37,8 @@ static bool inrange(V val) {
     return std::numeric_limits<T>::lowest() <= val && val <= std::numeric_limits<T>::max();
 }
 
-Token::Token(const Location& loc, Kind kind, const std::string& str)
-    : HasLocation(loc)
+Token::Token(Location location, Kind kind, const std::string& str)
+    : location_(location)
     , symbol_(str)
     , kind_(kind)
 {
@@ -105,7 +105,7 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
     if (err)
         switch (kind_) {
 #define IMPALA_LIT(itype, atype) \
-            case LIT_##itype: error(loc, "literal out of range for type '%'," #itype); return;
+            case LIT_##itype: error(location, "literal out of range for type '%'," #itype); return;
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }

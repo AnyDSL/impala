@@ -1,7 +1,6 @@
 #include "impala/sema/type.h"
 
 #include <algorithm>
-#include <iostream>
 #include <sstream>
 #include <stack>
 

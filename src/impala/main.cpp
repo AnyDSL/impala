@@ -161,27 +161,23 @@ int main(int argc, char** argv) {
         }
 #endif
 
-        thorin::AutoPtr<impala::ModContents> prg = new impala::ModContents();
+        impala::Items items;
         for (const auto& infile : infiles) {
             auto filename = infile.c_str();
             ifstream file(filename);
-            prg->set_loc(Location(filename, 1, 1, 1, 1));
-            impala::parse(prg, file, filename);
+            impala::parse(items, file, filename);
         }
 
-        if (!prg->items().empty())
-            prg->set_loc(prg->items().front()->loc().begin(), prg->items().back()->loc().end());
-        else
-            prg->set_loc(infiles.front().c_str(), 1, 1, 1, 1);
+        auto module = std::make_unique<const impala::Module>(infiles.front().c_str(), std::move(items));
 
         if (emit_ast)
-            prg->stream(std::cout);
+            module->stream(std::cout);
 
-        check(init, prg, nossa);
+        check(init, module.get(), nossa);
         bool result = impala::num_errors() == 0;
 
         if (result && emit_annotated)
-            prg->stream(std::cout);
+            module->stream(std::cout);
 
         if (result && emit_cint) {
             impala::CGenOptions opts;
@@ -204,11 +200,11 @@ int main(int argc, char** argv) {
                 std::cerr << "cannot open file " << opts.file_name << "for writing" << std::endl;
                 return EXIT_FAILURE;
             }
-            impala::generate_c_interface(prg, opts, out_file);
+            impala::generate_c_interface(module.get(), opts, out_file);
         }
 
         if (result && (emit_llvm || emit_thorin || emit_ycomp || emit_ycomp_cfg))
-            emit(init.world, prg);
+            emit(init.world, module.get());
 
         if (result) {
             if (!nocleanup)

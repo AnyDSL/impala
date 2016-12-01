@@ -101,7 +101,7 @@ private:
         // Structure types
         if (auto struct_type = type->isa<StructType>()) {
             const StructDecl* decl = struct_type->struct_decl();
-            ctype_prefix = "struct " + std::string(decl->item_symbol().str());
+            ctype_prefix = "struct " + std::string(decl->symbol().str());
             ctype_suffix = "";
             return true;
         }
@@ -163,7 +163,7 @@ private:
         struct_decls[cur_gen] = CUR_GEN;
 
         // Go through each dependency and generate it
-        for (auto field : cur_gen->field_decls()) {
+        for (const auto& field : cur_gen->field_decls()) {
             struct_from_type(field->type(), [&] (const StructDecl* decl) {
                 auto it = struct_decls.find(decl);
                 if (it != struct_decls.end()) {
@@ -181,7 +181,7 @@ private:
 
     void process_struct_decl(const StructDecl* struct_decl) {
         // Add all the structures that are referenced in the fields
-        for (auto field : struct_decl->field_decls()) {
+        for (const auto& field : struct_decl->field_decls()) {
             struct_from_type(field->type(), [this] (const StructDecl* decl) {
                 export_structs.insert(decl);
             });
@@ -210,8 +210,8 @@ private:
 public:
     bool needs_vectors = false;
 
-    void process_module(const ModContents* mod) {
-        for (auto item : mod->items()) {
+    void process_module(const Module* mod) {
+        for (const auto& item : mod->items()) {
             if (auto decl = item->isa<FnDecl>())
                 process_fn_decl(decl);
         }
@@ -256,13 +256,13 @@ public:
         assert(order.size() == export_structs.size());
 
         for (auto st : order) {
-            o << "struct " << st->item_symbol().str() << " {\n";
-            for (auto field : st->field_decls()) {
+            o << "struct " << st->symbol().str() << " {\n";
+            for (const auto& field : st->field_decls()) {
                 auto type = field->type();
 
                 std::string ctype_pref, ctype_suf;
                 if (!ctype_from_impala(type, ctype_pref, ctype_suf)) {
-                    error(field, "structure field type not exportable");
+                    error(field.get(), "structure field type not exportable");
                     return false;
                 }
 
@@ -275,7 +275,7 @@ public:
     }
 
     bool generate_functions(std::ostream& o) const {
-        for (auto fn : export_fns) {
+        for (const auto& fn : export_fns) {
             const auto fn_type = fn->fn_type();
 
             std::string return_pref, return_suf;
@@ -290,7 +290,7 @@ public:
                 return false;
             }
 
-            o << return_pref << ' ' << fn->item_symbol().str() << '(';
+            o << return_pref << ' ' << fn->symbol().str() << '(';
 
             // Generate all arguments except the last one which is the implicit continuation
             for (size_t i = 0, e = fn_type->num_ops() - 1; i != e; ++i) {
@@ -318,7 +318,7 @@ public:
     }
 };
 
-bool generate_c_interface(const ModContents* mod, const CGenOptions& opts, std::ostream& o) {
+bool generate_c_interface(const Module* mod, const CGenOptions& opts, std::ostream& o) {
     if (opts.fns_only && opts.structs_only)
         return false;
 

@@ -58,7 +58,7 @@ public:
             error(expr, "lvalue required for %", os.str());
     }
 
-    void expect_known(const ValueDecl* value_decl) {
+    void expect_known(const Decl* value_decl) {
         if (!value_decl->type()->is_known()) {
             if (value_decl->symbol() == "return")
                 error(value_decl, "cannot infer a return type, maybe you forgot to mark the function with '-> !'?");
@@ -75,7 +75,7 @@ public:
     // check wrappers
 
     const Var* check(const ASTTypeParam* ast_type_param) { ast_type_param->check(*this); return ast_type_param->var(); }
-    void check(const ModContents* n) { n->check(*this); }
+    void check(const Module* module) { module->check(*this); }
     const Type* check(const FieldDecl* n) { n->check(*this); return n->type(); }
     const Type* check(const LocalDecl* local) { local->check(*this); return local->type(); }
     const Type* check(const ASTType* ast_type) { ast_type->check(*this); return ast_type->type(); }
@@ -84,8 +84,10 @@ public:
     const Type* check(const Ptrn* p) { p->check(*this); return p->type(); }
     void check(const Stmt* n) { n->check(*this); }
     void check_call(const Expr* expr, ArrayRef<const Expr*> args);
-    void check_call(const Expr* expr, const std::deque<AutoPtr<const Expr>>& args) {
-        Array<const Expr*> array(args.begin(), args.end());
+    void check_call(const Expr* expr, const Exprs& args) {
+        Array<const Expr*> array(args.size());
+        for (size_t i = 0, e = args.size(); i != e; ++i)
+            array[i] = args[i].get();
         check_call(expr, array);
     }
 
@@ -97,9 +99,9 @@ public:
     const Fn* cur_fn_ = nullptr;
 };
 
-void type_analysis(const ModContents* mod, bool nossa) {
+void type_analysis(const Module* module, bool nossa) {
     TypeSema sema(nossa);
-    sema.check(mod);
+    sema.check(module);
 }
 
 template<class T>
@@ -115,15 +117,15 @@ const char* tok2str(const T* expr) { return Token::tok2str(token_kind(expr)); }
  */
 
 const Var* ASTTypeParam::check(TypeSema& sema) const {
-    for (auto bound : bounds())
-        sema.check(bound);
+    for (const auto& bound : bounds())
+        sema.check(bound.get());
 
     return var();
 }
 
 void ASTTypeParamList::check_ast_type_params(TypeSema& sema) const {
-    for (auto ast_type_param : ast_type_params())
-        sema.check(ast_type_param);
+    for (const auto& ast_type_param : ast_type_params())
+        sema.check(ast_type_param.get());
 }
 
 //------------------------------------------------------------------------------
@@ -144,18 +146,18 @@ void SimdASTType::check(TypeSema& sema) const {
 }
 
 void TupleASTType::check(TypeSema& sema) const {
-    for (auto ast_type_arg : ast_type_args())
-        sema.check(ast_type_arg);
+    for (const auto& ast_type_arg : ast_type_args())
+        sema.check(ast_type_arg.get());
 }
 
 void FnASTType::check(TypeSema& sema) const {
     check_ast_type_params(sema);
-    for (auto ast_type_arg : ast_type_args())
-        sema.check(ast_type_arg);
+    for (const auto& ast_type_arg : ast_type_args())
+        sema.check(ast_type_arg.get());
 }
 
 void ASTTypeApp::check(TypeSema&) const {
-    if (!decl() || !decl()->isa<TypeDecl>())
+    if (!decl() || !decl()->is_type_decl())
         error(identifier(), "'%' does not name a type", symbol());
 }
 
@@ -173,9 +175,9 @@ void LocalDecl::check(TypeSema& sema) const {
 const Type* Fn::check_body(TypeSema& sema) const {
     sema.check(body());
 
-    for (auto param : params()) {
+    for (const auto& param : params()) {
         if (param->is_mut() && !param->is_written())
-            warning(param, "parameter '%' declared mutable but parameter is never written to", param->symbol());
+            warning(param.get(), "parameter '%' declared mutable but parameter is never written to", param->symbol());
     }
 
     if (!body()->type()->isa<NoRetType>())
@@ -190,14 +192,12 @@ const Type* Fn::check_body(TypeSema& sema) const {
  * items
  */
 
-void ModDecl::check(TypeSema& sema) const {
-    if (mod_contents())
-        sema.check(mod_contents());
+void ModuleDecl::check(TypeSema&) const {
 }
 
-void ModContents::check(TypeSema& sema) const {
-    for (auto item : items())
-        sema.check(item);
+void Module::check(TypeSema& sema) const {
+    for (const auto& item : items())
+        sema.check(item.get());
 }
 
 void ExternBlock::check(TypeSema& sema) const {
@@ -206,8 +206,8 @@ void ExternBlock::check(TypeSema& sema) const {
             error(this, "unknown extern specification");  // TODO: better location
     }
 
-    for (auto fn : fns())
-        sema.check(fn);
+    for (const auto& fn_decl : fn_decls())
+        sema.check(fn_decl.get());
 }
 
 void Typedef::check(TypeSema& sema) const {
@@ -219,8 +219,8 @@ void EnumDecl::check(TypeSema&) const { /*TODO*/ }
 
 void StructDecl::check(TypeSema& sema) const {
     check_ast_type_params(sema);
-    for (auto field_decl : field_decls())
-        sema.check(field_decl);
+    for (const auto& field_decl : field_decls())
+        sema.check(field_decl.get());
 }
 
 void FieldDecl::check(TypeSema& sema) const { sema.check(ast_type()); }
@@ -228,8 +228,8 @@ void FieldDecl::check(TypeSema& sema) const { sema.check(ast_type()); }
 void FnDecl::check(TypeSema& sema) const {
     THORIN_PUSH(sema.cur_fn_, this);
     check_ast_type_params(sema);
-    for (auto param : params())
-        sema.check(param);
+    for (const auto& param : params())
+        sema.check(param.get());
 
     if (body() != nullptr)
         check_body(sema);
@@ -244,11 +244,11 @@ void StaticItem::check(TypeSema& sema) const {
 void TraitDecl::check(TypeSema& sema) const {
     check_ast_type_params(sema);
 
-    for (auto type_app : super_traits())
-        sema.check(type_app);
+    for (const auto& type_app : super_traits())
+        sema.check(type_app.get());
 
-    for (auto method : methods())
-        sema.check(method);
+    for (const auto& method : methods())
+        sema.check(method.get());
 }
 
 void ImplItem::check(TypeSema& sema) const {
@@ -257,8 +257,8 @@ void ImplItem::check(TypeSema& sema) const {
 
     if (trait()) {
         if (trait()->isa<ASTTypeApp>()) {
-            for (auto type_param : ast_type_params())
-                sema.check(type_param);
+            for (const auto& type_param : ast_type_params())
+                sema.check(type_param.get());
         } else
             error(trait(), "expected trait instance");
     }
@@ -403,7 +403,7 @@ void CastExpr::check(TypeSema& sema) const {
     if (auto explicit_cast_expr = isa<ExplicitCastExpr>())
         sema.check(explicit_cast_expr->ast_type());
 
-    auto src_type = sema.check(lhs());
+    auto src_type = sema.check(src());
     auto dst_type = type();
 
     // TODO be consistent: dst is first argument, src ist second argument
@@ -430,7 +430,7 @@ void CastExpr::check(TypeSema& sema) const {
 
 void TupleExpr::check(TypeSema& sema) const {
     for (const auto& arg : args())
-        sema.check(arg);
+        sema.check(arg.get());
 }
 
 void RepeatedDefiniteArrayExpr::check(TypeSema& sema) const { sema.check(value()); }
@@ -447,9 +447,9 @@ void DefiniteArrayExpr::check(TypeSema& sema) const {
         elem_type = definite_array_type->elem_type();
 
     for (const auto& arg : args()) {
-        sema.check(arg);
+        sema.check(arg.get());
         if (elem_type)
-            sema.expect_type(elem_type, arg, "element of definite array expression");
+            sema.expect_type(elem_type, arg.get(), "element of definite array expression");
     }
 }
 
@@ -459,9 +459,9 @@ void SimdExpr::check(TypeSema& sema) const {
         elem_type = simd_type->elem_type();
 
     for (const auto& arg : args()) {
-        sema.check(arg);
+        sema.check(arg.get());
         if (elem_type)
-            sema.expect_type(elem_type, arg, "element of simd expression");
+            sema.expect_type(elem_type, arg.get(), "element of simd expression");
     }
 }
 
@@ -471,17 +471,17 @@ void StructExpr::check(TypeSema& sema) const {
         auto struct_decl = struct_type->struct_decl();
         thorin::HashSet<const FieldDecl*> done;
         for (const auto& elem : elems()) {
-            sema.check(elem.expr());
+            sema.check(elem->expr());
 
-            if (auto field_decl = struct_decl->field_decl(elem.symbol())) {
-                elem.field_decl_ = field_decl;
+            if (auto field_decl = struct_decl->field_decl(elem->symbol())) {
+                elem->field_decl_ = field_decl;
 
                 if (!thorin::visit(done, field_decl))
-                    sema.expect_type(struct_type->op(field_decl->index()), elem.expr(), "initialization type for field");
+                    sema.expect_type(struct_type->op(field_decl->index()), elem->expr(), "initialization type for field");
                 else
-                    error(elem.expr(), "field '%' specified more than once", elem.symbol());
+                    error(elem->expr(), "field '%' specified more than once", elem->symbol());
             } else
-                error(elem.expr(), "structure '%' has no field named '%'", struct_decl->symbol(), elem.symbol());
+                error(elem->expr(), "structure '%' has no field named '%'", struct_decl->symbol(), elem->symbol());
         }
 
         if (done.size() != struct_decl->field_table().size()) {
@@ -512,7 +512,7 @@ void TypeAppExpr::check(TypeSema& /*sema*/) const {
 void MapExpr::check(TypeSema& sema) const {
     auto ltype = sema.check(lhs());
     for (const auto& arg : args())
-        sema.check(arg);
+        sema.check(arg.get());
 
     if (ltype->isa<FnType>()) {
         sema.check_call(lhs(), args());
@@ -549,12 +549,12 @@ void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
 
 void BlockExprBase::check(TypeSema& sema) const {
     THORIN_PUSH(sema.cur_block_, this);
-    for (auto stmt : stmts())
-        sema.check(stmt);
+    for (const auto& stmt : stmts())
+        sema.check(stmt.get());
 
     sema.check(expr());
 
-    for (auto local : locals_) {
+    for (const auto& local : locals_) {
         if (local->is_mut() && !local->is_written())
             warning(local, "variable '%' declared mutable but variable is never written to", local->symbol());
     }
@@ -586,15 +586,18 @@ void ForExpr::check(TypeSema& sema) const {
     if (auto map = forexpr->isa<MapExpr>()) {
         auto ltype = sema.check(map->lhs());
         for (const auto& arg : map->args())
-            sema.check(arg);
+            sema.check(arg.get());
         sema.check(fn_expr());
 
         if (auto fn_for = ltype->isa<FnType>()) {
             if (fn_for->num_ops() != 0) {
                 if (fn_for->ops().back()->isa<FnType>()) {
-                    // copy over args and check call
-                    Array<const Expr*> args(map->args().size()+1);
-                    *std::copy(map->args().begin(), map->args().end(), args.begin()) = fn_expr();
+                    // TODO remove copy & paste code
+                    // copy over args and check call --
+                    Array<const Expr*> args(map->num_args() + 1);
+                    for (size_t i = 0, e = map->num_args(); i != e; ++i)
+                        args[i] = map->arg(i);
+                    args.back() = fn_expr();
                     sema.check_call(map->lhs(), args);
                     return;
                 }
@@ -613,7 +616,7 @@ void ForExpr::check(TypeSema& sema) const {
 
 void TuplePtrn::check(TypeSema& sema) const {
     for (const auto& elem : elems()) {
-        sema.check(elem);
+        sema.check(elem.get());
     }
 }
 
@@ -662,13 +665,13 @@ void check_correct_asm_type(const Type* t, const Expr *expr) {
 
 void AsmStmt::check(TypeSema& sema) const {
     for (const auto& output : outputs()) {
-        if (!output.expr()->is_lvalue())
-            error(output.expr(), "output expression of an asm statement must be an lvalue");
-        check_correct_asm_type(sema.check(output.expr()), output.expr());
+        if (!output->expr()->is_lvalue())
+            error(output->expr(), "output expression of an asm statement must be an lvalue");
+        check_correct_asm_type(sema.check(output->expr()), output->expr());
     }
 
     for (const auto& input : inputs())
-        check_correct_asm_type(sema.check(input.expr()), input.expr());
+        check_correct_asm_type(sema.check(input->expr()), input->expr());
 
     for (const auto& option : options()) {
         if (option != "volatile" && option != "alignstack" && option != "intel")
