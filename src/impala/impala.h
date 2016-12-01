@@ -33,7 +33,7 @@ struct Init {
     ~Init() { destroy(); }
 
     thorin::World world;
-    thorin::AutoPtr<TypeTable> typetable;
+    std::unique_ptr<TypeTable> typetable;
 };
 
 void parse(Items&, std::istream&, const char*);

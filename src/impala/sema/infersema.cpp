@@ -338,7 +338,7 @@ auto InferSema::unify_by_rank(Representative* x, Representative* y) -> Represent
 
 void type_inference(Init& init, const Module* module) {
     auto sema = new InferSema();
-    init.typetable = sema;
+    init.typetable.reset(sema);
 
     int i = 0;
     for (;sema->todo_; ++i) {
@@ -496,9 +496,9 @@ void FnDecl::check(InferSema& sema) const {
 
     Array<const Type*> param_types(num_params());
     size_t e = num_params();
+
     // TODO remove wild hack to reduce Typedef'd tuple types to argument lists of return continuations
-    //if (!is_continuation()) {
-    if (false) {
+    if (num_params() > 0 && param(e - 1)->type() && param(e - 1)->type()->isa<FnType>()) {
         auto ret_type = sema.check(param(e - 1));
         if (ret_type->num_ops() == 1) {
             if (auto ret_tuple_type = ret_type->op(0)->isa<TupleType>()) {
