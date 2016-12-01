@@ -664,7 +664,7 @@ public:
 
 protected:
     Params params_;
-    mutable thorin::Continuation* continuation_;
+    mutable thorin::Continuation* continuation_ = nullptr;
     mutable const thorin::Param* ret_param_ = nullptr;
     mutable const thorin::Def* frame_ = nullptr;
 
