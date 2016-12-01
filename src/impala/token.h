@@ -5,7 +5,6 @@
 #include <string>
 
 #include "thorin/enums.h"
-#include "thorin/util/assert.h"
 #include "thorin/util/location.h"
 
 #include "impala/symbol.h"

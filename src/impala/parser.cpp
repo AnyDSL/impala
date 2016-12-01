@@ -3,7 +3,6 @@
 #include <sstream>
 
 #include "thorin/util/array.h"
-#include "thorin/util/assert.h"
 
 #include "impala/ast.h"
 #include "impala/impala.h"
