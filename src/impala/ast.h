@@ -743,8 +743,7 @@ public:
     {}
 
     Module(const char* first_file_name, Items&& items = Items())
-        : Module({{first_file_name, 1, 1},
-                 items.empty() ? thorin::Position(first_file_name, 1, 1) : items.back()->location().end()},
+        : Module(items.empty() ? Location(first_file_name, 1, 1) : Location(items.front()->location(), items.back()->location()),
                  Visibility::Pub, nullptr, ASTTypeParams(), std::move(items))
     {}
 

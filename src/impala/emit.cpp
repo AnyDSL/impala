@@ -203,9 +203,9 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
             args.push_back(mem);
             for (size_t i = 0, e = tuple->num_ops(); i != e; ++i)
                 args.push_back(cg.extract(def, i, loc));
-            cg.cur_bb->jump(ret_param(), args, loc.end());
+            cg.cur_bb->jump(ret_param(), args, loc.back());
         } else
-            cg.cur_bb->jump(ret_param(), {mem, def}, loc.end());
+            cg.cur_bb->jump(ret_param(), {mem, def}, loc.back());
     }
 }
 
@@ -306,11 +306,11 @@ void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     if (auto def = cg.remit(this)) {
         assert(cg.is_reachable());
         cg.cur_bb->set_value(1, def);
-        cg.jump(x, location().end());
+        cg.jump(x, location().back());
     } else
         assert(!cg.is_reachable());
 }
-void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.branch(cg.remit(this), t, f, location().end()); }
+void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.branch(cg.remit(this), t, f, location().back()); }
 const Def* EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}, location()); }
 
 const Def* LiteralExpr::remit(CodeGen& cg) const {
@@ -406,27 +406,27 @@ void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
     if (kind() == NOT && is_type_bool(cg.convert(type())))
         cg.emit_branch(rhs(), f, t);
     else
-        cg.branch(cg.remit(this), t, f, location().end());
+        cg.branch(cg.remit(this), t, f, location().back());
 }
 
 void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
     switch (kind()) {
         case ANDAND: {
-            JumpTarget x(rhs()->location().begin(), "and_extra");
+            JumpTarget x(rhs()->location().front(), "and_extra");
             cg.emit_branch(lhs(), x, f);
             if (cg.enter(x))
                 cg.emit_branch(rhs(), t, f);
             return;
         }
         case OROR: {
-            JumpTarget x(rhs()->location().begin(), "or_extra");
+            JumpTarget x(rhs()->location().front(), "or_extra");
             cg.emit_branch(lhs(), t, x);
             if (cg.enter(x))
                 cg.emit_branch(rhs(), t, f);
             return;
         }
         default:
-            cg.branch(cg.remit(this), t, f, location().end());
+            cg.branch(cg.remit(this), t, f, location().back());
             return;
     }
 }
@@ -434,16 +434,16 @@ void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
 const Def* InfixExpr::remit(CodeGen& cg) const {
     switch (kind()) {
         case ANDAND: {
-            JumpTarget t(lhs()->location().begin(), "and_true"), f(rhs()->location().begin(), "and_false"), x(location().end(), "and_exit");
+            JumpTarget t(lhs()->location().front(), "and_true"), f(rhs()->location().front(), "and_false"), x(location().back(), "and_exit");
             cg.emit_branch(lhs(), t, f);
             if (cg.enter(t)) cg.emit_jump(rhs(), x);
-            if (cg.enter(f)) cg.emit_jump_boolean(false, x, lhs()->location().end());
+            if (cg.enter(f)) cg.emit_jump_boolean(false, x, lhs()->location().back());
             return cg.converge(this, x);
         }
         case OROR: {
-            JumpTarget t(lhs()->location().begin(), "or_true"), f(rhs()->location().begin(), "or_false"), x(location().end(), "or_exit");
+            JumpTarget t(lhs()->location().front(), "or_true"), f(rhs()->location().front(), "or_false"), x(location().back(), "or_exit");
             cg.emit_branch(lhs(), t, f);
-            if (cg.enter(t)) cg.emit_jump_boolean(true, x, rhs()->location().end());
+            if (cg.enter(t)) cg.emit_jump_boolean(true, x, rhs()->location().back());
             if (cg.enter(f)) cg.emit_jump(rhs(), x);
             return cg.converge(this, x);
         }
@@ -645,41 +645,41 @@ const Def* RunBlockExpr::remit(CodeGen& cg) const {
 }
 
 void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
-    JumpTarget t(then_expr()->location().begin(), "if_then"), f(else_expr()->location().begin(), "if_else");
+    JumpTarget t(then_expr()->location().front(), "if_then"), f(else_expr()->location().front(), "if_else");
     cg.emit_branch(cond(), t, f);
     if (cg.enter(t))
         cg.emit_jump(then_expr(), x);
     if (cg.enter(f))
         cg.emit_jump(else_expr(), x);
-    cg.jump(x, location().end());
+    cg.jump(x, location().back());
 }
 
 const Def* IfExpr::remit(CodeGen& cg) const {
-    JumpTarget x(location().end(), "next");
+    JumpTarget x(location().back(), "next");
     return cg.converge(this, x);
 }
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
-    JumpTarget x(location().end(), "next");
+    JumpTarget x(location().back(), "next");
     auto break_continuation = cg.create_continuation(break_decl());
 
     cg.emit_jump(this, x);
-    cg.jump_to_continuation(break_continuation, location().end());
+    cg.jump_to_continuation(break_continuation, location().back());
     return cg.world().tuple({}, location());
 }
 
 void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
-    JumpTarget head_bb(cond()->location().begin(), "while_head"), body_bb(body()->location().begin(), "while_body");
+    JumpTarget head_bb(cond()->location().front(), "while_head"), body_bb(body()->location().front(), "while_body");
     auto continue_continuation = cg.create_continuation(continue_decl());
 
-    cg.jump(head_bb, cond()->location().end());
+    cg.jump(head_bb, cond()->location().back());
     cg.enter_unsealed(head_bb);
     cg.emit_branch(cond(), body_bb, exit_bb);
     if (cg.enter(body_bb)) {
         cg.remit(body());
-        cg.jump_to_continuation(continue_continuation, cond()->location().end());
+        cg.jump_to_continuation(continue_continuation, cond()->location().back());
     }
-    cg.jump(head_bb, cond()->location().end());
+    cg.jump(head_bb, cond()->location().back());
     head_bb.seal();
     cg.enter(exit_bb);
 }

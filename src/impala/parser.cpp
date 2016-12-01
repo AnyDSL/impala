@@ -142,10 +142,10 @@ public:
     public:
         Tracker(Parser& parser)
             : parser_(parser)
-            , location_(parser_.lookahead().location().begin())
+            , location_(parser_.lookahead().location().front())
         {}
 
-        operator Location() const { return {location_.begin(), parser_.prev_location().end()}; }
+        operator Location() const { return {location_.front(), parser_.prev_location().back()}; }
 
     private:
         Parser& parser_;
