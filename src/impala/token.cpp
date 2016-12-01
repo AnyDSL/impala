@@ -73,6 +73,7 @@ Token::Token(const Location& loc, Kind kind, const std::string& str)
     auto nptr = &literal.front();
 
     bool err = 0;
+    errno = 0;
     int64_t ival; uint64_t uval; half hval; float fval; double dval;
 
     switch (kind_) {
