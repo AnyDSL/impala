@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <functional>
 #include <sstream>
-#include <iostream>
 
 #include "thorin/util/array.h"
 #include "thorin/util/assert.h"
