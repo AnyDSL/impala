@@ -1,7 +1,6 @@
 extern fn f(i: int) -> int {
     let mut a;
     if i == 1 {
-        /*
         a = 23
     } else {
         a = 42
@@ -10,5 +9,5 @@ extern fn f(i: int) -> int {
 }
 
 fn main() -> int {
-    ifx (f(0) + f(1)) == 65 { 0 } else { 1 }
+    if (f(0) + f(1)) == 65 { 0 } else { 1 }
 }

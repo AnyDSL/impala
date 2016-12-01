@@ -531,6 +531,7 @@ public:
     bool is_anonymous() const { assert(!is_no_decl()); return symbol() == Symbol() || symbol().str()[0] == '<'; }
     size_t depth() const { assert(!is_no_decl()); return depth_; }
     const Decl* shadows() const { assert(!is_no_decl()); return shadows_; }
+    thorin::Debug debug() const { return {location(), symbol().str()}; }
 
     // ValueDecl
     const ASTType* ast_type() const { assert(is_value_decl()); return ast_type_.get(); } ///< Original \p ASTType.
@@ -655,8 +656,8 @@ public:
     std::ostream& stream_params(std::ostream& p, bool returning) const;
     void fn_check(NameSema&) const;
     const Type* check_body(TypeSema&) const;
-    thorin::Continuation* emit_head(CodeGen&, const Location&) const;
-    void emit_body(CodeGen&, const Location& loc) const;
+    thorin::Continuation* emit_head(CodeGen&, Location) const;
+    void emit_body(CodeGen&, Location loc) const;
 
     virtual const FnType* fn_type() const = 0;
     virtual Symbol fn_symbol() const = 0;

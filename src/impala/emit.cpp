@@ -34,8 +34,8 @@ public:
     }
 
     Continuation* create_continuation(const LocalDecl* decl) {
-        auto result = continuation(convert(decl->type())->as<thorin::FnType>(), decl->location(), decl->symbol().str());
-        result->param(0)->name = "mem";
+        auto result = continuation(convert(decl->type())->as<thorin::FnType>(), decl->debug());
+        result->param(0)->debug().set("mem");
         decl->value_ = Value::create_val(*this, result);
         return result;
     }
@@ -154,7 +154,7 @@ Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
 
     if (is_mut()) {
         if (is_address_taken())
-            value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), location(), symbol().str()));
+            value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), debug()));
         else
             value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str());
 
@@ -166,11 +166,12 @@ Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
     return value_;
 }
 
-Continuation* Fn::emit_head(CodeGen& cg, const Location& loc) const {
-    return continuation_ = cg.continuation(cg.convert(fn_type())->as<thorin::FnType>(), loc, fn_symbol().remove_quotation());
+Continuation* Fn::emit_head(CodeGen& cg, Location location) const {
+    return continuation_ = cg.continuation(cg.convert(fn_type())->as<thorin::FnType>(),
+                                           {location, fn_symbol().remove_quotation()});
 }
 
-void Fn::emit_body(CodeGen& cg, const Location& loc) const {
+void Fn::emit_body(CodeGen& cg, Location location) const {
     // setup function nest
     continuation()->set_parent(cg.cur_bb);
     THORIN_PUSH(cg.cur_fn, this);
@@ -179,14 +180,14 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
     // setup memory + frame
     size_t i = 0;
     const Def* mem_param = continuation()->param(i++);
-    mem_param->name = "mem";
+    mem_param->debug().set("mem");
     cg.set_mem(mem_param);
-    frame_ = cg.create_frame(loc);
+    frame_ = cg.create_frame(location);
 
     // name params and setup store locations
     for (const auto& param : params()) {
         auto p = continuation()->param(i++);
-        p->name = param->symbol().str();
+        p->debug().set(param->symbol().str());
         cg.emit(param.get(), p);
     }
     assert(i == continuation()->num_params());
@@ -202,10 +203,10 @@ void Fn::emit_body(CodeGen& cg, const Location& loc) const {
             std::vector<const Def*> args;
             args.push_back(mem);
             for (size_t i = 0, e = tuple->num_ops(); i != e; ++i)
-                args.push_back(cg.extract(def, i, loc));
-            cg.cur_bb->jump(ret_param(), args, loc.back());
+                args.push_back(cg.extract(def, i, location));
+            cg.cur_bb->jump(ret_param(), args, location.back());
         } else
-            cg.cur_bb->jump(ret_param(), {mem, def}, loc.back());
+            cg.cur_bb->jump(ret_param(), {mem, def}, location.back());
     }
 }
 
@@ -286,7 +287,7 @@ Value StaticItem::emit(CodeGen& cg, const Def* init) const {
     init = !this->init() ? cg.world().bottom(cg.convert(type()), location()) : cg.remit(this->init());
     if (!is_mut())
         return Value::create_val(cg, init);
-    return Value::create_ptr(cg, cg.world().global(init, location(), true, symbol().str()));
+    return Value::create_ptr(cg, cg.world().global(init, true, debug()));
 }
 
 void StructDecl::emit(CodeGen& cg) const {
@@ -332,7 +333,7 @@ const Def* CharExpr::remit(CodeGen& cg) const {
 }
 
 Value StrExpr::lemit(CodeGen& cg) const {
-    return Value::create_ptr(cg, cg.world().global(cg.remit(this), location()));
+    return Value::create_ptr(cg, cg.world().global(cg.remit(this), /*mutable*/ true, location()));
 }
 
 const Def* StrExpr::remit(CodeGen& cg) const {
@@ -382,7 +383,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
 
             auto def = cg.remit(rhs());
             if (is_const(def))
-                return cg.world().global(def, location(), false);
+                return cg.world().global(def, /*mutable*/ false, location());
 
             auto slot = cg.world().slot(cg.convert(rhs()->type()), cg.frame(), location());
             cg.store(slot, def, location());
@@ -412,14 +413,14 @@ void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
 void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
     switch (kind()) {
         case ANDAND: {
-            JumpTarget x(rhs()->location().front(), "and_extra");
+            JumpTarget x({rhs()->location().front(), "and_extra"});
             cg.emit_branch(lhs(), x, f);
             if (cg.enter(x))
                 cg.emit_branch(rhs(), t, f);
             return;
         }
         case OROR: {
-            JumpTarget x(rhs()->location().front(), "or_extra");
+            JumpTarget x({rhs()->location().front(), "or_extra"});
             cg.emit_branch(lhs(), t, x);
             if (cg.enter(x))
                 cg.emit_branch(rhs(), t, f);
@@ -434,14 +435,18 @@ void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
 const Def* InfixExpr::remit(CodeGen& cg) const {
     switch (kind()) {
         case ANDAND: {
-            JumpTarget t(lhs()->location().front(), "and_true"), f(rhs()->location().front(), "and_false"), x(location().back(), "and_exit");
+            JumpTarget t({lhs()->location().front(), "and_true"});
+            JumpTarget f({rhs()->location().front(), "and_false"});
+            JumpTarget x({location().back(), "and_exit"});
             cg.emit_branch(lhs(), t, f);
             if (cg.enter(t)) cg.emit_jump(rhs(), x);
             if (cg.enter(f)) cg.emit_jump_boolean(false, x, lhs()->location().back());
             return cg.converge(this, x);
         }
         case OROR: {
-            JumpTarget t(lhs()->location().front(), "or_true"), f(rhs()->location().front(), "or_false"), x(location().back(), "or_exit");
+            JumpTarget t({lhs()->location().front(), "or_true"});
+            JumpTarget f({rhs()->location().front(), "or_false"});
+            JumpTarget x({location().back(), "or_exit"});
             cg.emit_branch(lhs(), t, f);
             if (cg.enter(t)) cg.emit_jump_boolean(true, x, rhs()->location().back());
             if (cg.enter(f)) cg.emit_jump(rhs(), x);
@@ -552,7 +557,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             auto fn_type = cg.world().fn_type({
                                 cg.world().mem_type(), cg.world().type_qs32(),
                                 cg.world().fn_type({ cg.world().mem_type(), ptr_type }) });
-                            auto cont = cg.world().continuation(fn_type, location(), "reserve_shared");
+                            auto cont = cg.world().continuation(fn_type, {location(), "reserve_shared"});
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "atomic") {
@@ -561,7 +566,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             auto fn_type = cg.world().fn_type({
                                 cg.world().mem_type(), cg.world().type_pu32(), ptr_type, poly_type,
                                 cg.world().fn_type({ cg.world().mem_type(), poly_type }) });
-                            auto cont = cg.world().continuation(fn_type, location(), "atomic");
+                            auto cont = cg.world().continuation(fn_type, {location(), "atomic"});
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "cmpxchg") {
@@ -570,7 +575,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             auto fn_type = cg.world().fn_type({
                                 cg.world().mem_type(), ptr_type, poly_type, poly_type,
                                 cg.world().fn_type({ cg.world().mem_type(), poly_type, cg.world().type_bool() }) });
-                            auto cont = cg.world().continuation(fn_type, location(), "cmpxchg");
+                            auto cont = cg.world().continuation(fn_type, {location(), "cmpxchg"});
                             cont->set_intrinsic();
                             dst = cont;
                         }
@@ -596,7 +601,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
         if (state != None) {
             auto eval = state == Run ? &thorin::World::run : &thorin::World::hlt;
             auto cont = old_bb->args().back();
-            old_bb->update_callee((cg.world().*eval)(old_bb->callee(), cont, eval_loc, ""));
+            old_bb->update_callee((cg.world().*eval)(old_bb->callee(), cont, eval_loc));
         }
 
         return ret;
@@ -625,8 +630,8 @@ const Def* BlockExprBase::remit(CodeGen& cg) const {
 const Def* RunBlockExpr::remit(CodeGen& cg) const {
     if (cg.is_reachable()) {
         World& w = cg.world();
-        auto lrun = w.basicblock(location(), "run_block");
-        auto next = w.basicblock(location(), "run_next");
+        auto lrun = w.basicblock({location(), "run_block"});
+        auto next = w.basicblock({location(), "run_next"});
         auto old_bb = cg.cur_bb;
         cg.cur_bb->jump(lrun, {}, location());
         cg.enter(lrun);
@@ -645,7 +650,8 @@ const Def* RunBlockExpr::remit(CodeGen& cg) const {
 }
 
 void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
-    JumpTarget t(then_expr()->location().front(), "if_then"), f(else_expr()->location().front(), "if_else");
+    JumpTarget t({then_expr()->location().front(), "if_then"});
+    JumpTarget f({else_expr()->location().front(), "if_else"});
     cg.emit_branch(cond(), t, f);
     if (cg.enter(t))
         cg.emit_jump(then_expr(), x);
@@ -655,12 +661,12 @@ void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
 }
 
 const Def* IfExpr::remit(CodeGen& cg) const {
-    JumpTarget x(location().back(), "next");
+    JumpTarget x({location().back(), "next"});
     return cg.converge(this, x);
 }
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
-    JumpTarget x(location().back(), "next");
+    JumpTarget x({location().back(), "next"});
     auto break_continuation = cg.create_continuation(break_decl());
 
     cg.emit_jump(this, x);
@@ -669,7 +675,8 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
 }
 
 void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
-    JumpTarget head_bb(cond()->location().front(), "while_head"), body_bb(body()->location().front(), "while_body");
+    JumpTarget head_bb({cond()->location().front(), "while_head"});
+    JumpTarget body_bb({body()->location().front(), "while_body"});
     auto continue_continuation = cg.create_continuation(continue_decl());
 
     cg.jump(head_bb, cond()->location().back());
@@ -731,7 +738,7 @@ const Def* FnExpr::remit(CodeGen& cg) const {
  */
 
 void IdPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
-    init->name = local()->symbol().str();
+    init->debug().set(local()->symbol().str());
     cg.emit(local(), init);
 }
 
