@@ -8,7 +8,7 @@ fn main() -> int {
     if a_dec_zero && !b_dec_zero && a == 0 && b == 8 { 0 } else { 1 }
 }
 
-fn atomic_dec(mut p: &i32) -> bool {
+fn atomic_dec(p: &i32) -> bool {
     let mut res: bool = false;
     asm ("lock; decl $1; sete $0;"
             : /*"=r" (p),*/ "=q" (res)
