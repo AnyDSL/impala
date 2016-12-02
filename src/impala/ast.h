@@ -1018,7 +1018,7 @@ public:
     {}
 
 #ifndef NDEBUG
-    virtual ~Expr() { assert(docker_ != nullptr); }
+    virtual ~Expr() { assert(back_ref_ != nullptr); }
 #endif
 
     const thorin::Def* extra() const { return extra_; }
@@ -1037,21 +1037,21 @@ private:
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
 
 public:
-    mutable std::unique_ptr<const Expr>* docker_ = nullptr;
+    mutable std::unique_ptr<const Expr>* back_ref_ = nullptr;
 
 protected:
     mutable const thorin::Def* extra_ = nullptr; ///< Needed to propagate extend of indefinite arrays.
 
     friend const Expr* dock(std::unique_ptr<const Expr>& dst, const Expr* src) {
         if (src) {
-            assert(src->docker_ == nullptr);
-            src->docker_ = &dst;
+            assert(src->back_ref_ == nullptr);
+            src->back_ref_ = &dst;
         }
         return src;
     }
 
     template<class T, class...Args>
-    friend const T* insert(const Expr* expr, Args&&... args);
+    friend const T* interlope(const Expr* expr, Args&&... args);
 
     friend class Args;
     friend class CodeGen;
@@ -1061,14 +1061,14 @@ protected:
 };
 
 template<class T, class...Args>
-const T* insert(const Expr* expr, Args&&... args) {
+const T* interlope(const Expr* expr, Args&&... args) {
     std::unique_ptr<const Expr> ptr;
-    auto parent = expr->docker_;
+    auto parent = expr->back_ref_;
     parent->release();
-    expr->docker_ = nullptr;
+    expr->back_ref_ = nullptr;
     auto new_expr = new T(std::forward<Args>(args)...);
     parent->reset(new_expr);
-    new_expr->docker_ = parent;
+    new_expr->back_ref_ = parent;
     return new_expr;
 }
 
@@ -1079,7 +1079,7 @@ public:
         : args_(std::move(args))
     {
         for (auto& arg : args_)
-            arg->docker_ = &arg;
+            arg->back_ref_ = &arg;
     }
 
     const Exprs& args() const { return args_; }
@@ -1246,7 +1246,7 @@ public:
     {}
 
     static const PrefixExpr* create(const Expr* rhs, const Kind kind) {
-        return insert<PrefixExpr>(rhs, rhs->location(), kind, rhs);
+        return interlope<PrefixExpr>(rhs, rhs->location(), kind, rhs);
     }
 
     static const PrefixExpr* create_deref(const Expr* rhs) { return create(rhs, MUL); }
@@ -1421,7 +1421,7 @@ public:
     }
 
     static const ImplicitCastExpr* create(const Expr* src, const Type* type) {
-        return insert<ImplicitCastExpr>(src, src, type);
+        return interlope<ImplicitCastExpr>(src, src, type);
     }
 
     void check(NameSema&) const override { THORIN_UNREACHABLE; }
@@ -1581,7 +1581,7 @@ public:
     {}
 
     static const TypeAppExpr* create(const Expr* lhs) {
-        return insert<TypeAppExpr>(lhs, lhs->location(), lhs, ASTTypes());
+        return interlope<TypeAppExpr>(lhs, lhs->location(), lhs, ASTTypes());
     }
 
     const Expr* lhs() const { return lhs_.get(); }
