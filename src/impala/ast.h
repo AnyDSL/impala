@@ -98,9 +98,7 @@ public:
 protected:
     mutable const Type* type_ = nullptr;
 
-    friend class ForExpr;
     friend class InferSema;
-    friend class TypeSema;
 };
 
 /// Mixin for all entities which have a list of \p TypeParam%s: [T1, T2 : A + B[...], ...].
@@ -193,8 +191,6 @@ public:
     private:
         std::unique_ptr<const Identifier> identifier_;
         mutable const Decl* decl_ = nullptr;
-
-        friend class Path;
     };
 
     typedef std::deque<std::unique_ptr<const Elem>> Elems;
@@ -240,7 +236,6 @@ private:
     virtual const Type* check(InferSema&) const = 0;
     virtual void check(TypeSema&) const = 0;
 
-    friend class NameSema;
     friend class InferSema;
     friend class TypeSema;
 };
@@ -411,8 +406,6 @@ private:
     void check(TypeSema&) const override;
 
     std::unique_ptr<const Path> path_;
-
-    friend class NameScope;
 };
 
 class FnASTType : public ASTTypeParamList, public CompoundASTType {
@@ -553,8 +546,8 @@ protected:
     mutable unsigned written_ :  1;
     mutable unsigned done_    :  1; ///< Used during @p CodeGen.
 
-    friend class NameSema;
     friend class CodeGen;
+    friend class NameSema;
 };
 
 /// Base class for all values which may be mutated within a function.
@@ -586,9 +579,9 @@ protected:
     mutable const Fn* fn_;
     mutable bool is_address_taken_ = false;
 
+    friend class CodeGen;
     friend class InferSema;
     friend class TypeSema;
-    friend class CodeGen;
 };
 
 //------------------------------------------------------------------------------
@@ -617,12 +610,11 @@ private:
     const Var* check(InferSema&) const;
 
     ASTTypes bounds_;
-
-public: // HACK
     mutable int lambda_depth_ = -1;
 
+    friend class ASTTypeApp;
+    friend class ASTTypeParamList;
     friend class InferSema;
-    friend class TypeSema;
 };
 
 class Param : public LocalDecl {
@@ -634,8 +626,6 @@ public:
     Param(Location location, size_t handle, const Identifier* id, const ASTType* ast_type)
         : LocalDecl(location, handle, /*mut*/ false, id, ast_type)
     {}
-
-    friend class Fn;
 };
 
 class Fn : public ASTTypeParamList {
@@ -670,8 +660,6 @@ protected:
 
 private:
     std::unique_ptr<const Expr> body_;
-
-    friend class Parser;
 };
 
 //------------------------------------------------------------------------------
@@ -709,14 +697,10 @@ private:
     virtual void emit(CodeGen&) const = 0;
 
     Visibility visibility_;
-#ifndef NDEBUG
-    mutable bool done_ = false;
-#endif
 
-    friend class NameSema;
+    friend class CodeGen;
     friend class InferSema;
     friend class TypeSema;
-    friend class CodeGen;
 };
 
 class TypeDeclItem : public Item, public ASTTypeParamList {
@@ -940,9 +924,6 @@ private:
     Symbol abi_;
     Symbol export_name_;
     bool is_extern_ = false;
-
-    friend class InferSema;
-    friend class TypeSema;
 };
 
 class TraitDecl : public Item, public ASTTypeParamList {
@@ -1051,11 +1032,9 @@ protected:
     }
 
     template<class T, class...Args>
-    friend const T* interlope(const Expr* expr, Args&&... args);
 
-    friend class Args;
+    friend const T* interlope(const Expr* expr, Args&&... args);
     friend class CodeGen;
-    friend class IfExpr;
     friend class InferSema;
     friend class TypeSema;
 };
@@ -1370,8 +1349,6 @@ private:
     std::unique_ptr<const Expr> lhs_;
     std::unique_ptr<const Identifier> identifier_;
     mutable const FieldDecl* field_decl_ = nullptr;
-
-    friend class MapExpr; // remove this
 };
 
 class CastExpr : public Expr {
@@ -1638,8 +1615,6 @@ private:
     std::unique_ptr<const Expr> lhs_;
 
     friend class CodeGen;
-    friend class ForExpr;
-    friend class TypeSema;
 };
 
 class StmtLikeExpr : public Expr {

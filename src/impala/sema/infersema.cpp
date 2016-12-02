@@ -861,9 +861,8 @@ const Type* ForExpr::check(InferSema& sema) const {
 
         if (auto fn_for = ltype->isa<FnType>()) {
             if (fn_for->num_ops() != 0) {
-                if (auto fn_ret = fn_for->ops().back()->isa<FnType>()) {
-                    sema.constrain(break_decl_->type_, fn_ret); // inherit the type for break
-                }
+                if (auto fn_ret = fn_for->ops().back()->isa<FnType>())
+                    sema.constrain(break_decl_.get(), fn_ret); // inherit the type for break
             }
 
             // copy over args and check call
