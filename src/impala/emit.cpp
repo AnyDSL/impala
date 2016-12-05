@@ -594,7 +594,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
 
         auto ret_type = args().size() == fn_type->num_ops() ? nullptr : cg.convert(fn_type->return_type());
         auto old_bb = cg.cur_bb;
-        auto ret = cg.call(dst, defs, ret_type, location());
+        auto ret = cg.call(dst, defs, ret_type, thorin::Debug(location(), dst->name()) + "_cont");
         if (ret_type)
             cg.set_mem(cg.cur_bb->param(0));
 
