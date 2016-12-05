@@ -61,6 +61,22 @@ typedef thorin::HashMap<Symbol, const FieldDecl*> FieldTable;
 typedef thorin::HashMap<Symbol, const FnDecl*> MethodTable;
 typedef thorin::HashMap<Symbol, const Item*> Symbol2Item;
 
+/**
+ * Assigns @p src's @p Expr::back_ref_ to @p dst and returns @p src.
+ * In a typical @p ASTNode owning an @p Expr you should have a member:
+@code{.cpp}
+std::unique_ptr<const Expr> expr_;
+@endcode
+The constructor should look like this:
+@code{.cpp}
+MyExpr(Location location, ..., const Expr* expr, ...)
+    : Expr(location)
+    , ...
+    , expr_(dock(expr_, expr))
+{}
+@endcode
+ * @see interlope
+ */
 const Expr* dock(std::unique_ptr<const Expr>& dst, const Expr* src);
 
 //------------------------------------------------------------------------------
@@ -1017,11 +1033,16 @@ private:
     virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
     virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
 
-public:
-    mutable std::unique_ptr<const Expr>* back_ref_ = nullptr;
-
 protected:
-    mutable const thorin::Def* extra_ = nullptr; ///< Needed to propagate extend of indefinite arrays.
+    /// Needed to propagate extend of indefinite arrays.
+    mutable const thorin::Def* extra_ = nullptr;
+
+    /**
+     * A back reference to the @p std::unique_ptr which owns this @p Expr.
+     * This means that the address is @em not supposed to be changed in the future.
+     * For this reason, @p Exprs is a <tt> std::deque<std::unique_ptr<const Expr>> </tt> and @em not a @c std::vector.
+     */
+    mutable std::unique_ptr<const Expr>* back_ref_ = nullptr;
 
     friend const Expr* dock(std::unique_ptr<const Expr>& dst, const Expr* src) {
         if (src) {
@@ -1032,13 +1053,18 @@ protected:
     }
 
     template<class T, class...Args>
-
     friend const T* interlope(const Expr* expr, Args&&... args);
+    friend class Args;
     friend class CodeGen;
     friend class InferSema;
     friend class TypeSema;
 };
 
+/**
+ * Creates a new @p ASTNode @p T using @p args as constructor arguments
+ * while @p expr gets released from its @p Expr::back_ref_ and the newly created node is @p expr's new owner.
+ * This means that @p expr also occurs within @p args.
+ */
 template<class T, class...Args>
 const T* interlope(const Expr* expr, Args&&... args) {
     std::unique_ptr<const Expr> ptr;
