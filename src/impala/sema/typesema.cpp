@@ -644,9 +644,14 @@ void ItemStmt::check(TypeSema& sema) const {
 
 void LetStmt::check(TypeSema& sema) const {
     auto type = sema.check(ptrn());
-    if (init()) {
+
+    if (!type->is_known())
+        error(this, "cannot infer type for let statement");
+    else if (init()) {
         auto init_type = sema.check(init());
-        if (!is_subtype(init_type, type))
+        if (!init_type->is_known())
+            error(this, "cannot infer type for let initializer");
+        else if (!is_subtype(init_type, type))
             error(this, "let pattern type does not match initializer type, got '%' and '%'", type, init_type);
     } else {
         auto id_ptrn = ptrn()->isa<IdPtrn>();
