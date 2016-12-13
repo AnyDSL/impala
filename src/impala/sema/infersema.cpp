@@ -265,10 +265,7 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
         }
     }
 
-    if (dst->kind() == src->kind()) {
-        if (src->num_ops() < dst->num_ops())
-            std::swap(src, dst);
-
+    if (dst->kind() == src->kind() && dst->num_ops() == src->num_ops()) {
         Array<const Type*> op(dst->num_ops());
         for (size_t i = 0, e = op.size(); i != e; ++i)
             op[i] = unify(dst->op(i), src->op(i));
