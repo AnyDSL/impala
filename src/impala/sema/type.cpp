@@ -76,9 +76,22 @@ bool is_subtype(const Type* dst, const Type* src) {
 
     if (dst->kind() == src->kind() && dst->num_ops() == src->num_ops()) {
         bool result = true;
-        // this does not work for types which carry extra stuff like a pointer's addr_space or a definite array's dim
         for (size_t i = 0, e = dst->num_ops(); result && i != e; ++i)
             result &= is_subtype(dst->op(i), src->op(i));
+
+        // Special case for DefiniteArrays, SimdTypes and PtrTypes
+        if (auto dst_def_array = dst->isa<DefiniteArrayType>()) {
+            result &= src->as<DefiniteArrayType>()->dim() == dst_def_array->dim();
+        }
+
+        if (auto dst_simd_type = dst->isa<SimdType>()) {
+            result &= src->as<SimdType>()->dim() == dst_simd_type->dim();
+        }
+
+        if (auto dst_ptr_type = dst->isa<PtrType>()) {
+            result &= src->as<PtrType>()->addr_space() == dst_ptr_type->addr_space();
+        }
+
         return result;
     }
 
