@@ -415,16 +415,15 @@ void CastExpr::check(TypeSema& sema) const {
     auto int_to_bool    = [&] (const Type* a, const Type* b) { return is_int(a)         && is_bool(b);        };
     auto float_to_bool  = [&] (const Type* a, const Type* b) { return is_float(a)       && is_bool(b);        };
 
-    bool valid_cast =
-        ptr_to_ptr(src_type, dst_type) ||
-        float_to_float(src_type, dst_type) ||
-        int_to_int(src_type, dst_type) ||
-        symmetric(int_to_ptr, src_type, dst_type) ||
-        symmetric(int_to_float, src_type, dst_type) ||
-        symmetric(int_to_bool, src_type, dst_type) ||
-        symmetric(float_to_bool, src_type, dst_type);
+    bool valid_cast = ptr_to_ptr(src_type, dst_type)
+        || float_to_float(src_type, dst_type)
+        || int_to_int(src_type, dst_type)
+        || symmetric(int_to_ptr, src_type, dst_type)
+        || symmetric(int_to_float, src_type, dst_type)
+        || symmetric(int_to_bool, src_type, dst_type)
+        || symmetric(float_to_bool, src_type, dst_type);
 
-    if (!valid_cast && !is_subtype(dst_type, src_type))
+    if (src_type->is_known() && dst_type->is_known() && !valid_cast && !is_subtype(dst_type, src_type))
         error(this, "invalid source and destination types for cast operator, got '%' and '%'", src_type, dst_type);
 }
 
