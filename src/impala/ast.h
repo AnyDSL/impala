@@ -33,7 +33,6 @@ class FieldDecl;
 class Fn;
 class FnDecl;
 class LocalDecl;
-class MapExpr;
 class Param;
 class Ptrn;
 class Stmt;
