@@ -271,17 +271,17 @@ private:
 
 class PrimASTType : public ASTType {
 public:
-    enum Kind {
+    enum Tag {
 #define IMPALA_TYPE(itype, atype) TYPE_##itype = Token::TYPE_##itype,
 #include "impala/tokenlist.h"
     };
 
-    PrimASTType(Location location, Kind kind)
+    PrimASTType(Location location, Tag tag)
         : ASTType(location)
-        , kind_(kind)
+        , tag_(tag)
     {}
 
-    Kind kind() const { return kind_; }
+    Tag tag() const { return tag_; }
 
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
@@ -290,21 +290,21 @@ private:
     const Type* check(InferSema&) const override;
     void check(TypeSema&) const override;
 
-    Kind kind_;
+    Tag tag_;
 };
 
 class PtrASTType : public ASTType {
 public:
-    enum Kind { Borrowed, Mut, Owned };
+    enum Tag { Borrowed, Mut, Owned };
 
-    PtrASTType(Location location, Kind kind, int addr_space, const ASTType* referenced_ast_type)
+    PtrASTType(Location location, Tag tag, int addr_space, const ASTType* referenced_ast_type)
         : ASTType(location)
-        , kind_(kind)
+        , tag_(tag)
         , addr_space_(addr_space)
         , referenced_ast_type_(referenced_ast_type)
     {}
 
-    Kind kind() const { return kind_; }
+    Tag tag() const { return tag_; }
     std::string prefix() const;
     const ASTType* referenced_ast_type() const { return referenced_ast_type_.get(); }
     int addr_space() const { return addr_space_; }
@@ -316,7 +316,7 @@ private:
     const Type* check(InferSema&) const override;
     void check(TypeSema&) const override;
 
-    Kind kind_;
+    Tag tag_;
     int addr_space_;
     std::unique_ptr<const ASTType> referenced_ast_type_;
 };
@@ -1112,22 +1112,22 @@ private:
 
 class LiteralExpr : public Expr {
 public:
-    enum Kind {
+    enum Tag {
 #define IMPALA_LIT(itype, atype) LIT_##itype = Token::LIT_##itype,
 #include "impala/tokenlist.h"
         LIT_bool,
     };
 
-    LiteralExpr(Location location, Kind kind, thorin::Box box)
+    LiteralExpr(Location location, Tag tag, thorin::Box box)
         : Expr(location)
-        , kind_(kind)
+        , tag_(tag)
         , box_(box)
     {}
 
-    Kind kind() const { return kind_; }
+    Tag tag() const { return tag_; }
     thorin::Box box() const { return box_; }
     uint64_t get_u64() const;
-    PrimTypeKind literal2type() const;
+    PrimTypeTag literal2type() const;
 
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
@@ -1137,7 +1137,7 @@ private:
     const Type* check(InferSema&) const override;
     void check(TypeSema&) const override;
 
-    Kind kind_;
+    Tag tag_;
     thorin::Box box_;
 };
 
@@ -1238,26 +1238,26 @@ private:
 
 class PrefixExpr : public Expr {
 public:
-    enum Kind {
+    enum Tag {
 #define IMPALA_PREFIX(tok, str, prec) tok = Token:: tok,
 #include "impala/tokenlist.h"
     };
 
-    PrefixExpr(Location location, Kind kind, const Expr* rhs)
+    PrefixExpr(Location location, Tag tag, const Expr* rhs)
         : Expr(location)
-        , kind_(kind)
+        , tag_(tag)
         , rhs_(dock(rhs_, rhs))
     {}
 
-    static const PrefixExpr* create(const Expr* rhs, const Kind kind) {
-        return interlope<PrefixExpr>(rhs, rhs->location(), kind, rhs);
+    static const PrefixExpr* create(const Expr* rhs, const Tag tag) {
+        return interlope<PrefixExpr>(rhs, rhs->location(), tag, rhs);
     }
 
     static const PrefixExpr* create_deref(const Expr* rhs) { return create(rhs, MUL); }
     static const PrefixExpr* create_addrof(const Expr* rhs) { return create(rhs, AND); }
 
     const Expr* rhs() const { return rhs_.get(); }
-    Kind kind() const { return kind_; }
+    Tag tag() const { return tag_; }
 
     bool is_lvalue() const override;
     bool has_side_effect() const override;
@@ -1272,26 +1272,26 @@ private:
     const Type* check(InferSema&) const override;
     void check(TypeSema&) const override;
 
-    Kind kind_;
+    Tag tag_;
     std::unique_ptr<const Expr> rhs_;
 };
 
 class InfixExpr : public Expr {
 public:
-    enum Kind {
+    enum Tag {
 #define IMPALA_INFIX_ASGN(tok, str, lprec, rprec) tok = Token:: tok,
 #define IMPALA_INFIX(     tok, str, lprec, rprec) tok = Token:: tok,
 #include "impala/tokenlist.h"
     };
 
-    InfixExpr(Location location, const Expr* lhs, Kind kind, const Expr* rhs)
+    InfixExpr(Location location, const Expr* lhs, Tag tag, const Expr* rhs)
         : Expr(location)
-        , kind_(kind)
+        , tag_(tag)
         , lhs_(dock(lhs_, lhs))
         , rhs_(dock(rhs_, rhs))
     {}
 
-    Kind kind() const { return kind_; }
+    Tag tag() const { return tag_; }
     const Expr* lhs() const { return lhs_.get(); }
     const Expr* rhs() const { return rhs_.get(); }
 
@@ -1306,7 +1306,7 @@ private:
     const Type* check(InferSema&) const override;
     void check(TypeSema&) const override;
 
-    Kind kind_;
+    Tag tag_;
     std::unique_ptr<const Expr> lhs_;
     std::unique_ptr<const Expr> rhs_;
 };
@@ -1317,18 +1317,18 @@ private:
  */
 class PostfixExpr : public Expr {
 public:
-    enum Kind {
+    enum Tag {
         INC = Token::INC,
         DEC = Token::DEC
     };
 
-    PostfixExpr(Location location, const Expr* lhs, Kind kind)
+    PostfixExpr(Location location, const Expr* lhs, Tag tag)
         : Expr(location)
-        , kind_(kind)
+        , tag_(tag)
         , lhs_(dock(lhs_, lhs))
     {}
 
-    Kind kind() const { return kind_; }
+    Tag tag() const { return tag_; }
     const Expr* lhs() const { return lhs_.get(); }
 
     bool has_side_effect() const override;
@@ -1341,7 +1341,7 @@ private:
     const Type* check(InferSema&) const override;
     void check(TypeSema&) const override;
 
-    Kind kind_;
+    Tag tag_;
     std::unique_ptr<const Expr> lhs_;
 };
 

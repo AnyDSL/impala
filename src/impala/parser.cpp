@@ -128,13 +128,13 @@ public:
     Location prev_location() const { return prev_location_; }
 
 #ifdef NDEBUG
-    Token eat(TokenKind) { return lex(); }
+    Token eat(TokenTag) { return lex(); }
 #else
-    Token eat(TokenKind kind) { assert(kind == lookahead() && "internal parser error"); return lex(); }
+    Token eat(TokenTag tag) { assert(tag == lookahead() && "internal parser error"); return lex(); }
 #endif
 
-    bool accept(TokenKind tok);
-    bool expect(TokenKind tok, const std::string& context);
+    bool accept(TokenTag tok);
+    bool expect(TokenTag tok, const std::string& context);
     void error(const std::string& what, const std::string& context) { error(what, context, lookahead()); }
     void error(const std::string& what, const std::string& context, const Token& tok);
 
@@ -162,7 +162,7 @@ public:
      * The ending delimiter will @em not be eaten up by this method.
      * The list may also end with a comma.
      */
-    void nibble_comma_list(Array<TokenKind> delimiters, std::function<void()> f) {
+    void nibble_comma_list(Array<TokenTag> delimiters, std::function<void()> f) {
         auto is_delimiter = [&] () {
             for (auto delimiter : delimiters)
                 if (lookahead() == delimiter)
@@ -177,7 +177,7 @@ public:
     }
 
     /// Like @p nibble_comma_list but there is only one @p delimiter which @em will be eaten up by this method.
-    void parse_comma_list(const char* context, TokenKind delimiter, std::function<void()> f) {
+    void parse_comma_list(const char* context, TokenTag delimiter, std::function<void()> f) {
         nibble_comma_list({delimiter}, f);
         expect(delimiter, context);
     }
@@ -197,7 +197,7 @@ public:
     ASTTypeParams parse_ast_type_params();
     const ASTTypeParam* parse_ast_type_param();
     const Param* parse_param(int i, bool lambda);
-    Params parse_param_list(TokenKind delimiter, bool lambda);
+    Params parse_param_list(TokenTag delimiter, bool lambda);
     const Param* parse_return_param();
 
     bool param_list() {
@@ -312,14 +312,14 @@ Token Parser::lex() {
     return result;
 }
 
-bool Parser::accept(TokenKind type) {
+bool Parser::accept(TokenTag type) {
     if (type != lookahead())
         return false;
     lex();
     return true;
 }
 
-bool Parser::expect(TokenKind tok, const std::string& context) {
+bool Parser::expect(TokenTag tok, const std::string& context) {
     if (lookahead() == tok) {
         lex();
         return true;
@@ -350,7 +350,7 @@ const Identifier* Parser::try_identifier(const std::string& what) {
 
 Visibility Parser::parse_visibility() {
     switch (lookahead()) {
-        case VISIBILITY: return Visibility(lex().kind());
+        case VISIBILITY: return Visibility(lex().tag());
         default:         return Visibility(Visibility::None);
     }
 }
@@ -423,7 +423,7 @@ const ASTTypeParam* Parser::parse_ast_type_param() {
     return new ASTTypeParam(tracker, identifier, std::move(bounds));
 }
 
-Params Parser::parse_param_list(TokenKind delimiter, bool lambda) {
+Params Parser::parse_param_list(TokenTag delimiter, bool lambda) {
     Params params;
     int i = 0;
     parse_comma_list("parameter list", delimiter, [&] { params.emplace_back(parse_param(i++, lambda)); });
@@ -764,33 +764,33 @@ const ASTType* Parser::parse_return_type(bool& is_continuation, bool mandatory) 
 
 const PrimASTType* Parser::parse_prim_type() {
     auto tracker = track();
-    auto kind = (PrimASTType::Kind) lex().kind();
-    return new PrimASTType(tracker, kind);
+    auto tag = (PrimASTType::Tag) lex().tag();
+    return new PrimASTType(tracker, tag);
 }
 
 const PtrASTType* Parser::parse_ptr_type() {
     auto tracker = track();
     if (accept(Token::ANDAND)) {
-        auto kind = accept(Token::MUT) ? PtrASTType::Mut : PtrASTType::Borrowed;
+        auto tag = accept(Token::MUT) ? PtrASTType::Mut : PtrASTType::Borrowed;
         auto addr_space = parse_addr_space();
         auto referenced_ast_type = parse_type();
-        return new PtrASTType(tracker, PtrASTType::Borrowed, 0, new PtrASTType(tracker, kind, addr_space, referenced_ast_type));
+        return new PtrASTType(tracker, PtrASTType::Borrowed, 0, new PtrASTType(tracker, tag, addr_space, referenced_ast_type));
     }
 
-    PtrASTType::Kind kind;
+    PtrASTType::Tag tag;
     if (accept(Token::TILDE))
-        kind = PtrASTType::Owned;
+        tag = PtrASTType::Owned;
     else {
         eat(Token::AND);
         if (accept(Token::MUT))
-            kind = PtrASTType::Mut;
+            tag = PtrASTType::Mut;
         else
-            kind = PtrASTType::Borrowed;
+            tag = PtrASTType::Borrowed;
     }
 
     auto addr_space = parse_addr_space();
     auto referenced_ast_type = parse_type();
-    return new PtrASTType(tracker, kind, addr_space, referenced_ast_type);
+    return new PtrASTType(tracker, tag, addr_space, referenced_ast_type);
 }
 
 const TupleASTType* Parser::parse_tuple_type() {
@@ -883,16 +883,16 @@ const Expr* Parser::parse_prefix_expr() {
         return parse_fn_expr();
 
     auto tracker = track();
-    auto kind = lex().kind();
-    auto rhs = parse_expr(PrecTable::prefix_r[kind]);
+    auto tag = lex().tag();
+    auto rhs = parse_expr(PrecTable::prefix_r[tag]);
 
-    return new PrefixExpr(tracker, (PrefixExpr::Kind) kind, rhs);
+    return new PrefixExpr(tracker, (PrefixExpr::Tag) tag, rhs);
 }
 
 const Expr* Parser::parse_infix_expr(Tracker tracker, const Expr* lhs) {
-    auto kind = lex().kind();
-    auto rhs = parse_expr(PrecTable::infix_r[kind]);
-    return new InfixExpr(tracker, lhs, (InfixExpr::Kind) kind, rhs);
+    auto tag = lex().tag();
+    auto rhs = parse_expr(PrecTable::infix_r[tag]);
+    return new InfixExpr(tracker, lhs, (InfixExpr::Tag) tag, rhs);
 }
 
 const MapExpr* Parser::parse_map_expr(Tracker tracker, const Expr* lhs) {
@@ -915,8 +915,8 @@ const Expr* Parser::parse_postfix_expr(Tracker tracker, const Expr* lhs) {
         case Token::L_PAREN:   return parse_map_expr(tracker, lhs);
         case Token::DEC:
         case Token::INC: {
-            auto kind = (PostfixExpr::Kind) lex().kind();
-            return new PostfixExpr(tracker, lhs, kind);
+            auto tag = (PostfixExpr::Tag) lex().tag();
+            return new PostfixExpr(tracker, lhs, tag);
         }
         case Token::DOT: {
             lex();
@@ -1035,7 +1035,7 @@ const Expr* Parser::parse_primary_expr() {
 }
 
 const LiteralExpr* Parser::parse_literal_expr() {
-    LiteralExpr::Kind kind;
+    LiteralExpr::Tag tag;
     Box box;
 
     switch (lookahead()) {
@@ -1043,9 +1043,9 @@ const LiteralExpr* Parser::parse_literal_expr() {
         case Token::FALSE:      return new LiteralExpr(lex().location(), LiteralExpr::LIT_bool, Box(false));
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype: { \
-            kind = LiteralExpr::LIT_##itype; \
+            tag = LiteralExpr::LIT_##itype; \
             Box box = lookahead().box(); \
-            return new LiteralExpr(lex().location(), kind, box); \
+            return new LiteralExpr(lex().location(), tag, box); \
         }
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
@@ -1295,7 +1295,7 @@ const AsmStmt::Elem* Parser::parse_asm_op() {
 }
 
 const AsmStmt* Parser::parse_asm_stmt() {
-    static const Array<TokenKind> delimiters = {Token::COLON, Token::DOUBLE_COLON, Token::R_PAREN};
+    static const Array<TokenTag> delimiters = {Token::COLON, Token::DOUBLE_COLON, Token::R_PAREN};
 
     auto tracker = track();
     eat(Token::ASM);

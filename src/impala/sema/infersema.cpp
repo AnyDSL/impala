@@ -265,7 +265,7 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
         }
     }
 
-    if (dst->kind() == src->kind() && dst->num_ops() == src->num_ops()) {
+    if (dst->tag() == src->tag() && dst->num_ops() == src->num_ops()) {
         Array<const Type*> op(dst->num_ops());
         for (size_t i = 0, e = op.size(); i != e; ++i)
             op[i] = unify(dst->op(i), src->op(i));
@@ -378,7 +378,7 @@ const Type* LocalDecl::check(InferSema& sema) const {
 const Type* ErrorASTType::check(InferSema& sema) const { return sema.type_error(); }
 
 const Type* PrimASTType::check(InferSema& sema) const {
-    switch (kind()) {
+    switch (tag()) {
 #define IMPALA_TYPE(itype, atype) case TYPE_##itype: return sema.prim_type(PrimType_##itype);
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
@@ -387,7 +387,7 @@ const Type* PrimASTType::check(InferSema& sema) const {
 
 const Type* PtrASTType::check(InferSema& sema) const {
     auto referenced_type = sema.check(referenced_ast_type());
-    switch (kind()) {
+    switch (tag()) {
         case Borrowed: return sema.borrowed_ptr_type(referenced_type, addr_space());
         case Mut:      return sema.     mut_ptr_type(referenced_type, addr_space());
         case Owned:    return sema.   owned_ptr_type(referenced_type, addr_space());
@@ -571,7 +571,7 @@ const Type* PathExpr::check(InferSema& sema) const {
 }
 
 const Type* PrefixExpr::check(InferSema& sema) const {
-    switch (kind()) {
+    switch (tag()) {
         case AND:   return sema.borrowed_ptr_type(sema.check(rhs()), 0);
         case TILDE: return sema.   owned_ptr_type(sema.check(rhs()), 0);
         case MUL: {
@@ -595,7 +595,7 @@ const Type* PrefixExpr::check(InferSema& sema) const {
 }
 
 const Type* InfixExpr::check(InferSema& sema) const {
-    switch (kind()) {
+    switch (tag()) {
         case EQ: case NE:
         case LT: case LE:
         case GT: case GE: {
@@ -850,7 +850,7 @@ const Type* WhileExpr::check(InferSema& sema) const {
 const Type* ForExpr::check(InferSema& sema) const {
     auto forexpr = expr();
     if (auto prefix = forexpr->isa<PrefixExpr>())
-        if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HLT)
+        if (prefix->tag() == PrefixExpr::RUN || prefix->tag() == PrefixExpr::HLT)
             forexpr = prefix->rhs();
 
     if (auto map = forexpr->isa<MapExpr>()) {

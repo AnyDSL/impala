@@ -10,31 +10,31 @@
 
 namespace impala {
 
-enum Kind {
-#define IMPALA_TYPE(itype, atype) Kind_##itype,
+enum Tag {
+#define IMPALA_TYPE(itype, atype) Tag_##itype,
 #include "impala/tokenlist.h"
-    Kind_app,
-    Kind_borrowed_ptr,
-    Kind_definite_array,
-    Kind_error,
-    Kind_fn,
-    Kind_impl,
-    Kind_indefinite_array,
-    Kind_lambda,
-    Kind_mut_ptr,
-    Kind_noret,
-    Kind_owned_ptr,
-    Kind_pi,
-    Kind_simd,
-    Kind_struct,
-    Kind_tuple,
-    Kind_typedef_abs,
-    Kind_unknown,
-    Kind_var,
+    Tag_app,
+    Tag_borrowed_ptr,
+    Tag_definite_array,
+    Tag_error,
+    Tag_fn,
+    Tag_impl,
+    Tag_indefinite_array,
+    Tag_lambda,
+    Tag_mut_ptr,
+    Tag_noret,
+    Tag_owned_ptr,
+    Tag_pi,
+    Tag_simd,
+    Tag_struct,
+    Tag_tuple,
+    Tag_typedef_abs,
+    Tag_unknown,
+    Tag_var,
 };
 
-enum PrimTypeKind {
-#define IMPALA_TYPE(itype, atype) PrimType_##itype = Kind_##itype,
+enum PrimTypeTag {
+#define IMPALA_TYPE(itype, atype) PrimType_##itype = Tag_##itype,
 #include "impala/tokenlist.h"
 };
 
@@ -42,13 +42,13 @@ class StructDecl;
 template<class T> using ArrayRef = thorin::ArrayRef<T>;
 template<class T> using Array    = thorin::Array<T>;
 
-static const int Node_App        = impala::Kind_app;
-static const int Node_Lambda     = impala::Kind_lambda;
-static const int Node_Pi         = impala::Kind_pi;
-static const int Node_StructType = impala::Kind_struct;
-static const int Node_TupleType  = impala::Kind_tuple;
-static const int Node_TypeError  = impala::Kind_error;
-static const int Node_Var        = impala::Kind_var;
+static const int Node_App        = impala::Tag_app;
+static const int Node_Lambda     = impala::Tag_lambda;
+static const int Node_Pi         = impala::Tag_pi;
+static const int Node_StructType = impala::Tag_struct;
+static const int Node_TupleType  = impala::Tag_tuple;
+static const int Node_TypeError  = impala::Tag_error;
+static const int Node_Var        = impala::Tag_var;
 
 #define HENK_STRUCT_EXTRA_NAME  struct_decl
 #define HENK_STRUCT_EXTRA_TYPE  const StructDecl*
@@ -61,12 +61,12 @@ static const int Node_Var        = impala::Kind_var;
 /// Primitive type.
 class PrimType : public Type {
 private:
-    PrimType(TypeTable& typetable, PrimTypeKind kind)
-        : Type(typetable, (Kind) kind, {})
+    PrimType(TypeTable& typetable, PrimTypeTag tag)
+        : Type(typetable, (Tag) tag, {})
     {}
 
 public:
-    PrimTypeKind primtype_kind() const { return (PrimTypeKind) kind(); }
+    PrimTypeTag primtype_tag() const { return (PrimTypeTag) tag(); }
 
     virtual std::ostream& stream(std::ostream&) const override;
 
@@ -77,7 +77,7 @@ private:
     friend class TypeTable;
 };
 
-bool is(const Type*, PrimTypeKind kind);
+bool is(const Type*, PrimTypeTag tag);
 #define IMPALA_TYPE(itype, atype) inline bool is_##itype(const Type* t) { return is(t, PrimType_##itype); }
 #include "impala/tokenlist.h"
 inline bool is_float(const Type* t) { return             is_f16(t) || is_f32(t) || is_f64(t); }
@@ -91,8 +91,8 @@ bool is_subtype(const Type* dst, const Type* src);
 /// Pointer @p Type.
 class PtrType : public Type {
 protected:
-    PtrType(TypeTable& typetable, int kind, const Type* referenced_type, int addr_space)
-        : Type(typetable, kind, {referenced_type})
+    PtrType(TypeTable& typetable, int tag, const Type* referenced_type, int addr_space)
+        : Type(typetable, tag, {referenced_type})
         , addr_space_(addr_space)
     {}
 
@@ -116,7 +116,7 @@ private:
 class BorrowedPtrType : public PtrType {
 public:
     BorrowedPtrType(TypeTable& typetable, const Type* referenced_type, int addr_space)
-        : PtrType(typetable, Kind_borrowed_ptr, referenced_type, addr_space)
+        : PtrType(typetable, Tag_borrowed_ptr, referenced_type, addr_space)
     {}
 
     virtual std::string prefix() const override { return "&"; }
@@ -129,7 +129,7 @@ private:
 class MutPtrType : public PtrType {
 public:
     MutPtrType(TypeTable& typetable, const Type* referenced_type, int addr_space)
-        : PtrType(typetable, Kind_mut_ptr, referenced_type, addr_space)
+        : PtrType(typetable, Tag_mut_ptr, referenced_type, addr_space)
     {}
 
     virtual std::string prefix() const override { return "&mut"; }
@@ -142,7 +142,7 @@ private:
 class OwnedPtrType : public PtrType {
 public:
     OwnedPtrType(TypeTable& typetable, const Type* referenced_type, int addr_space)
-        : PtrType(typetable, Kind_owned_ptr, referenced_type, addr_space)
+        : PtrType(typetable, Tag_owned_ptr, referenced_type, addr_space)
     {}
 
     virtual std::string prefix() const override { return "~"; }
@@ -157,7 +157,7 @@ private:
 class FnType : public Type {
 private:
     FnType(TypeTable& typetable, Types ops)
-        : Type(typetable, Kind_fn, ops)
+        : Type(typetable, Tag_fn, ops)
     {
         ++order_;
     }
@@ -176,8 +176,8 @@ private:
 
 class ArrayType : public Type {
 protected:
-    ArrayType(TypeTable& typetable, int kind, const Type* elem_type)
-        : Type(typetable, kind, {elem_type})
+    ArrayType(TypeTable& typetable, int tag, const Type* elem_type)
+        : Type(typetable, tag, {elem_type})
     {}
 
 public:
@@ -187,7 +187,7 @@ public:
 class IndefiniteArrayType : public ArrayType {
 public:
     IndefiniteArrayType(TypeTable& typetable, const Type* elem_type)
-        : ArrayType(typetable, Kind_indefinite_array, elem_type)
+        : ArrayType(typetable, Tag_indefinite_array, elem_type)
     {}
 
     virtual std::ostream& stream(std::ostream&) const override;
@@ -202,7 +202,7 @@ private:
 class DefiniteArrayType : public ArrayType {
 public:
     DefiniteArrayType(TypeTable& typetable, const Type* elem_type, uint64_t dim)
-        : ArrayType(typetable, Kind_definite_array, elem_type)
+        : ArrayType(typetable, Tag_definite_array, elem_type)
         , dim_(dim)
     {}
 
@@ -226,7 +226,7 @@ private:
 class SimdType : public ArrayType {
 public:
     SimdType(TypeTable& typetable, const Type* elem_type, uint64_t dim)
-        : ArrayType(typetable, Kind_simd, elem_type)
+        : ArrayType(typetable, Tag_simd, elem_type)
         , dim_(dim)
     {}
 
@@ -250,7 +250,7 @@ private:
 class NoRetType : public Type {
 private:
     NoRetType(TypeTable& typetable)
-        : Type(typetable, Kind_noret, {})
+        : Type(typetable, Tag_noret, {})
     {}
 
 public:
@@ -266,7 +266,7 @@ private:
 class UnknownType : public Type {
 private:
     UnknownType(TypeTable& typetable)
-        : Type(typetable, Kind_unknown, {})
+        : Type(typetable, Tag_unknown, {})
     {
         known_ = false;
     }

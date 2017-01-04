@@ -19,8 +19,8 @@ using thorin::streamf;
 
 //------------------------------------------------------------------------------
 
-bool is(const Type* type, PrimTypeKind kind) {
-    return type->isa<PrimType>() && type->as<PrimType>()->primtype_kind() == kind;
+bool is(const Type* type, PrimTypeTag tag) {
+    return type->isa<PrimType>() && type->as<PrimType>()->primtype_tag() == tag;
 }
 
 bool is_void(const Type* type) {
@@ -74,7 +74,7 @@ bool is_subtype(const Type* dst, const Type* src) {
             return is_subtype(dst_indefinite_array_type->elem_type(), src_definite_array_type->elem_type());
     }
 
-    if (dst->kind() == src->kind() && dst->num_ops() == src->num_ops()) {
+    if (dst->tag() == src->tag() && dst->num_ops() == src->num_ops()) {
         bool result = true;
         for (size_t i = 0, e = dst->num_ops(); result && i != e; ++i)
             result &= is_subtype(dst->op(i), src->op(i));
@@ -133,7 +133,7 @@ std::ostream& Lambda::stream(std::ostream& os) const { return streamf(os, "[%].%
 std::ostream& UnknownType::stream(std::ostream& os) const { return os << '?' << gid(); }
 
 std::ostream& PrimType::stream(std::ostream& os) const {
-    switch (primtype_kind()) {
+    switch (primtype_tag()) {
 #define IMPALA_TYPE(itype, atype) case PrimType_##itype: return os << #itype;
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
@@ -185,7 +185,7 @@ std::ostream& TupleType::stream(std::ostream& os) const {
  * rebuild
  */
 
-const Type* PrimType           ::vrebuild(TypeTable& to, Types     ) const { return to.prim_type(primtype_kind()); }
+const Type* PrimType           ::vrebuild(TypeTable& to, Types     ) const { return to.prim_type(primtype_tag()); }
 const Type* FnType             ::vrebuild(TypeTable& to, Types ops) const { return to.   fn_type(ops); }
 const Type* DefiniteArrayType  ::vrebuild(TypeTable& to, Types ops) const { return to.  definite_array_type(ops[0], dim()); }
 const Type* SimdType           ::vrebuild(TypeTable& to, Types ops) const { return to.            simd_type(ops[0], dim()); }

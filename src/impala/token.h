@@ -15,7 +15,7 @@ using thorin::Location;
 
 class Token {
 public:
-    enum Kind {
+    enum Tag {
         // !!! DO NOT CHANGE THIS ORDER !!!
         // add prefix and postfix tokens manually in order to avoid duplicates in the enum
 #define IMPALA_INFIX(     tok, t_str, r, l) tok,
@@ -36,25 +36,25 @@ public:
         Sentinel,
     };
 
-    struct KindHash {
-        static uint64_t hash(Kind kind) { return uint64_t(kind); }
-        static bool eq(Kind k1, Kind k2) { return k1 == k2; }
-        static Kind sentinel() { return Sentinel; }
+    struct TagHash {
+        static uint64_t hash(Tag tag) { return uint64_t(tag); }
+        static bool eq(Tag k1, Tag k2) { return k1 == k2; }
+        static Tag sentinel() { return Sentinel; }
     };
 
     Token() {}
     /// Create an operator token
-    Token(Location location, Kind tok);
+    Token(Location location, Tag tok);
     /// Create an identifier or a keyword (depends on \p str)
     Token(Location location, const std::string& str);
     /// Create a literal
-    Token(Location location, Kind type, const std::string& str);
+    Token(Location location, Tag type, const std::string& str);
 
     Location location() const { return location_; }
     Symbol symbol() const { return symbol_; }
     thorin::Box box() const { return box_; }
-    Kind kind() const { return kind_; }
-    operator Kind() const { return kind_; }
+    Tag tag() const { return tag_; }
+    operator Tag() const { return tag_; }
 
     enum Op {
         None    = 0,
@@ -64,61 +64,61 @@ public:
         Asgn_Op = 8
     };
 
-    bool is_stmt_like() const { return kind() == L_BRACE || kind() == IF || kind() == FOR || kind() == WHILE || kind() == WITH; }
-    bool is_prefix()    const { return is_prefix(kind_); }
-    bool is_infix()     const { return is_infix(kind_); }
-    bool is_postfix()   const { return is_postfix(kind_); }
-    bool is_assign()    const { return is_assign(kind_); }
-    bool is_op()        const { return is_op(kind_); }
+    bool is_stmt_like() const { return tag() == L_BRACE || tag() == IF || tag() == FOR || tag() == WHILE || tag() == WITH; }
+    bool is_prefix()    const { return is_prefix(tag_); }
+    bool is_infix()     const { return is_infix(tag_); }
+    bool is_postfix()   const { return is_postfix(tag_); }
+    bool is_assign()    const { return is_assign(tag_); }
+    bool is_op()        const { return is_op(tag_); }
 
-    static Kind sym2lit(Symbol sym);
-    static Kind sym2flit(Symbol sym);
-    static bool is_prefix(Kind kind)  { return (tok2op_[kind] &  Prefix) != 0; }
-    static bool is_infix(Kind kind)   { return (tok2op_[kind] &   Infix) != 0; }
-    static bool is_postfix(Kind kind) { return (tok2op_[kind] & Postfix) != 0; }
-    static bool is_assign(Kind kind)  { return (tok2op_[kind] & Asgn_Op) != 0; }
-    static bool is_op(Kind kind)      { return is_prefix(kind) || is_infix(kind) || is_postfix(kind); }
-    static bool is_rel(Kind kind);
-    static Kind separate_assign(Kind kind);
-    static int to_binop(Kind kind);
-    static thorin::ArithOpKind to_arithop(Kind kind) { return (thorin::ArithOpKind) to_binop(kind); }
-    static thorin::CmpKind     to_cmp    (Kind kind) { return (thorin::CmpKind)     to_binop(kind); }
-    static const char* tok2str(Kind kind);
+    static Tag sym2lit(Symbol sym);
+    static Tag sym2flit(Symbol sym);
+    static bool is_prefix(Tag tag)  { return (tok2op_[tag] &  Prefix) != 0; }
+    static bool is_infix(Tag tag)   { return (tok2op_[tag] &   Infix) != 0; }
+    static bool is_postfix(Tag tag) { return (tok2op_[tag] & Postfix) != 0; }
+    static bool is_assign(Tag tag)  { return (tok2op_[tag] & Asgn_Op) != 0; }
+    static bool is_op(Tag tag)      { return is_prefix(tag) || is_infix(tag) || is_postfix(tag); }
+    static bool is_rel(Tag tag);
+    static Tag separate_assign(Tag tag);
+    static int to_binop(Tag tag);
+    static thorin::ArithOpTag to_arithop(Tag tag) { return (thorin::ArithOpTag) to_binop(tag); }
+    static thorin::CmpTag     to_cmp    (Tag tag) { return (thorin::CmpTag)     to_binop(tag); }
+    static const char* tok2str(Tag tag);
 
-    bool operator==(const Token& t) const { return kind_ == t; }
-    bool operator!=(const Token& t) const { return kind_ != t; }
+    bool operator==(const Token& t) const { return tag_ == t; }
+    bool operator!=(const Token& t) const { return tag_ != t; }
 
 private:
     static void init();
-    static Symbol insert(Kind tok, const char* str);
-    static void insert_key(Kind tok, const char* str);
+    static Symbol insert(Tag tok, const char* str);
+    static void insert_key(Tag tok, const char* str);
 
     Location location_;
     Symbol symbol_;
-    Kind kind_;
+    Tag tag_;
     thorin::Box box_;
 
-    typedef thorin::HashMap<Symbol, Kind> Sym2Kind;
-    typedef thorin::HashMap<Kind, const char*, KindHash> Kind2Str;
-    typedef thorin::HashMap<Kind, Symbol, KindHash> Kind2Sym;
+    typedef thorin::HashMap<Symbol, Tag> Sym2Tag;
+    typedef thorin::HashMap<Tag, const char*, TagHash> Tag2Str;
+    typedef thorin::HashMap<Tag, Symbol, TagHash> Tag2Sym;
     static int tok2op_[Num_Tokens];
-    static Kind2Str tok2str_;
-    static Kind2Sym tok2sym_;
-    static Sym2Kind keywords_;
-    static Sym2Kind sym2lit_; ///< Table of \em all (including floating) suffixes for literals.
-    static Sym2Kind sym2flit_;///< Table of suffixes for \em floating point literals.
+    static Tag2Str tok2str_;
+    static Tag2Sym tok2sym_;
+    static Sym2Tag keywords_;
+    static Sym2Tag sym2lit_; ///< Table of \em all (including floating) suffixes for literals.
+    static Sym2Tag sym2flit_;///< Table of suffixes for \em floating point literals.
 
     friend void init();
     friend std::ostream& operator<<(std::ostream& os, const Token& tok);
-    friend std::ostream& operator<<(std::ostream& os, const Kind&  tok);
+    friend std::ostream& operator<<(std::ostream& os, const Tag&  tok);
 };
 
-typedef Token::Kind TokenKind;
+typedef Token::Tag TokenTag;
 
 //------------------------------------------------------------------------------
 
 std::ostream& operator<<(std::ostream& os, const Token& tok);
-std::ostream& operator<<(std::ostream& os, const TokenKind& tok);
+std::ostream& operator<<(std::ostream& os, const TokenTag& tok);
 
 //------------------------------------------------------------------------------
 

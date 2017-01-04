@@ -13,7 +13,7 @@ const char* Visibility::str() {
 }
 
 std::string PtrASTType::prefix() const {
-    switch (kind()) {
+    switch (tag()) {
         case Borrowed: return "&";
         case Mut:      return "&mut";
         case Owned:    return "~";
@@ -29,8 +29,8 @@ const FnASTType* FnASTType::ret_fn_ast_type() const {
     return nullptr;
 }
 
-PrimTypeKind LiteralExpr::literal2type() const {
-    switch (kind()) {
+PrimTypeTag LiteralExpr::literal2type() const {
+    switch (tag()) {
 #define IMPALA_LIT(itype, atype) \
         case LIT_##itype: return PrimType_##itype;
 #include "impala/tokenlist.h"
@@ -69,7 +69,7 @@ bool MapExpr::is_lvalue() const {
     return (lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<PtrType>()) && lhs()->is_lvalue();
 }
 
-bool PrefixExpr::is_lvalue() const { return kind() == MUL; }
+bool PrefixExpr::is_lvalue() const { return tag() == MUL; }
 bool FieldExpr::is_lvalue() const { return lhs()->is_lvalue() || lhs()->type()->isa<PtrType>(); }
 bool CastExpr::is_lvalue() const { return src()->is_lvalue(); }
 
@@ -80,11 +80,11 @@ bool CastExpr::is_lvalue() const { return src()->is_lvalue(); }
  */
 
 bool PrefixExpr::has_side_effect() const {
-    return kind() == INC || kind() == DEC || kind() == TILDE || kind() == RUN || kind() == HLT;
+    return tag() == INC || tag() == DEC || tag() == TILDE || tag() == RUN || tag() == HLT;
 }
 
 bool InfixExpr::has_side_effect() const {
-    return Token::is_assign((TokenKind) kind());
+    return Token::is_assign((TokenTag) tag());
 }
 
 bool PostfixExpr::has_side_effect() const { return true; }

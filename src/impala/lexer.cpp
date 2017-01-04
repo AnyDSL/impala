@@ -265,7 +265,7 @@ bool Lexer::lex_identifier(std::string& str) {
 }
 
 Token Lexer::lex_suffix(std::string& str, bool floating) {
-    TokenKind tok = floating ? Token::LIT_f64 : Token::LIT_i32;
+    TokenTag tok = floating ? Token::LIT_f64 : Token::LIT_i32;
     std::string suffix_str;
     if (lex_identifier(suffix_str)) {
         Symbol suffix(suffix_str);

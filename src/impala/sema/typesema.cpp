@@ -105,10 +105,10 @@ void type_analysis(const Module* module, bool nossa) {
 }
 
 template<class T>
-TokenKind token_kind(const T* expr) { return TokenKind(expr->kind()); }
+TokenTag token_tag(const T* expr) { return TokenTag(expr->tag()); }
 
 template<class T>
-const char* tok2str(const T* expr) { return Token::tok2str(token_kind(expr)); }
+const char* tok2str(const T* expr) { return Token::tok2str(token_tag(expr)); }
 
 //------------------------------------------------------------------------------
 
@@ -299,7 +299,7 @@ void PathExpr::check(TypeSema& sema) const {
 void PrefixExpr::check(TypeSema& sema) const {
     sema.check(rhs());
 
-    switch (kind()) {
+    switch (tag()) {
         case AND:
             sema.expect_lvalue(rhs(), "as unary '&' operand");
             rhs()->take_address();
@@ -324,7 +324,7 @@ void PrefixExpr::check(TypeSema& sema) const {
         case HLT:
         case RUN:
             if (!rhs()->isa<MapExpr>())
-                error(this, "function call expected after partial evaluator command %", (TokenKind)kind());
+                error(this, "function call expected after partial evaluator command %", (TokenTag)tag());
             return;
         default:
             return;
@@ -343,7 +343,7 @@ void InfixExpr::check(TypeSema& sema) const {
         error(rhs(), "right-hand side type is '%'", rhs()->type());
     }
 
-    switch (kind()) {
+    switch (tag()) {
         case EQ: case NE:
         case LT: case GT:
         case LE: case GE:
@@ -579,7 +579,7 @@ void WhileExpr::check(TypeSema& sema) const {
 void ForExpr::check(TypeSema& sema) const {
     auto forexpr = expr();
     if (auto prefix = forexpr->isa<PrefixExpr>())
-        if (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HLT)
+        if (prefix->tag() == PrefixExpr::RUN || prefix->tag() == PrefixExpr::HLT)
             forexpr = prefix->rhs();
 
     if (auto map = forexpr->isa<MapExpr>()) {

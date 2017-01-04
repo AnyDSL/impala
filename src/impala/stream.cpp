@@ -50,7 +50,7 @@ std::ostream& ASTTypeApp::stream(std::ostream& os) const {
 }
 
 std::ostream& PrimASTType::stream(std::ostream& os) const {
-    switch (kind()) {
+    switch (tag()) {
 #define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return os << #itype;
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
@@ -235,7 +235,7 @@ std::ostream& BlockExprBase::stream(std::ostream& os) const {
 }
 
 std::ostream& LiteralExpr::stream(std::ostream& os) const {
-    switch (kind()) {
+    switch (tag()) {
         case LIT_i8:  return os << (int)box().get_s8()  << "i8";
         case LIT_i16: return os <<      box().get_s16() << "i16";
         case LIT_i32: return os <<      box().get_s32();
@@ -286,13 +286,13 @@ std::ostream& SimdExpr::stream(std::ostream& os) const {
 }
 
 std::ostream& PrefixExpr::stream(std::ostream& os) const {
-    Prec r = PrecTable::prefix_r[kind()];
+    Prec r = PrecTable::prefix_r[tag()];
     Prec old = prec;
     bool paren = !fancy() || prec <= r;
     if (paren) os << "(";
 
     const char* op;
-    switch (kind()) {
+    switch (tag()) {
 #define IMPALA_PREFIX(tok, str, rprec) case tok: op = str; break;
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
@@ -307,9 +307,9 @@ std::ostream& PrefixExpr::stream(std::ostream& os) const {
     return os;
 }
 
-static std::pair<Prec, bool> open(std::ostream& os, int kind) {
+static std::pair<Prec, bool> open(std::ostream& os, int tag) {
     std::pair<Prec, bool> result;
-    Prec l = PrecTable::postfix_l[kind];
+    Prec l = PrecTable::postfix_l[tag];
     result.first = prec;
     result.second = !fancy() || prec > l;
     if (result.second)
@@ -326,24 +326,24 @@ static std::ostream& close(std::ostream& os, std::pair<Prec, bool> pair) {
 }
 
 std::ostream& InfixExpr::stream(std::ostream& os) const {
-    auto open_state = open(os, kind());
+    auto open_state = open(os, tag());
     const char* op;
-    switch (kind()) {
+    switch (tag()) {
 #define IMPALA_INFIX_ASGN(tok, str, lprec, rprec) case tok: op = str; break;
 #define IMPALA_INFIX(     tok, str, lprec, rprec) case tok: op = str; break;
 #include "impala/tokenlist.h"
     }
 
     os << lhs() << " " << op << " ";
-    prec = PrecTable::infix_r[kind()];
+    prec = PrecTable::infix_r[tag()];
     os << rhs();
     return close(os, open_state);
 }
 
 std::ostream& PostfixExpr::stream(std::ostream& os) const {
-    auto open_state = open(os, kind());
+    auto open_state = open(os, tag());
     const char* op;
-    switch (kind()) {
+    switch (tag()) {
         case INC: op = "++"; break;
         case DEC: op = "--"; break;
         default: THORIN_UNREACHABLE;

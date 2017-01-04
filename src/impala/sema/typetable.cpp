@@ -8,8 +8,8 @@ TypeTable::TypeTable()
 #include "impala/tokenlist.h"
 {}
 
-const PrimType* TypeTable::prim_type(const PrimTypeKind kind) {
-    switch (kind) {
+const PrimType* TypeTable::prim_type(const PrimTypeTag tag) {
+    switch (tag) {
 #define IMPALA_TYPE(itype, atype) case PrimType_##itype: return itype##_;
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;

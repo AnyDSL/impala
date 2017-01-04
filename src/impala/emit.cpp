@@ -68,7 +68,7 @@ public:
     }
     void emit(const Ptrn* ptrn, const thorin::Def* def) { ptrn->emit(*this, def); }
     Value emit(const Decl* decl) {
-        assert(decl->value_.kind() != thorin::Value::Empty);
+        assert(decl->value_.tag() != thorin::Value::Empty);
         return decl->value_;
     }
     Value emit(const Decl* decl, const Def* init) {
@@ -109,7 +109,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
     } else if (auto var = type->isa<Var>()) {
         return world().var(var->depth());
     } else if (auto prim_type = type->isa<PrimType>()) {
-        switch (prim_type->primtype_kind()) {
+        switch (prim_type->primtype_tag()) {
 #define IMPALA_TYPE(itype, ttype) \
             case PrimType_##itype: return world().type_##ttype();
 #include "impala/tokenlist.h"
@@ -140,7 +140,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
     } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {
         return world().indefinite_array_type(convert(indefinite_array_type->elem_type()));
     } else if (auto simd_type = type->isa<SimdType>()) {
-        return world().type(convert(simd_type->elem_type())->as<thorin::PrimType>()->primtype_kind(), simd_type->dim());
+        return world().type(convert(simd_type->elem_type())->as<thorin::PrimType>()->primtype_tag(), simd_type->dim());
     }
     THORIN_UNREACHABLE;
 }
@@ -315,17 +315,17 @@ void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.bra
 const Def* EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}, location()); }
 
 const Def* LiteralExpr::remit(CodeGen& cg) const {
-    thorin::PrimTypeKind tkind;
+    thorin::PrimTypeTag ttag;
 
-    switch (kind()) {
+    switch (tag()) {
 #define IMPALA_LIT(itype, ttype) \
-        case LIT_##itype: tkind = thorin::PrimType_##ttype; break;
+        case LIT_##itype: ttag = thorin::PrimType_##ttype; break;
 #include "impala/tokenlist.h"
-        case LIT_bool: tkind = thorin::PrimType_bool; break;
+        case LIT_bool: ttag = thorin::PrimType_bool; break;
         default: THORIN_UNREACHABLE;
     }
 
-    return cg.world().literal(tkind, box(), location());
+    return cg.world().literal(ttag, box(), location());
 }
 
 const Def* CharExpr::remit(CodeGen& cg) const {
@@ -355,13 +355,13 @@ Value PathExpr::lemit(CodeGen& cg) const {
 }
 
 const Def* PrefixExpr::remit(CodeGen& cg) const {
-    switch (kind()) {
+    switch (tag()) {
         case INC:
         case DEC: {
             auto var = cg.lemit(rhs());
             const Def* def = var.load(location());
             const Def* one = cg.world().one(def->type(), location());
-            const Def* ndef = cg.world().arithop(Token::to_arithop((TokenKind) kind()), def, one, location());
+            const Def* ndef = cg.world().arithop(Token::to_arithop((TokenTag) tag()), def, one, location());
             var.store(ndef, location());
             return ndef;
         }
@@ -377,7 +377,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
         case AND: {
             if (rhs()->is_lvalue()) {
                 auto var = cg.lemit(rhs());
-                assert(var.kind() == Value::PtrRef);
+                assert(var.tag() == Value::PtrRef);
                 return var.def();
             }
 
@@ -398,20 +398,20 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
 }
 
 Value PrefixExpr::lemit(CodeGen& cg) const {
-    if (kind() == MUL)
+    if (tag() == MUL)
         return Value::create_ptr(cg, cg.remit(rhs()));
     THORIN_UNREACHABLE; // TODO
 }
 
 void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
-    if (kind() == NOT && is_type_bool(cg.convert(type())))
+    if (tag() == NOT && is_type_bool(cg.convert(type())))
         cg.emit_branch(rhs(), f, t);
     else
         cg.branch(cg.remit(this), t, f, location().back());
 }
 
 void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
-    switch (kind()) {
+    switch (tag()) {
         case ANDAND: {
             JumpTarget x({rhs()->location().front(), "and_extra"});
             cg.emit_branch(lhs(), x, f);
@@ -433,7 +433,7 @@ void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
 }
 
 const Def* InfixExpr::remit(CodeGen& cg) const {
-    switch (kind()) {
+    switch (tag()) {
         case ANDAND: {
             JumpTarget t({lhs()->location().front(), "and_true"});
             JumpTarget f({rhs()->location().front(), "and_false"});
@@ -453,14 +453,14 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             return cg.converge(this, x);
         }
         default:
-            const TokenKind op = (TokenKind) kind();
+            const TokenTag op = (TokenTag) tag();
 
             if (Token::is_assign(op)) {
                 Value lvar = cg.lemit(lhs());
                 const Def* rdef = cg.remit(rhs());
 
                 if (op != Token::ASGN) {
-                    TokenKind sop = Token::separate_assign(op);
+                    TokenTag sop = Token::separate_assign(op);
                     rdef = cg.world().binop(Token::to_binop(sop), lvar.load(location()), rdef, location());
                 }
 
@@ -478,7 +478,7 @@ const Def* PostfixExpr::remit(CodeGen& cg) const {
     Value var = cg.lemit(lhs());
     const Def* def = var.load(location());
     const Def* one = cg.world().one(def->type(), location());
-    var.store(cg.world().arithop(Token::to_arithop((TokenKind) kind()), def, one, location()), location());
+    var.store(cg.world().arithop(Token::to_arithop((TokenTag) tag()), def, one, location()), location());
     return def;
 }
 
@@ -700,7 +700,7 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     // peel off run and halt
     auto forexpr = expr();
     auto prefix = forexpr->isa<PrefixExpr>();
-    if (prefix && (prefix->kind() == PrefixExpr::RUN || prefix->kind() == PrefixExpr::HLT))
+    if (prefix && (prefix->tag() == PrefixExpr::RUN || prefix->tag() == PrefixExpr::HLT))
         forexpr = prefix->rhs();
 
     // emit call
@@ -710,8 +710,8 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     defs.push_back(cg.remit(fn_expr()));
     defs.push_back(break_continuation);
     auto fun = cg.remit(map_expr->lhs());
-    if (prefix && prefix->kind() == PrefixExpr::RUN) fun = cg.world().run(fun, break_continuation, location());
-    if (prefix && prefix->kind() == PrefixExpr::HLT) fun = cg.world().hlt(fun, break_continuation, location());
+    if (prefix && prefix->tag() == PrefixExpr::RUN) fun = cg.world().run(fun, break_continuation, location());
+    if (prefix && prefix->tag() == PrefixExpr::HLT) fun = cg.world().hlt(fun, break_continuation, location());
 
     defs.front() = cg.get_mem(); // now get the current memory monad
     cg.call(fun, defs, nullptr, map_expr->location());

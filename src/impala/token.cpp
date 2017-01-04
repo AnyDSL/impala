@@ -13,10 +13,10 @@ using namespace thorin;
 
 namespace impala {
 
-Token::Token(Location location, Kind tok)
+Token::Token(Location location, Tag tok)
     : location_(location)
     , symbol_(tok2sym_[tok])
-    , kind_(tok)
+    , tag_(tok)
 {}
 
 Token::Token(Location location, const std::string& str)
@@ -26,9 +26,9 @@ Token::Token(Location location, const std::string& str)
     assert(!str.empty());
     auto i = keywords_.find(str);
     if (i == keywords_.end())
-        kind_ = Token::ID;
+        tag_ = Token::ID;
     else
-        kind_ = i->second;
+        tag_ = i->second;
 }
 
 template<class T, class V>
@@ -36,15 +36,15 @@ static bool inrange(V val) {
     return std::numeric_limits<T>::lowest() <= val && val <= std::numeric_limits<T>::max();
 }
 
-Token::Token(Location location, Kind kind, const std::string& str)
+Token::Token(Location location, Tag tag, const std::string& str)
     : location_(location)
     , symbol_(str)
-    , kind_(kind)
+    , tag_(tag)
 {
     using namespace std;
     using thorin::half;
 
-    if (kind_ == LIT_str || kind_ == LIT_char)
+    if (tag_ == LIT_str || tag_ == LIT_char)
         return;
 
     std::string literal;
@@ -75,7 +75,7 @@ Token::Token(Location location, Kind kind, const std::string& str)
     errno = 0;
     int64_t ival; uint64_t uval; half hval; float fval; double dval;
 
-    switch (kind_) {
+    switch (tag_) {
         case LIT_i8: case LIT_i16: case LIT_i32: case LIT_i64:
                       ival = strtoll (nptr, 0, base);  err = errno; break;
         case LIT_u8: case LIT_u16: case LIT_u32: case LIT_u64:
@@ -86,7 +86,7 @@ Token::Token(Location location, Kind kind, const std::string& str)
         default: THORIN_UNREACHABLE;
     }
 
-    switch (kind_) {
+    switch (tag_) {
         case LIT_i8:  box_ =   int8_t(ival); err |= !inrange<  int8_t>(ival); break;
         case LIT_i16: box_ =  int16_t(ival); err |= !inrange< int16_t>(ival); break;
         case LIT_i32: box_ =  int32_t(ival); err |= !inrange< int32_t>(ival); break;
@@ -102,7 +102,7 @@ Token::Token(Location location, Kind kind, const std::string& str)
     }
 
     if (err)
-        switch (kind_) {
+        switch (tag_) {
 #define IMPALA_LIT(itype, atype) \
             case LIT_##itype: error(location, "literal out of range for type '%'," #itype); return;
 #include "impala/tokenlist.h"
@@ -110,7 +110,7 @@ Token::Token(Location location, Kind kind, const std::string& str)
     }
 }
 
-bool Token::is_rel(Kind op) {
+bool Token::is_rel(Tag op) {
     switch (op) {
         case EQ: case LT: case LE:
         case NE: case GT: case GE: return true;
@@ -118,10 +118,10 @@ bool Token::is_rel(Kind op) {
     }
 }
 
-TokenKind Token::separate_assign(TokenKind kind) {
-    assert(is_assign(kind) && "must be an assignment other than ASGN");
+TokenTag Token::separate_assign(TokenTag tag) {
+    assert(is_assign(tag) && "must be an assignment other than ASGN");
 
-    switch (kind) {
+    switch (tag) {
         case ADD_ASGN: return ADD;
         case SUB_ASGN: return SUB;
         case MUL_ASGN: return MUL;
@@ -136,8 +136,8 @@ TokenKind Token::separate_assign(TokenKind kind) {
     }
 }
 
-int Token::to_binop(Kind kind) {
-    switch (kind) {
+int Token::to_binop(Tag tag) {
+    switch (tag) {
         case INC:
         case ADD: return ArithOp_add;
         case DEC:
@@ -165,24 +165,24 @@ int Token::to_binop(Kind kind) {
  */
 
 int Token::tok2op_[Num_Tokens];
-Token::Kind2Str Token::tok2str_;
-Token::Kind2Sym Token::tok2sym_;
-Token::Sym2Kind Token::keywords_;
-Token::Sym2Kind Token::sym2lit_;
-Token::Sym2Kind Token::sym2flit_;
+Token::Tag2Str Token::tok2str_;
+Token::Tag2Sym Token::tok2sym_;
+Token::Sym2Tag Token::keywords_;
+Token::Sym2Tag Token::sym2lit_;
+Token::Sym2Tag Token::sym2flit_;
 
 /*
  * static methods
  */
 
-TokenKind Token::sym2lit(Symbol sym) {
+TokenTag Token::sym2lit(Symbol sym) {
     auto i = sym2lit_.find(sym);
     if (i != sym2lit_.end())
         return i->second;
     return TYPE_error;
 }
 
-TokenKind Token::sym2flit(Symbol sym) {
+TokenTag Token::sym2flit(Symbol sym) {
     auto i = sym2flit_.find(sym);
     if (i != sym2flit_.end())
         return i->second;
@@ -238,20 +238,20 @@ void Token::init() {
     insert_key(MUT, "mut");
 }
 
-void Token::insert_key(TokenKind tok, const char* str) {
+void Token::insert_key(TokenTag tok, const char* str) {
     Symbol s = str;
     assert(keywords_.find(s) == keywords_.end() && "already inserted");
     keywords_[s] = tok;
     tok2str_ [tok] = s.str();
 }
 
-Symbol Token::insert(TokenKind tok, const char* str) {
+Symbol Token::insert(TokenTag tok, const char* str) {
     Symbol s = str;
     const auto& p = tok2sym_.emplace(tok, s);
 
 #ifndef NDEBUG
     if (!p.second) {
-        Kind   oldTok = p.first->first;
+        Tag   oldTok = p.first->first;
         Symbol oldSym = p.first->second;
         assert(s == oldSym && tok == oldTok && "inserted ambiguous duplicate");
     }
@@ -263,18 +263,18 @@ Symbol Token::insert(TokenKind tok, const char* str) {
 
 //------------------------------------------------------------------------------
 
-const char* Token::tok2str(TokenKind kind) {
-    auto i = Token::tok2str_.find(kind);
+const char* Token::tok2str(TokenTag tag) {
+    auto i = Token::tok2str_.find(tag);
     assert(i != Token::tok2str_.end() && "must be found");
     return Symbol(i->second).str();
 }
 
-std::ostream& operator<<(std::ostream& os, const TokenKind& kind) { return os << Token::tok2str(kind); }
+std::ostream& operator<<(std::ostream& os, const TokenTag& tag) { return os << Token::tok2str(tag); }
 
 std::ostream& operator<<(std::ostream& os, const Token& tok) {
     const char* sym = tok.symbol().str();
     if (std::strcmp(sym, "") == 0)
-        return os << Symbol(Token::tok2str_[tok.kind()]).str();
+        return os << Symbol(Token::tok2str_[tok.tag()]).str();
     else
         return os << sym;
 }

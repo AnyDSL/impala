@@ -30,7 +30,7 @@ private:
     // Generates a C type from an Impala type
     static bool ctype_from_impala(const Type* type, std::string& ctype_prefix, std::string& ctype_suffix) {
         if (auto prim_type = type->isa<PrimType>()) {
-            switch (prim_type->primtype_kind()) {
+            switch (prim_type->primtype_tag()) {
                 case PrimType_i8:
                     ctype_prefix = "char"; ctype_suffix = "";
                     return true;
@@ -74,7 +74,7 @@ private:
             auto prim = simd_type->elem_type()->as<PrimType>();
 
             ctype_suffix = "";
-            switch (prim->primtype_kind()) {
+            switch (prim->primtype_tag()) {
                 case PrimType_i32:
                     if (simd_type->dim() == 4) ctype_prefix = "__m128i";
                     else if (simd_type->dim() == 8) ctype_prefix = "__m256i";

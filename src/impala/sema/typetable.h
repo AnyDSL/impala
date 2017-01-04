@@ -31,7 +31,7 @@ public:
     const OwnedPtrType* owned_ptr_type(const Type* referenced_type, int addr_space = 0) {
         return unify(new OwnedPtrType(*this, referenced_type, addr_space));
     }
-    const PrimType* prim_type(PrimTypeKind kind);
+    const PrimType* prim_type(PrimTypeTag tag);
     const UnknownType* unknown_type() { return unify(new UnknownType(*this)); }
 
 private:
