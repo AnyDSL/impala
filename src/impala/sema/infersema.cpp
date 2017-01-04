@@ -800,7 +800,8 @@ const Type* MapExpr::check(InferSema& sema) const {
     if (ltype->isa<FnType>())
         return sema.check_call(lhs(), args(), type_);
 
-    for (int i = 0, n = num_args(); i < n; i++) sema.check(arg(i));
+    for (int i = 0, e = num_args(); i != e; ++i)
+        sema.check(arg(i));
 
     if (ltype->isa<UnknownType>()) {
         return type_;

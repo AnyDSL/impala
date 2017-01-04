@@ -185,16 +185,16 @@ std::ostream& TupleType::stream(std::ostream& os) const {
  * rebuild
  */
 
-const Type* PrimType           ::vrebuild(TypeTable& to, Types     ) const { return to.prim_type(primtype_tag()); }
-const Type* FnType             ::vrebuild(TypeTable& to, Types ops) const { return to.   fn_type(ops); }
+const Type* PrimType           ::vrebuild(TypeTable& to, Types    ) const { return to.prim_type(primtype_tag()); }
+const Type* FnType             ::vrebuild(TypeTable& to, Types ops) const { return to.fn_type(ops); }
 const Type* DefiniteArrayType  ::vrebuild(TypeTable& to, Types ops) const { return to.  definite_array_type(ops[0], dim()); }
 const Type* SimdType           ::vrebuild(TypeTable& to, Types ops) const { return to.            simd_type(ops[0], dim()); }
 const Type* IndefiniteArrayType::vrebuild(TypeTable& to, Types ops) const { return to.indefinite_array_type(ops[0]); }
 const Type* BorrowedPtrType    ::vrebuild(TypeTable& to, Types ops) const { return to.borrowed_ptr_type(ops[0], addr_space()); }
 const Type* MutPtrType         ::vrebuild(TypeTable& to, Types ops) const { return to.     mut_ptr_type(ops[0], addr_space()); }
 const Type* OwnedPtrType       ::vrebuild(TypeTable& to, Types ops) const { return to.   owned_ptr_type(ops[0], addr_space()); }
-const Type* NoRetType          ::vrebuild(TypeTable&,    Types     ) const { return this; }
-const Type* UnknownType        ::vrebuild(TypeTable&,    Types     ) const { return this; }
+const Type* NoRetType          ::vrebuild(TypeTable&,    Types    ) const { return this; }
+const Type* UnknownType        ::vrebuild(TypeTable&,    Types    ) const { return this; }
 
 //------------------------------------------------------------------------------
 
