@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
         check(init, module.get(), nossa);
         bool result = impala::num_errors() == 0;
 
-        if (result && emit_annotated)
+        if (emit_annotated)
             module->stream(std::cout);
 
         if (result && emit_cint) {
