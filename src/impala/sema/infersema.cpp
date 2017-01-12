@@ -220,7 +220,7 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     dst = dst_repr->type;
     src = src_repr->type;
 
-    // normalise singleton tuples to their element
+    // normalize singleton tuples to their element
     if (src->isa<TupleType>() && src->num_ops() == 1) src = src->op(0);
     if (dst->isa<TupleType>() && dst->num_ops() == 1) dst = dst->op(0);
 
