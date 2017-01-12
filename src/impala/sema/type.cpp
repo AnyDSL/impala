@@ -121,7 +121,7 @@ uint64_t RefType::vhash() const {
 bool RefType::equal(const Type* other) const {
     if (!Type::equal(other))
         return false;
-    auto ptr = other->as<PtrType>();
+    auto ptr = other->as<RefType>();
     return ptr->addr_space() == addr_space();
 }
 

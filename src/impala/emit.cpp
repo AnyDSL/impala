@@ -375,19 +375,19 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             return ptr;
         }
         case AND: {
-            if (rhs()->is_lvalue()) {
+            //if (rhs()->is_lvalue()) {
                 auto var = cg.lemit(rhs());
                 assert(var.tag() == Value::PtrRef);
                 return var.def();
-            }
+            //}
 
-            auto def = cg.remit(rhs());
-            if (is_const(def))
-                return cg.world().global(def, /*mutable*/ false, location());
+            //auto def = cg.remit(rhs());
+            //if (is_const(def))
+                //return cg.world().global(def, [>mutable<] false, location());
 
-            auto slot = cg.world().slot(cg.convert(rhs()->type()), cg.frame(), location());
-            cg.store(slot, def, location());
-            return slot;
+            //auto slot = cg.world().slot(cg.convert(rhs()->type()), cg.frame(), location());
+            //cg.store(slot, def, location());
+            //return slot;
 
         }
 

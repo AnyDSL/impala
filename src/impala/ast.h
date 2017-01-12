@@ -1031,7 +1031,6 @@ public:
 
     const thorin::Def* extra() const { return extra_; }
 
-    virtual bool is_lvalue() const { return false; }
     virtual bool has_side_effect() const { return false; }
     virtual void take_address() const {}
     virtual void check(NameSema&) const = 0;
@@ -1187,8 +1186,6 @@ public:
     const Symbols& symbols() const { return symbols_; }
     const std::vector<char>& values() const { return values_; }
 
-    bool is_lvalue() const override;
-
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
@@ -1233,9 +1230,7 @@ public:
     const Path* path() const { return path_.get(); }
     const Decl* value_decl() const { return value_decl_; }
 
-    bool is_lvalue() const override;
     void take_address() const override;
-
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
 
@@ -1270,10 +1265,7 @@ public:
 
     const Expr* rhs() const { return rhs_.get(); }
     Tag tag() const { return tag_; }
-
-    bool is_lvalue() const override;
     bool has_side_effect() const override;
-
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     thorin::Value lemit(CodeGen&) const override;
@@ -1370,10 +1362,7 @@ public:
     Symbol symbol() const { return identifier()->symbol(); }
     const FieldDecl* field_decl() const { return field_decl_; }
     uint32_t index() const { return field_decl()->index(); }
-
-    bool is_lvalue() const override;
     void take_address() const override;
-
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
 
@@ -1396,16 +1385,13 @@ public:
     {}
 
     const Expr* src() const { return src_.get(); }
-
-    bool is_lvalue() const override;
-
     std::ostream& stream(std::ostream&) const override;
 
 private:
-    void check(TypeSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
 
 protected:
+    void check(TypeSema&) const override;
     std::unique_ptr<const Expr> src_;
 };
 
@@ -1422,6 +1408,7 @@ public:
 
 private:
     const Type* check(InferSema&) const override;
+    void check(TypeSema&) const override;
 
     std::unique_ptr<const ASTType> ast_type_;
 };
@@ -1441,6 +1428,25 @@ public:
     void check(NameSema&) const override { THORIN_UNREACHABLE; }
 
 private:
+    const Type* check(InferSema&) const override;
+};
+
+class LValue2RValueExpr : public CastExpr {
+public:
+    LValue2RValueExpr(const Expr* src)
+        : CastExpr(src->location(), src)
+    {
+        type_ = src->type()->as<LValueType>()->pointee();
+    }
+
+    static const LValue2RValueExpr* create(const Expr* src) {
+        return interlope<LValue2RValueExpr>(src, src);
+    }
+
+    void check(NameSema&) const override { THORIN_UNREACHABLE; }
+
+private:
+    void check(TypeSema&) const override;
     const Type* check(InferSema&) const override;
 };
 
@@ -1635,8 +1641,6 @@ public:
     };
 
     const Expr* lhs() const { return lhs_.get(); }
-
-    bool is_lvalue() const override;
     bool has_side_effect() const override;
     void take_address() const override;
     std::ostream& stream(std::ostream&) const override;

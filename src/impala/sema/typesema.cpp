@@ -51,11 +51,13 @@ public:
     IMPALA_EXPECT(num_or_bool_or_ptr, is_int(t) || is_float(t) || is_bool(t) || t->isa<PtrType>(), "number or boolean or pointer type")
 
     template<typename... Args>
-    void expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
+    const Type* expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
         std::ostringstream os;
         thorin::streamf(os, fmt, args...);
-        if (!expr->is_lvalue())
-            error(expr, "lvalue required for %", os.str());
+        if (auto lvalue = expr->type()->isa<LValueType>())
+            return lvalue->pointee();
+        error(expr, "lvalue required for %", os.str());
+        return expr->type();
     }
 
     void expect_known(const Decl* value_decl) {
@@ -337,33 +339,40 @@ void InfixExpr::check(TypeSema& sema) const {
     sema.check(lhs());
     sema.check(rhs());
 
-    if (lhs()->type() != rhs()->type() && !lhs()->type()->isa<TypeError>() && !rhs()->type()->isa<TypeError>()) {
-        error(this, "both left-hand side and right-hand side of binary '%' must agree on the same type", tok2str(this));
-        error(lhs(),  "left-hand side type is '%'", lhs()->type());
-        error(rhs(), "right-hand side type is '%'", rhs()->type());
-    }
+    auto match_type = [&]() {
+        if (lhs()->type() != rhs()->type() && !lhs()->type()->isa<TypeError>() && !rhs()->type()->isa<TypeError>()) {
+            error(this, "both left-hand side and right-hand side of binary '%' must agree on the same type", tok2str(this));
+            error(lhs(),  "left-hand side type is '%'", lhs()->type());
+            error(rhs(), "right-hand side type is '%'", rhs()->type());
+        }
+    };
 
     switch (tag()) {
         case EQ: case NE:
         case LT: case GT:
         case LE: case GE:
+            match_type();
             sema.expect_num_or_bool_or_ptr(lhs(),  "left-hand side of binary '%'", tok2str(this));
             sema.expect_num_or_bool_or_ptr(rhs(), "right-hand side of binary '%'", tok2str(this));
             return;
         case ADD: case SUB:
         case MUL: case DIV: case REM:
+            match_type();
             sema.expect_num(lhs(),  "left-hand side of binary '%'", tok2str(this));
             sema.expect_num(rhs(), "right-hand side of binary '%'", tok2str(this));
             return;
         case OROR: case ANDAND:
+            match_type();
             sema.expect_bool(lhs(),  "left-hand side of logical '%'", tok2str(this));
             sema.expect_bool(rhs(), "right-hand side of logical '%'", tok2str(this));
             return;
         case SHL: case SHR:
+            match_type();
             sema.expect_int(lhs(),  "left-hand side of binary '%'", tok2str(this));
             sema.expect_int(rhs(), "right-hand side of binary '%'", tok2str(this));
             return;
         case  OR: case AND: case XOR:
+            match_type();
             sema.expect_int_or_bool(lhs(),  "left-hand side of bitwise '%'", tok2str(this));
             sema.expect_int_or_bool(rhs(), "right-hand side of bitwise '%'", tok2str(this));
             return;
@@ -400,9 +409,6 @@ template <typename F, typename T>
 bool symmetric(F f, T a, T b) { return f(a, b) || f(b, a); }
 
 void CastExpr::check(TypeSema& sema) const {
-    if (auto explicit_cast_expr = isa<ExplicitCastExpr>())
-        sema.check(explicit_cast_expr->ast_type());
-
     auto src_type = sema.check(src());
     auto dst_type = type();
 
@@ -425,6 +431,24 @@ void CastExpr::check(TypeSema& sema) const {
 
     if (src_type->is_known() && dst_type->is_known() && !valid_cast && !is_subtype(dst_type, src_type))
         error(this, "invalid source and destination types for cast operator, got '%' and '%'", src_type, dst_type);
+}
+
+void ExplicitCastExpr::check(TypeSema& sema) const {
+    sema.check(ast_type());
+    CastExpr::check(sema);
+}
+
+void LValue2RValueExpr::check(TypeSema& sema) const {
+    auto src_type = sema.check(src());
+    auto dst_type = type();
+
+    if (auto lvalue = src_type->isa<LValueType>())
+        src_type = lvalue->pointee();
+    else
+        error(this, "source type of an lvalue-to-rvalue cast must be an lvalue, got '%'", src_type);
+
+    if (src_type->is_known() && dst_type->is_known() && src_type != dst_type)
+        error(this, "invalid source and destination types for lvalue-to-rvalue cast, got '%' and '%'", src_type, dst_type);
 }
 
 void TupleExpr::check(TypeSema& sema) const {
@@ -669,8 +693,9 @@ void check_correct_asm_type(const Type* t, const Expr *expr) {
 
 void AsmStmt::check(TypeSema& sema) const {
     for (const auto& output : outputs()) {
-        if (!output->expr()->is_lvalue())
-            error(output->expr(), "output expression of an asm statement must be an lvalue");
+        // TODO
+        //if (!output->expr()->is_lvalue())
+            //error(output->expr(), "output expression of an asm statement must be an lvalue");
         check_correct_asm_type(sema.check(output->expr()), output->expr());
     }
 

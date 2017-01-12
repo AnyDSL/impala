@@ -49,6 +49,7 @@ bool IfExpr::has_else() const {
 
 //------------------------------------------------------------------------------
 
+#if 0
 /*
  * is_lvalue
  */
@@ -72,6 +73,7 @@ bool MapExpr::is_lvalue() const {
 bool PrefixExpr::is_lvalue() const { return tag() == MUL; }
 bool FieldExpr::is_lvalue() const { return lhs()->is_lvalue() || lhs()->type()->isa<PtrType>(); }
 bool CastExpr::is_lvalue() const { return src()->is_lvalue(); }
+#endif
 
 //------------------------------------------------------------------------------
 

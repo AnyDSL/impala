@@ -87,6 +87,13 @@ public:
 
     const FnType* fn_type(ArrayRef<const Type*> types) { return fn_type(tuple_type(types)); }
 
+    const Type* rvalue(const Expr* expr) {
+        check(expr);
+        return expr->type()->isa<LValueType>() ? LValue2RValueExpr::create(expr)->type() : expr->type();
+    }
+
+    const Type* rvalue(const Expr* expr, const Type* t) { return constrain(expr, rvalue(expr), t); }
+
 private:
     /// Used for union/find - see https://en.wikipedia.org/wiki/Disjoint-set_data_structure#Disjoint-set_forests .
     struct Representative {
@@ -200,6 +207,10 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
 }
 
 const Type* InferSema::coerce(const Type* dst, const Expr* src) {
+    auto lvalue = dst->isa<LValueType>();
+    if (lvalue)
+        dst = lvalue->pointee();
+
     dst = find_type(dst);
     src->type_ = find_type(src);
 
@@ -215,7 +226,10 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
         check(src);
     }
 
-    return unify(dst, src->type());
+    auto type = unify(dst, src->type());
+    if (lvalue)
+        return lvalue_type(type, lvalue->addr_space());
+    return type;
 }
 
 const Type* InferSema::unify(const Type* dst, const Type* src) {
@@ -545,7 +559,7 @@ void FnDecl::check(InferSema& sema) const {
     sema.constrain(this, sema.close(num_ast_type_params(), sema.fn_type(param_types)));
 
     if (body() != nullptr) {
-        sema.check(body());
+        sema.rvalue(body());
         sema.coerce(fn_type()->return_type(), body());
     }
 }
@@ -597,8 +611,11 @@ const Type* FnExpr::check(InferSema& sema) const {
 }
 
 const Type* PathExpr::check(InferSema& sema) const {
-    if (value_decl())
-        return sema.find_type(value_decl());
+    if (value_decl()) {
+        auto type = sema.find_type(value_decl());
+        return value_decl()->is_mut() ? sema.lvalue_type(type) : type;
+    }
+
     return sema.type_error();
 }
 
@@ -607,9 +624,9 @@ const Type* PrefixExpr::check(InferSema& sema) const {
         case AND:   return sema.borrowed_ptr_type(sema.check(rhs()), 0);
         case TILDE: return sema.   owned_ptr_type(sema.check(rhs()), 0);
         case MUL: {
-            auto type = sema.check(rhs());
+            auto type = sema.rvalue(rhs());
             if (auto ptr_type = type->isa<PtrType>())
-                return ptr_type->pointee();
+                return sema.lvalue_type(ptr_type->pointee(), ptr_type->addr_space());
             else {
                 assert(false && "what todo now?");
                 return type;
@@ -631,8 +648,8 @@ const Type* InfixExpr::check(InferSema& sema) const {
         case EQ: case NE:
         case LT: case LE:
         case GT: case GE: {
-            auto ltype = sema.check(lhs());
-            auto rtype = sema.check(rhs());
+            auto ltype = sema.rvalue(lhs());
+            auto rtype = sema.rvalue(rhs());
             sema.constrain(lhs(), rtype);
             sema.constrain(rhs(), ltype);
             if (auto simd = rhs()->type()->isa<SimdType>())
@@ -641,15 +658,15 @@ const Type* InfixExpr::check(InferSema& sema) const {
         }
         case OROR:
         case ANDAND:
-            sema.check(lhs(), sema.type_bool());
-            sema.check(rhs(), sema.type_bool());
+            sema.rvalue(lhs(), sema.type_bool());
+            sema.rvalue(rhs(), sema.type_bool());
             return sema.type_bool();
         case ADD: case SUB:
         case MUL: case DIV: case REM:
         case SHL: case SHR:
         case AND: case OR:  case XOR: {
-            auto ltype = sema.check(lhs());
-            auto rtype = sema.check(rhs());
+            auto ltype = sema.rvalue(lhs());
+            auto rtype = sema.rvalue(rhs());
             sema.constrain(lhs(), rtype);
             sema.constrain(rhs(), ltype);
             return rhs()->type();
@@ -660,7 +677,7 @@ const Type* InfixExpr::check(InferSema& sema) const {
         case SHL_ASGN: case SHR_ASGN:
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN: {
             sema.check(lhs());
-            sema.check(rhs());
+            sema.rvalue(rhs());
             sema.coerce(lhs(), rhs());
             return sema.unit();
         }
@@ -679,6 +696,11 @@ const Type* ExplicitCastExpr::check(InferSema& sema) const {
 }
 
 const Type* ImplicitCastExpr::check(InferSema& sema) const {
+    sema.check(src());
+    return type();
+}
+
+const Type* LValue2RValueExpr::check(InferSema& sema) const {
     sema.check(src());
     return type();
 }
