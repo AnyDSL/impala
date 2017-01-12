@@ -1,0 +1,8 @@
+struct S {
+    data: &[f32]
+}
+
+fn main() -> i32 {
+    let s = S { data : ~[5:f32] };
+    0
+}	

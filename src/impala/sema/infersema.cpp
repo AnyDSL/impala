@@ -760,9 +760,15 @@ const Type* TupleExpr::check(InferSema& sema) const {
 
 const Type* StructExpr::check(InferSema& sema) const {
     auto type = sema.check(ast_type_app());
+    auto struct_type = type->isa<StructType>();
 
-    for (const auto& elem : elems())
-        sema.check(elem->expr());
+    for (size_t i = 0, e = num_elems(); i != e; ++i) {
+        if (struct_type && i < struct_type->num_ops()) {
+            sema.check(elem(i)->expr());
+            sema.coerce(struct_type->op(i), elem(i)->expr());
+        } else
+            sema.check(elem(i)->expr());
+    }
 
     return type;
 }
