@@ -1571,6 +1571,7 @@ public:
     {}
 
     const ASTTypeApp* ast_type_app() const { return ast_type_app_.get(); }
+    const Elem* elem(size_t i) const { return elems_[i].get(); }
     size_t num_elems() const { return elems_.size(); }
     const Elems& elems() const { return elems_; }
 
