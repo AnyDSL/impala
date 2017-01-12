@@ -108,7 +108,7 @@ bool is_strict_subtype(const Type* dst, const Type* src) {
  * hash
  */
 
-uint64_t PtrType::vhash() const {
+uint64_t RefType::vhash() const {
     return thorin::hash_combine(Type::vhash(), (uint64_t)addr_space());
 }
 
@@ -118,7 +118,7 @@ uint64_t PtrType::vhash() const {
  * equal
  */
 
-bool PtrType::equal(const Type* other) const {
+bool RefType::equal(const Type* other) const {
     if (!Type::equal(other))
         return false;
     auto ptr = other->as<PtrType>();
@@ -168,7 +168,7 @@ std::ostream& Var::stream(std::ostream& os) const {
 
 std::ostream& App::stream(std::ostream& os) const { return streamf(os, "%[%]", callee(), arg()); }
 
-std::ostream& PtrType::stream(std::ostream& os) const {
+std::ostream& RefType::stream(std::ostream& os) const {
     os << prefix();
     if (addr_space() != 0)
         os << '[' << addr_space() << ']';
@@ -203,6 +203,7 @@ const Type* IndefiniteArrayType::vrebuild(TypeTable& to, Types ops) const { retu
 const Type* BorrowedPtrType    ::vrebuild(TypeTable& to, Types ops) const { return to.borrowed_ptr_type(ops[0], addr_space()); }
 const Type* MutPtrType         ::vrebuild(TypeTable& to, Types ops) const { return to.     mut_ptr_type(ops[0], addr_space()); }
 const Type* OwnedPtrType       ::vrebuild(TypeTable& to, Types ops) const { return to.   owned_ptr_type(ops[0], addr_space()); }
+const Type* LValueType         ::vrebuild(TypeTable& to, Types ops) const { return to.      lvalue_type(ops[0], addr_space()); }
 const Type* NoRetType          ::vrebuild(TypeTable&,    Types    ) const { return this; }
 const Type* UnknownType        ::vrebuild(TypeTable&,    Types    ) const { return this; }
 
@@ -234,6 +235,10 @@ const Type* MutPtrType::vreduce(int depth, const Type* type, Type2Type& map) con
 
 const Type* OwnedPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {
     return typetable().owned_ptr_type(pointee()->reduce(depth, type, map), addr_space());
+}
+
+const Type* LValueType::vreduce(int depth, const Type* type, Type2Type& map) const {
+    return typetable().lvalue_type(pointee()->reduce(depth, type, map), addr_space());
 }
 
 const Type* FnType::vreduce(int depth, const Type* type, Type2Type& map) const {

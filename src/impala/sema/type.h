@@ -122,15 +122,6 @@ protected:
 
     std::ostream& stream_ptr_type(std::ostream&, std::string prefix, int addr_space, const Type* ref_type) const;
 
-public:
-    const Type* pointee() const { return op(0); }
-    int addr_space() const { return addr_space_; }
-
-    virtual std::ostream& stream(std::ostream&) const override;
-    virtual uint64_t vhash() const override;
-    virtual bool equal(const Type* other) const override;
-    virtual std::string prefix() const = 0;
-
 private:
     int addr_space_;
 
