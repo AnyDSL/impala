@@ -1385,7 +1385,6 @@ public:
     {}
 
     const Expr* src() const { return src_.get(); }
-    std::ostream& stream(std::ostream&) const override;
 
 private:
     const thorin::Def* remit(CodeGen&) const override;
@@ -1405,6 +1404,7 @@ public:
     const ASTType* ast_type() const { return ast_type_.get(); }
 
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1426,6 +1426,7 @@ public:
     }
 
     void check(NameSema&) const override { THORIN_UNREACHABLE; }
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1444,6 +1445,7 @@ public:
     }
 
     void check(NameSema&) const override { THORIN_UNREACHABLE; }
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     void check(TypeSema&) const override;

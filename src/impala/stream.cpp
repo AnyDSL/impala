@@ -359,14 +359,21 @@ std::ostream& FieldExpr::stream(std::ostream& os) const {
     return close(os, open_state);
 }
 
-std::ostream& CastExpr::stream(std::ostream& os) const {
+std::ostream& ExplicitCastExpr::stream(std::ostream& os) const {
     auto open_state = open(os, Token::AS);
+    streamf(os, "% as %", src(), ast_type());
+    return close(os, open_state);
+}
 
-    if (auto explicit_cast_expr = isa<ExplicitCastExpr>())
-        streamf(os, "% as %", src(), explicit_cast_expr->ast_type());
-    else
-        streamf(os, "% as %", src(), type());
+std::ostream& ImplicitCastExpr::stream(std::ostream& os) const {
+    auto open_state = open(os, Token::AS);
+    streamf(os, "implicit_cast(%, %)", src(), type());
+    return close(os, open_state);
+}
 
+std::ostream& LValue2RValueExpr::stream(std::ostream& os) const {
+    auto open_state = open(os, Token::AS);
+    streamf(os, "lvalue2rvalue(%, %)", src(), type());
     return close(os, open_state);
 }
 

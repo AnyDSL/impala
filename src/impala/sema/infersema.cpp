@@ -568,7 +568,7 @@ void StaticItem::check(InferSema& sema) const {
     if (ast_type())
         sema.constrain(this, sema.check(ast_type()));
     if (init())
-        sema.constrain(this, sema.check(init()));
+        sema.constrain(this, sema.rvalue(init()));
 }
 
 void TraitDecl::check(InferSema& /*sema*/) const {}
@@ -601,7 +601,7 @@ const Type* FnExpr::check(InferSema& sema) const {
             sema.constrain(param(i), fn_type()->op(i));
     }
 
-    auto body_type = sema.check(body());
+    auto body_type = sema.rvalue(body());
     if (body_type->isa<NoRetType>() || body_type->isa<UnknownType>())
         return sema.fn_type(param_types);
     else {
@@ -621,8 +621,14 @@ const Type* PathExpr::check(InferSema& sema) const {
 
 const Type* PrefixExpr::check(InferSema& sema) const {
     switch (tag()) {
-        case AND:   return sema.borrowed_ptr_type(sema.check(rhs()), 0);
-        case TILDE: return sema.   owned_ptr_type(sema.check(rhs()), 0);
+        case AND:    {
+            auto type = sema.check(rhs());
+            if (auto lvalue = type->isa<LValueType>())
+                return sema.borrowed_ptr_type(lvalue->pointee(), lvalue->addr_space());
+            return sema.borrowed_ptr_type(type, 0);
+        }
+        case TILDE:
+            return sema.owned_ptr_type(sema.rvalue(rhs()), 0);
         case MUL: {
             auto type = sema.rvalue(rhs());
             if (auto ptr_type = type->isa<PtrType>())
@@ -636,7 +642,7 @@ const Type* PrefixExpr::check(InferSema& sema) const {
         case ADD: case SUB:
         case NOT:
         case RUN: case HLT:
-            return sema.check(rhs());
+            return sema.rvalue(rhs());
         case OR:  case OROR: // Lambda
             THORIN_UNREACHABLE;
     }
@@ -691,18 +697,17 @@ const Type* PostfixExpr::check(InferSema& sema) const {
 }
 
 const Type* ExplicitCastExpr::check(InferSema& sema) const {
-    sema.check(src());
+    sema.rvalue(src());
     return sema.check(ast_type());
 }
 
 const Type* ImplicitCastExpr::check(InferSema& sema) const {
-    sema.check(src());
+    sema.rvalue(src());
     return type();
 }
 
 const Type* LValue2RValueExpr::check(InferSema& sema) const {
-    sema.check(src());
-    return type();
+    return sema.check(src())->as<LValueType>()->pointee();
 }
 
 const Type* DefiniteArrayExpr::check(InferSema& sema) const {
@@ -715,7 +720,7 @@ const Type* DefiniteArrayExpr::check(InferSema& sema) const {
         expected_elem_type = sema.type_error();
 
     for (const auto& arg : args())
-        sema.check(arg.get());
+        sema.rvalue(arg.get());
 
     for (const auto& arg : args())
         expected_elem_type = sema.coerce(expected_elem_type, arg.get());
@@ -733,7 +738,7 @@ const Type* SimdExpr::check(InferSema& sema) const {
         expected_elem_type = sema.type_error();
 
     for (const auto& arg : args())
-        sema.check(arg.get());
+        sema.rvalue(arg.get());
 
     for (const auto& arg : args())
         expected_elem_type = sema.coerce(expected_elem_type, arg.get());
@@ -742,18 +747,18 @@ const Type* SimdExpr::check(InferSema& sema) const {
 }
 
 const Type* RepeatedDefiniteArrayExpr::check(InferSema& sema) const {
-    return sema.definite_array_type(sema.check(value()), count());
+    return sema.definite_array_type(sema.rvalue(value()), count());
 }
 
 const Type* IndefiniteArrayExpr::check(InferSema& sema) const {
-    sema.check(dim());
+    sema.rvalue(dim());
     return sema.indefinite_array_type(sema.check(elem_ast_type()));
 }
 
 const Type* TupleExpr::check(InferSema& sema) const {
     Array<const Type*> types(num_args());
     for (size_t i = 0, e = types.size(); i != e; ++i)
-        types[i] = sema.check(arg(i));
+        types[i] = sema.rvalue(arg(i));
 
     return sema.tuple_type(types);
 }
@@ -764,10 +769,10 @@ const Type* StructExpr::check(InferSema& sema) const {
 
     for (size_t i = 0, e = num_elems(); i != e; ++i) {
         if (struct_type && i < struct_type->num_ops()) {
-            sema.check(elem(i)->expr());
+            sema.rvalue(elem(i)->expr());
             sema.coerce(struct_type->op(i), elem(i)->expr());
         } else
-            sema.check(elem(i)->expr());
+            sema.rvalue(elem(i)->expr());
     }
 
     return type;
@@ -777,7 +782,7 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, c
     auto fn_type = lhs->type()->as<FnType>();
 
     for (const auto& arg : args)
-        check(arg);
+        rvalue(arg);
 
     if (args.size() == fn_type->num_ops()) {
         Array<const Type*> types(args.size());
@@ -803,6 +808,7 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, c
 }
 
 const Type* FieldExpr::check(InferSema& sema) const {
+    // TODO lvalue
     auto ltype = sema.check(lhs());
     if (ltype->isa<PtrType>()) {
         PrefixExpr::create_deref(lhs_.get());
@@ -818,7 +824,7 @@ const Type* FieldExpr::check(InferSema& sema) const {
 }
 
 const Type* TypeAppExpr::check(InferSema& sema) const {
-    if (auto type = sema.check(lhs())) {
+    if (auto type = sema.rvalue(lhs())) {
         if (auto lambda = type->isa<Lambda>()) {
             auto num = sema.num_lambdas(lambda);
             if (type_args_.size() < num) {
@@ -841,6 +847,7 @@ const Type* TypeAppExpr::check(InferSema& sema) const {
 }
 
 const Type* MapExpr::check(InferSema& sema) const {
+    // TODO lvalue
     if (type_ == nullptr)
         type_ = sema.unknown_type();
 
@@ -887,14 +894,14 @@ const Type* BlockExprBase::check(InferSema& sema) const {
     for (const auto& stmt : stmts())
         sema.check(stmt.get());
 
-    return expr() ? sema.check(expr()) : sema.unit()->as<Type>();
+    return expr() ? sema.rvalue(expr()) : sema.unit()->as<Type>();
 }
 
 const Type* IfExpr::check(InferSema& sema) const {
-    sema.check(cond());
+    sema.rvalue(cond());
     sema.constrain(cond(), sema.type_bool());
-    auto then_type = sema.check(then_expr());
-    auto else_type = sema.check(else_expr());
+    auto then_type = sema.rvalue(then_expr());
+    auto else_type = sema.rvalue(else_expr());
 
     if (then_type->isa<NoRetType>()) return else_type;
     if (else_type->isa<NoRetType>()) return then_type;
@@ -904,11 +911,11 @@ const Type* IfExpr::check(InferSema& sema) const {
 }
 
 const Type* WhileExpr::check(InferSema& sema) const {
-    sema.check(cond());
+    sema.rvalue(cond());
     sema.constrain(cond(), sema.type_bool());
     sema.check(break_decl());
     sema.check(continue_decl());
-    sema.check(body());
+    sema.rvalue(body());
     sema.constrain(cond(), sema.unit());
     return sema.unit();
 }
@@ -920,7 +927,7 @@ const Type* ForExpr::check(InferSema& sema) const {
             forexpr = prefix->rhs();
 
     if (auto map = forexpr->isa<MapExpr>()) {
-        auto ltype = sema.check(map->lhs());
+        auto ltype = sema.rvalue(map->lhs());
 
         if (auto fn_for = ltype->isa<FnType>()) {
             if (fn_for->num_ops() != 0) {
@@ -937,10 +944,10 @@ const Type* ForExpr::check(InferSema& sema) const {
         }
 
         for (size_t i = 0, e = map->num_args(); i != e; ++i)
-            sema.check(map->arg(i));
+            sema.rvalue(map->arg(i));
     }
 
-    sema.check(fn_expr());
+    sema.rvalue(fn_expr());
 
     return sema.unit();
 }
@@ -968,13 +975,13 @@ const Type* IdPtrn::check(InferSema& sema) const {
  * statements
  */
 
-void ExprStmt::check(InferSema& sema) const { sema.check(expr()); }
+void ExprStmt::check(InferSema& sema) const { sema.rvalue(expr()); }
 void ItemStmt::check(InferSema& sema) const { sema.check(item()); }
 
 void LetStmt::check(InferSema& sema) const {
     sema.check(ptrn());
     if (init()) {
-        sema.check(init());
+        sema.rvalue(init());
         sema.coerce(ptrn(), init());
         //sema.constrain(local(), init()->type());
     }
@@ -982,7 +989,7 @@ void LetStmt::check(InferSema& sema) const {
 
 void AsmStmt::check(InferSema& sema) const {
     for (const auto& output : outputs()) sema.check(output->expr());
-    for (const auto&  input :  inputs()) sema.check( input->expr());
+    for (const auto&  input :  inputs()) sema.rvalue(input->expr());
 }
 
 //------------------------------------------------------------------------------
