@@ -66,7 +66,7 @@ bool is_subtype(const Type* dst, const Type* src) {
     if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
         if (auto src_owned_ptr_type = src->isa<OwnedPtrType>())
             return src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space()
-                && is_subtype(dst_borrowed_ptr_type->referenced_type(), src_owned_ptr_type->referenced_type());
+                && is_subtype(dst_borrowed_ptr_type->pointee(), src_owned_ptr_type->pointee());
     }
 
     if (auto dst_indefinite_array_type = dst->isa<IndefiniteArrayType>()) {
@@ -166,7 +166,7 @@ std::ostream& PtrType::stream(std::ostream& os) const {
     os << prefix();
     if (addr_space() != 0)
         os << '[' << addr_space() << ']';
-    return os << referenced_type();
+    return os << pointee();
 }
 
 std::ostream& DefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[% * %]", elem_type(), dim()); }
@@ -219,15 +219,15 @@ const Type* IndefiniteArrayType::vreduce(int depth, const Type* type, Type2Type&
 }
 
 const Type* BorrowedPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return typetable().borrowed_ptr_type(referenced_type()->reduce(depth, type, map), addr_space());
+    return typetable().borrowed_ptr_type(pointee()->reduce(depth, type, map), addr_space());
 }
 
 const Type* MutPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return typetable().mut_ptr_type(referenced_type()->reduce(depth, type, map), addr_space());
+    return typetable().mut_ptr_type(pointee()->reduce(depth, type, map), addr_space());
 }
 
 const Type* OwnedPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return typetable().owned_ptr_type(referenced_type()->reduce(depth, type, map), addr_space());
+    return typetable().owned_ptr_type(pointee()->reduce(depth, type, map), addr_space());
 }
 
 const Type* FnType::vreduce(int depth, const Type* type, Type2Type& map) const {

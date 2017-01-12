@@ -134,7 +134,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
         return thorin_struct_type(struct_type);
     } else if (auto ptr_type = type->isa<PtrType>()) {
-        return world().ptr_type(convert(ptr_type->referenced_type()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
+        return world().ptr_type(convert(ptr_type->pointee()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
         return world().definite_array_type(convert(definite_array_type->elem_type()), definite_array_type->dim());
     } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {
@@ -571,7 +571,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             dst = cont;
                         } else if (name == "cmpxchg") {
                             auto ptr_type = cg.convert(arg(0)->type());
-                            auto poly_type = ptr_type->as<thorin::PtrType>()->referenced_type();
+                            auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
                             auto fn_type = cg.world().fn_type({
                                 cg.world().mem_type(), ptr_type, poly_type, poly_type,
                                 cg.world().fn_type({ cg.world().mem_type(), poly_type, cg.world().type_bool() }) });

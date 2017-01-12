@@ -92,15 +92,15 @@ bool is_strict_subtype(const Type* dst, const Type* src);
 /// Pointer @p Type.
 class PtrType : public Type {
 protected:
-    PtrType(TypeTable& typetable, int tag, const Type* referenced_type, int addr_space)
-        : Type(typetable, tag, {referenced_type})
+    PtrType(TypeTable& typetable, int tag, const Type* pointee, int addr_space)
+        : Type(typetable, tag, {pointee})
         , addr_space_(addr_space)
     {}
 
     std::ostream& stream_ptr_type(std::ostream&, std::string prefix, int addr_space, const Type* ref_type) const;
 
 public:
-    const Type* referenced_type() const { return op(0); }
+    const Type* pointee() const { return op(0); }
     int addr_space() const { return addr_space_; }
 
     virtual std::ostream& stream(std::ostream&) const override;
@@ -116,8 +116,8 @@ private:
 
 class BorrowedPtrType : public PtrType {
 public:
-    BorrowedPtrType(TypeTable& typetable, const Type* referenced_type, int addr_space)
-        : PtrType(typetable, Tag_borrowed_ptr, referenced_type, addr_space)
+    BorrowedPtrType(TypeTable& typetable, const Type* pointee, int addr_space)
+        : PtrType(typetable, Tag_borrowed_ptr, pointee, addr_space)
     {}
 
     virtual std::string prefix() const override { return "&"; }
@@ -129,8 +129,8 @@ private:
 
 class MutPtrType : public PtrType {
 public:
-    MutPtrType(TypeTable& typetable, const Type* referenced_type, int addr_space)
-        : PtrType(typetable, Tag_mut_ptr, referenced_type, addr_space)
+    MutPtrType(TypeTable& typetable, const Type* pointee, int addr_space)
+        : PtrType(typetable, Tag_mut_ptr, pointee, addr_space)
     {}
 
     virtual std::string prefix() const override { return "&mut"; }
@@ -142,8 +142,8 @@ private:
 
 class OwnedPtrType : public PtrType {
 public:
-    OwnedPtrType(TypeTable& typetable, const Type* referenced_type, int addr_space)
-        : PtrType(typetable, Tag_owned_ptr, referenced_type, addr_space)
+    OwnedPtrType(TypeTable& typetable, const Type* pointee, int addr_space)
+        : PtrType(typetable, Tag_owned_ptr, pointee, addr_space)
     {}
 
     virtual std::string prefix() const override { return "~"; }

@@ -22,7 +22,7 @@ private:
         if (auto struct_type = type->isa<StructType>())
             f(struct_type->struct_decl());
         else if (auto ptr_type = type->isa<PtrType>())
-            struct_from_type(ptr_type->referenced_type(), f);
+            struct_from_type(ptr_type->pointee(), f);
         else if (auto array_type = type->isa<ArrayType>())
             struct_from_type(array_type->elem_type(), f);
     }
@@ -120,11 +120,11 @@ private:
             // &[T * N] -> T*
             // &T -> T*
 
-            if (auto array_type = ptr_type->referenced_type()->isa<ArrayType>()) {
+            if (auto array_type = ptr_type->pointee()->isa<ArrayType>()) {
                 if (!ctype_from_impala(array_type->elem_type(), ctype_prefix, ctype_suffix))
                     return false;
             } else {
-                if (!ctype_from_impala(ptr_type->referenced_type(), ctype_prefix, ctype_suffix))
+                if (!ctype_from_impala(ptr_type->pointee(), ctype_prefix, ctype_suffix))
                     return false;
             }
 

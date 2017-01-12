@@ -387,11 +387,11 @@ const Type* PrimASTType::check(InferSema& sema) const {
 }
 
 const Type* PtrASTType::check(InferSema& sema) const {
-    auto referenced_type = sema.check(referenced_ast_type());
+    auto pointee = sema.check(referenced_ast_type());
     switch (tag()) {
-        case Borrowed: return sema.borrowed_ptr_type(referenced_type, addr_space());
-        case Mut:      return sema.     mut_ptr_type(referenced_type, addr_space());
-        case Owned:    return sema.   owned_ptr_type(referenced_type, addr_space());
+        case Borrowed: return sema.borrowed_ptr_type(pointee, addr_space());
+        case Mut:      return sema.     mut_ptr_type(pointee, addr_space());
+        case Owned:    return sema.   owned_ptr_type(pointee, addr_space());
     }
     THORIN_UNREACHABLE;
 }
@@ -609,7 +609,7 @@ const Type* PrefixExpr::check(InferSema& sema) const {
         case MUL: {
             auto type = sema.check(rhs());
             if (auto ptr_type = type->isa<PtrType>())
-                return ptr_type->referenced_type();
+                return ptr_type->pointee();
             else {
                 assert(false && "what todo now?");
                 return type;
