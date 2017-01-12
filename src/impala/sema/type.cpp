@@ -98,6 +98,10 @@ bool is_subtype(const Type* dst, const Type* src) {
     return false;
 }
 
+bool is_strict_subtype(const Type* dst, const Type* src) {
+    return dst != src && is_subtype(dst, src);
+}
+
 //------------------------------------------------------------------------------
 
 /*

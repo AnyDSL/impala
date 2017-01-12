@@ -708,6 +708,7 @@ public:
 
 private:
     virtual void check(InferSema&) const = 0;
+    virtual const Type* check_head(InferSema&) const = 0;
     virtual void check(TypeSema&) const = 0;
     virtual void emit(CodeGen&) const = 0;
 
@@ -752,6 +753,7 @@ public:
 
     void check(NameSema&) const override;
     void check(InferSema&) const override;
+    const Type* check_head(InferSema&) const override;
     void check(TypeSema&) const override;
     void emit(CodeGen&) const override;
     std::ostream& stream(std::ostream&) const override;
@@ -772,6 +774,7 @@ public:
 
 private:
     void check(InferSema&) const override;
+    const Type* check_head(InferSema&) const override;
     void check(TypeSema&) const override;
     void emit(CodeGen&) const override;
 };
@@ -792,6 +795,7 @@ public:
 
 private:
     void check(InferSema&) const override;
+    const Type* check_head(InferSema&) const override;
     void check(TypeSema&) const override;
     void emit(CodeGen&) const override;
 
@@ -814,6 +818,7 @@ public:
 
 private:
     void check(InferSema&) const override;
+    const Type* check_head(InferSema&) const override;
     void check(TypeSema&) const override;
     void emit(CodeGen&) const override;
 
@@ -862,12 +867,14 @@ public:
     const FieldDecl* field_decl(size_t i) const { return field_decls_[i].get(); }
     const FieldDecl* field_decl(Symbol symbol) const { return thorin::find(field_table_, symbol); }
     const FieldDecl* field_decl(const Identifier* ident) const { return field_decl(ident->symbol()); }
+    const StructType* struct_type() const { return type_->as<StructType>(); }
 
     std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
 
 private:
     void check(InferSema&) const override;
+    const Type* check_head(InferSema&) const override;
     void check(TypeSema&) const override;
     void emit(CodeGen&) const override;
 
@@ -882,6 +889,7 @@ public:
 
 private:
     void check(InferSema&) const override;
+    const Type* check_head(InferSema&) const override;
     void check(TypeSema&) const override;
     void emit(CodeGen&) const override;
 };
@@ -901,6 +909,7 @@ public:
 
 private:
     void check(InferSema&) const override;
+    const Type* check_head(InferSema&) const override;
     void check(TypeSema&) const override;
     thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
@@ -933,6 +942,7 @@ public:
 
 private:
     void check(InferSema&) const override;
+    const Type* check_head(InferSema&) const override;
     void check(TypeSema&) const override;
     thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
@@ -960,6 +970,7 @@ public:
 
 private:
     void check(InferSema&) const override;
+    const Type* check_head(InferSema&) const override;
     void check(TypeSema&) const override;
     void emit(CodeGen&) const override;
 
@@ -992,6 +1003,7 @@ public:
 
 private:
     void check(InferSema&) const override;
+    const Type* check_head(InferSema&) const override;
     void check(TypeSema&) const override;
     void emit(CodeGen&) const override;
 

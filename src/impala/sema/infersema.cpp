@@ -54,6 +54,9 @@ public:
     const Type* check(const Ptrn* p) { return constrain(p, p->check(*this)); }
     const Type* check(const FieldDecl* f) { return constrain(f, f->check(*this)); }
     void check(const Item* n) { n->check(*this); }
+    const Type* check_head(const Item* n) {
+        return (n->type_ == nullptr || n->type_->isa<UnknownType>()) ? n->type_ = n->check_head(*this) : n->type_;
+    }
     void check(const Stmt* n) { n->check(*this); }
     const Type* check(const Expr* expr) { return constrain(expr, expr->check(*this)); }
     const Type* check(const Expr* expr, const Type* t) { return constrain(expr, expr->check(*this), t); }
@@ -197,20 +200,22 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
 }
 
 const Type* InferSema::coerce(const Type* dst, const Expr* src) {
+    dst = find_type(dst);
     src->type_ = find_type(src);
 
-    auto t = unify(dst, src->type_);
-
-    if (t->is_known() && src->type()->is_known()) {
-        if (t->isa<BorrowedPtrType>() && !src->type()->isa<PtrType>()) {
-            src = PrefixExpr::create_addrof(src);
-            check(src);
-        }
-        if (is_subtype(t, src->type_) && t != src->type())
-            ImplicitCastExpr::create(src, t);
+    // automatically take address of src if dst is a BorrowedPtrType
+    if (dst->isa<BorrowedPtrType>() && !src->type()->isa<PtrType>()) {
+        src = PrefixExpr::create_addrof(src);
+        check(src);
     }
 
-    return t;
+    // insert implicit cast for subtyping
+    if (dst->is_known() && src->type()->is_known() && is_strict_subtype(dst, src->type())) {
+        src = ImplicitCastExpr::create(src, dst);
+        check(src);
+    }
+
+    return unify(dst, src->type());
 }
 
 const Type* InferSema::unify(const Type* dst, const Type* src) {
@@ -249,28 +254,24 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     if (dst->isa<UnknownType>()) return unify(src_repr, dst_repr)->type;
     if (src->isa<UnknownType>()) return unify(dst_repr, src_repr)->type;
 
-    if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
-        if (auto src_owned_ptr_type = src->isa<OwnedPtrType>()) {
-            if (src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space()) {
-                auto referenced_type = unify(dst_borrowed_ptr_type->referenced_type(), src_owned_ptr_type->referenced_type());
-                return borrowed_ptr_type(referenced_type, dst_borrowed_ptr_type->addr_space());
-            }
-        }
-    }
 
-    if (auto dst_indefinite_array_type = dst->isa<IndefiniteArrayType>()) {
-        if (auto src_definite_array_type = src->isa<DefiniteArrayType>()) {
-            auto elem_type = unify(dst_indefinite_array_type->elem_type(), src_definite_array_type->elem_type());
-            return indefinite_array_type(elem_type);
-        }
-    }
-
-    if (dst->tag() == src->tag() && dst->num_ops() == src->num_ops()) {
+    if (dst->num_ops() == src->num_ops()) {
         Array<const Type*> op(dst->num_ops());
         for (size_t i = 0, e = op.size(); i != e; ++i)
             op[i] = unify(dst->op(i), src->op(i));
 
-        return dst->rebuild(op);
+        if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
+            if (auto src_owned_ptr_type = src->isa<OwnedPtrType>()) {
+                if (src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space())
+                    return borrowed_ptr_type(op[0], dst_borrowed_ptr_type->addr_space());
+            }
+        }
+
+        if (dst->isa<IndefiniteArrayType>() && src->isa<DefiniteArrayType>())
+            return indefinite_array_type(op[0]);
+
+        if (dst->tag() == src->tag())
+            return dst->rebuild(op);
     }
 
     return dst;
@@ -435,13 +436,56 @@ const Type* ASTTypeApp::check(InferSema& sema) const {
 //------------------------------------------------------------------------------
 
 /*
- * items
+ * Item::check_head
+ */
+
+const Type* Module::check_head(InferSema&) const { /*TODO*/ return nullptr; }
+const Type* ModuleDecl::check_head(InferSema&) const { /*TODO*/ return nullptr; }
+const Type* ExternBlock::check_head(InferSema&) const { return nullptr; }
+const Type* Typedef::check_head(InferSema&) const { /*TODO*/ return nullptr; }
+
+const Type* StructDecl::check_head(InferSema& sema) const {
+    check_ast_type_params(sema);
+    auto struct_type = sema.struct_type(this, num_field_decls());
+    for (size_t i = 0, e = num_field_decls(); i != e; ++i)
+        struct_type->set(i, sema.check(field_decl(i)));
+    return struct_type;
+}
+
+const Type* EnumDecl::check_head(InferSema&) const { /*TODO*/ return nullptr; }
+
+const Type* StaticItem::check_head(InferSema& sema) const {
+    if (ast_type())
+        return sema.check(ast_type());
+    if (type_ == nullptr)
+        type_ = sema.unknown_type();
+    return nullptr;
+}
+
+const Type* FnDecl::check_head(InferSema& sema) const {
+    check_ast_type_params(sema);
+
+    Array<const Type*> param_types(num_params());
+    for (size_t i = 0, e = num_params(); i != e; ++i)
+        param_types[i] = sema.check(param(i));
+
+    return sema.close(num_ast_type_params(), sema.fn_type(param_types));
+}
+
+const Type* TraitDecl::check_head(InferSema&) const { /*TODO*/ return nullptr; }
+const Type* ImplItem::check_head(InferSema&) const { /*TODO*/ return nullptr; }
+
+/*
+ * Item::check
  */
 
 void ModuleDecl::check(InferSema&) const {
 }
 
 void Module::check(InferSema& sema) const {
+    for (const auto& item : items())
+        sema.check_head(item.get());
+
     for (const auto& item : items())
         sema.check(item.get());
 }
@@ -469,19 +513,9 @@ void Typedef::check(InferSema& sema) const {
 void EnumDecl::check(InferSema&) const { /*TODO*/ }
 
 void StructDecl::check(InferSema& sema) const {
-    const StructType* struct_type = nullptr;
-    if (!type_ || type_->isa<UnknownType>()) {
-        struct_type = sema.struct_type(this, num_field_decls());
-        check_ast_type_params(sema);
-        if (!type_)
-            type_ = struct_type;
-        else
-            sema.constrain(this, struct_type);
-    } else
-        struct_type = type_->as<StructType>();
-
+    check_ast_type_params(sema);
     for (size_t i = 0, e = num_field_decls(); i != e; ++i)
-        struct_type->set(i, sema.check(field_decl(i)));
+        struct_type()->set(i, sema.check(field_decl(i)));
 }
 
 const Type* FieldDecl::check(InferSema& sema) const { return sema.check(ast_type()); }
@@ -504,7 +538,7 @@ void FnDecl::check(InferSema& sema) const {
 
     for (size_t i = 0; i != e; ++i) {
         param_types[i] = sema.check(param(i));
-        if (type() && !type()->isa<UnknownType>())
+        if (type() && type()->isa<FnType>())
             sema.constrain(param(i), fn_type()->op(i));
     }
 
@@ -517,8 +551,6 @@ void FnDecl::check(InferSema& sema) const {
 }
 
 void StaticItem::check(InferSema& sema) const {
-    if (type_ == nullptr)
-        type_ = sema.unknown_type();
     if (ast_type())
         sema.constrain(this, sema.check(ast_type()));
     if (init())
@@ -819,6 +851,11 @@ const Type* MapExpr::check(InferSema& sema) const {
 }
 
 const Type* BlockExprBase::check(InferSema& sema) const {
+    for (const auto& stmt : stmts()) {
+        if (auto item_stmt = stmt->isa<ItemStmt>())
+            sema.check_head(item_stmt->item());
+    }
+
     for (const auto& stmt : stmts())
         sema.check(stmt.get());
 

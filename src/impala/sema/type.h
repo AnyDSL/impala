@@ -85,6 +85,7 @@ inline bool is_int  (const Type* t) { return is_i8(t) || is_i16(t) || is_i32(t) 
                                           || is_u8(t) || is_u16(t) || is_u32(t) || is_u64(t); }
 bool is_void(const Type*);
 bool is_subtype(const Type* dst, const Type* src);
+bool is_strict_subtype(const Type* dst, const Type* src);
 
 //------------------------------------------------------------------------------
 
