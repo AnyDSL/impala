@@ -21,6 +21,7 @@ enum Tag {
     Tag_impl,
     Tag_indefinite_array,
     Tag_lambda,
+    Tag_lvalue,
     Tag_mut_ptr,
     Tag_noret,
     Tag_owned_ptr,
@@ -89,12 +90,34 @@ bool is_strict_subtype(const Type* dst, const Type* src);
 
 //------------------------------------------------------------------------------
 
-/// Pointer @p Type.
-class PtrType : public Type {
+/// Common base Type for PtrType%s and LValueType.
+class RefType : public Type {
 protected:
-    PtrType(TypeTable& typetable, int tag, const Type* pointee, int addr_space)
+    RefType(TypeTable& typetable, int tag, const Type* pointee, int addr_space)
         : Type(typetable, tag, {pointee})
         , addr_space_(addr_space)
+    {}
+
+public:
+    const Type* pointee() const { return op(0); }
+    int addr_space() const { return addr_space_; }
+
+    virtual std::ostream& stream(std::ostream&) const override;
+    virtual uint64_t vhash() const override;
+    virtual bool equal(const Type* other) const override;
+    virtual std::string prefix() const = 0;
+
+private:
+    int addr_space_;
+
+    friend class TypeTable;
+};
+
+/// Pointer @p Type.
+class PtrType : public RefType {
+protected:
+    PtrType(TypeTable& typetable, int tag, const Type* pointee, int addr_space)
+        : RefType(typetable, tag, {pointee}, addr_space)
     {}
 
     std::ostream& stream_ptr_type(std::ostream&, std::string prefix, int addr_space, const Type* ref_type) const;
@@ -151,6 +174,22 @@ public:
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+};
+
+class LValueType : public RefType {
+protected:
+    LValueType(TypeTable& typetable, const Type* pointee, int addr_space)
+        : RefType(typetable, Tag_lvalue, {pointee}, addr_space)
+    {}
+
+public:
+    virtual std::string prefix() const override { return "lvalue of "; }
+
+private:
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+
+    friend class TypeTable;
 };
 
 //------------------------------------------------------------------------------
