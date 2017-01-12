@@ -1,8 +1,8 @@
-fn foo(a: &[int]) -> int {
-    a(2)
+struct S {
+    data: &[f32]
 }
 
-fn main() -> int {
-    let mut a = [0, 1, 2, 3];
-    if foo(&a) == 2 { 0 } else { 1 }
-}
+fn main() -> i32 {
+    let s = S { data : ~[5:f32] };
+    0
+}	
