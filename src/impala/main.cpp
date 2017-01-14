@@ -4,7 +4,6 @@
 #include <stdexcept>
 
 #include "thorin/be/llvm/llvm.h"
-#include "thorin/be/ycomp.h"
 #include "thorin/util/args.h"
 #include "thorin/util/log.h"
 #include "thorin/util/location.h"
@@ -213,8 +212,10 @@ int main(int argc, char** argv) {
                 init.world.opt();
             if (emit_thorin)      init.world.dump();
             if (emit_llvm)        thorin::emit_llvm(init.world, opt, debug);
-            if (emit_ycomp)       thorin::emit_ycomp(init.world, true);
-            if (emit_ycomp_cfg)   thorin::emit_ycomp_cfg(init.world);
+            if (emit_ycomp)
+                std::cerr << "-emit-ycomp: this feature is currently removed" << std::endl;
+            if (emit_ycomp_cfg)
+                std::cerr << "-emit-ycomp-cfg: this feature is currently removed" << std::endl;
             yComp.print(init.world);
         } else
             return EXIT_FAILURE;
