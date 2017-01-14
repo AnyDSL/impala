@@ -225,8 +225,8 @@ public:
     bool is_global() const { return global_; }
     const Elems& elems() const { return elems_; }
     const Decl* decl() const { return elems().back()->decl(); }
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     bool global_;
@@ -261,8 +261,8 @@ public:
         : ASTType(location)
     {}
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -283,8 +283,8 @@ public:
 
     Tag tag() const { return tag_; }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -309,8 +309,8 @@ public:
     const ASTType* referenced_ast_type() const { return referenced_ast_type_.get(); }
     int addr_space() const { return addr_space_; }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -340,8 +340,8 @@ public:
         : ArrayASTType(location, elem_ast_type)
     {}
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -357,8 +357,8 @@ public:
 
     uint64_t dim() const { return dim_; }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -389,8 +389,8 @@ public:
         : CompoundASTType(location, std::move(ast_type_args))
     {}
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -413,8 +413,8 @@ public:
     Symbol symbol() const { return identifier()->symbol(); }
     const Decl* decl() const { return path()->decl(); }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -437,8 +437,8 @@ public:
 
     const FnASTType* ret_fn_ast_type() const;
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -454,8 +454,8 @@ public:
 
     const Expr* expr() const { return expr_.get(); }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -473,8 +473,8 @@ public:
 
     uint64_t size() const { return size_; }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -582,6 +582,7 @@ public:
     const Fn* fn() const { return fn_; }
     void take_address() const { is_address_taken_ = true; }
     void check(NameSema&) const;
+
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -769,8 +770,8 @@ public:
         : TypeDeclItem(location, vis, id, std::move(ast_type_params))
     {}
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     void check(InferSema&) const override;
@@ -790,8 +791,8 @@ public:
     Symbol abi() const { return abi_; }
     const FnDecls& fn_decls() const { return fn_decls_; }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     void check(InferSema&) const override;
@@ -813,8 +814,8 @@ public:
 
     const ASTType* ast_type() const { return ast_type_.get(); }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     void check(InferSema&) const override;
@@ -869,8 +870,8 @@ public:
     const FieldDecl* field_decl(const Identifier* ident) const { return field_decl(ident->symbol()); }
     const StructType* struct_type() const { return type_->as<StructType>(); }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     void check(InferSema&) const override;
@@ -884,14 +885,14 @@ private:
 
 class EnumDecl : public TypeDeclItem {
 public:
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream& os) const override { return os; }
 
 private:
     void check(InferSema&) const override;
     const Type* check_head(InferSema&) const override;
     void check(TypeSema&) const override;
-    void emit(CodeGen&) const override;
+    void emit(CodeGen&) const override {}
 };
 
 class StaticItem : public ValueItem {
@@ -904,8 +905,8 @@ public:
 
     const Expr* init() const { return init_.get(); }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     void check(InferSema&) const override;
@@ -937,8 +938,8 @@ public:
         return t->as<FnType>();
     }
     Symbol fn_symbol() const override { return export_name_ != "" ? export_name_ : identifier()->symbol(); }
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     void check(InferSema&) const override;
@@ -965,8 +966,8 @@ public:
     const FnDecls& methods() const { return methods_; }
     const MethodTable& method_table() const { return method_table_; }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     void check(InferSema&) const override;
@@ -1031,6 +1032,7 @@ public:
 
     const thorin::Def* extra() const { return extra_; }
 
+    virtual void write() const {}
     virtual bool has_side_effect() const { return false; }
     virtual void take_address() const {}
     virtual void check(NameSema&) const = 0;
@@ -1112,8 +1114,8 @@ public:
         : Expr(location)
     {}
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1140,9 +1142,9 @@ public:
     uint64_t get_u64() const;
     PrimTypeTag literal2type() const;
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1163,9 +1165,9 @@ public:
     Symbol symbol() const { return symbol_; }
     char value() const { return value_; }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1186,9 +1188,9 @@ public:
     const Symbols& symbols() const { return symbols_; }
     const std::vector<char>& values() const { return values_; }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1208,9 +1210,8 @@ public:
 
     const FnType* fn_type() const override { return type()->as<FnType>(); }
     Symbol fn_symbol() const override { return Symbol("lambda"); }
-
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1230,9 +1231,10 @@ public:
     const Path* path() const { return path_.get(); }
     const Decl* value_decl() const { return value_decl_; }
 
+    void write() const override;
     void take_address() const override;
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1265,12 +1267,14 @@ public:
 
     const Expr* rhs() const { return rhs_.get(); }
     Tag tag() const { return tag_; }
+
+    void write() const override;
     bool has_side_effect() const override;
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     thorin::Value lemit(CodeGen&) const override;
     const thorin::Def* remit(CodeGen&) const override;
     void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1300,11 +1304,10 @@ public:
     const Expr* rhs() const { return rhs_.get(); }
 
     bool has_side_effect() const override;
-
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
     void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1336,10 +1339,9 @@ public:
     const Expr* lhs() const { return lhs_.get(); }
 
     bool has_side_effect() const override;
-
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1362,9 +1364,11 @@ public:
     Symbol symbol() const { return identifier()->symbol(); }
     const FieldDecl* field_decl() const { return field_decl_; }
     uint32_t index() const { return field_decl()->index(); }
+
+    void write() const override;
     void take_address() const override;
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1385,6 +1389,7 @@ public:
     {}
 
     const Expr* src() const { return src_.get(); }
+    void write() const override;
 
 private:
     const thorin::Def* remit(CodeGen&) const override;
@@ -1459,8 +1464,8 @@ public:
         , Args(std::move(args))
     {}
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1479,8 +1484,8 @@ public:
     const Expr* value() const { return value_.get(); }
     uint64_t count() const { return count_; }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1502,8 +1507,8 @@ public:
     const Expr* dim() const { return dim_.get(); }
     const ASTType* elem_ast_type() const { return elem_ast_type_.get(); }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1521,8 +1526,8 @@ public:
         , Args(std::move(args))
     {}
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1537,8 +1542,8 @@ public:
         , Args(std::move(args))
     {}
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1560,6 +1565,7 @@ public:
         Symbol symbol() const { return identifier()->symbol(); }
         const Expr* expr() const { return expr_.get(); }
         const FieldDecl* field_decl() const { return field_decl_; }
+
         std::ostream& stream(std::ostream&) const override;
 
     private:
@@ -1583,8 +1589,8 @@ public:
     size_t num_elems() const { return elems_.size(); }
     const Elems& elems() const { return elems_; }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1617,8 +1623,8 @@ public:
     std::ostream& stream_ast_type_args(std::ostream& p) const;
     std::ostream& stream_type_args(std::ostream& p) const;
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1644,10 +1650,12 @@ public:
     };
 
     const Expr* lhs() const { return lhs_.get(); }
+
+    void write() const override;
     bool has_side_effect() const override;
     void take_address() const override;
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1685,9 +1693,8 @@ public:
 
     virtual const char* prefix() const = 0;
     bool has_side_effect() const override;
-
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 protected:
     const Type* check(InferSema&) const override;
@@ -1739,11 +1746,10 @@ public:
     bool has_else() const;
 
     bool has_side_effect() const override;
-
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
     void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1771,11 +1777,10 @@ public:
     const LocalDecl* continue_decl() const { return continue_decl_.get(); }
 
     bool has_side_effect() const override;
-
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
     void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1801,9 +1806,8 @@ public:
     const LocalDecl* break_decl() const { return break_decl_.get(); }
 
     bool has_side_effect() const override;
-
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1849,9 +1853,9 @@ public:
     const Ptrn* elem(size_t i) const { return elems_[i].get(); }
     size_t num_elems() const { return elems_.size(); }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1869,9 +1873,9 @@ public:
 
     const LocalDecl* local() const { return local_.get(); }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     const Type* check(InferSema&) const override;
@@ -1912,9 +1916,9 @@ public:
 
     const Expr* expr() const { return expr_.get(); }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     void emit(CodeGen&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     void check(InferSema&) const override;
@@ -1932,9 +1936,9 @@ public:
 
     const Item* item() const { return item_.get(); }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     void emit(CodeGen&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     void check(InferSema&) const override;
@@ -1954,9 +1958,9 @@ public:
     const Ptrn* ptrn() const { return ptrn_.get(); }
     const Expr* init() const { return init_.get(); }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     void emit(CodeGen&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     void check(InferSema&) const override;
@@ -1978,6 +1982,7 @@ public:
 
         const std::string& constraint() const { return constraint_; }
         const Expr* expr() const { return expr_.get(); }
+
         std::ostream& stream(std::ostream&) const override;
 
     private:
@@ -2021,11 +2026,11 @@ public:
         return result;
     }
 
-    std::ostream& stream(std::ostream&) const override;
     void check(NameSema&) const override;
     void check(InferSema&) const override;
     void check(TypeSema&) const override;
     void emit(CodeGen&) const override;
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     std::string asm_template_;

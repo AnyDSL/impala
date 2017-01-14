@@ -639,6 +639,7 @@ const Type* PrefixExpr::check(InferSema& sema) const {
             }
         }
         case INC: case DEC:
+            return sema.check(rhs());
         case ADD: case SUB:
         case NOT:
         case RUN: case HLT:
@@ -847,11 +848,34 @@ const Type* TypeAppExpr::check(InferSema& sema) const {
 }
 
 const Type* MapExpr::check(InferSema& sema) const {
-    // TODO lvalue
     if (type_ == nullptr)
         type_ = sema.unknown_type();
 
     auto ltype = sema.check(lhs());
+    for (const auto& arg : args())
+        sema.rvalue(arg.get());
+
+    if (auto lvalue = ltype->isa<LValueType>()) {
+        auto pointee = lvalue->pointee();
+
+        if (auto array = pointee->isa<ArrayType>())
+            return sema.lvalue_type(array->elem_type(), lvalue->addr_space());
+
+        if (auto tuple_type = pointee->isa<TupleType>()) {
+            if (auto lit = arg(0)->isa<LiteralExpr>())
+                return sema.lvalue_type(tuple_type->op(lit->get_u64()), lvalue->addr_space());
+            else
+                return sema.type_error();
+        }
+
+        if (auto simd_type = pointee->isa<SimdType>())
+            return sema.lvalue_type(simd_type->elem_type(), lvalue->addr_space());
+
+        if (pointee->isa<UnknownType>())
+            return type_;
+
+        ltype = LValue2RValueExpr::create(lhs())->type();
+    }
 
     if (ltype->isa<Lambda>()) {
         if (!lhs_->isa<TypeAppExpr>())
@@ -866,9 +890,6 @@ const Type* MapExpr::check(InferSema& sema) const {
 
     if (ltype->isa<FnType>())
         return sema.check_call(lhs(), args(), type_);
-
-    for (int i = 0, e = num_args(); i != e; ++i)
-        sema.check(arg(i));
 
     if (ltype->isa<UnknownType>()) {
         return type_;

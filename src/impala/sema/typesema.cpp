@@ -20,9 +20,12 @@ public:
 
     bool nossa() const { return nossa_; }
     const Type* scalar_type(const Expr* expr) {
-        if (auto simd_type = expr->type()->isa<SimdType>())
-            return simd_type->elem_type();
-        return expr->type();
+        auto result = expr->type();
+        if (auto lvalue = result->isa<LValueType>())
+            result = lvalue->pointee();
+        if (auto simd_type = result->isa<SimdType>())
+            result = simd_type->elem_type();
+        return result;
     }
 
     // error handling
@@ -312,10 +315,11 @@ void PrefixExpr::check(TypeSema& sema) const {
             sema.expect_ptr(rhs(), "unary '*'");
             return;
         case INC:
-        case DEC:
-            sema.expect_num(rhs(),    "prefix '%'", tok2str(this));
+        case DEC: {
             sema.expect_lvalue(rhs(), "prefix '%'", tok2str(this));
+            sema.expect_num(rhs(),    "prefix '%'", tok2str(this));
             return;
+        }
         case ADD:
         case SUB:
             sema.expect_num(rhs(), "unary '%'", tok2str(this));
@@ -377,20 +381,24 @@ void InfixExpr::check(TypeSema& sema) const {
             sema.expect_int_or_bool(rhs(), "right-hand side of bitwise '%'", tok2str(this));
             return;
         case ASGN:
+            lhs()->write();
             sema.expect_lvalue(lhs(), "assignment");
             return;
         case ADD_ASGN: case SUB_ASGN:
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
+            lhs()->write();
             sema.expect_num(lhs(),  "left-hand side of binary '%'", tok2str(this));
             sema.expect_num(rhs(), "right-hand side of binary '%'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '%'", tok2str(this));
             return;
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN:
+            lhs()->write();
             sema.expect_int_or_bool(lhs(),  "left-hand side of binary '%'", tok2str(this));
             sema.expect_int_or_bool(rhs(), "right-hand side of binary '%'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '%'", tok2str(this));
             return;
         case SHL_ASGN: case SHR_ASGN:
+            lhs()->write();
             sema.expect_int(lhs(),  "left-hand side of binary '%'", tok2str(this));
             sema.expect_int(rhs(), "right-hand side of binary '%'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '%'", tok2str(this));
@@ -537,9 +545,11 @@ void MapExpr::check(TypeSema& sema) const {
     for (const auto& arg : args())
         sema.check(arg.get());
 
-    if (ltype->isa<FnType>()) {
-        sema.check_call(lhs(), args());
-    } else if (ltype->isa<ArrayType>()) {
+    if (ltype->isa<FnType>())
+        return sema.check_call(lhs(), args());
+
+    ltype = sema.expect_lvalue(lhs(), "left-hand side of map expression");
+    if (ltype->isa<ArrayType>()) {
         if (num_args() == 1)
             sema.expect_int(arg(0), "for array subscript");
         else
