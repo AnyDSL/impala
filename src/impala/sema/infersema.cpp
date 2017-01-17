@@ -979,9 +979,7 @@ const Type* ForExpr::check(InferSema& sema) const {
  */
 
 const Type* TuplePtrn::check(InferSema& sema) const {
-    Array<const Type*> types(num_elems());
-    for (size_t i = 0, e = types.size(); i != e; ++i)
-        types[i] = sema.check(elem(i));
+    auto types = Array<const Type*>(num_elems(), [&](auto i) { return sema.check(this->elem(i)); });
     return sema.tuple_type(types);
 }
 
