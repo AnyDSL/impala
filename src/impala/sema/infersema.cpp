@@ -210,15 +210,13 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
     auto lvalue = dst->isa<LValueType>();
     if (lvalue)
         dst = lvalue->pointee();
-
-    dst = find_type(dst);
-    src->type_ = find_type(src);
-
-    // automatically take address of src if dst is a BorrowedPtrType
-    if (dst->isa<BorrowedPtrType>() && !src->type()->isa<PtrType>()) {
+    else if (dst->isa<BorrowedPtrType>() && !src->type()->isa<PtrType>()) {
+        // automatically take address of src if dst is a BorrowedPtrType
         src = PrefixExpr::create_addrof(src);
         check(src);
     }
+
+    src->type_ = find_type(src);
 
     // insert implicit cast for subtyping
     if (dst->is_known() && src->type()->is_known() && is_strict_subtype(dst, src->type())) {
@@ -852,9 +850,15 @@ const Type* MapExpr::check(InferSema& sema) const {
         type_ = sema.unknown_type();
 
     auto ltype = sema.check(lhs());
+    if (ltype->isa<PtrType>()) {
+        PrefixExpr::create_deref(lhs());
+        ltype = sema.check(lhs());
+    }
+
     for (const auto& arg : args())
         sema.rvalue(arg.get());
 
+    // propagate lvalue for array, tuple and simd types
     if (auto lvalue = ltype->isa<LValueType>()) {
         auto pointee = lvalue->pointee();
 
@@ -880,11 +884,6 @@ const Type* MapExpr::check(InferSema& sema) const {
     if (ltype->isa<Lambda>()) {
         if (!lhs_->isa<TypeAppExpr>())
             TypeAppExpr::create(lhs());
-        ltype = sema.check(lhs());
-    }
-
-    if (ltype->isa<PtrType>()) {
-        PrefixExpr::create_deref(lhs());
         ltype = sema.check(lhs());
     }
 
