@@ -20,9 +20,9 @@ std::ostream& PtrASTType::stream(std::ostream& os) const {
     return os << referenced_ast_type();
 }
 
-std::ostream& DefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[% * %]", elem_ast_type(), dim()); }
-std::ostream& IndefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[%]", elem_ast_type()); }
-std::ostream& SimdASTType::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_ast_type(), size()); }
+std::ostream& DefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[{} * {}]", elem_ast_type(), dim()); }
+std::ostream& IndefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[{}]", elem_ast_type()); }
+std::ostream& SimdASTType::stream(std::ostream& os) const { return streamf(os, "simd[{} * {}]", elem_ast_type(), size()); }
 
 std::ostream& TupleASTType::stream(std::ostream& os) const {
     return stream_list(os, ast_type_args(), [&](const auto& ast_type) { os << ast_type.get(); }, "(", ")");
@@ -58,7 +58,7 @@ std::ostream& PrimASTType::stream(std::ostream& os) const {
 }
 
 std::ostream& Typeof::stream(std::ostream& os) const {
-    return streamf(os, "typeof(%)", expr());
+    return streamf(os, "typeof({})", expr());
 }
 
 /*
@@ -171,23 +171,23 @@ std::ostream& FnDecl::stream(std::ostream& os) const {
 }
 
 std::ostream& FieldDecl::stream(std::ostream& os) const {
-    return streamf(os, "%%: %", visibility().str(), symbol(), ast_type());
+    return streamf(os, "{}{}: {}", visibility().str(), symbol(), ast_type());
 }
 
 std::ostream& StaticItem::stream(std::ostream& os) const {
-    streamf(os, "static % %: %", is_mut() ? "mut " : "", identifier(), type() ? type()->to_string() : ast_type()->to_string());
+    streamf(os, "static {} {}: {}", is_mut() ? "mut " : "", identifier(), type() ? type()->to_string() : ast_type()->to_string());
     if (init())
-        streamf(os, " = %", init());
+        streamf(os, " = {}", init());
     return os << ";";
 }
 
 std::ostream& StructDecl::stream(std::ostream& os) const {
-    stream_ast_type_params(streamf(os, "%struct %", visibility().str(), symbol())) << " {" << up << endl;
+    stream_ast_type_params(streamf(os, "{}struct {}", visibility().str(), symbol())) << " {" << up << endl;
     return stream_list(os, field_decls(), [&](const auto& field) { os << field.get(); }, "", "", ",", true) << down << endl << "}";
 }
 
 std::ostream& Typedef::stream(std::ostream& os) const {
-    return stream_ast_type_params(streamf(os, "%type %", visibility().str(), symbol())) << " = " << ast_type() << ';';
+    return stream_ast_type_params(streamf(os, "{}type {}", visibility().str(), symbol())) << " = " << ast_type() << ';';
 }
 
 std::ostream& TraitDecl::stream(std::ostream& os) const {
@@ -274,11 +274,11 @@ std::ostream& DefiniteArrayExpr::stream(std::ostream& os) const {
 }
 
 std::ostream& RepeatedDefiniteArrayExpr::stream(std::ostream& os) const {
-    return streamf(os, "[%, .. %]", value(), count());
+    return streamf(os, "[{}, .. {}]", value(), count());
 }
 
 std::ostream& IndefiniteArrayExpr::stream(std::ostream& os) const {
-    return streamf(os, "[%: %]", dim(), elem_ast_type());
+    return streamf(os, "[{}: {}]", dim(), elem_ast_type());
 }
 
 std::ostream& SimdExpr::stream(std::ostream& os) const {
@@ -361,24 +361,24 @@ std::ostream& FieldExpr::stream(std::ostream& os) const {
 
 std::ostream& ExplicitCastExpr::stream(std::ostream& os) const {
     auto open_state = open(os, Token::AS);
-    streamf(os, "% as %", src(), ast_type());
+    streamf(os, "{} as {}", src(), ast_type());
     return close(os, open_state);
 }
 
 std::ostream& ImplicitCastExpr::stream(std::ostream& os) const {
     auto open_state = open(os, Token::AS);
-    streamf(os, "implicit_cast(%, %)", src(), type());
+    streamf(os, "implicit_cast({}, {})", src(), type());
     return close(os, open_state);
 }
 
 std::ostream& LValue2RValueExpr::stream(std::ostream& os) const {
     auto open_state = open(os, Token::AS);
-    streamf(os, "lvalue2rvalue(%, %)", src(), type());
+    streamf(os, "lvalue2rvalue({}, {})", src(), type());
     return close(os, open_state);
 }
 
 std::ostream& StructExpr::Elem::stream(std::ostream& os) const {
-    return streamf(os, "%: %", symbol(), expr());
+    return streamf(os, "{}: {}", symbol(), expr());
 }
 
 std::ostream& StructExpr::stream(std::ostream& os) const {
@@ -447,14 +447,14 @@ std::ostream& FnExpr::stream(std::ostream& os) const {
 }
 
 std::ostream& IfExpr::stream(std::ostream& os) const {
-    streamf(os, "if % %", cond(), then_expr());
+    streamf(os, "if {} {}", cond(), then_expr());
     if (has_else())
         os << " else " << else_expr();
     return os;
 }
 
 std::ostream& WhileExpr::stream(std::ostream& os) const {
-    return streamf(os, "while % %", cond(), body());
+    return streamf(os, "while {} {}", cond(), body());
 }
 
 std::ostream& ForExpr::stream(std::ostream& os) const {
@@ -497,7 +497,7 @@ std::ostream& ExprStmt::stream(std::ostream& os) const {
 }
 
 std::ostream& AsmStmt::Elem::stream(std::ostream& os) const {
-    return streamf(os, "\"%\"(%)", constraint(), expr());
+    return streamf(os, "\"{}\"({})", constraint(), expr());
 }
 
 std::ostream& AsmStmt::stream(std::ostream& os) const {

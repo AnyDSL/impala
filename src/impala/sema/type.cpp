@@ -139,7 +139,7 @@ bool UnknownType::equal(const Type* other) const { return this == other; }
  * stream
  */
 
-std::ostream& Lambda::stream(std::ostream& os) const { return streamf(os, "[%].%", name(), body()); }
+std::ostream& Lambda::stream(std::ostream& os) const { return streamf(os, "[{}].{}", name(), body()); }
 std::ostream& UnknownType::stream(std::ostream& os) const { return os << '?' << gid(); }
 
 std::ostream& PrimType::stream(std::ostream& os) const {
@@ -159,14 +159,14 @@ std::ostream& FnType::stream(std::ostream& os) const {
     //if (ret_type->isa<NoRetType>())
         return stream_list(os, ops(), [&](const Type* type) { os << type; }, "(", ")");
 
-    //return streamf(os, "(%) -> %", stream_list(ops().skip_back(), [&](const Type* type) { os << type; }), ret_type);
+    //return streamf(os, "({}) -> {}", stream_list(ops().skip_back(), [&](const Type* type) { os << type; }), ret_type);
 }
 
 std::ostream& Var::stream(std::ostream& os) const {
-    return streamf(os, "<%>", depth());
+    return streamf(os, "<{}>", depth());
 }
 
-std::ostream& App::stream(std::ostream& os) const { return streamf(os, "%[%]", callee(), arg()); }
+std::ostream& App::stream(std::ostream& os) const { return streamf(os, "{}[{}]", callee(), arg()); }
 
 std::ostream& RefType::stream(std::ostream& os) const {
     os << prefix();
@@ -175,9 +175,9 @@ std::ostream& RefType::stream(std::ostream& os) const {
     return os << pointee();
 }
 
-std::ostream& DefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[% * %]", elem_type(), dim()); }
-std::ostream& IndefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[%]", elem_type()); }
-std::ostream& SimdType::stream(std::ostream& os) const { return streamf(os, "simd[% * %]", elem_type(), dim()); }
+std::ostream& DefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[{} * {}]", elem_type(), dim()); }
+std::ostream& IndefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[{}]", elem_type()); }
+std::ostream& SimdType::stream(std::ostream& os) const { return streamf(os, "simd[{} * {}]", elem_type(), dim()); }
 std::ostream& StructType::stream(std::ostream& os) const { return os << struct_decl()->symbol(); }
 
 //std::ostream& TypedefAbsNode::stream(std::ostream& os) const {
