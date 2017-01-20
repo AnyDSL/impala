@@ -31,7 +31,7 @@ public:
     void error_msg(const Expr* expr, const char* what, const Type* type, const char* fmt, Args... args) {
         std::ostringstream os;
         thorin::streamf(os, fmt, args...);
-        error(expr, "mismatched types: expected % but found '%' as %", what, type, os.str());
+        error(expr, "mismatched types: expected {} but found '{}' as {}", what, type, os.str());
     }
 
 #define IMPALA_EXPECT(T, pred, what) \
@@ -55,7 +55,7 @@ public:
         std::ostringstream os;
         thorin::streamf(os, fmt, args...);
         if (!expr->is_lvalue())
-            error(expr, "lvalue required for %", os.str());
+            error(expr, "lvalue required for {}", os.str());
     }
 
     void expect_known(const Decl* value_decl) {
@@ -63,13 +63,13 @@ public:
             if (value_decl->symbol() == "return")
                 error(value_decl, "cannot infer a return type, maybe you forgot to mark the function with '-> !'?");
             else
-                error(value_decl, "cannot infer type for '%'", value_decl->symbol());
+                error(value_decl, "cannot infer type for '{}'", value_decl->symbol());
         }
     }
 
     void expect_type(const Type* expected, const Expr* expr, const char* context) {
         if (expected != expr->type() && expected->is_known() && expr->type()->is_known() && !expr->type()->isa<TypeError>())
-            error(expr, "mismatched types: expected '%' but found '%' as %", expected, expr->type(), context);
+            error(expr, "mismatched types: expected '{}' but found '{}' as {}", expected, expr->type(), context);
     }
 
     // check wrappers
@@ -158,7 +158,7 @@ void FnASTType::check(TypeSema& sema) const {
 
 void ASTTypeApp::check(TypeSema&) const {
     if (!decl() || !decl()->is_type_decl())
-        error(identifier(), "'%' does not name a type", symbol());
+        error(identifier(), "'{}' does not name a type", symbol());
 }
 
 void Typeof::check(TypeSema& sema) const { sema.check(expr()); }
@@ -177,7 +177,7 @@ const Type* Fn::check_body(TypeSema& sema) const {
 
     for (const auto& param : params()) {
         if (param->is_mut() && !param->is_written())
-            warning(param.get(), "parameter '%' declared mutable but parameter is never written to", param->symbol());
+            warning(param.get(), "parameter '{}' declared mutable but parameter is never written to", param->symbol());
     }
 
     if (!body()->type()->isa<NoRetType>())
@@ -311,12 +311,12 @@ void PrefixExpr::check(TypeSema& sema) const {
             return;
         case INC:
         case DEC:
-            sema.expect_num(rhs(),    "prefix '%'", tok2str(this));
-            sema.expect_lvalue(rhs(), "prefix '%'", tok2str(this));
+            sema.expect_num(rhs(),    "prefix '{}'", tok2str(this));
+            sema.expect_lvalue(rhs(), "prefix '{}'", tok2str(this));
             return;
         case ADD:
         case SUB:
-            sema.expect_num(rhs(), "unary '%'", tok2str(this));
+            sema.expect_num(rhs(), "unary '{}'", tok2str(this));
             return;
         case NOT:
             sema.expect_int_or_bool(rhs(), "unary '!'");
@@ -324,7 +324,7 @@ void PrefixExpr::check(TypeSema& sema) const {
         case HLT:
         case RUN:
             if (!rhs()->isa<MapExpr>())
-                error(this, "function call expected after partial evaluator command %", (TokenTag)tag());
+                error(this, "function call expected after partial evaluator command {}", (TokenTag)tag());
             return;
         default:
             return;
@@ -338,53 +338,53 @@ void InfixExpr::check(TypeSema& sema) const {
     sema.check(rhs());
 
     if (lhs()->type() != rhs()->type() && !lhs()->type()->isa<TypeError>() && !rhs()->type()->isa<TypeError>()) {
-        error(this, "both left-hand side and right-hand side of binary '%' must agree on the same type", tok2str(this));
-        error(lhs(),  "left-hand side type is '%'", lhs()->type());
-        error(rhs(), "right-hand side type is '%'", rhs()->type());
+        error(this, "both left-hand side and right-hand side of binary '{}' must agree on the same type", tok2str(this));
+        error(lhs(),  "left-hand side type is '{}'", lhs()->type());
+        error(rhs(), "right-hand side type is '{}'", rhs()->type());
     }
 
     switch (tag()) {
         case EQ: case NE:
         case LT: case GT:
         case LE: case GE:
-            sema.expect_num_or_bool_or_ptr(lhs(),  "left-hand side of binary '%'", tok2str(this));
-            sema.expect_num_or_bool_or_ptr(rhs(), "right-hand side of binary '%'", tok2str(this));
+            sema.expect_num_or_bool_or_ptr(lhs(),  "left-hand side of binary '{}'", tok2str(this));
+            sema.expect_num_or_bool_or_ptr(rhs(), "right-hand side of binary '{}'", tok2str(this));
             return;
         case ADD: case SUB:
         case MUL: case DIV: case REM:
-            sema.expect_num(lhs(),  "left-hand side of binary '%'", tok2str(this));
-            sema.expect_num(rhs(), "right-hand side of binary '%'", tok2str(this));
+            sema.expect_num(lhs(),  "left-hand side of binary '{}'", tok2str(this));
+            sema.expect_num(rhs(), "right-hand side of binary '{}'", tok2str(this));
             return;
         case OROR: case ANDAND:
-            sema.expect_bool(lhs(),  "left-hand side of logical '%'", tok2str(this));
-            sema.expect_bool(rhs(), "right-hand side of logical '%'", tok2str(this));
+            sema.expect_bool(lhs(),  "left-hand side of logical '{}'", tok2str(this));
+            sema.expect_bool(rhs(), "right-hand side of logical '{}'", tok2str(this));
             return;
         case SHL: case SHR:
-            sema.expect_int(lhs(),  "left-hand side of binary '%'", tok2str(this));
-            sema.expect_int(rhs(), "right-hand side of binary '%'", tok2str(this));
+            sema.expect_int(lhs(),  "left-hand side of binary '{}'", tok2str(this));
+            sema.expect_int(rhs(), "right-hand side of binary '{}'", tok2str(this));
             return;
         case  OR: case AND: case XOR:
-            sema.expect_int_or_bool(lhs(),  "left-hand side of bitwise '%'", tok2str(this));
-            sema.expect_int_or_bool(rhs(), "right-hand side of bitwise '%'", tok2str(this));
+            sema.expect_int_or_bool(lhs(),  "left-hand side of bitwise '{}'", tok2str(this));
+            sema.expect_int_or_bool(rhs(), "right-hand side of bitwise '{}'", tok2str(this));
             return;
         case ASGN:
             sema.expect_lvalue(lhs(), "assignment");
             return;
         case ADD_ASGN: case SUB_ASGN:
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
-            sema.expect_num(lhs(),  "left-hand side of binary '%'", tok2str(this));
-            sema.expect_num(rhs(), "right-hand side of binary '%'", tok2str(this));
-            sema.expect_lvalue(lhs(), "assignment '%'", tok2str(this));
+            sema.expect_num(lhs(),  "left-hand side of binary '{}'", tok2str(this));
+            sema.expect_num(rhs(), "right-hand side of binary '{}'", tok2str(this));
+            sema.expect_lvalue(lhs(), "assignment '{}'", tok2str(this));
             return;
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN:
-            sema.expect_int_or_bool(lhs(),  "left-hand side of binary '%'", tok2str(this));
-            sema.expect_int_or_bool(rhs(), "right-hand side of binary '%'", tok2str(this));
-            sema.expect_lvalue(lhs(), "assignment '%'", tok2str(this));
+            sema.expect_int_or_bool(lhs(),  "left-hand side of binary '{}'", tok2str(this));
+            sema.expect_int_or_bool(rhs(), "right-hand side of binary '{}'", tok2str(this));
+            sema.expect_lvalue(lhs(), "assignment '{}'", tok2str(this));
             return;
         case SHL_ASGN: case SHR_ASGN:
-            sema.expect_int(lhs(),  "left-hand side of binary '%'", tok2str(this));
-            sema.expect_int(rhs(), "right-hand side of binary '%'", tok2str(this));
-            sema.expect_lvalue(lhs(), "assignment '%'", tok2str(this));
+            sema.expect_int(lhs(),  "left-hand side of binary '{}'", tok2str(this));
+            sema.expect_int(rhs(), "right-hand side of binary '{}'", tok2str(this));
+            sema.expect_lvalue(lhs(), "assignment '{}'", tok2str(this));
             return;
         default: THORIN_UNREACHABLE;
     }
@@ -392,8 +392,8 @@ void InfixExpr::check(TypeSema& sema) const {
 
 void PostfixExpr::check(TypeSema& sema) const {
     sema.check(lhs());
-    sema.expect_num(lhs(),    "postfix '%'", tok2str(this));
-    sema.expect_lvalue(lhs(), "postfix '%'", tok2str(this));
+    sema.expect_num(lhs(),    "postfix '{}'", tok2str(this));
+    sema.expect_lvalue(lhs(), "postfix '{}'", tok2str(this));
 }
 
 template <typename F, typename T>
@@ -424,7 +424,7 @@ void CastExpr::check(TypeSema& sema) const {
         || symmetric(float_to_bool, src_type, dst_type);
 
     if (src_type->is_known() && dst_type->is_known() && !valid_cast && !is_subtype(dst_type, src_type))
-        error(this, "invalid source and destination types for cast operator, got '%' and '%'", src_type, dst_type);
+        error(this, "invalid source and destination types for cast operator, got '{}' and '{}'", src_type, dst_type);
 }
 
 void TupleExpr::check(TypeSema& sema) const {
@@ -478,19 +478,19 @@ void StructExpr::check(TypeSema& sema) const {
                 if (!thorin::visit(done, field_decl))
                     sema.expect_type(struct_type->op(field_decl->index()), elem->expr(), "initialization type for field");
                 else
-                    error(elem->expr(), "field '%' specified more than once", elem->symbol());
+                    error(elem->expr(), "field '{}' specified more than once", elem->symbol());
             } else
-                error(elem->expr(), "structure '%' has no field named '%'", struct_decl->symbol(), elem->symbol());
+                error(elem->expr(), "structure '{}' has no field named '{}'", struct_decl->symbol(), elem->symbol());
         }
 
         if (done.size() != struct_decl->field_table().size()) {
             for (const auto& p : struct_decl->field_table()) {
                 if (!done.contains(p.second))
-                    error(this, "missing field '%'", p.first);
+                    error(this, "missing field '{}'", p.first);
             }
         }
     } else if (type->is_known() && !type->isa<TypeError>())
-        error(ast_type_app(), "'%' is not a structure", type);
+        error(ast_type_app(), "'{}' is not a structure", type);
 }
 
 void FieldExpr::check(TypeSema& sema) const {
@@ -500,9 +500,9 @@ void FieldExpr::check(TypeSema& sema) const {
         if (auto field_decl = struct_decl->field_decl(symbol()))
             field_decl_ = field_decl;
         else
-            error(lhs(), "attempted access of field '%' on type '%', but no field with that name was found", symbol(), type);
+            error(lhs(), "attempted access of field '{}' on type '{}', but no field with that name was found", symbol(), type);
     } else if (!type->isa<TypeError>())
-        error(lhs(), "request for field '%' in something not a structure", symbol());
+        error(lhs(), "request for field '{}' in something not a structure", symbol());
 }
 
 void TypeAppExpr::check(TypeSema& /*sema*/) const {
@@ -543,7 +543,7 @@ void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
         for (size_t i = 0; i < args.size(); i++)
             expect_type(fn_type->op(i), args[i], "argument type");
     } else
-        error(expr, "incorrect number of arguments in function application: got %, expected %", args.size(), fn_type->num_ops() - 1);
+        error(expr, "incorrect number of arguments in function application: got {}, expected {}", args.size(), fn_type->num_ops() - 1);
 }
 
 void BlockExprBase::check(TypeSema& sema) const {
@@ -555,7 +555,7 @@ void BlockExprBase::check(TypeSema& sema) const {
 
     for (const auto& local : locals_) {
         if (local->is_mut() && !local->is_written())
-            warning(local, "variable '%' declared mutable but variable is never written to", local->symbol());
+            warning(local, "variable '{}' declared mutable but variable is never written to", local->symbol());
     }
 }
 
@@ -651,7 +651,7 @@ void LetStmt::check(TypeSema& sema) const {
         if (!init_type->is_known())
             error(this, "cannot infer type for let initializer");
         else if (!is_subtype(init_type, type))
-            error(this, "let pattern type does not match initializer type, got '%' and '%'", type, init_type);
+            error(this, "let pattern type does not match initializer type, got '{}' and '{}'", type, init_type);
     } else {
         auto id_ptrn = ptrn()->isa<IdPtrn>();
         // Ptrns and non-mutable variables need an initialization
@@ -664,7 +664,7 @@ void LetStmt::check(TypeSema& sema) const {
 
 void check_correct_asm_type(const Type* t, const Expr *expr) {
     if (!t->isa<PrimType>() && !t->isa<PtrType>() && !t->isa<SimdType>())
-        error(expr, "asm operand must have primitive, pointer or SIMD type, but it is %");
+        error(expr, "asm operand must have primitive, pointer or SIMD type, but it is {}");
 }
 
 void AsmStmt::check(TypeSema& sema) const {
@@ -679,7 +679,7 @@ void AsmStmt::check(TypeSema& sema) const {
 
     for (const auto& option : options()) {
         if (option != "volatile" && option != "alignstack" && option != "intel")
-            error(this, "unsupported inline assembly option '%', only 'volatile', 'alignstack' and 'intel' supported", option);
+            error(this, "unsupported inline assembly option '{}', only 'volatile', 'alignstack' and 'intel' supported", option);
     }
 }
 
