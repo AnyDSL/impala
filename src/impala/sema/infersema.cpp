@@ -342,7 +342,7 @@ void type_inference(Init& init, const Module* module) {
         sema->check(module);
     }
 
-    DLOG("iterations needed for type inference: %", i);
+    DLOG("iterations needed for type inference: {}", i);
 }
 
 //------------------------------------------------------------------------------
