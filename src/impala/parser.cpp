@@ -332,7 +332,7 @@ bool Parser::expect(TokenTag tok, const std::string& context) {
 }
 
 void Parser::error(const std::string& what, const std::string& context, const Token& tok) {
-    impala::error(tok.location(), "expected %, got '%'%", what, tok,
+    impala::error(tok.location(), "expected {}, got '{}'{}", what, tok,
             context.empty() ? "" : std::string(" while parsing ") + context.c_str());
 }
 
@@ -1064,7 +1064,7 @@ char Parser::char_value(const char*& p) {
         case '\\': value = '\\'; break;
         default:
             // TODO make location precise inside strings, reduce redundancy for single chars
-            impala::error(lookahead().location(), "expected valid escape sequence, got '\\%' while parsing %", *(p-1), lookahead());
+            impala::error(lookahead().location(), "expected valid escape sequence, got '\\{}' while parsing {}", *(p-1), lookahead());
         }
     } else
         value = *(p-1);

@@ -228,7 +228,7 @@ Token Lexer::lex() {
         }
 
         // invalid input char
-        error(curr(), "invalid input character '%'", (char) next());
+        error(curr(), "invalid input character '{}'", (char) next());
         continue;
 
 l_dec:                                      // [0-9_]*
@@ -272,14 +272,14 @@ Token Lexer::lex_suffix(std::string& str, bool floating) {
         if (floating) {
             auto lit = Token::sym2flit(suffix);
             if (lit == Token::TYPE_error) {
-                error(location(), "invalid suffix on floating constant '%'", suffix);
+                error(location(), "invalid suffix on floating constant '{}'", suffix);
                 return {location(), tok, str};
             }
             tok = lit;
         } else {
             auto lit = Token::sym2lit(suffix);
             if (lit == Token::TYPE_error) {
-                error(location(), "invalid suffix on constant '%'", suffix);
+                error(location(), "invalid suffix on constant '{}'", suffix);
                 return {location(), tok, str};
             }
             tok = lit;
@@ -291,7 +291,7 @@ Token Lexer::lex_suffix(std::string& str, bool floating) {
 }
 
 Token Lexer::literal_error(std::string& str, bool floating) {
-    error(curr(), "invalid constant '%'", str);
+    error(curr(), "invalid constant '{}'", str);
     return lex_suffix(str, floating);
 }
 
