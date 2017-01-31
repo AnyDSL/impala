@@ -2,7 +2,17 @@
 # in order to compile and link against .impala files
 #
 # IMPALA_BIN
-# MACRO wrap_impala_sources()
+# MACRO wrap_impala_sources(
+#     BACKEND cpu|opencl|nvvm|cuda|...
+#     [ OUTPUT_NAME basename ]
+#     [ CLANG_FLAGS --flag1 --flag2 ...]
+#     [ CLANG_FLAGS_RELEASE --flag1 --flag2 ...]
+#     [ CLANG_FLAGS_DEBUG --flag1 --flag2 ...]
+#     [ IMPALA_FLAGS -emit-c-interface ...]
+#     [ IMPALA_FLAGS_RELEASE -flag1 -flag2 ...]
+#     [ IMPALA_FLAGS_DEBUG -flag1 -flag2 ...]
+#     FILES file1.impala file2.impala
+# )
 # IMPALA_RUNTIME_LIBRARIES
 # IMPALA_FOUND
 
