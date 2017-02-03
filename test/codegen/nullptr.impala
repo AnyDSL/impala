@@ -6,9 +6,9 @@ static int_nullptr = 0 as &int;
 
 fn check(p: &int) -> () {
     if p == int_nullptr {
-        println("null");
+        println(&"null");
     } else {
-        println("not null");
+        println(&"not null");
     }
 }
 

@@ -3,6 +3,6 @@ extern "C" {
 }
 
 fn main() -> int {
-    println("");
+    println(&"");
     if true { 0 } else { 1 }
 }

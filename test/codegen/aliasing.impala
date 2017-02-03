@@ -1,4 +1,4 @@
-fn foo(mut p: &int, mut q: &int) -> int {
+fn foo(p: &mut int, q: &mut int) -> int {
     let x = *p;
     *p = 1;
     *q = 2;
@@ -7,5 +7,5 @@ fn foo(mut p: &int, mut q: &int) -> int {
 
 fn main() -> int {
     let mut i = 23;
-    if foo(&i, &i) == 23 { 0 } else { 1 }
+    if foo(&mut i, &mut i) == 23 { 0 } else { 1 }
 }

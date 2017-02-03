@@ -4,7 +4,7 @@ fn take_address(&&int) -> () {}
 
 fn main() -> int {
     let mut i = 23;
-    let mut p = &i;
+    let mut p = &mut i;
     take_address(&p);
 
     while i < 42 {

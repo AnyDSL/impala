@@ -10,16 +10,16 @@ fn call_me(body: fn() -> ()) -> () {
     body();
 }
 
-fn test(mut i: &i32, body: fn() -> ()) -> () @{
+fn test(i: &mut i32, body: fn() -> ()) -> () @{
     call_me(|| {
         @body();
         *i = 42;
     });
 }
 
-extern fn cleanup_bug(i: &i32) -> () @{
+extern fn cleanup_bug(i: &mut i32) -> () @{
     for test(i) {
-        let mut thing : Thing;
+        let thing = Thing { count: 42 };
 
         // Only breaks if it is a 'while' loop
         while !is_empty(&thing) {
