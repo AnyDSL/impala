@@ -1010,7 +1010,7 @@ const Type* IdPtrn::check(InferSema& sema) const {
  * statements
  */
 
-void ExprStmt::check(InferSema& sema) const { sema.rvalue(expr()); }
+void ExprStmt::check(InferSema& sema) const { sema.check(expr()); }
 void ItemStmt::check(InferSema& sema) const { sema.check(item()); }
 
 void LetStmt::check(InferSema& sema) const {

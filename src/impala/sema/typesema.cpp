@@ -316,6 +316,7 @@ void PrefixExpr::check(TypeSema& sema) const {
             return;
         case INC:
         case DEC: {
+            rhs()->write();
             sema.expect_lvalue(rhs(), "prefix '{}'", tok2str(this));
             sema.expect_num(rhs(),    "prefix '{}'", tok2str(this));
             return;
@@ -413,6 +414,7 @@ void InfixExpr::check(TypeSema& sema) const {
 }
 
 void PostfixExpr::check(TypeSema& sema) const {
+    lhs()->write();
     sema.check(lhs());
     sema.expect_num(lhs(),    "postfix '{}'", tok2str(this));
     sema.expect_lvalue(lhs(), "postfix '{}'", tok2str(this));
@@ -553,7 +555,9 @@ void MapExpr::check(TypeSema& sema) const {
     if (ltype->isa<FnType>())
         return sema.check_call(lhs(), args());
 
-    ltype = sema.expect_lvalue(lhs(), "left-hand side of map expression");
+    if (auto lvalue = ltype->isa<LValueType>())
+        ltype = lvalue->pointee();
+
     if (ltype->isa<ArrayType>()) {
         if (num_args() == 1)
             sema.expect_int(arg(0), "for array subscript");
