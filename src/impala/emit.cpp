@@ -353,11 +353,11 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     return cg.world().convert(thorin_type, def, location());
 }
 
-Value LValue2RValueExpr::lemit(CodeGen& cg) const {
+Value Ref2RValueExpr::lemit(CodeGen& cg) const {
     return cg.lemit(src());
 }
 
-const Def* LValue2RValueExpr::remit(CodeGen& cg) const {
+const Def* Ref2RValueExpr::remit(CodeGen& cg) const {
     return cg.lemit(this).load(location());
 }
 

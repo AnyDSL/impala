@@ -21,8 +21,8 @@ public:
     bool nossa() const { return nossa_; }
     const Type* scalar_type(const Expr* expr) {
         auto result = expr->type();
-        if (auto lvalue = result->isa<LValueType>())
-            result = lvalue->pointee();
+        if (auto ref = result->isa<RefType>())
+            result = ref->pointee();
         if (auto simd_type = result->isa<SimdType>())
             result = simd_type->elem_type();
         return result;
@@ -57,8 +57,10 @@ public:
     const Type* expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
         std::ostringstream os;
         thorin::streamf(os, fmt, args...);
-        if (auto lvalue = expr->type()->isa<LValueType>())
-            return lvalue->pointee();
+        if (auto ref = expr->type()->isa<RefType>()) {
+            if (ref->is_mut())
+                return ref->pointee();
+        }
         error(expr, "lvalue required for {}", os.str());
         return expr->type();
     }
@@ -386,8 +388,8 @@ void InfixExpr::check(TypeSema& sema) const {
             lhs()->write();
             sema.expect_lvalue(lhs(), "assignment");
             auto ltype = lhs()->type();
-            if (auto lvalue = lhs()->type()->isa<LValueType>())
-                ltype = lvalue->pointee();
+            if (auto ref = lhs()->type()->isa<RefType>())
+                ltype = ref->pointee();
             match_type(ltype, rhs()->type());
             return;
         }
@@ -457,17 +459,17 @@ void ExplicitCastExpr::check(TypeSema& sema) const {
     CastExpr::check(sema);
 }
 
-void LValue2RValueExpr::check(TypeSema& sema) const {
+void Ref2RValueExpr::check(TypeSema& sema) const {
     auto src_type = sema.check(src());
     auto dst_type = type();
 
-    if (auto lvalue = src_type->isa<LValueType>())
-        src_type = lvalue->pointee();
+    if (auto ref = src_type->isa<RefType>())
+        src_type = ref->pointee();
     else
-        error(this, "source type of an lvalue-to-rvalue cast must be an lvalue, got '{}'", src_type);
+        error(this, "source type of an ref-to-rvalue cast must be an ref, got '{}'", src_type);
 
     if (src_type->is_known() && dst_type->is_known() && src_type != dst_type)
-        error(this, "invalid source and destination types for lvalue-to-rvalue cast, got '{}' and '{}'", src_type, dst_type);
+        error(this, "invalid source and destination types for ref-to-rvalue cast, got '{}' and '{}'", src_type, dst_type);
 }
 
 void TupleExpr::check(TypeSema& sema) const {
@@ -559,8 +561,8 @@ void MapExpr::check(TypeSema& sema) const {
     if (ltype->isa<FnType>())
         return sema.check_call(lhs(), args());
 
-    if (auto lvalue = ltype->isa<LValueType>())
-        ltype = lvalue->pointee();
+    if (auto ref = ltype->isa<RefType>())
+        ltype = ref->pointee();
 
     if (ltype->isa<ArrayType>()) {
         if (num_args() == 1)

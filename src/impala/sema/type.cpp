@@ -85,9 +85,9 @@ bool is_subtype(const Type* dst, const Type* src) {
             result &= src->as<DefiniteArrayType>()->dim() == dst_def_array->dim();
         else if (auto dst_simd_type = dst->isa<SimdType>())
             result &= src->as<SimdType>()->dim() == dst_simd_type->dim();
-        else if (auto dst_ref_type = dst->isa<RefType>())
-            result &=  src->as<RefType>()->is_mut() == dst_ref_type->is_mut()
-                    && src->as<RefType>()->addr_space() == dst_ref_type->addr_space();
+        else if (auto dst_ref_type = dst->isa<RefTypeBase>())
+            result &=  src->as<RefTypeBase>()->is_mut() == dst_ref_type->is_mut()
+                    && src->as<RefTypeBase>()->addr_space() == dst_ref_type->addr_space();
 
         for (size_t i = 0, e = dst->num_ops(); result && i != e; ++i)
             result &= is_subtype(dst->op(i), src->op(i));
@@ -108,7 +108,7 @@ bool is_strict_subtype(const Type* dst, const Type* src) {
  * hash
  */
 
-uint64_t RefType::vhash() const {
+uint64_t RefTypeBase::vhash() const {
     return thorin::hash_combine(Type::vhash(), ((uint64_t)addr_space() << 1) | uint64_t(is_mut()));
 }
 
@@ -118,10 +118,10 @@ uint64_t RefType::vhash() const {
  * equal
  */
 
-bool RefType::equal(const Type* other) const {
+bool RefTypeBase::equal(const Type* other) const {
     return Type::equal(other)
-        && this->is_mut() == other->as<RefType>()->is_mut()
-        && this->addr_space() == other->as<RefType>()->addr_space();
+        && this->is_mut() == other->as<RefTypeBase>()->is_mut()
+        && this->addr_space() == other->as<RefTypeBase>()->addr_space();
 }
 
 bool UnknownType::equal(const Type* other) const { return this == other; }
@@ -161,7 +161,7 @@ std::ostream& Var::stream(std::ostream& os) const {
 
 std::ostream& App::stream(std::ostream& os) const { return streamf(os, "{}[{}]", callee(), arg()); }
 
-std::ostream& RefType::stream(std::ostream& os) const {
+std::ostream& RefTypeBase::stream(std::ostream& os) const {
     os << prefix();
     if (addr_space() != 0)
         os << '[' << addr_space() << ']';
@@ -195,7 +195,7 @@ const Type* SimdType           ::vrebuild(TypeTable& to, Types ops) const { retu
 const Type* IndefiniteArrayType::vrebuild(TypeTable& to, Types ops) const { return to.indefinite_array_type(ops[0]); }
 const Type* BorrowedPtrType    ::vrebuild(TypeTable& to, Types ops) const { return to.borrowed_ptr_type(ops[0], is_mut(), addr_space()); }
 const Type* OwnedPtrType       ::vrebuild(TypeTable& to, Types ops) const { return to.   owned_ptr_type(ops[0], addr_space()); }
-const Type* LValueType         ::vrebuild(TypeTable& to, Types ops) const { return to.      lvalue_type(ops[0], addr_space()); }
+const Type* RefType            ::vrebuild(TypeTable& to, Types ops) const { return to.      ref_type(ops[0], is_mut(), addr_space()); }
 const Type* NoRetType          ::vrebuild(TypeTable&,    Types    ) const { return this; }
 const Type* UnknownType        ::vrebuild(TypeTable&,    Types    ) const { return this; }
 
@@ -225,8 +225,8 @@ const Type* OwnedPtrType::vreduce(int depth, const Type* type, Type2Type& map) c
     return typetable().owned_ptr_type(pointee()->reduce(depth, type, map), addr_space());
 }
 
-const Type* LValueType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return typetable().lvalue_type(pointee()->reduce(depth, type, map), addr_space());
+const Type* RefType::vreduce(int depth, const Type* type, Type2Type& map) const {
+    return typetable().ref_type(pointee()->reduce(depth, type, map), is_mut(), addr_space());
 }
 
 const Type* FnType::vreduce(int depth, const Type* type, Type2Type& map) const {

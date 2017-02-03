@@ -21,10 +21,10 @@ enum Tag {
     Tag_impl,
     Tag_indefinite_array,
     Tag_lambda,
-    Tag_lvalue,
     Tag_noret,
     Tag_owned_ptr,
     Tag_pi,
+    Tag_ref,
     Tag_simd,
     Tag_struct,
     Tag_tuple,
@@ -89,10 +89,10 @@ bool is_strict_subtype(const Type* dst, const Type* src);
 
 //------------------------------------------------------------------------------
 
-/// Common base Type for PtrType%s and LValueType.
-class RefType : public Type {
+/// Common base Type for PtrType%s and RefType.
+class RefTypeBase : public Type {
 protected:
-    RefType(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
+    RefTypeBase(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
         : Type(typetable, tag, {pointee})
         , mut_(mut)
         , addr_space_(addr_space)
@@ -116,10 +116,10 @@ private:
 };
 
 /// Pointer @p Type.
-class PtrType : public RefType {
+class PtrType : public RefTypeBase {
 protected:
     PtrType(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
-        : RefType(typetable, tag, {pointee}, mut, addr_space)
+        : RefTypeBase(typetable, tag, {pointee}, mut, addr_space)
     {}
 
     std::ostream& stream_ptr_type(std::ostream&, std::string prefix, int addr_space, const Type* ref_type) const;
@@ -156,14 +156,14 @@ private:
     virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 };
 
-class LValueType : public RefType {
+class RefType : public RefTypeBase {
 protected:
-    LValueType(TypeTable& typetable, const Type* pointee, int addr_space)
-        : RefType(typetable, Tag_lvalue, {pointee}, true, addr_space)
+    RefType(TypeTable& typetable, const Type* pointee, bool mut, int addr_space)
+        : RefTypeBase(typetable, Tag_ref, {pointee}, mut, addr_space)
     {}
 
 public:
-    virtual std::string prefix() const override { return "lvalue of "; }
+    virtual std::string prefix() const override { return is_mut() ? "lvalue of " : "reference of "; }
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;

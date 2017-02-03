@@ -89,12 +89,12 @@ public:
 
     const Type* rvalue(const Expr* expr) {
         check(expr);
-        return expr->type()->isa<LValueType>() ? LValue2RValueExpr::create(expr)->type() : expr->type();
+        return expr->type()->isa<RefType>() ? Ref2RValueExpr::create(expr)->type() : expr->type();
     }
 
     const Type* rvalue(const Expr* expr, const Type* t) { return constrain(expr, rvalue(expr), t); }
-    const Type* wrap_lvalue(const LValueType* lvalue, const Type* type) {
-        return lvalue ? lvalue_type(type, lvalue->addr_space()) : type;
+    const Type* wrap_ref(const RefType* ref, const Type* type) {
+        return ref ? ref_type(type, ref->is_mut(), ref->addr_space()) : type;
     }
 
 private:
@@ -210,9 +210,9 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
 }
 
 const Type* InferSema::coerce(const Type* dst, const Expr* src) {
-    auto lvalue = dst->isa<LValueType>();
-    if (lvalue)
-        dst = lvalue->pointee();
+    auto ref = dst->isa<RefType>();
+    if (ref)
+        dst = ref->pointee();
     //else if (dst->isa<BorrowedPtrType>() && !src->type()->isa<PtrType>()) {
         //// automatically take address of src if dst is a BorrowedPtrType
         //src = PrefixExpr::create_addrof(src);
@@ -227,9 +227,10 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
         check(src);
     }
 
+    // use wrap_ref here
     auto type = unify(dst, src->type());
-    if (lvalue)
-        return lvalue_type(type, lvalue->addr_space());
+    if (ref)
+        return ref_type(type, ref->is_mut(), ref->addr_space());
     return type;
 }
 
@@ -614,7 +615,7 @@ const Type* FnExpr::check(InferSema& sema) const {
 const Type* PathExpr::check(InferSema& sema) const {
     if (value_decl()) {
         auto type = sema.find_type(value_decl());
-        return value_decl()->is_mut() ? sema.lvalue_type(type) : type;
+        return sema.ref_type(type, value_decl()->is_mut(), 0);
     }
 
     return sema.type_error();
@@ -624,14 +625,14 @@ const Type* PrefixExpr::check(InferSema& sema) const {
     switch (tag()) {
         case AND: {
             auto type = sema.check(rhs());
-            if (auto lvalue = type->isa<LValueType>())
-                return sema.borrowed_ptr_type(lvalue->pointee(), false, lvalue->addr_space());
+            if (auto ref = type->isa<RefType>())
+                return sema.borrowed_ptr_type(ref->pointee(), false, ref->addr_space());
             return sema.borrowed_ptr_type(type, false, 0);
         }
         case MUT: {
             auto type = sema.check(rhs());
-            if (auto lvalue = type->isa<LValueType>())
-                return sema.borrowed_ptr_type(lvalue->pointee(), true, lvalue->addr_space());
+            if (auto ref = type->isa<RefType>())
+                return sema.borrowed_ptr_type(ref->pointee(), true, ref->addr_space());
             return sema.borrowed_ptr_type(type, true, 0);
         }
         case TILDE:
@@ -639,10 +640,7 @@ const Type* PrefixExpr::check(InferSema& sema) const {
         case MUL: {
             auto type = sema.rvalue(rhs());
             if (auto ptr_type = type->isa<PtrType>())
-                if (ptr_type->is_mut())
-                    return sema.lvalue_type(ptr_type->pointee(), ptr_type->addr_space());
-                else
-                    return ptr_type->pointee();
+                return sema.ref_type(ptr_type->pointee(), ptr_type->is_mut(), ptr_type->addr_space());
             else {
                 assert(false && "what todo now?");
                 return type;
@@ -717,8 +715,8 @@ const Type* ImplicitCastExpr::check(InferSema& sema) const {
     return type();
 }
 
-const Type* LValue2RValueExpr::check(InferSema& sema) const {
-    return sema.check(src())->as<LValueType>()->pointee();
+const Type* Ref2RValueExpr::check(InferSema& sema) const {
+    return sema.check(src())->as<RefType>()->pointee();
 }
 
 const Type* DefiniteArrayExpr::check(InferSema& sema) const {
@@ -819,7 +817,7 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, c
 }
 
 bool is_ptr(const Type* t) {
-    return t->isa<PtrType>() || (t->isa<LValueType>() && t->as<LValueType>()->pointee()->isa<PtrType>());
+    return t->isa<PtrType>() || (t->isa<RefType>() && t->as<RefType>()->pointee()->isa<PtrType>());
 }
 
 const Type* FieldExpr::check(InferSema& sema) const {
@@ -830,18 +828,18 @@ const Type* FieldExpr::check(InferSema& sema) const {
     }
 
     // TODO share with MapExpr
-    auto lvalue = ltype->isa<LValueType>();
-    ltype = lvalue ? lvalue->pointee() : ltype;
+    auto ref = ltype->isa<RefType>();
+    ltype = ref ? ref->pointee() : ltype;
 
     if (auto struct_type = ltype->isa<StructType>()) {
         if (auto field_decl = struct_type->struct_decl()->field_decl(symbol())) {
-            if (lvalue)
-                LValue2RValueExpr::create(lhs())->type();
-            return sema.wrap_lvalue(lvalue, struct_type->op(field_decl->index()));
+            if (ref)
+                Ref2RValueExpr::create(lhs())->type();
+            return sema.wrap_ref(ref, struct_type->op(field_decl->index()));
         }
     }
 
-    return sema.wrap_lvalue(lvalue, ltype->is_known() ? sema.type_error() : sema.find_type(this));
+    return sema.wrap_ref(ref, ltype->is_known() ? sema.type_error() : sema.find_type(this));
 }
 
 const Type* TypeAppExpr::check(InferSema& sema) const {
@@ -878,8 +876,8 @@ const Type* MapExpr::check(InferSema& sema) const {
     }
 
     // TODO share with FieldExpr
-    auto lvalue = ltype->isa<LValueType>();
-    ltype = lvalue ? lvalue->pointee() : ltype;
+    auto ref = ltype->isa<RefType>();
+    ltype = ref ? ref->pointee() : ltype;
 
     for (const auto& arg : args())
         sema.rvalue(arg.get());
@@ -888,20 +886,20 @@ const Type* MapExpr::check(InferSema& sema) const {
         return type_;
 
     if (auto array = ltype->isa<ArrayType>())
-        return sema.wrap_lvalue(lvalue, array->elem_type());
+        return sema.wrap_ref(ref, array->elem_type());
 
     if (auto tuple_type = ltype->isa<TupleType>()) {
         if (auto lit = arg(0)->isa<LiteralExpr>())
-            return sema.wrap_lvalue(lvalue, tuple_type->op(lit->get_u64()));
+            return sema.wrap_ref(ref, tuple_type->op(lit->get_u64()));
         else
-            return sema.wrap_lvalue(lvalue, sema.type_error());
+            return sema.wrap_ref(ref, sema.type_error());
     }
 
     if (auto simd_type = ltype->isa<SimdType>())
-        return sema.wrap_lvalue(lvalue, simd_type->elem_type());
+        return sema.wrap_ref(ref, simd_type->elem_type());
 
-    if (lvalue)
-        ltype = LValue2RValueExpr::create(lhs())->type();
+    if (ref)
+        ltype = Ref2RValueExpr::create(lhs())->type();
 
     if (ltype->isa<Lambda>()) {
         if (!lhs_->isa<TypeAppExpr>())
