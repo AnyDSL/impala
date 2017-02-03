@@ -1250,6 +1250,7 @@ public:
     enum Tag {
 #define IMPALA_PREFIX(tok, str, prec) tok = Token:: tok,
 #include "impala/tokenlist.h"
+        MUT
     };
 
     PrefixExpr(Location location, Tag tag, const Expr* rhs)

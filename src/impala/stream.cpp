@@ -295,6 +295,7 @@ std::ostream& PrefixExpr::stream(std::ostream& os) const {
     switch (tag()) {
 #define IMPALA_PREFIX(tok, str, rprec) case tok: op = str; break;
 #include "impala/tokenlist.h"
+        case MUT: op = "&mut "; break;
         default: THORIN_UNREACHABLE;
     }
 

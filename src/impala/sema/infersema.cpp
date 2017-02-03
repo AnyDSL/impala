@@ -97,13 +97,6 @@ public:
         return lvalue ? lvalue_type(type, lvalue->addr_space()) : type;
     }
 
-    const LValueType* extract_pointee(const Type*& type) {
-        auto lvalue = type->isa<LValueType>();
-        if (lvalue)
-            type = lvalue->pointee();
-        return lvalue;
-    }
-
 private:
     /// Used for union/find - see https://en.wikipedia.org/wiki/Disjoint-set_data_structure#Disjoint-set_forests .
     struct Representative {
@@ -629,11 +622,17 @@ const Type* PathExpr::check(InferSema& sema) const {
 
 const Type* PrefixExpr::check(InferSema& sema) const {
     switch (tag()) {
-        case AND:    {
+        case AND: {
+            auto type = sema.check(rhs());
+            if (auto lvalue = type->isa<LValueType>())
+                return sema.borrowed_ptr_type(lvalue->pointee(), false, lvalue->addr_space());
+            return sema.borrowed_ptr_type(type, false, 0);
+        }
+        case MUT: {
             auto type = sema.check(rhs());
             if (auto lvalue = type->isa<LValueType>())
                 return sema.borrowed_ptr_type(lvalue->pointee(), true, lvalue->addr_space());
-            return sema.borrowed_ptr_type(type, false, 0);
+            return sema.borrowed_ptr_type(type, true, 0);
         }
         case TILDE:
             return sema.owned_ptr_type(sema.rvalue(rhs()), 0);
@@ -819,14 +818,19 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, c
     return type_error();
 }
 
+bool is_ptr(const Type* t) {
+    return t->isa<PtrType>() || (t->isa<LValueType>() && t->as<LValueType>()->pointee()->isa<PtrType>());
+}
+
 const Type* FieldExpr::check(InferSema& sema) const {
     auto ltype = sema.check(lhs());
-    if (ltype->isa<PtrType>()) {
+    if (is_ptr(ltype)) {
         PrefixExpr::create_deref(lhs_.get());
         ltype = sema.check(lhs());
     }
 
-    auto lvalue = sema.extract_pointee(ltype);
+    auto lvalue = ltype->isa<LValueType>();
+    ltype = lvalue ? lvalue->pointee() : ltype;
 
     if (auto struct_type = ltype->isa<StructType>()) {
         if (auto field_decl = struct_type->struct_decl()->field_decl(symbol())) {

@@ -306,7 +306,11 @@ void PrefixExpr::check(TypeSema& sema) const {
 
     switch (tag()) {
         case AND:
-            sema.expect_lvalue(rhs(), "unary '&' operand");
+            rhs()->take_address();
+            return;
+        case MUT:
+            rhs()->write();
+            sema.expect_lvalue(rhs(), "unary '&mut' operand");
             rhs()->take_address();
             return;
         case TILDE:
@@ -314,27 +318,24 @@ void PrefixExpr::check(TypeSema& sema) const {
         case MUL:
             sema.expect_ptr(rhs(), "unary '*'");
             return;
-        case INC:
-        case DEC: {
+        case INC: case DEC: {
             rhs()->write();
             sema.expect_lvalue(rhs(), "prefix '{}'", tok2str(this));
             sema.expect_num(rhs(),    "prefix '{}'", tok2str(this));
             return;
         }
-        case ADD:
-        case SUB:
+        case ADD: case SUB:
             sema.expect_num(rhs(), "unary '{}'", tok2str(this));
             return;
         case NOT:
             sema.expect_int_or_bool(rhs(), "unary '!'");
             return;
-        case HLT:
-        case RUN:
+        case HLT: case RUN:
             if (!rhs()->isa<MapExpr>())
                 error(this, "function call expected after partial evaluator command {}", (TokenTag)tag());
             return;
-        default:
-            return;
+        case OR: case OROR:
+            THORIN_UNREACHABLE;
     }
 
     THORIN_UNREACHABLE;
