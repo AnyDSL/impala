@@ -428,6 +428,9 @@ void CastExpr::check(TypeSema& sema) const {
     auto src_type = sema.check(src());
     auto dst_type = type();
 
+    if (dst_type->isa<BorrowedPtrType>() && dst_type->as<BorrowedPtrType>()->is_mut())
+        src()->write();
+
     // TODO be consistent: dst is first argument, src ist second argument
     auto ptr_to_ptr     = [&] (const Type* a, const Type* b) { return a->isa<PtrType>() && b->isa<PtrType>(); };
     auto int_to_int     = [&] (const Type* a, const Type* b) { return is_int(a)         && is_int(b);         };

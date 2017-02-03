@@ -829,6 +829,7 @@ const Type* FieldExpr::check(InferSema& sema) const {
         ltype = sema.check(lhs());
     }
 
+    // TODO share with MapExpr
     auto lvalue = ltype->isa<LValueType>();
     ltype = lvalue ? lvalue->pointee() : ltype;
 
@@ -871,36 +872,36 @@ const Type* MapExpr::check(InferSema& sema) const {
         type_ = sema.unknown_type();
 
     auto ltype = sema.check(lhs());
-    if (ltype->isa<PtrType>()) {
-        PrefixExpr::create_deref(lhs());
+    if (is_ptr(ltype)) {
+        PrefixExpr::create_deref(lhs_.get());
         ltype = sema.check(lhs());
     }
+
+    // TODO share with FieldExpr
+    auto lvalue = ltype->isa<LValueType>();
+    ltype = lvalue ? lvalue->pointee() : ltype;
 
     for (const auto& arg : args())
         sema.rvalue(arg.get());
 
-    // propagate lvalue for array, tuple and simd types
-    if (auto lvalue = ltype->isa<LValueType>()) {
-        auto pointee = lvalue->pointee();
+    if (ltype->isa<UnknownType>())
+        return type_;
 
-        if (auto array = pointee->isa<ArrayType>())
-            return sema.lvalue_type(array->elem_type(), lvalue->addr_space());
+    if (auto array = ltype->isa<ArrayType>())
+        return sema.wrap_lvalue(lvalue, array->elem_type());
 
-        if (auto tuple_type = pointee->isa<TupleType>()) {
-            if (auto lit = arg(0)->isa<LiteralExpr>())
-                return sema.lvalue_type(tuple_type->op(lit->get_u64()), lvalue->addr_space());
-            else
-                return sema.type_error();
-        }
-
-        if (auto simd_type = pointee->isa<SimdType>())
-            return sema.lvalue_type(simd_type->elem_type(), lvalue->addr_space());
-
-        if (pointee->isa<UnknownType>())
-            return type_;
-
-        ltype = LValue2RValueExpr::create(lhs())->type();
+    if (auto tuple_type = ltype->isa<TupleType>()) {
+        if (auto lit = arg(0)->isa<LiteralExpr>())
+            return sema.wrap_lvalue(lvalue, tuple_type->op(lit->get_u64()));
+        else
+            return sema.wrap_lvalue(lvalue, sema.type_error());
     }
+
+    if (auto simd_type = ltype->isa<SimdType>())
+        return sema.wrap_lvalue(lvalue, simd_type->elem_type());
+
+    if (lvalue)
+        ltype = LValue2RValueExpr::create(lhs())->type();
 
     if (ltype->isa<Lambda>()) {
         if (!lhs_->isa<TypeAppExpr>())
@@ -910,18 +911,6 @@ const Type* MapExpr::check(InferSema& sema) const {
 
     if (ltype->isa<FnType>())
         return sema.check_call(lhs(), args(), type_);
-
-    if (ltype->isa<UnknownType>()) {
-        return type_;
-    } else {
-        if (auto array = ltype->isa<ArrayType>())
-            return array->elem_type();
-        else if (auto tuple_type = ltype->isa<TupleType>()) {
-            if (auto lit = arg(0)->isa<LiteralExpr>())
-                return tuple_type->op(lit->get_u64());
-        } else if (auto simd_type = ltype->isa<SimdType>())
-            return simd_type->elem_type();
-    }
 
     return sema.type_error();
 }
