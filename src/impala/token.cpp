@@ -104,7 +104,7 @@ Token::Token(Location location, Tag tag, const std::string& str)
     if (err)
         switch (tag_) {
 #define IMPALA_LIT(itype, atype) \
-            case LIT_##itype: error(location, "literal out of range for type '%'," #itype); return;
+            case LIT_##itype: error(location, "literal out of range for type '{}'," #itype); return;
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
