@@ -1456,6 +1456,8 @@ public:
 private:
     void check(TypeSema&) const override;
     const Type* check(InferSema&) const override;
+    thorin::Value lemit(CodeGen&) const override;
+    const thorin::Def* remit(CodeGen&) const override;
 };
 
 class DefiniteArrayExpr : public Expr, public Args {

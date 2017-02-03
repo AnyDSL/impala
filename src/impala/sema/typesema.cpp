@@ -310,8 +310,8 @@ void PrefixExpr::check(TypeSema& sema) const {
             return;
         case MUT:
             rhs()->write();
-            sema.expect_lvalue(rhs(), "unary '&mut' operand");
             rhs()->take_address();
+            sema.expect_lvalue(rhs(), "unary '&mut' operand");
             return;
         case TILDE:
             return;

@@ -152,14 +152,17 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
 Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
     auto thorin_type = cg.convert(type());
 
-    if (is_mut()) {
-        if (is_address_taken())
-            value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), debug()));
-        else
-            value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str());
-
+    auto do_init = [&]() {
         if (init)
             value_.store(init, location());
+    };
+
+    if (is_address_taken()) {
+        value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), debug()));
+        do_init();
+    } else if (is_mut()) {
+        value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str());
+        do_init();
     } else
         value_ = Value::create_val(cg, init);
 
@@ -350,6 +353,14 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     return cg.world().convert(thorin_type, def, location());
 }
 
+Value LValue2RValueExpr::lemit(CodeGen& cg) const {
+    return cg.lemit(src());
+}
+
+const Def* LValue2RValueExpr::remit(CodeGen& cg) const {
+    return cg.lemit(this).load(location());
+}
+
 Value PathExpr::lemit(CodeGen& cg) const {
     return cg.emit(value_decl(), nullptr);
 }
@@ -390,9 +401,15 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             //return slot;
 
         }
+        case MUT: {
+            auto var = cg.lemit(rhs());
+            assert(var.tag() == Value::PtrRef);
+            return var.def();
+        }
 
         case RUN: return cg.remit(rhs(), MapExpr::Run, location());
         case HLT: return cg.remit(rhs(), MapExpr::Hlt, location());
+        case OR: case OROR: THORIN_UNREACHABLE;
         default:  return cg.lemit(this).load(location());
     }
 }
@@ -529,7 +546,6 @@ const Def* TypeAppExpr::remit(CodeGen& /*cg*/) const {
 }
 
 Value MapExpr::lemit(CodeGen& cg) const {
-    assert(lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<SimdType>());
     auto agg = cg.lemit(lhs());
     return Value::create_agg(agg, cg.remit(arg(0)));
 }
