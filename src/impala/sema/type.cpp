@@ -109,7 +109,7 @@ bool is_strict_subtype(const Type* dst, const Type* src) {
  */
 
 uint64_t RefType::vhash() const {
-    return thorin::hash_combine(Type::vhash(), (uint64_t)addr_space());
+    return thorin::hash_combine(Type::vhash(), ((uint64_t)addr_space() << 1) | uint64_t(is_mut()));
 }
 
 //------------------------------------------------------------------------------
@@ -119,19 +119,12 @@ uint64_t RefType::vhash() const {
  */
 
 bool RefType::equal(const Type* other) const {
-    if (!Type::equal(other))
-        return false;
-    auto ptr = other->as<RefType>();
-    return ptr->addr_space() == addr_space();
+    return Type::equal(other)
+        && this->is_mut() == other->as<RefType>()->is_mut()
+        && this->addr_space() == other->as<RefType>()->addr_space();
 }
 
 bool UnknownType::equal(const Type* other) const { return this == other; }
-
-//------------------------------------------------------------------------------
-
-/*
- * prefix
- */
 
 //------------------------------------------------------------------------------
 
@@ -200,8 +193,7 @@ const Type* FnType             ::vrebuild(TypeTable& to, Types ops) const { retu
 const Type* DefiniteArrayType  ::vrebuild(TypeTable& to, Types ops) const { return to.  definite_array_type(ops[0], dim()); }
 const Type* SimdType           ::vrebuild(TypeTable& to, Types ops) const { return to.            simd_type(ops[0], dim()); }
 const Type* IndefiniteArrayType::vrebuild(TypeTable& to, Types ops) const { return to.indefinite_array_type(ops[0]); }
-const Type* BorrowedPtrType    ::vrebuild(TypeTable& to, Types ops) const { return to.borrowed_ptr_type(ops[0], addr_space()); }
-const Type* MutPtrType         ::vrebuild(TypeTable& to, Types ops) const { return to.     mut_ptr_type(ops[0], addr_space()); }
+const Type* BorrowedPtrType    ::vrebuild(TypeTable& to, Types ops) const { return to.borrowed_ptr_type(ops[0], is_mut(), addr_space()); }
 const Type* OwnedPtrType       ::vrebuild(TypeTable& to, Types ops) const { return to.   owned_ptr_type(ops[0], addr_space()); }
 const Type* LValueType         ::vrebuild(TypeTable& to, Types ops) const { return to.      lvalue_type(ops[0], addr_space()); }
 const Type* NoRetType          ::vrebuild(TypeTable&,    Types    ) const { return this; }
@@ -226,11 +218,7 @@ const Type* IndefiniteArrayType::vreduce(int depth, const Type* type, Type2Type&
 }
 
 const Type* BorrowedPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return typetable().borrowed_ptr_type(pointee()->reduce(depth, type, map), addr_space());
-}
-
-const Type* MutPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {
-    return typetable().mut_ptr_type(pointee()->reduce(depth, type, map), addr_space());
+    return typetable().borrowed_ptr_type(pointee()->reduce(depth, type, map), is_mut(), addr_space());
 }
 
 const Type* OwnedPtrType::vreduce(int depth, const Type* type, Type2Type& map) const {

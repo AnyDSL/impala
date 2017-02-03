@@ -22,7 +22,6 @@ enum Tag {
     Tag_indefinite_array,
     Tag_lambda,
     Tag_lvalue,
-    Tag_mut_ptr,
     Tag_noret,
     Tag_owned_ptr,
     Tag_pi,
@@ -93,13 +92,15 @@ bool is_strict_subtype(const Type* dst, const Type* src);
 /// Common base Type for PtrType%s and LValueType.
 class RefType : public Type {
 protected:
-    RefType(TypeTable& typetable, int tag, const Type* pointee, int addr_space)
+    RefType(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
         : Type(typetable, tag, {pointee})
+        , mut_(mut)
         , addr_space_(addr_space)
     {}
 
 public:
     const Type* pointee() const { return op(0); }
+    bool is_mut() const { return mut_; }
     int addr_space() const { return addr_space_; }
 
     virtual std::ostream& stream(std::ostream&) const override;
@@ -108,6 +109,7 @@ public:
     virtual std::string prefix() const = 0;
 
 private:
+    bool mut_;
     int addr_space_;
 
     friend class TypeTable;
@@ -116,8 +118,8 @@ private:
 /// Pointer @p Type.
 class PtrType : public RefType {
 protected:
-    PtrType(TypeTable& typetable, int tag, const Type* pointee, int addr_space)
-        : RefType(typetable, tag, {pointee}, addr_space)
+    PtrType(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
+        : RefType(typetable, tag, {pointee}, mut, addr_space)
     {}
 
     std::ostream& stream_ptr_type(std::ostream&, std::string prefix, int addr_space, const Type* ref_type) const;
@@ -130,24 +132,11 @@ private:
 
 class BorrowedPtrType : public PtrType {
 public:
-    BorrowedPtrType(TypeTable& typetable, const Type* pointee, int addr_space)
-        : PtrType(typetable, Tag_borrowed_ptr, pointee, addr_space)
+    BorrowedPtrType(TypeTable& typetable, const Type* pointee, bool mut, int addr_space)
+        : PtrType(typetable, Tag_borrowed_ptr, pointee, mut, addr_space)
     {}
 
-    virtual std::string prefix() const override { return "&"; }
-
-private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
-};
-
-class MutPtrType : public PtrType {
-public:
-    MutPtrType(TypeTable& typetable, const Type* pointee, int addr_space)
-        : PtrType(typetable, Tag_mut_ptr, pointee, addr_space)
-    {}
-
-    virtual std::string prefix() const override { return "&mut"; }
+    virtual std::string prefix() const override { return is_mut() ? "&mut " : "&"; }
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
@@ -157,7 +146,7 @@ private:
 class OwnedPtrType : public PtrType {
 public:
     OwnedPtrType(TypeTable& typetable, const Type* pointee, int addr_space)
-        : PtrType(typetable, Tag_owned_ptr, pointee, addr_space)
+        : PtrType(typetable, Tag_owned_ptr, pointee, true, addr_space)
     {}
 
     virtual std::string prefix() const override { return "~"; }
@@ -170,7 +159,7 @@ private:
 class LValueType : public RefType {
 protected:
     LValueType(TypeTable& typetable, const Type* pointee, int addr_space)
-        : RefType(typetable, Tag_lvalue, {pointee}, addr_space)
+        : RefType(typetable, Tag_lvalue, {pointee}, true, addr_space)
     {}
 
 public:

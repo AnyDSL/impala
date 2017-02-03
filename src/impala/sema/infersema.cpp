@@ -93,6 +93,16 @@ public:
     }
 
     const Type* rvalue(const Expr* expr, const Type* t) { return constrain(expr, rvalue(expr), t); }
+    const Type* wrap_lvalue(const LValueType* lvalue, const Type* type) {
+        return lvalue ? lvalue_type(type, lvalue->addr_space()) : type;
+    }
+
+    const LValueType* extract_pointee(const Type*& type) {
+        auto lvalue = type->isa<LValueType>();
+        if (lvalue)
+            type = lvalue->pointee();
+        return lvalue;
+    }
 
 private:
     /// Used for union/find - see https://en.wikipedia.org/wiki/Disjoint-set_data_structure#Disjoint-set_forests .
@@ -275,7 +285,7 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
         if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
             if (auto src_owned_ptr_type = src->isa<OwnedPtrType>()) {
                 if (src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space())
-                    return borrowed_ptr_type(op[0], dst_borrowed_ptr_type->addr_space());
+                    return borrowed_ptr_type(op[0], dst_borrowed_ptr_type->is_mut(), dst_borrowed_ptr_type->addr_space());
             }
         }
 
@@ -401,8 +411,8 @@ const Type* PrimASTType::check(InferSema& sema) const {
 const Type* PtrASTType::check(InferSema& sema) const {
     auto pointee = sema.check(referenced_ast_type());
     switch (tag()) {
-        case Borrowed: return sema.borrowed_ptr_type(pointee, addr_space());
-        case Mut:      return sema.     mut_ptr_type(pointee, addr_space());
+        case Borrowed: return sema.borrowed_ptr_type(pointee, false, addr_space());
+        case Mut:      return sema.borrowed_ptr_type(pointee,  true, addr_space());
         case Owned:    return sema.   owned_ptr_type(pointee, addr_space());
     }
     THORIN_UNREACHABLE;
@@ -622,15 +632,18 @@ const Type* PrefixExpr::check(InferSema& sema) const {
         case AND:    {
             auto type = sema.check(rhs());
             if (auto lvalue = type->isa<LValueType>())
-                return sema.borrowed_ptr_type(lvalue->pointee(), lvalue->addr_space());
-            return sema.borrowed_ptr_type(type, 0);
+                return sema.borrowed_ptr_type(lvalue->pointee(), true, lvalue->addr_space());
+            return sema.borrowed_ptr_type(type, false, 0);
         }
         case TILDE:
             return sema.owned_ptr_type(sema.rvalue(rhs()), 0);
         case MUL: {
             auto type = sema.rvalue(rhs());
             if (auto ptr_type = type->isa<PtrType>())
-                return sema.lvalue_type(ptr_type->pointee(), ptr_type->addr_space());
+                if (ptr_type->is_mut())
+                    return sema.lvalue_type(ptr_type->pointee(), ptr_type->addr_space());
+                else
+                    return ptr_type->pointee();
             else {
                 assert(false && "what todo now?");
                 return type;
@@ -807,19 +820,23 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, c
 }
 
 const Type* FieldExpr::check(InferSema& sema) const {
-    // TODO lvalue
     auto ltype = sema.check(lhs());
     if (ltype->isa<PtrType>()) {
         PrefixExpr::create_deref(lhs_.get());
         ltype = sema.check(lhs());
     }
 
+    auto lvalue = sema.extract_pointee(ltype);
+
     if (auto struct_type = ltype->isa<StructType>()) {
-        if (auto field_decl = struct_type->struct_decl()->field_decl(symbol()))
-            return struct_type->op(field_decl->index());
+        if (auto field_decl = struct_type->struct_decl()->field_decl(symbol())) {
+            if (lvalue)
+                LValue2RValueExpr::create(lhs())->type();
+            return sema.wrap_lvalue(lvalue, struct_type->op(field_decl->index()));
+        }
     }
 
-    return ltype->is_known() ? sema.type_error() : sema.find_type(this);
+    return sema.wrap_lvalue(lvalue, ltype->is_known() ? sema.type_error() : sema.find_type(this));
 }
 
 const Type* TypeAppExpr::check(InferSema& sema) const {

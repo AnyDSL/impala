@@ -21,11 +21,8 @@ public:
         return unify(new IndefiniteArrayType(*this, elem_type));
     }
     const SimdType* simd_type(const Type* elem_type, uint64_t size) { return unify(new SimdType(*this, elem_type, size)); }
-    const BorrowedPtrType* borrowed_ptr_type(const Type* pointee, int addr_space = 0) {
-        return unify(new BorrowedPtrType(*this, pointee, addr_space));
-    }
-    const MutPtrType* mut_ptr_type(const Type* pointee, int addr_space = 0) {
-        return unify(new MutPtrType(*this, pointee, addr_space));
+    const BorrowedPtrType* borrowed_ptr_type(const Type* pointee, bool mut, int addr_space) {
+        return unify(new BorrowedPtrType(*this, pointee, mut, addr_space));
     }
     const OwnedPtrType* owned_ptr_type(const Type* pointee, int addr_space = 0) {
         return unify(new OwnedPtrType(*this, pointee, addr_space));
