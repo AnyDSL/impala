@@ -213,11 +213,11 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
     auto lvalue = dst->isa<LValueType>();
     if (lvalue)
         dst = lvalue->pointee();
-    else if (dst->isa<BorrowedPtrType>() && !src->type()->isa<PtrType>()) {
-        // automatically take address of src if dst is a BorrowedPtrType
-        src = PrefixExpr::create_addrof(src);
-        check(src);
-    }
+    //else if (dst->isa<BorrowedPtrType>() && !src->type()->isa<PtrType>()) {
+        //// automatically take address of src if dst is a BorrowedPtrType
+        //src = PrefixExpr::create_addrof(src);
+        //check(src);
+    //}
 
     src->type_ = find_type(src);
 

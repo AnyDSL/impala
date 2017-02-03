@@ -214,7 +214,7 @@ fn clamp(f: f64) -> u8 {
 
 fn render(img: &mut [u8], w: int, h: int, nsubsamples: int) -> () {
     let mut fimg = ~[w*h*3:f64];
-    memset(fimg as &i8, 0, (w*h*3*8) as u64);
+    memset(fimg as &mut i8, 0, (w*h*3*8) as u64);
 
     for y in range(0, h) {
         for x in range(0, w) {
@@ -228,20 +228,20 @@ fn render(img: &mut [u8], w: int, h: int, nsubsamples: int) -> () {
                         dir: vec { x: px,  y: py,  z: -1.0 }
                     };
 
-                    vnormalize(&(ray.dir));
+                    vnormalize(&mut ray.dir);
 
                     let mut isect: Isect;
                     isect.t   = 1.0e+17;
                     isect.hit = 0;
 
-                    ray_sphere_intersect(&isect, &ray, &spheres(0));
-                    ray_sphere_intersect(&isect, &ray, &spheres(1));
-                    ray_sphere_intersect(&isect, &ray, &spheres(2));
-                    ray_plane_intersect (&isect, &ray, &plane);
+                    ray_sphere_intersect(&mut isect, &ray, &spheres(0));
+                    ray_sphere_intersect(&mut isect, &ray, &spheres(1));
+                    ray_sphere_intersect(&mut isect, &ray, &spheres(2));
+                    ray_plane_intersect (&mut isect, &ray, &plane);
 
                     if isect.hit == 1 {
                         let mut col: vec;
-                        ambient_occlusion(&col, &isect);
+                        ambient_occlusion(&mut col, &isect);
 
                         fimg(3 * (y * w + x) + 0) += col.x;
                         fimg(3 * (y * w + x) + 1) += col.y;
@@ -290,6 +290,6 @@ fn main(argc: int, argv: &[&str]) -> int {
     let img = ~[WIDTH*HEIGHT*3:u8];
     init_scene();
     render(img, WIDTH, HEIGHT, NSUBSAMPLES);
-    saveppm("ao.ppm", WIDTH, HEIGHT, img);
+    saveppm(&"ao.ppm", WIDTH, HEIGHT, img);
     0
 }
