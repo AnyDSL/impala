@@ -1,6 +1,2 @@
-SET ( EXECUTABLE_NAME exe_intrinsicgen )
-
-ADD_EXECUTABLE( ${EXECUTABLE_NAME} main.cpp )
-TARGET_LINK_LIBRARIES ( ${EXECUTABLE_NAME} ${THORIN_LIBRARIES} lib_impala )
-
-SET_TARGET_PROPERTIES(exe_intrinsicgen PROPERTIES OUTPUT_NAME intrinsicgen)
+ADD_EXECUTABLE( intrinsicgen main.cpp )
+TARGET_LINK_LIBRARIES ( intrinsicgen ${THORIN_LIBRARIES} lib_impala )
