@@ -63,7 +63,10 @@ void MapExpr::write() const {
         lhs()->write();
 }
 
-void PrefixExpr::write() const { rhs()->write(); }
+void PrefixExpr::write() const {
+    if (tag() == MUT)
+        rhs()->write();
+}
 void FieldExpr::write() const { lhs()->write(); }
 void CastExpr::write() const { src()->write(); }
 
