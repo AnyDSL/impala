@@ -343,11 +343,11 @@ void InfixExpr::check(TypeSema& sema) const {
     sema.check(lhs());
     sema.check(rhs());
 
-    auto match_type = [&]() {
-        if (lhs()->type() != rhs()->type() && !lhs()->type()->isa<TypeError>() && !rhs()->type()->isa<TypeError>()) {
+    auto match_type = [&](const Type* ltype, const Type* rtype) {
+        if (ltype != rtype && !ltype->isa<TypeError>() && !rtype->isa<TypeError>()) {
             error(this, "both left-hand side and right-hand side of binary '{}' must agree on the same type", tok2str(this));
-            error(lhs(),  "left-hand side type is '{}'", lhs()->type());
-            error(rhs(), "right-hand side type is '{}'", rhs()->type());
+            error(lhs(),  "left-hand side type is '{}'", ltype);
+            error(rhs(), "right-hand side type is '{}'", rtype);
         }
     };
 
@@ -355,35 +355,40 @@ void InfixExpr::check(TypeSema& sema) const {
         case EQ: case NE:
         case LT: case GT:
         case LE: case GE:
-            match_type();
+            match_type(lhs()->type(), rhs()->type());
             sema.expect_num_or_bool_or_ptr(lhs(),  "left-hand side of binary '{}'", tok2str(this));
             sema.expect_num_or_bool_or_ptr(rhs(), "right-hand side of binary '{}'", tok2str(this));
             return;
         case ADD: case SUB:
         case MUL: case DIV: case REM:
-            match_type();
+            match_type(lhs()->type(), rhs()->type());
             sema.expect_num(lhs(),  "left-hand side of binary '{}'", tok2str(this));
             sema.expect_num(rhs(), "right-hand side of binary '{}'", tok2str(this));
             return;
         case OROR: case ANDAND:
-            match_type();
+            match_type(lhs()->type(), rhs()->type());
             sema.expect_bool(lhs(),  "left-hand side of logical '{}'", tok2str(this));
             sema.expect_bool(rhs(), "right-hand side of logical '{}'", tok2str(this));
             return;
         case SHL: case SHR:
-            match_type();
+            match_type(lhs()->type(), rhs()->type());
             sema.expect_int(lhs(),  "left-hand side of binary '{}'", tok2str(this));
             sema.expect_int(rhs(), "right-hand side of binary '{}'", tok2str(this));
             return;
         case  OR: case AND: case XOR:
-            match_type();
+            match_type(lhs()->type(), rhs()->type());
             sema.expect_int_or_bool(lhs(),  "left-hand side of bitwise '{}'", tok2str(this));
             sema.expect_int_or_bool(rhs(), "right-hand side of bitwise '{}'", tok2str(this));
             return;
-        case ASGN:
+        case ASGN: {
             lhs()->write();
             sema.expect_lvalue(lhs(), "assignment");
+            auto ltype = lhs()->type();
+            if (auto lvalue = lhs()->type()->isa<LValueType>())
+                ltype = lvalue->pointee();
+            match_type(ltype, rhs()->type());
             return;
+        }
         case ADD_ASGN: case SUB_ASGN:
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
             lhs()->write();

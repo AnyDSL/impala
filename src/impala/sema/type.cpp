@@ -64,9 +64,17 @@ bool is_subtype(const Type* dst, const Type* src) {
         return true;
 
     if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
-        if (auto src_owned_ptr_type = src->isa<OwnedPtrType>())
+        if (auto src_owned_ptr_type = src->isa<OwnedPtrType>()) {
             return src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space()
+                && dst_borrowed_ptr_type->is_mut()
                 && is_subtype(dst_borrowed_ptr_type->pointee(), src_owned_ptr_type->pointee());
+        }
+
+        if (auto src_borrowed_ptr_type = src->isa<BorrowedPtrType>()) {
+            return src_borrowed_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space()
+                && (src_borrowed_ptr_type->is_mut() || !dst_borrowed_ptr_type->is_mut())
+                && is_subtype(dst_borrowed_ptr_type->pointee(), src_borrowed_ptr_type->pointee());
+        }
     }
 
     if (auto dst_indefinite_array_type = dst->isa<IndefiniteArrayType>()) {
@@ -76,21 +84,18 @@ bool is_subtype(const Type* dst, const Type* src) {
 
     if (dst->tag() == src->tag() && dst->num_ops() == src->num_ops()) {
         bool result = true;
+
+        // special cases for DefiniteArrays, SimdTypes and PtrTypes
+        if (auto dst_def_array = dst->isa<DefiniteArrayType>())
+            result &= src->as<DefiniteArrayType>()->dim() == dst_def_array->dim();
+        else if (auto dst_simd_type = dst->isa<SimdType>())
+            result &= src->as<SimdType>()->dim() == dst_simd_type->dim();
+        else if (auto dst_ref_type = dst->isa<RefType>())
+            result &=  src->as<RefType>()->is_mut() == dst_ref_type->is_mut()
+                    && src->as<RefType>()->addr_space() == dst_ref_type->addr_space();
+
         for (size_t i = 0, e = dst->num_ops(); result && i != e; ++i)
             result &= is_subtype(dst->op(i), src->op(i));
-
-        // Special case for DefiniteArrays, SimdTypes and PtrTypes
-        if (auto dst_def_array = dst->isa<DefiniteArrayType>()) {
-            result &= src->as<DefiniteArrayType>()->dim() == dst_def_array->dim();
-        }
-
-        if (auto dst_simd_type = dst->isa<SimdType>()) {
-            result &= src->as<SimdType>()->dim() == dst_simd_type->dim();
-        }
-
-        if (auto dst_ptr_type = dst->isa<PtrType>()) {
-            result &= src->as<PtrType>()->addr_space() == dst_ptr_type->addr_space();
-        }
 
         return result;
     }
