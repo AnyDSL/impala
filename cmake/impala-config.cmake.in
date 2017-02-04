@@ -2,7 +2,7 @@
 # in order to compile and link against .impala files
 #
 # IMPALA_BIN
-# MACRO wrap_impala_sources(
+# MACRO wrap_impala_sources( <output variable>
 #     BACKEND cpu|opencl|nvvm|cuda|...
 #     [ OUTPUT_NAME basename ]
 #     [ CLANG_FLAGS --flag1 --flag2 ...]
