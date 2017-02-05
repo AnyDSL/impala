@@ -39,8 +39,7 @@ int main() {
                 std::cout << thorin::endl;
                 auto fn = itype->as<impala::FnType>();
                 std::cout << "fn \"" << llvm_name << "\" " << name;
-                stream_list(std::cout, fn->ops().skip_back(fn->num_ops()-1), [&](const impala::Type* type) { std::cout << type; }, "(", ")");
-                std::cout << " -> ";
+                stream_list(std::cout, fn->ops().skip_back(), [&](const impala::Type* type) { std::cout << type; }, "(", ")");
                 if (fn->return_type()->isa<impala::NoRetType>())
                     std::cout << " -> !;";
                 else
