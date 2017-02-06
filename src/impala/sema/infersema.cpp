@@ -40,7 +40,7 @@ public:
     const Type*& constrain(const Typeable* t, const   Type* u, const Type* v) { return constrain(constrain(t, u), v); }
     const Type*& constrain(const Typeable* t, const   Type* u)                { return constrain(t->type_, u); }
 
-    /// Obeys subtyping.
+    /// obeys subtyping
     const Type* coerce(const Type* dst, const Expr* src);
     const Type* coerce(const Typeable* dst, const Expr* src) { return dst->type_ = coerce(dst->type_, src); }
 
@@ -101,6 +101,16 @@ public:
     const Type* rvalue(const Expr* expr, const Type* t) { return constrain(expr, rvalue(expr), t); }
     const Type* wrap_ref(const RefType* ref, const Type* type) {
         return ref ? ref_type(type, ref->is_mut(), ref->addr_space()) : type;
+    }
+
+    static bool is_ptr(const Type* t) {
+        return t->isa<PtrType>() || (t->isa<RefType>() && t->as<RefType>()->pointee()->isa<PtrType>());
+    }
+
+    static const RefType* split_ref_type(const Type*& type) {
+        auto ref = type->isa<RefType>();
+        type = ref ? ref->pointee() : type;
+        return ref;
     }
 
 private:
@@ -216,15 +226,12 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
 }
 
 const Type* InferSema::coerce(const Type* dst, const Expr* src) {
-    auto ref = dst->isa<RefType>();
-    if (ref)
-        dst = ref->pointee();
-    else if (auto borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
-        if(!borrowed_ptr_type->is_mut() && !src->type()->isa<UnknownType>() && !src->type()->isa<PtrType>()) {
-            // automatically take address of src if dst is a BorrowedPtrType
-            src = PrefixExpr::create_addrof(src);
-            check(src);
-        }
+    auto ref = InferSema::split_ref_type(dst);
+
+    // automatically take address of src if dst is a BorrowedPtrType
+    if (auto borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
+        if (!borrowed_ptr_type->is_mut() && !src->type()->isa<UnknownType>() && !src->type()->isa<PtrType>())
+            check(src = PrefixExpr::create_addrof(src));
     }
 
     src->type_ = find_type(src);
@@ -235,11 +242,7 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
         check(src);
     }
 
-    // use wrap_ref here
-    auto type = unify(dst, src->type());
-    if (ref)
-        return ref_type(type, ref->is_mut(), ref->addr_space());
-    return type;
+    return wrap_ref(ref, unify(dst, src->type()));
 }
 
 const Type* InferSema::unify(const Type* dst, const Type* src) {
@@ -824,20 +827,14 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, c
     return type_error();
 }
 
-bool is_ptr(const Type* t) {
-    return t->isa<PtrType>() || (t->isa<RefType>() && t->as<RefType>()->pointee()->isa<PtrType>());
-}
-
 const Type* FieldExpr::check(InferSema& sema) const {
     auto ltype = sema.check(lhs());
-    if (is_ptr(ltype)) {
+    if (InferSema::is_ptr(ltype)) {
         PrefixExpr::create_deref(lhs_.get());
         ltype = sema.check(lhs());
     }
 
-    // TODO share with MapExpr
-    auto ref = ltype->isa<RefType>();
-    ltype = ref ? ref->pointee() : ltype;
+    auto ref = InferSema::split_ref_type(ltype);
 
     if (auto struct_type = ltype->isa<StructType>()) {
         if (auto field_decl = struct_type->struct_decl()->field_decl(symbol())) {
@@ -878,14 +875,12 @@ const Type* MapExpr::check(InferSema& sema) const {
         type_ = sema.unknown_type();
 
     auto ltype = sema.check(lhs());
-    if (is_ptr(ltype)) {
+    if (InferSema::is_ptr(ltype)) {
         PrefixExpr::create_deref(lhs_.get());
         ltype = sema.check(lhs());
     }
 
-    // TODO share with FieldExpr
-    auto ref = ltype->isa<RefType>();
-    ltype = ref ? ref->pointee() : ltype;
+    auto ref = InferSema::split_ref_type(ltype);
 
     for (const auto& arg : args())
         sema.rvalue(arg.get());
