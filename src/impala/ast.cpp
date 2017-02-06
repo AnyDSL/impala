@@ -59,7 +59,8 @@ void PathExpr::write() const {
 }
 
 void MapExpr::write() const {
-    if (lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<PtrType>())
+    auto type = unpack_ref_type(lhs()->type());
+    if (type->isa<ArrayType>() || type->isa<TupleType>() || type->isa<PtrType>())
         lhs()->write();
 }
 
