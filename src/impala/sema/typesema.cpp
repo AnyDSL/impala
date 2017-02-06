@@ -664,7 +664,7 @@ void LetStmt::check(TypeSema& sema) const {
 
 void check_correct_asm_type(const Type* t, const Expr *expr) {
     if (!t->isa<PrimType>() && !t->isa<PtrType>() && !t->isa<SimdType>())
-        error(expr, "asm operand must have primitive, pointer or SIMD type, but it is {}");
+        error(expr, "asm operand must have primitive, pointer or SIMD type, got '{}'", t);
 }
 
 void AsmStmt::check(TypeSema& sema) const {
