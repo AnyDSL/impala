@@ -1437,16 +1437,16 @@ private:
     const Type* check(InferSema&) const override;
 };
 
-class Ref2RValueExpr : public CastExpr {
+class Ref2ValueExpr : public CastExpr {
 public:
-    Ref2RValueExpr(const Expr* src)
+    Ref2ValueExpr(const Expr* src)
         : CastExpr(src->location(), src)
     {
         type_ = src->type()->as<RefType>()->pointee();
     }
 
-    static const Ref2RValueExpr* create(const Expr* src) {
-        return interlope<Ref2RValueExpr>(src, src);
+    static const Ref2ValueExpr* create(const Expr* src) {
+        return interlope<Ref2ValueExpr>(src, src);
     }
 
     void check(NameSema&) const override { THORIN_UNREACHABLE; }

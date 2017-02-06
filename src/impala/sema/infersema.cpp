@@ -95,7 +95,7 @@ public:
 
     const Type* rvalue(const Expr* expr) {
         check(expr);
-        return expr->type()->isa<RefType>() ? Ref2RValueExpr::create(expr)->type() : expr->type();
+        return expr->type()->isa<RefType>() ? Ref2ValueExpr::create(expr)->type() : expr->type();
     }
 
     const Type* rvalue(const Expr* expr, const Type* t) { return constrain(expr, rvalue(expr), t); }
@@ -626,7 +626,7 @@ const Type* FnExpr::check(InferSema& sema) const {
 const Type* PathExpr::check(InferSema& sema) const {
     if (value_decl()) {
         auto type = sema.find_type(value_decl());
-        return sema.ref_type(type, value_decl()->is_mut(), 0);
+        return value_decl()->is_mut() ? sema.ref_type(type, true, 0) : type;
     }
 
     return sema.type_error();
@@ -726,7 +726,7 @@ const Type* ImplicitCastExpr::check(InferSema& sema) const {
     return type();
 }
 
-const Type* Ref2RValueExpr::check(InferSema& sema) const {
+const Type* Ref2ValueExpr::check(InferSema& sema) const {
     return sema.check(src())->as<RefType>()->pointee();
 }
 
@@ -839,7 +839,7 @@ const Type* FieldExpr::check(InferSema& sema) const {
     if (auto struct_type = ltype->isa<StructType>()) {
         if (auto field_decl = struct_type->struct_decl()->field_decl(symbol())) {
             if (ref)
-                Ref2RValueExpr::create(lhs())->type();
+                Ref2ValueExpr::create(lhs())->type();
             return sema.wrap_ref(ref, struct_type->op(field_decl->index()));
         }
     }
@@ -902,7 +902,7 @@ const Type* MapExpr::check(InferSema& sema) const {
         return sema.wrap_ref(ref, simd_type->elem_type());
 
     if (ref)
-        ltype = Ref2RValueExpr::create(lhs())->type();
+        ltype = Ref2ValueExpr::create(lhs())->type();
 
     if (ltype->isa<Lambda>()) {
         if (!lhs_->isa<TypeAppExpr>())

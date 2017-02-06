@@ -459,7 +459,7 @@ void ExplicitCastExpr::check(TypeSema& sema) const {
     CastExpr::check(sema);
 }
 
-void Ref2RValueExpr::check(TypeSema& sema) const {
+void Ref2ValueExpr::check(TypeSema& sema) const {
     auto src_type = sema.check(src());
     auto dst_type = type();
 

@@ -372,9 +372,9 @@ std::ostream& ImplicitCastExpr::stream(std::ostream& os) const {
     return close(os, open_state);
 }
 
-std::ostream& Ref2RValueExpr::stream(std::ostream& os) const {
+std::ostream& Ref2ValueExpr::stream(std::ostream& os) const {
     auto open_state = open(os, Token::AS);
-    streamf(os, "ref2rvalue({}, {})", src(), type());
+    streamf(os, "ref2value({}, {})", src(), type());
     return close(os, open_state);
 }
 
