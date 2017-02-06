@@ -1,5 +1,5 @@
 fn main() -> int {
-    let mut str = "I'm a string, get me out of here!\n";
+    let str = "I'm a string, get me out of here!\n";
     let len = 34;
 
     // prints a string

@@ -3,11 +3,11 @@ extern "C" {
 }
 
 fn main() -> int {
-    let mut str1 = "Come on, copy me!\n";
-    let mut str2 = "Don't overwrite me";
-    strcpy(&str2, &str1, 19u32);
+    let mut dst = "Don't overwrite me";
+    let src = "Come on, copy me!\n";
+    strcpy(&mut dst, src, 19u32);
 
-    println(&str2);
+    println(dst);
     0
 }
 

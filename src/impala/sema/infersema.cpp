@@ -87,12 +87,6 @@ public:
 
     const FnType* fn_type(ArrayRef<const Type*> types) { return fn_type(tuple_type(types)); }
 
-    const Type* unpack_ref_type(const Type* type) const {
-        return type->isa<RefType>() ? type->as<RefType>()->pointee() : type;
-    }
-
-    const Type* unpack_ref_type(const Expr* expr) const { return unpack_ref_type(expr->type()); }
-
     const Type* rvalue(const Expr* expr) {
         check(expr);
         return expr->type()->isa<RefType>() ? Ref2ValueExpr::create(expr)->type() : expr->type();
@@ -101,16 +95,6 @@ public:
     const Type* rvalue(const Expr* expr, const Type* t) { return constrain(expr, rvalue(expr), t); }
     const Type* wrap_ref(const RefType* ref, const Type* type) {
         return ref ? ref_type(type, ref->is_mut(), ref->addr_space()) : type;
-    }
-
-    static bool is_ptr(const Type* t) {
-        return t->isa<PtrType>() || (t->isa<RefType>() && t->as<RefType>()->pointee()->isa<PtrType>());
-    }
-
-    static const RefType* split_ref_type(const Type*& type) {
-        auto ref = type->isa<RefType>();
-        type = ref ? ref->pointee() : type;
-        return ref;
     }
 
 private:
@@ -226,7 +210,7 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
 }
 
 const Type* InferSema::coerce(const Type* dst, const Expr* src) {
-    auto ref = InferSema::split_ref_type(dst);
+    auto ref = split_ref_type(dst);
 
     // automatically take address of src if dst is a BorrowedPtrType
     if (auto borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
@@ -445,7 +429,7 @@ const Type* FnASTType::check(InferSema& sema) const {
     return sema.close(num_ast_type_params(), sema.fn_type(types));
 }
 
-const Type* Typeof::check(InferSema& sema) const { return sema.unpack_ref_type(sema.check(expr())); }
+const Type* Typeof::check(InferSema& sema) const { return unpack_ref_type(sema.check(expr())); }
 
 const Type* ASTTypeApp::check(InferSema& sema) const {
     if (decl() && decl()->is_type_decl()) {
@@ -658,7 +642,7 @@ const Type* PrefixExpr::check(InferSema& sema) const {
             }
         }
         case INC: case DEC:
-            return sema.unpack_ref_type(sema.check(rhs()));
+            return unpack_ref_type(sema.check(rhs()));
         case ADD: case SUB:
         case NOT:
         case RUN: case HLT:
@@ -713,7 +697,7 @@ const Type* InfixExpr::check(InferSema& sema) const {
 }
 
 const Type* PostfixExpr::check(InferSema& sema) const {
-    return sema.unpack_ref_type(sema.check(lhs()));
+    return unpack_ref_type(sema.check(lhs()));
 }
 
 const Type* ExplicitCastExpr::check(InferSema& sema) const {
@@ -829,12 +813,12 @@ const Type* InferSema::check_call(const Expr* lhs, ArrayRef<const Expr*> args, c
 
 const Type* FieldExpr::check(InferSema& sema) const {
     auto ltype = sema.check(lhs());
-    if (InferSema::is_ptr(ltype)) {
+    if (is_ptr(ltype)) {
         PrefixExpr::create_deref(lhs_.get());
         ltype = sema.check(lhs());
     }
 
-    auto ref = InferSema::split_ref_type(ltype);
+    auto ref = split_ref_type(ltype);
 
     if (auto struct_type = ltype->isa<StructType>()) {
         if (auto field_decl = struct_type->struct_decl()->field_decl(symbol())) {
@@ -875,12 +859,12 @@ const Type* MapExpr::check(InferSema& sema) const {
         type_ = sema.unknown_type();
 
     auto ltype = sema.check(lhs());
-    if (InferSema::is_ptr(ltype)) {
+    if (is_ptr(ltype)) {
         PrefixExpr::create_deref(lhs_.get());
         ltype = sema.check(lhs());
     }
 
-    auto ref = InferSema::split_ref_type(ltype);
+    auto ref = split_ref_type(ltype);
 
     for (const auto& arg : args())
         sema.rvalue(arg.get());

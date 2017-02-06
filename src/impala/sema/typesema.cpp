@@ -20,9 +20,7 @@ public:
 
     bool nossa() const { return nossa_; }
     const Type* scalar_type(const Expr* expr) {
-        auto result = expr->type();
-        if (auto ref = result->isa<RefType>())
-            result = ref->pointee();
+        auto result = unpack_ref_type(expr->type());
         if (auto simd_type = result->isa<SimdType>())
             result = simd_type->elem_type();
         return result;
@@ -57,10 +55,8 @@ public:
     const Type* expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
         std::ostringstream os;
         thorin::streamf(os, fmt, args...);
-        if (auto ref = expr->type()->isa<RefType>()) {
-            if (ref->is_mut())
-                return ref->pointee();
-        }
+        if (auto ref = is_lvalue(expr->type()))
+            return ref->pointee();
         error(expr, "lvalue required for {}", os.str());
         return expr->type();
     }
@@ -387,9 +383,7 @@ void InfixExpr::check(TypeSema& sema) const {
         case ASGN: {
             lhs()->write();
             sema.expect_lvalue(lhs(), "assignment");
-            auto ltype = lhs()->type();
-            if (auto ref = lhs()->type()->isa<RefType>())
-                ltype = ref->pointee();
+            auto ltype = unpack_ref_type(lhs()->type());
             match_type(ltype, rhs()->type());
             return;
         }
@@ -561,8 +555,7 @@ void MapExpr::check(TypeSema& sema) const {
     if (ltype->isa<FnType>())
         return sema.check_call(lhs(), args());
 
-    if (auto ref = ltype->isa<RefType>())
-        ltype = ref->pointee();
+    ltype = unpack_ref_type(ltype);
 
     if (ltype->isa<ArrayType>()) {
         if (num_args() == 1)
@@ -719,11 +712,14 @@ void check_correct_asm_type(const Type* t, const Expr *expr) {
 void AsmStmt::check(TypeSema& sema) const {
     for (const auto& output : outputs()) {
         auto type = sema.check(output->expr());
-        auto ref = type->isa<RefType>();
-        if (!ref || !ref->is_mut())
+
+        if (auto ref = is_lvalue(type))
+            type = ref->pointee();
+        else
             error(output->expr(), "output expression of an asm statement must be an lvalue");
+
         output->expr()->write();
-        check_correct_asm_type(ref->pointee(), output->expr());
+        check_correct_asm_type(type, output->expr());
     }
 
     for (const auto& input : inputs())

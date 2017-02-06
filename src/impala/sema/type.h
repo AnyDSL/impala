@@ -172,6 +172,28 @@ private:
     friend class TypeTable;
 };
 
+inline const RefType* is_lvalue(const Type* type) {
+    if (auto ref = type->isa<RefType>()) {
+        if (ref->is_mut())
+            return ref;
+    }
+    return nullptr;
+}
+
+inline const Type* unpack_ref_type(const Type* type) {
+    return type->isa<RefType>() ? type->as<RefType>()->pointee() : type;
+}
+
+inline bool is_ptr(const Type* t) {
+    return t->isa<PtrType>() || (t->isa<RefType>() && t->as<RefType>()->pointee()->isa<PtrType>());
+}
+
+inline const RefType* split_ref_type(const Type*& type) {
+    auto ref = type->isa<RefType>();
+    type = ref ? ref->pointee() : type;
+    return ref;
+}
+
 //------------------------------------------------------------------------------
 
 class FnType : public Type {
