@@ -434,7 +434,12 @@ const Type* FnASTType::check(InferSema& sema) const {
     return sema.close(num_ast_type_params(), sema.fn_type(types));
 }
 
-const Type* Typeof::check(InferSema& sema) const { return sema.check(expr()); }
+const Type* Typeof::check(InferSema& sema) const {
+    auto type = sema.check(expr());
+    if (auto ref = type->isa<RefType>())
+        return ref->pointee();
+    return type;
+}
 
 const Type* ASTTypeApp::check(InferSema& sema) const {
     if (decl() && decl()->is_type_decl()) {
