@@ -718,10 +718,12 @@ void check_correct_asm_type(const Type* t, const Expr *expr) {
 
 void AsmStmt::check(TypeSema& sema) const {
     for (const auto& output : outputs()) {
-        // TODO
-        //if (!output->expr()->is_lvalue())
-            //error(output->expr(), "output expression of an asm statement must be an lvalue");
-        check_correct_asm_type(sema.check(output->expr()), output->expr());
+        auto type = sema.check(output->expr());
+        auto ref = type->isa<RefType>();
+        if (!ref || !ref->is_mut())
+            error(output->expr(), "output expression of an asm statement must be an lvalue");
+        output->expr()->write();
+        check_correct_asm_type(ref->pointee(), output->expr());
     }
 
     for (const auto& input : inputs())

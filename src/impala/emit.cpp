@@ -783,7 +783,7 @@ void LetStmt::emit(CodeGen& cg) const {
 void AsmStmt::emit(CodeGen& cg) const {
     Array<const thorin::Type*> outs(num_outputs());
     for (size_t i = 0, e = num_outputs(); i != e; ++i)
-        outs[i] = cg.convert(output(i)->expr()->type());
+        outs[i] = cg.convert(output(i)->expr()->type()->as<RefType>()->pointee());
 
     Array<const Def*> ins(num_inputs());
     for (size_t i = 0, e = num_inputs(); i != e; ++i)
