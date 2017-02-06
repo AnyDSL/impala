@@ -18,7 +18,7 @@ fn eval_A(i: int, j: int) -> f64 {
     1.0/(((i+j)*(i+j+1)/2+i+1) as f64)
 }
 
-fn eval_A_times_u(N: int, u: &[f64], mut Au: &[f64]) -> () {
+fn eval_A_times_u(N: int, u: &[f64], Au: &mut [f64]) -> () {
     for i in range(0, N) {
         Au(i) = 0.0;
         for j in range(0, N) {
@@ -27,7 +27,7 @@ fn eval_A_times_u(N: int, u: &[f64], mut Au: &[f64]) -> () {
     }
 }
 
-fn eval_At_times_u(N: int, u: &[f64], mut Au: &[f64]) -> () {
+fn eval_At_times_u(N: int, u: &[f64], Au: &mut [f64]) -> () {
     for i in range(0, N) {
         Au(i) = 0.0;
         for j in range(0, N) {
@@ -36,7 +36,7 @@ fn eval_At_times_u(N: int, u: &[f64], mut Au: &[f64]) -> () {
     }
 }
 
-fn eval_AtA_times_u(N: int, u: &[f64], AtAu: &[f64]) -> () {
+fn eval_AtA_times_u(N: int, u: &[f64], AtAu: &mut [f64]) -> () {
     let v = ~[N: f64];
     eval_A_times_u(N, u, v); 
     eval_At_times_u(N, v, AtAu); 

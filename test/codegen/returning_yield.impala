@@ -1,4 +1,4 @@
-fn sum(a: int, b: int, mut acc: &int, body: fn(int) -> int) -> int {
+fn sum(a: int, b: int, acc: &mut int, body: fn(int) -> int) -> int {
     if a < b {
         let x = body(a);
         *acc = *acc + x;
@@ -9,7 +9,7 @@ fn sum(a: int, b: int, mut acc: &int, body: fn(int) -> int) -> int {
 
 fn main() -> int {
     let mut acc = 0;
-    let res = for i in sum(0, 13, &acc) {
+    let res = for i in sum(0, 13, &mut acc) {
         if i == 19 {
             break(77)
         } else {
