@@ -149,7 +149,7 @@ fn main(argc: int, argv: &[&str]) -> int {
     let variants: [&[u8] * 9] = [(&v0) as &[u8], &v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8];
 
     let ilen = fb_readall(&mut seq(0), get_stdin());
-    let clen = fb_subst(&mut seq(1), &mut seq(0), &">.*|\n", &"");
+    let clen = fb_subst(&mut seq(1), &mut seq(0), ">.*|\n", "");
 
     for i in range(0, NUM_VARIANTS) {
         print_num_matches(variants(i), fb_countmatches(&seq(1), variants(i)));
@@ -163,7 +163,7 @@ fn main(argc: int, argv: &[&str]) -> int {
         slen = fb_subst(&mut seq(1-flip), &mut seq(flip), &subst(i), pat(i));
         flip = 1-flip;
     }
-    println(&"");
+    println("");
     print_int(ilen as int);
     print_int(clen as int);
     print_int(slen as int);

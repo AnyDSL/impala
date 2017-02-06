@@ -290,6 +290,6 @@ fn main(argc: int, argv: &[&str]) -> int {
     let img = ~[WIDTH*HEIGHT*3:u8];
     init_scene();
     render(img, WIDTH, HEIGHT, NSUBSAMPLES);
-    saveppm(&"ao.ppm", WIDTH, HEIGHT, img);
+    saveppm("ao.ppm", WIDTH, HEIGHT, img);
     0
 }

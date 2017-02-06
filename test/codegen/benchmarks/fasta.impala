@@ -157,14 +157,14 @@ fn generate_And_Wrap_Pseudorandom_DNA_Sequence(
 
 fn main(argc: int, argv: &[&str]) -> int {
     let n = if argc >= 2 { atoi(argv(1)) } else { 0 };
-    println(&">ONE Homo sapiens alu");
+    println(">ONE Homo sapiens alu");
     let mut homo_Sapiens_Alu =
         "GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGGGAGGCCGAGGCGGGCGGATCACCTGAGGTC"
         "AGGAGTTCGAGACCAGCCTGGCCAACATGGTGAAACCCCGTCTCTACTAAAAATACAAAAATTAGCCGGGCG"
         "TGGTGGCGCGCGCCTGTAATCCCAGCTACTCGGGAGGCTGAGGCAGGAGAATCGCTTGAACCCGGGAGGCGG"
         "AGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCCAGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA";
     repeat_And_Wrap_String(&homo_Sapiens_Alu, 2*n);
-    println(&">TWO IUB ambiguity codes");
+    println(">TWO IUB ambiguity codes");
     let mut iub_Nucleotides_Information = [
         nucleotide_info{letter: 'a', probability: 0.27f},
         nucleotide_info{letter: 'c', probability: 0.12f},
@@ -185,7 +185,7 @@ fn main(argc: int, argv: &[&str]) -> int {
 
     generate_And_Wrap_Pseudorandom_DNA_Sequence(&iub_Nucleotides_Information, 15, 3*n);
 
-    println(&">THREE Homo sapiens frequency");
+    println(">THREE Homo sapiens frequency");
     let mut homo_Sapien_Nucleotides_Information = [
         nucleotide_info{letter: 'a', probability: 0.3029549426680f},
         nucleotide_info{letter: 'c', probability: 0.1979883004921f},

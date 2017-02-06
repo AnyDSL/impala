@@ -23,9 +23,9 @@ static JBFSIZE = 82;            // line input buffer size
 static QBFSIZE = 5200;        // output buffer initial size
 
 fn errex(s: &[u8]) -> () {            // error message+value, return 1
-    println(&"*** Error: ");
+    println("*** Error: ");
     println(s);
-    println(&"\n");
+    println("\n");
 }
 
 static EXIT_FAILURE = 1;
@@ -53,11 +53,11 @@ fn main(argc: int, argv: &[&str]) -> int {
     let mut pj = read(&mut jjj, JBFSIZE) == 1;                 // fetch 1st line
 
     if (!pj) {
-        errex(&"No input data");
+        errex("No input data");
         return(EXIT_FAILURE)
     }
     if (jjj(0) != '>') {
-        errex(&"1st char not '>'");
+        errex("1st char not '>'");
         return(EXIT_FAILURE)
     }
 
@@ -76,7 +76,7 @@ fn main(argc: int, argv: &[&str]) -> int {
                 let newstop = pqstop + 12777888;
                 qqq = impala_realloc(qqq, newstop);
                 if (qqq == nullptr) {
-                    errex(&"Out of memory");
+                    errex("Out of memory");
                     return(EXIT_FAILURE)
                 }
                 let newpr = newstop-(pqstop-pr);

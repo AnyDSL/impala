@@ -624,7 +624,7 @@ fn pretty(b: &[i8]) -> () {
     for i in range_step(0, 50, 10) {
       print_meteor_lines(b(i), b(i+1), b(i+2), b(i+3), b(i+4), b(i+5), b(i+6), b(i+7), b(i+8), b(i+9));
     }
-    println(&"");
+    println("");
 }
 
 fn main(argc: int, argv: &[&str]) -> int {
