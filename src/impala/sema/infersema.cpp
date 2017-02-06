@@ -87,6 +87,12 @@ public:
 
     const FnType* fn_type(ArrayRef<const Type*> types) { return fn_type(tuple_type(types)); }
 
+    const Type* unpack_ref_type(const Type* type) const {
+        return type->isa<RefType>() ? type->as<RefType>()->pointee() : type;
+    }
+
+    const Type* unpack_ref_type(const Expr* expr) const { return unpack_ref_type(expr->type()); }
+
     const Type* rvalue(const Expr* expr) {
         check(expr);
         return expr->type()->isa<RefType>() ? Ref2RValueExpr::create(expr)->type() : expr->type();
@@ -434,7 +440,7 @@ const Type* FnASTType::check(InferSema& sema) const {
     return sema.close(num_ast_type_params(), sema.fn_type(types));
 }
 
-const Type* Typeof::check(InferSema& sema) const { return sema.rvalue(expr()); }
+const Type* Typeof::check(InferSema& sema) const { return sema.unpack_ref_type(expr()); }
 
 const Type* ASTTypeApp::check(InferSema& sema) const {
     if (decl() && decl()->is_type_decl()) {
@@ -647,7 +653,7 @@ const Type* PrefixExpr::check(InferSema& sema) const {
             }
         }
         case INC: case DEC:
-            return sema.check(rhs());
+            return sema.unpack_ref_type(sema.check(rhs()));
         case ADD: case SUB:
         case NOT:
         case RUN: case HLT:
@@ -702,7 +708,7 @@ const Type* InfixExpr::check(InferSema& sema) const {
 }
 
 const Type* PostfixExpr::check(InferSema& sema) const {
-    return sema.check(lhs());
+    return sema.unpack_ref_type(sema.check(lhs()));
 }
 
 const Type* ExplicitCastExpr::check(InferSema& sema) const {
