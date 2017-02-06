@@ -1195,7 +1195,6 @@ public:
 private:
     const Type* check(InferSema&) const override;
     void check(TypeSema&) const override;
-    thorin::Value lemit(CodeGen&) const override;
 
     Symbols symbols_;
     mutable std::vector<char> values_;

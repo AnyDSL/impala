@@ -335,10 +335,6 @@ const Def* CharExpr::remit(CodeGen& cg) const {
     return cg.world().literal_pu8(value(), location());
 }
 
-Value StrExpr::lemit(CodeGen& cg) const {
-    return Value::create_ptr(cg, cg.world().global(cg.remit(this), /*mutable*/ true, location()));
-}
-
 const Def* StrExpr::remit(CodeGen& cg) const {
     Array<const Def*> args(values_.size());
     for (size_t i = 0, e = args.size(); i != e; ++i)
