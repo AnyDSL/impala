@@ -2,7 +2,7 @@
 # in order to compile and link against .impala files
 #
 # IMPALA_BIN
-# MACRO wrap_impala_sources(
+# MACRO wrap_impala_sources( <output variable>
 #     BACKEND cpu|opencl|nvvm|cuda|...
 #     [ OUTPUT_NAME basename ]
 #     [ CLANG_FLAGS --flag1 --flag2 ...]
@@ -140,7 +140,7 @@ MACRO ( wrap_impala_sources outfiles )
 
     STRING ( TOLOWER ${PARGS_BACKEND} _backend )
 
-    STRING ( RANDOM ALPHABET "abcdefghijklmnopqrstuvwxyz0123456789" _basename )
+    STRING ( SHA1 _basename "${PARGS_FILES};${PARGS_BACKEND}" )
     IF ( PARGS_OUTPUT_NAME )
         SET ( _basename ${PARGS_OUTPUT_NAME} )
     ENDIF ()

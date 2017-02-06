@@ -24,11 +24,11 @@ public:
     const BorrowedPtrType* borrowed_ptr_type(const Type* pointee, bool mut, int addr_space) {
         return unify(new BorrowedPtrType(*this, pointee, mut, addr_space));
     }
-    const OwnedPtrType* owned_ptr_type(const Type* pointee, int addr_space = 0) {
+    const OwnedPtrType* owned_ptr_type(const Type* pointee, int addr_space) {
         return unify(new OwnedPtrType(*this, pointee, addr_space));
     }
-    const LValueType* lvalue_type(const Type* pointee, int addr_space = 0) {
-        return unify(new LValueType(*this, pointee, addr_space));
+    const RefType* ref_type(const Type* pointee, bool mut, int addr_space) {
+        return unify(new RefType(*this, pointee, mut, addr_space));
     }
     const NoRetType* type_noret() { return type_noret_; }
     const PrimType* prim_type(PrimTypeTag tag);
