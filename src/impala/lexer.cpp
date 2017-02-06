@@ -34,11 +34,14 @@ Lexer::Lexer(std::istream& stream, const char* filename)
 int Lexer::next() {
     int c = stream_.get();
 
+    back_line_ = peek_line_;
+    back_col_  = peek_col_;
+
     if (c == '\n') {
-        ++back_line_;
-        back_col_ = 1;
+        ++peek_line_;
+        peek_col_ = 1;
     } else if (c != std::istream::traits_type::eof())
-        ++back_col_;
+        ++peek_col_;
 
     return c;
 }
@@ -46,8 +49,8 @@ int Lexer::next() {
 Token Lexer::lex() {
     while (true) {
         std::string str; // the token string is concatenated here
-        front_line_ = back_line_;
-        front_col_ = back_col_;
+        front_line_ = peek_line_;
+        front_col_ = peek_col_;
 
         // end of file
         if (accept(std::istream::traits_type::eof()))
