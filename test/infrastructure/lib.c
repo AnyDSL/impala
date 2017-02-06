@@ -34,7 +34,7 @@ void put_u8(unsigned char ui) {
    putc(ui, stdout);
 }
 
-void* thorin_alloc(int32_t dev, int64_t size) {
+void* anydsl_alloc(int32_t dev, int64_t size) {
     void* p;
     posix_memalign(&p, 64, size);
     return p;
