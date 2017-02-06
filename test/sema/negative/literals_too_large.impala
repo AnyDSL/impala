@@ -1,0 +1,6 @@
+fn main() -> int {
+    let int_max = 2147483647;
+    let int_max_plus_one = 2147483648;
+    let int_max_plus_ = 0xff_ff_ff_ff_ff;
+    0
+}
