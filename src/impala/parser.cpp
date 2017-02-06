@@ -996,23 +996,15 @@ const Expr* Parser::parse_primary_expr() {
                     Exprs args;
                     parse_comma_list("arguments of a map expression", Token::R_PAREN, [&] { args.emplace_back(parse_expr()); });
                     return new MapExpr(tracker, type_app_expr, std::move(args));
-                } else if (accept(Token::L_BRACE)) {
-                    auto ast_type_app = new ASTTypeApp(tracker, path, std::move(ast_type_args));
-                    StructExpr::Elems elems;
-                    parse_comma_list("elements of struct expression", Token::R_BRACE, [&] {
-                        auto tracker = track();
-                        auto symbol = try_identifier("identifier in struct expression");
-                        expect(Token::COLON, "struct expression");
-                        elems.emplace_back(new StructExpr::Elem(tracker, symbol, parse_expr()));
-                    });
-
-                    return new StructExpr(tracker, ast_type_app, std::move(elems));
                 }
             }
-            if (lookahead(0) == Token::L_BRACE && (lookahead(1) == Token::ID && lookahead(2) == Token::COLON)) {
+            // lookahead required because of if cond { expr }
+            if (lookahead(0) == Token::L_BRACE &&
+                ((lookahead(1) == Token::ID && lookahead(2) == Token::COLON) ||
+                  lookahead(1) == Token::R_BRACE)) {
                 eat(Token::L_BRACE);
 
-                auto ast_type_app = new ASTTypeApp(tracker, path, ASTTypes());
+                auto ast_type_app = new ASTTypeApp(tracker, path, std::move(ast_type_args));
 
                 StructExpr::Elems elems;
                 parse_comma_list("elements of struct expression", Token::R_BRACE, [&] {
