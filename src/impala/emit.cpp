@@ -548,7 +548,9 @@ Value MapExpr::lemit(CodeGen& cg) const {
 const Def* MapExpr::remit(CodeGen& cg) const { return remit(cg, None, Location()); }
 
 const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
-    if (auto fn_type = lhs()->type()->isa<FnType>()) {
+    auto ltype = unpack_ref_type(lhs()->type());
+
+    if (auto fn_type = ltype->isa<FnType>()) {
         const Def* dst = nullptr;
 
         // Handle primops here
@@ -616,7 +618,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
         }
 
         return ret;
-    } else if (lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<SimdType>()) {
+    } else if (ltype->isa<ArrayType>() || ltype->isa<TupleType>() || ltype->isa<SimdType>()) {
         auto index = cg.remit(arg(0));
         return cg.extract(cg.remit(lhs()), index, location());
     }
