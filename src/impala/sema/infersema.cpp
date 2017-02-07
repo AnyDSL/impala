@@ -883,11 +883,11 @@ const Type* MapExpr::check(InferSema& sema) const {
     if (auto simd_type = ltype->isa<SimdType>())
         return sema.wrap_ref(ref, simd_type->elem_type());
 
-    if (ref)
+    if (ref && (ltype->isa<Lambda>() || ltype->isa<FnType>()))
         ltype = Ref2ValueExpr::create(lhs())->type();
 
     if (ltype->isa<Lambda>()) {
-        if (!lhs_->isa<TypeAppExpr>())
+        if (!lhs()->isa<TypeAppExpr>())
             TypeAppExpr::create(lhs());
         ltype = sema.check(lhs());
     }
