@@ -533,8 +533,8 @@ void StructExpr::check(TypeSema& sema) const {
 }
 
 void FieldExpr::check(TypeSema& sema) const {
-    auto type = sema.check(lhs());
-    split_ref_type(type);
+    auto type = unpack_ref_type(sema.check(lhs()));
+
     if (auto struct_type = type->isa<StructType>()) {
         auto struct_decl = struct_type->struct_decl();
         if (auto field_decl = struct_decl->field_decl(symbol()))
@@ -549,14 +549,13 @@ void TypeAppExpr::check(TypeSema& /*sema*/) const {
 }
 
 void MapExpr::check(TypeSema& sema) const {
-    auto ltype = sema.check(lhs());
+    auto ltype = unpack_ref_type(sema.check(lhs()));
+
     for (const auto& arg : args())
         sema.check(arg.get());
 
     if (ltype->isa<FnType>())
         return sema.check_call(lhs(), args());
-
-    ltype = unpack_ref_type(ltype);
 
     if (ltype->isa<ArrayType>()) {
         if (num_args() == 1)
