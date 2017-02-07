@@ -294,7 +294,7 @@ Token Lexer::lex_suffix(std::string& str, bool floating) {
 }
 
 Token Lexer::literal_error(std::string& str, bool floating) {
-    error(curr(), "invalid constant '{}'", str);
+    error(location(), "invalid constant '{}'", str);
     return lex_suffix(str, floating);
 }
 

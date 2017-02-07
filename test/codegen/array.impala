@@ -1,0 +1,16 @@
+fn test(array: &[i32]) -> i32 {
+    array(0)
+}
+
+fn foo(mut a: [f32 * 4]) -> () {
+    a(0) = 42.f;
+}
+
+fn bar(p: &mut i32) -> () {
+}
+
+fn main() -> int {
+    let mut a = [0, 1, 2, 3];
+    bar(&mut a(4));
+    if test(a) == 0 { 0 } else { 1 }
+}
