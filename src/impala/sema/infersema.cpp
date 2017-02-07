@@ -305,9 +305,10 @@ auto InferSema::representative(const Type* type) -> Representative* {
 }
 
 auto InferSema::find(Representative* repr) -> Representative* {
+    auto old_parent = repr->parent;
     if (repr->parent != repr) {
-        todo_ = true;
         repr->parent = find(repr->parent);
+        todo_ |= repr->parent != old_parent;
     }
     return repr->parent;
 }
