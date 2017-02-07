@@ -152,14 +152,17 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
 Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
     auto thorin_type = cg.convert(type());
 
-    if (is_mut()) {
-        if (is_address_taken())
-            value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), debug()));
-        else
-            value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str());
-
+    auto do_init = [&]() {
         if (init)
             value_.store(init, location());
+    };
+
+    if (is_address_taken()) {
+        value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), debug()));
+        do_init();
+    } else if (is_mut()) {
+        value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str());
+        do_init();
     } else
         value_ = Value::create_val(cg, init);
 
@@ -332,10 +335,6 @@ const Def* CharExpr::remit(CodeGen& cg) const {
     return cg.world().literal_pu8(value(), location());
 }
 
-Value StrExpr::lemit(CodeGen& cg) const {
-    return Value::create_ptr(cg, cg.world().global(cg.remit(this), /*mutable*/ true, location()));
-}
-
 const Def* StrExpr::remit(CodeGen& cg) const {
     Array<const Def*> args(values_.size());
     for (size_t i = 0, e = args.size(); i != e; ++i)
@@ -348,6 +347,14 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     auto def = cg.remit(src());
     auto thorin_type = cg.convert(type());
     return cg.world().convert(thorin_type, def, location());
+}
+
+Value Ref2ValueExpr::lemit(CodeGen& cg) const {
+    return cg.lemit(src());
+}
+
+const Def* Ref2ValueExpr::remit(CodeGen& cg) const {
+    return cg.lemit(this).load(location());
 }
 
 Value PathExpr::lemit(CodeGen& cg) const {
@@ -375,7 +382,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             return ptr;
         }
         case AND: {
-            if (rhs()->is_lvalue()) {
+            if (rhs()->type()->isa<RefType>()) {
                 auto var = cg.lemit(rhs());
                 assert(var.tag() == Value::PtrRef);
                 return var.def();
@@ -388,11 +395,16 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             auto slot = cg.world().slot(cg.convert(rhs()->type()), cg.frame(), location());
             cg.store(slot, def, location());
             return slot;
-
+        }
+        case MUT: {
+            auto var = cg.lemit(rhs());
+            assert(var.tag() == Value::PtrRef);
+            return var.def();
         }
 
         case RUN: return cg.remit(rhs(), MapExpr::Run, location());
         case HLT: return cg.remit(rhs(), MapExpr::Hlt, location());
+        case OR: case OROR: THORIN_UNREACHABLE;
         default:  return cg.lemit(this).load(location());
     }
 }
@@ -529,7 +541,6 @@ const Def* TypeAppExpr::remit(CodeGen& /*cg*/) const {
 }
 
 Value MapExpr::lemit(CodeGen& cg) const {
-    assert(lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<SimdType>());
     auto agg = cg.lemit(lhs());
     return Value::create_agg(agg, cg.remit(arg(0)));
 }
@@ -537,7 +548,9 @@ Value MapExpr::lemit(CodeGen& cg) const {
 const Def* MapExpr::remit(CodeGen& cg) const { return remit(cg, None, Location()); }
 
 const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
-    if (auto fn_type = lhs()->type()->isa<FnType>()) {
+    auto ltype = unpack_ref_type(lhs()->type());
+
+    if (auto fn_type = ltype->isa<FnType>()) {
         const Def* dst = nullptr;
 
         // Handle primops here
@@ -605,7 +618,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
         }
 
         return ret;
-    } else if (lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<SimdType>()) {
+    } else if (ltype->isa<ArrayType>() || ltype->isa<TupleType>() || ltype->isa<SimdType>()) {
         auto index = cg.remit(arg(0));
         return cg.extract(cg.remit(lhs()), index, location());
     }
@@ -768,7 +781,7 @@ void LetStmt::emit(CodeGen& cg) const {
 void AsmStmt::emit(CodeGen& cg) const {
     Array<const thorin::Type*> outs(num_outputs());
     for (size_t i = 0, e = num_outputs(); i != e; ++i)
-        outs[i] = cg.convert(output(i)->expr()->type());
+        outs[i] = cg.convert(output(i)->expr()->type()->as<RefType>()->pointee());
 
     Array<const Def*> ins(num_inputs());
     for (size_t i = 0, e = num_inputs(); i != e; ++i)

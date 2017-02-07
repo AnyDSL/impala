@@ -9,7 +9,7 @@ fn range(a: int, b: int, body: fn(i32) -> ()) -> () {
     }
 }
 
-fn init_zero(mut arr: &[f32]) -> () {
+fn init_zero(arr: &mut [f32]) -> () {
     for i in range(7, 17) {
         arr(i) = 1337f;
     }

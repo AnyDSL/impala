@@ -21,10 +21,10 @@ enum Tag {
     Tag_impl,
     Tag_indefinite_array,
     Tag_lambda,
-    Tag_mut_ptr,
     Tag_noret,
     Tag_owned_ptr,
     Tag_pi,
+    Tag_ref,
     Tag_simd,
     Tag_struct,
     Tag_tuple,
@@ -89,24 +89,40 @@ bool is_strict_subtype(const Type* dst, const Type* src);
 
 //------------------------------------------------------------------------------
 
-/// Pointer @p Type.
-class PtrType : public Type {
+/// Common base Type for PtrType%s and RefType.
+class RefTypeBase : public Type {
 protected:
-    PtrType(TypeTable& typetable, int tag, const Type* pointee, int addr_space)
+    RefTypeBase(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
         : Type(typetable, tag, {pointee})
+        , mut_(mut)
         , addr_space_(addr_space)
     {}
 
-    std::ostream& stream_ptr_type(std::ostream&, std::string prefix, int addr_space, const Type* ref_type) const;
-
 public:
     const Type* pointee() const { return op(0); }
+    bool is_mut() const { return mut_; }
     int addr_space() const { return addr_space_; }
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual uint64_t vhash() const override;
     virtual bool equal(const Type* other) const override;
     virtual std::string prefix() const = 0;
+
+private:
+    bool mut_;
+    int addr_space_;
+
+    friend class TypeTable;
+};
+
+/// Pointer @p Type.
+class PtrType : public RefTypeBase {
+protected:
+    PtrType(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
+        : RefTypeBase(typetable, tag, {pointee}, mut, addr_space)
+    {}
+
+    std::ostream& stream_ptr_type(std::ostream&, std::string prefix, int addr_space, const Type* ref_type) const;
 
 private:
     int addr_space_;
@@ -116,24 +132,11 @@ private:
 
 class BorrowedPtrType : public PtrType {
 public:
-    BorrowedPtrType(TypeTable& typetable, const Type* pointee, int addr_space)
-        : PtrType(typetable, Tag_borrowed_ptr, pointee, addr_space)
+    BorrowedPtrType(TypeTable& typetable, const Type* pointee, bool mut, int addr_space)
+        : PtrType(typetable, Tag_borrowed_ptr, pointee, mut, addr_space)
     {}
 
-    virtual std::string prefix() const override { return "&"; }
-
-private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
-};
-
-class MutPtrType : public PtrType {
-public:
-    MutPtrType(TypeTable& typetable, const Type* pointee, int addr_space)
-        : PtrType(typetable, Tag_mut_ptr, pointee, addr_space)
-    {}
-
-    virtual std::string prefix() const override { return "&mut"; }
+    virtual std::string prefix() const override { return is_mut() ? "&mut " : "&"; }
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
@@ -143,7 +146,7 @@ private:
 class OwnedPtrType : public PtrType {
 public:
     OwnedPtrType(TypeTable& typetable, const Type* pointee, int addr_space)
-        : PtrType(typetable, Tag_owned_ptr, pointee, addr_space)
+        : PtrType(typetable, Tag_owned_ptr, pointee, true, addr_space)
     {}
 
     virtual std::string prefix() const override { return "~"; }
@@ -152,6 +155,44 @@ private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
     virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 };
+
+class RefType : public RefTypeBase {
+protected:
+    RefType(TypeTable& typetable, const Type* pointee, bool mut, int addr_space)
+        : RefTypeBase(typetable, Tag_ref, {pointee}, mut, addr_space)
+    {}
+
+public:
+    virtual std::string prefix() const override { return is_mut() ? "lvalue of " : "reference of "; }
+
+private:
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+
+    friend class TypeTable;
+};
+
+inline const RefType* is_lvalue(const Type* type) {
+    if (auto ref = type->isa<RefType>()) {
+        if (ref->is_mut())
+            return ref;
+    }
+    return nullptr;
+}
+
+inline const Type* unpack_ref_type(const Type* type) {
+    return type->isa<RefType>() ? type->as<RefType>()->pointee() : type;
+}
+
+inline bool is_ptr(const Type* t) {
+    return t->isa<PtrType>() || (t->isa<RefType>() && t->as<RefType>()->pointee()->isa<PtrType>());
+}
+
+inline const RefType* split_ref_type(const Type*& type) {
+    auto ref = type->isa<RefType>();
+    type = ref ? ref->pointee() : type;
+    return ref;
+}
 
 //------------------------------------------------------------------------------
 

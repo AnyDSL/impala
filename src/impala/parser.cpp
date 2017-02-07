@@ -884,9 +884,11 @@ const Expr* Parser::parse_prefix_expr() {
 
     auto tracker = track();
     auto tag = lex().tag();
-    auto rhs = parse_expr(PrecTable::prefix_r[tag]);
+    auto prec = PrecTable::prefix_r[tag];
+    bool mut = tag == Token::AND ? accept(Token::MUT) : false;
+    auto rhs = parse_expr(prec);
 
-    return new PrefixExpr(tracker, (PrefixExpr::Tag) tag, rhs);
+    return new PrefixExpr(tracker, mut ? PrefixExpr::MUT : (PrefixExpr::Tag) tag, rhs);
 }
 
 const Expr* Parser::parse_infix_expr(Tracker tracker, const Expr* lhs) {

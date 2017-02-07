@@ -1,0 +1,5 @@
+fn main() -> int {
+    let a: &mut [i32] = ~[17:i32];
+    a(3) = 3.f as i32;
+    if a(3) == 3 { 0 } else { 1 }
+}

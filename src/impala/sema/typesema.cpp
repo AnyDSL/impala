@@ -20,9 +20,10 @@ public:
 
     bool nossa() const { return nossa_; }
     const Type* scalar_type(const Expr* expr) {
-        if (auto simd_type = expr->type()->isa<SimdType>())
-            return simd_type->elem_type();
-        return expr->type();
+        auto result = unpack_ref_type(expr->type());
+        if (auto simd_type = result->isa<SimdType>())
+            result = simd_type->elem_type();
+        return result;
     }
 
     // error handling
@@ -51,11 +52,13 @@ public:
     IMPALA_EXPECT(num_or_bool_or_ptr, is_int(t) || is_float(t) || is_bool(t) || t->isa<PtrType>(), "number or boolean or pointer type")
 
     template<typename... Args>
-    void expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
+    const Type* expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
         std::ostringstream os;
         thorin::streamf(os, fmt, args...);
-        if (!expr->is_lvalue())
-            error(expr, "lvalue required for {}", os.str());
+        if (auto ref = is_lvalue(expr->type()))
+            return ref->pointee();
+        error(expr, "lvalue required for {}", os.str());
+        return expr->type();
     }
 
     void expect_known(const Decl* value_decl) {
@@ -301,33 +304,36 @@ void PrefixExpr::check(TypeSema& sema) const {
 
     switch (tag()) {
         case AND:
-            sema.expect_lvalue(rhs(), "unary '&' operand");
             rhs()->take_address();
+            return;
+        case MUT:
+            rhs()->write();
+            rhs()->take_address();
+            sema.expect_lvalue(rhs(), "unary '&mut' operand");
             return;
         case TILDE:
             return;
         case MUL:
             sema.expect_ptr(rhs(), "unary '*'");
             return;
-        case INC:
-        case DEC:
-            sema.expect_num(rhs(),    "prefix '{}'", tok2str(this));
+        case INC: case DEC: {
+            rhs()->write();
             sema.expect_lvalue(rhs(), "prefix '{}'", tok2str(this));
+            sema.expect_num(rhs(),    "prefix '{}'", tok2str(this));
             return;
-        case ADD:
-        case SUB:
+        }
+        case ADD: case SUB:
             sema.expect_num(rhs(), "unary '{}'", tok2str(this));
             return;
         case NOT:
             sema.expect_int_or_bool(rhs(), "unary '!'");
             return;
-        case HLT:
-        case RUN:
+        case HLT: case RUN:
             if (!rhs()->isa<MapExpr>())
                 error(this, "function call expected after partial evaluator command {}", (TokenTag)tag());
             return;
-        default:
-            return;
+        case OR: case OROR:
+            THORIN_UNREACHABLE;
     }
 
     THORIN_UNREACHABLE;
@@ -337,51 +343,65 @@ void InfixExpr::check(TypeSema& sema) const {
     sema.check(lhs());
     sema.check(rhs());
 
-    if (lhs()->type() != rhs()->type() && !lhs()->type()->isa<TypeError>() && !rhs()->type()->isa<TypeError>()) {
-        error(this, "both left-hand side and right-hand side of binary '{}' must agree on the same type", tok2str(this));
-        error(lhs(),  "left-hand side type is '{}'", lhs()->type());
-        error(rhs(), "right-hand side type is '{}'", rhs()->type());
-    }
+    auto match_type = [&](const Type* ltype, const Type* rtype) {
+        if (ltype != rtype && !ltype->isa<TypeError>() && !rtype->isa<TypeError>()) {
+            error(this, "both left-hand side and right-hand side of binary '{}' must agree on the same type", tok2str(this));
+            error(lhs(),  "left-hand side type is '{}'", ltype);
+            error(rhs(), "right-hand side type is '{}'", rtype);
+        }
+    };
 
     switch (tag()) {
         case EQ: case NE:
         case LT: case GT:
         case LE: case GE:
+            match_type(lhs()->type(), rhs()->type());
             sema.expect_num_or_bool_or_ptr(lhs(),  "left-hand side of binary '{}'", tok2str(this));
             sema.expect_num_or_bool_or_ptr(rhs(), "right-hand side of binary '{}'", tok2str(this));
             return;
         case ADD: case SUB:
         case MUL: case DIV: case REM:
+            match_type(lhs()->type(), rhs()->type());
             sema.expect_num(lhs(),  "left-hand side of binary '{}'", tok2str(this));
             sema.expect_num(rhs(), "right-hand side of binary '{}'", tok2str(this));
             return;
         case OROR: case ANDAND:
+            match_type(lhs()->type(), rhs()->type());
             sema.expect_bool(lhs(),  "left-hand side of logical '{}'", tok2str(this));
             sema.expect_bool(rhs(), "right-hand side of logical '{}'", tok2str(this));
             return;
         case SHL: case SHR:
+            match_type(lhs()->type(), rhs()->type());
             sema.expect_int(lhs(),  "left-hand side of binary '{}'", tok2str(this));
             sema.expect_int(rhs(), "right-hand side of binary '{}'", tok2str(this));
             return;
         case  OR: case AND: case XOR:
+            match_type(lhs()->type(), rhs()->type());
             sema.expect_int_or_bool(lhs(),  "left-hand side of bitwise '{}'", tok2str(this));
             sema.expect_int_or_bool(rhs(), "right-hand side of bitwise '{}'", tok2str(this));
             return;
-        case ASGN:
+        case ASGN: {
+            lhs()->write();
             sema.expect_lvalue(lhs(), "assignment");
+            auto ltype = unpack_ref_type(lhs()->type());
+            match_type(ltype, rhs()->type());
             return;
+        }
         case ADD_ASGN: case SUB_ASGN:
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
+            lhs()->write();
             sema.expect_num(lhs(),  "left-hand side of binary '{}'", tok2str(this));
             sema.expect_num(rhs(), "right-hand side of binary '{}'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '{}'", tok2str(this));
             return;
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN:
+            lhs()->write();
             sema.expect_int_or_bool(lhs(),  "left-hand side of binary '{}'", tok2str(this));
             sema.expect_int_or_bool(rhs(), "right-hand side of binary '{}'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '{}'", tok2str(this));
             return;
         case SHL_ASGN: case SHR_ASGN:
+            lhs()->write();
             sema.expect_int(lhs(),  "left-hand side of binary '{}'", tok2str(this));
             sema.expect_int(rhs(), "right-hand side of binary '{}'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '{}'", tok2str(this));
@@ -391,6 +411,7 @@ void InfixExpr::check(TypeSema& sema) const {
 }
 
 void PostfixExpr::check(TypeSema& sema) const {
+    lhs()->write();
     sema.check(lhs());
     sema.expect_num(lhs(),    "postfix '{}'", tok2str(this));
     sema.expect_lvalue(lhs(), "postfix '{}'", tok2str(this));
@@ -400,11 +421,11 @@ template <typename F, typename T>
 bool symmetric(F f, T a, T b) { return f(a, b) || f(b, a); }
 
 void CastExpr::check(TypeSema& sema) const {
-    if (auto explicit_cast_expr = isa<ExplicitCastExpr>())
-        sema.check(explicit_cast_expr->ast_type());
-
     auto src_type = sema.check(src());
     auto dst_type = type();
+
+    if (dst_type->isa<BorrowedPtrType>() && dst_type->as<BorrowedPtrType>()->is_mut())
+        src()->write();
 
     // TODO be consistent: dst is first argument, src ist second argument
     auto ptr_to_ptr     = [&] (const Type* a, const Type* b) { return a->isa<PtrType>() && b->isa<PtrType>(); };
@@ -425,6 +446,24 @@ void CastExpr::check(TypeSema& sema) const {
 
     if (src_type->is_known() && dst_type->is_known() && !valid_cast && !is_subtype(dst_type, src_type))
         error(this, "invalid source and destination types for cast operator, got '{}' and '{}'", src_type, dst_type);
+}
+
+void ExplicitCastExpr::check(TypeSema& sema) const {
+    sema.check(ast_type());
+    CastExpr::check(sema);
+}
+
+void Ref2ValueExpr::check(TypeSema& sema) const {
+    auto src_type = sema.check(src());
+    auto dst_type = type();
+
+    if (auto ref = src_type->isa<RefType>())
+        src_type = ref->pointee();
+    else
+        error(this, "source type of an ref-to-rvalue cast must be an ref, got '{}'", src_type);
+
+    if (src_type->is_known() && dst_type->is_known() && src_type != dst_type)
+        error(this, "invalid source and destination types for ref-to-rvalue cast, got '{}' and '{}'", src_type, dst_type);
 }
 
 void TupleExpr::check(TypeSema& sema) const {
@@ -494,7 +533,8 @@ void StructExpr::check(TypeSema& sema) const {
 }
 
 void FieldExpr::check(TypeSema& sema) const {
-    auto type = sema.check(lhs());
+    auto type = unpack_ref_type(sema.check(lhs()));
+
     if (auto struct_type = type->isa<StructType>()) {
         auto struct_decl = struct_type->struct_decl();
         if (auto field_decl = struct_decl->field_decl(symbol()))
@@ -509,13 +549,15 @@ void TypeAppExpr::check(TypeSema& /*sema*/) const {
 }
 
 void MapExpr::check(TypeSema& sema) const {
-    auto ltype = sema.check(lhs());
+    auto ltype = unpack_ref_type(sema.check(lhs()));
+
     for (const auto& arg : args())
         sema.check(arg.get());
 
-    if (ltype->isa<FnType>()) {
-        sema.check_call(lhs(), args());
-    } else if (ltype->isa<ArrayType>()) {
+    if (ltype->isa<FnType>())
+        return sema.check_call(lhs(), args());
+
+    if (ltype->isa<ArrayType>()) {
         if (num_args() == 1)
             sema.expect_int(arg(0), "for array subscript");
         else
@@ -669,9 +711,15 @@ void check_correct_asm_type(const Type* t, const Expr *expr) {
 
 void AsmStmt::check(TypeSema& sema) const {
     for (const auto& output : outputs()) {
-        if (!output->expr()->is_lvalue())
+        auto type = sema.check(output->expr());
+
+        if (auto ref = is_lvalue(type))
+            type = ref->pointee();
+        else
             error(output->expr(), "output expression of an asm statement must be an lvalue");
-        check_correct_asm_type(sema.check(output->expr()), output->expr());
+
+        output->expr()->write();
+        check_correct_asm_type(type, output->expr());
     }
 
     for (const auto& input : inputs())

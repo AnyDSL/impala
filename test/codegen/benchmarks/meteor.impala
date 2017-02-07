@@ -245,7 +245,7 @@ fn flip_piece(piece: int) -> () {
 }
 
 /* Convenience function to quickly calculate all of the indices for a piece */
-fn calc_cell_indices(mut cell: &[i8], piece: int, index: i8) -> () {
+fn calc_cell_indices(cell: &mut [i8], piece: int, index: i8) -> () {
    cell(0) = index;
    cell(1) = shift(cell(0), piece_def(piece)(0));
    cell(2) = shift(cell(1), piece_def(piece)(1));
@@ -311,7 +311,7 @@ fn record_piece(piece: int, minimum: int, first_empty: i8, piece_mask: u64) -> (
 /* Fill the entire board going cell by cell.  If any cells are "trapped"
  * they will be left alone.
  */
-fn fill_contiguous_space(mut board: &[i8], index: int) -> () {
+fn fill_contiguous_space(board: &mut [i8], index: int) -> () {
    if (board(index) == 1_i8) {
       return()
    }
@@ -357,7 +357,7 @@ fn has_island(cell: &[i8], piece: int) -> bool {
     while(temp_board(i) == 1_i8) {
         i--;
     }
-    fill_contiguous_space(&temp_board, i);
+    fill_contiguous_space(&mut temp_board, i);
     let mut c = 0_i8;
     for i in range(0, 50) {
         if(temp_board(i) == 0_i8) {
@@ -379,7 +379,7 @@ fn calc_six_rotations(piece: i8, index: i8) -> () {
 
     for rotation in range_i8(0_i8, 6_i8) {
         if piece != 3_i8 || rotation < 3_i8 { 
-            calc_cell_indices(&cell, piece as int, index);
+            calc_cell_indices(&mut cell, piece as int, index);
             if cells_fit_on_board(&cell, piece as int) && !has_island(&cell, piece as int) {
                 let minimum = minimum_of_cells(&cell);
                 let first_empty = first_empty_cell(&cell, minimum);

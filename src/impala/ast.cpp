@@ -50,28 +50,26 @@ bool IfExpr::has_else() const {
 //------------------------------------------------------------------------------
 
 /*
- * is_lvalue
+ * write
  */
 
-bool StrExpr::is_lvalue() const { return true; }
-
-bool PathExpr::is_lvalue() const {
-    if (value_decl()) {
+void PathExpr::write() const {
+    if (value_decl())
         value_decl()->write();
-        return value_decl()->is_mut();
-    }
-    return false;
 }
 
-bool MapExpr::is_lvalue() const {
-    if (!lhs()->type())
-        return true; // prevent further errors
-    return (lhs()->type()->isa<ArrayType>() || lhs()->type()->isa<TupleType>() || lhs()->type()->isa<PtrType>()) && lhs()->is_lvalue();
+void MapExpr::write() const {
+    auto type = unpack_ref_type(lhs()->type());
+    if (type->isa<ArrayType>() || type->isa<TupleType>() || type->isa<PtrType>())
+        lhs()->write();
 }
 
-bool PrefixExpr::is_lvalue() const { return tag() == MUL; }
-bool FieldExpr::is_lvalue() const { return lhs()->is_lvalue() || lhs()->type()->isa<PtrType>(); }
-bool CastExpr::is_lvalue() const { return src()->is_lvalue(); }
+void PrefixExpr::write() const {
+    if (tag() == MUT)
+        rhs()->write();
+}
+void FieldExpr::write() const { lhs()->write(); }
+void CastExpr::write() const { src()->write(); }
 
 //------------------------------------------------------------------------------
 

@@ -11,7 +11,7 @@ fn fun_impl(N: i32, body: fn(fn(i32) -> i32) -> ()) -> () {
     body(idx);
 }
 
-fn main(p: S, N: i32, mut arr: &[f32]) -> () {
+fn main(p: S, N: i32, arr: &mut [f32]) -> () {
     for idx_hyp in p.fun(N) {
         arr(idx_hyp(42)) = 42.0f;
         arr(23) = 23.0f;

@@ -12,7 +12,7 @@ extern "C" {
     fn printn(&[u8], int) -> ();
     fn print(&[u8]) -> ();
     fn println(&[u8]) -> ();
-    fn read(&[u8], int) -> int;
+    fn read(&mut [u8], int) -> int;
     fn impala_realloc(~[u8], int) -> ~[u8];
     fn impala_memmove(&u8, &u8, int) -> ();
 }
@@ -28,8 +28,6 @@ fn errex(s: &[u8]) -> () {            // error message+value, return 1
     println("\n");
 }
 
-fn take_address(&[u8]) -> () {}
-
 static EXIT_FAILURE = 1;
 
 fn main(argc: int, argv: &[&str]) -> int {
@@ -37,23 +35,22 @@ fn main(argc: int, argv: &[&str]) -> int {
     let mut jjj: [u8*82];        // allocate input line buffer
     let mut qqq = ~[QBFSIZE: u8];   // output buffer (dyn. size)
     let mut pqstop = QBFSIZE;        // size of qqq
-    let mut xtab = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-                   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-                   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-                   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-                   "\0TVGH\0\0CD\0\0M\0KN\0\0\0YSA\0BW\0R\0\0\0\0\0\0"
-                   "\0TVGH\0\0CD\0\0M\0KN\0\0\0YSA\0BW\0R\0\0\0\0\0\0"
-                   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-                   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-                   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-                   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-                   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-                   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-                   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-                   "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"; // char conversion table
-    take_address(&xtab);
+    let xtab = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+               "\0TVGH\0\0CD\0\0M\0KN\0\0\0YSA\0BW\0R\0\0\0\0\0\0"
+               "\0TVGH\0\0CD\0\0M\0KN\0\0\0YSA\0BW\0R\0\0\0\0\0\0"
+               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+               "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"; // char conversion table
     
-    let mut pj = read(&jjj, JBFSIZE) == 1;                 // fetch 1st line
+    let mut pj = read(&mut jjj, JBFSIZE) == 1;                 // fetch 1st line
 
     if (!pj) {
         errex("No input data");
@@ -71,7 +68,7 @@ fn main(argc: int, argv: &[&str]) -> int {
         let mut pq = 1;
         
         while true {                    // LOOP: fill output buffer
-            pj = read(&jjj, JBFSIZE) == 1;     // get line from stdin
+            pj = read(&mut jjj, JBFSIZE) == 1;     // get line from stdin
             if !pj || (jjj(0) == '>') {
                 break()       // EOF or new ID line
             }

@@ -7,7 +7,7 @@ fn range(a : int, b : int, yield : fn(int) -> ()) -> () {
         range(a+1, b, yield, return)
     }
 }
-fn sort(num : int, mut arr : &[i64]) -> () {
+fn sort(num : int, arr : &mut [i64]) -> () {
     // insertion sort
     for i in range(1, num) {
         let x = arr(i);
