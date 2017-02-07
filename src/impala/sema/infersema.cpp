@@ -823,13 +823,11 @@ const Type* FieldExpr::check(InferSema& sema) const {
 
     if (auto struct_type = ltype->isa<StructType>()) {
         if (auto field_decl = struct_type->struct_decl()->field_decl(symbol())) {
-            if (ref)
-                Ref2ValueExpr::create(lhs())->type();
             return sema.wrap_ref(ref, struct_type->op(field_decl->index()));
         }
     }
 
-    return sema.wrap_ref(ref, ltype->is_known() ? sema.type_error() : sema.find_type(this));
+    return ltype->is_known() ? sema.type_error() : sema.find_type(this);
 }
 
 const Type* TypeAppExpr::check(InferSema& sema) const {
