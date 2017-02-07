@@ -853,9 +853,6 @@ const Type* TypeAppExpr::check(InferSema& sema) const {
 }
 
 const Type* MapExpr::check(InferSema& sema) const {
-    if (type_ == nullptr)
-        type_ = sema.unknown_type();
-
     auto ltype = sema.check(lhs());
     if (is_ptr(ltype)) {
         PrefixExpr::create_deref(lhs_.get());
@@ -868,7 +865,7 @@ const Type* MapExpr::check(InferSema& sema) const {
         sema.rvalue(arg.get());
 
     if (ltype->isa<UnknownType>())
-        return type_;
+        return type() ? type() : sema.wrap_ref(ref, sema.unknown_type());
 
     if (auto array = ltype->isa<ArrayType>())
         return sema.wrap_ref(ref, array->elem_type());
@@ -893,7 +890,7 @@ const Type* MapExpr::check(InferSema& sema) const {
     }
 
     if (ltype->isa<FnType>())
-        return sema.check_call(lhs(), args(), type_);
+        return sema.check_call(lhs(), args(), sema.find_type(this));
 
     return sema.type_error();
 }
