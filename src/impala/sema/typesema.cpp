@@ -534,6 +534,7 @@ void StructExpr::check(TypeSema& sema) const {
 
 void FieldExpr::check(TypeSema& sema) const {
     auto type = sema.check(lhs());
+    split_ref_type(type);
     if (auto struct_type = type->isa<StructType>()) {
         auto struct_decl = struct_type->struct_decl();
         if (auto field_decl = struct_decl->field_decl(symbol()))
