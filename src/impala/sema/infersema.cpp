@@ -854,7 +854,7 @@ const Type* TypeAppExpr::infer(InferSema& sema) const {
             return sema.reduce(lambda, ast_type_args(), type_args_);
         }
     }
-    return sema.type_error();
+    return sema.find_type(this);
 }
 
 const Type* MapExpr::infer(InferSema& sema) const {
