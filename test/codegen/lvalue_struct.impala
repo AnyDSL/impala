@@ -1,0 +1,17 @@
+fn iter(out: Img, body: fn(Img) -> ()) -> () {}
+
+fn main() -> () {
+    let out = Img{data: ~[16*16:f32], width: 16, height: 16};
+    for out in iter(out) {
+        out.data(23) = 42.f;
+    }
+
+    if out.data(23) == 42.f { 0 } else { 1 }
+};
+
+struct Img {
+    data   : &mut[f32],
+    width  : i32,
+    height : i32
+}
+
