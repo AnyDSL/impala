@@ -1,6 +1,8 @@
-fn iter(out: Img, body: fn(Img) -> ()) -> () {}
+fn iter(out: Img, body: fn(Img) -> ()) -> () {
+    body(out)
+}
 
-fn main() -> () {
+fn main() -> int {
     let out = Img{data: ~[16*16:f32], width: 16, height: 16};
     for out in iter(out) {
         out.data(23) = 42.f;

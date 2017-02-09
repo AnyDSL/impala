@@ -43,6 +43,7 @@ public:
     /// obeys subtyping
     const Type* coerce(const Type* dst, const Expr* src);
     const Type* coerce(const Typeable* dst, const Expr* src) { return dst->type_ = coerce(dst->type_, src); }
+    void assign(const Expr* dst, const Expr* src);
 
     // check wrappers
 
@@ -210,6 +211,7 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
 }
 
 const Type* InferSema::coerce(const Type* dst, const Expr* src) {
+    find_type(src);
     auto ref = split_ref_type(dst);
 
     // automatically take address of src if dst is a BorrowedPtrType
@@ -218,8 +220,6 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
             check(src = PrefixExpr::create_addrof(src));
     }
 
-    src->type_ = find_type(src);
-
     // insert implicit cast for subtyping
     if (dst->is_known() && src->type()->is_known() && is_strict_subtype(dst, src->type())) {
         src = ImplicitCastExpr::create(src, dst);
@@ -227,6 +227,11 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
     }
 
     return wrap_ref(ref, unify(dst, src->type()));
+}
+
+void InferSema::assign(const Expr* dst, const Expr* src) {
+    if (!dst->type()->isa<UnknownType>())
+        coerce(dst->type(), src);
 }
 
 const Type* InferSema::unify(const Type* dst, const Type* src) {
@@ -688,7 +693,7 @@ const Type* InfixExpr::check(InferSema& sema) const {
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN: {
             sema.check(lhs());
             sema.rvalue(rhs());
-            sema.coerce(lhs(), rhs());
+            sema.assign(lhs(), rhs());
             return sema.unit();
         }
     }
