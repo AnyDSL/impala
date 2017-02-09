@@ -29,7 +29,7 @@ public:
     void push_scope() { levels_.push_back(decl_stack_.size()); } ///< Opens a new scope.
     void pop_scope();                                            ///< Discards current scope.
 
-    void check_head(const Item* item) {
+    void bind_head(const Item* item) {
         if (item->is_no_decl()) {
             if (const auto& extern_block = item->isa<ExternBlock>()) {
                 for (const auto& fn_decl : extern_block->fn_decls())
@@ -111,15 +111,15 @@ void NameSema::pop_scope() {
  * misc
  */
 
-void ASTTypeParam::check(NameSema& sema) const {
+void ASTTypeParam::bind(NameSema& sema) const {
     for (const auto& bound : bounds())
-        bound->check(sema);
+        bound->bind(sema);
 }
 
 
-void LocalDecl::check(NameSema& sema) const {
+void LocalDecl::bind(NameSema& sema) const {
     if (ast_type())
-        ast_type()->check(sema);
+        ast_type()->bind(sema);
     sema.insert(this);
 }
 
@@ -129,7 +129,7 @@ void LocalDecl::check(NameSema& sema) const {
  * AST types
  */
 
-void ASTTypeParamList::check_ast_type_params(NameSema& sema) const {
+void ASTTypeParamList::bind_ast_type_params(NameSema& sema) const {
     // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
     // first, insert names and generate De Bruijn index
     for (const auto& ast_type_param : ast_type_params()) {
@@ -137,35 +137,35 @@ void ASTTypeParamList::check_ast_type_params(NameSema& sema) const {
         ast_type_param->lambda_depth_ = ++sema.lambda_depth_;
     }
 
-    // then, check bounds
+    // then, bind bounds
     for (const auto& ast_type_param : ast_type_params())
-        ast_type_param->check(sema);
+        ast_type_param->bind(sema);
 }
 
-void ErrorASTType::check(NameSema&) const {}
-void PrimASTType::check(NameSema&) const {}
-void PtrASTType::check(NameSema& sema) const { referenced_ast_type()->check(sema); }
-void IndefiniteArrayASTType::check(NameSema& sema) const { elem_ast_type()->check(sema); }
-void DefiniteArrayASTType::check(NameSema& sema) const { elem_ast_type()->check(sema); }
-void SimdASTType::check(NameSema& sema) const { elem_ast_type()->check(sema); }
-void Typeof::check(NameSema& sema) const { expr()->check(sema); }
+void ErrorASTType::bind(NameSema&) const {}
+void PrimASTType::bind(NameSema&) const {}
+void PtrASTType::bind(NameSema& sema) const { referenced_ast_type()->bind(sema); }
+void IndefiniteArrayASTType::bind(NameSema& sema) const { elem_ast_type()->bind(sema); }
+void DefiniteArrayASTType::bind(NameSema& sema) const { elem_ast_type()->bind(sema); }
+void SimdASTType::bind(NameSema& sema) const { elem_ast_type()->bind(sema); }
+void Typeof::bind(NameSema& sema) const { expr()->bind(sema); }
 
-void TupleASTType::check(NameSema& sema) const {
+void TupleASTType::bind(NameSema& sema) const {
     for (const auto& ast_type_arg : ast_type_args())
-        ast_type_arg->check(sema);
+        ast_type_arg->bind(sema);
 }
 
-void ASTTypeApp::check(NameSema& sema) const {
-    path()->check(sema);
+void ASTTypeApp::bind(NameSema& sema) const {
+    path()->bind(sema);
     for (const auto& ast_type_arg : ast_type_args())
-        ast_type_arg->check(sema);
+        ast_type_arg->bind(sema);
 }
 
-void FnASTType::check(NameSema& sema) const {
+void FnASTType::bind(NameSema& sema) const {
     sema.push_scope();
-    check_ast_type_params(sema);
+    bind_ast_type_params(sema);
     for (const auto& ast_type_arg : ast_type_args())
-        ast_type_arg->check(sema);
+        ast_type_arg->bind(sema);
     sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
@@ -176,97 +176,97 @@ void FnASTType::check(NameSema& sema) const {
  * items
  */
 
-void ModuleDecl::check(NameSema& ) const {}
+void ModuleDecl::bind(NameSema& ) const {}
 
-void Module::check(NameSema& sema) const {
+void Module::bind(NameSema& sema) const {
     sema.push_scope();
     for (const auto& item : items()) {
-        sema.check_head(item.get());
+        sema.bind_head(item.get());
         if (item->is_named_decl())
             symbol2item_[item->symbol()] = item.get();
     }
     for (const auto& item : items())
-        item->check(sema);
+        item->bind(sema);
     sema.pop_scope();
 }
 
-void ExternBlock::check(NameSema& sema) const {
+void ExternBlock::bind(NameSema& sema) const {
     for (const auto& fn_decl : fn_decls())
-        fn_decl->check(sema);
+        fn_decl->bind(sema);
 }
 
-void Typedef::check(NameSema& sema) const {
+void Typedef::bind(NameSema& sema) const {
     sema.push_scope();
-    check_ast_type_params(sema);
-    ast_type()->check(sema);
+    bind_ast_type_params(sema);
+    ast_type()->bind(sema);
     sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
 
-void EnumDecl::check(NameSema&) const {}
+void EnumDecl::bind(NameSema&) const {}
 
-void StaticItem::check(NameSema& sema) const {
+void StaticItem::bind(NameSema& sema) const {
     if (ast_type())
-        ast_type()->check(sema);
+        ast_type()->bind(sema);
     if (init())
-        init()->check(sema);
+        init()->bind(sema);
 }
 
-void Fn::fn_check(NameSema& sema) const {
+void Fn::fn_bind(NameSema& sema) const {
     sema.push_scope();
-    check_ast_type_params(sema);
+    bind_ast_type_params(sema);
     for (const auto& param : params()) {
         sema.insert(param.get());
         if (param->ast_type())
-            param->ast_type()->check(sema);
+            param->ast_type()->bind(sema);
     }
     if (body() != nullptr)
-        body()->check(sema);
+        body()->bind(sema);
     sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
 
-void FnDecl::check(NameSema& sema) const {
-    fn_check(sema);
+void FnDecl::bind(NameSema& sema) const {
+    fn_bind(sema);
 }
 
-void StructDecl::check(NameSema& sema) const {
+void StructDecl::bind(NameSema& sema) const {
     sema.push_scope();
-    check_ast_type_params(sema);
+    bind_ast_type_params(sema);
     for (const auto& field_decl : field_decls()) {
-        field_decl->check(sema);
+        field_decl->bind(sema);
         field_table_[field_decl->symbol()] = field_decl.get();
     }
     sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
 
-void FieldDecl::check(NameSema& sema) const {
-    ast_type()->check(sema);
+void FieldDecl::bind(NameSema& sema) const {
+    ast_type()->bind(sema);
     sema.insert(this);
 }
 
-void TraitDecl::check(NameSema& sema) const {
+void TraitDecl::bind(NameSema& sema) const {
     sema.push_scope();
-    check_ast_type_params(sema);
+    bind_ast_type_params(sema);
     for (const auto& t : super_traits())
-        t->check(sema);
+        t->bind(sema);
     for (const auto& method : methods()) {
-        method->check(sema);
+        method->bind(sema);
         method_table_[method->symbol()] = method.get();
     }
     sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
 
-void ImplItem::check(NameSema& sema) const {
+void ImplItem::bind(NameSema& sema) const {
     sema.push_scope();
-    check_ast_type_params(sema);
+    bind_ast_type_params(sema);
     if (trait())
-        trait()->check(sema);
-    ast_type()->check(sema);
+        trait()->bind(sema);
+    ast_type()->bind(sema);
     for (const auto& fn : methods())
-        fn->check(sema);
+        fn->bind(sema);
     sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
@@ -277,36 +277,36 @@ void ImplItem::check(NameSema& sema) const {
  * expressions
  */
 
-void EmptyExpr::check(NameSema&) const {}
+void EmptyExpr::bind(NameSema&) const {}
 
-void BlockExprBase::check(NameSema& sema) const {
+void BlockExprBase::bind(NameSema& sema) const {
     sema.push_scope();
     for (const auto& stmt : stmts()) {
         if (auto item_stmt = stmt->isa<ItemStmt>())
-            sema.check_head(item_stmt->item());
+            sema.bind_head(item_stmt->item());
     }
     for (const auto& stmt : stmts())
-        stmt->check(sema);
-    expr()->check(sema);
+        stmt->bind(sema);
+    expr()->bind(sema);
     sema.pop_scope();
 }
 
-void LiteralExpr::check(NameSema&) const {}
-void CharExpr::check(NameSema&) const {}
-void StrExpr::check(NameSema&) const {}
-void FnExpr::check(NameSema& sema) const { fn_check(sema); }
+void LiteralExpr::bind(NameSema&) const {}
+void CharExpr::bind(NameSema&) const {}
+void StrExpr::bind(NameSema&) const {}
+void FnExpr::bind(NameSema& sema) const { fn_bind(sema); }
 
-void Path::Elem::check(NameSema& sema) const {
+void Path::Elem::bind(NameSema& sema) const {
     decl_ = sema.lookup(this, symbol());
 }
 
-void Path::check(NameSema& sema) const {
+void Path::bind(NameSema& sema) const {
     for (const auto& elem : elems())
-        elem->check(sema);
+        elem->bind(sema);
 }
 
-void PathExpr::check(NameSema& sema) const {
-    path()->check(sema);
+void PathExpr::bind(NameSema& sema) const {
+    path()->bind(sema);
     if (path()->decl()) {
         if (path()->decl()->is_value_decl())
             value_decl_ = path()->decl();
@@ -315,82 +315,82 @@ void PathExpr::check(NameSema& sema) const {
     }
 }
 
-void PrefixExpr ::check(NameSema& sema) const {                     rhs()->check(sema); }
-void InfixExpr  ::check(NameSema& sema) const { lhs()->check(sema); rhs()->check(sema); }
-void PostfixExpr::check(NameSema& sema) const { lhs()->check(sema); }
+void PrefixExpr ::bind(NameSema& sema) const {                     rhs()->bind(sema); }
+void InfixExpr  ::bind(NameSema& sema) const { lhs()->bind(sema); rhs()->bind(sema); }
+void PostfixExpr::bind(NameSema& sema) const { lhs()->bind(sema); }
 
-void FieldExpr::check(NameSema& sema) const {
-    lhs()->check(sema);
-    // don't check symbol here as it depends on lhs' type - must be done in TypeSema
+void FieldExpr::bind(NameSema& sema) const {
+    lhs()->bind(sema);
+    // don't bind symbol here as it depends on lhs' type - must be done in TypeSema
 }
 
-void ExplicitCastExpr::check(NameSema& sema) const {
-    src()->check(sema);
-    ast_type()->check(sema);
+void ExplicitCastExpr::bind(NameSema& sema) const {
+    src()->bind(sema);
+    ast_type()->bind(sema);
 }
 
-void DefiniteArrayExpr::check(NameSema& sema) const {
+void DefiniteArrayExpr::bind(NameSema& sema) const {
     for (const auto& arg : args())
-        arg->check(sema);
+        arg->bind(sema);
 }
 
-void RepeatedDefiniteArrayExpr::check(NameSema& sema) const {
-    value()->check(sema);
+void RepeatedDefiniteArrayExpr::bind(NameSema& sema) const {
+    value()->bind(sema);
 }
 
-void IndefiniteArrayExpr::check(NameSema& sema) const {
-    dim()->check(sema);
-    elem_ast_type()->check(sema);
+void IndefiniteArrayExpr::bind(NameSema& sema) const {
+    dim()->bind(sema);
+    elem_ast_type()->bind(sema);
 }
 
-void TupleExpr::check(NameSema& sema) const {
+void TupleExpr::bind(NameSema& sema) const {
     for (const auto& arg : args())
-        arg->check(sema);
+        arg->bind(sema);
 }
 
-void SimdExpr::check(NameSema& sema) const {
+void SimdExpr::bind(NameSema& sema) const {
     for (const auto& arg : args())
-        arg->check(sema);
+        arg->bind(sema);
 }
 
-void StructExpr::check(NameSema& sema) const {
-    ast_type_app()->check(sema);
+void StructExpr::bind(NameSema& sema) const {
+    ast_type_app()->bind(sema);
     for (const auto& elem : elems())
-        elem->expr()->check(sema);
+        elem->expr()->bind(sema);
 }
 
-void TypeAppExpr::check(NameSema& sema) const {
-    lhs()->check(sema);
+void TypeAppExpr::bind(NameSema& sema) const {
+    lhs()->bind(sema);
     for (const auto& ast_type_arg : ast_type_args())
-        ast_type_arg->check(sema);
+        ast_type_arg->bind(sema);
 }
 
-void MapExpr::check(NameSema& sema) const {
-    lhs()->check(sema);
+void MapExpr::bind(NameSema& sema) const {
+    lhs()->bind(sema);
     for (const auto& arg : args())
-        arg->check(sema);
+        arg->bind(sema);
 }
 
-void IfExpr::check(NameSema& sema) const {
-    cond()->check(sema);
-    then_expr()->check(sema);
-    else_expr()->check(sema);
+void IfExpr::bind(NameSema& sema) const {
+    cond()->bind(sema);
+    then_expr()->bind(sema);
+    else_expr()->bind(sema);
 }
 
-void WhileExpr::check(NameSema& sema) const {
-    cond()->check(sema);
+void WhileExpr::bind(NameSema& sema) const {
+    cond()->bind(sema);
     sema.push_scope();
-    break_decl()->check(sema);
-    continue_decl()->check(sema);
-    body()->check(sema);
+    break_decl()->bind(sema);
+    continue_decl()->bind(sema);
+    body()->bind(sema);
     sema.pop_scope();
 }
 
-void ForExpr::check(NameSema& sema) const {
-    expr()->check(sema);
+void ForExpr::bind(NameSema& sema) const {
+    expr()->bind(sema);
     sema.push_scope();
-    break_decl()->check(sema);
-    fn_expr()->check(sema);
+    break_decl()->bind(sema);
+    fn_expr()->bind(sema);
     sema.pop_scope();
 }
 
@@ -400,14 +400,14 @@ void ForExpr::check(NameSema& sema) const {
  * patterns
  */
 
-void TuplePtrn::check(NameSema& sema) const {
+void TuplePtrn::bind(NameSema& sema) const {
     for (const auto& elem : elems()) {
-        elem->check(sema);
+        elem->bind(sema);
     }
 }
 
-void IdPtrn::check(NameSema& sema) const {
-    local()->check(sema);
+void IdPtrn::bind(NameSema& sema) const {
+    local()->bind(sema);
 }
 
 //------------------------------------------------------------------------------
@@ -416,25 +416,25 @@ void IdPtrn::check(NameSema& sema) const {
  * statements
  */
 
-void ExprStmt::check(NameSema& sema) const { expr()->check(sema); }
-void ItemStmt::check(NameSema& sema) const { item()->check(sema); }
-void LetStmt::check(NameSema& sema) const {
+void ExprStmt::bind(NameSema& sema) const { expr()->bind(sema); }
+void ItemStmt::bind(NameSema& sema) const { item()->bind(sema); }
+void LetStmt::bind(NameSema& sema) const {
     if (init())
-        init()->check(sema);
-    ptrn()->check(sema);
+        init()->bind(sema);
+    ptrn()->bind(sema);
 }
-void AsmStmt::check(NameSema& sema) const {
+void AsmStmt::bind(NameSema& sema) const {
     for (const auto& output : outputs())
-        output->expr()->check(sema);
+        output->expr()->bind(sema);
     for (const auto& input : inputs())
-        input->expr()->check(sema);
+        input->expr()->bind(sema);
 }
 
 //------------------------------------------------------------------------------
 
 void name_analysis(const Module* module) {
     NameSema sema;
-    module->check(sema);
+    module->bind(sema);
 }
 
 //------------------------------------------------------------------------------
