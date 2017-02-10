@@ -119,7 +119,7 @@ private:
 class PtrType : public RefTypeBase {
 protected:
     PtrType(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
-        : RefTypeBase(typetable, tag, {pointee}, mut, addr_space)
+        : RefTypeBase(typetable, tag, pointee, mut, addr_space)
     {}
 
     std::ostream& stream_ptr_type(std::ostream&, std::string prefix, int addr_space, const Type* ref_type) const;
@@ -159,7 +159,7 @@ private:
 class RefType : public RefTypeBase {
 protected:
     RefType(TypeTable& typetable, const Type* pointee, bool mut, int addr_space)
-        : RefTypeBase(typetable, Tag_ref, {pointee}, mut, addr_space)
+        : RefTypeBase(typetable, Tag_ref, pointee, mut, addr_space)
     {}
 
 public:
