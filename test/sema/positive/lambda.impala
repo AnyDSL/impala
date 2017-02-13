@@ -20,7 +20,7 @@ extern fn g(i : int) -> int {
     |j : int| -> int { j + 42 + i }(23)
 }
 
-fn foo(h : fn(int, fn(int))) -> int {
+fn foo(h : fn(int, fn (int) -> !) -> !) -> int {
     h(24)
 }
 

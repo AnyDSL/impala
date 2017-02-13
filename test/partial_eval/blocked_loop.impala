@@ -1,11 +1,11 @@
-fn range_step(a: int, b: int, step: int, yield: fn(int, fn())) -> () {
+fn range_step(a: int, b: int, step: int, yield: fn(int, fn() -> !) -> !) -> () {
     if a < b {
         yield(a);
         range_step(a+step, b, step, yield, return)
     }
 }
 
-fn blocked_loop(length: int, get_block_size: fn(int) -> int, body: fn(int, fn(int))) -> int {
+fn blocked_loop(length: int, get_block_size: fn(int) -> int, body: fn(int, fn(int) -> !) -> !) -> int {
     fn blocked_iter(cur_level: int, i: int, N: int) -> int {
         let block_size = get_block_size(cur_level);
         if block_size <= 0 {
