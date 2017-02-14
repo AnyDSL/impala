@@ -4,7 +4,6 @@
 *.ll
 *.nvvm
 *.pyc
-*.spir
 *.vcg
 CMakeCache.txt
 CMakeFiles/

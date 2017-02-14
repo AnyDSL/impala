@@ -161,7 +161,7 @@ MACRO ( wrap_impala_sources outfiles )
         AnyDSL_runtime_files( _impala_platform_files
             FRONTEND impala
             BACKEND ${_backend} )
-        IF ( ("${_backend}" STREQUAL "spir") OR ("${_backend}" STREQUAL "nvvm") )
+        IF ("${_backend}" STREQUAL "nvvm")
             SET ( _backend_produces_irfile TRUE )
         ENDIF ()
         INCLUDE_DIRECTORIES ( ${AnyDSL_runtime_INCLUDE_DIR} )
@@ -197,7 +197,7 @@ MACRO ( wrap_impala_sources outfiles )
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS ${_impala_platform_files} ${_infiles} VERBATIM )
 
-    # generate .bc files for NVVM & SPIR
+    # generate .bc files for NVVM
     IF ( _backend_produces_irfile )
         SET ( _irfile "${_basepath}.${_backend}" )
         SET ( _bcfile "${_basepath}.${_backend}.bc" )
