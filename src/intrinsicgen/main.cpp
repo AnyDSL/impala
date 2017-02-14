@@ -15,13 +15,18 @@ int main() {
     auto module = std::make_unique<impala::Module>("dummy.impala");
     check(init, module.get(), false);
 
-    auto& context = llvm::getGlobalContext();
+    llvm::LLVMContext context;
     int num = llvm::Intrinsic::num_intrinsics - 1;
 
     std::cout << "extern \"device\" {" << thorin::up;
     for (int i = 1; i != num; ++i) {
         auto id = (llvm::Intrinsic::ID) i;
-        std::string llvm_name = llvm::Intrinsic::getName(id);
+        std::string llvm_name;
+        if (llvm::Intrinsic::isOverloaded(id))
+            llvm_name = IntrinsicNameTable[i];
+        else
+            llvm_name = llvm::Intrinsic::getName(id);
+
         // skip "experimental" intrinsics
         if (llvm_name.find("experimental")!=std::string::npos)
             continue;
