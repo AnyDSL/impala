@@ -1,7 +1,7 @@
-extern fn f(i : int, ret : fn(int)) {
+extern fn f(i : int, ret : fn(int) -> !) -> ! {
     g(3) + 5
 }
 
-extern fn g(i : int, ret : fn(int)) {
+extern fn g(i : int, ret : fn(int) -> !) -> ! {
     f(i, ret)
 }

@@ -30,7 +30,6 @@ def allTests():
       "codegen/range.impala",
       "codegen/range_poly.impala",
       "codegen/ret_assert.impala",
-      "codegen/spir_phi_bug.impala",
       "codegen/struct_arg.impala",
       "codegen/system_f_problem.impala",
       "codegen/trait_impls.impala",
