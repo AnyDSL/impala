@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 import argparse
+import math
 import os
+import subprocess
 import sys
 
-def is_exe(file):
-    return os.path.isfile(file) and os.access(file, os.X_OK)
+def is_exe(filename):
+    return os.path.isfile(filename) and os.access(filename, os.X_OK)
 
 def find_impala():
     impala_exe = "impala.exe" if sys.platform == "win32" else "impala"
@@ -19,26 +21,29 @@ def find_impala():
     return os.path.abspath(os.path.join("..", "build", "bin", impala_exe))
 
 def main():
-    exe = find_impala()
-
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('test',                    nargs='?', help='path to test or test directory',  default='.', type=str)
-    parser.add_argument('-e', '--executable',      nargs='?', help='path to impala executable',       default=exe, type=str)
-    parser.add_argument('-c', '--compile-timeout', nargs='?', help='timeout for compiling test case', default=6,   type=int)
-    parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',   default=6,   type=int)
+    parser.add_argument('test',                    nargs='?', help='path to test or test directory',  default='.',           type=str)
+    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                  default=find_impala(), type=str)
+    parser.add_argument('-c', '--compile-timeout', nargs='?', help='timeout for compiling test case', default=5,             type=int)
+    parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',   default=5,             type=int)
     args = parser.parse_args()
-    print(args.executable)
-    print(args.compile_timeout)
-    print(args.run_timeout)
-    #parser.print_help()
-    enum_tests()
 
-def enum_tests():
-    pass
-    # for dirName, subdirList, fileList in os.walk(rootDir):
-    # print('Found directory: %s' % dirName)
-    # for fname in fileList:
-    # print(fname)
-    # print('\t%s' % fname)
+    def impala(flags, prg):
+        subprocess.run([args.impala] + flags + [prg], timeout=args.compile_timeout)
+
+    tests = [];
+    for dirpath, dirs, files in os.walk(args.test): 
+        for filename in files:
+            tests.append(os.path.join(dirpath,filename))
+
+    i = 0
+    align = int(math.log10(len(tests)))
+    for test in tests:
+        print(">>> [{:>3}/{}]".format(i, len(tests)))
+        impala([], test)
+        i = i + 1
+    print(tests)
+    #impala(["-emit-llvm"], "codegen/endless_mangling.impala")
+    #parser.print_help()
 
 sys.exit(main())
