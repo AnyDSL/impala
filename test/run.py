@@ -26,7 +26,7 @@ def find_impala():
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('test',                    nargs='?', help='path to test or test directory',  default='.',           type=str)
+    parser.add_argument('test',                    nargs='*', help='path to test or test directory',  default='.',           type=str)
     parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                  default=find_impala(), type=str)
     parser.add_argument('-c', '--compile-timeout', nargs='?', help='timeout for compiling test case', default=5,             type=int)
     parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',   default=5,             type=int)
@@ -38,12 +38,13 @@ def main():
         subprocess.run(["clang", "-c", "-O2", "infrastructure/lib.c"])
 
     tests = [];
-    for dirpath, dirs, files in os.walk(args.test): 
-        for filename in files:
-            if os.path.splitext(filename)[1] == ".impala":
-                tests.append(os.path.join(dirpath,filename))
+    for test in args.test:
+        for dirpath, dirs, files in os.walk(test):
+            for filename in files:
+                if os.path.splitext(filename)[1] == ".impala":
+                    tests.append(os.path.join(dirpath,filename))
 
-    i = 0
+    i = 1
     align = int(math.log10(len(tests)))
     for test in tests:
         base = os.path.splitext(os.path.split(test)[1])[0]
