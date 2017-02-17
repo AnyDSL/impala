@@ -24,6 +24,12 @@ def find_impala():
 
     return os.path.abspath(os.path.join("..", "build", "bin", impala_exe))
 
+def has_main(test):
+    for line in open(test, 'r'):
+        if line.startswith("fn main"):
+            return True
+    return False
+
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('test',                    nargs='*', help='path to test or test directory',  default='.',           type=str)
@@ -70,8 +76,12 @@ def main():
 
         print((">>> [{:>%i}/{}] {}" % align).format(i, len(tests), test))
 
-        impala(["-emit-llvm"])
-        link()
+        if has_main(test):
+            impala(["-emit-llvm", "-O2"])
+            link()
+        else:
+            impala([])
+
         if not args.nocleanup:
             remove(test_ll)
             remove(base)
