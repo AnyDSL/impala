@@ -39,13 +39,16 @@ def main():
 
     tests = [];
     for test in args.test:
-        for dirpath, dirs, files in os.walk(test):
-            for filename in files:
-                if os.path.splitext(filename)[1] == ".impala":
-                    tests.append(os.path.join(dirpath,filename))
+        if os.path.isfile(test):
+            tests.append(test)
+        else:
+            for dirpath, dirs, files in os.walk(test):
+                for filename in files:
+                    if os.path.splitext(filename)[1] == ".impala":
+                        tests.append(os.path.join(dirpath,filename))
 
+    align = int(math.log10(len(tests))) + 1
     i = 1
-    align = int(math.log10(len(tests)))
     for test in tests:
         base = os.path.splitext(os.path.split(test)[1])[0]
         test_ll =  base + ".ll"
@@ -65,7 +68,7 @@ def main():
             except subprocess.TimeoutExpired as timeout:
                 print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
 
-        print(">>> [{:>3}/{}] {}".format(i, len(tests), test))
+        print((">>> [{:>%i}/{}] {}" % align).format(i, len(tests), test))
 
         impala(["-emit-llvm"])
         link()
