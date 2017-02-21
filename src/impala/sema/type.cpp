@@ -148,11 +148,11 @@ std::ostream& NoRetType::stream(std::ostream& os) const { return os << "<no-retu
 
 std::ostream& FnType::stream(std::ostream& os) const {
     os << "fn";
-    //auto ret_type = return_type();
-    //if (ret_type->isa<NoRetType>())
+    auto ret_type = return_type();
+    if (ret_type->isa<NoRetType>())
         return stream_list(os, ops(), [&](const Type* type) { os << type; }, "(", ")");
 
-    //return streamf(os, "({}) -> {}", stream_list(ops().skip_back(), [&](const Type* type) { os << type; }), ret_type);
+    return streamf(os, "({}) -> {}", stream_list(ops().skip_back(), [&](const Type* type) { os << type; }), ret_type);
 }
 
 std::ostream& Var::stream(std::ostream& os) const {

@@ -511,9 +511,7 @@ void StructExpr::check(TypeSema& sema) const {
         for (const auto& elem : elems()) {
             sema.check(elem->expr());
 
-            if (auto field_decl = struct_decl->field_decl(elem->symbol())) {
-                elem->field_decl_ = field_decl;
-
+            if (auto field_decl = elem->field_decl()) {
                 if (!thorin::visit(done, field_decl))
                     sema.expect_type(struct_type->op(field_decl->index()), elem->expr(), "initialization type for field");
                 else
