@@ -1,0 +1,9 @@
+fn main() -> i32 {
+    let s = S{g: |a, b| a + b, f: |a| a};
+    if s.g(23, 42)- s.f(23) == 42 { 0 } else { 1 }
+}
+
+struct S {
+    f: fn(i32) -> i32,
+    g: fn(i32, i32) -> i32,
+}

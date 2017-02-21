@@ -774,14 +774,16 @@ const Type* TupleExpr::infer(InferSema& sema) const {
 
 const Type* StructExpr::infer(InferSema& sema) const {
     auto type = sema.infer(ast_type_app());
-    auto struct_type = type->isa<StructType>();
 
-    for (size_t i = 0, e = num_elems(); i != e; ++i) {
-        if (struct_type && i < struct_type->num_ops()) {
-            sema.rvalue(elem(i)->expr());
-            sema.coerce(struct_type->op(i), elem(i)->expr());
-        } else
-            sema.rvalue(elem(i)->expr());
+    for (size_t i = 0, e = num_elems(); i != e; ++i)
+        sema.rvalue(elem(i)->expr());
+
+    if (auto struct_type = type->isa<StructType>()) {
+        for (size_t i = 0, e = num_elems(); i != e; ++i) {
+            elem(i)->field_decl_ = struct_type->struct_decl()->field_decl(elem(i)->symbol());
+            if (elem(i)->field_decl() != nullptr)
+                sema.coerce(struct_type->op(elem(i)->field_decl()->index()), elem(i)->expr());
+        }
     }
 
     return type;
