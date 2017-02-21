@@ -641,10 +641,8 @@ const Type* PrefixExpr::infer(InferSema& sema) const {
             auto type = sema.rvalue(rhs());
             if (auto ptr_type = type->isa<PtrType>())
                 return sema.ref_type(ptr_type->pointee(), ptr_type->is_mut(), ptr_type->addr_space());
-            else {
-                assert(false && "what todo now?");
-                return type;
-            }
+            else
+                return sema.find_type(this);
         }
         case INC: case DEC:
             return unpack_ref_type(sema.infer(rhs()));
