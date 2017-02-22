@@ -1,0 +1,6 @@
+extern
+fn foo() -> () {
+    let bar = |i: &mut int| { *i = 42; };
+    foobar(bar)
+}
+fn foobar(fun: fn(&int) -> ()) -> () { fun(45); fun(45); fun(55) }

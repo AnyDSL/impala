@@ -1,0 +1,1 @@
+subtype_fnargs1.impala:4 col 12 - 14: error: mismatched types: expected 'fn(&i32) -> ()' but found 'fn(&mut i32) -> ()' as argument type

@@ -89,8 +89,19 @@ bool is_subtype(const Type* dst, const Type* src) {
             result &=  src->as<RefTypeBase>()->is_mut() == dst_ref_type->is_mut()
                     && src->as<RefTypeBase>()->addr_space() == dst_ref_type->addr_space();
 
-        for (size_t i = 0, e = dst->num_ops(); result && i != e; ++i)
-            result &= is_subtype(dst->op(i), src->op(i));
+        if (auto dst_fn = dst->isa<FnType>()) {
+            auto ret = dst_fn->return_type();
+            size_t nops = dst->num_ops();
+            if (!ret->isa<NoRetType>()) {
+                result &= is_subtype(ret, src->as<FnType>()->return_type());
+                nops--;
+            }
+            for (size_t i = 0, e = nops; result && i != e; ++i)
+                result &= is_subtype(src->op(i), dst->op(i));
+        } else {
+            for (size_t i = 0, e = dst->num_ops(); result && i != e; ++i)
+                result &= is_subtype(dst->op(i), src->op(i));
+        }
 
         return result;
     }
