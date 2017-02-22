@@ -93,7 +93,6 @@ public:
         return expr->type()->isa<RefType>() ? Ref2ValueExpr::create(expr)->type() : expr->type();
     }
 
-    const Type* rvalue(const Expr* expr, const Type* t) { return constrain(expr, rvalue(expr), t); }
     const Type* wrap_ref(const RefType* ref, const Type* type) {
         return ref ? ref_type(type, ref->is_mut(), ref->addr_space()) : type;
     }
@@ -221,10 +220,8 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
     }
 
     // insert implicit cast for subtyping
-    if (dst->is_known() && src->type()->is_known() && is_strict_subtype(dst, src->type())) {
-        src = ImplicitCastExpr::create(src, dst);
-        infer(src);
-    }
+    if (dst->is_known() && src->type()->is_known() && is_strict_subtype(dst, src->type()))
+        infer(src = ImplicitCastExpr::create(src, dst));
 
     return wrap_ref(ref, unify(dst, src->type()));
 }
@@ -563,8 +560,8 @@ void FnDecl::infer(InferSema& sema) const {
     sema.constrain(this, sema.close(num_ast_type_params(), sema.fn_type(param_types)));
 
     if (body() != nullptr) {
-        sema.rvalue(body());
-        sema.coerce(fn_type()->return_type(), body());
+        if (!sema.rvalue(body())->isa<NoRetType>())
+            sema.coerce(fn_type()->return_type(), body());
     }
 }
 
@@ -673,8 +670,10 @@ const Type* InfixExpr::infer(InferSema& sema) const {
         }
         case OROR:
         case ANDAND:
-            sema.rvalue(lhs(), sema.type_bool());
-            sema.rvalue(rhs(), sema.type_bool());
+            sema.rvalue(lhs());
+            sema.rvalue(rhs());
+            sema.constrain(lhs(), sema.type_bool());
+            sema.constrain(rhs(), sema.type_bool());
             return sema.type_bool();
         case ADD: case SUB:
         case MUL: case DIV: case REM:
@@ -920,8 +919,8 @@ const Type* IfExpr::infer(InferSema& sema) const {
     auto then_type = sema.rvalue(then_expr());
     auto else_type = sema.rvalue(else_expr());
 
-    if (then_type->isa<NoRetType>()) return else_type;
-    if (else_type->isa<NoRetType>()) return then_type;
+    if (then_type->isa<NoRetType>() || then_type->isa<UnknownType>()) return else_type;
+    if (else_type->isa<NoRetType>() || else_type->isa<UnknownType>()) return then_type;
 
     sema.constrain(then_expr(), else_type);
     return sema.constrain(else_expr(), then_type);
