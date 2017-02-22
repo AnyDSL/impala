@@ -325,6 +325,22 @@ private:
     friend class TypeTable;
 };
 
+class TypeError : public Type {
+private:
+    TypeError(TypeTable& table)
+        : Type(table, Node_TypeError, {})
+    {}
+
+public:
+    virtual std::ostream& stream(std::ostream&) const override;
+
+private:
+    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
+    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+
+    friend class TypeTable;
+};
+
 //------------------------------------------------------------------------------
 
 }

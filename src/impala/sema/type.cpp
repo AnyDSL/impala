@@ -154,8 +154,8 @@ std::ostream& PrimType::stream(std::ostream& os) const {
     }
 }
 
-std::ostream& TypeError::stream(std::ostream& os) const { return os << "<type error>"; }
 std::ostream& NoRetType::stream(std::ostream& os) const { return os << "<no-return>"; }
+std::ostream& TypeError::stream(std::ostream& os) const { return os << "<type error>"; }
 
 std::ostream& FnType::stream(std::ostream& os) const {
     os << "fn";
@@ -209,6 +209,7 @@ const Type* OwnedPtrType       ::vrebuild(TypeTable& to, Types ops) const { retu
 const Type* RefType            ::vrebuild(TypeTable& to, Types ops) const { return to.      ref_type(ops[0], is_mut(), addr_space()); }
 const Type* NoRetType          ::vrebuild(TypeTable&,    Types    ) const { return this; }
 const Type* UnknownType        ::vrebuild(TypeTable&,    Types    ) const { return this; }
+const Type* TypeError          ::vrebuild(TypeTable&,    Types    ) const { return this; }
 
 //------------------------------------------------------------------------------
 
@@ -247,6 +248,8 @@ const Type* FnType::vreduce(int depth, const Type* type, Type2Type& map) const {
 const Type* PrimType   ::vreduce(int, const Type*, Type2Type&) const { return this; }
 const Type* NoRetType  ::vreduce(int, const Type*, Type2Type&) const { return this; }
 const Type* UnknownType::vreduce(int, const Type*, Type2Type&) const { return this; }
+const Type* TypeError  ::vreduce(int, const Type*, Type2Type&) const { return this; }
+
 
 //------------------------------------------------------------------------------
 
