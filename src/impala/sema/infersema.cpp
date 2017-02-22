@@ -270,24 +270,26 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     if (dst->isa<UnknownType>()) return unify(src_repr, dst_repr)->type;
     if (src->isa<UnknownType>()) return unify(dst_repr, src_repr)->type;
 
-
     if (dst->num_ops() == src->num_ops()) {
-        Array<const Type*> op(dst->num_ops());
-        for (size_t i = 0, e = op.size(); i != e; ++i)
-            op[i] = unify(dst->op(i), src->op(i));
-
+        // do not unify the operands if the types do not match
         if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
             if (auto src_owned_ptr_type = src->isa<OwnedPtrType>()) {
                 if (src_owned_ptr_type->addr_space() == dst_borrowed_ptr_type->addr_space())
-                    return borrowed_ptr_type(op[0], dst_borrowed_ptr_type->is_mut(), dst_borrowed_ptr_type->addr_space());
+                    return borrowed_ptr_type(unify(dst->op(0), src->op(0)),
+                                             dst_borrowed_ptr_type->is_mut(),
+                                             dst_borrowed_ptr_type->addr_space());
             }
         }
 
         if (dst->isa<IndefiniteArrayType>() && src->isa<DefiniteArrayType>())
-            return indefinite_array_type(op[0]);
+            return indefinite_array_type(unify(dst->op(0), src->op(0)));
 
-        if (dst->tag() == src->tag())
+        if (dst->tag() == src->tag()) {
+            Array<const Type*> op(dst->num_ops());
+            for (size_t i = 0, e = op.size(); i != e; ++i)
+                op[i] = unify(dst->op(i), src->op(i));
             return dst->rebuild(op);
+        }
     }
 
     return dst;
