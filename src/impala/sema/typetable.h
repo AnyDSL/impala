@@ -37,10 +37,9 @@ public:
 
 private:
     const NoRetType* type_noret_;
+    const TypeError* type_error_;
 #define IMPALA_TYPE(itype, atype) const PrimType* itype##_;
 #include "impala/tokenlist.h"
-
-    const TypeError* type_error_;
 };
 
 }
