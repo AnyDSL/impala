@@ -992,7 +992,6 @@ void LetStmt::infer(InferSema& sema) const {
     if (init()) {
         sema.rvalue(init());
         sema.coerce(ptrn(), init());
-        //sema.constrain(local(), init()->type());
     }
 }
 
