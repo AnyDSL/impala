@@ -1,3 +1,5 @@
+// codegen
+
 type char = u8;
 type str = [char];
 

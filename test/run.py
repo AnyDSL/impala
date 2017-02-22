@@ -1,10 +1,22 @@
 #!/usr/bin/env python
 
 import argparse
+import enum
 import math
 import os
 import subprocess
 import sys
+
+class Category(enum.Enum):
+    codegen  = 0
+    sema_pos = enum.auto()
+    sema_neg = enum.auto()
+
+def categorize(s):
+    for cat in Category:
+        if str(cat.name) == s:
+            return cat.value
+    return None
 
 def is_exe(filename):
     return os.path.isfile(filename) and os.access(filename, os.X_OK)
@@ -24,11 +36,11 @@ def find_impala():
 
     return os.path.abspath(os.path.join("..", "build", "bin", impala_exe))
 
-def has_main(test):
-    for line in open(test, 'r'):
-        if line.startswith("fn main"):
-            return True
-    return False
+def classify(test):
+    with open(test, 'r') as f:
+        line = f.readline()
+        if line.startswith("//"):
+            return categorize(line[2:].split()[0])
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -43,7 +55,8 @@ def main():
         print(">>> building lib.o")
         subprocess.run(["clang", "-c", "-O2", "infrastructure/lib.c"])
 
-    tests = [];
+    tests = [[], [], []]
+
     for test in args.test:
         if os.path.isfile(test):
             tests.append(test)
@@ -51,41 +64,49 @@ def main():
             for dirpath, dirs, files in os.walk(test):
                 for filename in files:
                     if os.path.splitext(filename)[1] == ".impala":
-                        tests.append(os.path.join(dirpath,filename))
+                        path = os.path.join(dirpath,filename)
+                        c = classify(path)
+                        if c != None:
+                            tests[c].append(path)
 
-    align = int(math.log10(len(tests))) + 1
+    total = sum([len(l) for l in tests])
+    align = int(math.log10(total)) + 1
     i = 1
-    for test in tests:
-        base = os.path.splitext(os.path.split(test)[1])[0]
-        test_ll =  base + ".ll"
+    for cat in tests:
+        for test in cat:
+            base = os.path.splitext(os.path.split(test)[1])[0]
+            test_ll =  base + ".ll"
 
-        def impala(flags):
-            try:
-                subprocess.run([args.impala] + flags + [test], timeout=args.compile_timeout)
-            except subprocess.TimeoutExpired as timeout:
-                print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
+            def impala(flags):
+                try:
+                    subprocess.run([args.impala] + flags + [test], timeout=args.compile_timeout)
+                except subprocess.TimeoutExpired as timeout:
+                    print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
 
-        def link():
-            subprocess.run(["clang", "-s", test_ll, "lib.o", "-o", base])
+            def link():
+                subprocess.run(["clang", "-s", test_ll, "lib.o", "-o", base])
 
-        def run():
-            try:
-                subprocess.run(["base"], args.run-timeout)
-            except subprocess.TimeoutExpired as timeout:
-                print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
+            def run():
+                try:
+                    subprocess.run(["base"], args.run-timeout)
+                except subprocess.TimeoutExpired as timeout:
+                    print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
 
-        print((">>> [{:>%i}/{}] {}" % align).format(i, len(tests), test))
+            print((">>> [{:>%i}/{}] {}" % align).format(i, total, test))
 
-        if has_main(test):
-            impala(["-emit-llvm", "-O2"])
-            link()
-        else:
-            impala([])
+            classify(test)
+            # if has_main(test):
+            if False:
+                impala(["-emit-llvm", "-O2"])
+                link()
+            else:
+                pass
+                # impala([])
 
-        if not args.nocleanup:
-            remove(test_ll)
-            remove(base)
+            if not args.nocleanup:
+                remove(test_ll)
+                remove(base)
 
-        i = i + 1
+            i = i + 1
 
 sys.exit(main())
