@@ -791,9 +791,6 @@ const Type* StructExpr::infer(InferSema& sema) const {
 const Type* InferSema::infer_call(const Expr* lhs, ArrayRef<const Expr*> args, const Type* call_type) {
     auto fn_type = lhs->type()->as<FnType>();
 
-    for (const auto& arg : args)
-        rvalue(arg);
-
     if (args.size() == fn_type->num_ops()) {
         Array<const Type*> types(args.size());
         for (size_t i = 0, e = args.size(); i != e; ++i)
@@ -936,6 +933,7 @@ const Type* WhileExpr::infer(InferSema& sema) const {
 }
 
 const Type* ForExpr::infer(InferSema& sema) const {
+    sema.rvalue(fn_expr());
     auto forexpr = expr();
     if (auto prefix = forexpr->isa<PrefixExpr>())
         if (prefix->tag() == PrefixExpr::RUN || prefix->tag() == PrefixExpr::HLT)
@@ -943,6 +941,9 @@ const Type* ForExpr::infer(InferSema& sema) const {
 
     if (auto map = forexpr->isa<MapExpr>()) {
         auto ltype = sema.rvalue(map->lhs());
+
+        for (size_t i = 0, e = map->num_args(); i != e; ++i)
+            sema.rvalue(map->arg(i));
 
         if (auto fn_for = ltype->isa<FnType>()) {
             if (fn_for->num_ops() != 0) {
@@ -957,12 +958,7 @@ const Type* ForExpr::infer(InferSema& sema) const {
             args.back() = fn_expr();
             return sema.infer_call(map->lhs(), args, type_);
         }
-
-        for (size_t i = 0, e = map->num_args(); i != e; ++i)
-            sema.rvalue(map->arg(i));
     }
-
-    sema.rvalue(fn_expr());
 
     return sema.unit();
 }
