@@ -292,7 +292,7 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
         }
     }
 
-    return dst;
+    return type_error();
 }
 
 //------------------------------------------------------------------------------
@@ -933,7 +933,6 @@ const Type* WhileExpr::infer(InferSema& sema) const {
     sema.infer(break_decl());
     sema.infer(continue_decl());
     sema.rvalue(body());
-    sema.constrain(cond(), sema.unit());
     return sema.unit();
 }
 
