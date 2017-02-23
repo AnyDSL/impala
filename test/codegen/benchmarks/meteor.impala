@@ -1,3 +1,5 @@
+// codegen
+
 /* The Computer Language Benchmarks Game
  * http://benchmarksgame.alioth.debian.org/
  *
@@ -605,7 +607,7 @@ fn compare_solutions(elem1: &[i8], elem2: &[i8]) -> i8 {
 }
 
 // searching is linear time, qsort n*log(n)
-fn find_minmax(mut ary: &[[i8*50]], size: int) -> (&[i8], &[i8]) {
+fn find_minmax(ary: &[[i8*50]], size: int) -> (&[i8], &[i8]) {
    let mut min = &ary(0);
    let mut max = &ary(0);
    for i in range(1, size) {

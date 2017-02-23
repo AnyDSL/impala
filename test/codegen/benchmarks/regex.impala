@@ -1,3 +1,5 @@
+// codegen
+
 struct pcre {}
 struct pcre_extra {}
 struct File {}

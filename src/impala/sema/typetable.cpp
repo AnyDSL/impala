@@ -4,6 +4,7 @@ namespace impala {
 
 TypeTable::TypeTable()
     : type_noret_(unify(new NoRetType(*this)))
+    , type_error_(unify(new TypeError(*this)))
 #define IMPALA_TYPE(itype, atype) , itype##_(unify(new PrimType(*this, PrimType_##itype)))
 #include "impala/tokenlist.h"
 {}

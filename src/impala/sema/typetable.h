@@ -33,9 +33,11 @@ public:
     const NoRetType* type_noret() { return type_noret_; }
     const PrimType* prim_type(PrimTypeTag tag);
     const UnknownType* unknown_type() { return unify(new UnknownType(*this)); }
+    const TypeError* type_error() { return type_error_; }
 
 private:
     const NoRetType* type_noret_;
+    const TypeError* type_error_;
 #define IMPALA_TYPE(itype, atype) const PrimType* itype##_;
 #include "impala/tokenlist.h"
 };
