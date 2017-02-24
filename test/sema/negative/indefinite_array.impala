@@ -1,0 +1,10 @@
+fn foo(x: [i32]) -> [i32] {
+    let y = [23: i32];
+    let z = ([23: i32], 23);
+    let mut w: (i32, [i32]);
+    y
+}
+
+struct S {
+    S: [i32]
+}
