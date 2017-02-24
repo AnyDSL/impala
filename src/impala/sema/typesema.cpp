@@ -75,6 +75,11 @@ public:
             error(expr, "mismatched types: expected '{}' but found '{}' as {}", expected, expr->type(), context);
     }
 
+    void no_indefinite_array(const ASTNode* n, const Type* type, const char* context) {
+        if (type->isa<IndefiniteArrayType>())
+            error(n, "indefinite array '{}' not allowed as {} because its size is statically unknown; use a definite array or a pointer to an indefinite array instead", type, context);
+    }
+
     // check wrappers
 
     const Var* check(const ASTTypeParam* ast_type_param) { ast_type_param->check(*this); return ast_type_param->var(); }
@@ -149,14 +154,18 @@ void SimdASTType::check(TypeSema& sema) const {
 }
 
 void TupleASTType::check(TypeSema& sema) const {
-    for (const auto& ast_type_arg : ast_type_args())
+    for (const auto& ast_type_arg : ast_type_args()) {
         sema.check(ast_type_arg.get());
+        sema.no_indefinite_array(ast_type_arg.get(), ast_type_arg->type(), "element type in a tuple");
+    }
 }
 
 void FnASTType::check(TypeSema& sema) const {
     check_ast_type_params(sema);
-    for (const auto& ast_type_arg : ast_type_args())
+    for (const auto& ast_type_arg : ast_type_args()) {
         sema.check(ast_type_arg.get());
+        sema.no_indefinite_array(ast_type_arg.get(), ast_type_arg->type(), "element type in a function type");
+    }
 }
 
 void ASTTypeApp::check(TypeSema&) const {
@@ -173,6 +182,8 @@ void LocalDecl::check(TypeSema& sema) const {
     if (ast_type())
         sema.check(ast_type());
     sema.expect_known(this);
+    sema.no_indefinite_array(ast_type() ? ast_type()->as<ASTNode>() : identifier()->as<ASTNode>(), type(),
+            isa<Param>() ? "parameter type" : "type for a local variable");
 }
 
 const Type* Fn::check_body(TypeSema& sema) const {
@@ -222,8 +233,10 @@ void EnumDecl::check(TypeSema&) const { /*TODO*/ }
 
 void StructDecl::check(TypeSema& sema) const {
     check_ast_type_params(sema);
-    for (const auto& field_decl : field_decls())
+    for (const auto& field_decl : field_decls()) {
         sema.check(field_decl.get());
+        sema.no_indefinite_array(field_decl.get(), field_decl->type(), "type for a struct field");
+    }
 }
 
 void FieldDecl::check(TypeSema& sema) const { sema.check(ast_type()); }
@@ -467,8 +480,10 @@ void Ref2ValueExpr::check(TypeSema& sema) const {
 }
 
 void TupleExpr::check(TypeSema& sema) const {
-    for (const auto& arg : args())
+    for (const auto& arg : args()) {
         sema.check(arg.get());
+        sema.no_indefinite_array(arg.get(), arg->type(), "type for an element in a tuple expression");
+    }
 }
 
 void RepeatedDefiniteArrayExpr::check(TypeSema& sema) const { sema.check(value()); }
