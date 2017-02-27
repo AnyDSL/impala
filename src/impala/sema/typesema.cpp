@@ -43,6 +43,7 @@ public:
             error_msg(expr, what, t, fmt, args...); \
     }
 
+    IMPALA_EXPECT(unit,        is_unit(t),                             "unit type")
     IMPALA_EXPECT(bool,        is_bool(t),                             "boolean type")
     IMPALA_EXPECT(int,         is_int(t),                              "integer type")
     IMPALA_EXPECT(int_or_bool, is_int(t)                || is_bool(t), "integer or boolean type")
@@ -627,19 +628,23 @@ void BlockExprBase::check(TypeSema& sema) const {
 
 void IfExpr::check(TypeSema& sema) const {
     sema.check(cond());
-    sema.expect_bool(cond(), "if condition");
+    sema.expect_bool(cond(), "if-condition");
     auto then_type = sema.check(then_expr());
     auto else_type = sema.check(else_expr());
 
-    if (then_type != else_type && !then_type->isa<NoRetType>() && !else_type->isa<NoRetType>())
+    if (!is_no_ret_or_type_error(then_type) && !is_no_ret_or_type_error(else_type) && then_type != else_type)
         sema.expect_type(then_type, else_expr(), "else branch type");
 }
 
 void WhileExpr::check(TypeSema& sema) const {
     sema.check(cond());
+    sema.expect_bool(cond(), "while-condition");
     sema.check(break_decl());
     sema.check(continue_decl());
     sema.check(body());
+
+    if (!is_no_ret_or_type_error(body()->type()))
+        sema.expect_unit(body(), "body type in a while-expression");
 }
 
 void ForExpr::check(TypeSema& sema) const {

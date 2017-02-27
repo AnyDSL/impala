@@ -341,6 +341,14 @@ private:
     friend class TypeTable;
 };
 
+inline bool is_no_ret_or_type_error(const Type* t) {
+    return t->isa<NoRetType>() || t->isa<TypeError>();
+}
+
+inline bool is_unit(const Type* t) {
+    return t->isa<TupleType>() && t->num_ops() == 0;
+}
+
 //------------------------------------------------------------------------------
 
 }

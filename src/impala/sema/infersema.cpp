@@ -206,7 +206,10 @@ const Type* InferSema::find_type(const Type*& type) {
 const Type*& InferSema::constrain(const Type*& t, const Type* u) {
     if (t == nullptr)
         return t = find(u);
-    return t = unify(t, u);
+    auto s = unify(t, u);
+    if (s->isa<TypeError>())
+        s = t;
+    return t = s;
 }
 
 const Type* InferSema::coerce(const Type* dst, const Expr* src) {
