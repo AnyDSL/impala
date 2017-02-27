@@ -364,6 +364,15 @@ void InfixExpr::check(TypeSema& sema) const {
         }
     };
 
+    auto match_subtype = [&](const Type* ltype, const Type* rtype) {
+        ltype = unpack_ref_type(ltype);
+        if (!is_subtype(ltype, rtype) && !ltype->isa<TypeError>() && !rtype->isa<TypeError>()) {
+            error(this, "right-hand side of binary '{}' must be a subtype of its left-hand side", tok2str(this));
+            error(lhs(),  "left-hand side type is '{}'", ltype);
+            error(rhs(), "right-hand side type is '{}'", rtype);
+        }
+    };
+
     switch (tag()) {
         case EQ: case NE:
         case LT: case GT:
@@ -395,26 +404,28 @@ void InfixExpr::check(TypeSema& sema) const {
             return;
         case ASGN: {
             lhs()->write();
+            match_subtype(lhs()->type(), rhs()->type());
             sema.expect_lvalue(lhs(), "assignment");
-            auto ltype = unpack_ref_type(lhs()->type());
-            match_type(ltype, rhs()->type());
             return;
         }
         case ADD_ASGN: case SUB_ASGN:
         case MUL_ASGN: case DIV_ASGN: case REM_ASGN:
             lhs()->write();
+            match_subtype(lhs()->type(), rhs()->type());
             sema.expect_num(lhs(),  "left-hand side of binary '{}'", tok2str(this));
             sema.expect_num(rhs(), "right-hand side of binary '{}'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '{}'", tok2str(this));
             return;
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN:
             lhs()->write();
+            match_subtype(lhs()->type(), rhs()->type());
             sema.expect_int_or_bool(lhs(),  "left-hand side of binary '{}'", tok2str(this));
             sema.expect_int_or_bool(rhs(), "right-hand side of binary '{}'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '{}'", tok2str(this));
             return;
         case SHL_ASGN: case SHR_ASGN:
             lhs()->write();
+            match_subtype(lhs()->type(), rhs()->type());
             sema.expect_int(lhs(),  "left-hand side of binary '{}'", tok2str(this));
             sema.expect_int(rhs(), "right-hand side of binary '{}'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '{}'", tok2str(this));
