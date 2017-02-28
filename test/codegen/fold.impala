@@ -1,3 +1,5 @@
+// codegen
+
 fn seq(a: int, b: int) -> (int, fn(int, fn(int) -> ()) -> ()) {
     fn stream(i: int, yield: fn(int) -> ()) -> () {
         if (i <= b) {

@@ -1,3 +1,5 @@
+// codegen
+
 // https://github.com/AnyDSL/thorin/issues/51
 extern fn h(mut n: int) -> () { g(n) }
 extern fn i(mut n: int) -> () { g(n) }

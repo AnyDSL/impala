@@ -1,3 +1,5 @@
+// codegen
+
 fn mask_store(i: simd[bool * 4], src: simd[int * 4], dst: &mut simd[int * 4]) -> () {
     if i(0) { dst(0) = src(0) }
     if i(1) { dst(1) = src(1) }

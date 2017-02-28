@@ -1,3 +1,5 @@
+// codegen
+
 fn main() -> int {
     let i = 23;
     let j: typeof(i) = i;

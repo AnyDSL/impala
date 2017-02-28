@@ -1,3 +1,5 @@
+// codegen
+
 extern "C" {
     fn print_int(int) -> ();
 }

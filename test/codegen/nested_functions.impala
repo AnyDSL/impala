@@ -1,3 +1,5 @@
+// codegen
+
 extern fn g(mut i: int) -> int {
     fn f(j: int) -> int {
         i + j

@@ -1,3 +1,5 @@
+// codegen
+
 fn main() -> int {
     let mut a = 1;
     let a_dec_zero = atomic_dec(&mut a);

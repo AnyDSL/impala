@@ -1,3 +1,5 @@
+// codegen
+
 struct S {
     roots: &[u32],
     arr:   &[i32],

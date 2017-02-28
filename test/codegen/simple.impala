@@ -1,3 +1,5 @@
+// codegen
+
 extern fn f(i: int) -> int {
     let mut a;
     if i == 1 {

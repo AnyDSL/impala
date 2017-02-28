@@ -1,3 +1,5 @@
+// codegen
+
 fn main() -> int {
     let mut k = 0;
     if k == 0 {

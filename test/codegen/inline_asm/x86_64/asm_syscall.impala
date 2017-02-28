@@ -1,3 +1,5 @@
+// codegen
+
 fn main() -> int {
     let str = "I'm a string, get me out of here!\n";
     let len = 34;

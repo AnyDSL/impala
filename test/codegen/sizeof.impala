@@ -1,3 +1,5 @@
+// codegen
+
 extern "thorin" {
     fn sizeof[T]() -> i32;
 }

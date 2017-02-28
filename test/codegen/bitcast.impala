@@ -1,3 +1,5 @@
+// codegen
+
 extern "thorin" {
     fn bitcast[D, S](S) -> D;
 }

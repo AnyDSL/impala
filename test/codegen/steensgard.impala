@@ -1,3 +1,5 @@
+// codegen
+
 fn myfun(i: int) -> int {
     let ret = return;
     fn branch(cond: bool, t: fn() -> !, f: fn() -> !) -> ! {

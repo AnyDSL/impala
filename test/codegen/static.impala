@@ -1,3 +1,5 @@
+// codegen
+
 fn main() -> int {
     static mut x = 3;
     static y = 4;

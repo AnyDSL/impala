@@ -1,3 +1,5 @@
+// codegen
+
 fn id[T](a: T) -> T { a }
 
 fn main() -> int {

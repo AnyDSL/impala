@@ -1,3 +1,5 @@
+// codegen
+
 fn foo(p: &mut int, q: &mut int) -> int {
     let x = *p;
     *p = 1;

@@ -1,3 +1,5 @@
+// codegen
+
 struct Thing {
     count: i32
 }

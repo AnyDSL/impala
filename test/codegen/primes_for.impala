@@ -1,3 +1,5 @@
+// codegen
+
 /*
 foreach that adds all primes smaller than 40
 expected result: 197

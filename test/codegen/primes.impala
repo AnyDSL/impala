@@ -1,3 +1,5 @@
+// codegen
+
 fn primes[T](n: int, t: T, body: fn(int, T) -> T) -> T {
     if n < 2 {
         return(t)
