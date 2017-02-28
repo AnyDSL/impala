@@ -206,10 +206,7 @@ const Type* InferSema::find_type(const Type*& type) {
 const Type*& InferSema::constrain(const Type*& t, const Type* u) {
     if (t == nullptr)
         return t = find(u);
-    auto s = unify(t, u);
-    if (s->isa<TypeError>())
-        s = t;
-    return t = s;
+    return t = unify(t, u);
 }
 
 const Type* InferSema::coerce(const Type* dst, const Expr* src) {
@@ -261,8 +258,8 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     }
 
     if (dst == src && dst->is_known()) return dst;
-    if (dst->isa<TypeError>()) return src; // guess the other one
-    if (src->isa<TypeError>()) return dst; // dito
+    if (dst->isa<TypeError>() || dst->isa<InferError>()) return src; // guess the other one
+    if (src->isa<TypeError>() || src->isa<InferError>()) return dst; // dito
 
     if (dst->isa<UnknownType>() && src->isa<UnknownType>())
         return unify_by_rank(dst_repr, src_repr)->type;
@@ -292,7 +289,7 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
         }
     }
 
-    return type_error();
+    return infer_error(dst, src);
 }
 
 //------------------------------------------------------------------------------

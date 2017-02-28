@@ -34,6 +34,7 @@ public:
     const PrimType* prim_type(PrimTypeTag tag);
     const UnknownType* unknown_type() { return unify(new UnknownType(*this)); }
     const TypeError* type_error() { return type_error_; }
+    const InferError* infer_error(const Type* dst, const Type* src);
 
 private:
     const NoRetType* type_noret_;
