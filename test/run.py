@@ -44,11 +44,12 @@ def classify(test):
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('test',                    nargs='*', help='path to test or test directory',  default='.',           type=str)
-    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                  default=find_impala(), type=str)
-    parser.add_argument('-c', '--compile-timeout', nargs='?', help='timeout for compiling test case', default=5,             type=int)
-    parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',   default=5,             type=int)
-    parser.add_argument('-n', '--nocleanup',                  help='don\'t clean up temporary files', action='store_true')
+    parser.add_argument('test',                    nargs='*', help='path to test or test directory',    default='.',           type=str)
+    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                    default=find_impala(), type=str)
+    parser.add_argument('-c', '--compile-timeout', nargs='?', help='timeout for compiling test case',   default=5,             type=int)
+    parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',     default=5,             type=int)
+    parser.add_argument('-n', '--nocleanup',                  help='don\'t clean up temporary files',   action='store_true')
+    parser.add_argument('-b', '--broken',                     help='also run tests known to be broken', action='store_true')
     args = parser.parse_args()
 
     if not os.access("lib.o", os.R_OK):
