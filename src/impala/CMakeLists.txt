@@ -11,8 +11,6 @@ SET ( SOURCES
     lexer.cpp
     lexer.h
     parser.cpp
-    prec.cpp
-    prec.h
     sema/infersema.cpp
     sema/namesema.cpp
     sema/type.cpp

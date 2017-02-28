@@ -1,7 +1,6 @@
 #include "impala/impala.h"
 
 #include "impala/ast.h"
-#include "impala/prec.h"
 #include "impala/symbol.h"
 #include "impala/token.h"
 

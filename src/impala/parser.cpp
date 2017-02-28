@@ -7,7 +7,6 @@
 #include "impala/ast.h"
 #include "impala/impala.h"
 #include "impala/lexer.h"
-#include "impala/prec.h"
 
 #define VISIBILITY \
          Token::PRIV: \
