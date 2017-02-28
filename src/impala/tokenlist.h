@@ -23,10 +23,10 @@ IMPALA_PREFIX(  HLT,   "$",    EVAL) // stop partial evaluation
 
 IMPALA_POSTFIX(      INC, "++", POSTFIX) // postfix ++
 IMPALA_POSTFIX(      DEC, "--", POSTFIX) // postfix --
-IMPALA_POSTFIX(L_BRACKET,  "[", POSTFIX) // map expression with type argument list
-IMPALA_POSTFIX(  L_PAREN,  "(", POSTFIX) // map expression (function call, array/tuple index)
-IMPALA_POSTFIX(      DOT,  ".", POSTFIX) // dot expression (struct access)
-IMPALA_POSTFIX(       AS, "as",     MUL) // cast expression (not as strong as mul)
+IMPALA_POSTFIX(L_BRACKET,  "[", POSTFIX) // MapExpr with type argument list
+IMPALA_POSTFIX(  L_PAREN,  "(", POSTFIX) // MapExpr (function call, array/tuple index)
+IMPALA_POSTFIX(      DOT,  ".", POSTFIX) // FieldExpr
+IMPALA_POSTFIX(       AS, "as",      AS) // CastExpr
 
 #undef IMPALA_POSTFIX
 
@@ -34,17 +34,17 @@ IMPALA_POSTFIX(       AS, "as",     MUL) // cast expression (not as strong as mu
 #define IMPALA_INFIX_ASGN(tok, str, lprec, rprec)
 #endif
 
-IMPALA_INFIX_ASGN(    ASGN,   "=", COND, ASGN)
-IMPALA_INFIX_ASGN(ADD_ASGN,  "+=", COND, ASGN)
-IMPALA_INFIX_ASGN(SUB_ASGN,  "-=", COND, ASGN)
-IMPALA_INFIX_ASGN(MUL_ASGN,  "*=", COND, ASGN)
-IMPALA_INFIX_ASGN(DIV_ASGN,  "/=", COND, ASGN)
-IMPALA_INFIX_ASGN(REM_ASGN,  "%=", COND, ASGN)
-IMPALA_INFIX_ASGN(AND_ASGN,  "&=", COND, ASGN)
-IMPALA_INFIX_ASGN( OR_ASGN,  "|=", COND, ASGN)
-IMPALA_INFIX_ASGN(XOR_ASGN,  "^=", COND, ASGN)
-IMPALA_INFIX_ASGN(SHL_ASGN, "<<=", COND, ASGN)
-IMPALA_INFIX_ASGN(SHR_ASGN, ">>=", COND, ASGN)
+IMPALA_INFIX_ASGN(    ASGN,   "=", OROR, ASGN)
+IMPALA_INFIX_ASGN(ADD_ASGN,  "+=", OROR, ASGN)
+IMPALA_INFIX_ASGN(SUB_ASGN,  "-=", OROR, ASGN)
+IMPALA_INFIX_ASGN(MUL_ASGN,  "*=", OROR, ASGN)
+IMPALA_INFIX_ASGN(DIV_ASGN,  "/=", OROR, ASGN)
+IMPALA_INFIX_ASGN(REM_ASGN,  "%=", OROR, ASGN)
+IMPALA_INFIX_ASGN(AND_ASGN,  "&=", OROR, ASGN)
+IMPALA_INFIX_ASGN( OR_ASGN,  "|=", OROR, ASGN)
+IMPALA_INFIX_ASGN(XOR_ASGN,  "^=", OROR, ASGN)
+IMPALA_INFIX_ASGN(SHL_ASGN, "<<=", OROR, ASGN)
+IMPALA_INFIX_ASGN(SHR_ASGN, ">>=", OROR, ASGN)
 
 #undef IMPALA_INFIX_ASGN
 
@@ -53,16 +53,16 @@ IMPALA_INFIX_ASGN(SHR_ASGN, ">>=", COND, ASGN)
 #endif
 
 IMPALA_INFIX(  OROR, "||",   OROR, ANDAND)
-IMPALA_INFIX(ANDAND, "&&", ANDAND,     OR)
-IMPALA_INFIX(    OR,  "|",     OR,    XOR)
-IMPALA_INFIX(   XOR,  "^",    XOR,    AND)
-IMPALA_INFIX(   AND,  "&",    AND,     EQ)
+IMPALA_INFIX(ANDAND, "&&", ANDAND,     EQ)
 IMPALA_INFIX(    EQ, "==",     EQ,    REL)
 IMPALA_INFIX(    NE, "!=",     EQ,    REL)
-IMPALA_INFIX(    LT,  "<",    REL,  SHIFT)
-IMPALA_INFIX(    LE, "<=",    REL,  SHIFT)
-IMPALA_INFIX(    GT,  ">",    REL,  SHIFT)
-IMPALA_INFIX(    GE, ">=",    REL,  SHIFT)
+IMPALA_INFIX(    LT,  "<",    REL,     OR)
+IMPALA_INFIX(    LE, "<=",    REL,     OR)
+IMPALA_INFIX(    GT,  ">",    REL,     OR)
+IMPALA_INFIX(    GE, ">=",    REL,     OR)
+IMPALA_INFIX(    OR,  "|",     OR,    XOR)
+IMPALA_INFIX(   XOR,  "^",    XOR,    AND)
+IMPALA_INFIX(   AND,  "&",    AND,  SHIFT)
 IMPALA_INFIX(   SHL, "<<",  SHIFT,    ADD)
 IMPALA_INFIX(   SHR, ">>",  SHIFT,    ADD)
 IMPALA_INFIX(   ADD,  "+",    ADD,    MUL)
