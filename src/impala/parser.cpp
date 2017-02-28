@@ -7,7 +7,6 @@
 #include "impala/ast.h"
 #include "impala/impala.h"
 #include "impala/lexer.h"
-#include "impala/prec.h"
 
 #define VISIBILITY \
          Token::PRIV: \
@@ -237,7 +236,7 @@ public:
     // expressions
     bool is_infix();
     const Expr*             parse_expr(Prec prec);
-    const Expr*             parse_expr() { return parse_expr(BOTTOM, false); }
+    const Expr*             parse_expr() { return parse_expr(Bottom, false); }
     const Expr*             parse_expr(Prec prec, bool no_bars) { THORIN_PUSH(no_bars_, no_bars); return parse_expr(prec); }
     const Expr*             parse_prefix_expr();
     const Expr*             parse_infix_expr(Tracker, const Expr* lhs);
