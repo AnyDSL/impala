@@ -45,24 +45,16 @@ void check(Init&, const Module*, bool nossa);
 void emit(thorin::World&, const Module*);
 
 enum Prec {
-    BOTTOM,
-    ASGN,
-    OROR,
-    ANDAND,
-    EQ,
-    REL,
-    OR,
-    XOR,
-    AND,
-    SHIFT,
-    ADD,
-    MUL,
-    UNARY,
-    EVAL,
-    AS,
-    POSTFIX,
-    TOP,
-    NUM_PREC
+    Bottom,
+    Assign = Bottom,
+    OrOr, AndAnd,
+    Eq, Rel,
+    Or, Xor, And,
+    Shift, Add, Mul,
+    Unary,
+    Eval,
+    As,
+    Postfix,
 };
 
 typedef Prec Type2Prec[Token::Num_Tokens];
