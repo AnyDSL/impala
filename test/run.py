@@ -1,22 +1,12 @@
 #!/usr/bin/env python
 
 import argparse
-import enum
 import math
 import os
 import subprocess
 import sys
 
-class Category(enum.Enum):
-    codegen  = 0
-    sema_pos = enum.auto()
-    sema_neg = enum.auto()
-
-def categorize(s):
-    for cat in Category:
-        if str(cat.name) == s:
-            return cat.value
-    return None
+categories = ["codegen", "sema_pos", "sema_neg"];
 
 def is_exe(filename):
     return os.path.isfile(filename) and os.access(filename, os.X_OK)
@@ -36,12 +26,6 @@ def find_impala():
 
     return os.path.abspath(os.path.join("..", "build", "bin", impala_exe))
 
-def classify(test):
-    with open(test, 'r') as f:
-        line = f.readline()
-        if line.startswith("//"):
-            return categorize(line[2:].split()[0])
-
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('test',                    nargs='*', help='path to test or test directory',    default='.',           type=str)
@@ -58,17 +42,23 @@ def main():
 
     tests = [[], [], []]
 
+    def classify(path):
+        with open(path, 'r') as f:
+            line = f.readline()
+            if line.startswith("//"):
+                tokens = line[2:].split()
+                if len(tokens) >= 1 and tokens[0] in categories:
+                    if args.broken or len(tokens) == 1 or tokens[1] != "broken":
+                        tests[categories.index(tokens[0])].append(path)
+
     for test in args.test:
         if os.path.isfile(test):
-            tests.append(test)
+            classify(test)
         else:
             for dirpath, dirs, files in os.walk(test):
                 for filename in files:
                     if os.path.splitext(filename)[1] == ".impala":
-                        path = os.path.join(dirpath,filename)
-                        c = classify(path)
-                        if c != None:
-                            tests[c].append(path)
+                        classify(os.path.join(dirpath,filename))
 
     total = sum([len(l) for l in tests])
     align = int(math.log10(total)) + 1
@@ -95,7 +85,7 @@ def main():
 
             print((">>> [{:>%i}/{}] {}" % align).format(i, total, test))
 
-            classify(test)
+            # classify(test)
             # if has_main(test):
             if False:
                 impala(["-emit-llvm", "-O2"])
