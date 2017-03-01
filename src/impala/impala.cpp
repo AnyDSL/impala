@@ -25,16 +25,12 @@ int global_num_errors = 0;
 int num_warnings() { return global_num_warnings; }
 int num_errors() { return global_num_errors; }
 
-Type2Prec PrecTable::prefix_r;
 Type2Prec PrecTable::infix_l;
 Type2Prec PrecTable::infix_r;
-Type2Prec PrecTable::postfix_l;
 
 void PrecTable::init() {
-#define IMPALA_PREFIX(    tok, t_str,    r)  PrecTable::prefix_r[Token:: tok] = r;
-#define IMPALA_POSTFIX(   tok, t_str, l   ) PrecTable::postfix_l[Token:: tok] = l;
-#define IMPALA_INFIX(     tok, t_str, l, r)   PrecTable::infix_l[Token:: tok] = l; PrecTable::infix_r[Token:: tok] = r;
-#define IMPALA_INFIX_ASGN(tok, t_str, l, r)   PrecTable::infix_l[Token:: tok] = l; PrecTable::infix_r[Token:: tok] = r;
+#define IMPALA_INFIX(     tok, t_str, prec) PrecTable::infix_l[Token::tok] = prec; PrecTable::infix_r[Token:: tok] = Prec(prec+1);
+#define IMPALA_INFIX_ASGN(tok, t_str)       PrecTable::infix_l[Token::tok] = Prec(Assign+1); PrecTable::infix_r[Token:: tok] = Assign;
 #include "impala/tokenlist.h"
 }
 

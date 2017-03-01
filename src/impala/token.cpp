@@ -202,10 +202,10 @@ void Token::init() {
     for (size_t i = 0; i < Num_Tokens; ++i)
         tok2op_[i] = None;
 
-#define IMPALA_PREFIX(    tok, str, r   ) insert(tok, str); tok2op_[tok] |= Prefix;
-#define IMPALA_POSTFIX(   tok, str,    l) insert(tok, str); tok2op_[tok] |= Postfix;
-#define IMPALA_INFIX(     tok, str, r, l) insert(tok, str); tok2op_[tok] |= Infix;
-#define IMPALA_INFIX_ASGN(tok, str, r, l) insert(tok, str); tok2op_[tok] |= Infix | Asgn_Op;
+#define IMPALA_PREFIX(    tok, str)       insert(tok, str); tok2op_[tok] |= Prefix;
+#define IMPALA_POSTFIX(   tok, str)       insert(tok, str); tok2op_[tok] |= Postfix;
+#define IMPALA_INFIX(     tok, str, prec) insert(tok, str); tok2op_[tok] |= Infix;
+#define IMPALA_INFIX_ASGN(tok, str)       insert(tok, str); tok2op_[tok] |= Infix | Asgn_Op;
 #define IMPALA_MISC(      tok, str)       insert(tok, str);
 #define IMPALA_KEY(       tok, str)       insert_key(tok, str);
 #define IMPALA_LIT(       tok, atype)     tok2str_[LIT_##tok] = Symbol("<literal>").str();
@@ -235,6 +235,7 @@ void Token::init() {
     // special tokens
     tok2str_[ID]         = Symbol("<identifier>").str();
     insert(END_OF_FILE, "<end of file>");
+    insert_key(AS, "as");
     insert_key(MUT, "mut");
 }
 

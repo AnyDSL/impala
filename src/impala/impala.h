@@ -48,13 +48,11 @@ enum Prec {
     Bottom,
     Assign = Bottom,
     OrOr, AndAnd,
-    Eq, Rel,
+    Rel,
     Or, Xor, And,
     Shift, Add, Mul,
-    Unary,
-    Eval,
     As,
-    Postfix,
+    Unary,
 };
 
 typedef Prec Type2Prec[Token::Num_Tokens];
@@ -70,10 +68,8 @@ struct BinPrec {
 typedef BinPrec Type2BinPrec[Token::Num_Tokens];
 
 struct PrecTable {
-    static Type2Prec prefix_r; ///< Right precedence -- for unary prefix operators.
     static Type2Prec infix_l;  ///< Left precedences -- for binary operators.
     static Type2Prec infix_r;  ///< Right precedences -- for binary operators.
-    static Type2Prec postfix_l;///< Left precedence -- for unary postfix operators.
 
 private:
     static void init();

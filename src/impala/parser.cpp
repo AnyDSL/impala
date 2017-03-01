@@ -865,8 +865,8 @@ const Expr* Parser::parse_expr(Prec prec) {
                 break;
 
             lhs = parse_infix_expr(tracker, lhs);
-        } else if ( lookahead().is_postfix() ) {
-            if (prec > PrecTable::postfix_l[lookahead()])
+        } else if (lookahead().is_postfix()) {
+            if (prec > Prec::Unary)
                 break;
 
             lhs = parse_postfix_expr(tracker, lhs);
@@ -883,15 +883,16 @@ const Expr* Parser::parse_prefix_expr() {
 
     auto tracker = track();
     auto tag = lex().tag();
-    auto prec = PrecTable::prefix_r[tag];
     bool mut = tag == Token::AND ? accept(Token::MUT) : false;
-    auto rhs = parse_expr(prec);
+    auto rhs = parse_expr(Prec::Unary);
 
     return new PrefixExpr(tracker, mut ? PrefixExpr::MUT : (PrefixExpr::Tag) tag, rhs);
 }
 
 const Expr* Parser::parse_infix_expr(Tracker tracker, const Expr* lhs) {
     auto tag = lex().tag();
+    if (tag == Token::AS)
+        return new ExplicitCastExpr(tracker, lhs, parse_type());
     auto rhs = parse_expr(PrecTable::infix_r[tag]);
     return new InfixExpr(tracker, lhs, (InfixExpr::Tag) tag, rhs);
 }
@@ -923,11 +924,6 @@ const Expr* Parser::parse_postfix_expr(Tracker tracker, const Expr* lhs) {
             lex();
             auto identifier = try_identifier("field expression");
             return new FieldExpr(tracker, lhs, identifier);
-        }
-        case Token::AS: {
-            lex();
-            auto ast_type = parse_type();
-            return new ExplicitCastExpr(tracker, lhs, ast_type);
         }
         default: THORIN_UNREACHABLE;
     }

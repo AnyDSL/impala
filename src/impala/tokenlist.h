@@ -1,75 +1,75 @@
 #ifndef IMPALA_PREFIX
-#define IMPALA_PREFIX(tok, str, prec)
+#define IMPALA_PREFIX(tok, str)
 #endif
 
-IMPALA_PREFIX(  ADD,   "+", Postfix) // unary +
-IMPALA_PREFIX(  SUB,   "-", Postfix) // unary -
-IMPALA_PREFIX(  MUL,   "*", Postfix) // deref
-IMPALA_PREFIX(  AND,   "&", Postfix) // address of
-IMPALA_PREFIX(TILDE,   "~", Postfix) // owned ptr constructor
-IMPALA_PREFIX(  NOT,   "!", Postfix) // not
-IMPALA_PREFIX(  INC,  "++", Postfix) // prefix ++
-IMPALA_PREFIX(  DEC,  "--", Postfix) // prefix --
-IMPALA_PREFIX(   OR,   "|", Postfix) // lambda expressions
-IMPALA_PREFIX( OROR,  "||", Postfix) // lambda expressions with empty param list
-IMPALA_PREFIX(  RUN,   "@",    Eval) // trigger partial evaluation
-IMPALA_PREFIX(  HLT,   "$",    Eval) // stop partial evaluation
+IMPALA_PREFIX(  ADD,   "+") // unary +
+IMPALA_PREFIX(  SUB,   "-") // unary -
+IMPALA_PREFIX(  MUL,   "*") // deref
+IMPALA_PREFIX(  AND,   "&") // address of
+IMPALA_PREFIX(TILDE,   "~") // owned ptr constructor
+IMPALA_PREFIX(  NOT,   "!") // not
+IMPALA_PREFIX(  INC,  "++") // prefix ++
+IMPALA_PREFIX(  DEC,  "--") // prefix --
+IMPALA_PREFIX(   OR,   "|") // lambda expressions
+IMPALA_PREFIX( OROR,  "||") // lambda expressions with empty param list
+IMPALA_PREFIX(  RUN,   "@") // trigger partial evaluation
+IMPALA_PREFIX(  HLT,   "$") // stop partial evaluation
 
 #undef IMPALA_PREFIX
 
 #ifndef IMPALA_POSTFIX
-#define IMPALA_POSTFIX(tok, str, prec)
+#define IMPALA_POSTFIX(tok, str)
 #endif
 
-IMPALA_POSTFIX(      INC, "++", Postfix) // postfix ++
-IMPALA_POSTFIX(      DEC, "--", Postfix) // postfix --
-IMPALA_POSTFIX(L_BRACKET,  "[", Postfix) // MapExpr with type argument list
-IMPALA_POSTFIX(  L_PAREN,  "(", Postfix) // MapExpr (function call, array/tuple index)
-IMPALA_POSTFIX(      DOT,  ".", Postfix) // FieldExpr
-IMPALA_POSTFIX(       AS, "as",      As) // CastExpr
+IMPALA_POSTFIX(      INC, "++") // postfix ++
+IMPALA_POSTFIX(      DEC, "--") // postfix --
+IMPALA_POSTFIX(L_BRACKET,  "[") // MapExpr with type argument list
+IMPALA_POSTFIX(  L_PAREN,  "(") // MapExpr (function call, array/tuple index)
+IMPALA_POSTFIX(      DOT,  ".") // FieldExpr
 
 #undef IMPALA_POSTFIX
 
 #ifndef IMPALA_INFIX_ASGN
-#define IMPALA_INFIX_ASGN(tok, str, lprec, rprec)
+#define IMPALA_INFIX_ASGN(tok, str)
 #endif
 
-IMPALA_INFIX_ASGN(    ASGN,   "=", OrOr, Assign)
-IMPALA_INFIX_ASGN(ADD_ASGN,  "+=", OrOr, Assign)
-IMPALA_INFIX_ASGN(SUB_ASGN,  "-=", OrOr, Assign)
-IMPALA_INFIX_ASGN(MUL_ASGN,  "*=", OrOr, Assign)
-IMPALA_INFIX_ASGN(DIV_ASGN,  "/=", OrOr, Assign)
-IMPALA_INFIX_ASGN(REM_ASGN,  "%=", OrOr, Assign)
-IMPALA_INFIX_ASGN(AND_ASGN,  "&=", OrOr, Assign)
-IMPALA_INFIX_ASGN( OR_ASGN,  "|=", OrOr, Assign)
-IMPALA_INFIX_ASGN(XOR_ASGN,  "^=", OrOr, Assign)
-IMPALA_INFIX_ASGN(SHL_ASGN, "<<=", OrOr, Assign)
-IMPALA_INFIX_ASGN(SHR_ASGN, ">>=", OrOr, Assign)
+IMPALA_INFIX_ASGN(    ASGN,   "=")
+IMPALA_INFIX_ASGN(ADD_ASGN,  "+=")
+IMPALA_INFIX_ASGN(SUB_ASGN,  "-=")
+IMPALA_INFIX_ASGN(MUL_ASGN,  "*=")
+IMPALA_INFIX_ASGN(DIV_ASGN,  "/=")
+IMPALA_INFIX_ASGN(REM_ASGN,  "%=")
+IMPALA_INFIX_ASGN(AND_ASGN,  "&=")
+IMPALA_INFIX_ASGN( OR_ASGN,  "|=")
+IMPALA_INFIX_ASGN(XOR_ASGN,  "^=")
+IMPALA_INFIX_ASGN(SHL_ASGN, "<<=")
+IMPALA_INFIX_ASGN(SHR_ASGN, ">>=")
 
 #undef IMPALA_INFIX_ASGN
 
 #ifndef IMPALA_INFIX
-#define IMPALA_INFIX(tok, str, lprec, rprec)
+#define IMPALA_INFIX(tok, str, prec)
 #endif
 
-IMPALA_INFIX(  OROR, "||",   OrOr, AndAnd)
-IMPALA_INFIX(ANDAND, "&&", AndAnd,     Eq)
-IMPALA_INFIX(    EQ, "==",     Eq,    Rel)
-IMPALA_INFIX(    NE, "!=",     Eq,    Rel)
-IMPALA_INFIX(    LT,  "<",    Rel,     Or)
-IMPALA_INFIX(    LE, "<=",    Rel,     Or)
-IMPALA_INFIX(    GT,  ">",    Rel,     Or)
-IMPALA_INFIX(    GE, ">=",    Rel,     Or)
-IMPALA_INFIX(    OR,  "|",     Or,    Xor)
-IMPALA_INFIX(   XOR,  "^",    Xor,    And)
-IMPALA_INFIX(   AND,  "&",    And,  Shift)
-IMPALA_INFIX(   SHL, "<<",  Shift,    Add)
-IMPALA_INFIX(   SHR, ">>",  Shift,    Add)
-IMPALA_INFIX(   ADD,  "+",    Add,    Mul)
-IMPALA_INFIX(   SUB,  "-",    Add,    Mul)
-IMPALA_INFIX(   MUL,  "*",    Mul,  Unary)
-IMPALA_INFIX(   DIV,  "/",    Mul,  Unary)
-IMPALA_INFIX(   REM,  "%",    Mul,  Unary)
+IMPALA_INFIX(  OROR, "||",   OrOr)
+IMPALA_INFIX(ANDAND, "&&", AndAnd)
+IMPALA_INFIX(    EQ, "==",    Rel)
+IMPALA_INFIX(    NE, "!=",    Rel)
+IMPALA_INFIX(    LT,  "<",    Rel)
+IMPALA_INFIX(    LE, "<=",    Rel)
+IMPALA_INFIX(    GT,  ">",    Rel)
+IMPALA_INFIX(    GE, ">=",    Rel)
+IMPALA_INFIX(    OR,  "|",     Or)
+IMPALA_INFIX(   XOR,  "^",    Xor)
+IMPALA_INFIX(   AND,  "&",    And)
+IMPALA_INFIX(   SHL, "<<",  Shift)
+IMPALA_INFIX(   SHR, ">>",  Shift)
+IMPALA_INFIX(   ADD,  "+",    Add)
+IMPALA_INFIX(   SUB,  "-",    Add)
+IMPALA_INFIX(   MUL,  "*",    Mul)
+IMPALA_INFIX(   DIV,  "/",    Mul)
+IMPALA_INFIX(   REM,  "%",    Mul)
+IMPALA_INFIX(    AS, "as",     As)
 
 #undef IMPALA_INFIX
 
@@ -77,7 +77,6 @@ IMPALA_INFIX(   REM,  "%",    Mul,  Unary)
 #define IMPALA_KEY(tok, str)
 #endif
 
-IMPALA_KEY(AS,        "as")
 IMPALA_KEY(DO,        "do")
 IMPALA_KEY(ELSE,      "else")
 IMPALA_KEY(ENUM,      "enum")

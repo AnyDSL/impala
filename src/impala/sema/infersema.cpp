@@ -695,6 +695,8 @@ const Type* InfixExpr::infer(InferSema& sema) const {
             sema.assign(lhs(), rhs());
             return sema.unit();
         }
+        case AS:
+            THORIN_UNREACHABLE;
     }
 
     THORIN_UNREACHABLE;
