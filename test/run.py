@@ -66,14 +66,18 @@ def main():
     for cat in tests:
         for test in cat:
             base = os.path.splitext(test)[0]
-            test_log = base + ".log"
-            test_ll  = base + ".ll"
-            test_exe = base
-            test_out = base + ".out"
+            test_log     = base + ".log"
+            test_log_new = base + ".log.new"
+            test_ll      = base + ".ll"
+            test_exe     = base
+            test_in      = base + ".in"
+            test_out     = base + ".out"
+            test_out_new = base + ".out.new"
 
             def impala(flags):
                 try:
-                    return subprocess.run([args.impala] + flags + [test], timeout=args.compile_timeout).returncode == 0
+                    log = open(test_log_new, 'w')
+                    return subprocess.run([args.impala] + flags + [test], timeout=args.compile_timeout, stdout=log, stderr=log).returncode == 0
                 except subprocess.TimeoutExpired as timeout:
                     print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
                     return False
@@ -83,7 +87,9 @@ def main():
 
             def run():
                 try:
-                    return subprocess.run([test_exe], args.run_timeout).returncode == 0
+                    out = open(test_out_new, 'w')
+                    input = open(test_in, 'r') if os.access(test_in, os.R_OK) else None
+                    return subprocess.run([test_exe], args.run_timeout, stdin=input, stdout=out, stderr=out, encoding="utf-8").returncode == 0
                 except subprocess.TimeoutExpired as timeout:
                     print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
                     return False
@@ -96,10 +102,10 @@ def main():
                 print("fail")
 
             if not args.nocleanup:
-                remove(test_log)
+                remove(test_log_new)
                 remove(test_ll)
                 remove(test_exe)
-                remove(test_out)
+                remove(test_out_new)
 
             i = i + 1
 
