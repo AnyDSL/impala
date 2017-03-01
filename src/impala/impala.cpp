@@ -25,7 +25,7 @@ int global_num_errors = 0;
 int num_warnings() { return global_num_warnings; }
 int num_errors() { return global_num_errors; }
 
-Prec PrecTable::infix[Token::Num_Tokens];
+Prec PrecTable::infix[Token::Num];
 
 void PrecTable::init() {
 #define IMPALA_INFIX(     tok, t_str, prec) PrecTable::infix[Token::tok] = Prec::prec;

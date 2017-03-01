@@ -288,7 +288,7 @@ private:
 void parse(Items& items, std::istream& is, const char* filename) {
     Parser parser(is, filename);
     parser.parse_items(items);
-    if (parser.lookahead() != Token::END_OF_FILE)
+    if (parser.lookahead() != Token::Eof)
         parser.error("module item", "module contents");
 }
 

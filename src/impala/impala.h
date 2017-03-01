@@ -56,7 +56,7 @@ enum class Prec {
 };
 
 struct PrecTable {
-    static Prec infix[Token::Num_Tokens];
+    static Prec infix[Token::Num];
     static Prec infix_l(int tag) { return infix[tag]; }
     static Prec infix_r(int tag) { return Prec(int(infix[tag])+1); }
 

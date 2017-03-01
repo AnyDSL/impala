@@ -164,7 +164,7 @@ int Token::to_binop(Tag tag) {
  * static member variables
  */
 
-int Token::tok2op_[Num_Tokens];
+int Token::tok2op_[Num];
 Token::Tag2Str Token::tok2str_;
 Token::Tag2Sym Token::tok2sym_;
 Token::Sym2Tag Token::keywords_;
@@ -179,14 +179,14 @@ TokenTag Token::sym2lit(Symbol sym) {
     auto i = sym2lit_.find(sym);
     if (i != sym2lit_.end())
         return i->second;
-    return TYPE_error;
+    return Error;
 }
 
 TokenTag Token::sym2flit(Symbol sym) {
     auto i = sym2flit_.find(sym);
     if (i != sym2flit_.end())
         return i->second;
-    return TYPE_error;
+    return Error;
 }
 
 void Token::init() {
@@ -199,7 +199,7 @@ void Token::init() {
      * - register misc tokens
      */
 
-    for (size_t i = 0; i < Num_Tokens; ++i)
+    for (size_t i = 0; i < Num; ++i)
         tok2op_[i] = None;
 
 #define IMPALA_PREFIX(    tok, str)       insert(tok, str); tok2op_[tok] |= Prefix;
@@ -234,7 +234,7 @@ void Token::init() {
 
     // special tokens
     tok2str_[ID]         = Symbol("<identifier>").str();
-    insert(END_OF_FILE, "<end of file>");
+    insert(Eof, "<end of file>");
     insert_key(AS, "as");
     insert_key(MUT, "mut");
 }

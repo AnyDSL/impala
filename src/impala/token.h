@@ -29,17 +29,15 @@ public:
         // manually insert missing unary prefix/postfix types
         TILDE, NOT, INC, DEC, RUN, HLT, DOT,
         // these do ont appear in impala/tokenlist.h -- they are too special
-        MUT, ID, END_OF_FILE,
-        TYPE_app, TYPE_generic, TYPE_genericref, TYPE_error, TYPE_tuple, TYPE_definite_array, TYPE_indefinite_array,
+        MUT, ID, Eof, Error,
         LIT_char, LIT_str,
-        Num_Tokens,
-        Sentinel,
+        Num,
     };
 
     struct TagHash {
         static uint64_t hash(Tag tag) { return uint64_t(tag); }
         static bool eq(Tag k1, Tag k2) { return k1 == k2; }
-        static Tag sentinel() { return Sentinel; }
+        static Tag sentinel() { return Num; }
     };
 
     Token() {}
@@ -101,7 +99,7 @@ private:
     typedef thorin::HashMap<Symbol, Tag> Sym2Tag;
     typedef thorin::HashMap<Tag, const char*, TagHash> Tag2Str;
     typedef thorin::HashMap<Tag, Symbol, TagHash> Tag2Sym;
-    static int tok2op_[Num_Tokens];
+    static int tok2op_[Num];
     static Tag2Str tok2str_;
     static Tag2Sym tok2sym_;
     static Sym2Tag keywords_;
