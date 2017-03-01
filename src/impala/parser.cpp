@@ -115,7 +115,6 @@ public:
     Parser(std::istream& stream, const char* filename)
         : lexer_(stream, filename)
         , cur_var_handle(2) // reserve 1 for conditionals, 0 for mem
-        , no_bars_(false)
     {
         lookahead_[0] = lexer_.lex();
         lookahead_[1] = lexer_.lex();
@@ -234,10 +233,8 @@ public:
     const Typedef*     parse_typedef(Tracker, Visibility);
 
     // expressions
-    bool is_infix();
     const Expr*             parse_expr(Prec prec);
-    const Expr*             parse_expr() { return parse_expr(Bottom, false); }
-    const Expr*             parse_expr(Prec prec, bool no_bars) { THORIN_PUSH(no_bars_, no_bars); return parse_expr(prec); }
+    const Expr*             parse_expr() { return parse_expr(Bottom); }
     const Expr*             parse_prefix_expr();
     const Expr*             parse_infix_expr(Tracker, const Expr* lhs);
     const Expr*             parse_postfix_expr(Tracker, const Expr* lhs);
@@ -283,7 +280,6 @@ private:
     Lexer lexer_;        ///< invoked in order to get next token
     Token lookahead_[3]; ///< SLL(3) look ahead
     size_t cur_var_handle;
-    bool no_bars_;
     Location prev_location_;
 };
 
@@ -840,13 +836,6 @@ const SimdASTType* Parser::parse_simd_type() {
  * expressions
  */
 
-bool Parser::is_infix() {
-    bool infix = lookahead().is_infix();
-    if (no_bars_ && infix)
-        return lookahead() != Token::OR && lookahead() != Token::OROR;
-    return infix;
-}
-
 const Expr* Parser::parse_expr(Prec prec) {
     auto tracker = track();
     auto lhs = lookahead().is_prefix() ? parse_prefix_expr() : parse_primary_expr();
@@ -860,8 +849,8 @@ const Expr* Parser::parse_expr(Prec prec) {
          *  lhs  op (LA  op ...) otherwise                                  -->  shift
          */
 
-        if (is_infix()) {
-            if (prec > PrecTable::infix_l[lookahead()])
+        if (lookahead().is_infix()) {
+            if (prec > PrecTable::infix_l(lookahead()))
                 break;
 
             lhs = parse_infix_expr(tracker, lhs);
@@ -893,7 +882,7 @@ const Expr* Parser::parse_infix_expr(Tracker tracker, const Expr* lhs) {
     auto tag = lex().tag();
     if (tag == Token::AS)
         return new ExplicitCastExpr(tracker, lhs, parse_type());
-    auto rhs = parse_expr(PrecTable::infix_r[tag]);
+    auto rhs = parse_expr(PrecTable::infix_r(tag));
     return new InfixExpr(tracker, lhs, (InfixExpr::Tag) tag, rhs);
 }
 

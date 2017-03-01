@@ -55,21 +55,10 @@ enum Prec {
     Unary,
 };
 
-typedef Prec Type2Prec[Token::Num_Tokens];
-
-struct BinPrec {
-    Prec l;
-    Prec r;
-
-    BinPrec() {}
-    BinPrec(Prec l, Prec r) : l(l), r(r) {}
-};
-
-typedef BinPrec Type2BinPrec[Token::Num_Tokens];
-
 struct PrecTable {
-    static Type2Prec infix_l;  ///< Left precedences -- for binary operators.
-    static Type2Prec infix_r;  ///< Right precedences -- for binary operators.
+    static Prec infix[Token::Num_Tokens];
+    static Prec infix_l(int tag) { return infix[tag]; }
+    static Prec infix_r(int tag) { return Prec(infix[tag]+1); }
 
 private:
     static void init();

@@ -323,7 +323,7 @@ std::ostream& PrefixExpr::stream(std::ostream& os) const {
 }
 
 std::ostream& InfixExpr::stream(std::ostream& os) const {
-    auto open_state = open(os, PrecTable::infix_l[tag()]);
+    auto open_state = open(os, PrecTable::infix_l(tag()));
     const char* op;
     switch (tag()) {
 #define IMPALA_INFIX_ASGN(tok, str)       case tok: op = str; break;
@@ -332,7 +332,7 @@ std::ostream& InfixExpr::stream(std::ostream& os) const {
     }
 
     os << lhs() << " " << op << " ";
-    prec = PrecTable::infix_r[tag()];
+    prec = PrecTable::infix_r(tag());
     os << rhs();
     return close(os, open_state);
 }
