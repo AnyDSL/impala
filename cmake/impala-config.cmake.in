@@ -3,7 +3,6 @@
 #
 # IMPALA_BIN
 # MACRO wrap_impala_sources( <output variable>
-#     BACKEND cpu|opencl|nvvm|cuda|...
 #     [ OUTPUT_NAME basename ]
 #     [ CLANG_FLAGS --flag1 --flag2 ...]
 #     [ CLANG_FLAGS_RELEASE --flag1 --flag2 ...]
@@ -133,14 +132,12 @@ SET ( OPT_FLAGS_DEBUG "-g" )
 SET ( OPT_FLAGS_RELEASE "-O3" )
 
 MACRO ( wrap_impala_sources outfiles )
-    CMAKE_PARSE_ARGUMENTS ( "PARGS" "" "BACKEND;OUTPUT_NAME" "CLANG_FLAGS;CLANG_FLAGS_RELEASE;CLANG_FLAGS_DEBUG;IMPALA_FLAGS;IMPALA_FLAGS_RELEASE;IMPALA_FLAGS_DEBUG;FILES" ${ARGN} )
+    CMAKE_PARSE_ARGUMENTS ( "PARGS" "" "OUTPUT_NAME" "CLANG_FLAGS;CLANG_FLAGS_RELEASE;CLANG_FLAGS_DEBUG;IMPALA_FLAGS;IMPALA_FLAGS_RELEASE;IMPALA_FLAGS_DEBUG;FILES" ${ARGN} )
     IF ( NOT "${PARGS_UNPARSED_ARGUMENTS}" STREQUAL "" )
         MESSAGE ( FATAL_ERROR "Unparsed arguments ${PARGS_UNPARSED_ARGUMENTS}" )
     ENDIF ()
 
-    STRING ( TOLOWER ${PARGS_BACKEND} _backend )
-
-    STRING ( SHA1 _basename "${PARGS_FILES};${PARGS_BACKEND}" )
+    STRING ( SHA1 _basename "${PARGS_FILES}" )
     IF ( PARGS_OUTPUT_NAME )
         SET ( _basename ${PARGS_OUTPUT_NAME} )
     ENDIF ()
@@ -158,19 +155,11 @@ MACRO ( wrap_impala_sources outfiles )
     SET ( _impala_platform_files )
     SET ( _backend_produces_irfile FALSE )
     IF ( AnyDSL_runtime_FOUND )
-        AnyDSL_runtime_files( _impala_platform_files
-            FRONTEND impala
-            BACKEND ${_backend} )
-        IF ("${_backend}" STREQUAL "nvvm")
-            SET ( _backend_produces_irfile TRUE )
-        ENDIF ()
+        AnyDSL_runtime_files( _impala_platform_files FRONTEND impala )
         INCLUDE_DIRECTORIES ( ${AnyDSL_runtime_INCLUDE_DIR} )
         SET ( IMPALA_RUNTIME_LIBRARIES ${AnyDSL_runtime_LIBRARIES} )
     ELSE ()
         MESSAGE ( STATUS "AnyDSL runtime not found. Set AnyDSL_runtime_DIR to enable runtime features." )
-        IF ( NOT "${_backend}" STREQUAL "cpu" )
-            MESSAGE ( WARNING "AnyDSL runtime is required for backend ${_backend}" )
-        ENDIF ()
     ENDIF ()
 
     SET ( _impala_flags_RELEASE ${OPT_FLAGS_RELEASE} ${PARGS_IMPALA_FLAGS_RELEASE} )
@@ -185,27 +174,25 @@ MACRO ( wrap_impala_sources outfiles )
     SET ( POST_PATCHING_COMMAND )
     IF ( AnyDSL_runtime_FOUND )
         SET ( _post_patcher ${AnyDSL_runtime_ROOT_DIR}/post-patcher.py )
-        SET ( POST_PATCHING_COMMAND COMMAND ${PYTHON_BIN} ${_post_patcher} ${_backend} ${_basepath} )
+        SET ( POST_PATCHING_COMMAND COMMAND ${PYTHON_BIN} ${_post_patcher} ${_basepath} )
     ENDIF ()
 
+    SET ( BC_GENERATING_COMMAND )
+    IF ( AnyDSL_runtime_FOUND )
+        SET ( _irfile "${_basepath}.nvvm" )
+        SET ( _bcfile "${_basepath}.nvvm.bc" )
+        SET ( BC_GENERATING_COMMAND COMMAND ${CMAKE_COMMAND} -D_irfile:PATH="${_irfile}" -DLLVM_AS_BIN:PATH="${LLVM_AS_BIN}" -P ${AnyDSL_runtime_ROOT_DIR}/cmake/check_llvmir.cmake )
+    ENDIF ()
     # generate .ll file and patch it
+    # generate .bc files for NVVM
     # run clang on the patched .ll file to get the .o
     ADD_CUSTOM_COMMAND ( OUTPUT ${_objfile}
         COMMAND ${IMPALA_BIN} ${_impala_flags} ${_impala_platform_files} ${_infiles}
         ${POST_PATCHING_COMMAND}
+        ${BC_GENERATING_COMMAND}
         COMMAND ${CLANG_BIN} ${_clang_flags} -c -o ${_objfile} ${_llfile}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS ${_impala_platform_files} ${_infiles} VERBATIM )
-
-    # generate .bc files for NVVM
-    IF ( _backend_produces_irfile )
-        SET ( _irfile "${_basepath}.${_backend}" )
-        SET ( _bcfile "${_basepath}.${_backend}.bc" )
-        ADD_CUSTOM_COMMAND ( OUTPUT ${_bcfile}
-            COMMAND ${LLVM_AS_BIN} ${_irfile}
-            DEPENDS ${_irfile} VERBATIM )
-        SET_SOURCE_FILES_PROPERTIES ( ${_irfile} ${_bcfile} PROPERTIES GENERATED true )
-    ENDIF ()
 
     SET_SOURCE_FILES_PROPERTIES ( ${_objfile}
         PROPERTIES
@@ -214,7 +201,7 @@ MACRO ( wrap_impala_sources outfiles )
             LANGUAGE CXX
     )
 
-    SET ( ${outfiles} ${${outfiles}} ${_objfile} ${_bcfile} ${_irfile} ${_impala_platform_files} )
+    SET ( ${outfiles} ${${outfiles}} ${_objfile} ${_impala_platform_files} )
 ENDMACRO ()
 
 
