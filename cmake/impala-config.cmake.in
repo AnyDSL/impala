@@ -194,7 +194,7 @@ MACRO ( wrap_impala_sources outfiles )
         ${BC_GENERATING_COMMAND}
         COMMAND ${CLANG_BIN} ${_clang_flags} -c -o ${_objfile} ${_llfile}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        DEPENDS ${_impala_platform_files} ${_infiles} VERBATIM )
+        DEPENDS ${IMPALA_BIN} ${_impala_platform_files} ${_infiles} VERBATIM )
 
     SET_SOURCE_FILES_PROPERTIES ( ${_objfile}
         PROPERTIES
