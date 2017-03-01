@@ -126,6 +126,10 @@ FIND_PATH ( AnyDSL_runtime_DIR
 )
 FIND_PACKAGE ( AnyDSL_runtime QUIET )
 
+IF ( NOT AnyDSL_runtime_FOUND )
+    MESSAGE ( STATUS "AnyDSL runtime not found. Set AnyDSL_runtime_DIR to enable runtime features." )
+ENDIF ()
+
 SET ( IMPALA_RUNTIME_LIBRARIES )
 
 SET ( OPT_FLAGS_DEBUG "-g" )
@@ -158,8 +162,6 @@ MACRO ( wrap_impala_sources outfiles )
         AnyDSL_runtime_files( _impala_platform_files FRONTEND impala )
         INCLUDE_DIRECTORIES ( ${AnyDSL_runtime_INCLUDE_DIR} )
         SET ( IMPALA_RUNTIME_LIBRARIES ${AnyDSL_runtime_LIBRARIES} )
-    ELSE ()
-        MESSAGE ( STATUS "AnyDSL runtime not found. Set AnyDSL_runtime_DIR to enable runtime features." )
     ENDIF ()
 
     SET ( _impala_flags_RELEASE ${OPT_FLAGS_RELEASE} ${PARGS_IMPALA_FLAGS_RELEASE} )
