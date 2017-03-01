@@ -28,8 +28,8 @@ int num_errors() { return global_num_errors; }
 Prec PrecTable::infix[Token::Num_Tokens];
 
 void PrecTable::init() {
-#define IMPALA_INFIX(     tok, t_str, prec) PrecTable::infix[Token::tok] = prec;
-#define IMPALA_INFIX_ASGN(tok, t_str)       PrecTable::infix[Token::tok] = Assign;
+#define IMPALA_INFIX(     tok, t_str, prec) PrecTable::infix[Token::tok] = Prec::prec;
+#define IMPALA_INFIX_ASGN(tok, t_str)       PrecTable::infix[Token::tok] = Prec::Assign;
 #include "impala/tokenlist.h"
 }
 

@@ -234,7 +234,7 @@ public:
 
     // expressions
     const Expr*             parse_expr(Prec prec);
-    const Expr*             parse_expr() { return parse_expr(Bottom); }
+    const Expr*             parse_expr() { return parse_expr(Prec::Bottom); }
     const Expr*             parse_prefix_expr();
     const Expr*             parse_infix_expr(Tracker, const Expr* lhs);
     const Expr*             parse_postfix_expr(Tracker, const Expr* lhs);

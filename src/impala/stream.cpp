@@ -5,7 +5,7 @@ namespace impala {
 
 using namespace thorin;
 
-Prec prec = Bottom;
+Prec prec = Prec::Bottom;
 
 /*
  * AST types

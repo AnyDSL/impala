@@ -44,7 +44,7 @@ void type_analysis(const Module*, bool nossa);
 void check(Init&, const Module*, bool nossa);
 void emit(thorin::World&, const Module*);
 
-enum Prec {
+enum class Prec {
     Bottom,
     Assign = Bottom,
     OrOr, AndAnd,
@@ -58,7 +58,7 @@ enum Prec {
 struct PrecTable {
     static Prec infix[Token::Num_Tokens];
     static Prec infix_l(int tag) { return infix[tag]; }
-    static Prec infix_r(int tag) { return Prec(infix[tag]+1); }
+    static Prec infix_r(int tag) { return Prec(int(infix[tag])+1); }
 
 private:
     static void init();
