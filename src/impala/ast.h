@@ -1247,7 +1247,7 @@ private:
 class PrefixExpr : public Expr {
 public:
     enum Tag {
-#define IMPALA_PREFIX(tok, str, prec) tok = Token:: tok,
+#define IMPALA_PREFIX(tok, str) tok = Token:: tok,
 #include "impala/tokenlist.h"
         MUT
     };
@@ -1287,8 +1287,8 @@ private:
 class InfixExpr : public Expr {
 public:
     enum Tag {
-#define IMPALA_INFIX_ASGN(tok, str, lprec, rprec) tok = Token:: tok,
-#define IMPALA_INFIX(     tok, str, lprec, rprec) tok = Token:: tok,
+#define IMPALA_INFIX_ASGN(tok, str)       tok = Token:: tok,
+#define IMPALA_INFIX(     tok, str, prec) tok = Token:: tok,
 #include "impala/tokenlist.h"
     };
 
