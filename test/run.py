@@ -65,38 +65,41 @@ def main():
     i = 1
     for cat in tests:
         for test in cat:
-            base = os.path.splitext(os.path.split(test)[1])[0]
-            test_ll =  base + ".ll"
+            base = os.path.splitext(test)[0]
+            test_log = base + ".log"
+            test_ll  = base + ".ll"
+            test_exe = base
+            test_out = base + ".out"
 
             def impala(flags):
                 try:
-                    subprocess.run([args.impala] + flags + [test], timeout=args.compile_timeout)
+                    return subprocess.run([args.impala] + flags + [test], timeout=args.compile_timeout).returncode == 0
                 except subprocess.TimeoutExpired as timeout:
                     print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
+                    return False
 
             def link():
-                subprocess.run(["clang", "-s", test_ll, "lib.o", "-o", base])
+                return subprocess.run(["clang", "-s", test_ll, "lib.o", "-o", test_exe]).returncode == 0
 
             def run():
                 try:
-                    subprocess.run(["base"], args.run-timeout)
+                    return subprocess.run([test_exe], args.run_timeout).returncode == 0
                 except subprocess.TimeoutExpired as timeout:
                     print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
+                    return False
 
             print((">>> [{:>%i}/{}] {}" % align).format(i, total, test))
 
-            # classify(test)
-            # if has_main(test):
-            if False:
-                impala(["-emit-llvm", "-O2"])
-                link()
-            else:
+            if impala(["-emit-llvm", "-O2", "-o", base]) and link() and run():
                 pass
-                # impala([])
+            else:
+                print("fail")
 
             if not args.nocleanup:
+                remove(test_log)
                 remove(test_ll)
-                remove(base)
+                remove(test_exe)
+                remove(test_out)
 
             i = i + 1
 
