@@ -62,7 +62,6 @@ public:
         Asgn_Op = 8
     };
 
-    bool is_stmt_like() const { return tag() == L_BRACE || tag() == IF || tag() == FOR || tag() == WHILE || tag() == WITH; }
     bool is_prefix()    const { return is_prefix(tag_); }
     bool is_infix()     const { return is_infix(tag_); }
     bool is_postfix()   const { return is_postfix(tag_); }

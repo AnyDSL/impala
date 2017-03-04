@@ -1,0 +1,6 @@
+// codegen
+
+fn main() -> int {
+    let i = (if true {23} else {42}) + 1;
+    if i == 24 {0} else {1}
+}
