@@ -610,7 +610,8 @@ void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
         for (size_t i = 0; i < args.size(); i++)
             expect_type(fn_type->op(i), args[i], "argument type");
     } else
-        error(expr, "incorrect number of arguments in function application: got {}, expected {}", args.size(), fn_type->num_ops() - 1);
+        error(expr, "incorrect number of arguments in function application: got {}, expected {}",
+              args.size(), fn_type->num_ops() > 0 ? fn_type->num_ops() - 1 : 0);
 }
 
 void BlockExprBase::check(TypeSema& sema) const {
