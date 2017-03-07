@@ -1671,17 +1671,10 @@ private:
     friend class CodeGen;
 };
 
-class StmtLikeExpr : public Expr {
-protected:
-    StmtLikeExpr(Location location)
-        : Expr(location)
-    {}
-};
-
-class BlockExprBase : public StmtLikeExpr {
+class BlockExprBase : public Expr {
 public:
     BlockExprBase(Location location, Stmts&& stmts, const Expr* expr)
-        : StmtLikeExpr(location)
+        : Expr(location)
         , stmts_(std::move(stmts))
         , expr_(dock(expr_, expr))
     {}
@@ -1733,10 +1726,10 @@ private:
     const thorin::Def* remit(CodeGen&) const override;
 };
 
-class IfExpr : public StmtLikeExpr {
+class IfExpr : public Expr {
 public:
     IfExpr(Location location, const Expr* cond, const Expr* then_expr, const Expr* else_expr)
-        : StmtLikeExpr(location)
+        : Expr(location)
         , cond_(dock(cond_, cond))
         , then_expr_(dock(then_expr_, then_expr))
         , else_expr_(dock(else_expr_, else_expr))
@@ -1762,11 +1755,11 @@ private:
     std::unique_ptr<const Expr> else_expr_;
 };
 
-class WhileExpr : public StmtLikeExpr {
+class WhileExpr : public Expr {
 public:
     WhileExpr(Location location, const LocalDecl* continue_decl, const Expr* cond,
               const Expr* body, const LocalDecl* break_decl)
-        : StmtLikeExpr(location)
+        : Expr(location)
         , continue_decl_(continue_decl)
         , cond_(dock(cond_, cond))
         , body_(dock(body_, body))
@@ -1794,10 +1787,10 @@ private:
     std::unique_ptr<const LocalDecl> break_decl_;
 };
 
-class ForExpr : public StmtLikeExpr {
+class ForExpr : public Expr {
 public:
     ForExpr(Location location, const Expr* fn_expr, const Expr* expr, const LocalDecl* break_decl)
-        : StmtLikeExpr(location)
+        : Expr(location)
         , fn_expr_(dock(fn_expr_, fn_expr))
         , expr_(dock(expr_, expr))
         , break_decl_(break_decl)

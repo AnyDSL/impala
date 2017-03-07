@@ -72,13 +72,10 @@
     case Token::ID: \
          Token::L_PAREN
 
-#define STMT_NOT_EXPR \
+#define STMT \
          Token::LET: \
     case Token::ASM: \
-    case ITEM
-
-#define STMT \
-        STMT_NOT_EXPR: \
+    case ITEM: \
     case EXPR
 
 #define TYPE \
@@ -258,7 +255,6 @@ public:
     const IdPtrn*    parse_id_ptrn();
 
     // statements
-    const Stmt*     parse_stmt_not_expr();
     const ItemStmt* parse_item_stmt();
     const LetStmt*  parse_let_stmt();
     const AsmStmt*  parse_asm_stmt();
@@ -840,9 +836,6 @@ const Expr* Parser::parse_expr(Prec prec) {
     auto tracker = track();
     auto lhs = lookahead().is_prefix() ? parse_prefix_expr() : parse_primary_expr();
 
-    if (lhs->isa<StmtLikeExpr>())
-        return lhs; // bail out for stmt-like expressions
-
     while (true) {
         /*
          * (lhs  op  LA) op ...  on break  (current prec > lhs prec of LA)  -->  reduce
@@ -1167,32 +1160,47 @@ const WhileExpr* Parser::parse_while_expr() {
 
 const BlockExprBase* Parser::parse_block_expr() {
     auto tracker = track();
-    bool run = accept(Token::RUN_BLOCK) ? true : (eat(Token::L_BRACE), false);
+    bool run = accept(Token::RUN_BLOCK);
+    if (!run)
+        eat(Token::L_BRACE);
     Stmts stmts;
-    const Expr* block_expr = nullptr;
+    const Expr* final_expr = nullptr;
     while (true) {
         switch (lookahead()) {
-            case Token::SEMICOLON:  lex(); continue; // ignore semicolon
-            case STMT_NOT_EXPR:     stmts.emplace_back(parse_stmt_not_expr()); continue;
+            case Token::SEMICOLON: lex(); continue; // ignore semicolon
+            case ITEM:             stmts.emplace_back(parse_item_stmt()); continue;
+            case Token::LET:       stmts.emplace_back(parse_let_stmt()); continue;
+            case Token::ASM:       stmts.emplace_back(parse_asm_stmt()); continue;
             case EXPR: {
                 auto tracker = track();
-                bool stmt_like = lookahead().is_stmt_like();
-                auto expr = parse_expr();
+                const Expr* expr;
+                bool stmt_like = true;
+                switch (lookahead()) {
+                    case Token::IF:         expr = parse_if_expr(); break;
+                    case Token::FOR:        expr = parse_for_expr(); break;
+                    case Token::WITH:       expr = parse_with_expr(); break;
+                    case Token::WHILE:      expr = parse_while_expr(); break;
+                    case Token::L_BRACE:
+                    case Token::RUN_BLOCK:  expr = parse_block_expr(); break;
+                    default:                expr = parse_expr(); stmt_like = false;
+                }
+
                 if (accept(Token::SEMICOLON) || (stmt_like && lookahead() != Token::R_BRACE)) {
                     stmts.emplace_back(new ExprStmt(tracker, expr));
                     continue;
                 }
-                block_expr = expr;
+
+                final_expr = expr;
                 // FALLTHROUGH
             }
             default:
                 expect(Token::R_BRACE, "block expression");
-                if (block_expr == nullptr)
-                    block_expr = create<EmptyExpr>();
+                if (final_expr == nullptr)
+                    final_expr = create<EmptyExpr>();
                 if (run)
-                    return new RunBlockExpr(tracker, std::move(stmts), block_expr);
+                    return new RunBlockExpr(tracker, std::move(stmts), final_expr);
                 else
-                    return new BlockExpr(tracker, std::move(stmts), block_expr);
+                    return new BlockExpr(tracker, std::move(stmts), final_expr);
         }
     }
 }
@@ -1240,15 +1248,6 @@ const IdPtrn* Parser::parse_id_ptrn() {
 /*
  * statements
  */
-
-const Stmt* Parser::parse_stmt_not_expr() {
-    switch (lookahead()) {
-        case ITEM:       return parse_item_stmt();
-        case Token::LET: return parse_let_stmt();
-        case Token::ASM: return parse_asm_stmt();
-        default:         THORIN_UNREACHABLE;
-    }
-}
 
 const LetStmt* Parser::parse_let_stmt() {
     auto tracker = track();
