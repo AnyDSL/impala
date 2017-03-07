@@ -53,3 +53,9 @@ MESSAGE ( STATUS "Using Release flags: ${CMAKE_CXX_FLAGS_RELEASE}" )
 MESSAGE ( STATUS "Build type: ${CMAKE_BUILD_TYPE}" )
 
 CONFIGURE_FILE ( "cmake/impala-config.cmake.in" "share/impala/cmake/impala-config.cmake" @ONLY)
+
+option(IMPALA_ENABLE_TESTS "enable tests for impala" OFF)
+if (IMPALA_ENABLE_TESTS)
+    enable_testing()
+    add_subdirectory(test)
+endif(IMPALA_ENABLE_TESTS)
