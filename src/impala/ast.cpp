@@ -4,6 +4,8 @@ using namespace thorin;
 
 namespace impala {
 
+size_t ASTNode::gid_counter_ = 1;
+
 //------------------------------------------------------------------------------
 
 const char* Visibility::str() {

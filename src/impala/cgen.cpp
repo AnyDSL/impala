@@ -157,7 +157,7 @@ private:
     };
 
     // Computes the order of generation of C structures
-    void compute_struct_order(thorin::HashMap<const StructDecl*, GenState>& struct_decls,
+    void compute_struct_order(thorin::GIDMap<const StructDecl*, GenState>& struct_decls,
                               std::vector<const StructDecl*>& order,
                               const StructDecl* cur_gen) {
         struct_decls[cur_gen] = CUR_GEN;
@@ -204,7 +204,7 @@ private:
         export_fns.push_back(fn_decl);
     }
 
-    thorin::HashSet<const StructDecl*> export_structs;
+    thorin::GIDSet<const StructDecl*> export_structs;
     std::vector<const FnDecl*> export_fns;
 
 public:
@@ -237,7 +237,7 @@ public:
         // We have to make sure every structure is generated after each
         // of its dependencies has already been generated (otherwise the C
         // compiler will complain)
-        thorin::HashMap<const StructDecl*, GenState> struct_decls;
+        thorin::GIDMap<const StructDecl*, GenState> struct_decls;
         std::vector<const StructDecl*> order;
 
         for (auto st : export_structs)
