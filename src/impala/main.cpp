@@ -47,32 +47,38 @@ int main(int argc, char** argv) {
              nocleanup, nossa, fancy;
         YCompCommandLine yComp;
 
-        auto cmd_parser = ArgParser()
-            .implicit_option             (                      "<infiles>",                      "input files", infiles)
-            .add_option<bool>            ("help",               "",                               "produce this help message", help, false)
 #ifndef NDEBUG
-            .add_option<vector<string>>  ("break",              "<arg>",                          "breakpoint at definition generation of with global id <arg>; may be used multiple times", breakpoints)
-            .add_option<string>          ("log-level",          "{none|error|warn|info|debug}",   "set log level", log_level, "warn")
-            .add_option<string>          ("log",                "<arg>",                          "specifies log file; use '-' for stdout (default)", log_name, "-")
+#define LOG_LEVELS "{error|warn|info|verbose|debug}"
+#else
+#define LOG_LEVELS "{error|warn|info}"
 #endif
-            .add_option<string>          ("o",                  "",                               "specifies the output module name", out_name, "")
-            .add_option<bool>            ("O0",                 "",                               "reduce compilation time and make debugging produce the expected results (default)", opt_0, false)
-            .add_option<bool>            ("O1",                 "",                               "optimize", opt_1, false)
-            .add_option<bool>            ("O2",                 "",                               "optimize even more", opt_2, false)
-            .add_option<bool>            ("O3",                 "",                               "optimize yet more", opt_3, false)
-            .add_option<bool>            ("Os",                 "",                               "optimize for size", opt_s, false)
-            .add_option<bool>            ("Othorin",            "",                               "optimize at Thorin level", opt_thorin, false)
-            .add_option<bool>            ("emit-annotated",     "",                               "emit AST of Impala program after semantic analysis", emit_annotated, false)
-            .add_option<bool>            ("emit-ast",           "",                               "emit AST of Impala program", emit_ast, false)
-            .add_option<bool>            ("emit-c-interface",   "",                               "emit C interface from Impala code (experimental)", emit_cint, false)
-            .add_option<bool>            ("emit-llvm",          "",                               "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
-            .add_option<bool>            ("emit-thorin",        "",                               "emit textual Thorin representation of Impala program", emit_thorin, false)
-            .add_option<bool>            ("emit-ycomp",         "",                               "emit ycomp-compatible graph representation of Impala program", emit_ycomp, false)
-            .add_option<bool>            ("emit-ycomp-cfg",     "",                               "emit ycomp-compatible control-flow graph representation of Impala program", emit_ycomp_cfg, false)
-            .add_option<bool>            ("f",                  "",                               "use fancy output: Impala's AST dump uses only parentheses where necessary", fancy, false)
-            .add_option<bool>            ("g",                  "",                               "emit debug information", debug, false)
-            .add_option<bool>            ("nocleanup",          "",                               "no clean-up phase", nocleanup, false)
-            .add_option<bool>            ("nossa",              "",                               "use slots + load/store instead of SSA construction", nossa, false)
+
+        auto cmd_parser = ArgParser()
+            .implicit_option             (                      "<infiles>", "input files", infiles)
+            .add_option<bool>            ("help",               "",          "produce this help message", help, false)
+            .add_option<string>          ("log-level",          LOG_LEVELS,  "set log level", log_level, "warn")
+#ifndef NDEBUG
+            .add_option<vector<string>>  ("break",              "<arg>", "breakpoint at definition generation of with global id <arg>; may be used multiple times", breakpoints)
+            .add_option<string>          ("log",                "<arg>", "specifies log file; use '-' for stdout (default)", log_name, "-")
+#endif
+            .add_option<string>          ("o",                  "", "specifies the output module name", out_name, "")
+            .add_option<bool>            ("O0",                 "", "reduce compilation time and make debugging produce the expected results (default)", opt_0, false)
+            .add_option<bool>            ("O1",                 "", "optimize", opt_1, false)
+            .add_option<bool>            ("O2",                 "", "optimize even more", opt_2, false)
+            .add_option<bool>            ("O3",                 "", "optimize yet more", opt_3, false)
+            .add_option<bool>            ("Os",                 "", "optimize for size", opt_s, false)
+            .add_option<bool>            ("Othorin",            "", "optimize at Thorin level", opt_thorin, false)
+            .add_option<bool>            ("emit-annotated",     "", "emit AST of Impala program after semantic analysis", emit_annotated, false)
+            .add_option<bool>            ("emit-ast",           "", "emit AST of Impala program", emit_ast, false)
+            .add_option<bool>            ("emit-c-interface",   "", "emit C interface from Impala code (experimental)", emit_cint, false)
+            .add_option<bool>            ("emit-llvm",          "", "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
+            .add_option<bool>            ("emit-thorin",        "", "emit textual Thorin representation of Impala program", emit_thorin, false)
+            .add_option<bool>            ("emit-ycomp",         "", "emit ycomp-compatible graph representation of Impala program", emit_ycomp, false)
+            .add_option<bool>            ("emit-ycomp-cfg",     "", "emit ycomp-compatible control-flow graph representation of Impala program", emit_ycomp_cfg, false)
+            .add_option<bool>            ("f",                  "", "use fancy output: Impala's AST dump uses only parentheses where necessary", fancy, false)
+            .add_option<bool>            ("g",                  "", "emit debug information", debug, false)
+            .add_option<bool>            ("nocleanup",          "", "no clean-up phase", nocleanup, false)
+            .add_option<bool>            ("nossa",              "", "use slots + load/store instead of SSA construction", nossa, false)
             .add_option<YCompCommandLine>("ycomp",              "{cfg|domtree|domfrontiers|looptree} {true|false} <arg>    ",
                 "print ycomp graph to <arg>; the flag indicates whether the graph is based upon a forward (true) or backwards (false) CFG; the option can be specified multiple times",
                 yComp, YCompCommandLine());
@@ -83,23 +89,19 @@ int main(int argc, char** argv) {
 
         impala::fancy() = fancy;
 
-#ifndef NDEBUG
         ofstream log_stream;
-        if (log_level == "none") {
-            // do nothing
-        } else if (log_level == "error") {
+        if (log_level == "error") {
             Log::set(Log::Error, open(log_stream, log_name));
         } else if (log_level == "warn") {
             Log::set(Log::Warn, open(log_stream, log_name));
         } else if (log_level == "info") {
             Log::set(Log::Info, open(log_stream, log_name));
+        } else if (log_level == "verbose") {
+            Log::set(Log::Verbose, open(log_stream, log_name));
         } else if (log_level == "debug") {
             Log::set(Log::Debug, open(log_stream, log_name));
         } else
-            throw invalid_argument("log level must be one of {none|error|warn|info|debug}");
-#else
-        Log::set(Log::Error, &std::cout);
-#endif
+            throw invalid_argument("log level must be one of " LOG_LEVELS);
 
         // check optimization levels
         if (opt_s + opt_0 + opt_1 + opt_2 + opt_3 > 1)
