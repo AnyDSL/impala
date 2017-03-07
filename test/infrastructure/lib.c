@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 void print_char(char c) {
    printf("%c\n", (int)c);
