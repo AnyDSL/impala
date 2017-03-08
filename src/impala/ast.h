@@ -143,12 +143,7 @@ public:
     ASTNode() = delete;
     ASTNode(const ASTNode&) = delete;
     ASTNode(ASTNode&&) = delete;
-
-    ASTNode(Location location)
-        : gid_(gid_counter_++)
-        , location_(location)
-    {}
-
+    ASTNode(Location location);
 #ifndef NDEBUG
     virtual ~ASTNode() { assert(location_.is_set()); }
 #endif
