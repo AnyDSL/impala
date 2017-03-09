@@ -1,3 +1,5 @@
+// codegen
+
 struct Foo {
     data: [i32 * 2],
     id: i32

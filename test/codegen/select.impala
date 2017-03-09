@@ -1,3 +1,5 @@
+// codegen
+
 extern "thorin" {
     fn select[T,U](T, U, U) -> U;
 }

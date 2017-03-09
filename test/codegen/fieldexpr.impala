@@ -1,3 +1,5 @@
+// codegen
+
 fn foo(rays: &Ray) -> f32 {
     rays.org.x
 }

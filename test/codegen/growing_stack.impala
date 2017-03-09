@@ -1,3 +1,5 @@
+// codegen
+
 fn take_address(&int) -> () {}
 
 fn range(a: int, b: int, body: fn(int) -> ()) -> () {

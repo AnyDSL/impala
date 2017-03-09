@@ -1,3 +1,5 @@
+// codegen
+
 fn primes(n: int, yield: fn(int) -> !) -> ! {
     if (n < 2) {
         yield(2)

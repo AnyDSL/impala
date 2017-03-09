@@ -1,3 +1,5 @@
+// codegen
+
 fn sum(a: int, b: int, acc: &mut int, body: fn(int) -> int) -> int {
     if a < b {
         let x = body(a);

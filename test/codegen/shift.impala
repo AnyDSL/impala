@@ -1,3 +1,5 @@
+// codegen
+
 extern fn f(buf: &mut [uint], width: int, x: int, v: int) -> () {
     buf(24*width + x) = ((v<<24) | v) as u32;
 }

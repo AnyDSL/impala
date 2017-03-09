@@ -1,3 +1,5 @@
+// codegen
+
 // https://github.com/AnyDSL/thorin/issues/27
 
 fn iterate_children(node_id: &mut i32) -> () {

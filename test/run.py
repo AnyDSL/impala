@@ -1,22 +1,12 @@
 #!/usr/bin/env python
 
 import argparse
-import enum
 import math
 import os
 import subprocess
 import sys
 
-class Category(enum.Enum):
-    codegen  = 0
-    sema_pos = enum.auto()
-    sema_neg = enum.auto()
-
-def categorize(s):
-    for cat in Category:
-        if str(cat.name) == s:
-            return cat.value
-    return None
+categories = ["codegen", "sema_pos", "sema_neg"];
 
 def is_exe(filename):
     return os.path.isfile(filename) and os.access(filename, os.X_OK)
@@ -36,19 +26,14 @@ def find_impala():
 
     return os.path.abspath(os.path.join("..", "build", "bin", impala_exe))
 
-def classify(test):
-    with open(test, 'r') as f:
-        line = f.readline()
-        if line.startswith("//"):
-            return categorize(line[2:].split()[0])
-
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('test',                    nargs='*', help='path to test or test directory',  default='.',           type=str)
-    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                  default=find_impala(), type=str)
-    parser.add_argument('-c', '--compile-timeout', nargs='?', help='timeout for compiling test case', default=5,             type=int)
-    parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',   default=5,             type=int)
-    parser.add_argument('-n', '--nocleanup',                  help='don\'t clean up temporary files', action='store_true')
+    parser.add_argument('test',                    nargs='*', help='path to test or test directory',    default='.',           type=str)
+    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                    default=find_impala(), type=str)
+    parser.add_argument('-c', '--compile-timeout', nargs='?', help='timeout for compiling test case',   default=5,             type=int)
+    parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',     default=5,             type=int)
+    parser.add_argument('-n', '--nocleanup',                  help='don\'t clean up temporary files',   action='store_true')
+    parser.add_argument('-b', '--broken',                     help='also run tests known to be broken', action='store_true')
     args = parser.parse_args()
 
     if not os.access("lib.o", os.R_OK):
@@ -57,55 +42,70 @@ def main():
 
     tests = [[], [], []]
 
+    def classify(path):
+        with open(path, 'r') as f:
+            line = f.readline()
+            if line.startswith("//"):
+                tokens = line[2:].split()
+                if len(tokens) >= 1 and tokens[0] in categories:
+                    if args.broken or len(tokens) == 1 or tokens[1] != "broken":
+                        tests[categories.index(tokens[0])].append(path)
+
     for test in args.test:
         if os.path.isfile(test):
-            tests.append(test)
+            classify(test)
         else:
             for dirpath, dirs, files in os.walk(test):
                 for filename in files:
                     if os.path.splitext(filename)[1] == ".impala":
-                        path = os.path.join(dirpath,filename)
-                        c = classify(path)
-                        if c != None:
-                            tests[c].append(path)
+                        classify(os.path.join(dirpath,filename))
 
     total = sum([len(l) for l in tests])
     align = int(math.log10(total)) + 1
     i = 1
     for cat in tests:
         for test in cat:
-            base = os.path.splitext(os.path.split(test)[1])[0]
-            test_ll =  base + ".ll"
+            base = os.path.splitext(test)[0]
+            test_log     = base + ".log"
+            test_log_new = base + ".log.new"
+            test_ll      = base + ".ll"
+            test_exe     = base
+            test_in      = base + ".in"
+            test_out     = base + ".out"
+            test_out_new = base + ".out.new"
 
             def impala(flags):
                 try:
-                    subprocess.run([args.impala] + flags + [test], timeout=args.compile_timeout)
+                    log = open(test_log_new, 'w')
+                    return subprocess.run([args.impala] + flags + [test], timeout=args.compile_timeout, stdout=log, stderr=log).returncode == 0
                 except subprocess.TimeoutExpired as timeout:
                     print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
+                    return False
 
             def link():
-                subprocess.run(["clang", "-s", test_ll, "lib.o", "-o", base])
+                return subprocess.run(["clang", "-s", test_ll, "lib.o", "-o", test_exe]).returncode == 0
 
             def run():
                 try:
-                    subprocess.run(["base"], args.run-timeout)
+                    out = open(test_out_new, 'w')
+                    input = open(test_in, 'r') if os.access(test_in, os.R_OK) else None
+                    return subprocess.run([test_exe], args.run_timeout, stdin=input, stdout=out, stderr=out, encoding="utf-8").returncode == 0
                 except subprocess.TimeoutExpired as timeout:
                     print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
+                    return False
 
             print((">>> [{:>%i}/{}] {}" % align).format(i, total, test))
 
-            classify(test)
-            # if has_main(test):
-            if False:
-                impala(["-emit-llvm", "-O2"])
-                link()
-            else:
+            if impala(["-emit-llvm", "-O2", "-o", base]) and link() and run():
                 pass
-                # impala([])
+            else:
+                print("fail")
 
             if not args.nocleanup:
+                remove(test_log_new)
                 remove(test_ll)
-                remove(base)
+                remove(test_exe)
+                remove(test_out_new)
 
             i = i + 1
 

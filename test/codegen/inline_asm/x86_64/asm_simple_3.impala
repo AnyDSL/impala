@@ -1,3 +1,5 @@
+// codegen
+
 fn main() -> int {
     let mut a = 4;
     let mut b = 3;

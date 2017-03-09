@@ -1,3 +1,5 @@
+// codegen
+
 
 static mut v0 = "elem1";
 static mut v1 = "elem2";

@@ -1,3 +1,5 @@
+// codegen
+
 trait Iterator {
     fn inc(self: Self) -> Self;
     fn lt(self: Self, other: Self) -> bool;

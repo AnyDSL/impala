@@ -44,44 +44,21 @@ void type_analysis(const Module*, bool nossa);
 void check(Init&, const Module*, bool nossa);
 void emit(thorin::World&, const Module*);
 
-enum Prec {
-    BOTTOM,
-    ASGN,
-    COND,
-    OROR,
-    ANDAND,
-    OR,
-    XOR,
-    AND,
-    EQ,
-    REL,
-    SHIFT,
-    ADD,
-    MUL,
-    UNARY,
-    EVAL,
-    POSTFIX,
-    TOP,
-    NUM_PREC
+enum class Prec {
+    Bottom,
+    Assign = Bottom,
+    OrOr, AndAnd,
+    Rel,
+    Or, Xor, And,
+    Shift, Add, Mul,
+    As,
+    Unary,
 };
-
-typedef Prec Type2Prec[Token::Num_Tokens];
-
-struct BinPrec {
-    Prec l;
-    Prec r;
-
-    BinPrec() {}
-    BinPrec(Prec l, Prec r) : l(l), r(r) {}
-};
-
-typedef BinPrec Type2BinPrec[Token::Num_Tokens];
 
 struct PrecTable {
-    static Type2Prec prefix_r; ///< Right precedence -- for unary prefix operators.
-    static Type2Prec infix_l;  ///< Left precedences -- for binary operators.
-    static Type2Prec infix_r;  ///< Right precedences -- for binary operators.
-    static Type2Prec postfix_l;///< Left precedence -- for unary postfix operators.
+    static Prec infix[Token::Num];
+    static Prec infix_l(int tag) { return infix[tag]; }
+    static Prec infix_r(int tag) { return Prec(int(infix[tag])+1); }
 
 private:
     static void init();

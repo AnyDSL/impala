@@ -1,3 +1,5 @@
+// codegen
+
 fn a(m: int, n: int) -> int {   
     if m == 0 {
         n + 1

@@ -258,8 +258,8 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     }
 
     if (dst == src && dst->is_known()) return dst;
-    if (dst->isa<TypeError>()) return src; // guess the other one
-    if (src->isa<TypeError>()) return dst; // dito
+    if (dst->isa<TypeError>() || dst->isa<InferError>()) return src; // guess the other one
+    if (src->isa<TypeError>() || src->isa<InferError>()) return dst; // dito
 
     if (dst->isa<UnknownType>() && src->isa<UnknownType>())
         return unify_by_rank(dst_repr, src_repr)->type;
@@ -289,7 +289,7 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
         }
     }
 
-    return type_error();
+    return infer_error(dst, src);
 }
 
 //------------------------------------------------------------------------------
@@ -695,6 +695,8 @@ const Type* InfixExpr::infer(InferSema& sema) const {
             sema.assign(lhs(), rhs());
             return sema.unit();
         }
+        case AS:
+            THORIN_UNREACHABLE;
     }
 
     THORIN_UNREACHABLE;

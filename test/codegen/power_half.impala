@@ -1,3 +1,5 @@
+// codegen
+
 fn power(a: half, mut b: int) -> half {
     let mut result = 1f16;
     while (b != 0) {

@@ -1,3 +1,5 @@
+// codegen
+
 trait Conv[T] {
     fn conv(self: &Self) -> T;
 }

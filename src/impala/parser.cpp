@@ -7,7 +7,6 @@
 #include "impala/ast.h"
 #include "impala/impala.h"
 #include "impala/lexer.h"
-#include "impala/prec.h"
 
 #define VISIBILITY \
          Token::PRIV: \
@@ -73,13 +72,10 @@
     case Token::ID: \
          Token::L_PAREN
 
-#define STMT_NOT_EXPR \
+#define STMT \
          Token::LET: \
     case Token::ASM: \
-    case ITEM
-
-#define STMT \
-        STMT_NOT_EXPR: \
+    case ITEM: \
     case EXPR
 
 #define TYPE \
@@ -116,7 +112,6 @@ public:
     Parser(std::istream& stream, const char* filename)
         : lexer_(stream, filename)
         , cur_var_handle(2) // reserve 1 for conditionals, 0 for mem
-        , no_bars_(false)
     {
         lookahead_[0] = lexer_.lex();
         lookahead_[1] = lexer_.lex();
@@ -235,10 +230,8 @@ public:
     const Typedef*     parse_typedef(Tracker, Visibility);
 
     // expressions
-    bool is_infix();
     const Expr*             parse_expr(Prec prec);
-    const Expr*             parse_expr() { return parse_expr(BOTTOM, false); }
-    const Expr*             parse_expr(Prec prec, bool no_bars) { THORIN_PUSH(no_bars_, no_bars); return parse_expr(prec); }
+    const Expr*             parse_expr() { return parse_expr(Prec::Bottom); }
     const Expr*             parse_prefix_expr();
     const Expr*             parse_infix_expr(Tracker, const Expr* lhs);
     const Expr*             parse_postfix_expr(Tracker, const Expr* lhs);
@@ -262,7 +255,6 @@ public:
     const IdPtrn*    parse_id_ptrn();
 
     // statements
-    const Stmt*     parse_stmt_not_expr();
     const ItemStmt* parse_item_stmt();
     const LetStmt*  parse_let_stmt();
     const AsmStmt*  parse_asm_stmt();
@@ -284,7 +276,6 @@ private:
     Lexer lexer_;        ///< invoked in order to get next token
     Token lookahead_[3]; ///< SLL(3) look ahead
     size_t cur_var_handle;
-    bool no_bars_;
     Location prev_location_;
 };
 
@@ -293,7 +284,7 @@ private:
 void parse(Items& items, std::istream& is, const char* filename) {
     Parser parser(is, filename);
     parser.parse_items(items);
-    if (parser.lookahead() != Token::END_OF_FILE)
+    if (parser.lookahead() != Token::Eof)
         parser.error("module item", "module contents");
 }
 
@@ -841,19 +832,9 @@ const SimdASTType* Parser::parse_simd_type() {
  * expressions
  */
 
-bool Parser::is_infix() {
-    bool infix = lookahead().is_infix();
-    if (no_bars_ && infix)
-        return lookahead() != Token::OR && lookahead() != Token::OROR;
-    return infix;
-}
-
 const Expr* Parser::parse_expr(Prec prec) {
     auto tracker = track();
     auto lhs = lookahead().is_prefix() ? parse_prefix_expr() : parse_primary_expr();
-
-    if (lhs->isa<StmtLikeExpr>())
-        return lhs; // bail out for stmt-like expressions
 
     while (true) {
         /*
@@ -861,13 +842,13 @@ const Expr* Parser::parse_expr(Prec prec) {
          *  lhs  op (LA  op ...) otherwise                                  -->  shift
          */
 
-        if (is_infix()) {
-            if (prec > PrecTable::infix_l[lookahead()])
+        if (lookahead().is_infix()) {
+            if (prec > PrecTable::infix_l(lookahead()))
                 break;
 
             lhs = parse_infix_expr(tracker, lhs);
-        } else if ( lookahead().is_postfix() ) {
-            if (prec > PrecTable::postfix_l[lookahead()])
+        } else if (lookahead().is_postfix()) {
+            if (prec > Prec::Unary)
                 break;
 
             lhs = parse_postfix_expr(tracker, lhs);
@@ -884,16 +865,17 @@ const Expr* Parser::parse_prefix_expr() {
 
     auto tracker = track();
     auto tag = lex().tag();
-    auto prec = PrecTable::prefix_r[tag];
     bool mut = tag == Token::AND ? accept(Token::MUT) : false;
-    auto rhs = parse_expr(prec);
+    auto rhs = parse_expr(Prec::Unary);
 
     return new PrefixExpr(tracker, mut ? PrefixExpr::MUT : (PrefixExpr::Tag) tag, rhs);
 }
 
 const Expr* Parser::parse_infix_expr(Tracker tracker, const Expr* lhs) {
     auto tag = lex().tag();
-    auto rhs = parse_expr(PrecTable::infix_r[tag]);
+    if (tag == Token::AS)
+        return new ExplicitCastExpr(tracker, lhs, parse_type());
+    auto rhs = parse_expr(PrecTable::infix_r(tag));
     return new InfixExpr(tracker, lhs, (InfixExpr::Tag) tag, rhs);
 }
 
@@ -924,11 +906,6 @@ const Expr* Parser::parse_postfix_expr(Tracker tracker, const Expr* lhs) {
             lex();
             auto identifier = try_identifier("field expression");
             return new FieldExpr(tracker, lhs, identifier);
-        }
-        case Token::AS: {
-            lex();
-            auto ast_type = parse_type();
-            return new ExplicitCastExpr(tracker, lhs, ast_type);
         }
         default: THORIN_UNREACHABLE;
     }
@@ -1183,32 +1160,47 @@ const WhileExpr* Parser::parse_while_expr() {
 
 const BlockExprBase* Parser::parse_block_expr() {
     auto tracker = track();
-    bool run = accept(Token::RUN_BLOCK) ? true : (eat(Token::L_BRACE), false);
+    bool run = accept(Token::RUN_BLOCK);
+    if (!run)
+        eat(Token::L_BRACE);
     Stmts stmts;
-    const Expr* block_expr = nullptr;
+    const Expr* final_expr = nullptr;
     while (true) {
         switch (lookahead()) {
-            case Token::SEMICOLON:  lex(); continue; // ignore semicolon
-            case STMT_NOT_EXPR:     stmts.emplace_back(parse_stmt_not_expr()); continue;
+            case Token::SEMICOLON: lex(); continue; // ignore semicolon
+            case ITEM:             stmts.emplace_back(parse_item_stmt()); continue;
+            case Token::LET:       stmts.emplace_back(parse_let_stmt()); continue;
+            case Token::ASM:       stmts.emplace_back(parse_asm_stmt()); continue;
             case EXPR: {
                 auto tracker = track();
-                bool stmt_like = lookahead().is_stmt_like();
-                auto expr = parse_expr();
+                const Expr* expr;
+                bool stmt_like = true;
+                switch (lookahead()) {
+                    case Token::IF:         expr = parse_if_expr(); break;
+                    case Token::FOR:        expr = parse_for_expr(); break;
+                    case Token::WITH:       expr = parse_with_expr(); break;
+                    case Token::WHILE:      expr = parse_while_expr(); break;
+                    case Token::L_BRACE:
+                    case Token::RUN_BLOCK:  expr = parse_block_expr(); break;
+                    default:                expr = parse_expr(); stmt_like = false;
+                }
+
                 if (accept(Token::SEMICOLON) || (stmt_like && lookahead() != Token::R_BRACE)) {
                     stmts.emplace_back(new ExprStmt(tracker, expr));
                     continue;
                 }
-                block_expr = expr;
+
+                final_expr = expr;
                 // FALLTHROUGH
             }
             default:
                 expect(Token::R_BRACE, "block expression");
-                if (block_expr == nullptr)
-                    block_expr = create<EmptyExpr>();
+                if (final_expr == nullptr)
+                    final_expr = create<EmptyExpr>();
                 if (run)
-                    return new RunBlockExpr(tracker, std::move(stmts), block_expr);
+                    return new RunBlockExpr(tracker, std::move(stmts), final_expr);
                 else
-                    return new BlockExpr(tracker, std::move(stmts), block_expr);
+                    return new BlockExpr(tracker, std::move(stmts), final_expr);
         }
     }
 }
@@ -1256,15 +1248,6 @@ const IdPtrn* Parser::parse_id_ptrn() {
 /*
  * statements
  */
-
-const Stmt* Parser::parse_stmt_not_expr() {
-    switch (lookahead()) {
-        case ITEM:       return parse_item_stmt();
-        case Token::LET: return parse_let_stmt();
-        case Token::ASM: return parse_asm_stmt();
-        default:         THORIN_UNREACHABLE;
-    }
-}
 
 const LetStmt* Parser::parse_let_stmt() {
     auto tracker = track();

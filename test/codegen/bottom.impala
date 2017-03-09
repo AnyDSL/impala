@@ -1,3 +1,5 @@
+// codegen
+
 // https://github.com/AnyDSL/thorin/issues/28
 struct Foo {
     x: int,

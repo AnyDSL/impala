@@ -5,7 +5,7 @@ namespace impala {
 
 using namespace thorin;
 
-Prec prec = BOTTOM;
+Prec prec = Prec::Bottom;
 
 /*
  * AST types
@@ -285,32 +285,8 @@ std::ostream& SimdExpr::stream(std::ostream& os) const {
     return stream_list(os, args(), [&](const auto& expr) { os << expr.get(); }, "simd[", "]");
 }
 
-std::ostream& PrefixExpr::stream(std::ostream& os) const {
-    Prec r = PrecTable::prefix_r[tag()];
-    Prec old = prec;
-    bool paren = !fancy() || prec <= r;
-    if (paren) os << "(";
-
-    const char* op;
-    switch (tag()) {
-#define IMPALA_PREFIX(tok, str, rprec) case tok: op = str; break;
-#include "impala/tokenlist.h"
-        case MUT: op = "&mut "; break;
-        default: THORIN_UNREACHABLE;
-    }
-
-    os << op;
-    prec = r;
-    os << rhs();
-    prec = old;
-
-    if (paren) os << ")";
-    return os;
-}
-
-static std::pair<Prec, bool> open(std::ostream& os, int tag) {
+static std::pair<Prec, bool> open(std::ostream& os, Prec l) {
     std::pair<Prec, bool> result;
-    Prec l = PrecTable::postfix_l[tag];
     result.first = prec;
     result.second = !fancy() || prec > l;
     if (result.second)
@@ -326,23 +302,43 @@ static std::ostream& close(std::ostream& os, std::pair<Prec, bool> pair) {
     return os;
 }
 
-std::ostream& InfixExpr::stream(std::ostream& os) const {
-    auto open_state = open(os, tag());
+std::ostream& PrefixExpr::stream(std::ostream& os) const {
     const char* op;
     switch (tag()) {
-#define IMPALA_INFIX_ASGN(tok, str, lprec, rprec) case tok: op = str; break;
-#define IMPALA_INFIX(     tok, str, lprec, rprec) case tok: op = str; break;
+#define IMPALA_PREFIX(tok, str) case tok: op = str; break;
+#include "impala/tokenlist.h"
+        case MUT: op = "&mut "; break;
+        default: THORIN_UNREACHABLE;
+    }
+
+    os << op;
+    if (auto prefix_expr = rhs()->isa<PrefixExpr>()) {
+        if ((tag() == ADD || tag() == SUB) && tag() == prefix_expr->tag())
+            os << ' ';
+    }
+
+    auto open_state = open(os, Prec::Unary);
+    os << rhs();
+    return close(os, open_state);
+}
+
+std::ostream& InfixExpr::stream(std::ostream& os) const {
+    auto open_state = open(os, PrecTable::infix_l(tag()));
+    const char* op;
+    switch (tag()) {
+#define IMPALA_INFIX_ASGN(tok, str)       case tok: op = str; break;
+#define IMPALA_INFIX(     tok, str, prec) case tok: op = str; break;
 #include "impala/tokenlist.h"
     }
 
     os << lhs() << " " << op << " ";
-    prec = PrecTable::infix_r[tag()];
+    prec = PrecTable::infix_r(tag());
     os << rhs();
     return close(os, open_state);
 }
 
 std::ostream& PostfixExpr::stream(std::ostream& os) const {
-    auto open_state = open(os, tag());
+    auto open_state = open(os, Prec::Unary);
     const char* op;
     switch (tag()) {
         case INC: op = "++"; break;
@@ -355,25 +351,25 @@ std::ostream& PostfixExpr::stream(std::ostream& os) const {
 }
 
 std::ostream& FieldExpr::stream(std::ostream& os) const {
-    auto open_state = open(os, Token::DOT);
+    auto open_state = open(os, Prec::Unary);
     os << lhs() << '.' << symbol();
     return close(os, open_state);
 }
 
 std::ostream& ExplicitCastExpr::stream(std::ostream& os) const {
-    auto open_state = open(os, Token::AS);
+    auto open_state = open(os, Prec::As);
     streamf(os, "{} as {}", src(), ast_type());
     return close(os, open_state);
 }
 
 std::ostream& ImplicitCastExpr::stream(std::ostream& os) const {
-    auto open_state = open(os, Token::AS);
+    auto open_state = open(os, Prec::As);
     streamf(os, "implicit_cast({}, {})", src(), type());
     return close(os, open_state);
 }
 
 std::ostream& Ref2ValueExpr::stream(std::ostream& os) const {
-    auto open_state = open(os, Token::AS);
+    auto open_state = open(os, Prec::As);
     streamf(os, "ref2value({}, {})", src(), type());
     return close(os, open_state);
 }
@@ -388,7 +384,7 @@ std::ostream& StructExpr::stream(std::ostream& os) const {
 }
 
 std::ostream& TypeAppExpr::stream(std::ostream& os) const {
-    Prec l = PrecTable::postfix_l[Token::L_BRACKET];
+    Prec l = Prec::Unary;
     Prec old = prec;
     bool paren = !fancy() || prec > l;
     if (paren) os << "(";
@@ -406,7 +402,7 @@ std::ostream& TypeAppExpr::stream(std::ostream& os) const {
 }
 
 std::ostream& MapExpr::stream(std::ostream& os) const {
-    Prec l = PrecTable::postfix_l[Token::L_PAREN];
+    Prec l = Prec::Unary;
     Prec old = prec;
     bool paren = !fancy() || prec > l;
     if (paren) os << "(";

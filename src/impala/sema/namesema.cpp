@@ -42,7 +42,7 @@ public:
 private:
     size_t depth() const { return levels_.size(); }
 
-    thorin::HashMap<Symbol, const Decl*> symbol2decl_;
+    thorin::HashMap<Symbol, const Decl*, Symbol::Hash> symbol2decl_;
     std::vector<const Decl*> decl_stack_;
     std::vector<size_t> levels_;
 

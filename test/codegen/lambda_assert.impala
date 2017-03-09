@@ -1,3 +1,5 @@
+// codegen
+
 fn iteration_sep_advanced() -> () {
     init_zero(~[23: f32]);
 }

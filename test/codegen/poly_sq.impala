@@ -1,3 +1,5 @@
+// codegen
+
 fn sq[T](mul: fn(T, T) -> T, val: T) -> T {
     mul(val, val)
 }

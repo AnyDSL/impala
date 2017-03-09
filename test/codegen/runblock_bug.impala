@@ -1,3 +1,5 @@
+// codegen
+
 fn test() -> i32 { 23 }
 
 fn main() -> i32 {

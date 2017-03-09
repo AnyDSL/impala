@@ -1,0 +1,7 @@
+fn foo(x: int) -> () {
+    while x {
+        23
+    }
+
+    let foo = if x { 23 } else { 42 };
+}

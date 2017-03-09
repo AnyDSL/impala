@@ -1,3 +1,5 @@
+// codegen
+
 fn foo(_: int, _: int) -> int {
     let _ = 23;
     let _ = 42;

@@ -17,4 +17,18 @@ const PrimType* TypeTable::prim_type(const PrimTypeTag tag) {
     }
 }
 
+const InferError* TypeTable::infer_error(const Type* dst, const Type* src) {
+    if (auto di = dst->isa<InferError>()) {
+        if (di->src() == src)
+            return di;
+    }
+
+    if (auto si = src->isa<InferError>()) {
+        if (si->dst() == dst)
+            return si;
+    }
+
+    return unify(new InferError(*this, dst, src));
+}
+
 }

@@ -1,3 +1,5 @@
+// codegen
+
 struct Vec3 {
     x: int,
     y: int,

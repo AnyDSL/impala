@@ -1,3 +1,5 @@
+// codegen
+
 extern "thorin" {
     fn reserve_shared[T](i32) -> &[3][T];
     fn nvvm(i32, (i32, i32, i32), (i32, i32, i32), fn() -> ()) -> ();

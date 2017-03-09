@@ -1,3 +1,5 @@
+// codegen
+
 extern fn fac(n : int) -> int {
     if (n <= 1) {
         1

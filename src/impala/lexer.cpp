@@ -54,7 +54,7 @@ Token Lexer::lex() {
 
         // end of file
         if (accept(std::istream::traits_type::eof()))
-            return {location(), Token::END_OF_FILE};
+            return {location(), Token::Eof};
 
         // skip whitespace
         if (accept(space)) {
@@ -113,7 +113,7 @@ Token Lexer::lex() {
         while (true) { \
             if (accept(std::istream::traits_type::eof())) { \
                 error(location().front(), "unterminated comment"); \
-                return {location(), Token::END_OF_FILE}; \
+                return {location(), Token::Eof}; \
             } \
             if (delim) break; \
             next(); /* eat up char in comment */\
@@ -274,14 +274,14 @@ Token Lexer::lex_suffix(std::string& str, bool floating) {
         Symbol suffix(suffix_str);
         if (floating) {
             auto lit = Token::sym2flit(suffix);
-            if (lit == Token::TYPE_error) {
+            if (lit == Token::Error) {
                 error(location(), "invalid suffix on floating constant '{}'", suffix);
                 return {location(), tok, str};
             }
             tok = lit;
         } else {
             auto lit = Token::sym2lit(suffix);
-            if (lit == Token::TYPE_error) {
+            if (lit == Token::Error) {
                 error(location(), "invalid suffix on constant '{}'", suffix);
                 return {location(), tok, str};
             }

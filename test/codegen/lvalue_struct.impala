@@ -1,3 +1,5 @@
+// codegen
+
 fn iter(out: Img, body: fn(Img) -> ()) -> () {
     body(out)
 }

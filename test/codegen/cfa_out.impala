@@ -1,3 +1,5 @@
+// codegen
+
 fn out(fA: fn(fn(fn(fn(int) -> !) -> !, fn(int) -> !) -> !) -> !, fB: fn(fn(fn(fn(int) -> !) -> !, fn(int) -> !) -> !) -> !) -> () {
 }
 

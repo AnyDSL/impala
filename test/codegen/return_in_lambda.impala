@@ -1,3 +1,5 @@
+// codegen
+
 extern fn g(i: int) -> int {
     let f = |x: int| -> int return(x+i);
 

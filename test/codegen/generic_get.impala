@@ -1,3 +1,5 @@
+// codegen
+
 fn get[T]() -> T {
     let mut tuple: (T, T);
     tuple(0)

@@ -1,3 +1,5 @@
+// codegen
+
 fn test(array: &[i32]) -> i32 {
     array(0)
 }

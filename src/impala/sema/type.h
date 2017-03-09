@@ -19,6 +19,7 @@ enum Tag {
     Tag_error,
     Tag_fn,
     Tag_impl,
+    Tag_infer_error,
     Tag_indefinite_array,
     Tag_lambda,
     Tag_noret,
@@ -340,6 +341,30 @@ private:
 
     friend class TypeTable;
 };
+
+class InferError : public Type {
+    InferError(TypeTable& typetable, const Type* dst, const Type* src)
+        : Type(typetable, Tag_infer_error, {dst, src})
+    {}
+
+    const Type* dst() const { return op(0); }
+    const Type* src() const { return op(1); }
+    virtual std::ostream& stream(std::ostream&) const override;
+
+private:
+    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+
+    friend class TypeTable;
+};
+
+inline bool is_no_ret_or_type_error(const Type* t) {
+    return t->isa<NoRetType>() || t->isa<TypeError>();
+}
+
+inline bool is_unit(const Type* t) {
+    return t->isa<TupleType>() && t->num_ops() == 0;
+}
 
 //------------------------------------------------------------------------------
 

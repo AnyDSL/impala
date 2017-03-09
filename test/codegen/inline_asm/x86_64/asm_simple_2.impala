@@ -1,3 +1,5 @@
+// codegen
+
 fn main() -> int {
     let a = 10;
     let mut b: i32;

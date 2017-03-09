@@ -1,3 +1,5 @@
+// codegen
+
 extern "thorin" {
     fn nvvm(int, (int, int, int), (int, int, int), fn() -> ()) -> ();
 }

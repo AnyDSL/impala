@@ -17,6 +17,12 @@ struct StrHash {
 
 class Symbol {
 public:
+    struct Hash {
+        static uint64_t hash(impala::Symbol s) { return impala::StrHash::hash(s.str()); }
+        static bool eq(impala::Symbol s1, impala::Symbol s2) { return s1 == s2; }
+        static impala::Symbol sentinel() { return impala::Symbol(/*dummy*/23); }
+    };
+
     Symbol() { insert(""); }
     Symbol(const char* str) { insert(str); }
     Symbol(const std::string& str) { insert(str.c_str()); }
@@ -43,22 +49,9 @@ private:
     const char* str_;
     typedef thorin::HashSet<const char*, StrHash> Table;
     static Table table_;
-
-    friend struct thorin::Hash<Symbol>;
 };
 
 inline std::ostream& operator << (std::ostream& os, Symbol s) { return os << s.str(); }
-
-}
-
-namespace thorin {
-
-template<>
-struct Hash<impala::Symbol> {
-    static uint64_t hash(impala::Symbol s) { return impala::StrHash::hash(s.str()); }
-    static bool eq(impala::Symbol s1, impala::Symbol s2) { return s1 == s2; }
-    static impala::Symbol sentinel() { return impala::Symbol(/*dummy*/23); }
-};
 
 }
 

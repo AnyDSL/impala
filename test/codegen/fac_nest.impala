@@ -1,3 +1,5 @@
+// codegen
+
 extern fn fac(n: int) -> int {
     fn helper(r: int, i : int) -> int {
         if i <= n {

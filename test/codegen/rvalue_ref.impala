@@ -1,3 +1,5 @@
+// codegen
+
 fn foo(i: &int) -> int {
     *i
 }

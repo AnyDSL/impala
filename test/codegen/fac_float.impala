@@ -1,3 +1,5 @@
+// codegen
+
 fn range(a: float, z: float, body: fn(float)->()) -> () {
     if a < z {
         body(a);
