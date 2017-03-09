@@ -56,10 +56,10 @@ int main(int argc, char** argv) {
         auto cmd_parser = ArgParser()
             .implicit_option             (                      "<infiles>", "input files", infiles)
             .add_option<bool>            ("help",               "",          "produce this help message", help, false)
-            .add_option<string>          ("log-level",          LOG_LEVELS,  "set log level", log_level, "warn")
+            .add_option<string>          ("log-level",          LOG_LEVELS,  "set log level", log_level, "error")
+            .add_option<string>          ("log",                "<arg>", "specifies log file; use '-' for stdout (default)", log_name, "-")
 #ifndef NDEBUG
             .add_option<vector<string>>  ("break",              "<arg>", "breakpoint at definition generation of with global id <arg>; may be used multiple times", breakpoints)
-            .add_option<string>          ("log",                "<arg>", "specifies log file; use '-' for stdout (default)", log_name, "-")
 #endif
             .add_option<string>          ("o",                  "", "specifies the output module name", out_name, "")
             .add_option<bool>            ("O0",                 "", "reduce compilation time and make debugging produce the expected results (default)", opt_0, false)

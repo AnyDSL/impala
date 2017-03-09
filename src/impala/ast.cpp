@@ -4,7 +4,14 @@ using namespace thorin;
 
 namespace impala {
 
+size_t ASTNode::gid_counter_ = 1;
+
 //------------------------------------------------------------------------------
+
+ASTNode::ASTNode(Location location)
+    : gid_(gid_counter_++)
+    , location_(location)
+{}
 
 const char* Visibility::str() {
     if (visibility_ == Pub)  return "pub ";

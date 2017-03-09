@@ -534,7 +534,7 @@ void StructExpr::check(TypeSema& sema) const {
     auto type = sema.check(ast_type_app());
     if (auto struct_type = type->isa<StructType>()) {
         auto struct_decl = struct_type->struct_decl();
-        thorin::HashSet<const FieldDecl*> done;
+        thorin::GIDSet<const FieldDecl*> done;
         for (const auto& elem : elems()) {
             sema.check(elem->expr());
 

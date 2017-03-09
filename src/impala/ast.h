@@ -143,18 +143,18 @@ public:
     ASTNode() = delete;
     ASTNode(const ASTNode&) = delete;
     ASTNode(ASTNode&&) = delete;
-
-    ASTNode(Location location)
-        : location_(location)
-    {}
-
+    ASTNode(Location location);
 #ifndef NDEBUG
     virtual ~ASTNode() { assert(location_.is_set()); }
 #endif
 
+    size_t gid() const { return gid_; }
     Location location() const { return location_; }
 
 private:
+    static size_t gid_counter_;
+
+    size_t gid_;
     Location location_;
 };
 
