@@ -136,14 +136,14 @@ private:
         if (auto darray_type = type->isa<DefiniteArrayType>()) {
             if (!ctype_from_impala(darray_type->elem_type(), ctype_prefix, ctype_suffix))
                 return false;
-            ctype_suffix = "[" + std::to_string(darray_type->dim()) + "]";
+            ctype_suffix = "[" + std::to_string(darray_type->dim()) + "]" + ctype_suffix;
             return true;
         }
 
         if (auto iarray_type = type->isa<IndefiniteArrayType>()) {
             if (!ctype_from_impala(iarray_type->elem_type(), ctype_prefix, ctype_suffix))
                 return false;
-            ctype_suffix = "[]";
+            ctype_suffix = "[]" + ctype_suffix;
             return true;
         }
 
