@@ -1,6 +1,5 @@
 # get source files
-
-SET ( SOURCES
+set(SOURCES
     ast.cpp
     ast.h
     cgen.cpp
@@ -26,12 +25,12 @@ SET ( SOURCES
     tokenlist.h
 )
 
-ADD_LIBRARY ( libimpala ${SOURCES} )
-TARGET_LINK_LIBRARIES ( libimpala ${THORIN_LIBRARIES} )
-SET_TARGET_PROPERTIES( libimpala PROPERTIES PREFIX "")
+add_library(libimpala ${SOURCES})
+target_link_libraries(libimpala ${Thorin_LIBRARIES})
+set_target_properties(libimpala PROPERTIES PREFIX "")
 
-ADD_EXECUTABLE( ${IMPALA_BINARY} main.cpp )
-TARGET_LINK_LIBRARIES ( ${IMPALA_BINARY} ${THORIN_LIBRARIES} libimpala )
-IF (MSVC)
-    SET_TARGET_PROPERTIES( ${IMPALA_BINARY} PROPERTIES LINK_FLAGS /STACK:8388608 )
-ENDIF (MSVC)
+add_executable(impala main.cpp)
+target_link_libraries(impala ${Thorin_LIBRARIES} libimpala)
+if(MSVC)
+    set_target_properties(impala PROPERTIES LINK_FLAGS /STACK:8388608)
+endif(MSVC)
