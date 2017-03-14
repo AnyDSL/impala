@@ -1,61 +1,126 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# import math
 import os
 import subprocess
+import sys
 
-categories = ["codegen", "sema_pos", "sema_neg"];
 
-def launch(args, expected_code=0, input=None, expected_output=None, timeout=None):
-    print("Launch:", args)
-    try:
-        stdout = subprocess.PIPE if expected_output is not None else None
-        completed = subprocess.run(args, timeout=timeout, stdout=stdout, stderr=subprocess.STDOUT, universal_newlines=True)
-        return completed
-    except subprocess.TimeoutExpired as timeout:
-        print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
-    return None
+EXE = '.exe' if sys.platform == 'win32' else ''
 
-def run_impala(testfile, **kwargs):
-    impala = kwargs.get("impala", "impala")
-    timeout = kwargs.get("timeout", None)
-    flags = ["-emit-llvm", "-O2", "-o", testfile.intermediate()]
-    result = launch([impala] + flags + [testfile.filename()], timeout=timeout)
-    print(result.stdout)
-    if result.returncode != 0:
-        return False
-    logfile = testfile.source(".log")
-    if logfile:
-        # TODO: diff output log
-        pass
-    return True
 
-def run_link(testfile, **kwargs):
-    clang = kwargs.get("clang", "clang")
-    libc = kwargs.get("libc", "testlibc.lib")
-    flags = [testfile.intermediate('.ll'), libc, "-o", testfile.intermediate('.exe')]
-    result = launch([clang] + flags)
-    print(result.stdout)
-    return result.returncode == 0
+class TestMethod(object):
+    def __init__(self, executable, timeout=None):
+        self.executable = executable
+        self.timeout = timeout
+        self.stdin = None
+        self.stdout = None
 
-def run_test(testfile, **kwargs):
-    timeout = kwargs.get("timeout", None)
-    result = launch([testfile.intermediate('.exe')], timeout=timeout)
-    print(result.stdout)
-    return result.returncode == 0
-    # try:
-        # out = open(test_out_new, 'w')
-        # input = open(test_in, 'r') if os.access(test_in, os.R_OK) else None
-        # return subprocess.run([test_exe], args.run_timeout, stdin=input, stdout=out, stderr=out, encoding="utf-8").returncode == 0
-    # except subprocess.TimeoutExpired as timeout:
-        # print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
-        # return False
+    def __call__(self, args, input=None):
+        self.stdin = input
+        self.completed = subprocess.run([self.executable] + args, timeout=self.timeout, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=self.stdin)
+        self.stdout = self.completed.stdout
+        return not self.wrong_returncode()
 
+    def wrong_returncode(self, code=0):
+        return self.completed.returncode != code
+
+    def wrong_output(self, expected=None):
+        if expected is None:
+            return False
+        return expected != self.stdout
+
+    def dump_output(self, filename, to_stdout=True, empty_too=False):
+        if len(self.stdout) > 0 or empty_too:
+            if to_stdout:
+                print(self.stdout)
+            if filename is None:
+                return
+            with open(filename, 'wb') as file:
+                file.write(self.stdout)
+
+    def load_source_file(self, filename):
+        if filename is None:
+            return None
+        with open(filename, 'rb') as file:
+            return file.read()
+        return None
+
+
+class RunImpalaCompile(TestMethod):
+    def __call__(self, testfile):
+        super().__call__(["-emit-llvm", "-O2", "-o", testfile.intermediate(), testfile.filename()])
+
+        self.dump_output(testfile.intermediate('.log'))
+
+        if self.wrong_returncode():
+            print("Impala returned wrong returncode")
+            return False
+
+        expected_output = None
+        logfilename = testfile.source('.log')
+        if logfilename is not None:
+            with open(logfilename, 'r') as logfile:
+                expected_output = logfile.readlines()
+        if self.wrong_output(expected_output):
+            print("Impala generated invalid output")
+            return False
+
+        return True
+
+class LinkFakeRuntime(TestMethod):
+    def __init__(self, clang, runtime):
+        super().__init__(clang)
+        self.runtime = runtime
+
+    def __call__(self, testfile):
+        super().__call__([testfile.intermediate('.ll'), self.runtime, "-o", testfile.intermediate(EXE)])
+
+        if len(self.stdout) > 0:
+            print(self.stdout)
+
+        if self.wrong_returncode():
+            print("Linking with", self.runtime, "failed.")
+            return False
+
+        return True
+
+class ExecuteTestOutput(TestMethod):
+    def __init__(self, timeout=None):
+        super().__init__(None, timeout=timeout)
+
+    def loadinput(self, testfile):
+        return self.load_source_file(testfile.source('.input'))
+
+    def __call__(self, testfile):
+        if not os.path.isfile(testfile.intermediate(EXE)):
+            return False
+        self.executable = testfile.intermediate(EXE)
+        stdin = self.loadinput(testfile)
+        super().__call__([], input=stdin)
+
+        if len(self.stdout) > 0:
+            print(self.stdout)
+
+        if self.wrong_returncode():
+            print("Executing output ", testfile, "exited with non-zero returncode.")
+            return False
+
+        return True
+
+class MultiStepPipeline(object):
+    def __init__(self, *args):
+        self.steps = args
+
+    def __call__(self, testfile):
+        for step in self.steps:
+            if not step(testfile):
+                return False
+        return True
 
 
 class TestFile(object):
-    def __init__(self, filename, **flags):
-        self.temp = flags.get('temp', os.getcwd())
+    def __init__(self, filename, tempdir):
+        self.temp = tempdir
         self.dir, basename = os.path.split(filename)
         self.base, self.ext = os.path.splitext(basename)
 
@@ -77,25 +142,8 @@ class TestFile(object):
     def intermediate(self, ext=''):
         return os.path.join(self.temp, self.dir, self.base + ext)
 
-def test_codegen(filename, flags):
-    print("Testing", filename)
 
-    file = TestFile(filename, **flags)
-    if not os.path.isdir(file.dirname()):
-        os.makedirs(file.dirname())
-
-    if not run_impala(file, **flags):
-        return False
-
-    if not run_link(file, **flags):
-        return False
-
-    if not run_test(file, **flags):
-        return False
-
-    return True
-
-def fetch_tokens(testfile):
+def fetch_tokens(testfile, test_methods):
     firstline = testfile.readline()
 
     tokens = firstline.split()
@@ -104,62 +152,64 @@ def fetch_tokens(testfile):
 
     is_broken = "broken" in tokens
 
-    procedure = list(set(tokens) & set(categories))
+    procedure = list(set(tokens) & set(test_methods.keys()))
     if len(procedure) == 1:
         procedure = procedure[0]
     else:
-        procedure = None
+        return None, is_broken
 
-    if procedure == "codegen":
-        return test_codegen, is_broken
+    return test_methods.get(procedure, None), is_broken
 
-    return None, is_broken
+def handle_testcase(method, file, pedantic=False):
+    action = "Fail" if args.pedantic else "Skip"
 
-def handle_testcase(testfile, flags, pedantic=False):
-    action = "Fail" if pedantic else "Skip"
-
-    test_proc, broken = fetch_tokens(testfile)
-    testfile.close()
-    filename = testfile.name
-
-    if test_proc is None:
-        print(action, "test", filename, "-", "Unknown testing procedure!")
+    if method is None:
+        print(action, "test", file.filename(), "-", "Unknown testing procedure!")
         return not pedantic
 
     if broken:
-        print(action, "test", filename, "-", "The test is known to be broken.")
+        print(action, "test", file.filename(), "-", "The test is known to be broken.")
         return not pedantic
 
-    return test_proc(filename, flags)
+    return method(file)
 
 if __name__ == '__main__':
     import argparse
     import sys
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('tests',           nargs='*', help='path to test or test directory', type=argparse.FileType('r'))
-    parser.add_argument('-i', '--impala',  help='path to impala',                    required=True, type=str)
-    parser.add_argument('-c', '--clang',   help='path to clang',                     required=True, type=str)
-    parser.add_argument('-t', '--temp',    help='path to temp dir',                  required=True, type=str)
-    parser.add_argument('-l', '--libc',    help='path to testlibc',                  required=True, type=str)
-    # parser.add_argument('-c', '--compile-timeout', nargs='?', help='timeout for compiling test case',   default=5,             type=int)
-    # parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',     default=5,             type=int)
-    # parser.add_argument('-n', '--nocleanup',                  help='don\'t clean up temporary files',   action='store_true')
+    parser.add_argument('tests',                   nargs='*', help='path to one or multiple test files', type=argparse.FileType('r'))
+    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                     type=str, default='impala')
+    parser.add_argument('-c', '--clang',           nargs='?', help='path to clang',                      type=str, default='clang')
+    parser.add_argument(      '--temp',            nargs='?', help='path to temp dir',                   type=str, default=os.getcwd())
+    parser.add_argument('-l', '--libc',        required=True, help='path to testlibc',                   type=str)
+    parser.add_argument('-t', '--compile-timeout', nargs='?', help='timeout for compiling test case',    type=int, default=5)
+    parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',      type=int, default=5)
     parser.add_argument('-p', '--pedantic',                     help='also run tests that are known to be broken or do not provide a valid testing procedure', action='store_true')
     args = parser.parse_args()
 
-    success = True
-
-    flags = {
-        'impala': args.impala,
-        'clang': args.clang,
-        'timeout': 5,
-        'temp': args.temp,
-        'libc': args.libc
+    test_methods = {
+        'codegen' : MultiStepPipeline(
+            RunImpalaCompile(args.impala, timeout=args.compile_timeout),
+            LinkFakeRuntime(args.clang, args.libc),
+            ExecuteTestOutput(timeout=args.run_timeout)
+        )
     }
 
+    success = True
+
     for testfile in args.tests:
-        success &= handle_testcase(testfile, flags, args.pedantic)
+        method, broken = fetch_tokens(testfile, test_methods)
+        testfile.close()
+        filename = testfile.name
+
+        print("Testing", filename)
+
+        file = TestFile(filename, args.temp)
+        if not os.path.isdir(file.dirname()):
+            os.makedirs(file.dirname())
+
+        success &= handle_testcase(method, file, args.pedantic)
 
     if not success:
         sys.exit(1)
