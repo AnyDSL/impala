@@ -119,12 +119,12 @@ int main(int argc, char** argv) {
         else if (opt_3) opt = 3;
 
         if (infiles.empty() && !help) {
-            std::cerr << "no input files" << std::endl;
+            errf("no input files\n");
             return EXIT_FAILURE;
         }
 
         if (help) {
-            std::cout << "Usage: " + prgname + " [options] file..." << std::endl;
+            outf("Usage: {} [options] file...\n", prgname);
             cmd_parser.print_help();
             return EXIT_SUCCESS;
         }
@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
 
             ofstream out_file(module_name + ".h");
             if (!out_file) {
-                std::cerr << "cannot open file " << opts.file_name << "for writing" << std::endl;
+                errf("cannot open file '{}' for writing\n", opts.file_name);
                 return EXIT_FAILURE;
             }
             impala::generate_c_interface(module.get(), opts, out_file);
@@ -224,9 +224,9 @@ int main(int argc, char** argv) {
                 thorin::emit_llvm(init.world, opt, debug);
 #endif
             if (emit_ycomp)
-                std::cerr << "-emit-ycomp: this feature is currently removed" << std::endl;
+                errf("-emit-ycomp: this feature is currently removed\n");
             if (emit_ycomp_cfg)
-                std::cerr << "-emit-ycomp-cfg: this feature is currently removed" << std::endl;
+                errf("-emit-ycomp-cfg: this feature is currently removed\n");
             yComp.print(init.world);
         } else
             return EXIT_FAILURE;
