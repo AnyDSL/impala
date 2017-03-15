@@ -1,4 +1,3 @@
-
 IF (MSVC)
     ADD_DEFINITIONS ( -D_SCL_SECURE_NO_WARNINGS )
     ADD_DEFINITIONS ( -D_CRT_SECURE_NO_WARNINGS )
@@ -8,5 +7,7 @@ ELSE ()
     ADD_DEFINITIONS ( "-Wall -Wextra" )
 ENDIF ()
 
-ADD_SUBDIRECTORY ( impala )
-ADD_SUBDIRECTORY ( intrinsicgen )
+add_subdirectory(impala)
+if(LLVM_FOUND)
+    add_subdirectory(intrinsicgen)
+endif()

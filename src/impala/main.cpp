@@ -3,7 +3,9 @@
 #include <cctype>
 #include <stdexcept>
 
+#ifdef LLVM_SUPPORT
 #include "thorin/be/llvm/llvm.h"
+#endif
 #include "thorin/util/args.h"
 #include "thorin/util/log.h"
 #include "thorin/util/location.h"
@@ -42,9 +44,10 @@ int main(int argc, char** argv) {
 #endif
         string out_name, log_name, log_level;
         bool help,
-             emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm, emit_ycomp, emit_ycomp_cfg,
+             emit_cint, emit_thorin, emit_ast, emit_annotated, emit_ycomp, emit_ycomp_cfg,
              opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
              nocleanup, nossa, fancy;
+        bool emit_llvm = false;
         YCompCommandLine yComp;
 
 #ifndef NDEBUG
@@ -71,7 +74,9 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("emit-annotated",     "", "emit AST of Impala program after semantic analysis", emit_annotated, false)
             .add_option<bool>            ("emit-ast",           "", "emit AST of Impala program", emit_ast, false)
             .add_option<bool>            ("emit-c-interface",   "", "emit C interface from Impala code (experimental)", emit_cint, false)
+#ifdef LLVM_SUPPORT
             .add_option<bool>            ("emit-llvm",          "", "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
+#endif
             .add_option<bool>            ("emit-thorin",        "", "emit textual Thorin representation of Impala program", emit_thorin, false)
             .add_option<bool>            ("emit-ycomp",         "", "emit ycomp-compatible graph representation of Impala program", emit_ycomp, false)
             .add_option<bool>            ("emit-ycomp-cfg",     "", "emit ycomp-compatible control-flow graph representation of Impala program", emit_ycomp_cfg, false)
@@ -212,8 +217,12 @@ int main(int argc, char** argv) {
                 init.world.cleanup();
             if (opt_thorin)
                 init.world.opt();
-            if (emit_thorin)      init.world.dump();
-            if (emit_llvm)        thorin::emit_llvm(init.world, opt, debug);
+            if (emit_thorin)
+                init.world.dump();
+#ifdef LLVM_SUPPORT
+            if (emit_llvm)
+                thorin::emit_llvm(init.world, opt, debug);
+#endif
             if (emit_ycomp)
                 std::cerr << "-emit-ycomp: this feature is currently removed" << std::endl;
             if (emit_ycomp_cfg)
