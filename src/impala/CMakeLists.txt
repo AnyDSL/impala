@@ -1,5 +1,5 @@
 # get source files
-set(SOURCES
+set(IMPALA_SOURCES
     ast.cpp
     ast.h
     cgen.cpp
@@ -25,7 +25,7 @@ set(SOURCES
     tokenlist.h
 )
 
-add_library(libimpala ${SOURCES})
+add_library(libimpala ${IMPALA_SOURCES})
 target_link_libraries(libimpala ${Thorin_LIBRARIES})
 set_target_properties(libimpala PROPERTIES PREFIX "")
 
