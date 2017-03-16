@@ -28,4 +28,5 @@ if(DEFINED CMAKE_BUILD_TYPE)
     message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 endif()
 
+export(TARGETS libimpala impala FILE ${CMAKE_BINARY_DIR}/share/impala/cmake/impala-exports.cmake)
 configure_file(cmake/impala-config.cmake.in ${CMAKE_BINARY_DIR}/share/impala/cmake/impala-config.cmake @ONLY)
