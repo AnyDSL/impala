@@ -1,0 +1,35 @@
+extern "C" {
+    fn print_int(i32) -> ();
+}
+
+fn range(mut b: i32, e: i32, body: fn(i32) -> ()) -> () {
+    while b < e {
+        body(b++)
+    }
+}
+
+fn sum_range(mut b: i32, e: i32, body: fn(i32) -> i32) -> i32 {
+    let mut sum = 0;
+    while b < e {
+        sum += b;
+        b += body(b)
+    }
+    sum
+}
+
+fn main() -> i32 {
+    for i in range(0, 3) {
+        print_int(i); // 0, 1, 2
+    }
+
+    let mut step = 1;
+    let sum = for i in sum_range(0, 16) { 
+        if step == 3 {
+            step++;
+            continue(1)
+        }
+        print_int(i); 
+        step++
+    };
+    if sum == 29 { 0 } else { 1 }
+}
