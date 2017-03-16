@@ -1,4 +1,3 @@
-# get source files
 set(IMPALA_SOURCES
     ast.cpp
     ast.h
