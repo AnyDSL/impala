@@ -10,13 +10,6 @@ endif()
 find_package(Thorin REQUIRED)
 include_directories(${Thorin_INCLUDE_DIRS})
 
-# check for Half library
-find_package(Half REQUIRED)
-if(Half_FOUND)
-    message(STATUS "Building with Half library from ${Half_INCLUDE_DIRS}.")
-    include_directories(${Half_INCLUDE_DIRS})
-endif()
-
 if(LLVM_FOUND)
     add_definitions(${LLVM_DEFINITIONS})
     add_definitions("-DLLVM_SUPPORT")
