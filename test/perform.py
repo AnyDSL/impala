@@ -49,8 +49,10 @@ class TestMethod(object):
     def load_source_file(self, filename):
         if filename is None:
             return None
-        with open(filename, 'rb') as file:
-            return file.read()
+        try:
+            return open(filename, 'rb')
+        except OSError as e:
+            print('Cannot open source file', filename)
         return None
 
 
