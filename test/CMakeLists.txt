@@ -9,7 +9,7 @@ find_program(CLANG_BIN clang clang++ PATHS ${LLVM_TOOLS_BINARY_DIR} PATH_SUFFIXE
 add_library(testlibc STATIC infrastructure/lib.c)
 
 set(TEST_SCRIPT perform.py)
-set(TEST_ARGS --impala $<TARGET_FILE:${IMPALA_BINARY}> --clang ${CLANG_BIN} --temp ${CMAKE_CURRENT_BINARY_DIR} --libc $<TARGET_FILE:testlibc>)
+set(TEST_ARGS --impala $<TARGET_FILE:impala> --clang ${CLANG_BIN} --temp ${CMAKE_CURRENT_BINARY_DIR} --libc $<TARGET_FILE:testlibc>)
 
 file(GLOB_RECURSE _testcases RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.impala")
 
