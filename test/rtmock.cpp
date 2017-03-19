@@ -40,10 +40,27 @@ void put_u8(unsigned char ui) {
    putc(ui, stdout);
 }
 
-void* anydsl_alloc(int32_t dev, int64_t size) {
-    void* p;
-    posix_memalign(&p, 64, size);
+#if _POSIX_VERSION >= 200112L || _XOPEN_SOURCE >= 600
+void* anydsl_aligned_malloc(size_t size, size_t alignment) {
+    void* p = nullptr;
+    posix_memalign(&p, alignment, size);
     return p;
+}
+void anydsl_aligned_free(void* ptr) { free(ptr); }
+#elif _ISOC11_SOURCE
+void* anydsl_aligned_malloc(size_t size, size_t alignment) { return ::aligned_alloc(alignment, size); }
+void anydsl_aligned_free(void* ptr) { ::free(ptr); }
+#elif defined(_WIN32) || defined(__CYGWIN__)
+#include <malloc.h>
+
+void* anydsl_aligned_malloc(size_t size, size_t alignment) { return ::_aligned_malloc(size, alignment); }
+void anydsl_aligned_free(void* ptr) { ::_aligned_free(ptr); }
+#else
+#error "There is no way to allocate aligned memory on this system"
+#endif
+void* anydsl_alloc(int32_t dev, int64_t size) {
+    // TODO: check whether aligned memory is actually necessary
+    return anydsl_aligned_malloc(size, 64);
 }
 
 // meteor printing
