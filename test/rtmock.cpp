@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void print_char(char c) {
    printf("%c\n", (int)c);
 }
@@ -99,3 +103,7 @@ void* impala_realloc(void* ptr, int size) {
 void impala_memmove(char* dest, const char* src, int size) {
     __builtin_memmove(dest, src, size);
 }
+
+#ifdef __cplusplus
+}
+#endif
