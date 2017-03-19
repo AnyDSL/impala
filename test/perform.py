@@ -36,6 +36,8 @@ class TestMethod(object):
         return expected != self.stdout
 
     def dump_output(self, filename, to_stdout=True, empty_too=False):
+        if self.stdout is None:
+            return
         if len(self.stdout) > 0 or empty_too:
             if to_stdout:
                 print(self.stdout)
@@ -81,7 +83,7 @@ class LinkFakeRuntime(TestMethod):
     def __call__(self, testfile):
         super().__call__([testfile.intermediate('.ll'), self.runtime, "-o", testfile.intermediate(EXE)])
 
-        if len(self.stdout) > 0:
+        if self.stdout is not None and len(self.stdout) > 0:
             print(self.stdout)
 
         if self.wrong_returncode():
@@ -104,8 +106,7 @@ class ExecuteTestOutput(TestMethod):
         stdin = self.loadinput(testfile)
         super().__call__([], input=stdin)
 
-        if len(self.stdout) > 0:
-            print(self.stdout)
+        self.dump_output(testfile.intermediate('.out'))
 
         if self.wrong_returncode():
             print("Executing output ", testfile, "exited with non-zero returncode.")
