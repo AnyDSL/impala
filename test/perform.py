@@ -111,7 +111,7 @@ class ExecuteTestOutput(TestMethod):
         self.dump_output(testfile.intermediate('.out'))
 
         if self.wrong_returncode():
-            print("Executing output ", testfile, "exited with non-zero returncode.")
+            print("Executing output", testfile.filename(), "exited with non-zero returncode.")
             return False
 
         return True
