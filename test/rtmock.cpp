@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <cstring>
 
 #ifdef __cplusplus
 extern "C" {
@@ -101,7 +102,7 @@ void* impala_realloc(void* ptr, int size) {
 }
 
 void impala_memmove(char* dest, const char* src, int size) {
-    __builtin_memmove(dest, src, size);
+    std::memmove(dest, src, size);
 }
 
 #ifdef __cplusplus
