@@ -17,8 +17,12 @@ class TestMethod(object):
 
     def __call__(self, args, input=None):
         self.stdin = input
-        self.completed = subprocess.run([self.executable] + args, timeout=self.timeout, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=self.stdin)
-        self.stdout = self.completed.stdout
+        try:
+            self.completed = subprocess.run([self.executable] + args, timeout=self.timeout, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=self.stdin)
+            self.stdout = self.completed.stdout
+        except subprocess.TimeoutExpired as e:
+            print('Running', self.executable, 'timed out after', self.timeout, 'seconds')
+            return False
         return not self.wrong_returncode()
 
     def wrong_returncode(self, code=0):
