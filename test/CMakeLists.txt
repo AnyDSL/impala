@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
-find_package(PythonInterp REQUIRED)
+find_package(PythonInterp 3.0 REQUIRED)
 set(PYTHON_BIN ${PYTHON_EXECUTABLE})
 
 find_package(LLVM QUIET)
