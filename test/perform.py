@@ -99,7 +99,7 @@ class ExecuteTestOutput(TestMethod):
         super().__init__(None, timeout=timeout)
 
     def loadinput(self, testfile):
-        return self.load_source_file(testfile.source('.input'))
+        return self.load_source_file(testfile.source('.in'))
 
     def __call__(self, testfile):
         if not os.path.isfile(testfile.intermediate(EXE)):
