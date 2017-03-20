@@ -182,20 +182,36 @@ def handle_testcase(method, file, pedantic=False):
 
     return method(file)
 
+def search_in_path(executable):
+    executable = executable + EXE
+    for path in os.environ['PATH'].split(os.pathsep):
+        path = path.strip('"')
+        filename = os.path.join(path, executable)
+        if os.path.isfile(filename) and os.access(filename, os.X_OK):
+            print('Found', executable, 'at', filename)
+            return filename
+    return None
+
 if __name__ == '__main__':
     import argparse
     import sys
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('tests',                   nargs='*', help='path to one or multiple test files', type=argparse.FileType('r'))
-    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                     type=str, default='impala')
-    parser.add_argument('-c', '--clang',           nargs='?', help='path to clang',                      type=str, default='clang')
+    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                     type=str)
+    parser.add_argument('-c', '--clang',           nargs='?', help='path to clang',                      type=str)
     parser.add_argument(      '--temp',            nargs='?', help='path to temp dir',                   type=str, default=os.getcwd())
     parser.add_argument('-l', '--libc',        required=True, help='path to rtmock',                     type=str)
     parser.add_argument('-t', '--compile-timeout', nargs='?', help='timeout for compiling test case',    type=int, default=5)
     parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',      type=int, default=5)
     parser.add_argument('-p', '--pedantic',                   help='also run tests that are known to be broken or do not provide a valid testing procedure', action='store_true')
     args = parser.parse_args()
+
+    if args.impala is None:
+        args.impala = search_in_path('impala')
+
+    if args.clang is None:
+        args.clang = search_in_path('clang')
 
     test_methods = {
         'codegen' : MultiStepPipeline(
