@@ -1,2 +1,2 @@
-ADD_EXECUTABLE( intrinsicgen main.cpp )
-TARGET_LINK_LIBRARIES ( intrinsicgen ${THORIN_LIBRARIES} libimpala )
+add_executable(intrinsicgen main.cpp)
+target_link_libraries(intrinsicgen ${Thorin_LIBRARIES} libimpala)

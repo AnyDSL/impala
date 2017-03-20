@@ -3,7 +3,9 @@
 #include <cctype>
 #include <stdexcept>
 
+#ifdef LLVM_SUPPORT
 #include "thorin/be/llvm/llvm.h"
+#endif
 #include "thorin/util/args.h"
 #include "thorin/util/log.h"
 #include "thorin/util/location.h"
@@ -42,9 +44,10 @@ int main(int argc, char** argv) {
 #endif
         string out_name, log_name, log_level;
         bool help,
-             emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm, emit_ycomp, emit_ycomp_cfg,
+             emit_cint, emit_thorin, emit_ast, emit_annotated, emit_ycomp, emit_ycomp_cfg,
              opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
              nocleanup, nossa, fancy;
+        bool emit_llvm = false;
         YCompCommandLine yComp;
 
 #ifndef NDEBUG
@@ -71,7 +74,9 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("emit-annotated",     "", "emit AST of Impala program after semantic analysis", emit_annotated, false)
             .add_option<bool>            ("emit-ast",           "", "emit AST of Impala program", emit_ast, false)
             .add_option<bool>            ("emit-c-interface",   "", "emit C interface from Impala code (experimental)", emit_cint, false)
+#ifdef LLVM_SUPPORT
             .add_option<bool>            ("emit-llvm",          "", "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
+#endif
             .add_option<bool>            ("emit-thorin",        "", "emit textual Thorin representation of Impala program", emit_thorin, false)
             .add_option<bool>            ("emit-ycomp",         "", "emit ycomp-compatible graph representation of Impala program", emit_ycomp, false)
             .add_option<bool>            ("emit-ycomp-cfg",     "", "emit ycomp-compatible control-flow graph representation of Impala program", emit_ycomp_cfg, false)
@@ -114,12 +119,12 @@ int main(int argc, char** argv) {
         else if (opt_3) opt = 3;
 
         if (infiles.empty() && !help) {
-            std::cerr << "no input files" << std::endl;
+            errf("no input files\n");
             return EXIT_FAILURE;
         }
 
         if (help) {
-            std::cout << "Usage: " + prgname + " [options] file..." << std::endl;
+            outf("Usage: {} [options] file...\n", prgname);
             cmd_parser.print_help();
             return EXIT_SUCCESS;
         }
@@ -198,7 +203,7 @@ int main(int argc, char** argv) {
 
             ofstream out_file(module_name + ".h");
             if (!out_file) {
-                std::cerr << "cannot open file " << opts.file_name << "for writing" << std::endl;
+                errf("cannot open file '{}' for writing\n", opts.file_name);
                 return EXIT_FAILURE;
             }
             impala::generate_c_interface(module.get(), opts, out_file);
@@ -212,12 +217,16 @@ int main(int argc, char** argv) {
                 init.world.cleanup();
             if (opt_thorin)
                 init.world.opt();
-            if (emit_thorin)      init.world.dump();
-            if (emit_llvm)        thorin::emit_llvm(init.world, opt, debug);
+            if (emit_thorin)
+                init.world.dump();
+#ifdef LLVM_SUPPORT
+            if (emit_llvm)
+                thorin::emit_llvm(init.world, opt, debug);
+#endif
             if (emit_ycomp)
-                std::cerr << "-emit-ycomp: this feature is currently removed" << std::endl;
+                errf("-emit-ycomp: this feature is currently removed\n");
             if (emit_ycomp_cfg)
-                std::cerr << "-emit-ycomp-cfg: this feature is currently removed" << std::endl;
+                errf("-emit-ycomp-cfg: this feature is currently removed\n");
             yComp.print(init.world);
         } else
             return EXIT_FAILURE;
