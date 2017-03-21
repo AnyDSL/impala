@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 trait Iterator {
     fn inc(self: Self) -> Self;

@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 // TODO this example is not semantically correct because method overloading is prohibited! (=>int cannot implement A and B together)
 

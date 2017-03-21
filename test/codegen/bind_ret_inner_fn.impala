@@ -1,5 +1,4 @@
-// codegen
-
+// codegen broken
 
 fn f(b: bool, i: int) -> int {
     fn F() -> ! { r(i-1) }
