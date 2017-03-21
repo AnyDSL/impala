@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 fn f(a: int, ret1: fn(int) -> !, ret2: fn(int) -> !) -> ! {
     if a < 42 {

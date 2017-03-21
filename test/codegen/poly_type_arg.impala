@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 extern "thorin" {
     fn reserve_shared[T](i32) -> &[3][T];
