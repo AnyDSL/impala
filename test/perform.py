@@ -244,8 +244,8 @@ if __name__ == '__main__':
             os.makedirs(file.dirname())
 
         if method is None:
-            print("Fail", "test", filename, "-", "Unknown testing procedure!")
-            return False
+            print(action, "test", filename, "-", "Unknown testing procedure!")
+            return False if args.pedantic else None
 
         return method(file)
 
