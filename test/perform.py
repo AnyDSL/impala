@@ -169,19 +169,6 @@ def fetch_tokens(testfile, test_methods):
 
     return test_methods.get(procedure, None), is_broken
 
-def handle_testcase(method, file, pedantic=False):
-    action = "Fail" if args.pedantic else "Skip"
-
-    if method is None:
-        print(action, "test", file.filename(), "-", "Unknown testing procedure!")
-        return not pedantic
-
-    if broken:
-        print(action, "test", file.filename(), "-", "The test is known to be broken.")
-        return not pedantic
-
-    return method(file)
-
 def search_in_path(executable):
     executable = executable + EXE
     for path in os.environ['PATH'].split(os.pathsep):
@@ -227,6 +214,10 @@ if __name__ == '__main__':
         print('Unable to determine the path to librtmock')
         sys.exit(2)
 
+    PASSED = 0
+    FAILED = 1
+    SKIPPED = 77
+
     test_methods = {
         'codegen' : MultiStepPipeline(
             RunImpalaCompile(args.impala, timeout=args.compile_timeout),
@@ -235,23 +226,51 @@ if __name__ == '__main__':
         )
     }
 
-    success = True
+    action = "Fail" if args.pedantic else "Skip"
 
-    for testfile in args.tests:
+    def handle_test(testfile):
         method, broken = fetch_tokens(testfile, test_methods)
         testfile.close()
         filename = testfile.name
 
         print("Testing", filename)
 
+        if broken:
+            print(action, "test", filename, "-", "The test is known to be broken.")
+            return False if args.pedantic else None
+
         file = TestFile(filename, args.temp)
         if not os.path.isdir(file.dirname()):
             os.makedirs(file.dirname())
 
-        success &= handle_testcase(method, file, args.pedantic)
+        if method is None:
+            print("Fail", "test", filename, "-", "Unknown testing procedure!")
+            return False
 
-    if not success:
-        sys.exit(1)
+        return method(file)
 
-    sys.exit(0)
+    result = None
+
+    if len(args.tests) == 1:
+        testfile = args.tests[0]
+        result = handle_test(testfile)
+    else:
+        result = True
+        for testfile in args.tests:
+            success = handle_test(testfile)
+            if success is None:
+                success = not args.pedantic
+            print('Test', testfile.name, 'passed.' if success else 'failed.')
+            result &= success
+
+    if result is None:
+        print('SKIPPED')
+        sys.exit(SKIPPED)
+
+    if result:
+        print('PASSED')
+        sys.exit(PASSED)
+
+    print('FAILED')
+    sys.exit(FAILED)
 
