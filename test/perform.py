@@ -211,7 +211,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                     type=str, default=config.IMPALA_BIN)
     parser.add_argument('-c', '--clang',           nargs='?', help='path to clang',                      type=str, default=config.CLANG_BIN)
     parser.add_argument(      '--temp',            nargs='?', help='path to temp dir',                   type=str, default=config.TEMP_DIR)
-    parser.add_argument('-l', '--libc',        required=True, help='path to rtmock',                     type=str)
+    parser.add_argument('-l', '--rtmock',          nargs='?', help='path to rtmock',                     type=str, default=config.LIBRTMOCK)
     parser.add_argument('-t', '--compile-timeout', nargs='?', help='timeout for compiling test case',    type=int, default=5)
     parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',      type=int, default=5)
     parser.add_argument('-p', '--pedantic',                   help='also run tests that are known to be broken or do not provide a valid testing procedure', action='store_true')
@@ -223,10 +223,14 @@ if __name__ == '__main__':
     if args.clang is None:
         args.clang = search_in_path('clang')
 
+    if args.rtmock is None:
+        print('Unable to determine the path to librtmock')
+        sys.exit(2)
+
     test_methods = {
         'codegen' : MultiStepPipeline(
             RunImpalaCompile(args.impala, timeout=args.compile_timeout),
-            LinkFakeRuntime(args.clang, args.libc),
+            LinkFakeRuntime(args.clang, args.rtmock),
             ExecuteTestOutput(timeout=args.run_timeout)
         )
     }

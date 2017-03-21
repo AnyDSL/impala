@@ -9,7 +9,7 @@ find_program(CLANG_BIN clang clang++ PATHS ${LLVM_TOOLS_BINARY_DIR} PATH_SUFFIXE
 add_library(rtmock STATIC rtmock.cpp)
 
 set(TEST_SCRIPT perform.py)
-set(TEST_ARGS --impala $<TARGET_FILE:impala> --clang ${CLANG_BIN} --temp ${CMAKE_CURRENT_BINARY_DIR} --libc $<TARGET_FILE:rtmock>)
+set(TEST_ARGS --impala $<TARGET_FILE:impala> --clang ${CLANG_BIN} --temp ${CMAKE_CURRENT_BINARY_DIR} --rtmock $<TARGET_FILE:rtmock>)
 
 file(GLOB_RECURSE _testcases RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.impala")
 
