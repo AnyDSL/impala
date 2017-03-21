@@ -196,11 +196,21 @@ if __name__ == '__main__':
     import argparse
     import sys
 
+    config = {'IMPALA_BIN': None, 'CLANG_BIN': None, 'TEMP_DIR': os.getcwd(), 'LIBRTMOCK': None}
+    try:
+        import configDebug as config
+    except ImportError as e:
+        pass
+    try:
+        import configRelease as config
+    except ImportError as e:
+        pass
+
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('tests',                   nargs='*', help='path to one or multiple test files', type=argparse.FileType('r'))
-    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                     type=str)
-    parser.add_argument('-c', '--clang',           nargs='?', help='path to clang',                      type=str)
-    parser.add_argument(      '--temp',            nargs='?', help='path to temp dir',                   type=str, default=os.getcwd())
+    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                     type=str, default=config.IMPALA_BIN)
+    parser.add_argument('-c', '--clang',           nargs='?', help='path to clang',                      type=str, default=config.CLANG_BIN)
+    parser.add_argument(      '--temp',            nargs='?', help='path to temp dir',                   type=str, default=config.TEMP_DIR)
     parser.add_argument('-l', '--libc',        required=True, help='path to rtmock',                     type=str)
     parser.add_argument('-t', '--compile-timeout', nargs='?', help='timeout for compiling test case',    type=int, default=5)
     parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',      type=int, default=5)
