@@ -45,9 +45,8 @@ int main(int argc, char** argv) {
         string out_name, log_name, log_level;
         bool help,
              emit_cint, emit_thorin, emit_ast, emit_annotated, emit_ycomp, emit_ycomp_cfg,
-             opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
+             emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
              nocleanup, nossa, fancy;
-        bool emit_llvm = false;
         YCompCommandLine yComp;
 
 #ifndef NDEBUG
@@ -74,9 +73,7 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("emit-annotated",     "", "emit AST of Impala program after semantic analysis", emit_annotated, false)
             .add_option<bool>            ("emit-ast",           "", "emit AST of Impala program", emit_ast, false)
             .add_option<bool>            ("emit-c-interface",   "", "emit C interface from Impala code (experimental)", emit_cint, false)
-#ifdef LLVM_SUPPORT
             .add_option<bool>            ("emit-llvm",          "", "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
-#endif
             .add_option<bool>            ("emit-thorin",        "", "emit textual Thorin representation of Impala program", emit_thorin, false)
             .add_option<bool>            ("emit-ycomp",         "", "emit ycomp-compatible graph representation of Impala program", emit_ycomp, false)
             .add_option<bool>            ("emit-ycomp-cfg",     "", "emit ycomp-compatible control-flow graph representation of Impala program", emit_ycomp_cfg, false)
@@ -219,10 +216,13 @@ int main(int argc, char** argv) {
                 init.world.opt();
             if (emit_thorin)
                 init.world.dump();
+            if (emit_llvm) {
 #ifdef LLVM_SUPPORT
-            if (emit_llvm)
                 thorin::emit_llvm(init.world, opt, debug);
+#else
+                outf("warning: built without LLVM support - I don't emit an LLVM file\n");
 #endif
+            }
             if (emit_ycomp)
                 errf("-emit-ycomp: this feature is currently removed\n");
             if (emit_ycomp_cfg)
