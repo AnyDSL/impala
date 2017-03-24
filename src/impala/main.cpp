@@ -41,6 +41,7 @@ int main(int argc, char** argv) {
         Names infiles;
 #ifndef NDEBUG
         Names breakpoints;
+        bool track_history;
 #endif
         string out_name, log_name, log_level;
         bool help,
@@ -62,6 +63,7 @@ int main(int argc, char** argv) {
             .add_option<string>          ("log",                "<arg>", "specifies log file; use '-' for stdout (default)", log_name, "-")
 #ifndef NDEBUG
             .add_option<vector<string>>  ("break",              "<arg>", "breakpoint at definition generation of with global id <arg>; may be used multiple times", breakpoints)
+            .add_option<bool>             ("track-history",     "", "track hisotry of names - useful for debugging", track_history, false)
 #endif
             .add_option<string>          ("o",                  "", "specifies the output module name", out_name, "")
             .add_option<bool>            ("O0",                 "", "reduce compilation time and make debugging produce the expected results (default)", opt_0, false)
@@ -162,6 +164,8 @@ int main(int argc, char** argv) {
 
             init.world.breakpoint(num);
         }
+
+        init.world.enable_history(track_history);
 #endif
 
         impala::Items items;
