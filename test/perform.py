@@ -6,6 +6,7 @@ import sys
 
 
 EXE = '.exe' if sys.platform == 'win32' else ''
+LIBC = '-lmsvcrt' if sys.platform == 'win32' else ''
 
 
 class TestMethod(object):
@@ -83,7 +84,7 @@ class LinkFakeRuntime(TestMethod):
         self.runtime = runtime
 
     def __call__(self, testfile):
-        super().__call__([testfile.intermediate('.ll'), self.runtime, "-o", testfile.intermediate(EXE)])
+        super().__call__([testfile.intermediate('.ll'), LIBC, self.runtime, "-o", testfile.intermediate(EXE)])
 
         if self.stdout is not None and len(self.stdout) > 0:
             print(self.stdout)
