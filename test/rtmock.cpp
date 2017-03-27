@@ -101,7 +101,12 @@ void print_digits(unsigned long long i) {
 }
 
 void saveppm(const char *fname, int w, int h, unsigned char *img) {
+#ifdef _MSC_VER
+    FILE *fp;
+    errno_t err = fopen_s(&fp, fname, "wb");
+#else // _MSC_VER
     FILE *fp = fopen(fname, "wb");
+#endif // _MSC_VER
     fprintf(fp, "P6\n");
     fprintf(fp, "%d %d\n", w, h);
     fprintf(fp, "255\n");
