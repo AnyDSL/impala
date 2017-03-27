@@ -125,3 +125,18 @@ void impala_memmove(char* dest, const char* src, int size) {
 #ifdef __cplusplus
 }
 #endif
+
+
+// polyfill of non-standard drand48()
+#ifdef _MSC_VER
+
+#include <random>
+static std::mt19937_64 std_gen64;
+static std::uniform_real_distribution<double> std_dist64(0., 1.);
+extern "C" void srand48(int64_t seed) { std_gen64.seed(seed); }
+extern "C" double drand48() { return std_dist64(std_gen64); }
+
+static std::uniform_int_distribution<int64_t> std_disti64(-(1 << 31), 1 << 31);
+extern "C" int64_t mrand48() { return std_disti64(std_gen64); }
+
+#endif // _MSC_VER
