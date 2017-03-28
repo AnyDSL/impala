@@ -1261,7 +1261,6 @@ public:
     static const PrefixExpr* create(const Expr* rhs, const Tag tag) {
         return interlope<PrefixExpr>(rhs, rhs->location(), tag, rhs);
     }
-
     static const PrefixExpr* create_deref(const Expr* rhs) { return create(rhs, MUL); }
     static const PrefixExpr* create_addrof(const Expr* rhs) { return create(rhs, AND); }
 
