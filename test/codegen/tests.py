@@ -16,7 +16,6 @@ def allTests():
       "codegen/conversion_trait.impala",
       "codegen/diderot.impala",
       "codegen/endless_mangling.impala",
-      "codegen/fold.impala",
       "codegen/generic_get.impala",
       "codegen/generic_while.impala",
       "codegen/ldg.impala",
