@@ -3,7 +3,7 @@
 fn range(a: float, z: float, body: fn(float)->()) -> () {
     if a < z {
         body(a);
-        range(a+1.f, z, body, return)
+        range(a+1.f, z, body)
     }
 }
 

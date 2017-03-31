@@ -13,7 +13,7 @@ impl Iterator for int {
 fn range[I: Iterator](a: I, b: I, body: fn(I)->()) -> () {
     if (a.lt(b)) {
         body(a);
-        range(a.inc(), b, body, return)
+        range(a.inc(), b, body)
     } else {
         return()
     }

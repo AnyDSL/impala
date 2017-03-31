@@ -5,7 +5,7 @@ fn take_address(&int) -> () {}
 fn range(a: int, b: int, body: fn(int) -> ()) -> () {
     if a < b {
         body(a);
-        range(a+1, b, body, return)
+        range(a+1, b, body)
     }
 }
 
