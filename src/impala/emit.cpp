@@ -22,7 +22,7 @@ public:
     const Def* converge(const Expr* expr, JumpTarget& x) {
         emit_jump(expr, x);
         if (enter(x))
-            return cur_bb->get_value(1, convert(expr->type()));
+            return cur_bb->get_value(1, convert(expr->type()), { expr->location(), "converge" });
         return nullptr;
     }
 
