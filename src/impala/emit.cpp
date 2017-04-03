@@ -161,7 +161,7 @@ Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
         value_ = Value::create_ptr(cg, cg.world().slot(thorin_type, cg.frame(), debug()));
         do_init();
     } else if (is_mut()) {
-        value_ = Value::create_mut(cg, handle(), thorin_type, symbol().str());
+        value_ = Value::create_mut(cg, handle(), thorin_type);
         do_init();
     } else
         value_ = Value::create_val(cg, init);
