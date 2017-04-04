@@ -1,9 +1,9 @@
 // codegen broken
 
 fn seq(a: int, b: int) -> (int, fn(int, fn(int) -> ()) -> ()) {
-    fn stream(i: int, yield: fn(int) -> ()) -> () {
+    fn stream(i: int, body: fn(int) -> ()) -> () {
         if (i <= b) {
-            yield(i, || -> ! { stream(i+1, yield, return) })
+            body(i, || -> ! { stream(i+1, body, return) })
         } else {
             return()
         }

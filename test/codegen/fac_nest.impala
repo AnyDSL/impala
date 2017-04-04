@@ -1,9 +1,9 @@
 // codegen
 
 extern fn fac(n: int) -> int {
-    fn helper(r: int, i : int) -> int {
+    fn helper(r: int, i: int) -> int {
         if i <= n {
-            helper(r*i, i+1, return)
+            helper(r*i, i+1)
         } else {
             r
         }
@@ -12,7 +12,7 @@ extern fn fac(n: int) -> int {
     if n <= 1 {
         1
     } else {
-        helper(1, 2, return)
+        helper(1, 2)
     }
 }
 

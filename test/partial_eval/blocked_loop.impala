@@ -1,7 +1,7 @@
-fn range_step(a: int, b: int, step: int, yield: fn(int, fn() -> !) -> !) -> () {
+fn range_step(a: int, b: int, step: int, body: fn(int, fn() -> !) -> !) -> () {
     if a < b {
-        yield(a);
-        range_step(a+step, b, step, yield, return)
+        body(a);
+        range_step(a+step, b, step, body)
     }
 }
 
