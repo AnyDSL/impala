@@ -105,17 +105,6 @@ private:
     int visibility_;
 };
 
-/// Mixin for all entities that have a type assigned.
-class Typeable {
-public:
-    const Type* type() const { return type_; }
-
-protected:
-    mutable const Type* type_ = nullptr;
-
-    friend class InferSema;
-};
-
 /// Mixin for all entities which have a list of \p TypeParam%s: [T1, T2 : A + B[...], ...].
 class ASTTypeParamList {
 public:
@@ -184,6 +173,20 @@ private:
     Symbol symbol_;
 };
 
+//------------------------------------------------------------------------------
+
+class TypeableNode : public ASTNode {
+public:
+    TypeableNode(Location location) : ASTNode(location) {}
+
+    const Type* type() const { return type_; }
+
+protected:
+    mutable const Type* type_ = nullptr;
+
+    friend class InferSema;
+};
+
 /*
  * paths
  */
@@ -239,10 +242,10 @@ private:
  * AST types
  */
 
-class ASTType : public ASTNode, public Typeable {
+class ASTType : public TypeableNode {
 public:
     ASTType(Location location)
-        : ASTNode(location)
+        : TypeableNode(location)
     {}
 
     virtual void bind(NameSema&) const = 0;
@@ -490,7 +493,7 @@ private:
  */
 
 /// Base class for all entities which have a @p symbol_.
-class Decl : public Typeable, public ASTNode {
+class Decl : public TypeableNode {
 public:
     enum Tag {
         NoDecl,
@@ -502,7 +505,7 @@ public:
 
     /// General constructor.
     Decl(Tag tag, Location location, bool mut, const Identifier* id, const ASTType* ast_type)
-        : ASTNode(location)
+        : TypeableNode(location)
         , tag_(tag)
         , identifier_(id)
         , ast_type_(ast_type)
@@ -1020,10 +1023,10 @@ private:
  * expressions
  */
 
-class Expr : public ASTNode, public Typeable {
+class Expr : public TypeableNode {
 public:
     Expr(Location location)
-        : ASTNode(location)
+        : TypeableNode(location)
     {}
 
 #ifndef NDEBUG
@@ -1754,6 +1757,38 @@ private:
     std::unique_ptr<const Expr> else_expr_;
 };
 
+class MatchExpr : public Expr {
+public:
+    MatchExpr(Location location, const Expr* expr, Ptrns&& ptrns, Exprs&& values)
+        : Expr(location)
+        , expr_(dock(expr_, expr))
+        , ptrns_(std::move(ptrns))
+        , values_(std::move(values))
+    {
+        assert(ptrns_.size() == values_.size());
+    }
+
+    const Expr* expr() const { return expr_.get(); }
+    const Ptrn* pattern(int i) const { return ptrns_[i].get(); }
+    const Expr* value(int i) const { return values_[i].get(); }
+    const Ptrns& patterns() const { return ptrns_; }
+    const Exprs& values() const { return values_; }
+
+    bool has_side_effect() const override;
+    void bind(NameSema&) const override;
+    const thorin::Def* remit(CodeGen&) const override;
+    void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
+    std::ostream& stream(std::ostream&) const override;
+
+private:
+    const Type* infer(InferSema&) const override;
+    void check(TypeSema&) const override;
+
+    std::unique_ptr<const Expr> expr_;
+    Ptrns ptrns_;
+    Exprs values_;
+};
+
 class WhileExpr : public Expr {
 public:
     WhileExpr(Location location, const LocalDecl* continue_decl, const Expr* cond,
@@ -1819,14 +1854,15 @@ private:
  * patterns
  */
 
-class Ptrn : public ASTNode, public Typeable {
+class Ptrn : public TypeableNode {
 public:
     Ptrn(Location location)
-        : ASTNode(location)
+        : TypeableNode(location)
     {}
 
     virtual void bind(NameSema&) const = 0;
     virtual void emit(CodeGen&, const thorin::Def*) const = 0;
+    virtual bool is_refutable() const = 0;
 
 private:
     virtual const Type* infer(InferSema&) const = 0;
@@ -1849,6 +1885,7 @@ public:
 
     void bind(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
+    bool is_refutable() const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1869,6 +1906,7 @@ public:
 
     void bind(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
+    bool is_refutable() const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1876,6 +1914,26 @@ private:
     void check(TypeSema&) const override;
 
     std::unique_ptr<const LocalDecl> local_;
+};
+
+class LiteralPtrn : public Ptrn {
+public:
+    LiteralPtrn(const LiteralExpr* literal)
+        : Ptrn(literal->location()), literal_(literal)
+    {}
+
+    const LiteralExpr* literal() const { return literal_.get(); }
+
+    void bind(NameSema&) const override;
+    void emit(CodeGen&, const thorin::Def*) const override;
+    bool is_refutable() const override;
+    std::ostream& stream(std::ostream&) const override;
+
+private:
+    const Type* infer(InferSema&) const override;
+    void check(TypeSema&) const override;
+
+    std::unique_ptr<const LiteralExpr> literal_;
 };
 
 //------------------------------------------------------------------------------

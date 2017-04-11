@@ -58,6 +58,7 @@
     case Token::RUN: \
     case Token::HLT: \
     case Token::IF: \
+    case Token::MATCH: \
     case Token::FOR: \
     case Token::WITH: \
     case Token::WHILE: \
@@ -66,11 +67,6 @@
     case Token::RUN_BLOCK: \
     case Token::L_BRACKET: \
     case Token::SIMD
-
-#define PTRN \
-         Token::MUT: \
-    case Token::ID: \
-         Token::L_PAREN
 
 #define STMT \
          Token::LET: \
@@ -243,6 +239,7 @@ public:
     const StrExpr*          parse_str_expr();
     const FnExpr*           parse_fn_expr();
     const IfExpr*           parse_if_expr();
+    const MatchExpr*        parse_match_expr();
     const ForExpr*          parse_for_expr();
     const ForExpr*          parse_with_expr();
     const WhileExpr*        parse_while_expr();
@@ -250,9 +247,10 @@ public:
     const BlockExprBase*    try_block_expr(const std::string& context);
 
     // patterns
-    const Ptrn*      parse_ptrn();
-    const TuplePtrn* parse_tuple_ptrn();
-    const IdPtrn*    parse_id_ptrn();
+    const Ptrn*        parse_ptrn();
+    const TuplePtrn*   parse_tuple_ptrn();
+    const IdPtrn*      parse_id_ptrn();
+    const LiteralPtrn* parse_literal_ptrn();
 
     // statements
     const ItemStmt* parse_item_stmt();
@@ -996,6 +994,7 @@ const Expr* Parser::parse_primary_expr() {
             return new PathExpr(path);
         }
         case Token::IF:         return parse_if_expr();
+        case Token::MATCH:      return parse_match_expr();
         case Token::FOR:        return parse_for_expr();
         case Token::WITH:       return parse_with_expr();
         case Token::WHILE:      return parse_while_expr();
@@ -1103,7 +1102,7 @@ const FnExpr* Parser::parse_fn_expr() {
 const IfExpr* Parser::parse_if_expr() {
     auto tracker = track();
     eat(Token::IF);
-    auto cond =  parse_expr();
+    auto cond = parse_expr();
     auto then_expr = try_block_expr("consequence of an if expression");
     const Expr* else_expr = nullptr;
     if (accept(Token::ELSE)) {
@@ -1119,6 +1118,23 @@ const IfExpr* Parser::parse_if_expr() {
     if (else_expr == nullptr)
         else_expr = create<BlockExpr>();
     return new IfExpr(tracker, cond, then_expr, else_expr);
+}
+
+const MatchExpr* Parser::parse_match_expr() {
+    auto tracker = track();
+    eat(Token::MATCH);
+    auto expr = parse_expr();
+    expect(Token::L_BRACE, "match expression");
+    Ptrns ptrns;
+    Exprs values;
+    parse_comma_list("closing brace of match expression", Token::R_BRACE, [&] {
+        ptrns.emplace_back(parse_ptrn());
+        expect(Token::FAT_ARRROW, "pattern of match expression");
+        values.emplace_back(parse_expr());
+    });
+    expect(Token::R_BRACE, "match expression");
+    if (ptrns.empty()) error("pattern list", "empty match expression");
+    return new MatchExpr(tracker, expr, std::move(ptrns), std::move(values));
 }
 
 const ForExpr* Parser::parse_for_expr() {
@@ -1221,10 +1237,16 @@ const BlockExprBase* Parser::try_block_expr(const std::string& context) {
  */
 
 const Ptrn* Parser::parse_ptrn() {
-    if (lookahead() == Token::L_PAREN)
-        return parse_tuple_ptrn();
-    else
-        return parse_id_ptrn();
+    switch (lookahead()) {
+        case Token::TRUE:
+        case Token::FALSE:
+#define IMPALA_LIT(itype, atype) case Token::LIT_##itype:
+#include "impala/tokenlist.h"
+            return parse_literal_ptrn();
+
+        case Token::L_PAREN: return parse_tuple_ptrn();
+        default:             return parse_id_ptrn();
+    }
 }
 
 const TuplePtrn* Parser::parse_tuple_ptrn() {
@@ -1243,6 +1265,10 @@ const IdPtrn* Parser::parse_id_ptrn() {
     auto identifier = try_identifier("local variable in let binding");
     auto ast_type = accept(Token::COLON) ? parse_type() : nullptr;
     return new IdPtrn(new LocalDecl(tracker, cur_var_handle++, mut, identifier, ast_type));
+}
+
+const LiteralPtrn* Parser::parse_literal_ptrn() {
+    return new LiteralPtrn(parse_literal_expr());
 }
 
 /*

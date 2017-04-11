@@ -450,6 +450,14 @@ std::ostream& IfExpr::stream(std::ostream& os) const {
     return os;
 }
 
+std::ostream& MatchExpr::stream(std::ostream& os) const {
+    os << "match " << expr() << " {" << endl;
+    for (size_t i = 0; i < patterns().size(); i++) {
+        os << pattern(i) << " => " << value(i) << "," << endl;
+    }
+    return (os << "}");
+}
+
 std::ostream& WhileExpr::stream(std::ostream& os) const {
     return streamf(os, "while {} {}", cond(), body());
 }

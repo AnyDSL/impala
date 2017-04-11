@@ -30,19 +30,19 @@ public:
      * Initializes @p type with @p UnknownType if @p type is @c nullptr.
      */
     const Type* find_type(const Type*& type);
-    const Type* find_type(const Typeable* typeable) { return find_type(typeable->type_); }
+    const Type* find_type(const TypeableNode* node) { return find_type(node->type_); }
 
     /**
      * @c unify(t, u).
      * Initializes @p t with @p UnknownType if @p type is @c nullptr.
      */
-    const Type*& constrain(const    Type*& t, const   Type* u);
-    const Type*& constrain(const Typeable* t, const   Type* u, const Type* v) { return constrain(constrain(t, u), v); }
-    const Type*& constrain(const Typeable* t, const   Type* u)                { return constrain(t->type_, u); }
+    const Type*& constrain(const        Type*& t, const Type* u);
+    const Type*& constrain(const TypeableNode* t, const Type* u, const Type* v) { return constrain(constrain(t, u), v); }
+    const Type*& constrain(const TypeableNode* t, const Type* u)                { return constrain(t->type_, u); }
 
     /// obeys subtyping
     const Type* coerce(const Type* dst, const Expr* src);
-    const Type* coerce(const Typeable* dst, const Expr* src) { return dst->type_ = coerce(dst->type_, src); }
+    const Type* coerce(const TypeableNode* dst, const Expr* src) { return dst->type_ = coerce(dst->type_, src); }
     void assign(const Expr* dst, const Expr* src);
 
     // infer wrappers
@@ -925,6 +925,16 @@ const Type* IfExpr::infer(InferSema& sema) const {
     return sema.constrain(else_expr(), then_type);
 }
 
+const Type* MatchExpr::infer(InferSema& sema) const {
+    auto expr_type  = sema.rvalue(expr());
+    auto value_type = sema.rvalue(value(0));
+    for (size_t i = 0; i < patterns().size(); i++) {
+        expr_type  = sema.constrain(pattern(i), expr_type);
+        value_type = sema.constrain(value(i),  value_type);
+    }
+    return value_type;
+}
+
 const Type* WhileExpr::infer(InferSema& sema) const {
     sema.rvalue(cond());
     sema.constrain(cond(), sema.type_bool());
@@ -978,6 +988,10 @@ const Type* TuplePtrn::infer(InferSema& sema) const {
 
 const Type* IdPtrn::infer(InferSema& sema) const {
     return sema.infer(local());
+}
+
+const Type* LiteralPtrn::infer(InferSema& sema) const {
+    return sema.infer(literal());
 }
 
 //------------------------------------------------------------------------------
