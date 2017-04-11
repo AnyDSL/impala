@@ -480,6 +480,10 @@ std::ostream& IdPtrn::stream(std::ostream& os) const {
     return os << local();
 }
 
+std::ostream& LiteralPtrn::stream(std::ostream& os) const {
+    return os << literal();
+}
+
 /*
  * statements
  */
