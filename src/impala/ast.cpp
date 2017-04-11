@@ -100,6 +100,12 @@ bool IfExpr::has_side_effect() const {
     return cond()->has_side_effect() || then_expr()->has_side_effect() || else_expr()->has_side_effect();
 }
 
+bool MatchExpr::has_side_effect() const {
+    return expr()->has_side_effect() ||
+        std::any_of(values().begin(), values().end(),
+            [] (const std::unique_ptr<const Expr>& e) { return e->has_side_effect(); });
+}
+
 bool WhileExpr::has_side_effect() const { return true; }
 bool ForExpr::has_side_effect() const { return true; }
 
@@ -120,5 +126,22 @@ void MapExpr::take_address() const { lhs()->take_address(); }
 void FieldExpr::take_address() const { lhs()->take_address(); }
 
 //------------------------------------------------------------------------------
+
+/*
+ * is_refutable
+ */
+
+bool TuplePtrn::is_refutable() const {
+    return std::any_of(elems_.begin(), elems_.end(),
+        [] (const std::unique_ptr<const Ptrn>& p) { return p->is_refutable(); });
+}
+
+bool IdPtrn::is_refutable() const {
+    return false;
+}
+
+bool LiteralPtrn::is_refutable() const {
+    return true;
+}
 
 }

@@ -71,9 +71,9 @@ public:
         }
     }
 
-    void expect_type(const Type* expected, const Expr* expr, const char* context) {
-        if (expected != expr->type() && expected->is_known() && expr->type()->is_known() && !expr->type()->isa<TypeError>())
-            error(expr, "mismatched types: expected '{}' but found '{}' as {}", expected, expr->type(), context);
+    void expect_type(const Type* expected, const TypeableNode* node, const char* context) {
+        if (expected != node->type() && expected->is_known() && node->type()->is_known() && !node->type()->isa<TypeError>())
+            error(node, "mismatched types: expected '{}' but found '{}' as {}", expected, node->type(), context);
     }
 
     void no_indefinite_array(const ASTNode* n, const Type* type, const char* context) {
@@ -637,6 +637,15 @@ void IfExpr::check(TypeSema& sema) const {
         sema.expect_type(then_type, else_expr(), "else branch type");
 }
 
+void MatchExpr::check(TypeSema& sema) const {
+    auto expr_type  = sema.check(expr());
+    auto value_type = sema.check(value(0));
+    for (size_t i = 0; i < patterns().size(); i++) {
+        sema.expect_type(expr_type,  pattern(i), "pattern type");
+        sema.expect_type(value_type, value(i), "matched expression type");
+    }
+}
+
 void WhileExpr::check(TypeSema& sema) const {
     sema.check(cond());
     sema.expect_bool(cond(), "while-condition");
@@ -696,6 +705,10 @@ void IdPtrn::check(TypeSema& sema) const {
     sema.check(local());
 }
 
+void LiteralPtrn::check(TypeSema& sema) const {
+    sema.check(literal());
+}
+
 //------------------------------------------------------------------------------
 
 /*
@@ -715,6 +728,9 @@ void ItemStmt::check(TypeSema& sema) const {
 
 void LetStmt::check(TypeSema& sema) const {
     auto type = sema.check(ptrn());
+
+    if (ptrn()->is_refutable())
+        error(this, "refutable pattern in let statement");
 
     if (!type->is_known())
         error(this, "cannot infer type for let statement");
