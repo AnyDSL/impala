@@ -71,7 +71,7 @@ public:
         }
     }
 
-    void expect_type(const Type* expected, const TypeableNode* node, const char* context) {
+    void expect_type(const Type* expected, const Typeable* node, const char* context) {
         if (expected != node->type() && expected->is_known() && node->type()->is_known() && !node->type()->isa<TypeError>())
             error(node, "mismatched types: expected '{}' but found '{}' as {}", expected, node->type(), context);
     }
