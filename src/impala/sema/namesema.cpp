@@ -382,7 +382,7 @@ void MatchExpr::bind(NameSema& sema) const {
     for (size_t i = 0; i < patterns().size(); i++) {
         sema.push_scope();
         pattern(i)->bind(sema);
-        value(i)->bind(sema);
+        arg(i)->bind(sema);
         sema.pop_scope();
     }
 }

@@ -1757,22 +1757,20 @@ private:
     std::unique_ptr<const Expr> else_expr_;
 };
 
-class MatchExpr : public Expr {
+class MatchExpr : public Expr, public Args {
 public:
-    MatchExpr(Location location, const Expr* expr, Ptrns&& ptrns, Exprs&& values)
+    MatchExpr(Location location, const Expr* expr, Ptrns&& ptrns, Exprs&& args)
         : Expr(location)
+        , Args(std::move(args))
         , expr_(dock(expr_, expr))
         , ptrns_(std::move(ptrns))
-        , values_(std::move(values))
     {
-        assert(ptrns_.size() == values_.size());
+        assert(num_args() == patterns().size());
     }
 
     const Expr* expr() const { return expr_.get(); }
     const Ptrn* pattern(int i) const { return ptrns_[i].get(); }
-    const Expr* value(int i) const { return values_[i].get(); }
     const Ptrns& patterns() const { return ptrns_; }
-    const Exprs& values() const { return values_; }
 
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
@@ -1786,7 +1784,6 @@ private:
 
     std::unique_ptr<const Expr> expr_;
     Ptrns ptrns_;
-    Exprs values_;
 };
 
 class WhileExpr : public Expr {
@@ -1862,6 +1859,7 @@ public:
 
     virtual void bind(NameSema&) const = 0;
     virtual void emit(CodeGen&, const thorin::Def*) const = 0;
+    virtual const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const = 0;
     virtual bool is_refutable() const = 0;
 
 private:
@@ -1885,6 +1883,7 @@ public:
 
     void bind(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
+    const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const override;
     bool is_refutable() const override;
     std::ostream& stream(std::ostream&) const override;
 
@@ -1906,6 +1905,7 @@ public:
 
     void bind(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
+    const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const override;
     bool is_refutable() const override;
     std::ostream& stream(std::ostream&) const override;
 
@@ -1919,13 +1919,15 @@ private:
 class LiteralPtrn : public Ptrn {
 public:
     LiteralPtrn(const LiteralExpr* literal)
-        : Ptrn(literal->location()), literal_(literal)
+        : Ptrn(literal->location())
+        , literal_(dock(literal_, literal))
     {}
 
-    const LiteralExpr* literal() const { return literal_.get(); }
+    const LiteralExpr* literal() const { return literal_.get()->as<LiteralExpr>(); }
 
     void bind(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
+    const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const override;
     bool is_refutable() const override;
     std::ostream& stream(std::ostream&) const override;
 
@@ -1933,7 +1935,7 @@ private:
     const Type* infer(InferSema&) const override;
     void check(TypeSema&) const override;
 
-    std::unique_ptr<const LiteralExpr> literal_;
+    std::unique_ptr<const Expr> literal_;
 };
 
 //------------------------------------------------------------------------------

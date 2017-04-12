@@ -102,7 +102,7 @@ bool IfExpr::has_side_effect() const {
 
 bool MatchExpr::has_side_effect() const {
     return expr()->has_side_effect() ||
-        std::any_of(values().begin(), values().end(),
+        std::any_of(args().begin(), args().end(),
             [] (const std::unique_ptr<const Expr>& e) { return e->has_side_effect(); });
 }
 
