@@ -688,20 +688,19 @@ const Def* IfExpr::remit(CodeGen& cg) const {
 }
 
 void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
-    JumpTarget cur({pattern(0)->location().front(), "case"});
     auto matcher = cg.remit(expr());
     for (size_t i = 0; i < patterns().size(); i++) {
-        auto last = i == patterns().size() - 1;
-        auto next = last ? x : JumpTarget({pattern(i + 1)->location().front(), "case"});
-        auto cond = pattern(i)->emit_cond(cg, matcher);
+        JumpTarget  cur({pattern(i)->location().front(), "case_true"});
+        JumpTarget next({pattern(i)->location().front(), "case_false"});
+
         pattern(i)->emit(cg, matcher);
+        auto cond = pattern(i)->emit_cond(cg, matcher);
 
         cg.branch(cond, cur, next);
         if (cg.enter(cur))
             cg.emit_jump(arg(i), x);
 
-        if (!cg.enter(next)) break;
-        cur = next;
+        cg.enter(next);
     }
     cg.jump(x);
 }
@@ -798,9 +797,11 @@ void TuplePtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 }
 
 const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
-    auto cond = cg.world().literal(true);
-    for (size_t i = 0, e = num_elems(); i != e; ++i)
-        cond = cg.world().arithop_and(cond, elem(i)->emit_cond(cg, cg.extract(init, i, location())));
+    const Def* cond = nullptr;
+    for (size_t i = 0, e = num_elems(); i != e; ++i) {
+        auto next = elem(i)->emit_cond(cg, cg.extract(init, i, location()));
+        cond = cond ? cg.world().arithop_and(cond, next) : next;
+    }
     return cond;
 }
 
