@@ -638,11 +638,14 @@ void IfExpr::check(TypeSema& sema) const {
 }
 
 void MatchExpr::check(TypeSema& sema) const {
-    auto expr_type  = sema.check(expr());
-    auto value_type = sema.check(value(0));
-    for (size_t i = 0; i < patterns().size(); i++) {
-        sema.expect_type(expr_type,  pattern(i), "pattern type");
-        sema.expect_type(value_type, value(i), "matched expression type");
+    auto expr_type = sema.check(expr());
+    auto arg_type  = sema.check(arg(0));
+    size_t n = patterns().size();
+    for (size_t i = 0; i < n; i++) {
+        sema.expect_type(expr_type, pattern(i), "pattern type");
+        sema.expect_type(arg_type, arg(i), "matched expression type");
+        if (!pattern(i)->is_refutable() && i < n - 1)
+            warning(pattern(i), "pattern is always true, subsequent patterns will not be executed");
     }
 }
 

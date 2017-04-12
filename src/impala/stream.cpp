@@ -451,9 +451,12 @@ std::ostream& IfExpr::stream(std::ostream& os) const {
 }
 
 std::ostream& MatchExpr::stream(std::ostream& os) const {
-    os << "match " << expr() << " {" << endl;
-    for (size_t i = 0; i < patterns().size(); i++) {
-        os << pattern(i) << " => " << value(i) << "," << endl;
+    os << "match " << expr() << " {" << up << endl;
+    size_t n = patterns().size();
+    for (size_t i = 0; i < n; i++) {
+        os << pattern(i) << " => " << arg(i) << ",";
+        if (i == n - 1) os << down;
+        os << endl;
     }
     return (os << "}");
 }

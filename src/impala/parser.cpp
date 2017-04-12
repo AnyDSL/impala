@@ -1126,15 +1126,14 @@ const MatchExpr* Parser::parse_match_expr() {
     auto expr = parse_expr();
     expect(Token::L_BRACE, "match expression");
     Ptrns ptrns;
-    Exprs values;
+    Exprs args;
     parse_comma_list("closing brace of match expression", Token::R_BRACE, [&] {
         ptrns.emplace_back(parse_ptrn());
         expect(Token::FAT_ARRROW, "pattern of match expression");
-        values.emplace_back(parse_expr());
+        args.emplace_back(parse_expr());
     });
-    expect(Token::R_BRACE, "match expression");
     if (ptrns.empty()) error("pattern list", "empty match expression");
-    return new MatchExpr(tracker, expr, std::move(ptrns), std::move(values));
+    return new MatchExpr(tracker, expr, std::move(ptrns), std::move(args));
 }
 
 const ForExpr* Parser::parse_for_expr() {

@@ -926,13 +926,14 @@ const Type* IfExpr::infer(InferSema& sema) const {
 }
 
 const Type* MatchExpr::infer(InferSema& sema) const {
-    auto expr_type  = sema.rvalue(expr());
-    auto value_type = sema.rvalue(value(0));
+    sema.rvalue(expr());
     for (size_t i = 0; i < patterns().size(); i++) {
-        expr_type  = sema.constrain(pattern(i), expr_type);
-        value_type = sema.constrain(value(i),  value_type);
+        sema.infer(pattern(i));
+        sema.coerce(pattern(i), expr());
+        sema.rvalue(arg(i));
+        if (i > 0) sema.coerce(arg(i), arg(i - 1));
     }
-    return value_type;
+    return sema.rvalue(arg(0));
 }
 
 const Type* WhileExpr::infer(InferSema& sema) const {

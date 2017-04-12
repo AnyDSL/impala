@@ -687,6 +687,30 @@ const Def* IfExpr::remit(CodeGen& cg) const {
     return cg.converge(this, x);
 }
 
+void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
+    JumpTarget cur({pattern(0)->location().front(), "case"});
+    auto matcher = cg.remit(expr());
+    for (size_t i = 0; i < patterns().size(); i++) {
+        auto last = i == patterns().size() - 1;
+        auto next = last ? x : JumpTarget({pattern(i + 1)->location().front(), "case"});
+        auto cond = pattern(i)->emit_cond(cg, matcher);
+        pattern(i)->emit(cg, matcher);
+
+        cg.branch(cond, cur, next);
+        if (cg.enter(cur))
+            cg.emit_jump(arg(i), x);
+
+        if (!cg.enter(next)) break;
+        cur = next;
+    }
+    cg.jump(x);
+}
+
+const Def* MatchExpr::remit(CodeGen& cg) const {
+    JumpTarget x({location().back(), "next"});
+    return cg.converge(this, x);
+}
+
 const Def* WhileExpr::remit(CodeGen& cg) const {
     JumpTarget x({location().back(), "next"});
     auto break_continuation = cg.create_continuation(break_decl());
@@ -764,9 +788,26 @@ void IdPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     cg.emit(local(), init);
 }
 
+const thorin::Def* IdPtrn::emit_cond(CodeGen& cg, const thorin::Def*) const {
+    return cg.world().literal(true);
+}
+
 void TuplePtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     for (size_t i = 0, e = num_elems(); i != e; ++i)
         cg.emit(elem(i), cg.extract(init, i, location()));
+}
+
+const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
+    auto cond = cg.world().literal(true);
+    for (size_t i = 0, e = num_elems(); i != e; ++i)
+        cond = cg.world().arithop_and(cond, elem(i)->emit_cond(cg, cg.extract(init, i, location())));
+    return cond;
+}
+
+void LiteralPtrn::emit(CodeGen&, const thorin::Def*) const {}
+
+const thorin::Def* LiteralPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
+    return cg.world().cmp_eq(init, cg.remit(literal()));
 }
 
 /*
