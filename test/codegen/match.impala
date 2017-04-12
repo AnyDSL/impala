@@ -1,0 +1,11 @@
+fn test(i: (int, int)) -> int {
+    match i {
+        (2, 3) => 5,
+        (1, x) => x,
+        _ => 0
+    }
+}
+
+fn main() -> int {
+    test((1, 0))
+}
