@@ -689,20 +689,54 @@ const Def* IfExpr::remit(CodeGen& cg) const {
 
 void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     auto matcher = cg.remit(expr());
-    for (size_t i = 0; i < patterns().size(); i++) {
-        JumpTarget  cur({pattern(i)->location().front(), "case_true"});
-        JumpTarget next({pattern(i)->location().front(), "case_false"});
+    if (is_int(expr()->type())) {
+        // integers: match continuation
+        JumpTarget otherwise;
+        Array<const Def*> defs(args().size());
+        Array<JumpTarget> targets(args().size());
 
-        pattern(i)->emit(cg, matcher);
-        auto cond = pattern(i)->emit_cond(cg, matcher);
+        size_t num_targets = patterns().size();
+        for (size_t i = 0; i < patterns().size(); i++) {
+            auto pat = pattern(i);
+            if (!pat->is_refutable()) {
+                num_targets = i;
+                cg.emit(pattern(i), matcher);
+                otherwise = JumpTarget({pat->location().front(), "otherwise"});
+                break;
+            } else {
+                defs[i] = cg.remit(pattern(i)->as<LiteralPtrn>()->literal());
+                targets[i] = JumpTarget({pat->location().front(), "case"});
+            }
+        }
+        targets.shrink(num_targets);
+        defs.shrink(num_targets);
 
-        cg.branch(cond, cur, next);
-        if (cg.enter(cur))
-            cg.emit_jump(arg(i), x);
+        cg.match(matcher, otherwise, defs, targets, {location().front(), "match"});
 
-        cg.enter(next);
+        for (size_t i = 0; i < num_targets; i++) {
+            if (cg.enter(targets[i]))
+                cg.emit_jump(arg(i), x);
+        }
+        bool no_otherwise = patterns().size() == num_targets;
+        if (!no_otherwise && cg.enter(otherwise))
+            cg.emit_jump(arg(num_targets), x);
+    } else {
+        // general case: if/else
+        for (size_t i = 0; i < patterns().size(); i++) {
+            JumpTarget  cur({pattern(i)->location().front(), "case_true"});
+            JumpTarget next({pattern(i)->location().front(), "case_false"});
+
+            pattern(i)->emit(cg, matcher);
+            auto cond = pattern(i)->emit_cond(cg, matcher);
+
+            cg.branch(cond, cur, next);
+            if (cg.enter(cur))
+                cg.emit_jump(arg(i), x);
+
+            cg.enter(next);
+        }
     }
-    cg.jump(x);
+    cg.jump(x, location().back());
 }
 
 const Def* MatchExpr::remit(CodeGen& cg) const {

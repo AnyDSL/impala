@@ -912,6 +912,7 @@ const Expr* Parser::parse_postfix_expr(Tracker tracker, const Expr* lhs) {
 const Expr* Parser::parse_primary_expr() {
     auto tracker = track();
     switch (lookahead()) {
+        case Token::R_PAREN: return new TupleExpr(tracker, {});
         case Token::L_PAREN: {
             lex();
             auto expr = parse_expr();
@@ -1192,6 +1193,7 @@ const BlockExprBase* Parser::parse_block_expr() {
                 bool stmt_like = true;
                 switch (lookahead()) {
                     case Token::IF:         expr = parse_if_expr(); break;
+                    case Token::MATCH:      expr = parse_match_expr(); break;
                     case Token::FOR:        expr = parse_for_expr(); break;
                     case Token::WITH:       expr = parse_with_expr(); break;
                     case Token::WHILE:      expr = parse_while_expr(); break;
