@@ -152,8 +152,6 @@ std::ostream& warning(const ASTNode* n, const char* fmt, Args... args) { return 
 template<class... Args>
 std::ostream& error  (const ASTNode* n, const char* fmt, Args... args) { return error  (n->location(), fmt, args...); }
 
-//------------------------------------------------------------------------------
-
 class Identifier : public ASTNode {
 public:
     Identifier(Location location, const char* str)
@@ -173,11 +171,9 @@ private:
     Symbol symbol_;
 };
 
-//------------------------------------------------------------------------------
-
-class TypeableNode : public ASTNode {
+class Typeable : public ASTNode {
 public:
-    TypeableNode(Location location) : ASTNode(location) {}
+    Typeable(Location location) : ASTNode(location) {}
 
     const Type* type() const { return type_; }
 
@@ -186,6 +182,8 @@ protected:
 
     friend class InferSema;
 };
+
+//------------------------------------------------------------------------------
 
 /*
  * paths
@@ -242,10 +240,10 @@ private:
  * AST types
  */
 
-class ASTType : public TypeableNode {
+class ASTType : public Typeable {
 public:
     ASTType(Location location)
-        : TypeableNode(location)
+        : Typeable(location)
     {}
 
     virtual void bind(NameSema&) const = 0;
@@ -493,7 +491,7 @@ private:
  */
 
 /// Base class for all entities which have a @p symbol_.
-class Decl : public TypeableNode {
+class Decl : public Typeable {
 public:
     enum Tag {
         NoDecl,
@@ -505,7 +503,7 @@ public:
 
     /// General constructor.
     Decl(Tag tag, Location location, bool mut, const Identifier* id, const ASTType* ast_type)
-        : TypeableNode(location)
+        : Typeable(location)
         , tag_(tag)
         , identifier_(id)
         , ast_type_(ast_type)
@@ -1023,10 +1021,10 @@ private:
  * expressions
  */
 
-class Expr : public TypeableNode {
+class Expr : public Typeable {
 public:
     Expr(Location location)
-        : TypeableNode(location)
+        : Typeable(location)
     {}
 
 #ifndef NDEBUG
@@ -1851,10 +1849,10 @@ private:
  * patterns
  */
 
-class Ptrn : public TypeableNode {
+class Ptrn : public Typeable {
 public:
     Ptrn(Location location)
-        : TypeableNode(location)
+        : Typeable(location)
     {}
 
     virtual void bind(NameSema&) const = 0;
