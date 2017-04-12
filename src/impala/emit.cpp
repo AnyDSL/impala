@@ -799,10 +799,12 @@ void TuplePtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     const Def* cond = nullptr;
     for (size_t i = 0, e = num_elems(); i != e; ++i) {
+        if (!elem(i)->is_refutable()) continue;
+
         auto next = elem(i)->emit_cond(cg, cg.extract(init, i, location()));
         cond = cond ? cg.world().arithop_and(cond, next) : next;
     }
-    return cond;
+    return cond ? cond : cg.world().literal(true);
 }
 
 void LiteralPtrn::emit(CodeGen&, const thorin::Def*) const {}
