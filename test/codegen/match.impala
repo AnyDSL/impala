@@ -1,4 +1,4 @@
-fn test(i: (int, int)) -> int {
+fn test1(i: (int, int)) -> int {
     match i {
         (2, 3) => 5,
         (1, x) => x,
@@ -6,6 +6,17 @@ fn test(i: (int, int)) -> int {
     }
 }
 
+fn test2(i: int) -> int {
+    match i {
+        5 => 6,
+        7 => 0,
+        _ => 3
+    }
+}
+
 fn main() -> int {
-    test((1, 0))
+    match (test1((1, 0)), test2(7)) {
+        (0, 0) => 0,
+        _ => 1
+    }
 }

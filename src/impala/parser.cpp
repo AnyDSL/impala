@@ -1134,9 +1134,6 @@ const MatchExpr* Parser::parse_match_expr() {
         auto expr = parse_expr();
         arms.emplace_back(new MatchExpr::Arm(tracker, ptrn, expr));
     });
-
-    // TODO move this to sema
-    if (arms.empty()) error("pattern list", "empty match expression");
     return new MatchExpr(tracker, expr, std::move(arms));
 }
 

@@ -934,9 +934,7 @@ const Type* MatchExpr::infer(InferSema& sema) const {
         if (i > 0)
             sema.coerce(arm(i)->expr(), arm(i-1)->expr());
     }
-    // TODO don't use rvalue here - we've already checked arm(0)->expr()
-    // TODO deal with empty arms
-    return sema.rvalue(arm(0)->expr());
+    return num_arms() > 0 ? arm(0)->expr()->type() : sema.type_error();
 }
 
 const Type* WhileExpr::infer(InferSema& sema) const {

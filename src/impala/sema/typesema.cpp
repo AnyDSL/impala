@@ -639,16 +639,15 @@ void IfExpr::check(TypeSema& sema) const {
 
 void MatchExpr::check(TypeSema& sema) const {
     auto expr_type = sema.check(expr());
-    auto arg_type  = sema.check(arm(0)->expr());
+    auto arg_type  = num_arms() > 0 ? sema.check(arm(0)->expr()) : nullptr;
     bool refutable = true;
     for (size_t i = 0, e = num_arms(); i != e; ++i) {
         sema.expect_type(expr_type, arm(i)->ptrn(), "pattern type");
-        sema.expect_type(arg_type, arm(i)->expr(), "matched expression type");
+        sema.expect_type(arg_type,  arm(i)->expr(), "matched expression type");
         if (!arm(i)->ptrn()->is_refutable() && i < e - 1)
             warning(arm(i)->ptrn(), "pattern is always true, subsequent patterns will not be executed");
         refutable &= arm(i)->ptrn()->is_refutable();
     }
-
     if (refutable)
         error(this, "missing default case for match expression");
 }
