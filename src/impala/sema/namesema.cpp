@@ -379,10 +379,10 @@ void IfExpr::bind(NameSema& sema) const {
 
 void MatchExpr::bind(NameSema& sema) const {
     expr()->bind(sema);
-    for (size_t i = 0; i < patterns().size(); i++) {
+    for (size_t i = 0, e = num_arms(); i != e; ++i) {
         sema.push_scope();
-        pattern(i)->bind(sema);
-        arg(i)->bind(sema);
+        arm(i)->ptrn()->bind(sema);
+        arm(i)->expr()->bind(sema);
         sema.pop_scope();
     }
 }

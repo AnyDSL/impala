@@ -692,20 +692,19 @@ void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     if (is_int(expr()->type())) {
         // integers: match continuation
         JumpTarget otherwise;
-        Array<const Def*> defs(args().size());
-        Array<JumpTarget> targets(args().size());
+        size_t num_targets = num_arms();
+        Array<const Def*> defs(num_targets);
+        Array<JumpTarget> targets(num_targets);
 
-        size_t num_targets = patterns().size();
-        for (size_t i = 0; i < patterns().size(); i++) {
-            auto pat = pattern(i);
-            if (!pat->is_refutable()) {
+        for (size_t i = 0, e = num_targets; i != e; ++i) {
+            if (!arm(i)->ptrn()->is_refutable()) {
                 num_targets = i;
-                cg.emit(pattern(i), matcher);
-                otherwise = JumpTarget({pat->location().front(), "otherwise"});
+                cg.emit(arm(i)->ptrn(), matcher);
+                otherwise = JumpTarget({arm(i)->location().front(), "otherwise"});
                 break;
             } else {
-                defs[i] = cg.remit(pattern(i)->as<LiteralPtrn>()->literal());
-                targets[i] = JumpTarget({pat->location().front(), "case"});
+                defs[i] = cg.remit(arm(i)->ptrn()->as<LiteralPtrn>()->literal());
+                targets[i] = JumpTarget({arm(i)->location().front(), "case"});
             }
         }
         targets.shrink(num_targets);
@@ -715,23 +714,23 @@ void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
 
         for (size_t i = 0; i < num_targets; i++) {
             if (cg.enter(targets[i]))
-                cg.emit_jump(arg(i), x);
+                cg.emit_jump(arm(i)->expr(), x);
         }
-        bool no_otherwise = patterns().size() == num_targets;
+        bool no_otherwise = num_arms() == num_targets;
         if (!no_otherwise && cg.enter(otherwise))
-            cg.emit_jump(arg(num_targets), x);
+            cg.emit_jump(arm(num_targets)->expr(), x);
     } else {
         // general case: if/else
-        for (size_t i = 0; i < patterns().size(); i++) {
-            JumpTarget  cur({pattern(i)->location().front(), "case_true"});
-            JumpTarget next({pattern(i)->location().front(), "case_false"});
+        for (size_t i = 0, e = num_arms(); i != e; ++i) {
+            JumpTarget  cur({arm(i)->location().front(), "case_true"});
+            JumpTarget next({arm(i)->location().front(), "case_false"});
 
-            pattern(i)->emit(cg, matcher);
-            auto cond = pattern(i)->emit_cond(cg, matcher);
+            arm(i)->ptrn()->emit(cg, matcher);
+            auto cond = arm(i)->ptrn()->emit_cond(cg, matcher);
 
             cg.branch(cond, cur, next);
             if (cg.enter(cur))
-                cg.emit_jump(arg(i), x);
+                cg.emit_jump(arm(i)->expr(), x);
 
             cg.enter(next);
         }

@@ -927,13 +927,16 @@ const Type* IfExpr::infer(InferSema& sema) const {
 
 const Type* MatchExpr::infer(InferSema& sema) const {
     sema.rvalue(expr());
-    for (size_t i = 0; i < patterns().size(); i++) {
-        sema.infer(pattern(i));
-        sema.coerce(pattern(i), expr());
-        sema.rvalue(arg(i));
-        if (i > 0) sema.coerce(arg(i), arg(i - 1));
+    for (size_t i = 0, e = num_arms(); i != e; ++i) {
+        sema.infer(arm(i)->ptrn());
+        sema.coerce(arm(i)->ptrn(), expr());
+        sema.rvalue(arm(i)->expr());
+        if (i > 0)
+            sema.coerce(arm(i)->expr(), arm(i-1)->expr());
     }
-    return sema.rvalue(arg(0));
+    // TODO don't use rvalue here - we've already checked arm(0)->expr()
+    // TODO deal with empty arms
+    return sema.rvalue(arm(0)->expr());
 }
 
 const Type* WhileExpr::infer(InferSema& sema) const {

@@ -1755,20 +1755,37 @@ private:
     std::unique_ptr<const Expr> else_expr_;
 };
 
-class MatchExpr : public Expr, public Args {
+class MatchExpr : public Expr {
 public:
-    MatchExpr(Location location, const Expr* expr, Ptrns&& ptrns, Exprs&& args)
+    class Arm : public ASTNode {
+    public:
+        Arm(Location location, const Ptrn* ptrn, const Expr* expr)
+            : ASTNode(location)
+            , ptrn_(ptrn)
+            , expr_(dock(expr_, expr))
+        {}
+
+        const Ptrn* ptrn() const { return ptrn_.get(); }
+        const Expr* expr() const { return expr_.get(); }
+        std::ostream& stream(std::ostream&) const override;
+
+    private:
+        std::unique_ptr<const Ptrn> ptrn_;
+        std::unique_ptr<const Expr> expr_;
+    };
+
+    typedef std::deque<std::unique_ptr<const Arm>> Arms;
+
+    MatchExpr(Location location, const Expr* expr, Arms&& arms)
         : Expr(location)
-        , Args(std::move(args))
         , expr_(dock(expr_, expr))
-        , ptrns_(std::move(ptrns))
-    {
-        assert(num_args() == patterns().size());
-    }
+        , arms_(std::move(arms))
+    {}
 
     const Expr* expr() const { return expr_.get(); }
-    const Ptrn* pattern(int i) const { return ptrns_[i].get(); }
-    const Ptrns& patterns() const { return ptrns_; }
+    const Arm* arm(size_t i) const { return arms_[i].get(); }
+    const Arms& arms() const { return arms_; }
+    size_t num_arms() const { return arms_.size(); }
 
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
@@ -1781,7 +1798,7 @@ private:
     void check(TypeSema&) const override;
 
     std::unique_ptr<const Expr> expr_;
-    Ptrns ptrns_;
+    Arms arms_;
 };
 
 class WhileExpr : public Expr {

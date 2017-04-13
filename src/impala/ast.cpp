@@ -102,8 +102,8 @@ bool IfExpr::has_side_effect() const {
 
 bool MatchExpr::has_side_effect() const {
     return expr()->has_side_effect() ||
-        std::any_of(args().begin(), args().end(),
-            [] (const std::unique_ptr<const Expr>& e) { return e->has_side_effect(); });
+        std::any_of(arms().begin(), arms().end(),
+            [] (const std::unique_ptr<const Arm>& arm) { return arm->expr()->has_side_effect(); });
 }
 
 bool WhileExpr::has_side_effect() const { return true; }
