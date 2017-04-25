@@ -3,7 +3,9 @@
 #include <cctype>
 #include <stdexcept>
 
+#ifdef LLVM_SUPPORT
 #include "thorin/be/llvm/llvm.h"
+#endif
 #include "thorin/util/args.h"
 #include "thorin/util/log.h"
 #include "thorin/util/location.h"
@@ -39,11 +41,12 @@ int main(int argc, char** argv) {
         Names infiles;
 #ifndef NDEBUG
         Names breakpoints;
+        bool track_history;
 #endif
         string out_name, log_name, log_level;
         bool help,
-             emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm, emit_ycomp, emit_ycomp_cfg,
-             opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
+             emit_cint, emit_thorin, emit_ast, emit_annotated, emit_ycomp, emit_ycomp_cfg,
+             emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
              nocleanup, nossa, fancy;
         YCompCommandLine yComp;
 
@@ -60,6 +63,7 @@ int main(int argc, char** argv) {
             .add_option<string>          ("log",                "<arg>", "specifies log file; use '-' for stdout (default)", log_name, "-")
 #ifndef NDEBUG
             .add_option<vector<string>>  ("break",              "<arg>", "breakpoint at definition generation of with global id <arg>; may be used multiple times", breakpoints)
+            .add_option<bool>             ("track-history",     "", "track hisotry of names - useful for debugging", track_history, false)
 #endif
             .add_option<string>          ("o",                  "", "specifies the output module name", out_name, "")
             .add_option<bool>            ("O0",                 "", "reduce compilation time and make debugging produce the expected results (default)", opt_0, false)
@@ -114,12 +118,12 @@ int main(int argc, char** argv) {
         else if (opt_3) opt = 3;
 
         if (infiles.empty() && !help) {
-            std::cerr << "no input files" << std::endl;
+            errf("no input files\n");
             return EXIT_FAILURE;
         }
 
         if (help) {
-            std::cout << "Usage: " + prgname + " [options] file..." << std::endl;
+            outf("Usage: {} [options] file...\n", prgname);
             cmd_parser.print_help();
             return EXIT_SUCCESS;
         }
@@ -160,6 +164,8 @@ int main(int argc, char** argv) {
 
             init.world.breakpoint(num);
         }
+
+        init.world.enable_history(track_history);
 #endif
 
         impala::Items items;
@@ -198,7 +204,7 @@ int main(int argc, char** argv) {
 
             ofstream out_file(module_name + ".h");
             if (!out_file) {
-                std::cerr << "cannot open file " << opts.file_name << "for writing" << std::endl;
+                errf("cannot open file '{}' for writing\n", opts.file_name);
                 return EXIT_FAILURE;
             }
             impala::generate_c_interface(module.get(), opts, out_file);
@@ -212,12 +218,19 @@ int main(int argc, char** argv) {
                 init.world.cleanup();
             if (opt_thorin)
                 init.world.opt();
-            if (emit_thorin)      init.world.dump();
-            if (emit_llvm)        thorin::emit_llvm(init.world, opt, debug);
+            if (emit_thorin)
+                init.world.dump();
+            if (emit_llvm) {
+#ifdef LLVM_SUPPORT
+                thorin::emit_llvm(init.world, opt, debug);
+#else
+                outf("warning: built without LLVM support - I don't emit an LLVM file\n");
+#endif
+            }
             if (emit_ycomp)
-                std::cerr << "-emit-ycomp: this feature is currently removed" << std::endl;
+                errf("-emit-ycomp: this feature is currently removed\n");
             if (emit_ycomp_cfg)
-                std::cerr << "-emit-ycomp-cfg: this feature is currently removed" << std::endl;
+                errf("-emit-ycomp-cfg: this feature is currently removed\n");
             yComp.print(init.world);
         } else
             return EXIT_FAILURE;

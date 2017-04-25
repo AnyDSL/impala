@@ -1,7 +1,7 @@
 # Try to find all libraries and tools related to impala
 # in order to compile and link against .impala files
 #
-# IMPALA_BIN
+# Impala_BIN
 # MACRO wrap_impala_sources( <output variable>
 #     [ OUTPUT_NAME basename ]
 #     [ CLANG_FLAGS --flag1 --flag2 ...]
@@ -12,208 +12,147 @@
 #     [ IMPALA_FLAGS_DEBUG -flag1 -flag2 ...]
 #     FILES file1.impala file2.impala
 # )
-# IMPALA_RUNTIME_LIBRARIES
-# IMPALA_FOUND
+# Impala_RUNTIME_LIBRARIES
+# Impala_FOUND
 
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.1 )
+cmake_minimum_required(VERSION 3.1)
 
-FIND_PATH ( IMPALA_ROOT_DIR
-    NAMES
-        cmake/impala-config.cmake.in
-        src/impala/impala.h
-    PATHS
-        ${IMPALA_ROOT_DIR}
-        "@CMAKE_CURRENT_SOURCE_DIR@"
-        "@CMAKE_SOURCE_DIR@"
+find_path(IMPALA_BUILD_DIR
+    NAMES CMakeCache.txt
+    PATHS ${IMPALA_BUILD_DIR} "@CMAKE_CURRENT_BINARY_DIR@"
 )
-FIND_PATH ( IMPALA_BUILD_DIR
-    NAMES
-        CMakeCache.txt
-    PATHS
-        ${IMPALA_BUILD_DIR}
-        "@CMAKE_CURRENT_BINARY_DIR@"
+find_path(IMPALA_INSTALL_DIR
+    NAMES share/impala/cmake/impala-config.cmake
+    PATHS "@CMAKE_INSTALL_PREFIX@"
 )
-FIND_PATH ( IMPALA_INSTALL_DIR
-    NAMES
-        share/impala/cmake/impala-config.cmake
-    PATHS
-        "@CMAKE_INSTALL_PREFIX@"
+find_path(IMPALA_DIR
+    NAMES impala-config.cmake
+    PATHS ${IMPALA_DIR} $ENV{IMPALA_DIR} ${CMAKE_CURRENT_LIST_DIR} ${IMPALA_BUILD_DIR} ${IMPALA_INSTALL_DIR} ${IMPALA_SOURCE_DIR} "@CMAKE_CURRENT_BINARY_DIR@/share/impala/cmake"
+    PATH_SUFFIXES share/impala/cmake
 )
-FIND_PATH ( IMPALA_DIR
-    NAMES
-        impala-config.cmake
-    PATHS
-        ${IMPALA_DIR}
-        $ENV{IMPALA_DIR}
-        ${CMAKE_CURRENT_LIST_DIR}
-        ${IMPALA_BUILD_DIR}
-        ${IMPALA_INSTALL_DIR}
-        ${IMPALA_SOURCE_DIR}
-        "@CMAKE_CURRENT_BINARY_DIR@/share/impala/cmake"
-    PATH_SUFFIXES
-        share/impala/cmake
-)
-FIND_PROGRAM ( IMPALA_BIN
-    NAMES
-        @IMPALA_BINARY@
-        impala
-    PATHS
-        ${IMPALA_DIR}/../../../@PROJ_BINARY_DIR@
-        ${IMPALA_BUILD_DIR}/@PROJ_BINARY_DIR@
-        ${IMPALA_INSTALL_DIR}/@PROJ_BINARY_DIR@
-        "@CMAKE_RUNTIME_OUTPUT_DIRECTORY@"
-    PATH_SUFFIXES
-        @CMAKE_CONFIGURATION_TYPES@
+find_program(Impala_BIN
+    NAMES impala
+    PATHS ${IMPALA_DIR}/../../../bin ${IMPALA_BUILD_DIR}/bin ${IMPALA_INSTALL_DIR}/bin "@CMAKE_RUNTIME_OUTPUT_DIRECTORY@"
+    PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
 )
 
-FIND_PATH (LLVM_DIR LLVMConfig.cmake
-    PATHS
-        ${LLVM_DIR}
-        $ENV{LLVM_DIR}
-        "@LLVM_DIR@"
+find_path(LLVM_DIR LLVMConfig.cmake PATHS ${LLVM_DIR} $ENV{LLVM_DIR} "@LLVM_DIR@")
+find_package(LLVM QUIET)
+find_path(LLVM_INSTALL_PREFIX
+    NAMES share/llvm/cmake/LLVMConfig.cmake bin/clang
+    PATHS ${LLVM_INSTALL_PREFIX} "@LLVM_INSTALL_PREFIX@"
 )
-FIND_PACKAGE ( LLVM QUIET )
-FIND_PATH ( LLVM_INSTALL_PREFIX
-    NAMES
-        share/llvm/cmake/LLVMConfig.cmake
-        bin/clang
-    PATHS
-        ${LLVM_INSTALL_PREFIX}
-        "@LLVM_INSTALL_PREFIX@"
+find_path(LLVM_TOOLS_BINARY_DIR
+    NAMES llvm-as clang
+    PATHS ${LLVM_TOOLS_BINARY_DIR} "@LLVM_TOOLS_BINARY_DIR@" ${LLVM_INSTALL_PREFIX}/bin
+    PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
 )
-FIND_PATH ( LLVM_TOOLS_BINARY_DIR
-    NAMES
-        llvm-as clang
-    PATHS
-        ${LLVM_TOOLS_BINARY_DIR}
-        "@LLVM_TOOLS_BINARY_DIR@"
-        ${LLVM_INSTALL_PREFIX}/bin
-    PATH_SUFFIXES
-        @CMAKE_CONFIGURATION_TYPES@
+find_program(LLVM_AS_BIN llvm-as
+    PATHS ${LLVM_TOOLS_BINARY_DIR} ${LLVM_INSTALL_PREFIX}/bin
+    PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
 )
-FIND_PROGRAM ( LLVM_AS_BIN llvm-as
-    PATHS
-        ${LLVM_TOOLS_BINARY_DIR}
-        ${LLVM_INSTALL_PREFIX}/bin
-    PATH_SUFFIXES
-        @CMAKE_CONFIGURATION_TYPES@
-)
-FIND_PROGRAM ( CLANG_BIN clang
-    PATHS
-        ${LLVM_TOOLS_BINARY_DIR}
-        ${LLVM_INSTALL_PREFIX}/bin
-    PATH_SUFFIXES
-        @CMAKE_CONFIGURATION_TYPES@
+find_program(CLANG_BIN clang
+    PATHS ${LLVM_TOOLS_BINARY_DIR} ${LLVM_INSTALL_PREFIX}/bin
+    PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
 )
 
-FIND_PACKAGE ( PythonInterp REQUIRED )
-SET ( PYTHON_BIN ${PYTHON_EXECUTABLE})
+find_package(PythonInterp REQUIRED)
+set(PYTHON_BIN ${PYTHON_EXECUTABLE})
 
-MESSAGE ( STATUS "IMPALA_BIN: ${IMPALA_BIN}")
-MESSAGE ( STATUS "CLANG_BIN: ${CLANG_BIN}")
-MESSAGE ( STATUS "LLVM_AS_BIN: ${LLVM_AS_BIN}")
-MESSAGE ( STATUS "Python found: ${PYTHON_VERSION_STRING}")
+message(STATUS "Impala_BIN: ${Impala_BIN}")
+message(STATUS "CLANG_BIN: ${CLANG_BIN}")
+message(STATUS "LLVM_AS_BIN: ${LLVM_AS_BIN}")
+message(STATUS "Python found: ${PYTHON_VERSION_STRING}")
 
-FIND_PATH ( AnyDSL_runtime_DIR
-    NAMES
-        anydsl_runtime-config.cmake
-    PATHS
-        ${AnyDSL_runtime_DIR}
-        $ENV{AnyDSL_runtime_DIR}
-        "@AnyDSL_runtime_DIR@"
-    PATH_SUFFIXES
-        share/AnyDSL_runtime/cmake
+find_path(AnyDSL_runtime_DIR
+    NAMES anydsl_runtime-config.cmake
+    PATHS ${AnyDSL_runtime_DIR} $ENV{AnyDSL_runtime_DIR} "@AnyDSL_runtime_DIR@"
+    PATH_SUFFIXES share/AnyDSL_runtime/cmake
 )
-FIND_PACKAGE ( AnyDSL_runtime QUIET )
+find_package(AnyDSL_runtime QUIET)
 
-IF ( NOT AnyDSL_runtime_FOUND )
-    MESSAGE ( STATUS "AnyDSL runtime not found. Set AnyDSL_runtime_DIR to enable runtime features." )
-ENDIF ()
+if(NOT AnyDSL_runtime_FOUND)
+    message(STATUS "AnyDSL runtime not found. Set AnyDSL_runtime_DIR to enable runtime features.")
+endif()
 
-SET ( IMPALA_RUNTIME_LIBRARIES )
+set(Impala_RUNTIME_LIBRARIES)
 
-SET ( OPT_FLAGS_DEBUG "-g" )
-SET ( OPT_FLAGS_RELEASE "-O3" )
+set(OPT_FLAGS_DEBUG "-g")
+set(OPT_FLAGS_RELEASE "-O3")
 
-MACRO ( wrap_impala_sources outfiles )
-    CMAKE_PARSE_ARGUMENTS ( "PARGS" "" "OUTPUT_NAME" "CLANG_FLAGS;CLANG_FLAGS_RELEASE;CLANG_FLAGS_DEBUG;IMPALA_FLAGS;IMPALA_FLAGS_RELEASE;IMPALA_FLAGS_DEBUG;FILES" ${ARGN} )
-    IF ( NOT "${PARGS_UNPARSED_ARGUMENTS}" STREQUAL "" )
-        MESSAGE ( FATAL_ERROR "Unparsed arguments ${PARGS_UNPARSED_ARGUMENTS}" )
-    ENDIF ()
+macro(wrap_impala_sources outfiles)
+    cmake_parse_arguments("PARGS" "" "OUTPUT_NAME" "CLANG_FLAGS;CLANG_FLAGS_RELEASE;CLANG_FLAGS_DEBUG;IMPALA_FLAGS;IMPALA_FLAGS_RELEASE;IMPALA_FLAGS_DEBUG;FILES" ${ARGN})
+    if(NOT "${PARGS_UNPARSED_ARGUMENTS}" STREQUAL "")
+        message(FATAL_ERROR "Unparsed arguments ${PARGS_UNPARSED_ARGUMENTS}")
+    endif()
 
-    STRING ( SHA1 _basename "${PARGS_FILES}" )
-    IF ( PARGS_OUTPUT_NAME )
-        SET ( _basename ${PARGS_OUTPUT_NAME} )
-    ENDIF ()
+    string(SHA1 _basename "${PARGS_FILES}")
+    if(PARGS_OUTPUT_NAME)
+        set(_basename ${PARGS_OUTPUT_NAME})
+    endif()
 
-    SET ( _basepath ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${_basename} )
-    SET ( _llfile ${_basepath}.ll )
-    SET ( _objfile ${_basepath}.o )
+    set(_basepath ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${_basename})
+    set(_llfile ${_basepath}.ll)
+    set(_objfile ${_basepath}.o)
 
-    SET ( _infiles )
-    FOREACH ( _it ${PARGS_FILES} )
-        GET_FILENAME_COMPONENT ( _infile ${_it} ABSOLUTE )
-        LIST ( APPEND _infiles ${_infile} )
-    ENDFOREACH ()
+    set(_infiles)
+    foreach(_it ${PARGS_FILES})
+        get_filename_component(_infile ${_it} ABSOLUTE)
+        list(APPEND _infiles ${_infile})
+    endforeach()
 
-    SET ( _impala_platform_files )
-    SET ( _backend_produces_irfile FALSE )
-    IF ( AnyDSL_runtime_FOUND )
-        AnyDSL_runtime_files( _impala_platform_files FRONTEND impala )
-        INCLUDE_DIRECTORIES ( ${AnyDSL_runtime_INCLUDE_DIR} )
-        SET ( IMPALA_RUNTIME_LIBRARIES ${AnyDSL_runtime_LIBRARIES} )
-    ENDIF ()
+    set(_impala_platform_files)
+    set(_backend_produces_irfile FALSE)
+    if(AnyDSL_runtime_FOUND)
+        AnyDSL_runtime_files(_impala_platform_files FRONTEND impala)
+        include_directories(${AnyDSL_runtime_INCLUDE_DIR})
+        set(Impala_RUNTIME_LIBRARIES ${AnyDSL_runtime_LIBRARIES})
+    endif()
 
-    SET ( _impala_flags_RELEASE ${OPT_FLAGS_RELEASE} ${PARGS_IMPALA_FLAGS_RELEASE} )
-    SET ( _impala_flags_DEBUG ${OPT_FLAGS_DEBUG} ${PARGS_IMPALA_FLAGS_DEBUG} )
-    SET ( _impala_flags -emit-llvm -o ${_basepath} ${PARGS_IMPALA_FLAGS} $<$<CONFIG:Release>:${_impala_flags_RELEASE}>$<$<CONFIG:Debug>:${_impala_flags_DEBUG}> )
+    set(_impala_flags_RELEASE ${OPT_FLAGS_RELEASE} ${PARGS_IMPALA_FLAGS_RELEASE})
+    set(_impala_flags_DEBUG ${OPT_FLAGS_DEBUG} ${PARGS_IMPALA_FLAGS_DEBUG})
+    set(_impala_flags -emit-llvm -o ${_basepath} ${PARGS_IMPALA_FLAGS} $<$<CONFIG:Release>:${_impala_flags_RELEASE}>$<$<CONFIG:Debug>:${_impala_flags_DEBUG}>)
 
-    SET ( _clang_flags_RELEASE ${OPT_FLAGS_RELEASE} ${PARGS_CLANG_FLAGS_RELEASE} )
-    SET ( _clang_flags_DEBUG ${OPT_FLAGS_DEBUG} ${PARGS_CLANG_FLAGS_DEBUG} )
-    SET ( _clang_flags ${PARGS_CLANG_FLAGS} $<$<CONFIG:Release>:${_clang_flags_RELEASE}>$<$<CONFIG:Debug>:${_clang_flags_DEBUG}> )
+    set(_clang_flags_RELEASE ${OPT_FLAGS_RELEASE} ${PARGS_CLANG_FLAGS_RELEASE})
+    set(_clang_flags_DEBUG ${OPT_FLAGS_DEBUG} ${PARGS_CLANG_FLAGS_DEBUG})
+    set(_clang_flags ${PARGS_CLANG_FLAGS} $<$<CONFIG:Release>:${_clang_flags_RELEASE}>$<$<CONFIG:Debug>:${_clang_flags_DEBUG}>)
 
     # TODO: post-patcher should be part of impala rather than AnyDSL_runtime
-    SET ( POST_PATCHING_COMMAND )
-    IF ( AnyDSL_runtime_FOUND )
-        SET ( _post_patcher ${AnyDSL_runtime_ROOT_DIR}/post-patcher.py )
-        SET ( POST_PATCHING_COMMAND COMMAND ${PYTHON_BIN} ${_post_patcher} ${_basepath} )
-    ENDIF ()
+    set(POST_PATCHING_COMMAND)
+    if(AnyDSL_runtime_FOUND)
+        set(_post_patcher ${AnyDSL_runtime_ROOT_DIR}/post-patcher.py)
+        set(POST_PATCHING_COMMAND COMMAND ${PYTHON_BIN} ${_post_patcher} ${_basepath})
+    endif()
 
-    SET ( BC_GENERATING_COMMAND )
-    IF ( AnyDSL_runtime_FOUND )
-        SET ( _irfile "${_basepath}.nvvm" )
-        SET ( _bcfile "${_basepath}.nvvm.bc" )
-        SET ( BC_GENERATING_COMMAND COMMAND ${CMAKE_COMMAND} -D_irfile:PATH="${_irfile}" -DLLVM_AS_BIN:PATH="${LLVM_AS_BIN}" -P ${AnyDSL_runtime_ROOT_DIR}/cmake/check_llvmir.cmake )
-    ENDIF ()
+    set(BC_GENERATING_COMMAND)
+    if(AnyDSL_runtime_FOUND)
+        set(_irfile "${_basepath}.nvvm")
+        set(_bcfile "${_basepath}.nvvm.bc")
+        set(BC_GENERATING_COMMAND COMMAND ${CMAKE_COMMAND} -D_irfile:PATH="${_irfile}" -DLLVM_AS_BIN:PATH="${LLVM_AS_BIN}" -P ${AnyDSL_runtime_ROOT_DIR}/cmake/check_llvmir.cmake)
+    endif()
     # generate .ll file and patch it
     # generate .bc files for NVVM
     # run clang on the patched .ll file to get the .o
-    ADD_CUSTOM_COMMAND ( OUTPUT ${_objfile}
-        COMMAND ${IMPALA_BIN} ${_impala_flags} ${_impala_platform_files} ${_infiles}
+    add_custom_command(OUTPUT ${_objfile}
+        COMMAND ${Impala_BIN} ${_impala_flags} ${_impala_platform_files} ${_infiles}
         ${POST_PATCHING_COMMAND}
         ${BC_GENERATING_COMMAND}
         COMMAND ${CLANG_BIN} ${_clang_flags} -c -o ${_objfile} ${_llfile}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        DEPENDS ${IMPALA_BIN} ${_impala_platform_files} ${_infiles} VERBATIM )
+        DEPENDS ${Impala_BIN} ${_impala_platform_files} ${_infiles} VERBATIM)
 
-    SET_SOURCE_FILES_PROPERTIES ( ${_objfile}
+    set_source_files_properties(${_objfile}
         PROPERTIES
             EXTERNAL_OBJECT true
             GENERATED true
             LANGUAGE CXX
     )
 
-    SET ( ${outfiles} ${${outfiles}} ${_objfile} ${_impala_platform_files} )
-ENDMACRO ()
+    set(${outfiles} ${${outfiles}} ${_objfile} ${_impala_platform_files})
+endmacro()
 
 
-INCLUDE ( FindPackageHandleStandardArgs )
-FIND_PACKAGE_HANDLE_STANDARD_ARGS ( IMPALA DEFAULT_MSG
-    IMPALA_DIR IMPALA_BIN
-    PYTHON_BIN
-    CLANG_BIN LLVM_AS_BIN )
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(Impala DEFAULT_MSG IMPALA_DIR Impala_BIN PYTHON_BIN CLANG_BIN LLVM_AS_BIN)
 
-MARK_AS_ADVANCED (
-    IMPALA_ROOT_DIR IMPALA_BUILD_DIR IMPALA_INSTALL_DIR IMPALA_BIN
-    PYTHON_BIN
-    LLVM_DIR CLANG_BIN LLVM_AS_BIN )
+mark_as_advanced(IMPALA_BUILD_DIR IMPALA_INSTALL_DIR PYTHON_BIN LLVM_DIR CLANG_BIN LLVM_AS_BIN)

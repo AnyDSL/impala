@@ -25,20 +25,20 @@ extern "C" {
 fn range_step(a: int, b: int, step: int, body: fn(int) -> ()) -> () {
     if a < b {
         body(a);
-        range_step(a+step, b, step, body, return)
+        range_step(a+step, b, step, body)
     }
 }
 
-fn range(a: int, b: int, body: fn(int) -> ()) -> () { range_step(a, b, 1, body, return) }
+fn range(a: int, b: int, body: fn(int) -> ()) -> () { range_step(a, b, 1, body) }
 
 fn range_step_i8(a: i8, b: i8, step: i8, body: fn(i8) -> ()) -> () {
     if a < b {
         body(a);
-        range_step_i8(a+step, b, step, body, return)
+        range_step_i8(a+step, b, step, body)
     }
 }
 
-fn range_i8(a: i8, b: i8, body: fn(i8) -> ()) -> () { range_step_i8(a, b, 1_i8, body, return) }
+fn range_i8(a: i8, b: i8, body: fn(i8) -> ()) -> () { range_step_i8(a, b, 1_i8, body) }
 
 /* The board is a 50 cell hexagonal pattern.  For    . . . . .
  * maximum speed the board will be implemented as     . . . . .

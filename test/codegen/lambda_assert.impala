@@ -7,7 +7,7 @@ fn iteration_sep_advanced() -> () {
 fn range(a: int, b: int, body: fn(i32) -> ()) -> () {
     if a < b {
         body(a);
-        range(a+1, b, body, return)
+        range(a+1, b, body)
     }
 }
 

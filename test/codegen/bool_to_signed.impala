@@ -5,5 +5,5 @@ fn f(b: bool) -> int {
 }
 
 fn main() -> int {
-	if (4*f(true) + f(false)) == 4 { 0 } else { 1 }
+    if (4*f(true) + f(false)) == 4 { 0 } else { 1 }
 }

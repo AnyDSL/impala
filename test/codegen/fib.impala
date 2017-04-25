@@ -3,15 +3,15 @@
 fn range(a: int, z: int, body: fn(int)->()) -> () {
     if a < z {
         body(a);
-        range(a+1, z, body, return)
+        range(a+1, z, body)
     }
 }
 
-fn fib(n : int, yield : fn(int)->()) -> () {
+fn fib(n: int, body: fn(int)->()) -> () {
     let ret = return;
-    fn loop(n : int, cur : int, prev : int) -> ! {
+    fn loop(n: int, cur: int, prev: int) -> ! {
         if (n != 0) {
-            yield(cur, || -> ! loop(n-1, cur + prev, cur) )
+            body(cur, || -> ! loop(n-1, cur + prev, cur) )
         } else {
             ret()
         }
@@ -20,10 +20,10 @@ fn fib(n : int, yield : fn(int)->()) -> () {
 }
 
 fn main() -> int {
-    let mut result : int = 0;
+    let mut result: int = 0;
     for i in range(0, 15000000) {
         fib(13,
-            |f : int| result = result % 4 + f,
+            |f: int| result = result % 4 + f,
             continue
         )
     }

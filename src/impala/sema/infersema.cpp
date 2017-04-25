@@ -30,15 +30,15 @@ public:
      * Initializes @p type with @p UnknownType if @p type is @c nullptr.
      */
     const Type* find_type(const Type*& type);
-    const Type* find_type(const Typeable* typeable) { return find_type(typeable->type_); }
+    const Type* find_type(const Typeable* node) { return find_type(node->type_); }
 
     /**
      * @c unify(t, u).
      * Initializes @p t with @p UnknownType if @p type is @c nullptr.
      */
-    const Type*& constrain(const    Type*& t, const   Type* u);
-    const Type*& constrain(const Typeable* t, const   Type* u, const Type* v) { return constrain(constrain(t, u), v); }
-    const Type*& constrain(const Typeable* t, const   Type* u)                { return constrain(t->type_, u); }
+    const Type*& constrain(const    Type*& t, const Type* u);
+    const Type*& constrain(const Typeable* t, const Type* u, const Type* v) { return constrain(constrain(t, u), v); }
+    const Type*& constrain(const Typeable* t, const Type* u)                { return constrain(t->type_, u); }
 
     /// obeys subtyping
     const Type* coerce(const Type* dst, const Expr* src);
@@ -925,6 +925,18 @@ const Type* IfExpr::infer(InferSema& sema) const {
     return sema.constrain(else_expr(), then_type);
 }
 
+const Type* MatchExpr::infer(InferSema& sema) const {
+    sema.rvalue(expr());
+    for (size_t i = 0, e = num_arms(); i != e; ++i) {
+        sema.infer(arm(i)->ptrn());
+        sema.coerce(arm(i)->ptrn(), expr());
+        sema.rvalue(arm(i)->expr());
+        if (i > 0)
+            sema.coerce(arm(i)->expr(), arm(i-1)->expr());
+    }
+    return num_arms() > 0 ? arm(0)->expr()->type() : sema.type_error();
+}
+
 const Type* WhileExpr::infer(InferSema& sema) const {
     sema.rvalue(cond());
     sema.constrain(cond(), sema.type_bool());
@@ -978,6 +990,10 @@ const Type* TuplePtrn::infer(InferSema& sema) const {
 
 const Type* IdPtrn::infer(InferSema& sema) const {
     return sema.infer(local());
+}
+
+const Type* LiteralPtrn::infer(InferSema& sema) const {
+    return sema.infer(literal());
 }
 
 //------------------------------------------------------------------------------

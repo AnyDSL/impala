@@ -377,6 +377,16 @@ void IfExpr::bind(NameSema& sema) const {
     else_expr()->bind(sema);
 }
 
+void MatchExpr::bind(NameSema& sema) const {
+    expr()->bind(sema);
+    for (size_t i = 0, e = num_arms(); i != e; ++i) {
+        sema.push_scope();
+        arm(i)->ptrn()->bind(sema);
+        arm(i)->expr()->bind(sema);
+        sema.pop_scope();
+    }
+}
+
 void WhileExpr::bind(NameSema& sema) const {
     cond()->bind(sema);
     sema.push_scope();
@@ -409,6 +419,8 @@ void TuplePtrn::bind(NameSema& sema) const {
 void IdPtrn::bind(NameSema& sema) const {
     local()->bind(sema);
 }
+
+void LiteralPtrn::bind(NameSema&) const {}
 
 //------------------------------------------------------------------------------
 
