@@ -600,6 +600,14 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             auto cont = cg.world().continuation(fn_type, {location(), "pe_info"});
                             cont->set_intrinsic();
                             dst = cont;
+                        } else if (name == "pe_known") {
+                            auto poly_type = cg.convert(arg(0)->type());
+                            auto fn_type = cg.world().fn_type({
+                                cg.world().mem_type(), poly_type,
+                                cg.world().fn_type({ cg.world().mem_type(), cg.world().type_bool() }) });
+                            auto cont = cg.world().continuation(fn_type, {location(), "pe_known"});
+                            cont->set_intrinsic();
+                            dst = cont;
                         }
                     }
                 }
