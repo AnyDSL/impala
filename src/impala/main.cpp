@@ -84,9 +84,6 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("nocleanup",          "", "no clean-up phase", nocleanup, false)
             .add_option<bool>            ("nossa",              "", "use slots + load/store instead of SSA construction", nossa, false)
             .add_option<bool>            ("simple-pe",          "", "use syntax instead of the CFG to determine when to stop PE", simple_pe, false)
-            .add_option<YCompCommandLine>("ycomp",              "{cfg|domtree|domfrontiers|looptree} {true|false} <arg>    ",
-                "print ycomp graph to <arg>; the flag indicates whether the graph is based upon a forward (true) or backwards (false) CFG; the option can be specified multiple times",
-                yComp, YCompCommandLine());
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
