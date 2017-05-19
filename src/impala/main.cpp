@@ -9,7 +9,6 @@
 #include "thorin/util/args.h"
 #include "thorin/util/log.h"
 #include "thorin/util/location.h"
-#include "thorin/util/ycomp.h"
 
 #include "impala/ast.h"
 #include "impala/cgen.h"
@@ -45,10 +44,9 @@ int main(int argc, char** argv) {
 #endif
         string out_name, log_name, log_level;
         bool help,
-             emit_cint, emit_thorin, emit_ast, emit_annotated, emit_ycomp, emit_ycomp_cfg,
+             emit_cint, emit_thorin, emit_ast, emit_annotated,
              emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
              nocleanup, nossa, simple_pe, fancy;
-        YCompCommandLine yComp;
 
 #ifndef NDEBUG
 #define LOG_LEVELS "{error|warn|info|verbose|debug}"
@@ -77,16 +75,11 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("emit-c-interface",   "", "emit C interface from Impala code (experimental)", emit_cint, false)
             .add_option<bool>            ("emit-llvm",          "", "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
             .add_option<bool>            ("emit-thorin",        "", "emit textual Thorin representation of Impala program", emit_thorin, false)
-            .add_option<bool>            ("emit-ycomp",         "", "emit ycomp-compatible graph representation of Impala program", emit_ycomp, false)
-            .add_option<bool>            ("emit-ycomp-cfg",     "", "emit ycomp-compatible control-flow graph representation of Impala program", emit_ycomp_cfg, false)
             .add_option<bool>            ("f",                  "", "use fancy output: Impala's AST dump uses only parentheses where necessary", fancy, false)
             .add_option<bool>            ("g",                  "", "emit debug information", debug, false)
             .add_option<bool>            ("nocleanup",          "", "no clean-up phase", nocleanup, false)
             .add_option<bool>            ("nossa",              "", "use slots + load/store instead of SSA construction", nossa, false)
-            .add_option<bool>            ("simple-pe",          "", "use syntax instead of the CFG to determine when to stop PE", simple_pe, false)
-            .add_option<YCompCommandLine>("ycomp",              "{cfg|domtree|domfrontiers|looptree} {true|false} <arg>    ",
-                "print ycomp graph to <arg>; the flag indicates whether the graph is based upon a forward (true) or backwards (false) CFG; the option can be specified multiple times",
-                yComp, YCompCommandLine());
+            .add_option<bool>            ("simple-pe",          "", "use syntax instead of the CFG to determine when to stop PE", simple_pe, false);
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
@@ -211,7 +204,7 @@ int main(int argc, char** argv) {
             impala::generate_c_interface(module.get(), opts, out_file);
         }
 
-        if (result && (emit_llvm || emit_thorin || emit_ycomp || emit_ycomp_cfg))
+        if (result && (emit_llvm || emit_thorin))
             emit(init.world, module.get());
 
         if (result) {
@@ -228,11 +221,6 @@ int main(int argc, char** argv) {
                 outf("warning: built without LLVM support - I don't emit an LLVM file\n");
 #endif
             }
-            if (emit_ycomp)
-                errf("-emit-ycomp: this feature is currently removed\n");
-            if (emit_ycomp_cfg)
-                errf("-emit-ycomp-cfg: this feature is currently removed\n");
-            yComp.print(init.world);
         } else
             return EXIT_FAILURE;
 

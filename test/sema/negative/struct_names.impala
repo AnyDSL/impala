@@ -1,0 +1,13 @@
+struct S {
+    a : i32
+}
+struct T {
+    a : i32
+}
+
+fn getT(a: i32) -> T { getS(a) }
+fn getS(a: i32) -> S { S { a : a } }
+
+fn main(i: i32) -> i32 {
+    getT(i).a
+}
