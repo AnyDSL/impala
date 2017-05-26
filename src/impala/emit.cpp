@@ -565,6 +565,8 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             return cg.world().select(cg.remit(arg(0)), cg.remit(arg(1)), cg.remit(arg(2)), eval_loc);
                         } else if (name == "sizeof") {
                             return cg.world().size_of(cg.convert(type_expr->type_arg(0)), eval_loc);
+                        } else if (name == "undef") {
+                            return cg.world().bottom(cg.convert(type_expr->type_arg(0)), eval_loc);
                         } else if (name == "reserve_shared") {
                             auto ptr_type = cg.convert(type());
                             auto fn_type = cg.world().fn_type({
