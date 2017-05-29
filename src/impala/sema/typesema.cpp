@@ -642,6 +642,9 @@ void MatchExpr::check(TypeSema& sema) const {
     auto arg_type  = num_arms() > 0 ? sema.check(arm(0)->expr()) : nullptr;
     bool refutable = true;
     for (size_t i = 0, e = num_arms(); i != e; ++i) {
+        sema.check(arm(i)->ptrn());
+        sema.check(arm(i)->expr());
+
         sema.expect_type(expr_type, arm(i)->ptrn(), "pattern type");
         sema.expect_type(arg_type,  arm(i)->expr(), "matched expression type");
         if (!arm(i)->ptrn()->is_refutable() && i < e - 1)
