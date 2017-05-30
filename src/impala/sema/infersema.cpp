@@ -282,6 +282,12 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
             return indefinite_array_type(unify(dst->op(0), src->op(0)));
 
         if (dst->tag() == src->tag()) {
+            // structures are nominally typed
+            if (src->isa<StructType>() &&
+                src->as<StructType>()->struct_decl() !=
+                dst->as<StructType>()->struct_decl())
+                return infer_error(dst, src);
+
             Array<const Type*> op(dst->num_ops());
             for (size_t i = 0, e = op.size(); i != e; ++i)
                 op[i] = unify(dst->op(i), src->op(i));
