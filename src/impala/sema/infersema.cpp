@@ -258,8 +258,8 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     }
 
     if (dst == src && dst->is_known()) return dst;
-    if (dst->isa<TypeError>() || dst->isa<InferError>()) return src; // guess the other one
-    if (src->isa<TypeError>() || src->isa<InferError>()) return dst; // dito
+    if (dst->isa<TypeError>() || dst->isa<InferError>()) return dst; // propagate errors
+    if (src->isa<TypeError>() || src->isa<InferError>()) return src; // dito
 
     if (dst->isa<UnknownType>() && src->isa<UnknownType>())
         return unify_by_rank(dst_repr, src_repr)->type;
@@ -812,11 +812,11 @@ const Type* InferSema::infer_call(const Expr* lhs, ArrayRef<const Expr*> args, c
         for (size_t i = 0, e = args.size(); i != e; ++i)
             types[i] = coerce(fn_type->op(i), args[i]);
         types.back() = fn_type->ops().back();
+
         auto result = constrain(lhs, this->fn_type(types));
         if (auto fn_type = result->isa<FnType>())
             return fn_type->return_type();
-        else
-            return call_type;
+        return call_type;
     }
 
     return type_error();
