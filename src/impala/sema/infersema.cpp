@@ -668,11 +668,14 @@ const Type* InfixExpr::infer(InferSema& sema) const {
         case GT: case GE: {
             auto ltype = sema.rvalue(lhs());
             auto rtype = sema.rvalue(rhs());
-            sema.constrain(lhs(), rtype);
-            sema.constrain(rhs(), ltype);
-            if (auto simd = rhs()->type()->isa<SimdType>())
-                return sema.simd_type(sema.type_bool(), simd->dim());
-            return rhs()->type()->is_known() ? sema.type_bool() : sema.find_type(this);
+            if (rtype->is_known() && ltype->is_known()) {
+                sema.constrain(lhs(), rtype);
+                sema.constrain(rhs(), ltype);
+                if (auto simd = rhs()->type()->isa<SimdType>())
+                    return sema.simd_type(sema.type_bool(), simd->dim());
+                return sema.type_bool();
+            }
+            return sema.find_type(this);
         }
         case OROR:
         case ANDAND:
@@ -687,9 +690,12 @@ const Type* InfixExpr::infer(InferSema& sema) const {
         case AND: case OR:  case XOR: {
             auto ltype = sema.rvalue(lhs());
             auto rtype = sema.rvalue(rhs());
-            sema.constrain(lhs(), rtype);
-            sema.constrain(rhs(), ltype);
-            return rhs()->type();
+            if (rtype->is_known() && ltype->is_known()) {
+                sema.constrain(lhs(), rtype);
+                sema.constrain(rhs(), ltype);
+                return rtype;
+            }
+            return sema.find_type(this);
         }
         case ASGN:
         case ADD_ASGN: case SUB_ASGN:
