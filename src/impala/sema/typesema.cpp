@@ -71,9 +71,9 @@ public:
         }
     }
 
-    void expect_type(const Type* expected, const Expr* expr, const char* context) {
-        if (expected != expr->type() && expected->is_known() && expr->type()->is_known() && !expr->type()->isa<TypeError>())
-            error(expr, "mismatched types: expected '{}' but found '{}' as {}", expected, expr->type(), context);
+    void expect_type(const Type* expected, const Typeable* node, const char* context) {
+        if (expected != node->type() && expected->is_known() && node->type()->is_known() && !node->type()->isa<TypeError>())
+            error(node, "mismatched types: expected '{}' but found '{}' as {}", expected, node->type(), context);
     }
 
     void no_indefinite_array(const ASTNode* n, const Type* type, const char* context) {
@@ -637,6 +637,24 @@ void IfExpr::check(TypeSema& sema) const {
         sema.expect_type(then_type, else_expr(), "else branch type");
 }
 
+void MatchExpr::check(TypeSema& sema) const {
+    auto expr_type = sema.check(expr());
+    auto arg_type  = num_arms() > 0 ? sema.check(arm(0)->expr()) : nullptr;
+    bool refutable = true;
+    for (size_t i = 0, e = num_arms(); i != e; ++i) {
+        sema.check(arm(i)->ptrn());
+        sema.check(arm(i)->expr());
+
+        sema.expect_type(expr_type, arm(i)->ptrn(), "pattern type");
+        sema.expect_type(arg_type,  arm(i)->expr(), "matched expression type");
+        if (!arm(i)->ptrn()->is_refutable() && i < e - 1)
+            warning(arm(i)->ptrn(), "pattern is always true, subsequent patterns will not be executed");
+        refutable &= arm(i)->ptrn()->is_refutable();
+    }
+    if (refutable)
+        error(this, "missing default case for match expression");
+}
+
 void WhileExpr::check(TypeSema& sema) const {
     sema.check(cond());
     sema.expect_bool(cond(), "while-condition");
@@ -696,6 +714,10 @@ void IdPtrn::check(TypeSema& sema) const {
     sema.check(local());
 }
 
+void LiteralPtrn::check(TypeSema& sema) const {
+    sema.check(literal());
+}
+
 //------------------------------------------------------------------------------
 
 /*
@@ -715,6 +737,9 @@ void ItemStmt::check(TypeSema& sema) const {
 
 void LetStmt::check(TypeSema& sema) const {
     auto type = sema.check(ptrn());
+
+    if (ptrn()->is_refutable())
+        error(this, "refutable pattern in let statement");
 
     if (!type->is_known())
         error(this, "cannot infer type for let statement");

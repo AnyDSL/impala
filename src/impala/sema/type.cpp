@@ -58,10 +58,12 @@ const Type* FnType::return_type() const {
 }
 
 bool is_subtype(const Type* dst, const Type* src) {
-    assert(dst->is_known() && src->is_known());
-
     if (dst == src)
         return true;
+
+    if (dst->isa<StructType>())
+        // structs are the only nominal types
+        return false;
 
     if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
         if (auto src_owned_ptr_type = src->isa<OwnedPtrType>()) {

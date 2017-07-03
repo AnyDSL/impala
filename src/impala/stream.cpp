@@ -450,6 +450,20 @@ std::ostream& IfExpr::stream(std::ostream& os) const {
     return os;
 }
 
+std::ostream& MatchExpr::Arm::stream(std::ostream& os) const {
+    return os << ptrn() << " => " << expr() << ",";
+}
+
+std::ostream& MatchExpr::stream(std::ostream& os) const {
+    os << "match " << expr() << " {" << up << endl;
+    for (size_t i = 0, e = num_arms(); i != e; ++i) {
+        os << arm(i);
+        if (i == e - 1) os << down;
+        os << endl;
+    }
+    return (os << "}");
+}
+
 std::ostream& WhileExpr::stream(std::ostream& os) const {
     return streamf(os, "while {} {}", cond(), body());
 }
@@ -470,6 +484,10 @@ std::ostream& TuplePtrn::stream(std::ostream& os) const {
 
 std::ostream& IdPtrn::stream(std::ostream& os) const {
     return os << local();
+}
+
+std::ostream& LiteralPtrn::stream(std::ostream& os) const {
+    return os << literal();
 }
 
 /*

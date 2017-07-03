@@ -565,6 +565,8 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             return cg.world().select(cg.remit(arg(0)), cg.remit(arg(1)), cg.remit(arg(2)), eval_loc);
                         } else if (name == "sizeof") {
                             return cg.world().size_of(cg.convert(type_expr->type_arg(0)), eval_loc);
+                        } else if (name == "undef") {
+                            return cg.world().bottom(cg.convert(type_expr->type_arg(0)), eval_loc);
                         } else if (name == "reserve_shared") {
                             auto ptr_type = cg.convert(type());
                             auto fn_type = cg.world().fn_type({
@@ -598,6 +600,14 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                                 cg.world().mem_type(), string_type, poly_type,
                                 cg.world().fn_type({ cg.world().mem_type() }) });
                             auto cont = cg.world().continuation(fn_type, {location(), "pe_info"});
+                            cont->set_intrinsic();
+                            dst = cont;
+                        } else if (name == "pe_known") {
+                            auto poly_type = cg.convert(arg(0)->type());
+                            auto fn_type = cg.world().fn_type({
+                                cg.world().mem_type(), poly_type,
+                                cg.world().fn_type({ cg.world().mem_type(), cg.world().type_bool() }) });
+                            auto cont = cg.world().continuation(fn_type, {location(), "pe_known"});
                             cont->set_intrinsic();
                             dst = cont;
                         }
@@ -687,6 +697,62 @@ const Def* IfExpr::remit(CodeGen& cg) const {
     return cg.converge(this, x);
 }
 
+void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
+    auto matcher = cg.remit(expr());
+    if (is_int(expr()->type())) {
+        // integers: match continuation
+        JumpTarget otherwise;
+        size_t num_targets = num_arms();
+        Array<const Def*> defs(num_targets);
+        Array<JumpTarget> targets(num_targets);
+
+        for (size_t i = 0, e = num_targets; i != e; ++i) {
+            if (!arm(i)->ptrn()->is_refutable()) {
+                num_targets = i;
+                cg.emit(arm(i)->ptrn(), matcher);
+                otherwise = JumpTarget({arm(i)->location().front(), "otherwise"});
+                break;
+            } else {
+                defs[i] = cg.remit(arm(i)->ptrn()->as<LiteralPtrn>()->literal());
+                targets[i] = JumpTarget({arm(i)->location().front(), "case"});
+            }
+        }
+        targets.shrink(num_targets);
+        defs.shrink(num_targets);
+
+        cg.match(matcher, otherwise, defs, targets, {location().front(), "match"});
+
+        for (size_t i = 0; i < num_targets; i++) {
+            if (cg.enter(targets[i]))
+                cg.emit_jump(arm(i)->expr(), x);
+        }
+        bool no_otherwise = num_arms() == num_targets;
+        if (!no_otherwise && cg.enter(otherwise))
+            cg.emit_jump(arm(num_targets)->expr(), x);
+    } else {
+        // general case: if/else
+        for (size_t i = 0, e = num_arms(); i != e; ++i) {
+            JumpTarget  cur({arm(i)->location().front(), "case_true"});
+            JumpTarget next({arm(i)->location().front(), "case_false"});
+
+            arm(i)->ptrn()->emit(cg, matcher);
+            auto cond = arm(i)->ptrn()->emit_cond(cg, matcher);
+
+            cg.branch(cond, cur, next);
+            if (cg.enter(cur))
+                cg.emit_jump(arm(i)->expr(), x);
+
+            cg.enter(next);
+        }
+    }
+    cg.jump(x, location().back());
+}
+
+const Def* MatchExpr::remit(CodeGen& cg) const {
+    JumpTarget x({location().back(), "next"});
+    return cg.converge(this, x);
+}
+
 const Def* WhileExpr::remit(CodeGen& cg) const {
     JumpTarget x({location().back(), "next"});
     auto break_continuation = cg.create_continuation(break_decl());
@@ -764,9 +830,30 @@ void IdPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     cg.emit(local(), init);
 }
 
+const thorin::Def* IdPtrn::emit_cond(CodeGen& cg, const thorin::Def*) const {
+    return cg.world().literal(true);
+}
+
 void TuplePtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     for (size_t i = 0, e = num_elems(); i != e; ++i)
         cg.emit(elem(i), cg.extract(init, i, location()));
+}
+
+const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
+    const Def* cond = nullptr;
+    for (size_t i = 0, e = num_elems(); i != e; ++i) {
+        if (!elem(i)->is_refutable()) continue;
+
+        auto next = elem(i)->emit_cond(cg, cg.extract(init, i, location()));
+        cond = cond ? cg.world().arithop_and(cond, next) : next;
+    }
+    return cond ? cond : cg.world().literal(true);
+}
+
+void LiteralPtrn::emit(CodeGen&, const thorin::Def*) const {}
+
+const thorin::Def* LiteralPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
+    return cg.world().cmp_eq(init, cg.remit(literal()));
 }
 
 /*

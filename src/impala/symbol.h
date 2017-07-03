@@ -9,16 +9,10 @@
 
 namespace impala {
 
-struct StrHash {
-    static uint64_t hash(const char* s);
-    static bool eq(const char* s1, const char* s2) { return std::strcmp(s1, s2) == 0; }
-    static const char* sentinel() { return (const char*)(1); }
-};
-
 class Symbol {
 public:
     struct Hash {
-        static uint64_t hash(impala::Symbol s) { return impala::StrHash::hash(s.str()); }
+        static uint64_t hash(impala::Symbol s) { return thorin::hash(s.str()); }
         static bool eq(impala::Symbol s1, impala::Symbol s2) { return s1 == s2; }
         static impala::Symbol sentinel() { return impala::Symbol(/*dummy*/23); }
     };
@@ -47,7 +41,7 @@ private:
     void insert(const char* str);
 
     const char* str_;
-    typedef thorin::HashSet<const char*, StrHash> Table;
+    typedef thorin::HashSet<const char*, thorin::StrHash> Table;
     static Table table_;
 };
 

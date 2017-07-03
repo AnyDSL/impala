@@ -127,6 +127,11 @@ void impala_memmove(char* dest, const char* src, int size) {
     std::memmove(dest, src, size);
 }
 
+// pe_known
+int forty_two() {
+    return 42;
+}
+
 #ifdef __cplusplus
 }
 #endif
