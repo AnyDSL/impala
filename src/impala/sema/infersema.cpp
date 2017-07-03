@@ -25,6 +25,9 @@ public:
 
     // unification related stuff
 
+    /// Unifies @p t and @p u.
+    const Type* unify(const Type* t, const Type* u);
+
     /**
      * Gets the representative of @p type.
      * Initializes @p type with @p UnknownType if @p type is @c nullptr.
@@ -116,9 +119,6 @@ private:
     Representative* representative(const Type* type);
     Representative* find(Representative* repr);
     const Type* find(const Type* type);
-
-    /// Unifies @p t and @p u.
-    const Type* unify(const Type* t, const Type* u);
 
     /**
      * @p x will be the new representative.
@@ -860,8 +860,12 @@ const Type* TypeAppExpr::infer(InferSema& sema) const {
                     type_args_.push_back(sema.unknown_type());
             }
 
-            for (auto& type_arg : type_args_)
-                type_arg = sema.find_type(type_arg);
+            for (auto& type_arg : type_args_) {
+                // The most precise type is required here.
+                // using find_type is not enough, as the
+                // type may be an aggregate
+                type_arg = sema.unify(type_arg, type_arg);
+            }
 
             return sema.reduce(lambda, ast_type_args(), type_args_);
         }
