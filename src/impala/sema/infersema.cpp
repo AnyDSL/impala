@@ -227,7 +227,7 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
 }
 
 void InferSema::assign(const Expr* dst, const Expr* src) {
-    if (!dst->type()->isa<UnknownType>())
+    if (dst->type()->is_known() && src->type()->is_known())
         coerce(dst->type(), src);
 }
 
