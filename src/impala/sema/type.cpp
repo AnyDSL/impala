@@ -60,8 +60,6 @@ const Type* FnType::return_type() const {
 }
 
 bool is_subtype(const Type* dst, const Type* src) {
-    assert(dst->is_known() && src->is_known());
-
     if (dst == src)
         return true;
 
