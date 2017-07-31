@@ -203,7 +203,21 @@ void Typedef::bind(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void EnumDecl::bind(NameSema&) const {}
+void EnumDecl::bind(NameSema& sema) const {
+    sema.push_scope();
+    bind_ast_type_params(sema);
+    for (const auto& option : option_decls()) {
+        option->bind(sema);
+        option_table_[option->symbol()] = option.get();
+    }
+    sema.lambda_depth_ -= num_ast_type_params();
+    sema.pop_scope();
+}
+
+void OptionDecl::bind(NameSema& sema) const {
+    sema.insert(this);
+    for (const auto& arg : args()) arg->bind(sema);
+}
 
 void StaticItem::bind(NameSema& sema) const {
     if (ast_type())
@@ -315,7 +329,7 @@ void PathExpr::bind(NameSema& sema) const {
     }
 }
 
-void PrefixExpr ::bind(NameSema& sema) const {                     rhs()->bind(sema); }
+void PrefixExpr ::bind(NameSema& sema) const {                    rhs()->bind(sema); }
 void InfixExpr  ::bind(NameSema& sema) const { lhs()->bind(sema); rhs()->bind(sema); }
 void PostfixExpr::bind(NameSema& sema) const { lhs()->bind(sema); }
 

@@ -12,7 +12,9 @@ namespace impala {
 using thorin::streamf;
 
 #define HENK_STRUCT_EXTRA_NAME struct_decl
-#define HENK_STRUCT_EXTRA_TYPE  const StructDecl*
+#define HENK_STRUCT_EXTRA_TYPE const StructDecl*
+#define HENK_ENUM_EXTRA_NAME enum_decl
+#define HENK_ENUM_EXTRA_TYPE const EnumDecl*
 #define HENK_TABLE_TYPE TypeTable
 #define HENK_TABLE_NAME typetable
 #include "thorin/henk.cpp.h"
@@ -188,6 +190,7 @@ std::ostream& DefiniteArrayType::stream(std::ostream& os) const { return streamf
 std::ostream& IndefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[{}]", elem_type()); }
 std::ostream& SimdType::stream(std::ostream& os) const { return streamf(os, "simd[{} * {}]", elem_type(), dim()); }
 std::ostream& StructType::stream(std::ostream& os) const { return os << struct_decl()->symbol(); }
+std::ostream& EnumType::stream(std::ostream& os) const { return os << enum_decl()->symbol(); }
 
 //std::ostream& TypedefAbsNode::stream(std::ostream& os) const {
     //assert(num_type_params() > 0); // otherwise no TypedefAbsNode should have been used in the first place

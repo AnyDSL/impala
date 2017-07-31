@@ -215,6 +215,7 @@ public:
     void               parse_items(Items&);
     const StaticItem*  parse_static_item(Tracker, Visibility);
     const EnumDecl*    parse_enum_decl(Tracker, Visibility);
+    const OptionDecl*  parse_option_decl(const size_t);
     const FnDecl*      parse_fn_decl(BodyMode, Tracker, Visibility, bool is_extern, Symbol abi);
     const ImplItem*    parse_impl(Tracker, Visibility);
     const Item*        parse_module_or_module_decl(Tracker, Visibility);
@@ -498,9 +499,29 @@ const Item* Parser::parse_item() {
     }
 }
 
-const EnumDecl* Parser::parse_enum_decl(Tracker, Visibility) {
-    assert(false && "TODO");
-    return 0;
+const EnumDecl* Parser::parse_enum_decl(Tracker tracker, Visibility vis) {
+    auto identifier = try_identifier("enum declaration");
+    auto ast_type_params = parse_ast_type_params();
+    expect(Token::L_BRACE, "enum declaration");
+    size_t i = 0;
+    OptionDecls option_decls;
+    parse_comma_list("closing brace of enum declaration", Token::R_BRACE, [&] {
+        option_decls.emplace_back(parse_option_decl(i++));
+    });
+    return new EnumDecl(tracker, vis, identifier, std::move(ast_type_params), std::move(option_decls));
+}
+
+const OptionDecl* Parser::parse_option_decl(const size_t i) {
+    auto tracker = track();
+    auto identifier = try_identifier("enum option");
+    ASTTypes args;
+    if (lookahead() == Token::L_PAREN) {
+        eat(Token::L_PAREN);
+        parse_comma_list("closing parenthesis of enum option", Token::R_PAREN, [&] {
+            args.emplace_back(parse_type());
+        });
+    }
+    return new OptionDecl(tracker, i, identifier, std::move(args));
 }
 
 const Item* Parser::parse_extern_block_or_fn_decl(Tracker tracker, Visibility vis) {

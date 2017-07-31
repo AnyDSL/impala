@@ -174,6 +174,11 @@ std::ostream& FieldDecl::stream(std::ostream& os) const {
     return streamf(os, "{}{}: {}", visibility().str(), symbol(), ast_type());
 }
 
+std::ostream& OptionDecl::stream(std::ostream& os) const {
+    streamf(os, "{}", symbol());
+    return stream_list(os, args(), [&](const auto& arg) { os << arg.get(); }, "(", ")", ", ");
+}
+
 std::ostream& StaticItem::stream(std::ostream& os) const {
     streamf(os, "static {} {}: {}", is_mut() ? "mut " : "", identifier(), type() ? type()->to_string() : ast_type()->to_string());
     if (init())
@@ -184,6 +189,11 @@ std::ostream& StaticItem::stream(std::ostream& os) const {
 std::ostream& StructDecl::stream(std::ostream& os) const {
     stream_ast_type_params(streamf(os, "{}struct {}", visibility().str(), symbol())) << " {" << up << endl;
     return stream_list(os, field_decls(), [&](const auto& field) { os << field.get(); }, "", "", ",", true) << down << endl << "}";
+}
+
+std::ostream& EnumDecl::stream(std::ostream& os) const {
+    stream_ast_type_params(streamf(os, "{}enum {}", visibility().str(), symbol())) << " {" << up << endl;
+    return stream_list(os, option_decls(), [&](const auto& option) { os << option.get(); }, "", "", ",", true) << down << endl << "}";
 }
 
 std::ostream& Typedef::stream(std::ostream& os) const {

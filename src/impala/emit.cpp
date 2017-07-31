@@ -133,6 +133,8 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
             thorin_struct_type(struct_type)->set(i++, convert(op));
         thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
         return thorin_struct_type(struct_type);
+    } else if (auto enum_type = type->isa<EnumType>()) {
+        THORIN_UNREACHABLE;
     } else if (auto ptr_type = type->isa<PtrType>()) {
         return world().ptr_type(convert(ptr_type->pointee()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
@@ -294,6 +296,10 @@ Value StaticItem::emit(CodeGen& cg, const Def* init) const {
 }
 
 void StructDecl::emit(CodeGen& cg) const {
+    cg.convert(type());
+}
+
+void EnumDecl::emit(CodeGen& cg) const {
     cg.convert(type());
 }
 

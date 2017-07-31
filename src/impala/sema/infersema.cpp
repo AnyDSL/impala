@@ -54,6 +54,7 @@ public:
     }
     const Type* infer(const Ptrn* p) { return constrain(p, p->infer(*this)); }
     const Type* infer(const FieldDecl* f) { return constrain(f, f->infer(*this)); }
+    const Type* infer(const OptionDecl* o) { return constrain(o, o->infer(*this)); }
     void infer(const Item* n) { n->infer(*this); }
     const Type* infer_head(const Item* n) {
         return (n->type_ == nullptr || n->type_->isa<UnknownType>()) ? n->type_ = n->infer_head(*this) : n->type_;
@@ -282,10 +283,8 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
             return indefinite_array_type(unify(dst->op(0), src->op(0)));
 
         if (dst->tag() == src->tag()) {
-            // structures are nominally typed
-            if (src->isa<StructType>() &&
-                src->as<StructType>()->struct_decl() !=
-                dst->as<StructType>()->struct_decl())
+            // Handle nominal types
+            if (src->is_nominal() && src != dst)
                 return infer_error(dst, src);
 
             Array<const Type*> op(dst->num_ops());
@@ -531,7 +530,18 @@ void Typedef::infer(InferSema& sema) const {
         sema.constrain(this, body_type);
 }
 
-void EnumDecl::infer(InferSema&) const { /*TODO*/ }
+void EnumDecl::infer(InferSema& sema) const {
+    infer_ast_type_params(sema);
+    for (size_t i = 0, e = num_option_decls(); i != e; ++i)
+        enum_type()->set(i, sema.infer(option_decl(i)));
+}
+
+const Type* OptionDecl::infer(InferSema& sema) const {
+    Array<const Type*> types(num_args());
+    for (size_t i = 0, e = args().size(); i != e; ++i)
+        types[i] = sema.infer(arg(i));
+    return sema.tuple_type(types);
+}
 
 void StructDecl::infer(InferSema& sema) const {
     infer_ast_type_params(sema);
@@ -580,7 +590,6 @@ void StaticItem::infer(InferSema& sema) const {
 
 void TraitDecl::infer(InferSema& /*sema*/) const {}
 void ImplItem::infer(InferSema& /*sema*/) const {}
-
 
 //------------------------------------------------------------------------------
 

@@ -86,6 +86,7 @@ public:
     const Var* check(const ASTTypeParam* ast_type_param) { ast_type_param->check(*this); return ast_type_param->var(); }
     void check(const Module* module) { module->check(*this); }
     const Type* check(const FieldDecl* n) { n->check(*this); return n->type(); }
+    const Type* check(const OptionDecl* n) { n->check(*this); return n->type(); }
     const Type* check(const LocalDecl* local) { local->check(*this); return local->type(); }
     const Type* check(const ASTType* ast_type) { ast_type->check(*this); return ast_type->type(); }
     void check(const Item* n) { n->check(*this); }
@@ -230,7 +231,15 @@ void Typedef::check(TypeSema& sema) const {
     sema.check(ast_type());
 }
 
-void EnumDecl::check(TypeSema&) const { /*TODO*/ }
+void EnumDecl::check(TypeSema& sema) const {
+    check_ast_type_params(sema);
+    for (const auto& option : option_decls())
+        sema.check(option.get());
+}
+
+void OptionDecl::check(TypeSema& sema) const {
+    for (const auto& arg : args()) sema.check(arg.get());
+}
 
 void StructDecl::check(TypeSema& sema) const {
     check_ast_type_params(sema);

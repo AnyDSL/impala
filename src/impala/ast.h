@@ -30,6 +30,7 @@ class ASTTypeParam;
 class Decl;
 class Expr;
 class FieldDecl;
+class OptionDecl;
 class Fn;
 class FnDecl;
 class LocalDecl;
@@ -52,11 +53,13 @@ typedef std::vector<std::unique_ptr<const ASTType>> ASTTypes;
 typedef std::vector<std::unique_ptr<const ASTTypeApp>> ASTTypeApps;
 typedef std::vector<std::unique_ptr<const ASTTypeParam>> ASTTypeParams;
 typedef std::vector<std::unique_ptr<const FieldDecl>> FieldDecls;
+typedef std::vector<std::unique_ptr<const OptionDecl>> OptionDecls;
 typedef std::vector<std::unique_ptr<const FnDecl>> FnDecls;
 typedef std::vector<std::unique_ptr<const Param>> Params;
 typedef std::vector<std::unique_ptr<const Stmt>> Stmts;
 typedef std::vector<char> Chars;
 typedef thorin::HashMap<Symbol, const FieldDecl*> FieldTable;
+typedef thorin::HashMap<Symbol, const OptionDecl*> OptionTable;
 typedef thorin::HashMap<Symbol, const FnDecl*> MethodTable;
 typedef thorin::HashMap<Symbol, const Item*> Symbol2Item;
 
@@ -884,16 +887,57 @@ private:
     mutable FieldTable field_table_;
 };
 
+class OptionDecl : public Decl {
+public:
+    OptionDecl(Location location, size_t index, const Identifier* id, ASTTypes args)
+        : Decl(TypeableDecl, location, id)
+        , index_(index)
+        , args_(std::move(args))
+    {}
+
+    uint32_t index() const { return index_; }
+    size_t num_args() const { return args_.size(); }
+    const ASTTypes& args() const { return args_; }
+    const ASTType* arg(size_t i) const { return args_[i].get(); }
+
+    void bind(NameSema&) const;
+    std::ostream& stream(std::ostream&) const override;
+
+private:
+    const Type* infer(InferSema&) const;
+    void check(TypeSema&) const;
+
+    uint32_t index_;
+    ASTTypes args_;
+
+    friend class InferSema;
+    friend class TypeSema;
+};
+
 class EnumDecl : public TypeDeclItem {
 public:
+    EnumDecl(Location location, Visibility vis, const Identifier* id,
+             ASTTypeParams&& ast_type_params, OptionDecls&& option_decls)
+        : TypeDeclItem(location, vis, id, std::move(ast_type_params))
+        , option_decls_(std::move(option_decls))
+    {}
+
     void bind(NameSema&) const override;
-    std::ostream& stream(std::ostream& os) const override { return os; }
+    std::ostream& stream(std::ostream& os) const override;
+
+    size_t num_option_decls() const { return option_decls_.size(); }
+    const OptionDecls& option_decls() const { return option_decls_; }
+    const OptionDecl* option_decl(size_t i) const { return option_decls_[i].get(); }
+    const EnumType* enum_type() const { return type_->as<EnumType>(); }
 
 private:
     void infer(InferSema&) const override;
     const Type* infer_head(InferSema&) const override;
     void check(TypeSema&) const override;
-    void emit(CodeGen&) const override {}
+    void emit(CodeGen&) const override;
+
+    OptionDecls option_decls_;
+    mutable OptionTable option_table_;
 };
 
 class StaticItem : public ValueItem {
