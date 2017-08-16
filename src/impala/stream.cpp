@@ -176,7 +176,11 @@ std::ostream& FieldDecl::stream(std::ostream& os) const {
 
 std::ostream& OptionDecl::stream(std::ostream& os) const {
     streamf(os, "{}", symbol());
-    return stream_list(os, args(), [&](const auto& arg) { os << arg.get(); }, "(", ")", ", ");
+    if (num_args() > 0) {
+        return stream_list(os, args(), [&](const auto& arg) { os << arg.get(); }, "(", ")", ", ");
+    } else {
+        return os;
+    }
 }
 
 std::ostream& StaticItem::stream(std::ostream& os) const {
@@ -494,6 +498,14 @@ std::ostream& TuplePtrn::stream(std::ostream& os) const {
 
 std::ostream& IdPtrn::stream(std::ostream& os) const {
     return os << local();
+}
+
+std::ostream& EnumPtrn::stream(std::ostream& os) const {
+    if (num_args() > 0) {
+        return stream_list(os << path() << "(", args(), [&] (const auto& arg) { os << arg.get(); }) << ")";
+    } else {
+        return os << path();
+    }
 }
 
 std::ostream& LiteralPtrn::stream(std::ostream& os) const {

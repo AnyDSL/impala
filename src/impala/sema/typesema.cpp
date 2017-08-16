@@ -739,6 +739,12 @@ void IdPtrn::check(TypeSema& sema) const {
     sema.check(local());
 }
 
+void EnumPtrn::check(TypeSema& sema) const {
+    for (const auto& arg : args()) {
+        sema.check(arg.get());
+    }
+}
+
 void LiteralPtrn::check(TypeSema& sema) const {
     sema.check(literal());
 }

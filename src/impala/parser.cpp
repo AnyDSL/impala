@@ -131,9 +131,8 @@ public:
 
     class Tracker {
     public:
-        Tracker(Parser& parser)
-            : parser_(parser)
-            , location_(parser_.lookahead().location().front())
+        Tracker(Parser& parser, const Location& location)
+            : parser_(parser), location_(location)
         {}
 
         operator Location() const { return {location_.front(), parser_.prev_location().back()}; }
@@ -143,7 +142,8 @@ public:
         Location location_;
     };
 
-    Tracker track() { return Tracker(*this); }
+    Tracker track() { return Tracker(*this, lookahead().location().front()); }
+    Tracker track(const Location& location) { return Tracker(*this, location); }
 
     template<class T, class... Args>
     const T* create(Args&&... args) { return new T(prev_location(), std::forward<Args>(args)...); }
@@ -250,7 +250,8 @@ public:
     // patterns
     const Ptrn*        parse_ptrn();
     const TuplePtrn*   parse_tuple_ptrn();
-    const IdPtrn*      parse_id_ptrn();
+    const IdPtrn*      parse_id_ptrn(const Identifier*);
+    const EnumPtrn*    parse_enum_ptrn(const Path*);
     const LiteralPtrn* parse_literal_ptrn();
 
     // statements
@@ -1268,7 +1269,17 @@ const Ptrn* Parser::parse_ptrn() {
             return parse_literal_ptrn();
 
         case Token::L_PAREN: return parse_tuple_ptrn();
-        default:             return parse_id_ptrn();
+        case Token::MUT:     return parse_id_ptrn(nullptr);
+        default: {
+            std::unique_ptr<const Path> path(parse_path());
+            if (lookahead() == Token::L_PAREN   ||
+                lookahead() == Token::L_BRACKET ||
+                path->num_elems() > 1) {
+                return parse_enum_ptrn(path.release());
+            }
+            auto id = path->elem(0)->identifier();
+            return parse_id_ptrn(new Identifier(path->location(), id->symbol().str()));
+        }
     }
 }
 
@@ -1282,12 +1293,24 @@ const TuplePtrn* Parser::parse_tuple_ptrn() {
     return new TuplePtrn(tracker, std::move(elems));
 }
 
-const IdPtrn* Parser::parse_id_ptrn() {
-    auto tracker = track();
-    auto mut = accept(Token::MUT);
-    auto identifier = try_identifier("local variable in let binding");
+const IdPtrn* Parser::parse_id_ptrn(const Identifier* id) {
+    auto tracker = id ? track(id->location()) : track();
+    auto mut = id ? false : accept(Token::MUT);
+    auto identifier = id ? id : try_identifier("local variable in let binding");
     auto ast_type = accept(Token::COLON) ? parse_type() : nullptr;
     return new IdPtrn(new LocalDecl(tracker, cur_var_handle++, mut, identifier, ast_type));
+}
+
+const EnumPtrn* Parser::parse_enum_ptrn(const Path* path) {
+    auto tracker = track(path->location());
+    Ptrns args;
+    if (lookahead() == Token::L_PAREN) {
+        eat(Token::L_PAREN);
+        parse_comma_list("closing parenthesis of enum pattern", Token::R_PAREN, [&] {
+            args.emplace_back(parse_ptrn());
+        });
+    }
+    return new EnumPtrn(tracker, path, std::move(args));
 }
 
 const LiteralPtrn* Parser::parse_literal_ptrn() {

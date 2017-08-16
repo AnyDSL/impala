@@ -424,6 +424,13 @@ void IdPtrn::bind(NameSema& sema) const {
     local()->bind(sema);
 }
 
+void EnumPtrn::bind(NameSema& sema) const {
+    path()->bind(sema);
+    for (const auto& arg : args()) {
+        arg->bind(sema);
+    }
+}
+
 void LiteralPtrn::bind(NameSema&) const {}
 
 //------------------------------------------------------------------------------

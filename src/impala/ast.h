@@ -212,6 +212,7 @@ public:
         mutable const Decl* decl_ = nullptr;
 
         friend class Path;
+        friend class Parser;
         friend class InferSema;
     };
 
@@ -913,6 +914,8 @@ public:
     void bind(NameSema&) const;
     std::ostream& stream(std::ostream&) const override;
 
+    const thorin::Type* variant_type(CodeGen&) const;
+
 private:
     const Type* infer(InferSema&) const;
     void check(TypeSema&) const;
@@ -941,6 +944,7 @@ public:
     size_t num_option_decls() const { return option_decls_.size(); }
     const OptionDecls& option_decls() const { return option_decls_; }
     const OptionDecl* option_decl(size_t i) const { return option_decls_[i].get(); }
+    const OptionDecl* option_decl(Symbol symbol) const { return thorin::find(option_table_, symbol); }
     const EnumType* enum_type() const { return type_->as<EnumType>(); }
 
 private:
@@ -1985,6 +1989,33 @@ private:
     void check(TypeSema&) const override;
 
     std::unique_ptr<const LocalDecl> local_;
+};
+
+class EnumPtrn : public Ptrn {
+public:
+    EnumPtrn(Location location, const Path* path, Ptrns&& args)
+        : Ptrn(location)
+        , path_(path)
+        , args_(std::move(args))
+    {}
+
+    const Path* path() const { return path_.get(); }
+    const Ptrns& args() const { return args_; }
+    const Ptrn* arg(size_t i) const { return args_[i].get(); }
+    size_t num_args() const { return args_.size(); }
+
+    void bind(NameSema&) const override;
+    void emit(CodeGen&, const thorin::Def*) const override;
+    const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const override;
+    bool is_refutable() const override;
+    std::ostream& stream(std::ostream&) const override;
+
+private:
+    const Type* infer(InferSema&) const override;
+    void check(TypeSema&) const override;
+
+    std::unique_ptr<const Path> path_;
+    Ptrns args_;
 };
 
 class LiteralPtrn : public Ptrn {

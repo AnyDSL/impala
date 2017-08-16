@@ -65,6 +65,8 @@ public:
     void infer(const Stmt* n) { n->infer(*this); }
     const Type* infer(const Expr* expr) { return constrain(expr, expr->infer(*this)); }
     const Type* infer(const Expr* expr, const Type* t) { return constrain(expr, expr->infer(*this), t); }
+    const Type* infer(const Path* path) { return constrain(path, path->infer(*this)); }
+    const Type* infer(const Path* path, const Type* t) { return constrain(path, path->infer(*this), t); }
 
     const Var* infer(const ASTTypeParam* ast_type_param) {
         if (!ast_type_param->type())
@@ -465,7 +467,7 @@ const Type* FnASTType::infer(InferSema& sema) const {
 const Type* Typeof::infer(InferSema& sema) const { return unpack_ref_type(sema.infer(expr())); }
 
 const Type* ASTTypeApp::infer(InferSema& sema) const {
-    path()->infer(sema);
+    sema.infer(path());
 
     if (decl() && decl()->is_type_decl()) {
         if (auto ast_type_param = decl()->isa<ASTTypeParam>())
@@ -664,7 +666,7 @@ const Type* FnExpr::infer(InferSema& sema) const {
 }
 
 const Type* PathExpr::infer(InferSema& sema) const {
-    path()->infer(sema);
+    sema.infer(path());
     if (value_decl()) {
         auto type = sema.find_type(value_decl());
         return value_decl()->is_mut() ? sema.ref_type(type, true, 0) : type;
@@ -1053,6 +1055,21 @@ const Type* TuplePtrn::infer(InferSema& sema) const {
 
 const Type* IdPtrn::infer(InferSema& sema) const {
     return sema.infer(local());
+}
+
+const Type* EnumPtrn::infer(InferSema& sema) const {
+    auto ret_type = sema.find_type(this);
+    if (num_args() > 0) {
+        Array<const Type*> params(num_args() + 1);
+        for (size_t i = 0, e = num_args(); i != e; ++i) {
+            params[i] = sema.infer(arg(i));
+        }
+        params.back() = sema.fn_type({ ret_type });
+        sema.infer(path(), sema.fn_type(params));
+        return ret_type;
+    } else {
+        return sema.infer(path());
+    }
 }
 
 const Type* LiteralPtrn::infer(InferSema& sema) const {
