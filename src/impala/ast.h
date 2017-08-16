@@ -228,6 +228,8 @@ public:
 
     bool is_global() const { return global_; }
     const Elems& elems() const { return elems_; }
+    const Elem* elem(size_t i) const { return elems_[i].get(); }
+    size_t num_elems() const { return elems_.size(); }
     const Decl* decl() const { return elems().back()->decl(); }
     void bind(NameSema&) const;
     std::ostream& stream(std::ostream&) const override;
@@ -890,7 +892,7 @@ private:
 class OptionDecl : public Decl {
 public:
     OptionDecl(Location location, size_t index, const Identifier* id, ASTTypes args)
-        : Decl(TypeableDecl, location, id)
+        : Decl(ValueDecl, location, id)
         , index_(index)
         , args_(std::move(args))
     {}
@@ -899,6 +901,7 @@ public:
     size_t num_args() const { return args_.size(); }
     const ASTTypes& args() const { return args_; }
     const ASTType* arg(size_t i) const { return args_[i].get(); }
+    const EnumDecl* enum_decl() const { return enum_decl_; }
 
     void bind(NameSema&) const;
     std::ostream& stream(std::ostream&) const override;
@@ -910,6 +913,9 @@ private:
     uint32_t index_;
     ASTTypes args_;
 
+    mutable const EnumDecl* enum_decl_;
+
+    friend class EnumDecl;
     friend class InferSema;
     friend class TypeSema;
 };

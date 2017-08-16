@@ -500,6 +500,7 @@ const Item* Parser::parse_item() {
 }
 
 const EnumDecl* Parser::parse_enum_decl(Tracker tracker, Visibility vis) {
+    eat(Token::ENUM);
     auto identifier = try_identifier("enum declaration");
     auto ast_type_params = parse_ast_type_params();
     expect(Token::L_BRACE, "enum declaration");

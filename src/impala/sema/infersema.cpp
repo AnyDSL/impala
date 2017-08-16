@@ -472,7 +472,13 @@ const Type* StructDecl::infer_head(InferSema& sema) const {
     return struct_type;
 }
 
-const Type* EnumDecl::infer_head(InferSema&) const { /*TODO*/ return nullptr; }
+const Type* EnumDecl::infer_head(InferSema& sema) const {
+    infer_ast_type_params(sema);
+    auto enum_type = sema.enum_type(this, num_option_decls());
+    for (size_t i = 0, e = num_option_decls(); i != e; ++i)
+        enum_type->set(i, sema.infer(option_decl(i)));
+    return enum_type;
+}
 
 const Type* StaticItem::infer_head(InferSema& sema) const {
     if (ast_type())
@@ -537,10 +543,15 @@ void EnumDecl::infer(InferSema& sema) const {
 }
 
 const Type* OptionDecl::infer(InferSema& sema) const {
-    Array<const Type*> types(num_args());
-    for (size_t i = 0, e = args().size(); i != e; ++i)
-        types[i] = sema.infer(arg(i));
-    return sema.tuple_type(types);
+    if (num_args() != 0) {
+        Array<const Type*> params(num_args() + 1);
+        for (size_t i = 0, e = args().size(); i != e; ++i)
+            params[i] = sema.infer(arg(i));
+        params.back() = sema.fn_type({ sema.find_type(enum_decl()) });
+        return sema.fn_type(params);
+    } else {
+        return sema.find_type(this);
+    }
 }
 
 void StructDecl::infer(InferSema& sema) const {
