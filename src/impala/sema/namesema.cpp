@@ -179,16 +179,15 @@ void FnASTType::bind(NameSema& sema) const {
 void ModuleDecl::bind(NameSema& ) const {}
 
 void Module::bind(NameSema& sema) const {
+    sema.push_scope();
     for (const auto& item : items()) {
         sema.bind_head(item.get());
         if (item->is_named_decl())
             symbol2item_[item->symbol()] = item.get();
     }
-    for (const auto& item : items()) {
-        sema.push_scope();
+    for (const auto& item : items())
         item->bind(sema);
-        sema.pop_scope();
-    }
+    sema.pop_scope();
 }
 
 void ExternBlock::bind(NameSema& sema) const {
@@ -197,12 +196,15 @@ void ExternBlock::bind(NameSema& sema) const {
 }
 
 void Typedef::bind(NameSema& sema) const {
+    sema.push_scope();
     bind_ast_type_params(sema);
     ast_type()->bind(sema);
     sema.lambda_depth_ -= num_ast_type_params();
+    sema.pop_scope();
 }
 
 void EnumDecl::bind(NameSema& sema) const {
+    sema.push_scope();
     bind_ast_type_params(sema);
     for (const auto& option : option_decls()) {
         option->bind(sema);
@@ -210,6 +212,7 @@ void EnumDecl::bind(NameSema& sema) const {
         option_table_[option->symbol()] = option.get();
     }
     sema.lambda_depth_ -= num_ast_type_params();
+    sema.pop_scope();
 }
 
 void OptionDecl::bind(NameSema& sema) const {
@@ -225,6 +228,7 @@ void StaticItem::bind(NameSema& sema) const {
 }
 
 void Fn::fn_bind(NameSema& sema) const {
+    sema.push_scope();
     bind_ast_type_params(sema);
     for (const auto& param : params()) {
         sema.insert(param.get());
@@ -234,6 +238,7 @@ void Fn::fn_bind(NameSema& sema) const {
     if (body() != nullptr)
         body()->bind(sema);
     sema.lambda_depth_ -= num_ast_type_params();
+    sema.pop_scope();
 }
 
 void FnDecl::bind(NameSema& sema) const {
@@ -241,12 +246,14 @@ void FnDecl::bind(NameSema& sema) const {
 }
 
 void StructDecl::bind(NameSema& sema) const {
+    sema.push_scope();
     bind_ast_type_params(sema);
     for (const auto& field_decl : field_decls()) {
         field_decl->bind(sema);
         field_table_[field_decl->symbol()] = field_decl.get();
     }
     sema.lambda_depth_ -= num_ast_type_params();
+    sema.pop_scope();
 }
 
 void FieldDecl::bind(NameSema& sema) const {
@@ -255,6 +262,7 @@ void FieldDecl::bind(NameSema& sema) const {
 }
 
 void TraitDecl::bind(NameSema& sema) const {
+    sema.push_scope();
     bind_ast_type_params(sema);
     for (const auto& t : super_traits())
         t->bind(sema);
@@ -263,9 +271,11 @@ void TraitDecl::bind(NameSema& sema) const {
         method_table_[method->symbol()] = method.get();
     }
     sema.lambda_depth_ -= num_ast_type_params();
+    sema.pop_scope();
 }
 
 void ImplItem::bind(NameSema& sema) const {
+    sema.push_scope();
     bind_ast_type_params(sema);
     if (trait())
         trait()->bind(sema);
@@ -273,6 +283,7 @@ void ImplItem::bind(NameSema& sema) const {
     for (const auto& fn : methods())
         fn->bind(sema);
     sema.lambda_depth_ -= num_ast_type_params();
+    sema.pop_scope();
 }
 
 //------------------------------------------------------------------------------
@@ -300,31 +311,12 @@ void CharExpr::bind(NameSema&) const {}
 void StrExpr::bind(NameSema&) const {}
 void FnExpr::bind(NameSema& sema) const { fn_bind(sema); }
 
-void Path::Elem::bind(NameSema& sema) const {
-    decl_ = sema.lookup(this, symbol());
-}
-
 void Path::bind(NameSema& sema) const {
-    for (auto& elem : elems()) {
-        elem->bind(sema);
-        sema.push_scope();
-        if (elem->decl()) {
-            if (auto item = elem->decl()->isa<Item>())
-                item->bind(sema);
-        }
-    }
-    for (size_t i = 0; i < num_elems(); i++)
-        sema.pop_scope();
+    elem(0)->decl_ = sema.lookup(elem(0), elem(0)->symbol());
 }
 
 void PathExpr::bind(NameSema& sema) const {
     path()->bind(sema);
-    if (path()->decl()) {
-        if (path()->decl()->is_value_decl())
-            value_decl_ = path()->decl();
-        else
-            error(this, "'{}' is not a value", path());
-    }
 }
 
 void PrefixExpr ::bind(NameSema& sema) const {                    rhs()->bind(sema); }

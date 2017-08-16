@@ -192,30 +192,33 @@ protected:
  * paths
  */
 
-class Path : public ASTNode {
+class Path : public Typeable {
 public:
-    class Elem : public ASTNode {
+    class Elem : public Typeable {
     public:
         Elem(const Identifier* id)
-            : ASTNode(id->location())
+            : Typeable(id->location())
             , identifier_(id)
         {}
 
         const Identifier* identifier() const { return identifier_.get(); }
         Symbol symbol() const { return identifier()->symbol(); }
         const Decl* decl() const { return decl_; }
-        void bind(NameSema&) const;
+
         std::ostream& stream(std::ostream&) const override;
 
     private:
         std::unique_ptr<const Identifier> identifier_;
         mutable const Decl* decl_ = nullptr;
+
+        friend class Path;
+        friend class InferSema;
     };
 
     typedef std::deque<std::unique_ptr<const Elem>> Elems;
 
     Path(Location location, bool global, Elems&& elems)
-        : ASTNode(location)
+        : Typeable(location)
         , global_(global)
         , elems_(std::move(elems))
     {}
@@ -231,7 +234,11 @@ public:
     const Elem* elem(size_t i) const { return elems_[i].get(); }
     size_t num_elems() const { return elems_.size(); }
     const Decl* decl() const { return elems().back()->decl(); }
+
     void bind(NameSema&) const;
+    const Type* infer(InferSema&) const;
+    void check(TypeSema&) const;
+
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1279,7 +1286,7 @@ public:
     {}
 
     const Path* path() const { return path_.get(); }
-    const Decl* value_decl() const { return value_decl_; }
+    const Decl* value_decl() const { return path_->decl(); }
 
     void write() const override;
     void take_address() const override;
@@ -1292,7 +1299,6 @@ private:
     thorin::Value lemit(CodeGen&) const override;
 
     std::unique_ptr<const Path> path_;
-    mutable const Decl* value_decl_ = nullptr; ///< Declaration of the variable in use.
 };
 
 class PrefixExpr : public Expr {

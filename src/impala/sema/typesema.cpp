@@ -170,7 +170,8 @@ void FnASTType::check(TypeSema& sema) const {
     }
 }
 
-void ASTTypeApp::check(TypeSema&) const {
+void ASTTypeApp::check(TypeSema& sema) const {
+    path()->check(sema);
     if (!decl() || !decl()->is_type_decl())
         error(identifier(), "'{}' does not name a type", symbol());
 }
@@ -200,6 +201,20 @@ const Type* Fn::check_body(TypeSema& sema) const {
         sema.expect_type(fn_type()->return_type(), body(), "return type");
 
     return body()->type();
+}
+
+void Path::check(TypeSema&) const {
+    if (decl()) {
+        auto last_type = elem(0)->type();
+        for (size_t i = 1, e = num_elems(); i != e; ++i) {
+            auto cur_type = elem(i)->type();
+            if (cur_type->isa<TypeError>()) {
+                error(this, "'{}' is not a member of '{}'", elem(i)->symbol(), last_type);
+                break;
+            }
+            last_type = cur_type;
+        }
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -313,6 +328,7 @@ void FnExpr::check(TypeSema& sema) const {
 }
 
 void PathExpr::check(TypeSema& sema) const {
+    path()->check(sema);
     if (value_decl()) {
         if (auto local = value_decl()->isa<LocalDecl>()) {
             // if local lies in an outer function go through memory to implement closure

@@ -390,6 +390,30 @@ const Type* LocalDecl::infer(InferSema& sema) const {
     return type();
 }
 
+const Type* Path::infer(InferSema& sema) const {
+    auto last_type = sema.constrain(elem(0), sema.find_type(elem(0)->decl_));
+
+    for (size_t i = 1, e = num_elems(); i != e; ++i) {
+        auto cur_elem = elem(i);
+        auto cur_type = sema.find_type(cur_elem);
+
+        if (auto enum_type = last_type->isa<EnumType>()) {
+            // lookup enum option
+            auto enum_decl = enum_type->enum_decl();
+            auto option_decl = enum_decl->option_decl(cur_elem->symbol());
+            auto option_type = option_decl ? sema.find_type(option_decl) : sema.type_error();
+
+            sema.constrain(cur_type, sema.find_type(option_type));
+            cur_elem->decl_ = option_decl;
+        } else if (last_type->is_known()) {
+            sema.constrain(cur_type, sema.type_error());
+        }
+        last_type = cur_type;
+    }
+
+    return last_type;
+}
+
 //------------------------------------------------------------------------------
 
 /*
@@ -441,6 +465,8 @@ const Type* FnASTType::infer(InferSema& sema) const {
 const Type* Typeof::infer(InferSema& sema) const { return unpack_ref_type(sema.infer(expr())); }
 
 const Type* ASTTypeApp::infer(InferSema& sema) const {
+    path()->infer(sema);
+
     if (decl() && decl()->is_type_decl()) {
         if (auto ast_type_param = decl()->isa<ASTTypeParam>())
             return sema.var(ast_type_param->lambda_depth_);
@@ -638,6 +664,7 @@ const Type* FnExpr::infer(InferSema& sema) const {
 }
 
 const Type* PathExpr::infer(InferSema& sema) const {
+    path()->infer(sema);
     if (value_decl()) {
         auto type = sema.find_type(value_decl());
         return value_decl()->is_mut() ? sema.ref_type(type, true, 0) : type;
