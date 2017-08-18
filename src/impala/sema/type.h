@@ -28,6 +28,7 @@ enum Tag {
     Tag_ref,
     Tag_simd,
     Tag_struct,
+    Tag_enum,
     Tag_tuple,
     Tag_typedef_abs,
     Tag_unknown,
@@ -40,6 +41,7 @@ enum PrimTypeTag {
 };
 
 class StructDecl;
+class EnumDecl;
 template<class T> using ArrayRef = thorin::ArrayRef<T>;
 template<class T> using Array    = thorin::Array<T>;
 
@@ -47,12 +49,17 @@ static const int Node_App        = impala::Tag_app;
 static const int Node_Lambda     = impala::Tag_lambda;
 static const int Node_Pi         = impala::Tag_pi;
 static const int Node_StructType = impala::Tag_struct;
+static const int Node_EnumType   = impala::Tag_enum;
 static const int Node_TupleType  = impala::Tag_tuple;
 static const int Node_TypeError  = impala::Tag_error;
 static const int Node_Var        = impala::Tag_var;
 
 #define HENK_STRUCT_EXTRA_NAME  struct_decl
 #define HENK_STRUCT_EXTRA_TYPE  const StructDecl*
+
+#define HENK_ENUM_EXTRA_NAME  enum_decl
+#define HENK_ENUM_EXTRA_TYPE  const EnumDecl*
+
 #define HENK_TABLE_NAME  typetable
 #define HENK_TABLE_TYPE  TypeTable
 #include "thorin/henk.h"
