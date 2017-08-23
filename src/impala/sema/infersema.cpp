@@ -384,6 +384,8 @@ const Type* LocalDecl::infer(InferSema& sema) const {
 }
 
 const Type* Path::infer(InferSema& sema) const {
+    if (!elem(0)->decl_) return sema.type_error();
+
     auto last_type = sema.constrain(elem(0), sema.find_type(elem(0)->decl_));
 
     for (size_t i = 1, e = num_elems(); i != e; ++i) {
