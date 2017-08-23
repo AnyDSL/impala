@@ -86,14 +86,6 @@ public:
         return infer_call(lhs, array, call_type);
     }
 
-    const FnType* fn_type(const Type* type) {
-        if (auto tuple_type = type->isa<TupleType>())
-            return TypeTable::fn_type(tuple_type->ops());
-        return TypeTable::fn_type({type});
-    }
-
-    const FnType* fn_type(ArrayRef<const Type*> types) { return fn_type(tuple_type(types)); }
-
     const Type* rvalue(const Expr* expr) {
         infer(expr);
         return expr->type()->isa<RefType>() ? Ref2ValueExpr::create(expr)->type() : expr->type();
@@ -260,15 +252,14 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
         }
     }
 
+    if (dst->isa<UnknownType>() && src->isa<UnknownType>())
+        return unify_by_rank(dst_repr, src_repr)->type;
+    if (dst->isa<UnknownType>()) return unify(src_repr, dst_repr)->type;
+    if (src->isa<UnknownType>()) return unify(dst_repr, src_repr)->type;
+
     if (dst == src && dst->is_known()) return dst;
     if (dst->isa<TypeError>() || dst->isa<InferError>()) return dst; // propagate errors
     if (src->isa<TypeError>() || src->isa<InferError>()) return src; // dito
-
-    if (dst->isa<UnknownType>() && src->isa<UnknownType>())
-        return unify_by_rank(dst_repr, src_repr)->type;
-
-    if (dst->isa<UnknownType>()) return unify(src_repr, dst_repr)->type;
-    if (src->isa<UnknownType>()) return unify(dst_repr, src_repr)->type;
 
     if (dst->num_ops() == src->num_ops()) {
         // do not unify the operands if the types do not match
@@ -405,10 +396,10 @@ const Type* Path::infer(InferSema& sema) const {
             auto option_decl = enum_decl->option_decl(cur_elem->symbol());
             auto option_type = option_decl ? sema.find_type(option_decl) : sema.type_error();
 
-            sema.constrain(cur_type, sema.find_type(option_type));
+            cur_type = sema.constrain(cur_type, sema.find_type(option_type));
             cur_elem->decl_ = option_decl;
         } else if (last_type->is_known()) {
-            sema.constrain(cur_type, sema.type_error());
+            cur_type = sema.constrain(cur_type, sema.type_error());
         }
         last_type = cur_type;
     }
@@ -578,7 +569,7 @@ const Type* OptionDecl::infer(InferSema& sema) const {
         params.back() = sema.fn_type({ sema.find_type(enum_decl()) });
         return sema.fn_type(params);
     } else {
-        return sema.find_type(this);
+        return sema.find_type(enum_decl());
     }
 }
 
@@ -595,16 +586,6 @@ void FnDecl::infer(InferSema& sema) const {
 
     Array<const Type*> param_types(num_params());
     size_t e = num_params();
-
-    // TODO remove wild hack to reduce Typedef'd tuple types to argument lists of return continuations
-    if (num_params() > 0 && param(e - 1)->type() && param(e - 1)->type()->isa<FnType>()) {
-        auto ret_type = sema.infer(param(e - 1));
-        if (ret_type->num_ops() == 1) {
-            if (auto ret_tuple_type = ret_type->op(0)->isa<TupleType>()) {
-                param_types[--e] = sema.fn_type(ret_tuple_type->ops());
-            }
-        }
-    }
 
     for (size_t i = 0; i != e; ++i) {
         param_types[i] = sema.infer(param(i));
@@ -660,7 +641,7 @@ const Type* FnExpr::infer(InferSema& sema) const {
     if (body_type->isa<NoRetType>() || body_type->isa<UnknownType>())
         return sema.fn_type(param_types);
     else {
-        param_types.back() = sema.constrain(params().back().get(), sema.fn_type(body_type));
+        param_types.back() = sema.constrain(params().back().get(), sema.fn_type({body_type}));
         return sema.fn_type(param_types);
     }
 }

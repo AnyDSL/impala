@@ -135,12 +135,12 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
         return thorin_struct_type(struct_type);
     } else if (auto enum_type = type->isa<EnumType>()) {
-        std::vector<const thorin::Type*> ops;
-        ops.push_back(world().type_qu32());
         size_t bytes = (bitwidth(enum_type) - 32) / 8;
-        if (bytes != 0)
-            ops.push_back(world().definite_array_type(world().type_qu8(), bytes));
-        return world().tuple_type(ops);
+        if (bytes != 0) {
+            return world().tuple_type({ world().type_qu32(), world().definite_array_type(world().type_qu8(), bytes) });
+        } else {
+            return world().type_qu32();
+        }
     } else if (auto ptr_type = type->isa<PtrType>()) {
         return world().ptr_type(convert(ptr_type->pointee()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
@@ -257,15 +257,7 @@ void Fn::emit_body(CodeGen& cg, Location location) const {
     auto def = cg.remit(body());
     if (def) {
         const Def* mem = cg.get_mem();
-
-        if (auto tuple = def->type()->isa<thorin::TupleType>()) {
-            std::vector<const Def*> args;
-            args.push_back(mem);
-            for (size_t i = 0, e = tuple->num_ops(); i != e; ++i)
-                args.push_back(cg.extract(def, i, location));
-            cg.cur_bb->jump(ret_param(), args, location.back());
-        } else
-            cg.cur_bb->jump(ret_param(), {mem, def}, location.back());
+        cg.cur_bb->jump(ret_param(), {mem, def}, location.back());
     }
 }
 
@@ -339,6 +331,18 @@ void ImplItem::emit(CodeGen& cg) const {
         method(i)->emit_body(cg, location());
 
     def_ = cg.world().tuple(args, location());
+}
+
+Value OptionDecl::emit(CodeGen& cg, const Def* init) const {
+    assert(!init);
+    size_t bytes = (cg.bitwidth(enum_decl()->type()) - 32) / 8;
+    auto id = cg.world().literal_qu32(index(), location());
+    if (bytes != 0) {
+        auto bot = cg.world().bottom(cg.world().definite_array_type(cg.world().type_qu8(), bytes));
+        return Value::create_val(cg, cg.world().tuple({ id, bot }) );
+    } else {
+        return Value::create_val(cg, id);
+    }
 }
 
 Value StaticItem::emit(CodeGen& cg, const Def* init) const {
@@ -679,13 +683,15 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
         if (auto path_expr = lhs()->isa<PathExpr>()) {
             if (auto option = path_expr->path()->decl()->isa<OptionDecl>()) {
                 // handle option creation here
-                auto variant_type = option->variant_type(cg);
+                auto bytes = (cg.bitwidth(option->enum_decl()->type()) - 32) / 8;
+                assert(bytes != 0);
+                auto dst_type = cg.world().definite_array_type(cg.world().type_qu8(), bytes);
                 std::vector<const Def*> defs;
                 for (const auto& arg : args())
                     defs.push_back(cg.remit(arg.get()));
                 return cg.world().tuple({
                     cg.world().literal_qu32(option->index(), location()),
-                    cg.world().bitcast(variant_type, cg.world().tuple(defs, location()), location())
+                    cg.world().bitcast(dst_type, cg.world().tuple(defs, location()), location())
                 });
             }
         }

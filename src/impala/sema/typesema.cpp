@@ -204,16 +204,14 @@ const Type* Fn::check_body(TypeSema& sema) const {
 }
 
 void Path::check(TypeSema&) const {
-    if (decl()) {
-        auto last_type = elem(0)->type();
-        for (size_t i = 1, e = num_elems(); i != e; ++i) {
-            auto cur_type = elem(i)->type();
-            if (cur_type->isa<TypeError>()) {
-                error(this, "'{}' is not a member of '{}'", elem(i)->symbol(), last_type);
-                break;
-            }
-            last_type = cur_type;
+    auto last_type = elem(0)->type();
+    for (size_t i = 1, e = num_elems(); i != e; ++i) {
+        auto cur_type = elem(i)->type();
+        if (cur_type->isa<TypeError>()) {
+            error(this, "'{}' is not a member of '{}'", elem(i)->symbol(), last_type);
+            break;
         }
+        last_type = cur_type;
     }
 }
 

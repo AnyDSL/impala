@@ -744,7 +744,7 @@ const FnASTType* Parser::parse_fn_type() {
 
 const ASTType* Parser::parse_return_type(bool& is_continuation, bool mandatory) {
     auto tracker = track();
-    ASTTypes ast_type_args;
+    ASTTypes ast_types;
     is_continuation = false;
     if (accept(Token::ARROW)) {
         if (accept(Token::NOT)) {
@@ -752,23 +752,14 @@ const ASTType* Parser::parse_return_type(bool& is_continuation, bool mandatory) 
             return nullptr;
         }
 
-        if (accept(Token::L_PAREN)) {   // in-place tuple
-            parse_comma_list("closing parenthesis of return type list", Token::R_PAREN, [&] {
-                ast_type_args.emplace_back(parse_type());
-            });
-        } else {
-            auto type = parse_type();
-            assert(!type->isa<TupleASTType>());
-            ast_type_args.emplace_back(type);
-        }
-
-        return new FnASTType(tracker, std::move(ast_type_args));
+        ast_types.emplace_back(parse_type());
+        return new FnASTType(tracker, std::move(ast_types));
     }
 
     if (mandatory) {
         error("return type", "function type");
-        ast_type_args.emplace_back(new ErrorASTType(tracker));
-        return new FnASTType(tracker, std::move(ast_type_args));
+        ast_types.emplace_back(new ErrorASTType(tracker));
+        return new FnASTType(tracker, std::move(ast_types));
     }
 
     return nullptr;

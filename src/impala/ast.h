@@ -919,6 +919,7 @@ public:
 private:
     const Type* infer(InferSema&) const;
     void check(TypeSema&) const;
+    thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
 
     uint32_t index_;
     ASTTypes args_;
@@ -1290,7 +1291,9 @@ public:
     {}
 
     const Path* path() const { return path_.get(); }
-    const Decl* value_decl() const { return path_->decl(); }
+    const Decl* value_decl() const {
+        return path_->decl() && path_->decl()->is_value_decl() ? path_->decl() : nullptr;
+    }
 
     void write() const override;
     void take_address() const override;
