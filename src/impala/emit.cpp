@@ -662,7 +662,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             auto string_type = cg.world().ptr_type(cg.world().indefinite_array_type(cg.world().type_pu8()));
                             auto fn_type = cg.world().fn_type({
                                 cg.world().mem_type(), string_type, poly_type,
-                                cg.world().fn_type({ cg.world().mem_type() }) });
+                                cg.world().fn_type({ cg.world().mem_type(), cg.world().unit() }) });
                             auto cont = cg.world().continuation(fn_type, {location(), "pe_info"});
                             cont->set_intrinsic();
                             dst = cont;
