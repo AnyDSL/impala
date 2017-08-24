@@ -128,6 +128,7 @@ private:
                     return false;
             }
 
+            if (!ptr_type->is_mut()) ctype_prefix += " const";
             ctype_prefix += "*";
             ctype_suffix = "";
             return true;

@@ -140,6 +140,10 @@ bool IdPtrn::is_refutable() const {
     return false;
 }
 
+bool EnumPtrn::is_refutable() const {
+    return true;
+}
+
 bool LiteralPtrn::is_refutable() const {
     return true;
 }

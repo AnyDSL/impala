@@ -170,7 +170,7 @@ class InvokeTest(Test):
             yield ["clang", "-O3", "lib.o", self.ll_file, "-L", "/opt/local/lib", "-lm", "-lpcre", "-lgmp", "-s", "-o", self.exe_file]
         else:
             yield ["llc", "-o", self.s_file, self.ll_file]
-            yield ["cc", "-o", self.exe_file, self.s_file, InvokeTest.LIB_C]
+            yield ["clang", "-o", self.exe_file, self.s_file, InvokeTest.LIB_C]
 
 
     def invoke(self, gEx):
