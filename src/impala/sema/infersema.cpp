@@ -450,9 +450,16 @@ const Type* TupleASTType::infer(InferSema& sema) const {
 const Type* FnASTType::infer(InferSema& sema) const {
     infer_ast_type_params(sema);
 
-    Array<const Type*> types(num_ast_type_args());
-    for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
-        types[i] = sema.infer(ast_type_arg(i));
+    size_t n = num_ast_type_args() == 0 ? 1 : num_ast_type_args();
+    Array<const Type*> types(n);
+    if (num_ast_type_args() != 0) {
+        for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
+            types[i] = sema.infer(ast_type_arg(i));
+    } else {
+        // fn () simply does not exist, we replace it with fn(())
+        if (num_ast_type_args() == 0)
+            types[0] = sema.unit();
+    }
 
     return sema.close(num_ast_type_params(), sema.fn_type(types));
 }
@@ -640,6 +647,9 @@ const Type* FnExpr::infer(InferSema& sema) const {
     }
 
     auto body_type = sema.rvalue(body());
+    if (num_params() == 0 && body_type->isa<NoRetType>())
+        return sema.fn_type({ sema.unit() });
+
     if (body_type->isa<NoRetType>() || body_type->isa<UnknownType>())
         return sema.fn_type(param_types);
     else {

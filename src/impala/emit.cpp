@@ -15,6 +15,7 @@ class CodeGen : public IRBuilder {
 public:
     CodeGen(World& world)
         : IRBuilder(world)
+        , empty_fn_type(world.fn_type({ world.mem_type(), world.unit() }))
     {}
 
     const Def* frame() const { assert(cur_fn); return cur_fn->frame(); }
@@ -47,7 +48,7 @@ public:
 
     void jump_to_continuation(Continuation* continuation, const thorin::Location& loc) {
         if (is_reachable())
-            cur_bb->jump(continuation, {get_mem()}, loc);
+            cur_bb->jump(continuation, {get_mem(), world().tuple({})}, loc);
         set_continuation(continuation);
     }
 
@@ -91,6 +92,7 @@ public:
     const thorin::StructType*& thorin_struct_type(const StructType* type) { return struct_type_impala2thorin_[type]; }
 
     const Fn* cur_fn = nullptr;
+    const thorin::Type* empty_fn_type;
     TypeMap<const thorin::Type*> impala2thorin_;
     GIDMap<const StructType*, const thorin::StructType*> struct_type_impala2thorin_;
 };
@@ -249,7 +251,7 @@ void Fn::emit_body(CodeGen& cg, Location location) const {
         p->debug().set(param->symbol().str());
         cg.emit(param.get(), p);
     }
-    assert(i == continuation()->num_params());
+    assert(i == continuation()->num_params() || continuation()->type() == cg.empty_fn_type);
     if (continuation()->num_params() != 0 && continuation()->params().back()->type()->isa<thorin::FnType>())
         ret_param_ = continuation()->params().back();
 
@@ -700,7 +702,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
 
         std::vector<const Def*> defs;
         defs.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
-        if (num_args() == 0 && cg.convert(fn_type->op(0)) == cg.world().unit()) // add dummy () to be able to call break() instead of break(())
+        if (num_args() == 0 && cg.convert(fn_type) == cg.empty_fn_type) // add dummy () to be able to call break() instead of break(())
             defs.push_back(cg.world().tuple({}));
         for (const auto& arg : args())
             defs.push_back(cg.remit(arg.get()));
