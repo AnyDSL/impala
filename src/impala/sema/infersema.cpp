@@ -846,6 +846,11 @@ const Type* InferSema::infer_call(const Expr* lhs, ArrayRef<const Expr*> args, c
     }
 
     if (args.size()+1 == fn_type->num_ops()) {
+        if (fn_type->num_ops() == 1 && fn_type->op(0) == unit()) {
+            // special case to allow calling break() instead of break(())
+            return type_noret();
+        }
+
         Array<const Type*> types(args.size()+1);
         for (size_t i = 0, e = args.size(); i != e; ++i)
             types[i] = coerce(fn_type->op(i), args[i]);

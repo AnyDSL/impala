@@ -700,11 +700,13 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
 
         std::vector<const Def*> defs;
         defs.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
+        if (num_args() == 0 && cg.convert(fn_type->op(0)) == cg.world().unit()) // add dummy () to be able to call break() instead of break(())
+            defs.push_back(cg.world().tuple({}));
         for (const auto& arg : args())
             defs.push_back(cg.remit(arg.get()));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
-        auto ret_type = args().size() == fn_type->num_ops() ? nullptr : cg.convert(fn_type->return_type());
+        auto ret_type = defs.size() - 1 == fn_type->num_ops() ? nullptr : cg.convert(fn_type->return_type());
         auto old_bb = cg.cur_bb;
         auto ret = cg.call(dst, defs, ret_type, thorin::Debug(location(), dst->name()) + "_cont");
         if (ret_type)
