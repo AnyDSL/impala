@@ -565,6 +565,8 @@ const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility v
     const Expr* pe_expr = nullptr;
     if (accept(Token::RUN))
         pe_expr = parse_expr();
+    if (accept(Token::RUNRUN))
+        pe_expr = new LiteralExpr(prev_location(), LiteralExpr::LIT_bool, thorin::Box(true));
 
     auto export_name = lookahead() == Token::LIT_str ? lex().symbol() : Symbol();
     auto identifier = try_identifier("function name");
