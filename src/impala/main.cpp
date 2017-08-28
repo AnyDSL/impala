@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
         bool help,
              emit_cint, emit_thorin, emit_ast, emit_annotated,
              emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
-             nocleanup, nossa, simple_pe, fancy;
+             nocleanup, nossa, fancy;
 
 #ifndef NDEBUG
 #define LOG_LEVELS "{error|warn|info|verbose|debug}"
@@ -78,8 +78,7 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("f",                  "", "use fancy output: Impala's AST dump uses only parentheses where necessary", fancy, false)
             .add_option<bool>            ("g",                  "", "emit debug information", debug, false)
             .add_option<bool>            ("nocleanup",          "", "no clean-up phase", nocleanup, false)
-            .add_option<bool>            ("nossa",              "", "use slots + load/store instead of SSA construction", nossa, false)
-            .add_option<bool>            ("simple-pe",          "", "use syntax instead of the CFG to determine when to stop PE", simple_pe, false);
+            .add_option<bool>            ("nossa",              "", "use slots + load/store instead of SSA construction", nossa, false);
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
@@ -211,7 +210,7 @@ int main(int argc, char** argv) {
             if (!nocleanup)
                 init.world.cleanup();
             if (opt_thorin)
-                init.world.opt(simple_pe);
+                init.world.opt();
             if (emit_thorin)
                 init.world.dump();
             if (emit_llvm) {

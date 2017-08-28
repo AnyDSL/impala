@@ -294,7 +294,7 @@ void ImplItem::bind(NameSema& sema) const {
 
 void EmptyExpr::bind(NameSema&) const {}
 
-void BlockExprBase::bind(NameSema& sema) const {
+void BlockExpr::bind(NameSema& sema) const {
     sema.push_scope();
     for (const auto& stmt : stmts()) {
         if (auto item_stmt = stmt->isa<ItemStmt>())

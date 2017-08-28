@@ -55,7 +55,6 @@
     case Token::OR: \
     case Token::OROR: \
     case Token::ID: \
-    case Token::RUN: \
     case Token::HLT: \
     case Token::IF: \
     case Token::MATCH: \
@@ -64,7 +63,6 @@
     case Token::WHILE: \
     case Token::L_PAREN: \
     case Token::L_BRACE: \
-    case Token::RUN_BLOCK: \
     case Token::L_BRACKET: \
     case Token::SIMD
 
@@ -227,25 +225,25 @@ public:
     const Typedef*     parse_typedef(Tracker, Visibility);
 
     // expressions
-    const Expr*             parse_expr(Prec prec);
-    const Expr*             parse_expr() { return parse_expr(Prec::Bottom); }
-    const Expr*             parse_prefix_expr();
-    const Expr*             parse_infix_expr(Tracker, const Expr* lhs);
-    const Expr*             parse_postfix_expr(Tracker, const Expr* lhs);
-    const MapExpr*          parse_map_expr(Tracker, const Expr* lhs);
-    const TypeAppExpr*      parse_type_app_expr(Tracker, const Expr* lhs);
-    const Expr*             parse_primary_expr();
-    const LiteralExpr*      parse_literal_expr();
-    const CharExpr*         parse_char_expr();
-    const StrExpr*          parse_str_expr();
-    const FnExpr*           parse_fn_expr();
-    const IfExpr*           parse_if_expr();
-    const MatchExpr*        parse_match_expr();
-    const ForExpr*          parse_for_expr();
-    const ForExpr*          parse_with_expr();
-    const WhileExpr*        parse_while_expr();
-    const BlockExprBase*    parse_block_expr();
-    const BlockExprBase*    try_block_expr(const std::string& context);
+    const Expr*         parse_expr(Prec prec);
+    const Expr*         parse_expr() { return parse_expr(Prec::Bottom); }
+    const Expr*         parse_prefix_expr();
+    const Expr*         parse_infix_expr(Tracker, const Expr* lhs);
+    const Expr*         parse_postfix_expr(Tracker, const Expr* lhs);
+    const MapExpr*      parse_map_expr(Tracker, const Expr* lhs);
+    const TypeAppExpr*  parse_type_app_expr(Tracker, const Expr* lhs);
+    const Expr*         parse_primary_expr();
+    const LiteralExpr*  parse_literal_expr();
+    const CharExpr*     parse_char_expr();
+    const StrExpr*      parse_str_expr();
+    const FnExpr*       parse_fn_expr();
+    const IfExpr*       parse_if_expr();
+    const MatchExpr*    parse_match_expr();
+    const ForExpr*      parse_for_expr();
+    const ForExpr*      parse_with_expr();
+    const WhileExpr*    parse_while_expr();
+    const BlockExpr*    parse_block_expr();
+    const BlockExpr*    try_block_expr(const std::string& context);
 
     // patterns
     const Ptrn*        parse_ptrn();
@@ -1013,8 +1011,7 @@ const Expr* Parser::parse_primary_expr() {
         case Token::FOR:        return parse_for_expr();
         case Token::WITH:       return parse_with_expr();
         case Token::WHILE:      return parse_while_expr();
-        case Token::L_BRACE:
-        case Token::RUN_BLOCK:  return parse_block_expr();
+        case Token::L_BRACE:    return parse_block_expr();
         default:                error("expression", ""); return new EmptyExpr(lex().location());
     }
 }
@@ -1122,9 +1119,8 @@ const IfExpr* Parser::parse_if_expr() {
     const Expr* else_expr = nullptr;
     if (accept(Token::ELSE)) {
         switch (lookahead()) {
-            case Token::IF:         else_expr =  parse_if_expr(); break;
-            case Token::L_BRACE:
-            case Token::RUN_BLOCK:  else_expr =  parse_block_expr(); break;
+            case Token::IF:      else_expr =  parse_if_expr(); break;
+            case Token::L_BRACE: else_expr =  parse_block_expr(); break;
             default:
                 error("block or if expression", "alternative of an if expression");
         }
@@ -1188,11 +1184,9 @@ const WhileExpr* Parser::parse_while_expr() {
     return new WhileExpr(tracker, continue_decl, cond, body, break_decl);
 }
 
-const BlockExprBase* Parser::parse_block_expr() {
+const BlockExpr* Parser::parse_block_expr() {
     auto tracker = track();
-    bool run = accept(Token::RUN_BLOCK);
-    if (!run)
-        eat(Token::L_BRACE);
+    eat(Token::L_BRACE);
     Stmts stmts;
     const Expr* final_expr = nullptr;
     while (true) {
@@ -1211,8 +1205,7 @@ const BlockExprBase* Parser::parse_block_expr() {
                     case Token::FOR:        expr = parse_for_expr(); break;
                     case Token::WITH:       expr = parse_with_expr(); break;
                     case Token::WHILE:      expr = parse_while_expr(); break;
-                    case Token::L_BRACE:
-                    case Token::RUN_BLOCK:  expr = parse_block_expr(); break;
+                    case Token::L_BRACE:    expr = parse_block_expr(); break;
                     default:                expr = parse_expr(); stmt_like = false;
                 }
 
@@ -1228,18 +1221,14 @@ const BlockExprBase* Parser::parse_block_expr() {
                 expect(Token::R_BRACE, "block expression");
                 if (final_expr == nullptr)
                     final_expr = create<EmptyExpr>();
-                if (run)
-                    return new RunBlockExpr(tracker, std::move(stmts), final_expr);
-                else
-                    return new BlockExpr(tracker, std::move(stmts), final_expr);
+                return new BlockExpr(tracker, std::move(stmts), final_expr);
         }
     }
 }
 
-const BlockExprBase* Parser::try_block_expr(const std::string& context) {
+const BlockExpr* Parser::try_block_expr(const std::string& context) {
     switch (lookahead()) {
         case Token::L_BRACE:
-        case Token::RUN_BLOCK:
             return parse_block_expr();
         default:
             error("block expression", context);

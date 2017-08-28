@@ -108,7 +108,7 @@ private:
     int visibility_;
 };
 
-/// Mixin for all entities which have a list of \p TypeParam%s: [T1, T2 : A + B[...], ...].
+/// Mixin for all entities which have a list of @p TypeParam%s: [T1, T2 : A + B[...], ...].
 class ASTTypeParamList {
 public:
     ASTTypeParamList(ASTTypeParams&& ast_type_params)
@@ -556,7 +556,7 @@ public:
     thorin::Debug debug() const { return {location(), symbol().str()}; }
 
     // ValueDecl
-    const ASTType* ast_type() const { assert(is_value_decl()); return ast_type_.get(); } ///< Original \p ASTType.
+    const ASTType* ast_type() const { assert(is_value_decl()); return ast_type_.get(); } ///< Original @p ASTType.
     bool is_mut() const { assert(is_value_decl()); return mut_; }
     bool is_written() const { assert(is_value_decl()); return written_; }
     void write() const { assert(is_value_decl()); written_ = true; }
@@ -1710,10 +1710,6 @@ public:
         , lhs_(dock(lhs_, lhs))
     {}
 
-    enum State {
-        None, Run, Hlt
-    };
-
     const Expr* lhs() const { return lhs_.get(); }
 
     void write() const override;
@@ -1727,19 +1723,22 @@ private:
     void check(TypeSema&) const override;
     thorin::Value lemit(CodeGen&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-    const thorin::Def* remit(CodeGen&, State, Location) const;
 
     std::unique_ptr<const Expr> lhs_;
 
     friend class CodeGen;
 };
 
-class BlockExprBase : public Expr {
+class BlockExpr : public Expr {
 public:
-    BlockExprBase(Location location, Stmts&& stmts, const Expr* expr)
+    BlockExpr(Location location, Stmts&& stmts, const Expr* expr)
         : Expr(location)
         , stmts_(std::move(stmts))
         , expr_(dock(expr_, expr))
+    {}
+    /// An empty BlockExpr with no @p stmts and an @p EmptyExpr as @p expr.
+    BlockExpr(Location location)
+        : BlockExpr(location, Stmts(), new EmptyExpr(location))
     {}
 
     const Stmts& stmts() const { return stmts_; }
@@ -1749,7 +1748,6 @@ public:
     const LocalDecls& locals() const { return locals_; }
     void add_local(const LocalDecl* local) const { locals_.push_back(local); }
 
-    virtual const char* prefix() const = 0;
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
     std::ostream& stream(std::ostream&) const override;
@@ -1761,32 +1759,7 @@ protected:
 
     Stmts stmts_;
     std::unique_ptr<const Expr> expr_;
-    mutable LocalDecls locals_; ///< All \p LocalDecl%s in this \p BlockExprBase from top to bottom.
-};
-
-class BlockExpr : public BlockExprBase {
-public:
-    BlockExpr(Location location, Stmts&& stmts, const Expr* expr)
-        : BlockExprBase(location, std::move(stmts), expr)
-    {}
-
-    BlockExpr(Location location)
-        : BlockExprBase(location, Stmts(), new EmptyExpr(location))
-    {}
-
-    const char* prefix() const override { return "{"; }
-};
-
-class RunBlockExpr : public BlockExprBase {
-public:
-    RunBlockExpr(Location location, Stmts&& stmts, const Expr* expr)
-        : BlockExprBase(location, std::move(stmts), expr)
-    {}
-
-    const char* prefix() const override { return "@{"; }
-
-private:
-    const thorin::Def* remit(CodeGen&) const override;
+    mutable LocalDecls locals_; ///< All @p LocalDecl%s in this @p BlockExpr from top to bottom.
 };
 
 class IfExpr : public Expr {
@@ -1876,7 +1849,7 @@ public:
     {}
 
     const Expr* cond() const { return cond_.get(); }
-    const BlockExprBase* body() const { return body_.get()->as<BlockExprBase>(); }
+    const BlockExpr* body() const { return body_.get()->as<BlockExpr>(); }
     const LocalDecl* break_decl() const { return break_decl_.get(); }
     const LocalDecl* continue_decl() const { return continue_decl_.get(); }
 

@@ -105,7 +105,7 @@ private:
     bool nossa_;
 
 public:
-    const BlockExprBase* cur_block_ = nullptr;
+    const BlockExpr* cur_block_ = nullptr;
     const Fn* cur_fn_ = nullptr;
 };
 
@@ -365,9 +365,7 @@ void PrefixExpr::check(TypeSema& sema) const {
         case NOT:
             sema.expect_int_or_bool(rhs(), "unary '!'");
             return;
-        case HLT: case RUN:
-            if (!rhs()->isa<MapExpr>())
-                error(this, "function call expected after partial evaluator command {}", (TokenTag)tag());
+        case HLT:
             return;
         case OR: case OROR:
             THORIN_UNREACHABLE;
@@ -637,7 +635,7 @@ void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
               args.size(), fn_type->num_ops() > 0 ? fn_type->num_ops() - 1 : 0);
 }
 
-void BlockExprBase::check(TypeSema& sema) const {
+void BlockExpr::check(TypeSema& sema) const {
     THORIN_PUSH(sema.cur_block_, this);
     for (const auto& stmt : stmts())
         sema.check(stmt.get());
@@ -691,9 +689,6 @@ void WhileExpr::check(TypeSema& sema) const {
 
 void ForExpr::check(TypeSema& sema) const {
     auto forexpr = expr();
-    if (auto prefix = forexpr->isa<PrefixExpr>())
-        if (prefix->tag() == PrefixExpr::RUN || prefix->tag() == PrefixExpr::HLT)
-            forexpr = prefix->rhs();
 
     if (auto map = forexpr->isa<MapExpr>()) {
         auto ltype = sema.check(map->lhs());

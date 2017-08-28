@@ -232,8 +232,8 @@ std::ostream& ImplItem::stream(std::ostream& os) const {
  * expressions
  */
 
-std::ostream& BlockExprBase::stream(std::ostream& os) const {
-    os << prefix();
+std::ostream& BlockExpr::stream(std::ostream& os) const {
+    os << '{';
     if (empty())
         return os << endl << '}';
 

@@ -49,7 +49,7 @@ PrimTypeTag LiteralExpr::literal2type() const {
 uint64_t LiteralExpr::get_u64() const { return thorin::bcast<uint64_t, thorin::Box>(box()); }
 
 bool IfExpr::has_else() const {
-    if (auto block = else_expr_->isa<BlockExprBase>())
+    if (auto block = else_expr_->isa<BlockExpr>())
         return !block->empty();
     return true;
 }
@@ -85,7 +85,7 @@ void CastExpr::write() const { src()->write(); }
  */
 
 bool PrefixExpr::has_side_effect() const {
-    return tag() == INC || tag() == DEC || tag() == TILDE || tag() == RUN || tag() == HLT;
+    return tag() == INC || tag() == DEC || tag() == TILDE || tag() == HLT;
 }
 
 bool InfixExpr::has_side_effect() const {
@@ -94,7 +94,7 @@ bool InfixExpr::has_side_effect() const {
 
 bool PostfixExpr::has_side_effect() const { return true; }
 bool MapExpr::has_side_effect() const { return bool(lhs()->type()->isa<FnType>()); }
-bool BlockExprBase::has_side_effect() const { return !stmts().empty() || expr()->has_side_effect(); }
+bool BlockExpr::has_side_effect() const { return !stmts().empty() || expr()->has_side_effect(); }
 
 bool IfExpr::has_side_effect() const {
     return cond()->has_side_effect() || then_expr()->has_side_effect() || else_expr()->has_side_effect();

@@ -695,7 +695,7 @@ const Type* PrefixExpr::infer(InferSema& sema) const {
             return unpack_ref_type(sema.infer(rhs()));
         case ADD: case SUB:
         case NOT:
-        case RUN: case HLT:
+        case HLT:
             return sema.rvalue(rhs());
         case OR:  case OROR: // Lambda
             THORIN_UNREACHABLE;
@@ -963,7 +963,7 @@ const Type* MapExpr::infer(InferSema& sema) const {
     return sema.type_error();
 }
 
-const Type* BlockExprBase::infer(InferSema& sema) const {
+const Type* BlockExpr::infer(InferSema& sema) const {
     for (const auto& stmt : stmts()) {
         if (auto item_stmt = stmt->isa<ItemStmt>())
             sema.infer_head(item_stmt->item());
@@ -1012,9 +1012,6 @@ const Type* WhileExpr::infer(InferSema& sema) const {
 const Type* ForExpr::infer(InferSema& sema) const {
     sema.rvalue(fn_expr());
     auto forexpr = expr();
-    if (auto prefix = forexpr->isa<PrefixExpr>())
-        if (prefix->tag() == PrefixExpr::RUN || prefix->tag() == PrefixExpr::HLT)
-            forexpr = prefix->rhs();
 
     if (auto map = forexpr->isa<MapExpr>()) {
         auto ltype = sema.rvalue(map->lhs());
