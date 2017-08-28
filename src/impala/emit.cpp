@@ -469,6 +469,10 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             auto def = cg.remit(rhs());
             return cg.world().hlt(def, location());
         }
+        case KNOWN: {
+            auto def = cg.remit(rhs());
+            return cg.world().known(def, location());
+        }
         case OR:
         case OROR:
             THORIN_UNREACHABLE;

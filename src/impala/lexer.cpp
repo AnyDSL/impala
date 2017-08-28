@@ -162,6 +162,7 @@ Token Lexer::lex() {
         if (accept('{')) return {location(), Token::L_BRACE};
         if (accept('}')) return {location(), Token::R_BRACE};
         if (accept('~')) return {location(), Token::TILDE};
+        if (accept('?')) return {location(), Token::KNOWN};
 
         // '.', floats
         if (accept('.')) {

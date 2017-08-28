@@ -697,6 +697,8 @@ const Type* PrefixExpr::infer(InferSema& sema) const {
         case NOT:
         case HLT:
             return sema.rvalue(rhs());
+        case KNOWN:
+            return sema.type_bool();
         case OR:  case OROR: // Lambda
             THORIN_UNREACHABLE;
     }

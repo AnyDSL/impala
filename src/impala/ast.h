@@ -649,13 +649,17 @@ private:
 
 class Param : public LocalDecl {
 public:
-    Param(Location location, size_t handle, bool mut, const Identifier* id, const ASTType* ast_type)
+    Param(Location location, size_t handle, bool mut, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
         : LocalDecl(location, handle, mut, id, ast_type)
+        , pe_expr_(dock(pe_expr_, pe_expr))
     {}
 
-    Param(Location location, size_t handle, const Identifier* id, const ASTType* ast_type)
-        : LocalDecl(location, handle, /*mut*/ false, id, ast_type)
+    Param(Location location, size_t handle, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
+        : Param(location, handle, /*mut*/ false, id, ast_type, pe_expr)
     {}
+
+private:
+    std::unique_ptr<const Expr> pe_expr_;
 };
 
 class Fn : public ASTTypeParamList {

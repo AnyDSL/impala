@@ -13,6 +13,7 @@ IMPALA_PREFIX(  DEC,  "--") // prefix --
 IMPALA_PREFIX(   OR,   "|") // lambda expressions
 IMPALA_PREFIX( OROR,  "||") // lambda expressions with empty param list
 IMPALA_PREFIX(  HLT,   "$") // stop partial evaluation
+IMPALA_PREFIX(KNOWN,   "?") // is value statically known?
 
 #undef IMPALA_PREFIX
 
