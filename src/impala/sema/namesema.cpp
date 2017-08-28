@@ -230,13 +230,21 @@ void StaticItem::bind(NameSema& sema) const {
 void Fn::fn_bind(NameSema& sema) const {
     sema.push_scope();
     bind_ast_type_params(sema);
+
     for (const auto& param : params()) {
         sema.insert(param.get());
         if (param->ast_type())
             param->ast_type()->bind(sema);
     }
+
+    for (const auto& param : params()) {
+        if (auto pe_expr = param->pe_expr())
+            pe_expr->bind(sema);
+    }
+
     if (body() != nullptr)
         body()->bind(sema);
+
     sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }

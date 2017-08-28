@@ -658,6 +658,8 @@ public:
         : Param(location, handle, /*mut*/ false, id, ast_type, pe_expr)
     {}
 
+    const Expr* pe_expr() const { return pe_expr_.get(); }
+
 private:
     std::unique_ptr<const Expr> pe_expr_;
 };
