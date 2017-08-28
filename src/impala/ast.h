@@ -157,11 +157,10 @@ std::ostream& error  (const ASTNode* n, const char* fmt, Args... args) { return 
 
 class Identifier : public ASTNode {
 public:
-    Identifier(Location location, const char* str)
+    Identifier(Location location, Symbol symbol)
         : ASTNode(location)
-        , symbol_(str)
+        , symbol_(symbol)
     {}
-
     Identifier(Token tok)
         : ASTNode(tok.location())
         , symbol_(tok.symbol())
@@ -223,7 +222,6 @@ public:
         , global_(global)
         , elems_(std::move(elems))
     {}
-
     Path(const Identifier* id)
         : Path(id->location(), false, Elems())
     {
@@ -659,6 +657,7 @@ public:
     {}
 
     const Expr* pe_expr() const { return pe_expr_.get(); }
+    std::ostream& stream(std::ostream&) const override;
 
 private:
     std::unique_ptr<const Expr> pe_expr_;
@@ -1294,6 +1293,9 @@ public:
     PathExpr(const Path* path)
         : Expr(path->location())
         , path_(path)
+    {}
+    PathExpr(const Identifier* identifier)
+        : PathExpr(new Path(identifier))
     {}
 
     const Path* path() const { return path_.get(); }
