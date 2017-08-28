@@ -148,6 +148,8 @@ std::ostream& FnDecl::stream(std::ostream& os) const {
     if (is_extern())
         os << "extern ";
     os << "fn ";
+    if (pe_expr())
+        os << '@' << pe_expr() << ' ';
     if (export_name_)
         os << export_name_ << ' ';
     stream_ast_type_params(os << symbol());

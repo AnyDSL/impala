@@ -665,12 +665,14 @@ private:
 
 class Fn : public ASTTypeParamList {
 public:
-    Fn(ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
+    Fn(const Expr* pe_expr, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
         : ASTTypeParamList(std::move(ast_type_params))
+        , pe_expr_(dock(pe_expr_, pe_expr))
         , params_(std::move(params))
         , body_(dock(body_, body))
     {}
 
+    const Expr* pe_expr() const { return pe_expr_.get(); }
     const Param* param(size_t i) const { return params_[i].get(); }
     ArrayRef<std::unique_ptr<const Param>> params() const { return params_; }
     size_t num_params() const { return params_.size(); }
@@ -688,6 +690,7 @@ public:
     virtual Symbol fn_symbol() const = 0;
 
 protected:
+    std::unique_ptr<const Expr> pe_expr_;
     Params params_;
     mutable thorin::Continuation* continuation_ = nullptr;
     mutable const thorin::Param* ret_param_ = nullptr;
@@ -987,10 +990,10 @@ private:
 
 class FnDecl : public ValueItem, public Fn {
 public:
-    FnDecl(Location location, Visibility vis, bool is_extern, Symbol abi, Symbol export_name,
+    FnDecl(Location location, Visibility vis, bool is_extern, Symbol abi, const Expr* pe_expr, Symbol export_name,
            const Identifier* id, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
         : ValueItem(location, vis, /*mut*/ false, id, /*ast_type*/ nullptr)
-        , Fn(std::move(ast_type_params), std::move(params), body)
+        , Fn(pe_expr, std::move(ast_type_params), std::move(params), body)
         , abi_(abi)
         , export_name_(export_name)
         , is_extern_(is_extern)
@@ -1272,7 +1275,7 @@ class FnExpr : public Expr, public Fn {
 public:
     FnExpr(Location location, Params&& params, const Expr* body)
         : Expr(location)
-        , Fn(ASTTypeParams(), std::move(params), body)
+        , Fn(nullptr, ASTTypeParams(), std::move(params), body)
     {}
 
     const FnType* fn_type() const override { return type()->as<FnType>(); }

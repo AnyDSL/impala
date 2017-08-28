@@ -237,6 +237,9 @@ void Fn::fn_bind(NameSema& sema) const {
             param->ast_type()->bind(sema);
     }
 
+    if (pe_expr())
+        pe_expr()->bind(sema);
+
     for (const auto& param : params()) {
         if (auto pe_expr = param->pe_expr())
             pe_expr->bind(sema);

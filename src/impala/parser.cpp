@@ -472,8 +472,10 @@ const Param* Parser::parse_param(int i, bool lambda) {
         identifier = create<Identifier>(oss.str().c_str());
     }
 
-    if (pe_tok == Token::RUNRUN)
-        pe_expr = new PrefixExpr(pe_tok.location(), PrefixExpr::KNOWN, new PathExpr(new Identifier(pe_tok.location(), identifier->symbol())));
+    if (pe_tok == Token::RUNRUN) {
+        pe_expr = new PrefixExpr(pe_tok.location(), PrefixExpr::KNOWN,
+                                 new PathExpr(new Identifier(pe_tok.location(), identifier->symbol())));
+    }
 
     return new Param(tracker, cur_var_handle++, mut, identifier, ast_type, pe_expr);
 }
@@ -559,6 +561,11 @@ const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility v
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     eat(Token::FN);
+
+    const Expr* pe_expr = nullptr;
+    if (accept(Token::RUN))
+        pe_expr = parse_expr();
+
     auto export_name = lookahead() == Token::LIT_str ? lex().symbol() : Symbol();
     auto identifier = try_identifier("function name");
     auto ast_type_params = parse_ast_type_params();
@@ -577,8 +584,8 @@ const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility v
             break;
     }
 
-    return new FnDecl(tracker, vis, is_extern, abi, export_name, identifier, std::move(ast_type_params),
-                      std::move(params), body);
+    return new FnDecl(tracker, vis, is_extern, abi, pe_expr, export_name, identifier,
+                      std::move(ast_type_params), std::move(params), body);
 }
 
 const ImplItem* Parser::parse_impl(Tracker tracker, Visibility vis) {
