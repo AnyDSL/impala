@@ -427,9 +427,9 @@ const Param* Parser::parse_param(int i, bool lambda) {
     if (accept(Token::RUN))
         pe_expr = parse_expr();
 
-    Token pe_tok;
-    if (lookahead() == Token::RUNRUN)
-        pe_tok = lex(); // construct @?x later - when we know the identifier
+    Token pe_tok = lookahead();
+    if (pe_tok == Token::RUNRUN)
+        lex(); // construct @?x later - when we know the identifier
 
     bool mut = accept(Token::MUT);
     const Identifier* identifier = nullptr;
