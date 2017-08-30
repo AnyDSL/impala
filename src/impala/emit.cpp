@@ -236,27 +236,55 @@ void Fn::emit_body(CodeGen& cg, Location location) const {
     THORIN_PUSH(cg.cur_bb, continuation());
 
     // setup memory + frame
-    size_t i = 0;
-    const Def* mem_param = continuation()->param(i++);
-    mem_param->debug().set("mem");
-    cg.set_mem(mem_param);
-    frame_ = cg.create_frame(location);
+    {
+        size_t i = 0;
+        const Def* mem_param = continuation()->param(i++);
+        mem_param->debug().set("mem");
+        cg.set_mem(mem_param);
+        frame_ = cg.create_frame(location);
 
-    // name params and setup store locations
-    for (const auto& param : params()) {
-        auto p = continuation()->param(i++);
-        p->debug().set(param->symbol().str());
-        cg.emit(param.get(), p);
+        // name params and setup store locations
+        for (const auto& param : params()) {
+            auto p = continuation()->param(i++);
+            p->debug().set(param->symbol().str());
+            cg.emit(param.get(), p);
+        }
+
+        assert(i == continuation()->num_params() || continuation()->type() == cg.empty_fn_type);
+
+        if (continuation()->num_params() != 0
+                && continuation()->params().back()->type()->isa<thorin::FnType>())
+            ret_param_ = continuation()->params().back();
     }
-    assert(i == continuation()->num_params() || continuation()->type() == cg.empty_fn_type);
-    if (continuation()->num_params() != 0 && continuation()->params().back()->type()->isa<thorin::FnType>())
-        ret_param_ = continuation()->params().back();
 
     // descend into body
     auto def = cg.remit(body());
     if (def) {
         const Def* mem = cg.get_mem();
         cg.cur_bb->jump(ret_param(), {mem, def}, location.back());
+    }
+
+    // now handle the pe_profile
+    {
+        size_t i = 0;
+        auto global = pe_expr() ? cg.remit(pe_expr()) : cg.world().literal_bool(false, location);
+        Array<const Def*> pe_profile(continuation()->num_params());
+        pe_profile[i++] = global; // mem param
+
+        for (const auto& param : params()) {
+            auto pe_expr = param->pe_expr();
+            pe_profile[i++] = pe_expr
+                          ? cg.world().arithop_or(global, cg.remit(pe_expr), pe_expr->location())
+                          : global;
+        }
+
+        // HACK for unit
+        if (auto tuple_type = continuation()->type()->ops().back()->isa<thorin::TupleType>()) {
+            if (tuple_type->num_ops() == 0)
+                pe_profile[i++] = global;
+        }
+
+        continuation()->set_pe_profile(pe_profile);
     }
 }
 

@@ -122,6 +122,8 @@ IMPALA_MISC(COLON,        ":")
 IMPALA_MISC(DOUBLE_COLON, ":")
 IMPALA_MISC(COMMA,        ",")
 IMPALA_MISC(DOTDOT,       "..")
+IMPALA_MISC(RUN,          "@")
+IMPALA_MISC(RUNRUN,       "@@")
 
 #undef IMPALA_MISC
 
