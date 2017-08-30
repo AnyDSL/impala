@@ -52,6 +52,7 @@
     case Token::NOT: \
     case Token::INC: \
     case Token::DEC: \
+    case Token::RUN: \
     case Token::OR: \
     case Token::OROR: \
     case Token::ID: \
@@ -892,7 +893,7 @@ const Expr* Parser::parse_expr(Prec prec) {
 }
 
 const Expr* Parser::parse_prefix_expr() {
-    if (lookahead() == Token::OR || lookahead() == Token::OROR)
+    if (lookahead() == Token::OR || lookahead() == Token::OROR || lookahead() == Token::RUN)
         return parse_fn_expr();
 
     auto tracker = track();
@@ -1119,6 +1120,13 @@ const FnExpr* Parser::parse_fn_expr() {
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
     auto tracker = track();
 
+    const Expr* pe_expr = nullptr;
+    if (accept(Token::RUN)) {
+        expect(Token::L_PAREN, "partial evaluation profile of function expression");
+        pe_expr = parse_expr();
+        expect(Token::R_PAREN, "partial evaluation profile of function expression");
+    }
+
     Params params;
     if (accept(Token::OR))
         params = parse_param_list(Token::OR, true);
@@ -1130,7 +1138,7 @@ const FnExpr* Parser::parse_fn_expr() {
 
     auto body = parse_expr();
 
-    return new FnExpr(tracker, std::move(params), body);
+    return new FnExpr(tracker, pe_expr, std::move(params), body);
 }
 
 const IfExpr* Parser::parse_if_expr() {
@@ -1179,7 +1187,7 @@ const ForExpr* Parser::parse_for_expr() {
     auto expr = parse_expr();
     auto body = try_block_expr("body of for loop");
     auto break_decl = create_continuation_decl("break", /*set type during InferSema*/ false);
-    return new ForExpr(tracker, new FnExpr(tracker, std::move(params), body), expr, break_decl);
+    return new ForExpr(tracker, new FnExpr(tracker, nullptr, std::move(params), body), expr, break_decl);
 }
 
 const ForExpr* Parser::parse_with_expr() {
@@ -1193,7 +1201,7 @@ const ForExpr* Parser::parse_with_expr() {
     auto expr = parse_expr();
     auto body = try_block_expr("body of with statement");
     auto break_decl = create_continuation_decl("_", /*set type during InferSema*/ false);
-    return new ForExpr(tracker, new FnExpr(tracker, std::move(params), body), expr, break_decl);
+    return new ForExpr(tracker, new FnExpr(tracker, nullptr, std::move(params), body), expr, break_decl);
 }
 
 const WhileExpr* Parser::parse_while_expr() {

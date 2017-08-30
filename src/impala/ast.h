@@ -1273,9 +1273,9 @@ private:
 
 class FnExpr : public Expr, public Fn {
 public:
-    FnExpr(Location location, Params&& params, const Expr* body)
+    FnExpr(Location location, const Expr* pe_expr, Params&& params, const Expr* body)
         : Expr(location)
-        , Fn(nullptr, ASTTypeParams(), std::move(params), body)
+        , Fn(pe_expr, ASTTypeParams(), std::move(params), body)
     {}
 
     const FnType* fn_type() const override { return type()->as<FnType>(); }
