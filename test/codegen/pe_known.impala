@@ -7,7 +7,7 @@ extern "C" {
     fn forty_two() -> int;
 }
 
-fn test(i: int) -> bool {
+fn @@test(i: int) -> bool {
     if pe_known(i) {
         pe_info("i is known and equal to", i);
         true
@@ -18,8 +18,8 @@ fn test(i: int) -> bool {
 
 fn main() -> int {
     let mut ok = true;
-    ok &= @test(1);
+    ok &= test(1);
     ok &= !test(42);
-    ok &= !@test(forty_two());
+    ok &= !test(forty_two());
     if ok { 0 } else { 1 }
 }

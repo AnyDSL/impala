@@ -1,16 +1,17 @@
 // codegen
 
-fn power(a: half, mut b: int) -> half {
-    let mut result = 1f16;
-    while (b != 0) {
-        result *= a;
-        --b;
+fn @?n power(a: half, mut n: int) -> half {
+    if n == 0 { 
+        1h
+    } else if n % 2 == 0 {
+        let b = power(a, n / 2);
+        b * b
+    } else {
+        a * power(a, n - 1)
     }
-
-    result
 }
 
 fn main() -> int {
-    let power4 = |a: half| -> half @power(a, 4);
-    if @power(3h, 4) == 81h { 0 } else { 1 }
+    let power4 = |a: half| -> half power(a, 4);
+    if power(3h, 4) == 81h { 0 } else { 1 }
 }
