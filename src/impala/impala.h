@@ -47,6 +47,7 @@ void emit(thorin::World&, const Module*);
 enum class Prec {
     Bottom,
     Assign = Bottom,
+    Hlt,
     OrOr, AndAnd,
     Rel,
     Or, Xor, And,
