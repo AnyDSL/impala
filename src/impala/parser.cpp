@@ -423,14 +423,12 @@ Params Parser::parse_param_list(TokenTag delimiter, bool lambda) {
 
 const Param* Parser::parse_param(int i, bool lambda) {
     auto tracker = track();
-    const Expr* pe_expr = nullptr;
 
+    const Expr* pe_expr = nullptr;
     if (accept(Token::RUN))
         pe_expr = parse_expr();
-
-    Token pe_tok = lookahead();
-    if (pe_tok == Token::RUNRUN)
-        lex(); // construct @?x later - when we know the identifier
+    else if (accept(Token::RUNRUN))
+        pe_expr = new LiteralExpr(prev_location(), LiteralExpr::LIT_bool, thorin::Box(true));
 
     bool mut = accept(Token::MUT);
     const Identifier* identifier = nullptr;
@@ -471,11 +469,6 @@ const Param* Parser::parse_param(int i, bool lambda) {
         std::ostringstream oss;
         oss << '<' << i << ">";
         identifier = create<Identifier>(oss.str().c_str());
-    }
-
-    if (pe_tok == Token::RUNRUN) {
-        pe_expr = new PrefixExpr(pe_tok.location(), PrefixExpr::KNOWN,
-                                 new PathExpr(new Identifier(pe_tok.location(), identifier->symbol())));
     }
 
     return new Param(tracker, cur_var_handle++, mut, identifier, ast_type, pe_expr);
