@@ -368,7 +368,7 @@ void PrefixExpr::check(TypeSema& sema) const {
         case HLT:
         case KNOWN:
             return;
-        case RUN: case OR: case OROR:
+        case OR: case OROR: case RUN: case RUNRUN:  // Lambda
             THORIN_UNREACHABLE;
     }
 

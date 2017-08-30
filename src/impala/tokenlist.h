@@ -2,19 +2,20 @@
 #define IMPALA_PREFIX(tok, str)
 #endif
 
-IMPALA_PREFIX(  ADD,   "+") // unary +
-IMPALA_PREFIX(  SUB,   "-") // unary -
-IMPALA_PREFIX(  MUL,   "*") // deref
-IMPALA_PREFIX(  AND,   "&") // address of
-IMPALA_PREFIX(TILDE,   "~") // owned ptr constructor
-IMPALA_PREFIX(  NOT,   "!") // not
-IMPALA_PREFIX(  INC,  "++") // prefix ++
-IMPALA_PREFIX(  DEC,  "--") // prefix --
-IMPALA_PREFIX(   OR,   "|") // lambda expressions
-IMPALA_PREFIX( OROR,  "||") // lambda expressions with empty param list
-IMPALA_PREFIX(  RUN,   "@") // lambda expressions with pe profile
-IMPALA_PREFIX(  HLT,   "$") // stop partial evaluation
-IMPALA_PREFIX(KNOWN,   "?") // is value statically known?
+IMPALA_PREFIX(   ADD,  "+") // unary +
+IMPALA_PREFIX(   SUB,  "-") // unary -
+IMPALA_PREFIX(   MUL,  "*") // deref
+IMPALA_PREFIX(   AND,  "&") // address of
+IMPALA_PREFIX( TILDE,  "~") // owned ptr constructor
+IMPALA_PREFIX(   NOT,  "!") // not
+IMPALA_PREFIX(   INC, "++") // prefix ++
+IMPALA_PREFIX(   DEC, "--") // prefix --
+IMPALA_PREFIX(    OR,  "|") // lambda expressions
+IMPALA_PREFIX(  OROR, "||") // lambda expressions with empty param list
+IMPALA_PREFIX(   RUN,  "@") // lambda expressions with pe profile
+IMPALA_PREFIX(RUNRUN, "@@") // lambda expressions with pe profile
+IMPALA_PREFIX(   HLT,  "$") // stop partial evaluation
+IMPALA_PREFIX( KNOWN,  "?") // is value statically known?
 
 #undef IMPALA_PREFIX
 
@@ -123,8 +124,6 @@ IMPALA_MISC(COLON,        ":")
 IMPALA_MISC(DOUBLE_COLON, "::")
 IMPALA_MISC(COMMA,        ",")
 IMPALA_MISC(DOTDOT,       "..")
-IMPALA_MISC(RUN,          "@")
-IMPALA_MISC(RUNRUN,       "@@")
 
 #undef IMPALA_MISC
 

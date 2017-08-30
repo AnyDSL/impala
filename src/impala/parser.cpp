@@ -53,6 +53,7 @@
     case Token::INC: \
     case Token::DEC: \
     case Token::RUN: \
+    case Token::RUNRUN: \
     case Token::OR: \
     case Token::OROR: \
     case Token::ID: \
@@ -559,7 +560,7 @@ const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility v
     const Expr* pe_expr = nullptr;
     if (accept(Token::RUN))
         pe_expr = parse_expr();
-    if (accept(Token::RUNRUN))
+    else if (accept(Token::RUNRUN))
         pe_expr = new LiteralExpr(prev_location(), LiteralExpr::LIT_bool, thorin::Box(true));
 
     auto export_name = lookahead() == Token::LIT_str ? lex().symbol() : Symbol();
@@ -886,7 +887,7 @@ const Expr* Parser::parse_expr(Prec prec) {
 }
 
 const Expr* Parser::parse_prefix_expr() {
-    if (lookahead() == Token::OR || lookahead() == Token::OROR || lookahead() == Token::RUN)
+    if (lookahead() == Token::OR || lookahead() == Token::OROR || lookahead() == Token::RUN || lookahead() == Token::RUNRUN)
         return parse_fn_expr();
 
     auto tracker = track();
@@ -1118,7 +1119,8 @@ const FnExpr* Parser::parse_fn_expr() {
         expect(Token::L_PAREN, "partial evaluation profile of function expression");
         pe_expr = parse_expr();
         expect(Token::R_PAREN, "partial evaluation profile of function expression");
-    }
+    } else if (accept(Token::RUNRUN))
+        pe_expr = new LiteralExpr(prev_location(), LiteralExpr::LIT_bool, thorin::Box(true));
 
     Params params;
     if (accept(Token::OR))

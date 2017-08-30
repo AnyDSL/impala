@@ -27,7 +27,7 @@ public:
 #include "impala/tokenlist.h"
 
         // manually insert missing unary prefix/postfix types
-        TILDE, NOT, INC, DEC, HLT, KNOWN, DOT,
+        TILDE, NOT, INC, DEC, HLT, KNOWN, DOT, RUN, RUNRUN,
         // these do ont appear in impala/tokenlist.h -- they are too special
         MUT, ID, Eof, Error,
         LIT_char, LIT_str,
