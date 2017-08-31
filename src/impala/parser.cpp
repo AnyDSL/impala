@@ -247,6 +247,7 @@ public:
     const WhileExpr*    parse_while_expr();
     const BlockExpr*    parse_block_expr();
     const BlockExpr*    try_block_expr(const std::string& context);
+    const Expr*         parse_pe_expr(const char* context);
 
     // patterns
     const Ptrn*        parse_ptrn();
@@ -1259,6 +1260,17 @@ const BlockExpr* Parser::try_block_expr(const std::string& context) {
             error("block expression", context);
             return create<BlockExpr>();
     }
+}
+
+const Expr* Parser::parse_pe_expr(const char* context) {
+    const Expr* pe_expr = nullptr;
+    if (accept(Token::RUN)) {
+        expect(Token::L_PAREN, context);
+        pe_expr = parse_expr();
+        expect(Token::R_PAREN, context);
+    }
+
+    return pe_expr;
 }
 
 /*
