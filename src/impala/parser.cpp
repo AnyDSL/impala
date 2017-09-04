@@ -53,7 +53,6 @@
     case Token::INC: \
     case Token::DEC: \
     case Token::RUN: \
-    case Token::RUNRUN: \
     case Token::OR: \
     case Token::OROR: \
     case Token::ID: \
@@ -426,11 +425,7 @@ Params Parser::parse_param_list(TokenTag delimiter, bool lambda) {
 const Param* Parser::parse_param(int i, bool lambda) {
     auto tracker = track();
 
-    const Expr* pe_expr = nullptr;
-    if (accept(Token::RUN))
-        pe_expr = parse_expr();
-    else if (accept(Token::RUNRUN))
-        pe_expr = new LiteralExpr(prev_location(), LiteralExpr::LIT_bool, thorin::Box(true));
+    const Expr* pe_expr = parse_pe_expr("partial evaluation profile of function parameter");
 
     bool mut = accept(Token::MUT);
     const Identifier* identifier = nullptr;
@@ -557,14 +552,9 @@ const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility v
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
 
     eat(Token::FN);
-
-    const Expr* pe_expr = nullptr;
-    if (accept(Token::RUN))
-        pe_expr = parse_expr();
-    else if (accept(Token::RUNRUN))
-        pe_expr = new LiteralExpr(prev_location(), LiteralExpr::LIT_bool, thorin::Box(true));
-
     auto export_name = lookahead() == Token::LIT_str ? lex().symbol() : Symbol();
+
+    const Expr* pe_expr = parse_pe_expr("partial evaluation profile of function declaration");
     auto identifier = try_identifier("function name");
     auto ast_type_params = parse_ast_type_params();
     expect(Token::L_PAREN, "function head");
@@ -888,7 +878,7 @@ const Expr* Parser::parse_expr(Prec prec) {
 }
 
 const Expr* Parser::parse_prefix_expr() {
-    if (lookahead() == Token::OR || lookahead() == Token::OROR || lookahead() == Token::RUN || lookahead() == Token::RUNRUN)
+    if (lookahead() == Token::OR || lookahead() == Token::OROR || lookahead() == Token::RUN)
         return parse_fn_expr();
 
     auto tracker = track();
@@ -1115,13 +1105,7 @@ const FnExpr* Parser::parse_fn_expr() {
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
     auto tracker = track();
 
-    const Expr* pe_expr = nullptr;
-    if (accept(Token::RUN)) {
-        expect(Token::L_PAREN, "partial evaluation profile of function expression");
-        pe_expr = parse_expr();
-        expect(Token::R_PAREN, "partial evaluation profile of function expression");
-    } else if (accept(Token::RUNRUN))
-        pe_expr = new LiteralExpr(prev_location(), LiteralExpr::LIT_bool, thorin::Box(true));
+    const Expr* pe_expr = parse_pe_expr("partial evaluation profile of function expression");
 
     Params params;
     if (accept(Token::OR))
@@ -1265,9 +1249,13 @@ const BlockExpr* Parser::try_block_expr(const std::string& context) {
 const Expr* Parser::parse_pe_expr(const char* context) {
     const Expr* pe_expr = nullptr;
     if (accept(Token::RUN)) {
-        expect(Token::L_PAREN, context);
-        pe_expr = parse_expr();
-        expect(Token::R_PAREN, context);
+        if (lookahead() == Token::L_PAREN) {
+            eat(Token::L_PAREN);
+            pe_expr = parse_expr();
+            expect(Token::R_PAREN, context);
+        } else {
+            pe_expr = new LiteralExpr(lookahead().location(), LiteralExpr::LIT_bool, Box(true));
+        }
     }
 
     return pe_expr;
