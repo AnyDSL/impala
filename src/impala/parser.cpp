@@ -1163,11 +1163,11 @@ const ForExpr* Parser::parse_for_expr() {
     eat(Token::FOR);
     auto params = param_list() ? parse_param_list(Token::IN, true) : Params();
     params.emplace_back(create<Param>(cur_var_handle++, create<Identifier>("continue"), nullptr));
-    //fn_expr->is_continuation_ = false;
     auto expr = parse_expr();
+    auto pe_expr = parse_pe_expr("partial evaluation profile of for loop");
     auto body = try_block_expr("body of for loop");
     auto break_decl = create_continuation_decl("break", /*set type during InferSema*/ false);
-    return new ForExpr(tracker, new FnExpr(tracker, nullptr, std::move(params), body), expr, break_decl);
+    return new ForExpr(tracker, new FnExpr(tracker, pe_expr, std::move(params), body), expr, break_decl);
 }
 
 const ForExpr* Parser::parse_with_expr() {
@@ -1179,9 +1179,10 @@ const ForExpr* Parser::parse_with_expr() {
     auto params = param_list() ? parse_param_list(Token::IN, true) : Params();
     params.emplace_back(create<Param>(cur_var_handle++, create<Identifier>("break"), nullptr));
     auto expr = parse_expr();
+    auto pe_expr = parse_pe_expr("partial evaluation profile of with statement");
     auto body = try_block_expr("body of with statement");
     auto break_decl = create_continuation_decl("_", /*set type during InferSema*/ false);
-    return new ForExpr(tracker, new FnExpr(tracker, nullptr, std::move(params), body), expr, break_decl);
+    return new ForExpr(tracker, new FnExpr(tracker, pe_expr, std::move(params), body), expr, break_decl);
 }
 
 const WhileExpr* Parser::parse_while_expr() {
