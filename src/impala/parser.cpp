@@ -131,9 +131,8 @@ public:
 
     class Tracker {
     public:
-        Tracker(Parser& parser)
-            : parser_(parser)
-            , location_(parser_.lookahead().location().front())
+        Tracker(Parser& parser, const Location& location)
+            : parser_(parser), location_(location)
         {}
 
         operator Location() const { return {location_.front(), parser_.prev_location().back()}; }
@@ -143,7 +142,8 @@ public:
         Location location_;
     };
 
-    Tracker track() { return Tracker(*this); }
+    Tracker track() { return Tracker(*this, lookahead().location().front()); }
+    Tracker track(const Location& location) { return Tracker(*this, location); }
 
     template<class T, class... Args>
     const T* create(Args&&... args) { return new T(prev_location(), std::forward<Args>(args)...); }
@@ -215,6 +215,7 @@ public:
     void               parse_items(Items&);
     const StaticItem*  parse_static_item(Tracker, Visibility);
     const EnumDecl*    parse_enum_decl(Tracker, Visibility);
+    const OptionDecl*  parse_option_decl(const size_t);
     const FnDecl*      parse_fn_decl(BodyMode, Tracker, Visibility, bool is_extern, Symbol abi);
     const ImplItem*    parse_impl(Tracker, Visibility);
     const Item*        parse_module_or_module_decl(Tracker, Visibility);
@@ -249,7 +250,8 @@ public:
     // patterns
     const Ptrn*        parse_ptrn();
     const TuplePtrn*   parse_tuple_ptrn();
-    const IdPtrn*      parse_id_ptrn();
+    const IdPtrn*      parse_id_ptrn(const Identifier*);
+    const EnumPtrn*    parse_enum_ptrn(const Path*);
     const LiteralPtrn* parse_literal_ptrn();
 
     // statements
@@ -498,9 +500,30 @@ const Item* Parser::parse_item() {
     }
 }
 
-const EnumDecl* Parser::parse_enum_decl(Tracker, Visibility) {
-    assert(false && "TODO");
-    return 0;
+const EnumDecl* Parser::parse_enum_decl(Tracker tracker, Visibility vis) {
+    eat(Token::ENUM);
+    auto identifier = try_identifier("enum declaration");
+    auto ast_type_params = parse_ast_type_params();
+    expect(Token::L_BRACE, "enum declaration");
+    size_t i = 0;
+    OptionDecls option_decls;
+    parse_comma_list("closing brace of enum declaration", Token::R_BRACE, [&] {
+        option_decls.emplace_back(parse_option_decl(i++));
+    });
+    return new EnumDecl(tracker, vis, identifier, std::move(ast_type_params), std::move(option_decls));
+}
+
+const OptionDecl* Parser::parse_option_decl(const size_t i) {
+    auto tracker = track();
+    auto identifier = try_identifier("enum option");
+    ASTTypes args;
+    if (lookahead() == Token::L_PAREN) {
+        eat(Token::L_PAREN);
+        parse_comma_list("closing parenthesis of enum option", Token::R_PAREN, [&] {
+            args.emplace_back(parse_type());
+        });
+    }
+    return new OptionDecl(tracker, i, identifier, std::move(args));
 }
 
 const Item* Parser::parse_extern_block_or_fn_decl(Tracker tracker, Visibility vis) {
@@ -721,7 +744,7 @@ const FnASTType* Parser::parse_fn_type() {
 
 const ASTType* Parser::parse_return_type(bool& is_continuation, bool mandatory) {
     auto tracker = track();
-    ASTTypes ast_type_args;
+    ASTTypes ast_types;
     is_continuation = false;
     if (accept(Token::ARROW)) {
         if (accept(Token::NOT)) {
@@ -729,23 +752,14 @@ const ASTType* Parser::parse_return_type(bool& is_continuation, bool mandatory) 
             return nullptr;
         }
 
-        if (accept(Token::L_PAREN)) {   // in-place tuple
-            parse_comma_list("closing parenthesis of return type list", Token::R_PAREN, [&] {
-                ast_type_args.emplace_back(parse_type());
-            });
-        } else {
-            auto type = parse_type();
-            assert(!type->isa<TupleASTType>());
-            ast_type_args.emplace_back(type);
-        }
-
-        return new FnASTType(tracker, std::move(ast_type_args));
+        ast_types.emplace_back(parse_type());
+        return new FnASTType(tracker, std::move(ast_types));
     }
 
     if (mandatory) {
         error("return type", "function type");
-        ast_type_args.emplace_back(new ErrorASTType(tracker));
-        return new FnASTType(tracker, std::move(ast_type_args));
+        ast_types.emplace_back(new ErrorASTType(tracker));
+        return new FnASTType(tracker, std::move(ast_types));
     }
 
     return nullptr;
@@ -1246,7 +1260,17 @@ const Ptrn* Parser::parse_ptrn() {
             return parse_literal_ptrn();
 
         case Token::L_PAREN: return parse_tuple_ptrn();
-        default:             return parse_id_ptrn();
+        case Token::MUT:     return parse_id_ptrn(nullptr);
+        default: {
+            std::unique_ptr<const Path> path(parse_path());
+            if (lookahead() == Token::L_PAREN   ||
+                lookahead() == Token::L_BRACKET ||
+                path->num_elems() > 1) {
+                return parse_enum_ptrn(path.release());
+            }
+            auto id = path->elem(0)->identifier();
+            return parse_id_ptrn(new Identifier(path->location(), id->symbol().str()));
+        }
     }
 }
 
@@ -1260,12 +1284,24 @@ const TuplePtrn* Parser::parse_tuple_ptrn() {
     return new TuplePtrn(tracker, std::move(elems));
 }
 
-const IdPtrn* Parser::parse_id_ptrn() {
-    auto tracker = track();
-    auto mut = accept(Token::MUT);
-    auto identifier = try_identifier("local variable in let binding");
+const IdPtrn* Parser::parse_id_ptrn(const Identifier* id) {
+    auto tracker = id ? track(id->location()) : track();
+    auto mut = id ? false : accept(Token::MUT);
+    auto identifier = id ? id : try_identifier("local variable in let binding");
     auto ast_type = accept(Token::COLON) ? parse_type() : nullptr;
     return new IdPtrn(new LocalDecl(tracker, cur_var_handle++, mut, identifier, ast_type));
+}
+
+const EnumPtrn* Parser::parse_enum_ptrn(const Path* path) {
+    auto tracker = track(path->location());
+    Ptrns args;
+    if (lookahead() == Token::L_PAREN) {
+        eat(Token::L_PAREN);
+        parse_comma_list("closing parenthesis of enum pattern", Token::R_PAREN, [&] {
+            args.emplace_back(parse_ptrn());
+        });
+    }
+    return new EnumPtrn(tracker, path, std::move(args));
 }
 
 const LiteralPtrn* Parser::parse_literal_ptrn() {

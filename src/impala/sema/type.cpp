@@ -12,7 +12,7 @@ namespace impala {
 using thorin::streamf;
 
 #define HENK_STRUCT_EXTRA_NAME struct_decl
-#define HENK_STRUCT_EXTRA_TYPE  const StructDecl*
+#define HENK_STRUCT_EXTRA_TYPE const StructDecl*
 #define HENK_ENUM_EXTRA_NAME enum_decl
 #define HENK_ENUM_EXTRA_TYPE const EnumDecl*
 #define HENK_TABLE_TYPE TypeTable

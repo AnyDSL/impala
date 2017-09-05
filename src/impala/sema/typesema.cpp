@@ -86,6 +86,7 @@ public:
     const Var* check(const ASTTypeParam* ast_type_param) { ast_type_param->check(*this); return ast_type_param->var(); }
     void check(const Module* module) { module->check(*this); }
     const Type* check(const FieldDecl* n) { n->check(*this); return n->type(); }
+    const Type* check(const OptionDecl* n) { n->check(*this); return n->type(); }
     const Type* check(const LocalDecl* local) { local->check(*this); return local->type(); }
     const Type* check(const ASTType* ast_type) { ast_type->check(*this); return ast_type->type(); }
     void check(const Item* n) { n->check(*this); }
@@ -169,7 +170,8 @@ void FnASTType::check(TypeSema& sema) const {
     }
 }
 
-void ASTTypeApp::check(TypeSema&) const {
+void ASTTypeApp::check(TypeSema& sema) const {
+    path()->check(sema);
     if (!decl() || !decl()->is_type_decl())
         error(identifier(), "'{}' does not name a type", symbol());
 }
@@ -201,6 +203,18 @@ const Type* Fn::check_body(TypeSema& sema) const {
     return body()->type();
 }
 
+void Path::check(TypeSema&) const {
+    auto last_type = elem(0)->type();
+    for (size_t i = 1, e = num_elems(); i != e; ++i) {
+        auto cur_type = elem(i)->type();
+        if (cur_type->isa<TypeError>()) {
+            error(this, "'{}' is not a member of '{}'", elem(i)->symbol(), last_type);
+            break;
+        }
+        last_type = cur_type;
+    }
+}
+
 //------------------------------------------------------------------------------
 
 /*
@@ -230,7 +244,15 @@ void Typedef::check(TypeSema& sema) const {
     sema.check(ast_type());
 }
 
-void EnumDecl::check(TypeSema&) const { /*TODO*/ }
+void EnumDecl::check(TypeSema& sema) const {
+    check_ast_type_params(sema);
+    for (const auto& option : option_decls())
+        sema.check(option.get());
+}
+
+void OptionDecl::check(TypeSema& sema) const {
+    for (const auto& arg : args()) sema.check(arg.get());
+}
 
 void StructDecl::check(TypeSema& sema) const {
     check_ast_type_params(sema);
@@ -304,6 +326,7 @@ void FnExpr::check(TypeSema& sema) const {
 }
 
 void PathExpr::check(TypeSema& sema) const {
+    path()->check(sema);
     if (value_decl()) {
         if (auto local = value_decl()->isa<LocalDecl>()) {
             // if local lies in an outer function go through memory to implement closure
@@ -712,6 +735,12 @@ void TuplePtrn::check(TypeSema& sema) const {
 void IdPtrn::check(TypeSema& sema) const {
     sema.cur_block_->add_local(local());
     sema.check(local());
+}
+
+void EnumPtrn::check(TypeSema& sema) const {
+    for (const auto& arg : args()) {
+        sema.check(arg.get());
+    }
 }
 
 void LiteralPtrn::check(TypeSema& sema) const {
