@@ -26,7 +26,7 @@ fn main() -> int {
     let levels = 2;
     let mut times = ~[2:i64];
 
-    fn @@vcycle_dsl_intern(level: int) -> () {
+    fn @vcycle_dsl_intern(level: int) -> () {
         sort(2, times);
         if level == levels-1 {
             print_int(times(1) as int);

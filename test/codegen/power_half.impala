@@ -1,6 +1,6 @@
 // codegen
 
-fn @?n power(a: half, n: int) -> half {
+fn @(?n) power(a: half, n: int) -> half {
     if n == 0 { 
         1h
     } else if n % 2 == 0 {
