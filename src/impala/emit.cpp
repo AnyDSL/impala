@@ -686,7 +686,8 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
                             auto fn_type = cg.world().fn_type({
                                 cg.world().mem_type(), ptr_type, poly_type, poly_type,
-                                cg.world().fn_type({ cg.world().mem_type(), poly_type, cg.world().type_bool() }) });
+                                cg.world().fn_type({ cg.world().mem_type(), cg.world().tuple_type({ poly_type, cg.world().type_bool() }) })
+                            });
                             auto cont = cg.world().continuation(fn_type, {location(), "cmpxchg"});
                             cont->set_intrinsic();
                             dst = cont;
