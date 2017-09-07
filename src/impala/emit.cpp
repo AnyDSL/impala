@@ -742,10 +742,8 @@ const Def* MapExpr::remit(CodeGen& cg) const {
 
         auto ret_type = defs.size() - 1 == fn_type->num_ops() ? nullptr : cg.convert(fn_type->return_type());
         auto ret = cg.call(dst, defs, ret_type, thorin::Debug(location(), dst->name()) + "_cont");
-        if (ret_type) {
-            cg.cur_bb->set_all_true_pe_profile();
+        if (ret_type)
             cg.set_mem(cg.cur_bb->param(0));
-        }
 
         return ret;
     } else if (ltype->isa<ArrayType>() || ltype->isa<TupleType>() || ltype->isa<SimdType>()) {
