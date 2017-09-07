@@ -929,7 +929,7 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 
 const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     auto index = path()->decl()->as<OptionDecl>()->index();
-    auto cond = cg.world().cmp_eq(cg.world().extract(init, size_t(0), location()), cg.world().literal_qu32(index, location()));
+    auto cond = cg.world().cmp_eq(cg.world().extract(init, 0_u32, location()), cg.world().literal_qu32(index, location()));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
         auto variant = cg.world().bitcast(variant_type, cg.world().extract(init, 1, location()), location());
