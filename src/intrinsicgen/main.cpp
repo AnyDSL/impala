@@ -8,6 +8,14 @@
 #include "impala/ast.h"
 #include "impala/impala.h"
 
+// extract intrinsic names for overloaded intrinsics
+static const char * const IntrinsicNameTable[] = {
+  "not_intrinsic",
+#define GET_INTRINSIC_NAME_TABLE
+#include <llvm/IR/Intrinsics.gen>
+#undef GET_INTRINSIC_NAME_TABLE
+};
+
 const impala::Type* llvm2impala(impala::TypeTable&, llvm::Type*);
 
 int main() {
@@ -15,13 +23,18 @@ int main() {
     auto module = std::make_unique<impala::Module>("dummy.impala");
     check(init, module.get(), false);
 
-    auto& context = llvm::getGlobalContext();
+    llvm::LLVMContext context;
     int num = llvm::Intrinsic::num_intrinsics - 1;
 
     std::cout << "extern \"device\" {" << thorin::up;
     for (int i = 1; i != num; ++i) {
         auto id = (llvm::Intrinsic::ID) i;
-        std::string llvm_name = llvm::Intrinsic::getName(id);
+        std::string llvm_name;
+        if (llvm::Intrinsic::isOverloaded(id))
+            llvm_name = IntrinsicNameTable[i];
+        else
+            llvm_name = llvm::Intrinsic::getName(id);
+
         // skip "experimental" intrinsics
         if (llvm_name.find("experimental")!=std::string::npos)
             continue;
@@ -58,13 +71,37 @@ const impala::Type* llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
             case 16: return tt.type_i16();
             case 32: return tt.type_i32();
             case 64: return tt.type_i64();
-            default: assert(false);
+            default: return nullptr;
         }
     }
 
     if (type->isHalfTy())   return tt.type_f16();
     if (type->isFloatTy())  return tt.type_f32();
     if (type->isDoubleTy()) return tt.type_f64();
+
+    if (auto ptr = llvm::dyn_cast<llvm::PointerType>(type)) {
+        auto elem = llvm2impala(tt, ptr->getElementType());
+        return elem == nullptr ? nullptr : tt.borrowed_ptr_type(elem, false, ptr->getAddressSpace());
+    }
+
+    if (auto vector_type = llvm::dyn_cast<llvm::VectorType>(type)) {
+        auto elem = llvm2impala(tt, vector_type->getElementType());
+        return elem == nullptr ? nullptr : tt.simd_type(elem, vector_type->getNumElements());
+    }
+
+    if (auto struct_type = llvm::dyn_cast<llvm::StructType>(type)) {
+        auto elements = struct_type->elements();
+        impala::ASTTypeParams ast_type_params;
+        impala::FieldDecls field_decls;
+        auto ret = tt.struct_type(new impala::StructDecl(impala::Location(), impala::Visibility(impala::Visibility::Pub), new impala::Identifier(thorin::Location(), struct_type->isLiteral() ? "" : struct_type->getName().str().c_str()), std::move(ast_type_params), std::move(field_decls)), struct_type->getNumElements());
+        for (size_t i = 0, e = struct_type->getNumElements(); i != e; ++i) {
+            auto elem = llvm2impala(tt, elements[i]);
+            if (elem == nullptr)
+                return nullptr;
+            ret->set(i, elem);
+        }
+        return ret;
+    }
 
     if (auto fn = llvm::dyn_cast<llvm::FunctionType>(type)) {
         std::vector<const impala::Type*> param_types(fn->getNumParams()+1);
