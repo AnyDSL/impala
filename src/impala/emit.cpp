@@ -627,15 +627,15 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                     if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {
                         auto name = fn_decl->fn_symbol().remove_quotation();
                         if (name == "bitcast") {
-                            return cg.world().bitcast(cg.convert(type_expr->type_arg(0)), cg.remit(arg(0)), eval_loc);
+                            return cg.world().bitcast(cg.convert(type_expr->type_arg(0)), cg.remit(arg(0)), location());
                         } else if (name == "select") {
-                            return cg.world().select(cg.remit(arg(0)), cg.remit(arg(1)), cg.remit(arg(2)), eval_loc);
+                            return cg.world().select(cg.remit(arg(0)), cg.remit(arg(1)), cg.remit(arg(2)), location());
                         } else if (name == "insert") {
-                            return cg.world().insert(cg.remit(arg(0)), cg.remit(arg(1)), cg.remit(arg(2)), eval_loc);
+                            return cg.world().insert(cg.remit(arg(0)), cg.remit(arg(1)), cg.remit(arg(2)), location());
                         } else if (name == "sizeof") {
-                            return cg.world().size_of(cg.convert(type_expr->type_arg(0)), eval_loc);
+                            return cg.world().size_of(cg.convert(type_expr->type_arg(0)), location());
                         } else if (name == "undef") {
-                            return cg.world().bottom(cg.convert(type_expr->type_arg(0)), eval_loc);
+                            return cg.world().bottom(cg.convert(type_expr->type_arg(0)), location());
                         } else if (name == "reserve_shared") {
                             auto ptr_type = cg.convert(type());
                             auto fn_type = cg.world().fn_type({
