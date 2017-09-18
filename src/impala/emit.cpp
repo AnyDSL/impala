@@ -280,6 +280,7 @@ static bool is_primop(const Symbol& name) {
     if      (name == "select")   return true;
     else if (name == "sizeof")   return true;
     else if (name == "bitcast")  return true;
+    else if (name == "insert")   return true;
     return false;
 }
 
@@ -629,6 +630,8 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             return cg.world().bitcast(cg.convert(type_expr->type_arg(0)), cg.remit(arg(0)), eval_loc);
                         } else if (name == "select") {
                             return cg.world().select(cg.remit(arg(0)), cg.remit(arg(1)), cg.remit(arg(2)), eval_loc);
+                        } else if (name == "insert") {
+                            return cg.world().insert(cg.remit(arg(0)), cg.remit(arg(1)), cg.remit(arg(2)), eval_loc);
                         } else if (name == "sizeof") {
                             return cg.world().size_of(cg.convert(type_expr->type_arg(0)), eval_loc);
                         } else if (name == "undef") {
@@ -655,7 +658,8 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
                             auto fn_type = cg.world().fn_type({
                                 cg.world().mem_type(), ptr_type, poly_type, poly_type,
-                                cg.world().fn_type({ cg.world().mem_type(), poly_type, cg.world().type_bool() }) });
+                                cg.world().fn_type({ cg.world().mem_type(), cg.world().tuple_type({ poly_type, cg.world().type_bool() }) })
+                            });
                             auto cont = cg.world().continuation(fn_type, {location(), "cmpxchg"});
                             cont->set_intrinsic();
                             dst = cont;
