@@ -65,11 +65,11 @@ find_program(LLVM_AS_BIN llvm-as
     PATHS ${LLVM_TOOLS_BINARY_DIR} ${LLVM_INSTALL_PREFIX}/bin
     PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
 )
-if(TARGET clang AND NOT CLANG_BIN)
-    get_target_property(CLANG_BIN clang LOCATION)
-    set(CLANG_BIN ${CLANG_BIN} CACHE FILEPATH "path to clang executable")
+if(TARGET clang AND NOT Clang_BIN)
+    get_target_property(Clang_BIN clang LOCATION)
+    set(Clang_BIN ${Clang_BIN} CACHE FILEPATH "path to clang executable")
 endif()
-find_program(CLANG_BIN clang
+find_program(Clang_BIN clang
     PATHS ${LLVM_TOOLS_BINARY_DIR} ${LLVM_INSTALL_PREFIX}/bin
     PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
 )
@@ -78,7 +78,7 @@ find_package(PythonInterp REQUIRED)
 set(PYTHON_BIN ${PYTHON_EXECUTABLE})
 
 message(STATUS "Impala_BIN: ${Impala_BIN}")
-message(STATUS "CLANG_BIN: ${CLANG_BIN}")
+message(STATUS "Clang_BIN: ${Clang_BIN}")
 message(STATUS "LLVM_AS_BIN: ${LLVM_AS_BIN}")
 message(STATUS "Python found: ${PYTHON_VERSION_STRING}")
 
@@ -155,7 +155,7 @@ function(wrap_impala_sources outfiles)
         COMMAND ${Impala_BIN} ${_impala_flags} ${_impala_platform_files} ${_infiles}
         ${POST_PATCHING_COMMAND}
         ${BC_GENERATING_COMMAND}
-        COMMAND ${CLANG_BIN} ${_clang_flags} -c -o ${_objfile} ${_llfile}
+        COMMAND ${Clang_BIN} ${_clang_flags} -c -o ${_objfile} ${_llfile}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS ${Impala_BIN} ${_impala_platform_files} ${_infiles} VERBATIM)
 
@@ -171,6 +171,6 @@ endfunction()
 
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Impala DEFAULT_MSG Impala_DIR Impala_BIN PYTHON_BIN CLANG_BIN LLVM_AS_BIN)
+find_package_handle_standard_args(Impala DEFAULT_MSG Impala_DIR Impala_BIN PYTHON_BIN Clang_BIN LLVM_AS_BIN)
 
-mark_as_advanced(Impala_BUILD_DIR Impala_INSTALL_DIR PYTHON_BIN LLVM_DIR CLANG_BIN LLVM_AS_BIN)
+mark_as_advanced(Impala_BUILD_DIR Impala_INSTALL_DIR PYTHON_BIN LLVM_DIR Clang_BIN LLVM_AS_BIN)
