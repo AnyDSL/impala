@@ -2,7 +2,7 @@
 # in order to compile and link against .impala files
 #
 # Impala_BIN
-# MACRO wrap_impala_sources( <output variable>
+# FUNCTION wrap_impala_sources( <output variable>
 #     [ OUTPUT_NAME basename ]
 #     [ CLANG_FLAGS --flag1 --flag2 ...]
 #     [ CLANG_FLAGS_RELEASE --flag1 --flag2 ...]
@@ -17,29 +17,39 @@
 
 cmake_minimum_required(VERSION 3.1)
 
-find_path(IMPALA_BUILD_DIR
+find_path(Impala_BUILD_DIR
     NAMES CMakeCache.txt
-    PATHS ${IMPALA_BUILD_DIR} "@CMAKE_CURRENT_BINARY_DIR@"
+    PATHS ${Impala_BUILD_DIR} ${IMPALA_BUILD_DIR} "@CMAKE_CURRENT_BINARY_DIR@"
 )
-find_path(IMPALA_INSTALL_DIR
+find_path(Impala_INSTALL_DIR
     NAMES share/impala/cmake/impala-config.cmake
     PATHS "@CMAKE_INSTALL_PREFIX@"
 )
-find_path(IMPALA_DIR
+find_path(Impala_DIR
     NAMES impala-config.cmake
-    PATHS ${IMPALA_DIR} $ENV{IMPALA_DIR} ${CMAKE_CURRENT_LIST_DIR} ${IMPALA_BUILD_DIR} ${IMPALA_INSTALL_DIR} ${IMPALA_SOURCE_DIR} "@CMAKE_CURRENT_BINARY_DIR@/share/impala/cmake"
+    PATHS ${Impala_DIR} ${IMPALA_DIR} $ENV{IMPALA_DIR} $ENV{Impala_DIR} ${CMAKE_CURRENT_LIST_DIR} ${IMPALA_BUILD_DIR} ${IMPALA_INSTALL_DIR} ${IMPALA_SOURCE_DIR} "@CMAKE_CURRENT_BINARY_DIR@/share/impala/cmake"
     PATH_SUFFIXES share/impala/cmake
 )
+# legacy fallback
+set(IMPALA_DIR ${Impala_DIR})
+
+if(NOT TARGET impala)
+    include(${Impala_DIR}/impala-exports.cmake)
+endif()
+if(TARGET impala AND NOT Impala_BIN)
+    get_target_property(Impala_BIN impala LOCATION)
+    set(Impala_BIN ${Impala_BIN} CACHE PATH "path to impala executable")
+endif()
 find_program(Impala_BIN
     NAMES impala
-    PATHS ${IMPALA_DIR}/../../../bin ${IMPALA_BUILD_DIR}/bin ${IMPALA_INSTALL_DIR}/bin "@CMAKE_RUNTIME_OUTPUT_DIRECTORY@"
+    PATHS ${Impala_DIR}/../../../bin ${Impala_BUILD_DIR}/bin ${Impala_INSTALL_DIR}/bin "@CMAKE_RUNTIME_OUTPUT_DIRECTORY@"
     PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
 )
 
 find_path(LLVM_DIR LLVMConfig.cmake PATHS ${LLVM_DIR} $ENV{LLVM_DIR} "@LLVM_DIR@")
 find_package(LLVM QUIET)
 find_path(LLVM_INSTALL_PREFIX
-    NAMES share/llvm/cmake/LLVMConfig.cmake bin/clang
+    NAMES lib/cmake/llvm/LLVMConfig.cmake share/llvm/cmake/LLVMConfig.cmake bin/clang
     PATHS ${LLVM_INSTALL_PREFIX} "@LLVM_INSTALL_PREFIX@"
 )
 find_path(LLVM_TOOLS_BINARY_DIR
@@ -47,10 +57,18 @@ find_path(LLVM_TOOLS_BINARY_DIR
     PATHS ${LLVM_TOOLS_BINARY_DIR} "@LLVM_TOOLS_BINARY_DIR@" ${LLVM_INSTALL_PREFIX}/bin
     PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
 )
+if(TARGET llvm-as AND NOT LLVM_AS_BIN)
+    get_target_property(LLVM_AS_BIN llvm-as LOCATION)
+    set(LLVM_AS_BIN ${LLVM_AS_BIN} CACHE PATH "path to llvm-as executable")
+endif()
 find_program(LLVM_AS_BIN llvm-as
     PATHS ${LLVM_TOOLS_BINARY_DIR} ${LLVM_INSTALL_PREFIX}/bin
     PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
 )
+if(TARGET clang AND NOT CLANG_BIN)
+    get_target_property(CLANG_BIN clang LOCATION)
+    set(CLANG_BIN ${CLANG_BIN} CACHE PATH "path to clang executable")
+endif()
 find_program(CLANG_BIN clang
     PATHS ${LLVM_TOOLS_BINARY_DIR} ${LLVM_INSTALL_PREFIX}/bin
     PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
@@ -80,7 +98,7 @@ set(Impala_RUNTIME_LIBRARIES)
 set(OPT_FLAGS_DEBUG "-g")
 set(OPT_FLAGS_RELEASE "-O3")
 
-macro(wrap_impala_sources outfiles)
+function(wrap_impala_sources outfiles)
     cmake_parse_arguments("PARGS" "" "OUTPUT_NAME" "CLANG_FLAGS;CLANG_FLAGS_RELEASE;CLANG_FLAGS_DEBUG;IMPALA_FLAGS;IMPALA_FLAGS_RELEASE;IMPALA_FLAGS_DEBUG;FILES" ${ARGN})
     if(NOT "${PARGS_UNPARSED_ARGUMENTS}" STREQUAL "")
         message(FATAL_ERROR "Unparsed arguments ${PARGS_UNPARSED_ARGUMENTS}")
@@ -106,7 +124,7 @@ macro(wrap_impala_sources outfiles)
     if(AnyDSL_runtime_FOUND)
         AnyDSL_runtime_files(_impala_platform_files FRONTEND impala)
         include_directories(${AnyDSL_runtime_INCLUDE_DIR})
-        set(Impala_RUNTIME_LIBRARIES ${AnyDSL_runtime_LIBRARIES})
+        set(Impala_RUNTIME_LIBRARIES ${AnyDSL_runtime_LIBRARIES} PARENT_SCOPE)
     endif()
 
     set(_impala_flags_RELEASE ${OPT_FLAGS_RELEASE} ${PARGS_IMPALA_FLAGS_RELEASE})
@@ -148,11 +166,11 @@ macro(wrap_impala_sources outfiles)
             LANGUAGE CXX
     )
 
-    set(${outfiles} ${${outfiles}} ${_objfile} ${_impala_platform_files})
-endmacro()
+    set(${outfiles} ${${outfiles}} ${_objfile} ${_impala_platform_files} PARENT_SCOPE)
+endfunction()
 
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Impala DEFAULT_MSG IMPALA_DIR Impala_BIN PYTHON_BIN CLANG_BIN LLVM_AS_BIN)
+find_package_handle_standard_args(Impala DEFAULT_MSG Impala_DIR Impala_BIN PYTHON_BIN CLANG_BIN LLVM_AS_BIN)
 
-mark_as_advanced(IMPALA_BUILD_DIR IMPALA_INSTALL_DIR PYTHON_BIN LLVM_DIR CLANG_BIN LLVM_AS_BIN)
+mark_as_advanced(Impala_BUILD_DIR Impala_INSTALL_DIR PYTHON_BIN LLVM_DIR CLANG_BIN LLVM_AS_BIN)
