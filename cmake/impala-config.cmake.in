@@ -65,6 +65,8 @@ find_program(LLVM_AS_BIN llvm-as
     PATHS ${LLVM_TOOLS_BINARY_DIR} ${LLVM_INSTALL_PREFIX}/bin
     PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
 )
+find_path(Clang_DIR ClangConfig.cmake PATHS ${Clang_DIR} ${LLVM_DIR} PATH_SUFFIXES ../clang)
+find_package(Clang QUIET)
 if(TARGET clang AND NOT Clang_BIN)
     get_target_property(Clang_BIN clang LOCATION)
     set(Clang_BIN ${Clang_BIN} CACHE FILEPATH "path to clang executable")
@@ -173,4 +175,4 @@ endfunction()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Impala DEFAULT_MSG Impala_DIR Impala_BIN PYTHON_BIN Clang_BIN LLVM_AS_BIN)
 
-mark_as_advanced(Impala_BUILD_DIR Impala_INSTALL_DIR PYTHON_BIN LLVM_DIR Clang_BIN LLVM_AS_BIN)
+mark_as_advanced(Impala_BUILD_DIR Impala_INSTALL_DIR PYTHON_BIN LLVM_DIR Clang_DIR Clang_BIN LLVM_AS_BIN)
