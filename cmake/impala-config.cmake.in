@@ -38,7 +38,7 @@ if(NOT TARGET impala)
 endif()
 if(TARGET impala AND NOT Impala_BIN)
     get_target_property(Impala_BIN impala LOCATION)
-    set(Impala_BIN ${Impala_BIN} CACHE PATH "path to impala executable")
+    set(Impala_BIN ${Impala_BIN} CACHE FILEPATH "path to impala executable")
 endif()
 find_program(Impala_BIN
     NAMES impala
@@ -59,7 +59,7 @@ find_path(LLVM_TOOLS_BINARY_DIR
 )
 if(TARGET llvm-as AND NOT LLVM_AS_BIN)
     get_target_property(LLVM_AS_BIN llvm-as LOCATION)
-    set(LLVM_AS_BIN ${LLVM_AS_BIN} CACHE PATH "path to llvm-as executable")
+    set(LLVM_AS_BIN ${LLVM_AS_BIN} CACHE FILEPATH "path to llvm-as executable")
 endif()
 find_program(LLVM_AS_BIN llvm-as
     PATHS ${LLVM_TOOLS_BINARY_DIR} ${LLVM_INSTALL_PREFIX}/bin
@@ -67,7 +67,7 @@ find_program(LLVM_AS_BIN llvm-as
 )
 if(TARGET clang AND NOT CLANG_BIN)
     get_target_property(CLANG_BIN clang LOCATION)
-    set(CLANG_BIN ${CLANG_BIN} CACHE PATH "path to clang executable")
+    set(CLANG_BIN ${CLANG_BIN} CACHE FILEPATH "path to clang executable")
 endif()
 find_program(CLANG_BIN clang
     PATHS ${LLVM_TOOLS_BINARY_DIR} ${LLVM_INSTALL_PREFIX}/bin
