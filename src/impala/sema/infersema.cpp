@@ -710,7 +710,7 @@ const Type* InfixExpr::infer(InferSema& sema) const {
         case GT: case GE: {
             auto ltype = sema.rvalue(lhs());
             auto rtype = sema.rvalue(rhs());
-            if (rtype->is_known() && ltype->is_known()) {
+            if (rtype->is_known() || ltype->is_known()) {
                 sema.constrain(lhs(), rtype);
                 sema.constrain(rhs(), ltype);
                 if (auto simd = rhs()->type()->isa<SimdType>())
@@ -732,7 +732,7 @@ const Type* InfixExpr::infer(InferSema& sema) const {
         case AND: case OR:  case XOR: {
             auto ltype = sema.rvalue(lhs());
             auto rtype = sema.rvalue(rhs());
-            if (rtype->is_known() && ltype->is_known()) {
+            if (rtype->is_known() || ltype->is_known()) {
                 sema.constrain(lhs(), rtype);
                 sema.constrain(rhs(), ltype);
                 return rtype;
