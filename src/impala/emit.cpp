@@ -15,7 +15,7 @@ class CodeGen : public IRBuilder {
 public:
     CodeGen(World& world)
         : IRBuilder(world)
-        , empty_fn_type(world.fn_type({ world.mem_type(), world.unit() }))
+        , empty_fn_type(world.fn_type({ world.mem_type() }))
     {}
 
     const Def* frame() const { assert(cur_fn); return cur_fn->frame(); }
@@ -48,7 +48,7 @@ public:
 
     void jump_to_continuation(Continuation* continuation, const thorin::Location& loc) {
         if (is_reachable())
-            cur_bb->jump(continuation, {get_mem(), world().tuple({})}, loc);
+            cur_bb->jump(continuation, {get_mem()}, loc);
         set_continuation(continuation);
     }
 
@@ -84,7 +84,6 @@ public:
         return thorin_type(type) = t;
     }
 
-    void convert_ops(const Type*, std::vector<const thorin::Type*>& nops);
     const thorin::Type* convert_rec(const Type*);
     size_t bitwidth(const Type* t);
 
@@ -101,11 +100,6 @@ public:
  * Type
  */
 
-void CodeGen::convert_ops(const Type* type, std::vector<const thorin::Type*>& nops) {
-    for (const auto& op : type->ops())
-        nops.push_back(convert(op));
-}
-
 const thorin::Type* CodeGen::convert_rec(const Type* type) {
     if (auto lambda = type->isa<Lambda>()) {
         return world().lambda(convert(lambda->body()), lambda->name());
@@ -121,11 +115,13 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
     } else if (auto fn_type = type->isa<FnType>()) {
         std::vector<const thorin::Type*> nops;
         nops.push_back(world().mem_type());
-        convert_ops(fn_type, nops);
+        for (size_t i = 0, e = fn_type->num_params(); i != e; ++i)
+            nops.push_back(convert(fn_type->param(i)));
         return world().fn_type(nops);
     } else if (auto tuple_type = type->isa<TupleType>()) {
         std::vector<const thorin::Type*> nops;
-        convert_ops(tuple_type, nops);
+        for (const auto& op : tuple_type->ops())
+            nops.push_back(convert(op));
         return world().tuple_type(nops);
     } else if (auto struct_type = type->isa<StructType>()) {
         auto s = world().struct_type(struct_type->struct_decl()->symbol().str(), struct_type->num_ops());
@@ -259,7 +255,15 @@ void Fn::emit_body(CodeGen& cg, Location location) const {
     auto def = cg.remit(body());
     if (def) {
         const Def* mem = cg.get_mem();
-        cg.cur_bb->jump(ret_param(), {mem, def}, location.back());
+        // flatten returned values
+        if (auto tuple = body()->type()->isa<TupleType>()) {
+            Array<const Def*> ret_values(tuple->num_ops() + 1);
+            for (size_t i = 0, e = tuple->num_ops(); i != e; ++i)
+                ret_values[i + 1] = cg.world().extract(def, i);
+            ret_values[0] = mem;
+            cg.cur_bb->jump(ret_param(), ret_values, location.back());
+        } else
+            cg.cur_bb->jump(ret_param(), {mem, def}, location.back());
     }
 }
 
@@ -658,7 +662,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
                             auto fn_type = cg.world().fn_type({
                                 cg.world().mem_type(), ptr_type, poly_type, poly_type,
-                                cg.world().fn_type({ cg.world().mem_type(), cg.world().tuple_type({ poly_type, cg.world().type_bool() }) })
+                                cg.world().fn_type({ cg.world().mem_type(), poly_type, cg.world().type_bool() })
                             });
                             auto cont = cg.world().continuation(fn_type, {location(), "cmpxchg"});
                             cont->set_intrinsic();
@@ -668,7 +672,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             auto string_type = cg.world().ptr_type(cg.world().indefinite_array_type(cg.world().type_pu8()));
                             auto fn_type = cg.world().fn_type({
                                 cg.world().mem_type(), string_type, poly_type,
-                                cg.world().fn_type({ cg.world().mem_type(), cg.world().unit() }) });
+                                cg.world().fn_type({ cg.world().mem_type() }) });
                             auto cont = cg.world().continuation(fn_type, {location(), "pe_info"});
                             cont->set_intrinsic();
                             dst = cont;
@@ -706,13 +710,11 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
 
         std::vector<const Def*> defs;
         defs.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
-        if (num_args() == 0 && cg.convert(fn_type) == cg.empty_fn_type) // add dummy () to be able to call break() instead of break(())
-            defs.push_back(cg.world().tuple({}));
         for (const auto& arg : args())
             defs.push_back(cg.remit(arg.get()));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
-        auto ret_type = defs.size() - 1 == fn_type->num_ops() ? nullptr : cg.convert(fn_type->return_type());
+        auto ret_type = num_args() == fn_type->num_params() ? nullptr : cg.convert(fn_type->return_type());
         auto old_bb = cg.cur_bb;
         auto ret = cg.call(dst, defs, ret_type, thorin::Debug(location(), dst->name()) + "_cont");
         if (ret_type)

@@ -195,13 +195,16 @@ inline const RefType* split_ref_type(const Type*& type) {
 
 class FnType : public Type {
 private:
-    FnType(TypeTable& typetable, Types ops)
-        : Type(typetable, Tag_fn, ops)
+    FnType(TypeTable& typetable, const Type* op)
+        : Type(typetable, Tag_fn, {op})
     {
         ++order_;
     }
 
 public:
+    const Type* param(size_t) const;
+    size_t num_params() const;
+    const Type* last_param() const;
     const Type* return_type() const;
     bool is_returning() const;
     virtual std::ostream& stream(std::ostream&) const override;
@@ -493,7 +496,7 @@ public:
     const Type* app(const Type* callee, const Type* op);
     const Lambda* lambda(const Type* body, const char* name) { return unify(new Lambda(*this, body, name)); }
 
-    const TupleType* tuple_type(Types ops) { return unify(new TupleType(*this, ops)); }
+    const TupleType* tuple_type(Types ops) { assert(ops.size() != 1); return unify(new TupleType(*this, ops)); }
     const TupleType* unit() { return unit_; }
 
     const StructType* struct_type(const StructDecl* decl, size_t size);
@@ -504,7 +507,8 @@ public:
     const DefiniteArrayType* definite_array_type(const Type* elem_type, uint64_t dim) {
         return unify(new DefiniteArrayType(*this, elem_type, dim));
     }
-    const FnType* fn_type(Types params) { return unify(new FnType(*this, params)); }
+    const FnType* fn_type(const Type* op) { return unify(new FnType(*this, op)); }
+    const FnType* fn_type(Types params) { return unify(new FnType(*this, params.size() == 1 ? params.front() : tuple_type(params))); }
     const IndefiniteArrayType* indefinite_array_type(const Type* elem_type) {
         return unify(new IndefiniteArrayType(*this, elem_type));
     }

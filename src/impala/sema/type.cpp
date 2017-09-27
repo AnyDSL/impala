@@ -22,31 +22,41 @@ bool is_void(const Type* type) {
     return false;
 }
 
+const Type* FnType::param(size_t i) const {
+    return op(0)->isa<TupleType>() ? op(0)->op(i) : op(i);
+}
+
+size_t FnType::num_params() const {
+    return op(0)->isa<TupleType>() ? op(0)->num_ops() : 1;
+}
+
+const Type* FnType::last_param() const {
+    return op(0)->isa<TupleType>() ? op(0)->ops().back() : op(0);
+}
+
 bool FnType::is_returning() const {
-    bool ret = false;
-    for (auto op : ops()) {
-        switch (op->order()) {
-            case 0: continue;
-            case 1:
-                if (!ret) {
-                    ret = true;
-                    continue;
-                } // else fall-through
-            default:
-                return false;
+    if (auto tuple = op(0)->isa<TupleType>()) {
+        int ret = 0;
+        for (auto op : tuple->ops()) {
+            if (op->order() == 0) continue;
+            else if (op->order() == 1) ret++;
+            else ret = 2;
         }
+        return ret == 1;
+    } else {
+        return op(0)->order() == 1;
     }
-    return true;
 }
 
 const Type* FnType::return_type() const {
-    if (!empty()) {
-        if (auto fn = ops().back()->isa<FnType>()) {
-            if (fn->num_ops() == 1)
-                return fn->ops().front();
-            return table().tuple_type(fn->ops());
-        }
+    auto last_param = op(0);
+    if (last_param->isa<TupleType>()) {
+         if (last_param->empty())
+            return table().type_noret();
+        last_param = last_param->ops().back();
     }
+    if (auto fn = last_param->isa<FnType>())
+        return fn->op(0);
     return table().type_noret();
 }
 
@@ -163,11 +173,12 @@ std::ostream& TypeError::stream(std::ostream& os) const { return os << "<type er
 
 std::ostream& FnType::stream(std::ostream& os) const {
     os << "fn";
+    if (auto tuple = op(0)->isa<TupleType>())
+        streamf(os, "{}", tuple);
+    else
+        streamf(os, "({})", op(0));
     auto ret_type = return_type();
-    if (ret_type->isa<NoRetType>())
-        return stream_list(os, ops(), [&](const Type* type) { os << type; }, "(", ")");
-
-    return streamf(os, "({}) -> {}", stream_list(ops().skip_back(), [&](const Type* type) { os << type; }), ret_type);
+    return !ret_type->isa<NoRetType>() ? streamf(os, " -> {}", ret_type) : os;
 }
 
 std::ostream& Var::stream(std::ostream& os) const {

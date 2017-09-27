@@ -628,12 +628,12 @@ void MapExpr::check(TypeSema& sema) const {
 void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
     auto fn_type = expr->type()->as<FnType>();
 
-    if (fn_type->num_ops() == args.size() || fn_type->num_ops() == args.size() + 1) {
+    if (fn_type->num_params() == args.size() || fn_type->num_params() == args.size() + 1) {
         for (size_t i = 0; i < args.size(); i++)
-            expect_type(fn_type->op(i), args[i], "argument type");
+            expect_type(fn_type->param(i), args[i], "argument type");
     } else
         error(expr, "incorrect number of arguments in function application: got {}, expected {}",
-              args.size(), fn_type->num_ops() > 0 ? fn_type->num_ops() - 1 : 0);
+              args.size(), std::max(size_t(0), fn_type->num_params() - (fn_type->is_returning() ? 1 : 0)));
 }
 
 void BlockExprBase::check(TypeSema& sema) const {
@@ -701,8 +701,8 @@ void ForExpr::check(TypeSema& sema) const {
         sema.check(fn_expr());
 
         if (auto fn_for = ltype->isa<FnType>()) {
-            if (fn_for->num_ops() != 0) {
-                if (fn_for->ops().back()->isa<FnType>()) {
+            if (fn_for->num_params() != 0) {
+                if (fn_for->last_param()->isa<FnType>()) {
                     // TODO remove copy & paste code
                     // copy over args and check call --
                     Array<const Expr*> args(map->num_args() + 1);
