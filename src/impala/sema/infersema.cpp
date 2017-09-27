@@ -6,7 +6,6 @@
 
 #include "impala/ast.h"
 #include "impala/impala.h"
-#include "impala/sema/typetable.h"
 
 using namespace thorin;
 

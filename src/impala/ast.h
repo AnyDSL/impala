@@ -130,7 +130,7 @@ protected:
 
 //------------------------------------------------------------------------------
 
-class ASTNode : public thorin::MagicCast<ASTNode>, public thorin::Streamable  {
+class ASTNode : public thorin::RuntimeCast<ASTNode>, public thorin::Streamable  {
 public:
     ASTNode() = delete;
     ASTNode(const ASTNode&) = delete;
