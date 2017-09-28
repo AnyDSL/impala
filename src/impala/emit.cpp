@@ -88,11 +88,13 @@ public:
 
     const thorin::Type*& thorin_type(const Type* type) { return impala2thorin_[type]; }
     const thorin::StructType*& thorin_struct_type(const StructType* type) { return struct_type_impala2thorin_[type]; }
+    const thorin::StructType*& thorin_enum_type(const EnumType* type) { return enum_type_impala2thorin_[type]; }
 
     const Fn* cur_fn = nullptr;
     const thorin::Type* empty_fn_type;
     TypeMap<const thorin::Type*> impala2thorin_;
     GIDMap<const StructType*, const thorin::StructType*> struct_type_impala2thorin_;
+    GIDMap<const EnumType*,   const thorin::StructType*> enum_type_impala2thorin_;
 };
 
 /*
@@ -128,17 +130,25 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         thorin_type(type) = s;
         size_t i = 0;
         for (const auto& op : struct_type->ops())
-            thorin_struct_type(struct_type)->set(i++, convert(op));
+            s->set(i++, convert(op));
         thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
-        return thorin_struct_type(struct_type);
+        return s;
     } else if (auto enum_type = type->isa<EnumType>()) {
+        auto s = world().struct_type(enum_type->enum_decl()->symbol().str(), 2);
+        thorin_enum_type(enum_type) = s;
+        thorin_type(enum_type) = s;
+
         auto enum_decl = enum_type->enum_decl();
         thorin::TypeSet variants;
         for (const auto& option : enum_decl->option_decls())
             variants.insert(option->variant_type(*this));
         thorin::Array<const thorin::Type*> ops(variants.size());
         std::copy(variants.begin(), variants.end(), ops.begin());
-        return world().tuple_type({ world().type_qu32(), world().variant_type(ops) });
+
+        s->set(0, world().type_qu32());
+        s->set(1, world().variant_type(ops));
+        thorin_type(enum_type) = nullptr;
+        return s;
     } else if (auto ptr_type = type->isa<PtrType>()) {
         return world().ptr_type(convert(ptr_type->pointee()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
@@ -301,10 +311,11 @@ void ImplItem::emit(CodeGen& cg) const {
 
 Value OptionDecl::emit(CodeGen& cg, const Def* init) const {
     assert(!init);
-    auto variant_type = cg.convert(enum_decl()->type())->op(1)->as<VariantType>();
+    auto enum_type = enum_decl()->type()->as<EnumType>();
+    auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
     auto id = cg.world().literal_qu32(index(), location());
     auto bot = cg.world().bottom(variant_type);
-    return Value::create_val(cg, cg.world().tuple({ id, bot }) );
+    return Value::create_val(cg, cg.world().struct_agg(cg.thorin_enum_type(enum_type), { id, bot }) );
 }
 
 Value StaticItem::emit(CodeGen& cg, const Def* init) const {
@@ -648,11 +659,12 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
         if (auto path_expr = lhs()->isa<PathExpr>()) {
             if (auto option = path_expr->path()->decl()->isa<OptionDecl>()) {
                 // handle option creation here
-                auto variant_type = cg.convert(option->enum_decl()->type())->op(1)->as<VariantType>();
+                auto enum_type = option->enum_decl()->type()->as<EnumType>();
+                auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
                 std::vector<const Def*> defs;
                 for (const auto& arg : args())
                     defs.push_back(cg.remit(arg.get()));
-                return cg.world().tuple({
+                return cg.world().struct_agg(cg.thorin_enum_type(enum_type), {
                     cg.world().literal_qu32(option->index(), location()),
                     cg.world().variant(variant_type, cg.world().tuple(defs, location()), location())
                 });
