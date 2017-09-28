@@ -85,7 +85,6 @@ public:
     }
 
     const thorin::Type* convert_rec(const Type*);
-    size_t bitwidth(const Type* t);
 
     const thorin::Type*& thorin_type(const Type* type) { return impala2thorin_[type]; }
     const thorin::StructType*& thorin_struct_type(const StructType* type) { return struct_type_impala2thorin_[type]; }
@@ -133,12 +132,13 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
         return thorin_struct_type(struct_type);
     } else if (auto enum_type = type->isa<EnumType>()) {
-        size_t bytes = (bitwidth(enum_type) - 32) / 8;
-        if (bytes != 0) {
-            return world().tuple_type({ world().type_qu32(), world().definite_array_type(world().type_qu8(), bytes) });
-        } else {
-            return world().type_qu32();
-        }
+        auto enum_decl = enum_type->enum_decl();
+        thorin::TypeSet variants;
+        for (const auto& option : enum_decl->option_decls())
+            variants.insert(option->variant_type(*this));
+        thorin::Array<const thorin::Type*> ops(variants.size());
+        std::copy(variants.begin(), variants.end(), ops.begin());
+        return world().tuple_type({ world().type_qu32(), world().variant_type(ops) });
     } else if (auto ptr_type = type->isa<PtrType>()) {
         return world().ptr_type(convert(ptr_type->pointee()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
@@ -147,47 +147,6 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         return world().indefinite_array_type(convert(indefinite_array_type->elem_type()));
     } else if (auto simd_type = type->isa<SimdType>()) {
         return world().type(convert(simd_type->elem_type())->as<thorin::PrimType>()->primtype_tag(), simd_type->dim());
-    }
-    THORIN_UNREACHABLE;
-}
-
-size_t CodeGen::bitwidth(const Type* t) {
-    if (auto tuple_type = t->isa<TupleType>()) {
-        size_t bits = 0;
-        for (const auto& op : tuple_type->ops()) bits += bitwidth(op);
-        return bits;
-    } else if (auto enum_type = t->isa<EnumType>()) {
-        size_t bits = 0;
-        for (const auto & op : enum_type->ops()) {
-            size_t op_bits = 0;
-            if (auto fn_type = op->isa<FnType>()) {
-                for (size_t i = 0, e = fn_type->num_ops() - 1; i != e; i++)
-                    op_bits += bitwidth(fn_type->op(i));
-            } else {
-                op_bits = 0;
-            }
-            bits = std::max(bits, op_bits);
-        }
-        return 32 + bits;
-    } else if (auto prim_type = t->isa<PrimType>()) {
-        switch (prim_type->primtype_tag()) {
-            case PrimType_i8:  return 8;
-            case PrimType_i16: return 16;
-            case PrimType_i32: return 32;
-            case PrimType_i64: return 64;
-            case PrimType_u8:  return 8;
-            case PrimType_u16: return 16;
-            case PrimType_u32: return 32;
-            case PrimType_u64: return 64;
-            case PrimType_f16: return 16;
-            case PrimType_f32: return 32;
-            case PrimType_f64: return 64;
-
-            case PrimType_bool:
-                // cannot reliably estimate the type of a boolean (LLVM will do its own stuff)
-            default:
-              THORIN_UNREACHABLE;
-        }
     }
     THORIN_UNREACHABLE;
 }
@@ -342,14 +301,10 @@ void ImplItem::emit(CodeGen& cg) const {
 
 Value OptionDecl::emit(CodeGen& cg, const Def* init) const {
     assert(!init);
-    size_t bytes = (cg.bitwidth(enum_decl()->type()) - 32) / 8;
+    auto variant_type = cg.convert(enum_decl()->type())->op(1)->as<VariantType>();
     auto id = cg.world().literal_qu32(index(), location());
-    if (bytes != 0) {
-        auto bot = cg.world().bottom(cg.world().definite_array_type(cg.world().type_qu8(), bytes));
-        return Value::create_val(cg, cg.world().tuple({ id, bot }) );
-    } else {
-        return Value::create_val(cg, id);
-    }
+    auto bot = cg.world().bottom(variant_type);
+    return Value::create_val(cg, cg.world().tuple({ id, bot }) );
 }
 
 Value StaticItem::emit(CodeGen& cg, const Def* init) const {
@@ -693,15 +648,13 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
         if (auto path_expr = lhs()->isa<PathExpr>()) {
             if (auto option = path_expr->path()->decl()->isa<OptionDecl>()) {
                 // handle option creation here
-                auto bytes = (cg.bitwidth(option->enum_decl()->type()) - 32) / 8;
-                assert(bytes != 0);
-                auto dst_type = cg.world().definite_array_type(cg.world().type_qu8(), bytes);
+                auto variant_type = cg.convert(option->enum_decl()->type())->op(1)->as<VariantType>();
                 std::vector<const Def*> defs;
                 for (const auto& arg : args())
                     defs.push_back(cg.remit(arg.get()));
                 return cg.world().tuple({
                     cg.world().literal_qu32(option->index(), location()),
-                    cg.world().bitcast(dst_type, cg.world().tuple(defs, location()), location())
+                    cg.world().variant(variant_type, cg.world().tuple(defs, location()), location())
                 });
             }
         }
@@ -927,7 +880,7 @@ const thorin::Def* IdPtrn::emit_cond(CodeGen& cg, const thorin::Def*) const {
 void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     if (num_args() == 0) return;
     auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
-    auto variant = cg.world().bitcast(variant_type, cg.world().extract(init, 1), location());
+    auto variant = cg.world().cast(variant_type, cg.world().extract(init, 1), location());
     for (size_t i = 0, e = num_args(); i != e; ++i) {
         cg.emit(arg(i), cg.extract(variant, i, location()));
     }
@@ -938,7 +891,7 @@ const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) con
     auto cond = cg.world().cmp_eq(cg.world().extract(init, size_t(0), location()), cg.world().literal_qu32(index, location()));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
-        auto variant = cg.world().bitcast(variant_type, cg.world().extract(init, 1, location()), location());
+        auto variant = cg.world().cast(variant_type, cg.world().extract(init, 1, location()), location());
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
             cond = cg.world().arithop_and(cond, arg(i)->emit_cond(cg, cg.world().extract(variant, i, location())), location());
