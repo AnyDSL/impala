@@ -64,8 +64,8 @@ bool is_subtype(const Type* dst, const Type* src) {
     if (dst == src)
         return true;
 
-    if (dst->isa<StructType>())
-        // structs are the only nominal types
+    if (dst->isa<StructType>() || dst->isa<EnumType>())
+        // structs and enums are the only nominal types
         return false;
 
     if (auto dst_borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
