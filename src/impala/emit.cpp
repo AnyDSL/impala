@@ -754,7 +754,11 @@ const Def* IfExpr::remit(CodeGen& cg) const {
 
 void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     auto matcher = cg.remit(expr());
-    if (is_int(expr()->type())) {
+    auto enum_type = expr()->type()->isa<EnumType>();
+    bool is_integer = is_int(expr()->type());
+    bool is_simple = enum_type && enum_type->enum_decl()->is_simple();
+
+    if (is_integer || is_simple) {
         // integers: match continuation
         JumpTarget otherwise;
         size_t num_targets = num_arms();
@@ -762,20 +766,28 @@ void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
         Array<JumpTarget> targets(num_targets);
 
         for (size_t i = 0, e = num_targets; i != e; ++i) {
-            if (!arm(i)->ptrn()->is_refutable()) {
+            // last pattern will always be taken
+            if (!arm(i)->ptrn()->is_refutable() || i == e - 1) {
                 num_targets = i;
                 cg.emit(arm(i)->ptrn(), matcher);
                 otherwise = JumpTarget({arm(i)->location().front(), "otherwise"});
                 break;
             } else {
-                defs[i] = cg.remit(arm(i)->ptrn()->as<LiteralPtrn>()->literal());
+                if (is_integer)
+                    defs[i] = cg.remit(arm(i)->ptrn()->as<LiteralPtrn>()->literal());
+                else {
+                    auto enum_ptrn = arm(i)->ptrn()->as<EnumPtrn>();
+                    auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
+                    defs[i] = cg.world().literal_qu32(option_decl->index(), arm(i)->ptrn()->location());
+                }
                 targets[i] = JumpTarget({arm(i)->location().front(), "case"});
             }
         }
         targets.shrink(num_targets);
         defs.shrink(num_targets);
 
-        cg.match(matcher, otherwise, defs, targets, {location().front(), "match"});
+        auto matcher_int = is_integer ? matcher : cg.world().extract(matcher, 0_u32, matcher->debug());
+        cg.match(matcher_int, otherwise, defs, targets, {location().front(), "match"});
 
         for (size_t i = 0; i < num_targets; i++) {
             if (cg.enter(targets[i]))
@@ -791,7 +803,10 @@ void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
             JumpTarget next({arm(i)->location().front(), "case_false"});
 
             arm(i)->ptrn()->emit(cg, matcher);
-            auto cond = arm(i)->ptrn()->emit_cond(cg, matcher);
+            // last pattern will always be taken
+            auto cond = i == e - 1
+                ? cg.world().literal_bool(true, arm(i)->ptrn()->location())
+                : arm(i)->ptrn()->emit_cond(cg, matcher);
 
             cg.branch(cond, cur, next);
             if (cg.enter(cur))
