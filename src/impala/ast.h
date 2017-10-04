@@ -130,7 +130,7 @@ protected:
 
 //------------------------------------------------------------------------------
 
-class ASTNode : public thorin::MagicCast<ASTNode>, public thorin::Streamable  {
+class ASTNode : public thorin::RuntimeCast<ASTNode>, public thorin::Streamable  {
 public:
     ASTNode() = delete;
     ASTNode(const ASTNode&) = delete;
@@ -945,10 +945,16 @@ public:
              ASTTypeParams&& ast_type_params, OptionDecls&& option_decls)
         : TypeDeclItem(location, vis, id, std::move(ast_type_params))
         , option_decls_(std::move(option_decls))
-    {}
+    {
+        simple_ = true;
+        for (auto& option : option_decls_)
+            simple_ &= option->num_args() == 0;
+    }
 
     void bind(NameSema&) const override;
     std::ostream& stream(std::ostream& os) const override;
+
+    bool is_simple() const { return simple_; }
 
     size_t num_option_decls() const { return option_decls_.size(); }
     const OptionDecls& option_decls() const { return option_decls_; }
@@ -962,6 +968,7 @@ private:
     void check(TypeSema&) const override;
     void emit(CodeGen&) const override;
 
+    bool simple_;
     OptionDecls option_decls_;
     mutable OptionTable option_table_;
 };

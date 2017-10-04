@@ -14,8 +14,6 @@ set(IMPALA_SOURCES
     sema/type.cpp
     sema/type.h
     sema/typesema.cpp
-    sema/typetable.cpp
-    sema/typetable.h
     stream.cpp
     symbol.cpp
     symbol.h

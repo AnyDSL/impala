@@ -10,7 +10,7 @@
 #include "thorin/util/stream.h"
 
 #include "impala/token.h"
-#include "impala/sema/typetable.h"
+#include "impala/sema/type.h"
 
 namespace impala {
 

@@ -2,7 +2,6 @@
 
 #include "impala/ast.h"
 #include "impala/impala.h"
-#include "impala/sema/typetable.h"
 
 using namespace thorin;
 
@@ -628,12 +627,12 @@ void MapExpr::check(TypeSema& sema) const {
 void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
     auto fn_type = expr->type()->as<FnType>();
 
-    if (fn_type->num_ops() == args.size() || fn_type->num_ops() == args.size() + 1) {
+    if (fn_type->num_params() == args.size() || fn_type->num_params() == args.size() + 1) {
         for (size_t i = 0; i < args.size(); i++)
-            expect_type(fn_type->op(i), args[i], "argument type");
+            expect_type(fn_type->param(i), args[i], "argument type");
     } else
         error(expr, "incorrect number of arguments in function application: got {}, expected {}",
-              args.size(), fn_type->num_ops() > 0 ? fn_type->num_ops() - 1 : 0);
+              args.size(), std::max(size_t(0), fn_type->num_params() - (fn_type->is_returning() ? 1 : 0)));
 }
 
 void BlockExpr::check(TypeSema& sema) const {
@@ -659,10 +658,41 @@ void IfExpr::check(TypeSema& sema) const {
         sema.expect_type(then_type, else_expr(), "else branch type");
 }
 
+inline bool is_match_complete(const MatchExpr* match) {
+    if (auto enum_type = match->expr()->type()->isa<EnumType>()) {
+        // match is complete if every option is covered by an irrefutable pattern
+        auto enum_decl = enum_type->enum_decl();
+        Array<bool> covered(enum_decl->num_option_decls(), false);
+        size_t num_covered = 0;
+
+        for (size_t i = 0, e = match->num_arms(); i != e; ++i) {
+            auto enum_ptrn = match->arm(i)->ptrn()->isa<EnumPtrn>();
+            if (!enum_ptrn) continue;
+            auto option_decl = enum_ptrn->path()->decl()->isa<OptionDecl>();
+            if (!option_decl || option_decl->enum_decl() != enum_decl) continue;
+
+            bool refutable = false;
+            for (auto& arg : enum_ptrn->args()) refutable |= arg->is_refutable();
+            if (refutable) continue;
+
+            num_covered += covered[option_decl->index()] ? 0 : 1;
+            covered[option_decl->index()] = true;
+        }
+
+        if (num_covered == enum_decl->num_option_decls()) return true;
+    }
+
+    // match is complete if there is an irrefutable pattern
+    for (size_t i = 0, e = match->num_arms(); i != e; ++i) {
+        if (!match->arm(i)->ptrn()->is_refutable()) return true;
+    }
+
+    return false;
+}
+
 void MatchExpr::check(TypeSema& sema) const {
     auto expr_type = sema.check(expr());
     auto arg_type  = num_arms() > 0 ? sema.check(arm(0)->expr()) : nullptr;
-    bool refutable = true;
     for (size_t i = 0, e = num_arms(); i != e; ++i) {
         sema.check(arm(i)->ptrn());
         sema.check(arm(i)->expr());
@@ -671,9 +701,8 @@ void MatchExpr::check(TypeSema& sema) const {
         sema.expect_type(arg_type,  arm(i)->expr(), "matched expression type");
         if (!arm(i)->ptrn()->is_refutable() && i < e - 1)
             warning(arm(i)->ptrn(), "pattern is always true, subsequent patterns will not be executed");
-        refutable &= arm(i)->ptrn()->is_refutable();
     }
-    if (refutable)
+    if (!is_match_complete(this))
         error(this, "missing default case for match expression");
 }
 
@@ -698,8 +727,8 @@ void ForExpr::check(TypeSema& sema) const {
         sema.check(fn_expr());
 
         if (auto fn_for = ltype->isa<FnType>()) {
-            if (fn_for->num_ops() != 0) {
-                if (fn_for->ops().back()->isa<FnType>()) {
+            if (fn_for->num_params() != 0) {
+                if (fn_for->last_param()->isa<FnType>()) {
                     // TODO remove copy & paste code
                     // copy over args and check call --
                     Array<const Expr*> args(map->num_args() + 1);

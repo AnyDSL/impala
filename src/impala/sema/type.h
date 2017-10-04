@@ -5,6 +5,7 @@
 #include "thorin/util/cast.h"
 #include "thorin/util/hash.h"
 #include "thorin/util/stream.h"
+#include "thorin/util/type_table.h"
 
 #include "impala/symbol.h"
 
@@ -40,29 +41,21 @@ enum PrimTypeTag {
 #include "impala/tokenlist.h"
 };
 
+//------------------------------------------------------------------------------
+
+class TypeTable;
+using Type = thorin::TypeBase<TypeTable>;
+
 class StructDecl;
 class EnumDecl;
 template<class T> using ArrayRef = thorin::ArrayRef<T>;
 template<class T> using Array    = thorin::Array<T>;
 
-static const int Node_App        = impala::Tag_app;
-static const int Node_Lambda     = impala::Tag_lambda;
-static const int Node_Pi         = impala::Tag_pi;
-static const int Node_StructType = impala::Tag_struct;
-static const int Node_EnumType   = impala::Tag_enum;
-static const int Node_TupleType  = impala::Tag_tuple;
-static const int Node_TypeError  = impala::Tag_error;
-static const int Node_Var        = impala::Tag_var;
-
-#define HENK_STRUCT_EXTRA_NAME  struct_decl
-#define HENK_STRUCT_EXTRA_TYPE  const StructDecl*
-
-#define HENK_ENUM_EXTRA_NAME  enum_decl
-#define HENK_ENUM_EXTRA_TYPE  const EnumDecl*
-
-#define HENK_TABLE_NAME  typetable
-#define HENK_TABLE_TYPE  TypeTable
-#include "thorin/henk.h"
+template<class T>
+using TypeMap   = thorin::GIDMap<const Type*, T>;
+using TypeSet   = thorin::GIDSet<const Type*>;
+using Type2Type = TypeMap<const Type*>;
+using Types     = ArrayRef<const Type*>;
 
 //------------------------------------------------------------------------------
 
@@ -80,7 +73,6 @@ public:
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     friend class TypeTable;
 };
@@ -148,7 +140,6 @@ public:
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 };
 
 class OwnedPtrType : public PtrType {
@@ -161,7 +152,6 @@ public:
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 };
 
 class RefType : public RefTypeBase {
@@ -175,7 +165,6 @@ public:
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     friend class TypeTable;
 };
@@ -206,23 +195,154 @@ inline const RefType* split_ref_type(const Type*& type) {
 
 class FnType : public Type {
 private:
-    FnType(TypeTable& typetable, Types ops)
-        : Type(typetable, Tag_fn, ops)
+    FnType(TypeTable& typetable, const Type* op)
+        : Type(typetable, Tag_fn, {op})
     {
         ++order_;
     }
 
 public:
+    const Type* param(size_t) const;
+    size_t num_params() const;
+    const Type* last_param() const;
     const Type* return_type() const;
     bool is_returning() const;
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     friend class TypeTable;
 };
+
+//------------------------------------------------------------------------------
+
+class Lambda : public Type {
+private:
+    Lambda(TypeTable& table, const Type* body, const char* name)
+        : Type(table, Tag_lambda, {body})
+        , name_(name)
+    {}
+
+public:
+    const char* name() const { return name_; }
+    const Type* body() const { return op(0); }
+    virtual std::ostream& stream(std::ostream&) const override;
+
+private:
+    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
+    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+
+    const char* name_;
+
+    friend class TypeTable;
+};
+
+class Var : public Type {
+private:
+    Var(TypeTable& table, int depth)
+        : Type(table, Tag_var, {})
+        , depth_(depth)
+    {
+        monomorphic_ = false;
+    }
+
+public:
+    int depth() const { return depth_; }
+    virtual std::ostream& stream(std::ostream&) const override;
+
+private:
+    virtual uint64_t vhash() const override;
+    virtual bool equal(const Type*) const override;
+    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
+    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+
+    int depth_;
+
+    friend class TypeTable;
+};
+
+class App : public Type {
+private:
+    App(TypeTable& table, const Type* callee, const Type* arg)
+        : Type(table, Tag_app, {callee, arg})
+    {}
+
+public:
+    const Type* callee() const { return Type::op(0); }
+    const Type* arg() const { return Type::op(1); }
+    virtual std::ostream& stream(std::ostream&) const override;
+
+private:
+    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
+
+    mutable const Type* cache_ = nullptr;
+
+    friend class TypeTable;
+};
+
+//------------------------------------------------------------------------------
+
+class TupleType : public Type {
+private:
+    TupleType(TypeTable& table, Types ops)
+        : Type(table, Tag_tuple, ops)
+    {}
+
+public:
+    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
+
+    friend class TypeTable;
+};
+
+class StructType : public Type {
+private:
+    StructType(TypeTable& table, const StructDecl* decl, size_t size)
+        : Type(table, Tag_struct, thorin::Array<const Type*>(size))
+        , decl_(decl)
+    {
+        nominal_ = true;
+    }
+
+public:
+    const StructDecl* struct_decl() const { return decl_; }
+    void set(size_t i, const Type* type) const { return const_cast<StructType*>(this)->Type::set(i, type); }
+
+private:
+    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
+    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
+
+    const StructDecl* decl_;
+
+    friend class TypeTable;
+};
+
+class EnumType : public Type {
+private:
+    EnumType(TypeTable& table, const EnumDecl* decl, size_t size)
+        : Type(table, Tag_enum, thorin::Array<const Type*>(size))
+        , decl_(decl)
+    {
+        nominal_ = true;
+    }
+
+public:
+    const EnumDecl* enum_decl() const { return decl_; }
+    void set(size_t i, const Type* type) const { return const_cast<EnumType*>(this)->Type::set(i, type); }
+
+private:
+    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
+    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+    virtual std::ostream& stream(std::ostream&) const override;
+
+    const EnumDecl* decl_;
+
+    friend class TypeTable;
+};
+
+//------------------------------------------------------------------------------
 
 class ArrayType : public Type {
 protected:
@@ -244,7 +364,6 @@ public:
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     friend class TypeTable;
 };
@@ -266,7 +385,6 @@ public:
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     uint64_t dim_;
 
@@ -290,7 +408,6 @@ public:
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     uint64_t dim_;
 
@@ -308,7 +425,6 @@ public:
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     friend class TypeTable;
 };
@@ -328,7 +444,6 @@ private:
     virtual bool equal(const Type*) const override;
     virtual uint64_t vhash() const override { return this->gid(); }
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     friend class TypeTable;
 };
@@ -336,7 +451,7 @@ private:
 class TypeError : public Type {
 private:
     TypeError(TypeTable& table)
-        : Type(table, Node_TypeError, {})
+        : Type(table, Tag_error, {})
     {}
 
 public:
@@ -344,7 +459,6 @@ public:
 
 private:
     virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     friend class TypeTable;
 };
@@ -360,7 +474,6 @@ class InferError : public Type {
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     friend class TypeTable;
 };
@@ -374,6 +487,54 @@ inline bool is_unit(const Type* t) {
 }
 
 //------------------------------------------------------------------------------
+
+class TypeTable : public thorin::TypeTableBase<Type> {
+public:
+    TypeTable();
+
+    const Var* var(int depth) { return unify(new Var(*this, depth)); }
+    const Type* app(const Type* callee, const Type* op);
+    const Lambda* lambda(const Type* body, const char* name) { return unify(new Lambda(*this, body, name)); }
+
+    const TupleType* tuple_type(Types ops) { assert(ops.size() != 1); return unify(new TupleType(*this, ops)); }
+    const TupleType* unit() { return unit_; }
+
+    const StructType* struct_type(const StructDecl* decl, size_t size);
+    const EnumType* enum_type(const EnumDecl* decl, size_t size);
+
+#define IMPALA_TYPE(itype, atype) const PrimType* type_##itype() { return itype##_; }
+#include "impala/tokenlist.h"
+    const DefiniteArrayType* definite_array_type(const Type* elem_type, uint64_t dim) {
+        return unify(new DefiniteArrayType(*this, elem_type, dim));
+    }
+    const FnType* fn_type(const Type* op) { return unify(new FnType(*this, op)); }
+    const FnType* fn_type(Types params) { return unify(new FnType(*this, params.size() == 1 ? params.front() : tuple_type(params))); }
+    const IndefiniteArrayType* indefinite_array_type(const Type* elem_type) {
+        return unify(new IndefiniteArrayType(*this, elem_type));
+    }
+    const SimdType* simd_type(const Type* elem_type, uint64_t size) { return unify(new SimdType(*this, elem_type, size)); }
+    const BorrowedPtrType* borrowed_ptr_type(const Type* pointee, bool mut, int addr_space) {
+        return unify(new BorrowedPtrType(*this, pointee, mut, addr_space));
+    }
+    const OwnedPtrType* owned_ptr_type(const Type* pointee, int addr_space) {
+        return unify(new OwnedPtrType(*this, pointee, addr_space));
+    }
+    const RefType* ref_type(const Type* pointee, bool mut, int addr_space) {
+        return unify(new RefType(*this, pointee, mut, addr_space));
+    }
+    const NoRetType* type_noret() { return type_noret_; }
+    const PrimType* prim_type(PrimTypeTag tag);
+    const UnknownType* unknown_type() { return unify(new UnknownType(*this)); }
+    const TypeError* type_error() { return type_error_; }
+    const InferError* infer_error(const Type* dst, const Type* src);
+
+private:
+    const TupleType* unit_;
+    const NoRetType* type_noret_;
+    const TypeError* type_error_;
+#define IMPALA_TYPE(itype, atype) const PrimType* itype##_;
+#include "impala/tokenlist.h"
+};
 
 }
 
