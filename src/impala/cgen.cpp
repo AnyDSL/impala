@@ -308,7 +308,7 @@ public:
             }
 
             // Generate void functions when the function takes no argument to be C89 compatible
-            if (fn_type->num_ops() == 1) {
+            if (fn_type->num_params() == 1) {
                 o << "void";
             }
 
