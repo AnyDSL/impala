@@ -641,7 +641,7 @@ const Type* FnExpr::infer(InferSema& sema) const {
     Array<const Type*> param_types(num_params());
     for (size_t i = 0, e = num_params(); i != e; ++i) {
         param_types[i] = sema.infer(param(i));
-        if (type())
+        if (type() && type()->isa<FnType>())
             sema.constrain(param(i), fn_type()->param(i));
     }
 
