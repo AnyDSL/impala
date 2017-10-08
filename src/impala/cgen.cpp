@@ -303,7 +303,7 @@ public:
 
                 o << ctype_pref << ' ' << fn->param(i)->symbol().str() << ctype_suf;
 
-                if (i < fn_type->num_ops() - 2)
+                if (i < fn_type->num_params() - 2)
                     o << ", ";
             }
 
