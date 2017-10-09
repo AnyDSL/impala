@@ -767,8 +767,18 @@ void IdPtrn::check(TypeSema& sema) const {
 }
 
 void EnumPtrn::check(TypeSema& sema) const {
-    for (const auto& arg : args()) {
+    for (const auto& arg : args())
         sema.check(arg.get());
+
+    auto option_decl = path()->decl()->isa<OptionDecl>();
+    if (option_decl) {
+        if (option_decl->num_args() != num_args()) {
+            error(this, "incorrect number of arguments for enumeration variant");
+        } else {
+            for (size_t i = 0, e = num_args(); i != e; ++i) {
+                sema.expect_type(option_decl->arg(i)->type(), arg(i), "argument of enumeration variant");
+            }
+        }
     }
 }
 
