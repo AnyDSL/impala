@@ -315,8 +315,21 @@ Value OptionDecl::emit(CodeGen& cg, const Def* init) const {
     auto enum_type = enum_decl()->type()->as<EnumType>();
     auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
     auto id = cg.world().literal_qu32(index(), location());
-    auto bot = cg.world().bottom(variant_type);
-    return Value::create_val(cg, cg.world().struct_agg(cg.thorin_enum_type(enum_type), { id, bot }) );
+    if (num_args() == 0) {
+        auto bot = cg.world().bottom(variant_type);
+        return Value::create_val(cg, cg.world().struct_agg(cg.thorin_enum_type(enum_type), { id, bot }) );
+    } else {
+        auto continuation = cg.world().continuation(cg.convert(type())->as<thorin::FnType>(), { location(), symbol().str() });
+        auto ret = continuation->param(continuation->num_params() - 1);
+        auto mem = continuation->param(0);
+        Array<const Def*> defs(num_args() - 2 /* mem + ret */);
+        for (size_t i = 1, e = num_args(); i + 1 < e; i++)
+            defs[i-1] = continuation->param(i);
+        auto option_val = num_args() == 1 ? defs.back() : cg.world().tuple(defs);
+        auto enum_val = cg.world().struct_agg(cg.thorin_enum_type(enum_type), { id, cg.world().variant(variant_type, option_val) });
+        continuation->jump(ret, { mem, enum_val }, location());
+        return Value::create_val(cg, continuation);
+    }
 }
 
 Value StaticItem::emit(CodeGen& cg, const Def* init) const {
@@ -654,21 +667,6 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                         }
                     }
                 }
-            }
-        }
-
-        if (auto path_expr = lhs()->isa<PathExpr>()) {
-            if (auto option = path_expr->path()->decl()->isa<OptionDecl>()) {
-                // handle option creation here
-                auto enum_type = option->enum_decl()->type()->as<EnumType>();
-                auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
-                std::vector<const Def*> defs;
-                for (const auto& arg : args())
-                    defs.push_back(cg.remit(arg.get()));
-                return cg.world().struct_agg(cg.thorin_enum_type(enum_type), {
-                    cg.world().literal_qu32(option->index(), location()),
-                    cg.world().variant(variant_type, defs.size() == 1 ? defs.back() : cg.world().tuple(defs, location()), location())
-                });
             }
         }
 
