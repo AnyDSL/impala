@@ -322,7 +322,7 @@ Value OptionDecl::emit(CodeGen& cg, const Def* init) const {
         auto continuation = cg.world().continuation(cg.convert(type())->as<thorin::FnType>(), { location(), symbol().str() });
         auto ret = continuation->param(continuation->num_params() - 1);
         auto mem = continuation->param(0);
-        Array<const Def*> defs(num_args() - 2 /* mem + ret */);
+        Array<const Def*> defs(num_args());
         for (size_t i = 1, e = num_args(); i + 1 < e; i++)
             defs[i-1] = continuation->param(i);
         auto option_val = num_args() == 1 ? defs.back() : cg.world().tuple(defs);
