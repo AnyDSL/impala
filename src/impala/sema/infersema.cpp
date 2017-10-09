@@ -397,10 +397,10 @@ const Type* Path::infer(InferSema& sema) const {
             auto option_decl = enum_decl->option_decl(cur_elem->symbol());
             auto option_type = option_decl ? sema.find_type(option_decl) : sema.type_error();
 
-            cur_type = sema.constrain(cur_type, sema.find_type(option_type));
+            cur_type = sema.constrain(cur_elem, sema.find_type(option_type));
             cur_elem->decl_ = option_decl;
         } else if (last_type->is_known()) {
-            cur_type = sema.constrain(cur_type, sema.type_error());
+            cur_type = sema.constrain(cur_elem, sema.type_error());
         }
         last_type = cur_type;
     }
@@ -652,6 +652,8 @@ const Type* FnExpr::infer(InferSema& sema) const {
     if (body_type->isa<NoRetType>() || body_type->isa<UnknownType>())
         return sema.fn_type(param_types);
     else {
+        if (num_params() == 0) return sema.fn_type(sema.fn_type(sema.type_error()));
+
         param_types.back() = sema.constrain(params().back().get(), sema.fn_type(body_type));
         return sema.fn_type(param_types);
     }
@@ -673,12 +675,16 @@ const Type* PrefixExpr::infer(InferSema& sema) const {
             auto type = sema.infer(rhs());
             if (auto ref = type->isa<RefType>())
                 return sema.borrowed_ptr_type(ref->pointee(), false, ref->addr_space());
+            // The type might turn out to be a ref type later on
+            if (type->isa<UnknownType>()) return sema.find_type(this);
             return sema.borrowed_ptr_type(type, false, 0);
         }
         case MUT: {
             auto type = sema.infer(rhs());
             if (auto ref = type->isa<RefType>())
                 return sema.borrowed_ptr_type(ref->pointee(), true, ref->addr_space());
+            // The type might turn out to be a ref type later on
+            if (type->isa<UnknownType>()) return sema.find_type(this);
             return sema.borrowed_ptr_type(type, true, 0);
         }
         case TILDE:
