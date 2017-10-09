@@ -323,7 +323,7 @@ Value OptionDecl::emit(CodeGen& cg, const Def* init) const {
         auto ret = continuation->param(continuation->num_params() - 1);
         auto mem = continuation->param(0);
         Array<const Def*> defs(num_args());
-        for (size_t i = 1, e = num_args(); i + 1 < e; i++)
+        for (size_t i = 1, e = continuation->num_params(); i + 1 < e; i++)
             defs[i-1] = continuation->param(i);
         auto option_val = num_args() == 1 ? defs.back() : cg.world().tuple(defs);
         auto enum_val = cg.world().struct_agg(cg.thorin_enum_type(enum_type), { id, cg.world().variant(variant_type, option_val) });
