@@ -189,6 +189,7 @@ const thorin::Type* OptionDecl::variant_type(CodeGen& cg) const {
     std::vector<const thorin::Type*> types;
     for (const auto& arg : args())
         types.push_back(cg.convert(arg->type()));
+    if (num_args() == 1) return types.back();
     return cg.world().tuple_type(types);
 }
 
@@ -666,7 +667,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                     defs.push_back(cg.remit(arg.get()));
                 return cg.world().struct_agg(cg.thorin_enum_type(enum_type), {
                     cg.world().literal_qu32(option->index(), location()),
-                    cg.world().variant(variant_type, cg.world().tuple(defs, location()), location())
+                    cg.world().variant(variant_type, defs.size() == 1 ? defs.back() : cg.world().tuple(defs, location()), location())
                 });
             }
         }
@@ -909,7 +910,7 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
     auto variant = cg.world().cast(variant_type, cg.world().extract(init, 1), location());
     for (size_t i = 0, e = num_args(); i != e; ++i) {
-        cg.emit(arg(i), cg.extract(variant, i, location()));
+        cg.emit(arg(i), num_args() == 1 ? variant : cg.extract(variant, i, location()));
     }
 }
 
@@ -921,7 +922,8 @@ const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) con
         auto variant = cg.world().cast(variant_type, cg.world().extract(init, 1, location()), location());
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
-            cond = cg.world().arithop_and(cond, arg(i)->emit_cond(cg, cg.world().extract(variant, i, location())), location());
+            auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? variant : cg.world().extract(variant, i, location()));
+            cond = cg.world().arithop_and(cond, arg_cond, location());
         }
     }
     return cond;
