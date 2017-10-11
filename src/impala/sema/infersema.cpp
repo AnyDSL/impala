@@ -442,7 +442,7 @@ const Type* TupleASTType::infer(InferSema& sema) const {
     Array<const Type*> types(num_ast_type_args());
     for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
         types[i] = sema.infer(ast_type_arg(i));
-
+    if (types.size() == 1) return types.back();
     return sema.tuple_type(types);
 }
 
