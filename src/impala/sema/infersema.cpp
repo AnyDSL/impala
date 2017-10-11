@@ -442,6 +442,7 @@ const Type* TupleASTType::infer(InferSema& sema) const {
     Array<const Type*> types(num_ast_type_args());
     for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
         types[i] = sema.infer(ast_type_arg(i));
+    // tuples of size 1 do not exist
     if (types.size() == 1) return types.back();
     return sema.tuple_type(types);
 }
@@ -449,17 +450,9 @@ const Type* TupleASTType::infer(InferSema& sema) const {
 const Type* FnASTType::infer(InferSema& sema) const {
     infer_ast_type_params(sema);
 
-    size_t n = num_ast_type_args() == 0 ? 1 : num_ast_type_args();
-    Array<const Type*> types(n);
-    if (num_ast_type_args() != 0) {
-        for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
-            types[i] = sema.infer(ast_type_arg(i));
-    } else {
-        // fn () simply does not exist, we replace it with fn(())
-        if (num_ast_type_args() == 0)
-            types[0] = sema.unit();
-    }
-
+    Array<const Type*> types(num_ast_type_args());
+    for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
+        types[i] = sema.infer(ast_type_arg(i));
     return sema.close(num_ast_type_params(), sema.fn_type(types));
 }
 
