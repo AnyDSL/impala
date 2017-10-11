@@ -776,7 +776,10 @@ const Type* ImplicitCastExpr::infer(InferSema& sema) const {
 }
 
 const Type* Ref2ValueExpr::infer(InferSema& sema) const {
-    return sema.infer(src())->as<RefType>()->pointee();
+    auto src_type = sema.infer(src());
+    if (auto ref_type = src_type->isa<RefType>())
+        return ref_type->pointee();
+    return sema.type_error();
 }
 
 const Type* DefiniteArrayExpr::infer(InferSema& sema) const {
