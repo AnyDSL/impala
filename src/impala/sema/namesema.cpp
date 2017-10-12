@@ -203,7 +203,22 @@ void Typedef::bind(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void EnumDecl::bind(NameSema&) const {}
+void EnumDecl::bind(NameSema& sema) const {
+    sema.push_scope();
+    bind_ast_type_params(sema);
+    for (const auto& option : option_decls()) {
+        option->bind(sema);
+        option->enum_decl_ = this;
+        option_table_[option->symbol()] = option.get();
+    }
+    sema.lambda_depth_ -= num_ast_type_params();
+    sema.pop_scope();
+}
+
+void OptionDecl::bind(NameSema& sema) const {
+    sema.insert(this);
+    for (const auto& arg : args()) arg->bind(sema);
+}
 
 void StaticItem::bind(NameSema& sema) const {
     if (ast_type())
@@ -296,26 +311,15 @@ void CharExpr::bind(NameSema&) const {}
 void StrExpr::bind(NameSema&) const {}
 void FnExpr::bind(NameSema& sema) const { fn_bind(sema); }
 
-void Path::Elem::bind(NameSema& sema) const {
-    decl_ = sema.lookup(this, symbol());
-}
-
 void Path::bind(NameSema& sema) const {
-    for (const auto& elem : elems())
-        elem->bind(sema);
+    elem(0)->decl_ = sema.lookup(elem(0), elem(0)->symbol());
 }
 
 void PathExpr::bind(NameSema& sema) const {
     path()->bind(sema);
-    if (path()->decl()) {
-        if (path()->decl()->is_value_decl())
-            value_decl_ = path()->decl();
-        else
-            error(this, "'{}' is not a value", path());
-    }
 }
 
-void PrefixExpr ::bind(NameSema& sema) const {                     rhs()->bind(sema); }
+void PrefixExpr ::bind(NameSema& sema) const {                    rhs()->bind(sema); }
 void InfixExpr  ::bind(NameSema& sema) const { lhs()->bind(sema); rhs()->bind(sema); }
 void PostfixExpr::bind(NameSema& sema) const { lhs()->bind(sema); }
 
@@ -377,6 +381,16 @@ void IfExpr::bind(NameSema& sema) const {
     else_expr()->bind(sema);
 }
 
+void MatchExpr::bind(NameSema& sema) const {
+    expr()->bind(sema);
+    for (size_t i = 0, e = num_arms(); i != e; ++i) {
+        sema.push_scope();
+        arm(i)->ptrn()->bind(sema);
+        arm(i)->expr()->bind(sema);
+        sema.pop_scope();
+    }
+}
+
 void WhileExpr::bind(NameSema& sema) const {
     cond()->bind(sema);
     sema.push_scope();
@@ -409,6 +423,15 @@ void TuplePtrn::bind(NameSema& sema) const {
 void IdPtrn::bind(NameSema& sema) const {
     local()->bind(sema);
 }
+
+void EnumPtrn::bind(NameSema& sema) const {
+    path()->bind(sema);
+    for (const auto& arg : args()) {
+        arg->bind(sema);
+    }
+}
+
+void LiteralPtrn::bind(NameSema&) const {}
 
 //------------------------------------------------------------------------------
 

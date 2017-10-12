@@ -3,13 +3,13 @@
 extern "C" {
     fn print_int(int) -> ();
 }
-fn range(a : int, b : int, yield : fn(int) -> ()) -> () {
+fn range(a: int, b: int, body: fn(int) -> ()) -> () {
     if a < b {
-        yield(a);
-        range(a+1, b, yield, return)
+        body(a);
+        range(a+1, b, body)
     }
 }
-fn sort(num : int, arr : &mut [i64]) -> () {
+fn sort(num: int, arr: &mut [i64]) -> () {
     // insertion sort
     for i in range(1, num) {
         let x = arr(i);
@@ -26,7 +26,7 @@ fn main() -> int {
     let levels = 2;
     let mut times = ~[2:i64];
 
-    fn vcycle_dsl_intern(level : int) -> () {
+    fn vcycle_dsl_intern(level: int) -> () {
         sort(2, times);
         if level == levels-1 {
             print_int(times(1) as int);

@@ -30,6 +30,7 @@ class ASTTypeParam;
 class Decl;
 class Expr;
 class FieldDecl;
+class OptionDecl;
 class Fn;
 class FnDecl;
 class LocalDecl;
@@ -52,11 +53,13 @@ typedef std::vector<std::unique_ptr<const ASTType>> ASTTypes;
 typedef std::vector<std::unique_ptr<const ASTTypeApp>> ASTTypeApps;
 typedef std::vector<std::unique_ptr<const ASTTypeParam>> ASTTypeParams;
 typedef std::vector<std::unique_ptr<const FieldDecl>> FieldDecls;
+typedef std::vector<std::unique_ptr<const OptionDecl>> OptionDecls;
 typedef std::vector<std::unique_ptr<const FnDecl>> FnDecls;
 typedef std::vector<std::unique_ptr<const Param>> Params;
 typedef std::vector<std::unique_ptr<const Stmt>> Stmts;
 typedef std::vector<char> Chars;
 typedef thorin::HashMap<Symbol, const FieldDecl*> FieldTable;
+typedef thorin::HashMap<Symbol, const OptionDecl*> OptionTable;
 typedef thorin::HashMap<Symbol, const FnDecl*> MethodTable;
 typedef thorin::HashMap<Symbol, const Item*> Symbol2Item;
 
@@ -105,17 +108,6 @@ private:
     int visibility_;
 };
 
-/// Mixin for all entities that have a type assigned.
-class Typeable {
-public:
-    const Type* type() const { return type_; }
-
-protected:
-    mutable const Type* type_ = nullptr;
-
-    friend class InferSema;
-};
-
 /// Mixin for all entities which have a list of \p TypeParam%s: [T1, T2 : A + B[...], ...].
 class ASTTypeParamList {
 public:
@@ -138,7 +130,7 @@ protected:
 
 //------------------------------------------------------------------------------
 
-class ASTNode : public thorin::MagicCast<ASTNode>, public thorin::Streamable  {
+class ASTNode : public thorin::RuntimeCast<ASTNode>, public thorin::Streamable  {
 public:
     ASTNode() = delete;
     ASTNode(const ASTNode&) = delete;
@@ -163,8 +155,6 @@ std::ostream& warning(const ASTNode* n, const char* fmt, Args... args) { return 
 template<class... Args>
 std::ostream& error  (const ASTNode* n, const char* fmt, Args... args) { return error  (n->location(), fmt, args...); }
 
-//------------------------------------------------------------------------------
-
 class Identifier : public ASTNode {
 public:
     Identifier(Location location, const char* str)
@@ -184,34 +174,52 @@ private:
     Symbol symbol_;
 };
 
+class Typeable : public ASTNode {
+public:
+    Typeable(Location location) : ASTNode(location) {}
+
+    const Type* type() const { return type_; }
+
+protected:
+    mutable const Type* type_ = nullptr;
+
+    friend class InferSema;
+};
+
+//------------------------------------------------------------------------------
+
 /*
  * paths
  */
 
-class Path : public ASTNode {
+class Path : public Typeable {
 public:
-    class Elem : public ASTNode {
+    class Elem : public Typeable {
     public:
         Elem(const Identifier* id)
-            : ASTNode(id->location())
+            : Typeable(id->location())
             , identifier_(id)
         {}
 
         const Identifier* identifier() const { return identifier_.get(); }
         Symbol symbol() const { return identifier()->symbol(); }
         const Decl* decl() const { return decl_; }
-        void bind(NameSema&) const;
+
         std::ostream& stream(std::ostream&) const override;
 
     private:
         std::unique_ptr<const Identifier> identifier_;
         mutable const Decl* decl_ = nullptr;
+
+        friend class Path;
+        friend class Parser;
+        friend class InferSema;
     };
 
     typedef std::deque<std::unique_ptr<const Elem>> Elems;
 
     Path(Location location, bool global, Elems&& elems)
-        : ASTNode(location)
+        : Typeable(location)
         , global_(global)
         , elems_(std::move(elems))
     {}
@@ -224,8 +232,14 @@ public:
 
     bool is_global() const { return global_; }
     const Elems& elems() const { return elems_; }
+    const Elem* elem(size_t i) const { return elems_[i].get(); }
+    size_t num_elems() const { return elems_.size(); }
     const Decl* decl() const { return elems().back()->decl(); }
+
     void bind(NameSema&) const;
+    const Type* infer(InferSema&) const;
+    void check(TypeSema&) const;
+
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -239,10 +253,10 @@ private:
  * AST types
  */
 
-class ASTType : public ASTNode, public Typeable {
+class ASTType : public Typeable {
 public:
     ASTType(Location location)
-        : ASTNode(location)
+        : Typeable(location)
     {}
 
     virtual void bind(NameSema&) const = 0;
@@ -490,7 +504,7 @@ private:
  */
 
 /// Base class for all entities which have a @p symbol_.
-class Decl : public Typeable, public ASTNode {
+class Decl : public Typeable {
 public:
     enum Tag {
         NoDecl,
@@ -502,7 +516,7 @@ public:
 
     /// General constructor.
     Decl(Tag tag, Location location, bool mut, const Identifier* id, const ASTType* ast_type)
-        : ASTNode(location)
+        : Typeable(location)
         , tag_(tag)
         , identifier_(id)
         , ast_type_(ast_type)
@@ -883,16 +897,72 @@ private:
     mutable FieldTable field_table_;
 };
 
+class OptionDecl : public Decl {
+public:
+    OptionDecl(Location location, size_t index, const Identifier* id, ASTTypes args)
+        : Decl(ValueDecl, location, id)
+        , index_(index)
+        , args_(std::move(args))
+    {}
+
+    uint32_t index() const { return index_; }
+    size_t num_args() const { return args_.size(); }
+    const ASTTypes& args() const { return args_; }
+    const ASTType* arg(size_t i) const { return args_[i].get(); }
+    const EnumDecl* enum_decl() const { return enum_decl_; }
+
+    void bind(NameSema&) const;
+    std::ostream& stream(std::ostream&) const override;
+
+    const thorin::Type* variant_type(CodeGen&) const;
+
+private:
+    const Type* infer(InferSema&) const;
+    void check(TypeSema&) const;
+    thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
+
+    uint32_t index_;
+    ASTTypes args_;
+
+    mutable const EnumDecl* enum_decl_;
+
+    friend class EnumDecl;
+    friend class InferSema;
+    friend class TypeSema;
+};
+
 class EnumDecl : public TypeDeclItem {
 public:
+    EnumDecl(Location location, Visibility vis, const Identifier* id,
+             ASTTypeParams&& ast_type_params, OptionDecls&& option_decls)
+        : TypeDeclItem(location, vis, id, std::move(ast_type_params))
+        , option_decls_(std::move(option_decls))
+    {
+        simple_ = true;
+        for (auto& option : option_decls_)
+            simple_ &= option->num_args() == 0;
+    }
+
     void bind(NameSema&) const override;
-    std::ostream& stream(std::ostream& os) const override { return os; }
+    std::ostream& stream(std::ostream& os) const override;
+
+    bool is_simple() const { return simple_; }
+
+    size_t num_option_decls() const { return option_decls_.size(); }
+    const OptionDecls& option_decls() const { return option_decls_; }
+    const OptionDecl* option_decl(size_t i) const { return option_decls_[i].get(); }
+    const OptionDecl* option_decl(Symbol symbol) const { return thorin::find(option_table_, symbol); }
+    const EnumType* enum_type() const { return type_->as<EnumType>(); }
 
 private:
     void infer(InferSema&) const override;
     const Type* infer_head(InferSema&) const override;
     void check(TypeSema&) const override;
-    void emit(CodeGen&) const override {}
+    void emit(CodeGen&) const override;
+
+    bool simple_;
+    OptionDecls option_decls_;
+    mutable OptionTable option_table_;
 };
 
 class StaticItem : public ValueItem {
@@ -1020,10 +1090,10 @@ private:
  * expressions
  */
 
-class Expr : public ASTNode, public Typeable {
+class Expr : public Typeable {
 public:
     Expr(Location location)
-        : ASTNode(location)
+        : Typeable(location)
     {}
 
 #ifndef NDEBUG
@@ -1228,7 +1298,9 @@ public:
     {}
 
     const Path* path() const { return path_.get(); }
-    const Decl* value_decl() const { return value_decl_; }
+    const Decl* value_decl() const {
+        return path_->decl() && path_->decl()->is_value_decl() ? path_->decl() : nullptr;
+    }
 
     void write() const override;
     void take_address() const override;
@@ -1241,7 +1313,6 @@ private:
     thorin::Value lemit(CodeGen&) const override;
 
     std::unique_ptr<const Path> path_;
-    mutable const Decl* value_decl_ = nullptr; ///< Declaration of the variable in use.
 };
 
 class PrefixExpr : public Expr {
@@ -1261,7 +1332,6 @@ public:
     static const PrefixExpr* create(const Expr* rhs, const Tag tag) {
         return interlope<PrefixExpr>(rhs, rhs->location(), tag, rhs);
     }
-
     static const PrefixExpr* create_deref(const Expr* rhs) { return create(rhs, MUL); }
     static const PrefixExpr* create_addrof(const Expr* rhs) { return create(rhs, AND); }
 
@@ -1755,6 +1825,52 @@ private:
     std::unique_ptr<const Expr> else_expr_;
 };
 
+class MatchExpr : public Expr {
+public:
+    class Arm : public ASTNode {
+    public:
+        Arm(Location location, const Ptrn* ptrn, const Expr* expr)
+            : ASTNode(location)
+            , ptrn_(ptrn)
+            , expr_(dock(expr_, expr))
+        {}
+
+        const Ptrn* ptrn() const { return ptrn_.get(); }
+        const Expr* expr() const { return expr_.get(); }
+        std::ostream& stream(std::ostream&) const override;
+
+    private:
+        std::unique_ptr<const Ptrn> ptrn_;
+        std::unique_ptr<const Expr> expr_;
+    };
+
+    typedef std::deque<std::unique_ptr<const Arm>> Arms;
+
+    MatchExpr(Location location, const Expr* expr, Arms&& arms)
+        : Expr(location)
+        , expr_(dock(expr_, expr))
+        , arms_(std::move(arms))
+    {}
+
+    const Expr* expr() const { return expr_.get(); }
+    const Arm* arm(size_t i) const { return arms_[i].get(); }
+    const Arms& arms() const { return arms_; }
+    size_t num_arms() const { return arms_.size(); }
+
+    bool has_side_effect() const override;
+    void bind(NameSema&) const override;
+    const thorin::Def* remit(CodeGen&) const override;
+    void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
+    std::ostream& stream(std::ostream&) const override;
+
+private:
+    const Type* infer(InferSema&) const override;
+    void check(TypeSema&) const override;
+
+    std::unique_ptr<const Expr> expr_;
+    Arms arms_;
+};
+
 class WhileExpr : public Expr {
 public:
     WhileExpr(Location location, const LocalDecl* continue_decl, const Expr* cond,
@@ -1820,14 +1936,16 @@ private:
  * patterns
  */
 
-class Ptrn : public ASTNode, public Typeable {
+class Ptrn : public Typeable {
 public:
     Ptrn(Location location)
-        : ASTNode(location)
+        : Typeable(location)
     {}
 
     virtual void bind(NameSema&) const = 0;
     virtual void emit(CodeGen&, const thorin::Def*) const = 0;
+    virtual const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const = 0;
+    virtual bool is_refutable() const = 0;
 
 private:
     virtual const Type* infer(InferSema&) const = 0;
@@ -1850,6 +1968,8 @@ public:
 
     void bind(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
+    const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const override;
+    bool is_refutable() const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1870,6 +1990,8 @@ public:
 
     void bind(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
+    const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const override;
+    bool is_refutable() const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1877,6 +1999,55 @@ private:
     void check(TypeSema&) const override;
 
     std::unique_ptr<const LocalDecl> local_;
+};
+
+class EnumPtrn : public Ptrn {
+public:
+    EnumPtrn(Location location, const Path* path, Ptrns&& args)
+        : Ptrn(location)
+        , path_(path)
+        , args_(std::move(args))
+    {}
+
+    const Path* path() const { return path_.get(); }
+    const Ptrns& args() const { return args_; }
+    const Ptrn* arg(size_t i) const { return args_[i].get(); }
+    size_t num_args() const { return args_.size(); }
+
+    void bind(NameSema&) const override;
+    void emit(CodeGen&, const thorin::Def*) const override;
+    const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const override;
+    bool is_refutable() const override;
+    std::ostream& stream(std::ostream&) const override;
+
+private:
+    const Type* infer(InferSema&) const override;
+    void check(TypeSema&) const override;
+
+    std::unique_ptr<const Path> path_;
+    Ptrns args_;
+};
+
+class LiteralPtrn : public Ptrn {
+public:
+    LiteralPtrn(const LiteralExpr* literal)
+        : Ptrn(literal->location())
+        , literal_(dock(literal_, literal))
+    {}
+
+    const LiteralExpr* literal() const { return literal_.get()->as<LiteralExpr>(); }
+
+    void bind(NameSema&) const override;
+    void emit(CodeGen&, const thorin::Def*) const override;
+    const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const override;
+    bool is_refutable() const override;
+    std::ostream& stream(std::ostream&) const override;
+
+private:
+    const Type* infer(InferSema&) const override;
+    void check(TypeSema&) const override;
+
+    std::unique_ptr<const Expr> literal_;
 };
 
 //------------------------------------------------------------------------------

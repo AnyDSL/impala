@@ -2,7 +2,6 @@
 
 #include "impala/ast.h"
 #include "impala/impala.h"
-#include "impala/sema/typetable.h"
 
 using namespace thorin;
 
@@ -71,9 +70,9 @@ public:
         }
     }
 
-    void expect_type(const Type* expected, const Expr* expr, const char* context) {
-        if (expected != expr->type() && expected->is_known() && expr->type()->is_known() && !expr->type()->isa<TypeError>())
-            error(expr, "mismatched types: expected '{}' but found '{}' as {}", expected, expr->type(), context);
+    void expect_type(const Type* expected, const Typeable* node, const char* context) {
+        if (expected != node->type() && expected->is_known() && node->type()->is_known() && !node->type()->isa<TypeError>())
+            error(node, "mismatched types: expected '{}' but found '{}' as {}", expected, node->type(), context);
     }
 
     void no_indefinite_array(const ASTNode* n, const Type* type, const char* context) {
@@ -86,6 +85,7 @@ public:
     const Var* check(const ASTTypeParam* ast_type_param) { ast_type_param->check(*this); return ast_type_param->var(); }
     void check(const Module* module) { module->check(*this); }
     const Type* check(const FieldDecl* n) { n->check(*this); return n->type(); }
+    const Type* check(const OptionDecl* n) { n->check(*this); return n->type(); }
     const Type* check(const LocalDecl* local) { local->check(*this); return local->type(); }
     const Type* check(const ASTType* ast_type) { ast_type->check(*this); return ast_type->type(); }
     void check(const Item* n) { n->check(*this); }
@@ -169,7 +169,8 @@ void FnASTType::check(TypeSema& sema) const {
     }
 }
 
-void ASTTypeApp::check(TypeSema&) const {
+void ASTTypeApp::check(TypeSema& sema) const {
+    path()->check(sema);
     if (!decl() || !decl()->is_type_decl())
         error(identifier(), "'{}' does not name a type", symbol());
 }
@@ -201,6 +202,18 @@ const Type* Fn::check_body(TypeSema& sema) const {
     return body()->type();
 }
 
+void Path::check(TypeSema&) const {
+    auto last_type = elem(0)->type();
+    for (size_t i = 1, e = num_elems(); i != e; ++i) {
+        auto cur_type = elem(i)->type();
+        if (cur_type->isa<TypeError>()) {
+            error(this, "'{}' is not a member of '{}'", elem(i)->symbol(), last_type);
+            break;
+        }
+        last_type = cur_type;
+    }
+}
+
 //------------------------------------------------------------------------------
 
 /*
@@ -230,7 +243,15 @@ void Typedef::check(TypeSema& sema) const {
     sema.check(ast_type());
 }
 
-void EnumDecl::check(TypeSema&) const { /*TODO*/ }
+void EnumDecl::check(TypeSema& sema) const {
+    check_ast_type_params(sema);
+    for (const auto& option : option_decls())
+        sema.check(option.get());
+}
+
+void OptionDecl::check(TypeSema& sema) const {
+    for (const auto& arg : args()) sema.check(arg.get());
+}
 
 void StructDecl::check(TypeSema& sema) const {
     check_ast_type_params(sema);
@@ -304,6 +325,7 @@ void FnExpr::check(TypeSema& sema) const {
 }
 
 void PathExpr::check(TypeSema& sema) const {
+    path()->check(sema);
     if (value_decl()) {
         if (auto local = value_decl()->isa<LocalDecl>()) {
             // if local lies in an outer function go through memory to implement closure
@@ -606,12 +628,12 @@ void MapExpr::check(TypeSema& sema) const {
 void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
     auto fn_type = expr->type()->as<FnType>();
 
-    if (fn_type->num_ops() == args.size() || fn_type->num_ops() == args.size() + 1) {
+    if (fn_type->num_params() == args.size() || fn_type->num_params() == args.size() + 1) {
         for (size_t i = 0; i < args.size(); i++)
-            expect_type(fn_type->op(i), args[i], "argument type");
+            expect_type(fn_type->param(i), args[i], "argument type");
     } else
         error(expr, "incorrect number of arguments in function application: got {}, expected {}",
-              args.size(), fn_type->num_ops() > 0 ? fn_type->num_ops() - 1 : 0);
+              args.size(), std::max(size_t(0), fn_type->num_params() - (fn_type->is_returning() ? 1 : 0)));
 }
 
 void BlockExprBase::check(TypeSema& sema) const {
@@ -635,6 +657,54 @@ void IfExpr::check(TypeSema& sema) const {
 
     if (!is_no_ret_or_type_error(then_type) && !is_no_ret_or_type_error(else_type) && then_type != else_type)
         sema.expect_type(then_type, else_expr(), "else branch type");
+}
+
+inline bool is_match_complete(const MatchExpr* match) {
+    if (auto enum_type = match->expr()->type()->isa<EnumType>()) {
+        // match is complete if every option is covered by an irrefutable pattern
+        auto enum_decl = enum_type->enum_decl();
+        Array<bool> covered(enum_decl->num_option_decls(), false);
+        size_t num_covered = 0;
+
+        for (size_t i = 0, e = match->num_arms(); i != e; ++i) {
+            auto enum_ptrn = match->arm(i)->ptrn()->isa<EnumPtrn>();
+            if (!enum_ptrn) continue;
+            auto option_decl = enum_ptrn->path()->decl()->isa<OptionDecl>();
+            if (!option_decl || option_decl->enum_decl() != enum_decl) continue;
+
+            bool refutable = false;
+            for (auto& arg : enum_ptrn->args()) refutable |= arg->is_refutable();
+            if (refutable) continue;
+
+            num_covered += covered[option_decl->index()] ? 0 : 1;
+            covered[option_decl->index()] = true;
+        }
+
+        if (num_covered == enum_decl->num_option_decls()) return true;
+    }
+
+    // match is complete if there is an irrefutable pattern
+    for (size_t i = 0, e = match->num_arms(); i != e; ++i) {
+        if (!match->arm(i)->ptrn()->is_refutable()) return true;
+    }
+
+    return false;
+}
+
+void MatchExpr::check(TypeSema& sema) const {
+    auto expr_type = sema.check(expr());
+    auto arg_type  = num_arms() > 0 ? sema.check(arm(0)->expr()) : nullptr;
+    for (size_t i = 0, e = num_arms(); i != e; ++i) {
+        sema.check(arm(i)->ptrn());
+        sema.check(arm(i)->expr());
+
+        sema.expect_type(expr_type, arm(i)->ptrn(), "pattern type");
+        sema.expect_type(arg_type,  arm(i)->expr(), "matched expression type");
+        if (!arm(i)->ptrn()->is_refutable() && i < e - 1)
+            warning(arm(i)->ptrn(), "pattern is always true, subsequent patterns will not be executed");
+    }
+    if (!is_match_complete(this))
+        error(this, "missing default case for match expression");
 }
 
 void WhileExpr::check(TypeSema& sema) const {
@@ -661,8 +731,8 @@ void ForExpr::check(TypeSema& sema) const {
         sema.check(fn_expr());
 
         if (auto fn_for = ltype->isa<FnType>()) {
-            if (fn_for->num_ops() != 0) {
-                if (fn_for->ops().back()->isa<FnType>()) {
+            if (fn_for->num_params() != 0) {
+                if (fn_for->last_param()->isa<FnType>()) {
                     // TODO remove copy & paste code
                     // copy over args and check call --
                     Array<const Expr*> args(map->num_args() + 1);
@@ -696,6 +766,26 @@ void IdPtrn::check(TypeSema& sema) const {
     sema.check(local());
 }
 
+void EnumPtrn::check(TypeSema& sema) const {
+    for (const auto& arg : args())
+        sema.check(arg.get());
+
+    auto option_decl = path()->decl()->isa<OptionDecl>();
+    if (option_decl) {
+        if (option_decl->num_args() != num_args()) {
+            error(this, "incorrect number of arguments for enumeration variant");
+        } else {
+            for (size_t i = 0, e = num_args(); i != e; ++i) {
+                sema.expect_type(option_decl->arg(i)->type(), arg(i), "argument of enumeration variant");
+            }
+        }
+    }
+}
+
+void LiteralPtrn::check(TypeSema& sema) const {
+    sema.check(literal());
+}
+
 //------------------------------------------------------------------------------
 
 /*
@@ -715,6 +805,9 @@ void ItemStmt::check(TypeSema& sema) const {
 
 void LetStmt::check(TypeSema& sema) const {
     auto type = sema.check(ptrn());
+
+    if (ptrn()->is_refutable())
+        error(this, "refutable pattern in let statement");
 
     if (!type->is_known())
         error(this, "cannot infer type for let statement");

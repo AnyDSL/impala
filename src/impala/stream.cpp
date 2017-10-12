@@ -174,6 +174,15 @@ std::ostream& FieldDecl::stream(std::ostream& os) const {
     return streamf(os, "{}{}: {}", visibility().str(), symbol(), ast_type());
 }
 
+std::ostream& OptionDecl::stream(std::ostream& os) const {
+    streamf(os, "{}", symbol());
+    if (num_args() > 0) {
+        return stream_list(os, args(), [&](const auto& arg) { os << arg.get(); }, "(", ")", ", ");
+    } else {
+        return os;
+    }
+}
+
 std::ostream& StaticItem::stream(std::ostream& os) const {
     streamf(os, "static {} {}: {}", is_mut() ? "mut " : "", identifier(), type() ? type()->to_string() : ast_type()->to_string());
     if (init())
@@ -184,6 +193,11 @@ std::ostream& StaticItem::stream(std::ostream& os) const {
 std::ostream& StructDecl::stream(std::ostream& os) const {
     stream_ast_type_params(streamf(os, "{}struct {}", visibility().str(), symbol())) << " {" << up << endl;
     return stream_list(os, field_decls(), [&](const auto& field) { os << field.get(); }, "", "", ",", true) << down << endl << "}";
+}
+
+std::ostream& EnumDecl::stream(std::ostream& os) const {
+    stream_ast_type_params(streamf(os, "{}enum {}", visibility().str(), symbol())) << " {" << up << endl;
+    return stream_list(os, option_decls(), [&](const auto& option) { os << option.get(); }, "", "", ",", true) << down << endl << "}";
 }
 
 std::ostream& Typedef::stream(std::ostream& os) const {
@@ -450,6 +464,20 @@ std::ostream& IfExpr::stream(std::ostream& os) const {
     return os;
 }
 
+std::ostream& MatchExpr::Arm::stream(std::ostream& os) const {
+    return os << ptrn() << " => " << expr() << ",";
+}
+
+std::ostream& MatchExpr::stream(std::ostream& os) const {
+    os << "match " << expr() << " {" << up << endl;
+    for (size_t i = 0, e = num_arms(); i != e; ++i) {
+        os << arm(i);
+        if (i == e - 1) os << down;
+        os << endl;
+    }
+    return (os << "}");
+}
+
 std::ostream& WhileExpr::stream(std::ostream& os) const {
     return streamf(os, "while {} {}", cond(), body());
 }
@@ -470,6 +498,18 @@ std::ostream& TuplePtrn::stream(std::ostream& os) const {
 
 std::ostream& IdPtrn::stream(std::ostream& os) const {
     return os << local();
+}
+
+std::ostream& EnumPtrn::stream(std::ostream& os) const {
+    if (num_args() > 0) {
+        return stream_list(os << path() << "(", args(), [&] (const auto& arg) { os << arg.get(); }) << ")";
+    } else {
+        return os << path();
+    }
+}
+
+std::ostream& LiteralPtrn::stream(std::ostream& os) const {
+    return os << literal();
 }
 
 /*

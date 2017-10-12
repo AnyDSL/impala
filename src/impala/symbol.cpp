@@ -7,15 +7,6 @@ namespace impala {
 
 Symbol::Table Symbol::table_;
 
-uint64_t StrHash::hash(const char* s) {
-    uint64_t seed = thorin::hash_begin();
-    const char* i = s;
-
-    while (*i != '\0')
-        seed = thorin::hash_combine(seed, *i++);
-    return thorin::hash_combine(seed, i-s);
-}
-
 #ifdef _MSC_VER
 static const char* duplicate(const char* s) { return _strdup(s); }
 #else // _MSC_VER

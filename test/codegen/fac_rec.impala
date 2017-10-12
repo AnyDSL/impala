@@ -1,6 +1,6 @@
 // codegen
 
-fn fac_rec(n : int) -> int {
+fn fac_rec(n: int) -> int {
     if (n <= 0) {
         1
     } else {

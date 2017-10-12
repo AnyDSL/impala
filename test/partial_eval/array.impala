@@ -1,7 +1,7 @@
-fn range(a : int, b : int, yield : fn(int, fn() -> !) -> !) -> () {
+fn range(a: int, b: int, body: fn(int, fn() -> !) -> !) -> () {
     if a < b {
-        yield(a);
-        range(a+1, b, yield, return)
+        body(a);
+        range(a+1, b, body)
     }
 }
 
