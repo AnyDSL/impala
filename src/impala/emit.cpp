@@ -400,12 +400,15 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     return cg.world().convert(thorin_type, def, location());
 }
 
-Value Ref2ValueExpr::lemit(CodeGen& cg) const {
+Value RValueExpr::lemit(CodeGen& cg) const {
+    assert(src()->type()->isa<RefType>());
     return cg.lemit(src());
 }
 
-const Def* Ref2ValueExpr::remit(CodeGen& cg) const {
-    return cg.lemit(this).load(location());
+const Def* RValueExpr::remit(CodeGen& cg) const {
+    if (src()->type()->isa<RefType>())
+        return cg.lemit(this).load(location());
+    return cg.remit(src());
 }
 
 Value PathExpr::lemit(CodeGen& cg) const {
@@ -606,7 +609,8 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
 
         // Handle primops here
         if (auto type_expr = lhs()->isa<TypeAppExpr>()) { // Bitcast, sizeof and select are all polymorphic
-            if (auto path = type_expr->lhs()->isa<PathExpr>()) {
+            auto callee = type_expr->lhs()->isa<RValueExpr>() ? type_expr->lhs()->as<RValueExpr>()->src() : type_expr->lhs();
+            if (auto path = callee->isa<PathExpr>()) {
                 if (auto fn_decl = path->value_decl()->isa<FnDecl>()) {
                     if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {
                         auto name = fn_decl->fn_symbol().remove_quotation();
