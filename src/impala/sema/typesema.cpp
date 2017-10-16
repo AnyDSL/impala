@@ -592,8 +592,11 @@ void MapExpr::check(TypeSema& sema) const {
     for (const auto& arg : args())
         sema.check(arg.get());
 
-    if (ltype->isa<FnType>())
+    if (ltype->isa<FnType>()) {
+        if (!type()->is_known())
+            error(this, "cannot infer type for function call");
         return sema.check_call(lhs(), args());
+    }
 
     if (ltype->isa<ArrayType>()) {
         if (num_args() == 1)
