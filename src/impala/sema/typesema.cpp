@@ -500,17 +500,8 @@ void ExplicitCastExpr::check(TypeSema& sema) const {
     CastExpr::check(sema);
 }
 
-void Ref2ValueExpr::check(TypeSema& sema) const {
-    auto src_type = sema.check(src());
-    auto dst_type = type();
-
-    if (auto ref = src_type->isa<RefType>())
-        src_type = ref->pointee();
-    else
-        error(this, "source type of an ref-to-rvalue cast must be an ref, got '{}'", src_type);
-
-    if (src_type->is_known() && dst_type->is_known() && src_type != dst_type)
-        error(this, "invalid source and destination types for ref-to-rvalue cast, got '{}' and '{}'", src_type, dst_type);
+void RValueExpr::check(TypeSema& sema) const {
+    sema.check(src());
 }
 
 void TupleExpr::check(TypeSema& sema) const {

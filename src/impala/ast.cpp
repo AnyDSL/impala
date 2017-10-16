@@ -84,6 +84,10 @@ void CastExpr::write() const { src()->write(); }
  * has_side_effect
  */
 
+bool RValueExpr::has_side_effect() const {
+    return src()->has_side_effect();
+}
+
 bool PrefixExpr::has_side_effect() const {
     return tag() == INC || tag() == DEC || tag() == TILDE || tag() == RUN || tag() == HLT;
 }
