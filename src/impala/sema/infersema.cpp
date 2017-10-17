@@ -601,7 +601,7 @@ void FnDecl::infer(InferSema& sema) const {
     sema.constrain(this, sema.close(num_ast_type_params(), sema.fn_type(param_types)));
 
     if (body() != nullptr) {
-        if (!sema.rvalue(body())->isa<NoRetType>())
+        if (!sema.infer(body())->isa<NoRetType>())
             sema.coerce(fn_type()->return_type(), body());
     }
 }
@@ -768,8 +768,14 @@ const Type* ImplicitCastExpr::infer(InferSema& sema) const {
 
 const Type* RValueExpr::infer(InferSema& sema) const {
     auto src_type = sema.infer(src());
+    // references are converted to rvalues
     if (auto ref_type = src_type->isa<RefType>())
         return ref_type->pointee();
+    // function calls never result in references
+    if (auto map = src()->isa<MapExpr>()) {
+        if (map->lhs()->type()->isa<FnType>())
+            return src_type;
+    }
     // if the type is not known, we cannot make a decision yet
     return src_type->isa<UnknownType>() ? sema.find_type(this) : src_type;
 }
