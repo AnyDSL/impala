@@ -456,8 +456,8 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             return var.def();
         }
 
-        case RUN: return cg.remit(rhs(), MapExpr::Run, location());
-        case HLT: return cg.remit(rhs(), MapExpr::Hlt, location());
+        case RUN: return cg.remit(rhs()->skip_rvalue(), MapExpr::Run, location());
+        case HLT: return cg.remit(rhs()->skip_rvalue(), MapExpr::Hlt, location());
         case OR: case OROR: THORIN_UNREACHABLE;
         default:  return cg.lemit(this).load(location());
     }
@@ -609,7 +609,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
 
         // Handle primops here
         if (auto type_expr = lhs()->isa<TypeAppExpr>()) { // Bitcast, sizeof and select are all polymorphic
-            auto callee = type_expr->lhs()->isa<RValueExpr>() ? type_expr->lhs()->as<RValueExpr>()->src() : type_expr->lhs();
+            auto callee = type_expr->lhs()->skip_rvalue();
             if (auto path = callee->isa<PathExpr>()) {
                 if (auto fn_decl = path->value_decl()->isa<FnDecl>()) {
                     if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {

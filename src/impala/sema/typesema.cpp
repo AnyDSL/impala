@@ -365,7 +365,7 @@ void PrefixExpr::check(TypeSema& sema) const {
             sema.expect_int_or_bool(rhs(), "unary '!'");
             return;
         case HLT: case RUN:
-            if (!rhs()->isa<MapExpr>())
+            if (!rhs()->skip_rvalue()->isa<MapExpr>())
                 error(this, "function call expected after partial evaluator command {}", (TokenTag)tag());
             return;
         case OR: case OROR:

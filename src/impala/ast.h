@@ -1102,6 +1102,8 @@ public:
 
     const thorin::Def* extra() const { return extra_; }
 
+    const Expr* skip_rvalue() const;
+
     virtual void write() const {}
     virtual bool has_side_effect() const { return false; }
     virtual void take_address() const {}
