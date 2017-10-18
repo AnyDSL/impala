@@ -25,6 +25,10 @@ private:
             struct_from_type(ptr_type->pointee(), f);
         else if (auto array_type = type->isa<ArrayType>())
             struct_from_type(array_type->elem_type(), f);
+        else if (auto fn_type = type->isa<FnType>()) {
+            for (size_t i = 0, e = fn_type->num_params(); i != e; ++i)
+                struct_from_type(fn_type->param(i), f);
+        }
     }
 
     // Generates a C type from an Impala type
@@ -195,12 +199,9 @@ private:
             return;
 
         // Read each argument in turn and record the structures that have to be exported
-        auto fn_type = fn_decl->fn_type();
-        for (size_t i = 0, e = fn_type->num_params(); i != e; ++i) {
-            struct_from_type(fn_type->param(i), [this] (const StructDecl* decl) {
-                export_structs.insert(decl);
-            });
-        }
+        struct_from_type(fn_decl->fn_type(), [this] (const StructDecl* decl) {
+            export_structs.insert(decl);
+        });
 
         export_fns.push_back(fn_decl);
     }
