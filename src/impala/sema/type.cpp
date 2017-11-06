@@ -95,14 +95,15 @@ bool is_subtype(const Type* dst, const Type* src) {
                     && src->as<RefTypeBase>()->addr_space() == dst_ref_type->addr_space();
 
         if (auto dst_fn = dst->isa<FnType>()) {
+            auto src_fn = src->as<FnType>();
             auto ret = dst_fn->return_type();
-            size_t nops = dst->num_ops();
+            size_t nparams = dst_fn->num_params();
             if (!ret->isa<NoRetType>()) {
-                result &= is_subtype(ret, src->as<FnType>()->return_type());
-                nops--;
+                result &= is_subtype(ret, src_fn->return_type());
+                nparams--;
             }
-            for (size_t i = 0, e = nops; result && i != e; ++i)
-                result &= is_subtype(src->op(i), dst->op(i));
+            for (size_t i = 0, e = nparams; result && i != e; ++i)
+                result &= is_subtype(src_fn->param(i), dst_fn->param(i));
         } else {
             for (size_t i = 0, e = dst->num_ops(); result && i != e; ++i)
                 result &= is_subtype(dst->op(i), src->op(i));

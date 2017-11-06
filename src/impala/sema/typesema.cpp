@@ -499,17 +499,8 @@ void ExplicitCastExpr::check(TypeSema& sema) const {
     CastExpr::check(sema);
 }
 
-void Ref2ValueExpr::check(TypeSema& sema) const {
-    auto src_type = sema.check(src());
-    auto dst_type = type();
-
-    if (auto ref = src_type->isa<RefType>())
-        src_type = ref->pointee();
-    else
-        error(this, "source type of an ref-to-rvalue cast must be an ref, got '{}'", src_type);
-
-    if (src_type->is_known() && dst_type->is_known() && src_type != dst_type)
-        error(this, "invalid source and destination types for ref-to-rvalue cast, got '{}' and '{}'", src_type, dst_type);
+void RValueExpr::check(TypeSema& sema) const {
+    sema.check(src());
 }
 
 void TupleExpr::check(TypeSema& sema) const {
@@ -600,8 +591,11 @@ void MapExpr::check(TypeSema& sema) const {
     for (const auto& arg : args())
         sema.check(arg.get());
 
-    if (ltype->isa<FnType>())
+    if (ltype->isa<FnType>()) {
+        if (!type()->is_known())
+            error(this, "cannot infer type for function call");
         return sema.check_call(lhs(), args());
+    }
 
     if (ltype->isa<ArrayType>()) {
         if (num_args() == 1)
@@ -763,8 +757,18 @@ void IdPtrn::check(TypeSema& sema) const {
 }
 
 void EnumPtrn::check(TypeSema& sema) const {
-    for (const auto& arg : args()) {
+    for (const auto& arg : args())
         sema.check(arg.get());
+
+    auto option_decl = path()->decl()->isa<OptionDecl>();
+    if (option_decl) {
+        if (option_decl->num_args() != num_args()) {
+            error(this, "incorrect number of arguments for enumeration variant");
+        } else {
+            for (size_t i = 0, e = num_args(); i != e; ++i) {
+                sema.expect_type(option_decl->arg(i)->type(), arg(i), "argument of enumeration variant");
+            }
+        }
     }
 }
 

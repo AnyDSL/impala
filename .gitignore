@@ -1,4 +1,5 @@
 *.bc
+*.out
 *.cl
 *.cu
 *.ll

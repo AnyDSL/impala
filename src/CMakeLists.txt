@@ -13,7 +13,7 @@ include_directories(${Thorin_INCLUDE_DIRS})
 if(LLVM_FOUND)
     add_definitions(${LLVM_DEFINITIONS})
     add_definitions("-DLLVM_SUPPORT")
-    include_directories(${LLVM_INCLUDE_DIRS})
+    include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})

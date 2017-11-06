@@ -86,8 +86,12 @@ public:
     }
 
     const Type* rvalue(const Expr* expr) {
-        infer(expr);
-        return expr->type()->isa<RefType>() ? Ref2ValueExpr::create(expr)->type() : expr->type();
+        auto type = infer(expr);
+        if (type->isa<RefType>() || (type->isa<UnknownType>() && !expr->isa<RValueExpr>())) {
+            todo_ = true;
+            return infer(RValueExpr::create(expr));
+        }
+        return type;
     }
 
     const Type* wrap_ref(const RefType* ref, const Type* type) {
@@ -397,10 +401,10 @@ const Type* Path::infer(InferSema& sema) const {
             auto option_decl = enum_decl->option_decl(cur_elem->symbol());
             auto option_type = option_decl ? sema.find_type(option_decl) : sema.type_error();
 
-            cur_type = sema.constrain(cur_type, sema.find_type(option_type));
+            cur_type = sema.constrain(cur_elem, sema.find_type(option_type));
             cur_elem->decl_ = option_decl;
         } else if (last_type->is_known()) {
-            cur_type = sema.constrain(cur_type, sema.type_error());
+            cur_type = sema.constrain(cur_elem, sema.type_error());
         }
         last_type = cur_type;
     }
@@ -442,24 +446,17 @@ const Type* TupleASTType::infer(InferSema& sema) const {
     Array<const Type*> types(num_ast_type_args());
     for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
         types[i] = sema.infer(ast_type_arg(i));
-
+    // tuples of size 1 do not exist
+    if (types.size() == 1) return types.back();
     return sema.tuple_type(types);
 }
 
 const Type* FnASTType::infer(InferSema& sema) const {
     infer_ast_type_params(sema);
 
-    size_t n = num_ast_type_args() == 0 ? 1 : num_ast_type_args();
-    Array<const Type*> types(n);
-    if (num_ast_type_args() != 0) {
-        for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
-            types[i] = sema.infer(ast_type_arg(i));
-    } else {
-        // fn () simply does not exist, we replace it with fn(())
-        if (num_ast_type_args() == 0)
-            types[0] = sema.unit();
-    }
-
+    Array<const Type*> types(num_ast_type_args());
+    for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
+        types[i] = sema.infer(ast_type_arg(i));
     return sema.close(num_ast_type_params(), sema.fn_type(types));
 }
 
@@ -604,7 +601,7 @@ void FnDecl::infer(InferSema& sema) const {
     sema.constrain(this, sema.close(num_ast_type_params(), sema.fn_type(param_types)));
 
     if (body() != nullptr) {
-        if (!sema.rvalue(body())->isa<NoRetType>())
+        if (!sema.infer(body())->isa<NoRetType>())
             sema.coerce(fn_type()->return_type(), body());
     }
 }
@@ -652,6 +649,8 @@ const Type* FnExpr::infer(InferSema& sema) const {
     if (body_type->isa<NoRetType>() || body_type->isa<UnknownType>())
         return sema.fn_type(param_types);
     else {
+        if (num_params() == 0) return sema.fn_type(sema.fn_type(sema.type_error()));
+
         param_types.back() = sema.constrain(params().back().get(), sema.fn_type(body_type));
         return sema.fn_type(param_types);
     }
@@ -673,12 +672,16 @@ const Type* PrefixExpr::infer(InferSema& sema) const {
             auto type = sema.infer(rhs());
             if (auto ref = type->isa<RefType>())
                 return sema.borrowed_ptr_type(ref->pointee(), false, ref->addr_space());
+            // The type might turn out to be a ref type later on
+            if (type->isa<UnknownType>()) return sema.find_type(this);
             return sema.borrowed_ptr_type(type, false, 0);
         }
         case MUT: {
             auto type = sema.infer(rhs());
             if (auto ref = type->isa<RefType>())
                 return sema.borrowed_ptr_type(ref->pointee(), true, ref->addr_space());
+            // The type might turn out to be a ref type later on
+            if (type->isa<UnknownType>()) return sema.find_type(this);
             return sema.borrowed_ptr_type(type, true, 0);
         }
         case TILDE:
@@ -711,14 +714,11 @@ const Type* InfixExpr::infer(InferSema& sema) const {
         case GT: case GE: {
             auto ltype = sema.rvalue(lhs());
             auto rtype = sema.rvalue(rhs());
-            if (rtype->is_known() || ltype->is_known()) {
-                sema.constrain(lhs(), rtype);
-                sema.constrain(rhs(), ltype);
-                if (auto simd = rhs()->type()->isa<SimdType>())
-                    return sema.simd_type(sema.type_bool(), simd->dim());
-                return sema.type_bool();
-            }
-            return sema.find_type(this);
+            sema.constrain(lhs(), rtype);
+            sema.constrain(rhs(), ltype);
+            if (auto simd = rhs()->type()->isa<SimdType>())
+                return sema.simd_type(sema.type_bool(), simd->dim());
+            return sema.type_bool();
         }
         case OROR:
         case ANDAND:
@@ -733,12 +733,9 @@ const Type* InfixExpr::infer(InferSema& sema) const {
         case AND: case OR:  case XOR: {
             auto ltype = sema.rvalue(lhs());
             auto rtype = sema.rvalue(rhs());
-            if (rtype->is_known() || ltype->is_known()) {
-                sema.constrain(lhs(), rtype);
-                sema.constrain(rhs(), ltype);
-                return rtype;
-            }
-            return sema.find_type(this);
+            sema.constrain(lhs(), rtype);
+            sema.constrain(rhs(), ltype);
+            return rtype;
         }
         case ASGN:
         case ADD_ASGN: case SUB_ASGN:
@@ -771,8 +768,18 @@ const Type* ImplicitCastExpr::infer(InferSema& sema) const {
     return type();
 }
 
-const Type* Ref2ValueExpr::infer(InferSema& sema) const {
-    return sema.infer(src())->as<RefType>()->pointee();
+const Type* RValueExpr::infer(InferSema& sema) const {
+    auto src_type = sema.infer(src());
+    // references are converted to rvalues
+    if (auto ref_type = src_type->isa<RefType>())
+        return ref_type->pointee();
+    // function calls never result in references
+    if (auto map = src()->isa<MapExpr>()) {
+        if (map->lhs()->type()->isa<FnType>())
+            return src_type;
+    }
+    // if the type is not known, we cannot make a decision yet
+    return src_type->isa<UnknownType>() ? sema.find_type(this) : src_type;
 }
 
 const Type* DefiniteArrayExpr::infer(InferSema& sema) const {
@@ -929,7 +936,7 @@ const Type* MapExpr::infer(InferSema& sema) const {
         sema.rvalue(arg.get());
 
     if (ltype->isa<UnknownType>())
-        return type() ? type() : sema.wrap_ref(ref, sema.unknown_type());
+        return sema.find_type(this);
 
     if (auto array = ltype->isa<ArrayType>())
         return sema.wrap_ref(ref, array->elem_type());
@@ -945,7 +952,7 @@ const Type* MapExpr::infer(InferSema& sema) const {
         return sema.wrap_ref(ref, simd_type->elem_type());
 
     if (ref && (ltype->isa<Lambda>() || ltype->isa<FnType>()))
-        ltype = Ref2ValueExpr::create(lhs())->type();
+        ltype = sema.rvalue(lhs());
 
     if (ltype->isa<Lambda>()) {
         if (!lhs()->isa<TypeAppExpr>())

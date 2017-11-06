@@ -1110,6 +1110,8 @@ public:
 
     const thorin::Def* extra() const { return extra_; }
 
+    const Expr* skip_rvalue() const;
+
     virtual void write() const {}
     virtual bool has_side_effect() const { return false; }
     virtual void take_address() const {}
@@ -1518,17 +1520,17 @@ private:
     const Type* infer(InferSema&) const override;
 };
 
-class Ref2ValueExpr : public CastExpr {
+class RValueExpr : public CastExpr {
 public:
-    Ref2ValueExpr(const Expr* src)
+    RValueExpr(const Expr* src)
         : CastExpr(src->location(), src)
-    {
-        type_ = src->type()->as<RefType>()->pointee();
+    {}
+
+    static const RValueExpr* create(const Expr* src) {
+        return interlope<RValueExpr>(src, src);
     }
 
-    static const Ref2ValueExpr* create(const Expr* src) {
-        return interlope<Ref2ValueExpr>(src, src);
-    }
+    bool has_side_effect() const override;
 
     void bind(NameSema&) const override { THORIN_UNREACHABLE; }
     std::ostream& stream(std::ostream&) const override;

@@ -186,6 +186,7 @@ const thorin::Type* OptionDecl::variant_type(CodeGen& cg) const {
     std::vector<const thorin::Type*> types;
     for (const auto& arg : args())
         types.push_back(cg.convert(arg->type()));
+    if (num_args() == 1) return types.back();
     return cg.world().tuple_type(types);
 }
 
@@ -339,8 +340,21 @@ Value OptionDecl::emit(CodeGen& cg, const Def* init) const {
     auto enum_type = enum_decl()->type()->as<EnumType>();
     auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
     auto id = cg.world().literal_qu32(index(), location());
-    auto bot = cg.world().bottom(variant_type);
-    return Value::create_val(cg, cg.world().struct_agg(cg.thorin_enum_type(enum_type), { id, bot }) );
+    if (num_args() == 0) {
+        auto bot = cg.world().bottom(variant_type);
+        return Value::create_val(cg, cg.world().struct_agg(cg.thorin_enum_type(enum_type), { id, bot }) );
+    } else {
+        auto continuation = cg.world().continuation(cg.convert(type())->as<thorin::FnType>(), { location(), symbol().str() });
+        auto ret = continuation->param(continuation->num_params() - 1);
+        auto mem = continuation->param(0);
+        Array<const Def*> defs(num_args());
+        for (size_t i = 1, e = continuation->num_params(); i + 1 < e; i++)
+            defs[i-1] = continuation->param(i);
+        auto option_val = num_args() == 1 ? defs.back() : cg.world().tuple(defs);
+        auto enum_val = cg.world().struct_agg(cg.thorin_enum_type(enum_type), { id, cg.world().variant(variant_type, option_val) });
+        continuation->jump(ret, { mem, enum_val }, location());
+        return Value::create_val(cg, continuation);
+    }
 }
 
 Value StaticItem::emit(CodeGen& cg, const Def* init) const {
@@ -411,12 +425,15 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     return cg.world().convert(thorin_type, def, location());
 }
 
-Value Ref2ValueExpr::lemit(CodeGen& cg) const {
+Value RValueExpr::lemit(CodeGen& cg) const {
+    assert(src()->type()->isa<RefType>());
     return cg.lemit(src());
 }
 
-const Def* Ref2ValueExpr::remit(CodeGen& cg) const {
-    return cg.lemit(this).load(location());
+const Def* RValueExpr::remit(CodeGen& cg) const {
+    if (src()->type()->isa<RefType>())
+        return cg.lemit(this).load(location());
+    return cg.remit(src());
 }
 
 Value PathExpr::lemit(CodeGen& cg) const {
@@ -465,11 +482,11 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
         }
 
         case HLT: {
-            auto def = cg.remit(rhs());
+            auto def = cg.remit(rhs()->skip_rvalue());
             return cg.world().hlt(def, location());
         }
         case KNOWN: {
-            auto def = cg.remit(rhs());
+            auto def = cg.remit(rhs()->skip_rvalue());
             return cg.world().known(def, location());
         }
         case OR:
@@ -623,7 +640,8 @@ const Def* MapExpr::remit(CodeGen& cg) const {
 
         // Handle primops here
         if (auto type_expr = lhs()->isa<TypeAppExpr>()) { // Bitcast, sizeof and select are all polymorphic
-            if (auto path = type_expr->lhs()->isa<PathExpr>()) {
+            auto callee = type_expr->lhs()->skip_rvalue();
+            if (auto path = callee->isa<PathExpr>()) {
                 if (auto fn_decl = path->value_decl()->isa<FnDecl>()) {
                     if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {
                         auto name = fn_decl->fn_symbol().remove_quotation();
@@ -684,21 +702,6 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         }
                     }
                 }
-            }
-        }
-
-        if (auto path_expr = lhs()->isa<PathExpr>()) {
-            if (auto option = path_expr->path()->decl()->isa<OptionDecl>()) {
-                // handle option creation here
-                auto enum_type = option->enum_decl()->type()->as<EnumType>();
-                auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
-                std::vector<const Def*> defs;
-                for (const auto& arg : args())
-                    defs.push_back(cg.remit(arg.get()));
-                return cg.world().struct_agg(cg.thorin_enum_type(enum_type), {
-                    cg.world().literal_qu32(option->index(), location()),
-                    cg.world().variant(variant_type, cg.world().tuple(defs, location()), location())
-                });
             }
         }
 
@@ -906,7 +909,7 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
     auto variant = cg.world().cast(variant_type, cg.world().extract(init, 1), location());
     for (size_t i = 0, e = num_args(); i != e; ++i) {
-        cg.emit(arg(i), cg.extract(variant, i, location()));
+        cg.emit(arg(i), num_args() == 1 ? variant : cg.extract(variant, i, location()));
     }
 }
 
@@ -918,7 +921,8 @@ const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) con
         auto variant = cg.world().cast(variant_type, cg.world().extract(init, 1, location()), location());
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
-            cond = cg.world().arithop_and(cond, arg(i)->emit_cond(cg, cg.world().extract(variant, i, location())), location());
+            auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? variant : cg.world().extract(variant, i, location()));
+            cond = cg.world().arithop_and(cond, arg_cond, location());
         }
     }
     return cond;

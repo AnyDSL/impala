@@ -46,6 +46,11 @@ PrimTypeTag LiteralExpr::literal2type() const {
     }
 }
 
+const Expr* Expr::skip_rvalue() const {
+    if (auto rvalue = isa<RValueExpr>()) return rvalue->src();
+    return this;
+}
+
 uint64_t LiteralExpr::get_u64() const { return thorin::bcast<uint64_t, thorin::Box>(box()); }
 
 bool IfExpr::has_else() const {
@@ -83,6 +88,10 @@ void CastExpr::write() const { src()->write(); }
 /*
  * has_side_effect
  */
+
+bool RValueExpr::has_side_effect() const {
+    return src()->has_side_effect();
+}
 
 bool PrefixExpr::has_side_effect() const {
     return tag() == INC || tag() == DEC || tag() == TILDE || tag() == HLT;
