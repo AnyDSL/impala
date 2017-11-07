@@ -1,4 +1,4 @@
-fn range(a: int, b: int, body: fn(int, fn() -> !) -> !) -> () {
+fn @(?a & ?b) range(a: int, b: int, body: fn(int, fn() -> !) -> !) -> () {
     if a < b {
         body(a);
         range(a+1, b, body)
@@ -7,7 +7,7 @@ fn range(a: int, b: int, body: fn(int, fn() -> !) -> !) -> () {
 
 fn main(arr: &mut [int]) -> int {
     //let mut sum_xxx = 42;
-    for i in @range(0, 3) {
+    for i in range(0, 3) {
         //sum_xxx += arr(i);
         arr(i+1) = i;
     }
