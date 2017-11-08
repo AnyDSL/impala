@@ -157,4 +157,25 @@ bool LiteralPtrn::is_refutable() const {
     return true;
 }
 
+//------------------------------------------------------------------------------
+
+const PrefixExpr* replace_rvalue_by_addrof(const RValueExpr* rvalue) {
+    auto parent = rvalue->back_ref_;
+    parent->release();
+    auto src = rvalue->src()->back_ref_->release();
+    src->back_ref_ = nullptr;
+    auto new_expr = new PrefixExpr(rvalue->location(), PrefixExpr::AND, src);
+    delete rvalue;
+    parent->reset(new_expr);
+    new_expr->back_ref_ = parent;
+    return new_expr;
+}
+
+const PrefixExpr* PrefixExpr::create_addrof(const Expr* rhs) {
+    if (auto rvalue = rhs->isa<RValueExpr>()) {
+        return replace_rvalue_by_addrof(rvalue);
+    }
+    return create(rhs, AND);
+}
+
 }

@@ -37,6 +37,8 @@ class LocalDecl;
 class Param;
 class Ptrn;
 class Stmt;
+class PrefixExpr;
+class RValueExpr;
 
 class NameSema;
 class InferSema;
@@ -1146,6 +1148,7 @@ protected:
 
     template<class T, class...Args>
     friend const T* interlope(const Expr* expr, Args&&... args);
+    friend const PrefixExpr* replace_rvalue_by_addrof(const RValueExpr* expr);
     friend class Args;
     friend class CodeGen;
     friend class InferSema;
@@ -1159,7 +1162,6 @@ protected:
  */
 template<class T, class...Args>
 const T* interlope(const Expr* expr, Args&&... args) {
-    std::unique_ptr<const Expr> ptr;
     auto parent = expr->back_ref_;
     parent->release();
     expr->back_ref_ = nullptr;
@@ -1168,6 +1170,8 @@ const T* interlope(const Expr* expr, Args&&... args) {
     new_expr->back_ref_ = parent;
     return new_expr;
 }
+
+const PrefixExpr* replace_rvalue_by_addrof(const RValueExpr* rvalue);
 
 /// Use as mixin for anything which uses args: (expr_1, ..., expr_n)
 class Args {
@@ -1346,7 +1350,7 @@ public:
         return interlope<PrefixExpr>(rhs, rhs->location(), tag, rhs);
     }
     static const PrefixExpr* create_deref(const Expr* rhs) { return create(rhs, MUL); }
-    static const PrefixExpr* create_addrof(const Expr* rhs) { return create(rhs, AND); }
+    static const PrefixExpr* create_addrof(const Expr* rhs);
 
     const Expr* rhs() const { return rhs_.get(); }
     Tag tag() const { return tag_; }
