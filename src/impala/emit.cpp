@@ -480,7 +480,10 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             assert(var.tag() == Value::PtrRef);
             return var.def();
         }
-
+        case RUNRUN: {
+            auto def = cg.remit(rhs()->skip_rvalue());
+            return cg.world().run(def, location());
+        }
         case HLT: {
             auto def = cg.remit(rhs()->skip_rvalue());
             return cg.world().hlt(def, location());

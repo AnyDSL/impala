@@ -53,6 +53,7 @@
     case Token::INC: \
     case Token::DEC: \
     case Token::RUN: \
+    case Token::RUNRUN: \
     case Token::OR: \
     case Token::OROR: \
     case Token::ID: \
@@ -884,7 +885,13 @@ const Expr* Parser::parse_prefix_expr() {
     auto tracker = track();
     auto tag = lex().tag();
     bool mut = tag == Token::AND ? accept(Token::MUT) : false;
-    auto rhs = parse_expr(tag == Token::HLT ? Prec::Hlt : Prec::Unary);
+    Prec prec;
+    switch (tag) {
+        case Token::HLT:    prec = Prec::Hlt; break;
+        case Token::RUNRUN: prec = Prec::RunRun; break;
+        default:            prec = Prec::Unary;
+    }
+    auto rhs = parse_expr(prec);
 
     return new PrefixExpr(tracker, mut ? PrefixExpr::MUT : (PrefixExpr::Tag) tag, rhs);
 }

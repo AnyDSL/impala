@@ -1,6 +1,6 @@
 fn @(?a & ?z) range(a: int, z: int, body: fn(int)->()) -> () {
     if a < z {
-        body(a);
+        @@body(a);
         range(a+1, z, body)
     }
 }

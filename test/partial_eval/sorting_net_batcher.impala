@@ -4,7 +4,7 @@ fn @batcher_sort(n: int, cmp_swap: fn (int, int) -> ()) -> () {
         if step < len {
             merge(i, len, step);
             merge(i + r, len, step);
-            for j in range_step(i + r, i + len - r, step) @{
+            for j in range_step(i + r, i + len - r, step) {
                 // Remove comparators for non-existing elements
                 if j < n && j + r < n {
                     cmp_swap(j, j + r)
@@ -45,7 +45,7 @@ fn @ilog2(i: int) -> int {
 
 fn @(?a & ?b) range_step(a: int, b: int, @ c: int, @ body: fn (int) -> ()) -> () {
     if a < b {
-        body(a);
+        @@body(a);
         range_step(a + c, b, c, body, return)
     }
 }

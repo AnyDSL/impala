@@ -54,6 +54,7 @@ enum class Prec {
     Shift, Add, Mul,
     As,
     Unary,
+    RunRun,
 };
 
 struct PrecTable {

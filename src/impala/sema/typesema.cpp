@@ -31,7 +31,7 @@ public:
     void error_msg(const Expr* expr, const char* what, const Type* type, const char* fmt, Args... args) {
         std::ostringstream os;
         thorin::streamf(os, fmt, args...);
-        error(expr, "mismatched types: expected {} but found '{}' as {}", what, type, os.str());
+        error(expr, "mismatched types: expected {} but found '{}' at {}", what, type, os.str());
     }
 
 #define IMPALA_EXPECT(T, pred, what) \
@@ -50,6 +50,7 @@ public:
     IMPALA_EXPECT(num_or_bool, is_int(t) || is_float(t) || is_bool(t), "number or boolean type")
     IMPALA_EXPECT(ptr,         t->isa<PtrType>(),                      "pointer type")
     IMPALA_EXPECT(num_or_bool_or_ptr, is_int(t) || is_float(t) || is_bool(t) || t->isa<PtrType>(), "number or boolean or pointer type")
+    IMPALA_EXPECT(fn,          t->isa<FnType>(),                       "function type")
 
     template<typename... Args>
     const Type* expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
@@ -345,27 +346,30 @@ void PrefixExpr::check(TypeSema& sema) const {
         case MUT:
             rhs()->write();
             rhs()->take_address();
-            sema.expect_lvalue(rhs(), "unary '&mut' operand");
+            sema.expect_lvalue(rhs(), "operand of '&mut'");
             return;
         case TILDE:
             return;
         case MUL:
-            sema.expect_ptr(rhs(), "unary '*'");
+            sema.expect_ptr(rhs(), "operand of unary '*'");
             return;
         case INC: case DEC: {
             rhs()->write();
-            sema.expect_lvalue(rhs(), "prefix '{}'", tok2str(this));
-            sema.expect_num(rhs(),    "prefix '{}'", tok2str(this));
+            sema.expect_lvalue(rhs(), "operand of prefix '{}'", tok2str(this));
+            sema.expect_num(rhs(),    "operand of prefix '{}'", tok2str(this));
             return;
         }
         case ADD: case SUB:
-            sema.expect_num(rhs(), "unary '{}'", tok2str(this));
+            sema.expect_num(rhs(), "operand of unary '{}'", tok2str(this));
             return;
         case NOT:
-            sema.expect_int_or_bool(rhs(), "unary '!'");
+            sema.expect_int_or_bool(rhs(), "operand of '!'");
             return;
         case HLT:
         case KNOWN:
+            return;
+        case RUNRUN:
+            sema.expect_fn(rhs(), "operand of '{}'", tok2str(this));
             return;
         case OR: case OROR: case RUN: // Lambda
             THORIN_UNREACHABLE;

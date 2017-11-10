@@ -1,6 +1,6 @@
 fn @(?a & ?b) range(a: int, b: int, body: fn(int, fn() -> !) -> !) -> () {
     if a < b {
-        body(a);
+        @@body(a);
         range(a+1, b, body)
     }
 }
@@ -8,9 +8,9 @@ fn @(?a & ?b) range(a: int, b: int, body: fn(int, fn() -> !) -> !) -> () {
 fn @foo(n: int) -> int {
     let mut m = 0;
     let mut res = 0;
-    for i in range(0, n) @{
+    for i in range(0, n) {
         m++;
-        for j in range(0, m) @{
+        for j in range(0, m) {
             res++;
         }
     }
