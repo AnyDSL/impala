@@ -53,6 +53,7 @@
     case Token::INC: \
     case Token::DEC: \
     case Token::RUN: \
+    case Token::RUNKNOWN: \
     case Token::RUNRUN: \
     case Token::OR: \
     case Token::OROR: \
@@ -426,7 +427,11 @@ Params Parser::parse_param_list(TokenTag delimiter, bool lambda) {
 const Param* Parser::parse_param(int i, bool lambda) {
     auto tracker = track();
 
-    const Expr* pe_expr = parse_pe_expr("partial evaluation profile of function parameter");
+    const Expr* pe_expr = nullptr;
+    if (lookahead() == Token::RUNKNOWN) {
+        eat(Token::RUNKNOWN);
+    } else
+        pe_expr = parse_pe_expr("partial evaluation profile of function parameter");
 
     bool mut = accept(Token::MUT);
     const Identifier* identifier = nullptr;
@@ -467,6 +472,12 @@ const Param* Parser::parse_param(int i, bool lambda) {
         std::ostringstream oss;
         oss << '<' << i << ">";
         identifier = create<Identifier>(oss.str().c_str());
+    }
+    if (pe_expr == nullptr) {
+        Path::Elems elems;
+        elems.emplace_back(new Path::Elem(new Identifier(tracker, identifier->symbol())));
+        auto id = new PathExpr(new Path(tracker, false, std::move(elems)));
+        pe_expr = new PrefixExpr(tracker, PrefixExpr::Tag::KNOWN, id);
     }
 
     return new Param(tracker, cur_var_handle++, mut, identifier, ast_type, pe_expr);

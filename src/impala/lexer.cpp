@@ -153,6 +153,8 @@ Token Lexer::lex() {
         if (accept('@')) {
             if (accept('@'))
                 return {location(), Token::RUNRUN};
+            if (accept('?'))
+                return {location(), Token::RUNKNOWN};
             return {location(), Token::RUN};
         }
 
