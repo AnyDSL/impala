@@ -550,7 +550,7 @@ public:
     // identifier
     const Identifier* identifier() const { assert(!is_no_decl()); return identifier_.get(); }
     Symbol symbol() const { assert(!is_no_decl()); return identifier_->symbol(); }
-    bool is_anonymous() const { assert(!is_no_decl()); return symbol() == Symbol() || symbol().str()[0] == '_'; }
+    bool is_anonymous() const { assert(!is_no_decl()); return symbol() == Symbol() || symbol().str()[0] == '<'; }
     size_t depth() const { assert(!is_no_decl()); return depth_; }
     const Decl* shadows() const { assert(!is_no_decl()); return shadows_; }
     thorin::Debug debug() const { return {location(), symbol().str()}; }
