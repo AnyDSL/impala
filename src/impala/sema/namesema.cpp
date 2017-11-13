@@ -48,6 +48,8 @@ private:
 
 public: // HACK
     int lambda_depth_ = 0;
+
+    friend void Fn::fn_bind(NameSema&) const;
 };
 
 //------------------------------------------------------------------------------
@@ -55,15 +57,15 @@ public: // HACK
 const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
     assert(!symbol.empty() && "symbol is empty");
 
-    if (!symbol.is_anonymous()) {
-        auto decl = thorin::find(symbol2decl_, symbol);
-        if (decl == nullptr)
+    auto decl = thorin::find(symbol2decl_, symbol);
+    // anonymous symbols may be temporarily stored in the map
+    if (decl == nullptr) {
+        if (!symbol.is_anonymous())
             error(n, "'{}' not found in current scope", symbol);
-        return decl;
-    } else {
-        error(n, "identifier '_' is reverserved for anonymous declarations");
-        return nullptr;
+        else
+            error(n, "identifier '_' is reserved for anonymous declarations");
     }
+    return decl;
 }
 
 void NameSema::insert(const Decl* decl) {
@@ -241,8 +243,16 @@ void Fn::fn_bind(NameSema& sema) const {
         pe_expr()->bind(sema);
 
     for (const auto& param : params()) {
+        auto symbol = param->symbol();
+        if (symbol.is_anonymous()) {
+            // we temporarily associate '_' with the current param,
+            // and remove the association after binding
+            sema.symbol2decl_.emplace(symbol, param.get());
+        }
         if (auto pe_expr = param->pe_expr())
             pe_expr->bind(sema);
+        if (symbol.is_anonymous())
+            sema.symbol2decl_.erase(symbol);
     }
 
     if (body() != nullptr)

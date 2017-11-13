@@ -97,13 +97,11 @@ std::ostream& Fn::stream_params(std::ostream& os, bool returning) const {
 
 std::ostream& LocalDecl::stream(std::ostream& os) const {
     os << (is_mut() ? "mut " : "" );
-    if (!is_anonymous()) {
-        os << symbol();
-        if (type())
-            os << ": " << type();
-        else if (ast_type())
-            os << ": " << ast_type();
-    }
+    os << symbol();
+    if (type())
+        os << ": " << type();
+    else if (ast_type())
+        os << ": " << ast_type();
 
     return os;
 }
@@ -111,9 +109,9 @@ std::ostream& LocalDecl::stream(std::ostream& os) const {
 std::ostream& Param::stream(std::ostream& os) const {
     if (pe_expr())
         os << '@' << pe_expr() << ' ';
-    if (!is_anonymous())
-        os << (is_mut() ? "mut " : "") << symbol() <<
-            ((ast_type() || type()) ? ": " : "");
+
+    os << (is_mut() ? "mut " : "") << symbol() <<
+        ((ast_type() || type()) ? ": " : "");
 
     if (type())
         os << type();
