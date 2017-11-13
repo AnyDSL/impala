@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
             .add_option<string>          ("log-level",          LOG_LEVELS,  "set log level", log_level, "error")
             .add_option<string>          ("log",                "<arg>", "specifies log file; use '-' for stdout (default)", log_name, "-")
 #ifndef NDEBUG
-            .add_option<vector<string>>  ("break",              "<arg>", "breakpoint at definition generation of with global id <arg>; may be used multiple times", breakpoints)
+            .add_option<vector<string>>  ("break",              "<args>", "breakpoint at definition generation with global id <arg>; may be used multiple times separated by space or '_'", breakpoints)
             .add_option<bool>             ("track-history",     "", "track hisotry of names - useful for debugging", track_history, false)
 #endif
             .add_option<string>          ("o",                  "", "specifies the output module name", out_name, "")
@@ -148,14 +148,21 @@ int main(int argc, char** argv) {
             size_t num = 0;
             for (size_t i = 0, e = b.size(); i != e; ++i) {
                 char c = b[i];
-                if (!std::isdigit(c)) {
+                if (c == '_') {
+                    if (num != 0) {
+                        init.world.breakpoint(num);
+                        num = 0;
+                    }
+                } else if (std::isdigit(c)) {
+                    num = num*10 + c - '0';
+                } else {
                     std::cerr << "invalid breakpoint '" << b << "'" << std::endl;
                     return EXIT_FAILURE;
                 }
-                num = num*10 + c - '0';
             }
 
-            init.world.breakpoint(num);
+            if (num != 0)
+                init.world.breakpoint(num);
         }
 
         init.world.enable_history(track_history);
