@@ -61,7 +61,7 @@ const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
             error(n, "'{}' not found in current scope", symbol);
         return decl;
     } else {
-        error(n, "identifier '_' is reverserved for anonymous declarations");
+        error(n, "identifier '_' is reserved for anonymous declarations");
         return nullptr;
     }
 }

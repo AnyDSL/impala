@@ -1275,7 +1275,8 @@ const Expr* Parser::parse_pe_expr(const char* context) {
         } else {
             pe_expr = new LiteralExpr(lookahead().location(), LiteralExpr::LIT_bool, Box(true));
         }
-    }
+    } else
+        pe_expr = new LiteralExpr(lookahead().location(), LiteralExpr::LIT_bool, Box(false));
 
     return pe_expr;
 }
