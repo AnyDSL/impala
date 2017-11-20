@@ -240,21 +240,6 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     if (src->isa<TupleType>() && src->num_ops() == 1) src = src->op(0);
     if (dst->isa<TupleType>() && dst->num_ops() == 1) dst = dst->op(0);
 
-    // HACK needed as long as we have this stupid tuple problem
-    if (auto dst_fn = dst->isa<FnType>()) {
-        if (auto src_fn = src->isa<FnType>()) {
-            if (dst_fn->num_ops() != 1 && src_fn->num_ops() == 1 && src_fn->op(0)->isa<UnknownType>()) {
-                if (dst_fn->is_known())
-                    return unify(dst_repr, src_repr)->type;
-            }
-
-            if (src_fn->num_ops() != 1 && dst_fn->num_ops() == 1 && dst_fn->op(0)->isa<UnknownType>()) {
-                if (src_fn->is_known())
-                    return unify(src_repr, dst_repr)->type;
-            }
-        }
-    }
-
     if (dst->isa<UnknownType>() && src->isa<UnknownType>())
         return unify_by_rank(dst_repr, src_repr)->type;
     if (dst->isa<UnknownType>()) return unify(src_repr, dst_repr)->type;
