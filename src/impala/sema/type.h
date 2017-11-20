@@ -468,6 +468,7 @@ class InferError : public Type {
         : Type(typetable, Tag_infer_error, {dst, src})
     {}
 
+public:
     const Type* dst() const { return op(0); }
     const Type* src() const { return op(1); }
     virtual std::ostream& stream(std::ostream&) const override;
