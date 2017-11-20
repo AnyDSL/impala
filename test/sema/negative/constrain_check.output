@@ -1,0 +1,1 @@
+constrain_check.impala:2 col 15: error: incompatible types: 'i32' and 'i64' found as argument type

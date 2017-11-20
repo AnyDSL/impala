@@ -1,0 +1,3 @@
+fn get_direction(dir: i32, body: fn(i64) -> ()) -> () {
+    (|a| body(a)) (1)
+}
