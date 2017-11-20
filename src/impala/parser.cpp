@@ -1138,6 +1138,7 @@ const FnExpr* Parser::parse_fn_expr(bool nested) {
         });
         // special case for nested lambdas (e.g. |x||y| x + y)
         if (accept(Token::OROR)) {
+            params.emplace_back(parse_return_param());
             auto body = parse_fn_expr(true);
             return new FnExpr(tracker, pe_expr, std::move(params), body);
         }
