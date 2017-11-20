@@ -11,7 +11,7 @@ def allTests():
     This function returns a list of tests for the parser.
     """
 
-    tests = get_tests_from_dir("parser/negative")
+    tests = get_tests_from_dir("parser/negative") + get_tests_from_dir("parser/positive")
     
     return tests
 

@@ -240,7 +240,7 @@ public:
     const LiteralExpr*  parse_literal_expr();
     const CharExpr*     parse_char_expr();
     const StrExpr*      parse_str_expr();
-    const FnExpr*       parse_fn_expr();
+    const FnExpr*       parse_fn_expr(bool nested = false);
     const IfExpr*       parse_if_expr();
     const MatchExpr*    parse_match_expr();
     const ForExpr*      parse_for_expr();
@@ -1119,16 +1119,30 @@ const StrExpr* Parser::parse_str_expr() {
     return new StrExpr(tracker, std::move(symbols), std::move(values));
 }
 
-const FnExpr* Parser::parse_fn_expr() {
+const FnExpr* Parser::parse_fn_expr(bool nested) {
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
     auto tracker = track();
 
-    const Expr* pe_expr = parse_pe_expr("partial evaluation profile of function expression");
+    const Expr* pe_expr = nullptr;
+    if (nested)
+        pe_expr = new LiteralExpr(lookahead().location(), LiteralExpr::LIT_bool, Box(false));
+    else
+        pe_expr = parse_pe_expr("partial evaluation profile of function expression");
 
     Params params;
-    if (accept(Token::OR))
-        params = parse_param_list(Token::OR, true);
-    else
+    if (accept(Token::OR) || nested) {
+        // cannot use parse_param_list here because the list may end with OR or OROR
+        int i = 0;
+        nibble_comma_list({ Token::OR, Token::OROR }, [&] {
+            params.emplace_back(parse_param(i++, true));
+        });
+        // special case for nested lambdas (e.g. |x||y| x + y)
+        if (accept(Token::OROR)) {
+            auto body = parse_fn_expr(true);
+            return new FnExpr(tracker, pe_expr, std::move(params), body);
+        }
+        expect(Token::OR, "parameter list of function expression");
+    } else
         expect(Token::OROR, "parameter list of function expression");
 
     if (auto ret_param = parse_return_param())
