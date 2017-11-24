@@ -574,6 +574,8 @@ const Type* FieldDecl::infer(InferSema& sema) const { return sema.infer(ast_type
 void FnDecl::infer(InferSema& sema) const {
     infer_ast_type_params(sema);
 
+    sema.infer(pe_expr());
+
     Array<const Type*> param_types(num_params());
     size_t e = num_params();
 
@@ -619,6 +621,8 @@ const Type* StrExpr::infer(InferSema& sema) const {
 
 const Type* FnExpr::infer(InferSema& sema) const {
     assert(ast_type_params().empty());
+
+    sema.infer(pe_expr());
 
     Array<const Type*> param_types(num_params());
     for (size_t i = 0, e = num_params(); i != e; ++i) {
