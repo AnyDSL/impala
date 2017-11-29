@@ -16,8 +16,8 @@ fn main() -> () {
     { let i: i32 = 0b01; }
     { let i: i32 = 0o0_1234567; }
     { let i: i32 = 0o01234567_; }
-    { let i: i32 = 0x0_123456789abcdef; }
-    { let i: i32 = 0x0123456789abcdef_; }
+    { let i: i64 = 0x0_123456789abcdefi64; }
+    { let i: i64 = 0x0123456789abcdef_i64; }
     { let f: f64 = 1e1; }
     { let f: f64 = 1e-1; }
     { let f: f64 = 1e+1; }

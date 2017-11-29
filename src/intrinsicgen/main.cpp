@@ -51,12 +51,16 @@ int main() {
             if (auto itype = llvm2impala(*init.typetable, llvm::Intrinsic::getType(context, id))) {
                 std::cout << thorin::endl;
                 auto fn = itype->as<impala::FnType>();
-                std::cout << "fn \"" << llvm_name << "\" " << name;
-                stream_list(std::cout, fn->ops().skip_back(), [&](const impala::Type* type) { std::cout << type; }, "(", ")");
+                std::cout << "fn \"" << llvm_name << "\" " << name << "(";
+                for (size_t i = 0, e = fn->num_params()-1; i != e; ++i) {
+                    std::cout << fn->param(i);
+                    if (i != e-1)
+                        std::cout << ", ";
+                }
                 if (fn->return_type()->isa<impala::NoRetType>())
-                    std::cout << " -> !;";
+                    std::cout << ") -> !;";
                 else
-                    std::cout << " -> " << fn->return_type() << ';';
+                    std::cout << ") -> " << fn->return_type() << ';';
             }
         }
     }
@@ -90,34 +94,31 @@ const impala::Type* llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
     }
 
     if (auto struct_type = llvm::dyn_cast<llvm::StructType>(type)) {
-        auto elements = struct_type->elements();
-        impala::ASTTypeParams ast_type_params;
-        impala::FieldDecls field_decls;
-        auto ret = tt.struct_type(new impala::StructDecl(impala::Location(), impala::Visibility(impala::Visibility::Pub), new impala::Identifier(thorin::Location(), struct_type->isLiteral() ? "" : struct_type->getName().str().c_str()), std::move(ast_type_params), std::move(field_decls)), struct_type->getNumElements());
-        for (size_t i = 0, e = struct_type->getNumElements(); i != e; ++i) {
-            auto elem = llvm2impala(tt, elements[i]);
-            if (elem == nullptr)
+        std::vector<const impala::Type*> args;
+
+        for (auto elem : struct_type->elements()) {
+            args.push_back(llvm2impala(tt, elem));
+            if (args.back() == nullptr)
                 return nullptr;
-            ret->set(i, elem);
         }
-        return ret;
+
+        return tt.tuple_type(args);
     }
 
     if (auto fn = llvm::dyn_cast<llvm::FunctionType>(type)) {
         std::vector<const impala::Type*> param_types(fn->getNumParams()+1);
-        bool valid = true;
         for (size_t i = 0, e = fn->getNumParams(); i != e; ++i) {
             auto t = llvm2impala(tt, fn->getParamType(i));
-            valid &= bool(t);
-            if (valid) param_types[i] = t;
+            if (!t)
+                return nullptr;
+            param_types[i] = t;
         }
 
-        auto ret = fn->getReturnType()->isVoidTy() ? (const impala::Type*)tt.tuple_type({}) : llvm2impala(tt, fn->getReturnType());
-        valid &= bool(ret);
-        if (valid) {
-            param_types.back() = fn->getReturnType()->isVoidTy() ? tt.fn_type({}) : tt.fn_type({ret});
-            return tt.fn_type(param_types);
-        }
+        auto ret = fn->getReturnType()->isVoidTy() ? (const impala::Type*)tt.unit() : llvm2impala(tt, fn->getReturnType());
+        if (!ret)
+            return nullptr;
+        param_types.back() = fn->getReturnType()->isVoidTy() ? tt.fn_type(tt.unit()) : tt.fn_type(ret);
+        return tt.fn_type(param_types);
     }
 
     return nullptr;

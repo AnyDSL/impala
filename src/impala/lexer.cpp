@@ -150,10 +150,11 @@ Token Lexer::lex() {
             return {location(), Token::COLON};
         }
 
-        // @, @{
         if (accept('@')) {
-            if (accept('{'))
-                return {location(), Token::RUN_BLOCK};
+            if (accept('@'))
+                return {location(), Token::RUNRUN};
+            if (accept('?'))
+                return {location(), Token::RUNKNOWN};
             return {location(), Token::RUN};
         }
 
@@ -168,6 +169,7 @@ Token Lexer::lex() {
         if (accept('{')) return {location(), Token::L_BRACE};
         if (accept('}')) return {location(), Token::R_BRACE};
         if (accept('~')) return {location(), Token::TILDE};
+        if (accept('?')) return {location(), Token::KNOWN};
 
         // '.', floats
         if (accept('.')) {

@@ -2,7 +2,6 @@
 
 #include "impala/ast.h"
 #include "impala/impala.h"
-#include "impala/sema/typetable.h"
 
 using namespace thorin;
 
@@ -32,7 +31,7 @@ public:
     void error_msg(const Expr* expr, const char* what, const Type* type, const char* fmt, Args... args) {
         std::ostringstream os;
         thorin::streamf(os, fmt, args...);
-        error(expr, "mismatched types: expected {} but found '{}' as {}", what, type, os.str());
+        error(expr, "mismatched types: expected {} but found '{}' at {}", what, type, os.str());
     }
 
 #define IMPALA_EXPECT(T, pred, what) \
@@ -51,6 +50,7 @@ public:
     IMPALA_EXPECT(num_or_bool, is_int(t) || is_float(t) || is_bool(t), "number or boolean type")
     IMPALA_EXPECT(ptr,         t->isa<PtrType>(),                      "pointer type")
     IMPALA_EXPECT(num_or_bool_or_ptr, is_int(t) || is_float(t) || is_bool(t) || t->isa<PtrType>(), "number or boolean or pointer type")
+    IMPALA_EXPECT(fn,          t->isa<FnType>(),                       "function type")
 
     template<typename... Args>
     const Type* expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
@@ -72,8 +72,14 @@ public:
     }
 
     void expect_type(const Type* expected, const Typeable* node, const char* context) {
-        if (expected != node->type() && expected->is_known() && node->type()->is_known() && !node->type()->isa<TypeError>())
-            error(node, "mismatched types: expected '{}' but found '{}' as {}", expected, node->type(), context);
+        if (expected == node->type()) {
+            // note: for type inference errors, it is unclear which one of 'src' and 'dst' is the correct type
+            if (auto infer_error = expected->isa<InferError>())
+                error(node, "incompatible types: '{}' and '{}' found as {}", infer_error->src(), infer_error->dst(), context);
+        } else {
+            if (expected->is_known() && node->type()->is_known() && !node->type()->isa<TypeError>())
+                error(node, "mismatched types: expected '{}' but found '{}' as {}", expected, node->type(), context);
+        }
     }
 
     void no_indefinite_array(const ASTNode* n, const Type* type, const char* context) {
@@ -105,7 +111,7 @@ private:
     bool nossa_;
 
 public:
-    const BlockExprBase* cur_block_ = nullptr;
+    const BlockExpr* cur_block_ = nullptr;
     const Fn* cur_fn_ = nullptr;
 };
 
@@ -346,30 +352,32 @@ void PrefixExpr::check(TypeSema& sema) const {
         case MUT:
             rhs()->write();
             rhs()->take_address();
-            sema.expect_lvalue(rhs(), "unary '&mut' operand");
+            sema.expect_lvalue(rhs(), "operand of '&mut'");
             return;
         case TILDE:
             return;
         case MUL:
-            sema.expect_ptr(rhs(), "unary '*'");
+            sema.expect_ptr(rhs(), "operand of unary '*'");
             return;
         case INC: case DEC: {
             rhs()->write();
-            sema.expect_lvalue(rhs(), "prefix '{}'", tok2str(this));
-            sema.expect_num(rhs(),    "prefix '{}'", tok2str(this));
+            sema.expect_lvalue(rhs(), "operand of prefix '{}'", tok2str(this));
+            sema.expect_num(rhs(),    "operand of prefix '{}'", tok2str(this));
             return;
         }
         case ADD: case SUB:
-            sema.expect_num(rhs(), "unary '{}'", tok2str(this));
+            sema.expect_num(rhs(), "operand of unary '{}'", tok2str(this));
             return;
         case NOT:
-            sema.expect_int_or_bool(rhs(), "unary '!'");
+            sema.expect_int_or_bool(rhs(), "operand of '!'");
             return;
-        case HLT: case RUN:
-            if (!rhs()->isa<MapExpr>())
-                error(this, "function call expected after partial evaluator command {}", (TokenTag)tag());
+        case HLT:
+        case KNOWN:
             return;
-        case OR: case OROR:
+        case RUNRUN:
+            sema.expect_fn(rhs(), "operand of '{}'", tok2str(this));
+            return;
+        case OR: case OROR: case RUN: // Lambda
             THORIN_UNREACHABLE;
     }
 
@@ -501,17 +509,8 @@ void ExplicitCastExpr::check(TypeSema& sema) const {
     CastExpr::check(sema);
 }
 
-void Ref2ValueExpr::check(TypeSema& sema) const {
-    auto src_type = sema.check(src());
-    auto dst_type = type();
-
-    if (auto ref = src_type->isa<RefType>())
-        src_type = ref->pointee();
-    else
-        error(this, "source type of an ref-to-rvalue cast must be an ref, got '{}'", src_type);
-
-    if (src_type->is_known() && dst_type->is_known() && src_type != dst_type)
-        error(this, "invalid source and destination types for ref-to-rvalue cast, got '{}' and '{}'", src_type, dst_type);
+void RValueExpr::check(TypeSema& sema) const {
+    sema.check(src());
 }
 
 void TupleExpr::check(TypeSema& sema) const {
@@ -602,8 +601,11 @@ void MapExpr::check(TypeSema& sema) const {
     for (const auto& arg : args())
         sema.check(arg.get());
 
-    if (ltype->isa<FnType>())
+    if (ltype->isa<FnType>()) {
+        if (!type()->is_known())
+            error(this, "cannot infer type for function call");
         return sema.check_call(lhs(), args());
+    }
 
     if (ltype->isa<ArrayType>()) {
         if (num_args() == 1)
@@ -629,15 +631,15 @@ void MapExpr::check(TypeSema& sema) const {
 void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
     auto fn_type = expr->type()->as<FnType>();
 
-    if (fn_type->num_ops() == args.size() || fn_type->num_ops() == args.size() + 1) {
+    if (fn_type->num_params() == args.size() || fn_type->num_params() == args.size() + 1) {
         for (size_t i = 0; i < args.size(); i++)
-            expect_type(fn_type->op(i), args[i], "argument type");
+            expect_type(fn_type->param(i), args[i], "argument type");
     } else
         error(expr, "incorrect number of arguments in function application: got {}, expected {}",
-              args.size(), fn_type->num_ops() > 0 ? fn_type->num_ops() - 1 : 0);
+              args.size(), std::max(size_t(0), fn_type->num_params() - (fn_type->is_returning() ? 1 : 0)));
 }
 
-void BlockExprBase::check(TypeSema& sema) const {
+void BlockExpr::check(TypeSema& sema) const {
     THORIN_PUSH(sema.cur_block_, this);
     for (const auto& stmt : stmts())
         sema.check(stmt.get());
@@ -660,10 +662,41 @@ void IfExpr::check(TypeSema& sema) const {
         sema.expect_type(then_type, else_expr(), "else branch type");
 }
 
+inline bool is_match_complete(const MatchExpr* match) {
+    if (auto enum_type = match->expr()->type()->isa<EnumType>()) {
+        // match is complete if every option is covered by an irrefutable pattern
+        auto enum_decl = enum_type->enum_decl();
+        Array<bool> covered(enum_decl->num_option_decls(), false);
+        size_t num_covered = 0;
+
+        for (size_t i = 0, e = match->num_arms(); i != e; ++i) {
+            auto enum_ptrn = match->arm(i)->ptrn()->isa<EnumPtrn>();
+            if (!enum_ptrn) continue;
+            auto option_decl = enum_ptrn->path()->decl()->isa<OptionDecl>();
+            if (!option_decl || option_decl->enum_decl() != enum_decl) continue;
+
+            bool refutable = false;
+            for (auto& arg : enum_ptrn->args()) refutable |= arg->is_refutable();
+            if (refutable) continue;
+
+            num_covered += covered[option_decl->index()] ? 0 : 1;
+            covered[option_decl->index()] = true;
+        }
+
+        if (num_covered == enum_decl->num_option_decls()) return true;
+    }
+
+    // match is complete if there is an irrefutable pattern
+    for (size_t i = 0, e = match->num_arms(); i != e; ++i) {
+        if (!match->arm(i)->ptrn()->is_refutable()) return true;
+    }
+
+    return false;
+}
+
 void MatchExpr::check(TypeSema& sema) const {
     auto expr_type = sema.check(expr());
     auto arg_type  = num_arms() > 0 ? sema.check(arm(0)->expr()) : nullptr;
-    bool refutable = true;
     for (size_t i = 0, e = num_arms(); i != e; ++i) {
         sema.check(arm(i)->ptrn());
         sema.check(arm(i)->expr());
@@ -672,9 +705,8 @@ void MatchExpr::check(TypeSema& sema) const {
         sema.expect_type(arg_type,  arm(i)->expr(), "matched expression type");
         if (!arm(i)->ptrn()->is_refutable() && i < e - 1)
             warning(arm(i)->ptrn(), "pattern is always true, subsequent patterns will not be executed");
-        refutable &= arm(i)->ptrn()->is_refutable();
     }
-    if (refutable)
+    if (!is_match_complete(this))
         error(this, "missing default case for match expression");
 }
 
@@ -691,9 +723,6 @@ void WhileExpr::check(TypeSema& sema) const {
 
 void ForExpr::check(TypeSema& sema) const {
     auto forexpr = expr();
-    if (auto prefix = forexpr->isa<PrefixExpr>())
-        if (prefix->tag() == PrefixExpr::RUN || prefix->tag() == PrefixExpr::HLT)
-            forexpr = prefix->rhs();
 
     if (auto map = forexpr->isa<MapExpr>()) {
         auto ltype = sema.check(map->lhs());
@@ -702,8 +731,8 @@ void ForExpr::check(TypeSema& sema) const {
         sema.check(fn_expr());
 
         if (auto fn_for = ltype->isa<FnType>()) {
-            if (fn_for->num_ops() != 0) {
-                if (fn_for->ops().back()->isa<FnType>()) {
+            if (fn_for->num_params() != 0) {
+                if (fn_for->last_param()->isa<FnType>()) {
                     // TODO remove copy & paste code
                     // copy over args and check call --
                     Array<const Expr*> args(map->num_args() + 1);
@@ -738,8 +767,18 @@ void IdPtrn::check(TypeSema& sema) const {
 }
 
 void EnumPtrn::check(TypeSema& sema) const {
-    for (const auto& arg : args()) {
+    for (const auto& arg : args())
         sema.check(arg.get());
+
+    auto option_decl = path()->decl()->isa<OptionDecl>();
+    if (option_decl) {
+        if (option_decl->num_args() != num_args()) {
+            error(this, "incorrect number of arguments for enumeration variant");
+        } else {
+            for (size_t i = 0, e = num_args(); i != e; ++i) {
+                sema.expect_type(option_decl->arg(i)->type(), arg(i), "argument of enumeration variant");
+            }
+        }
     }
 }
 

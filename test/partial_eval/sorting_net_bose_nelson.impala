@@ -1,0 +1,65 @@
+extern "thorin" {
+    fn select[T, U](T, U, U) -> U;
+}
+
+fn @bose_nelson_sort(n: int, cmp_swap: fn (int, int) -> ()) -> () {
+    fn @p_star(i: int, len: int) -> () {
+        if len > 1 {
+            let m = len / 2;
+            p_star(i, m);
+            p_star((i + m), (len - m));
+            p_bracket(i, m, (i + m), (len - m));
+        }
+    }
+
+    fn @p_bracket(i1: int, len1: int, i2: int, len2: int) -> () {
+        if len1 == 1 && len2 == 1 {
+            cmp_swap(i1, i2);
+        } else if len1 == 1 && len2 == 2 {
+            cmp_swap(i1, i2 + 1);
+            cmp_swap(i1, i2);
+        } else if len1 == 2 && len2 == 1 {
+            cmp_swap(i1, i2);
+            cmp_swap(i1 + 1, i2);
+        } else {
+            let a = len1 / 2;
+            let b = select(len1 % 2 != 0, len2 / 2, (len2 + 1) / 2);
+            p_bracket(i1, a, i2, b);
+            p_bracket((i1 + a), (len1 - a), (i2 + b), (len2 - b));
+            p_bracket((i1 + a), (len1 - a), i2, b);
+        }
+    }
+
+    p_star(0, n)
+}
+
+fn @validate(arr: &[int * 8]) -> bool {
+    let mut prev = arr(0);
+    fn @rec(i: int) -> bool {
+        if i < 8 {
+            if prev <= arr(i) {
+                prev = arr(i);
+                rec(i+1)
+            } else {
+                false
+            }
+        } else {
+            true
+        }
+    }
+    rec(1)
+}
+
+fn main() -> bool {
+    let mut array = [2, 6, 4, 8, 1, 3, 7, 5];
+    bose_nelson_sort(8, @ |i, j| {
+        let vi = array(i);
+        let vj = array(j);
+        if (vi > vj) {
+            array(i) = vj;
+            array(j) = vi;
+        }
+    });
+    validate(array)
+}
+

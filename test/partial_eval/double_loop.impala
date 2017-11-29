@@ -1,6 +1,6 @@
-fn range(a: int, b: int, body: fn(int, fn() -> !) -> !) -> () {
+fn @(?a & ?b) range(a: int, b: int, body: fn(int, fn() -> !) -> !) -> () {
     if a < b {
-        body(a);
+        @@body(a);
         range(a+1, b, body)
     }
 }
@@ -20,5 +20,5 @@ fn foo(a: int, b: int) -> int {
 }
 
 fn main(i: int) -> int {
-    @foo(i, 19)
+    foo(i, 19)
 }

@@ -10,7 +10,7 @@
 #include "thorin/util/stream.h"
 
 #include "impala/token.h"
-#include "impala/sema/typetable.h"
+#include "impala/sema/type.h"
 
 namespace impala {
 
@@ -47,12 +47,14 @@ void emit(thorin::World&, const Module*);
 enum class Prec {
     Bottom,
     Assign = Bottom,
+    Hlt,
     OrOr, AndAnd,
     Rel,
     Or, Xor, And,
     Shift, Add, Mul,
     As,
     Unary,
+    RunRun,
 };
 
 struct PrecTable {

@@ -1,4 +1,4 @@
-fn range(a: int, b: int, body: fn(int, fn() -> !) -> !) -> () {
+fn @(?a & ?b) range(a: int, b: int, body: fn(int, fn() -> !) -> !) -> () {
     if a < b {
         body(a);
         range(a+1, b, body)
@@ -13,7 +13,7 @@ fn main(n: int) -> () {
     let mut arr = ~[n: float];
 
     let unroll = 100;
-    for i in @range(0, unroll) {
+    for i in range(0, unroll) @{
         arr(0) = foo(i);
     }
 }

@@ -61,7 +61,7 @@ const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
             error(n, "'{}' not found in current scope", symbol);
         return decl;
     } else {
-        error(n, "identifier '_' is reverserved for anonymous declarations");
+        error(n, "identifier '_' is reserved for anonymous declarations");
         return nullptr;
     }
 }
@@ -230,13 +230,24 @@ void StaticItem::bind(NameSema& sema) const {
 void Fn::fn_bind(NameSema& sema) const {
     sema.push_scope();
     bind_ast_type_params(sema);
+
     for (const auto& param : params()) {
         sema.insert(param.get());
         if (param->ast_type())
             param->ast_type()->bind(sema);
     }
+
+    if (pe_expr())
+        pe_expr()->bind(sema);
+
+    for (const auto& param : params()) {
+        if (auto pe_expr = param->pe_expr())
+            pe_expr->bind(sema);
+    }
+
     if (body() != nullptr)
         body()->bind(sema);
+
     sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
 }
@@ -294,7 +305,7 @@ void ImplItem::bind(NameSema& sema) const {
 
 void EmptyExpr::bind(NameSema&) const {}
 
-void BlockExprBase::bind(NameSema& sema) const {
+void BlockExpr::bind(NameSema& sema) const {
     sema.push_scope();
     for (const auto& stmt : stmts()) {
         if (auto item_stmt = stmt->isa<ItemStmt>())

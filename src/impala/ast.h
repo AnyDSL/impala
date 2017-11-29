@@ -37,6 +37,8 @@ class LocalDecl;
 class Param;
 class Ptrn;
 class Stmt;
+class PrefixExpr;
+class RValueExpr;
 
 class NameSema;
 class InferSema;
@@ -108,7 +110,7 @@ private:
     int visibility_;
 };
 
-/// Mixin for all entities which have a list of \p TypeParam%s: [T1, T2 : A + B[...], ...].
+/// Mixin for all entities which have a list of @p TypeParam%s: [T1, T2 : A + B[...], ...].
 class ASTTypeParamList {
 public:
     ASTTypeParamList(ASTTypeParams&& ast_type_params)
@@ -130,7 +132,7 @@ protected:
 
 //------------------------------------------------------------------------------
 
-class ASTNode : public thorin::MagicCast<ASTNode>, public thorin::Streamable  {
+class ASTNode : public thorin::RuntimeCast<ASTNode>, public thorin::Streamable  {
 public:
     ASTNode() = delete;
     ASTNode(const ASTNode&) = delete;
@@ -157,11 +159,10 @@ std::ostream& error  (const ASTNode* n, const char* fmt, Args... args) { return 
 
 class Identifier : public ASTNode {
 public:
-    Identifier(Location location, const char* str)
+    Identifier(Location location, Symbol symbol)
         : ASTNode(location)
-        , symbol_(str)
+        , symbol_(symbol)
     {}
-
     Identifier(Token tok)
         : ASTNode(tok.location())
         , symbol_(tok.symbol())
@@ -223,7 +224,6 @@ public:
         , global_(global)
         , elems_(std::move(elems))
     {}
-
     Path(const Identifier* id)
         : Path(id->location(), false, Elems())
     {
@@ -556,7 +556,7 @@ public:
     thorin::Debug debug() const { return {location(), symbol().str()}; }
 
     // ValueDecl
-    const ASTType* ast_type() const { assert(is_value_decl()); return ast_type_.get(); } ///< Original \p ASTType.
+    const ASTType* ast_type() const { assert(is_value_decl()); return ast_type_.get(); } ///< Original @p ASTType.
     bool is_mut() const { assert(is_value_decl()); return mut_; }
     bool is_written() const { assert(is_value_decl()); return written_; }
     void write() const { assert(is_value_decl()); written_ = true; }
@@ -649,23 +649,32 @@ private:
 
 class Param : public LocalDecl {
 public:
-    Param(Location location, size_t handle, bool mut, const Identifier* id, const ASTType* ast_type)
+    Param(Location location, size_t handle, bool mut, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
         : LocalDecl(location, handle, mut, id, ast_type)
+        , pe_expr_(dock(pe_expr_, pe_expr))
     {}
 
-    Param(Location location, size_t handle, const Identifier* id, const ASTType* ast_type)
-        : LocalDecl(location, handle, /*mut*/ false, id, ast_type)
+    Param(Location location, size_t handle, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
+        : Param(location, handle, /*mut*/ false, id, ast_type, pe_expr)
     {}
+
+    const Expr* pe_expr() const { return pe_expr_.get(); }
+    std::ostream& stream(std::ostream&) const override;
+
+private:
+    std::unique_ptr<const Expr> pe_expr_;
 };
 
 class Fn : public ASTTypeParamList {
 public:
-    Fn(ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
+    Fn(const Expr* pe_expr, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
         : ASTTypeParamList(std::move(ast_type_params))
+        , pe_expr_(dock(pe_expr_, pe_expr))
         , params_(std::move(params))
         , body_(dock(body_, body))
     {}
 
+    const Expr* pe_expr() const { return pe_expr_.get(); }
     const Param* param(size_t i) const { return params_[i].get(); }
     ArrayRef<std::unique_ptr<const Param>> params() const { return params_; }
     size_t num_params() const { return params_.size(); }
@@ -683,6 +692,7 @@ public:
     virtual Symbol fn_symbol() const = 0;
 
 protected:
+    std::unique_ptr<const Expr> pe_expr_;
     Params params_;
     mutable thorin::Continuation* continuation_ = nullptr;
     mutable const thorin::Param* ret_param_ = nullptr;
@@ -937,10 +947,16 @@ public:
              ASTTypeParams&& ast_type_params, OptionDecls&& option_decls)
         : TypeDeclItem(location, vis, id, std::move(ast_type_params))
         , option_decls_(std::move(option_decls))
-    {}
+    {
+        simple_ = true;
+        for (auto& option : option_decls_)
+            simple_ &= option->num_args() == 0;
+    }
 
     void bind(NameSema&) const override;
     std::ostream& stream(std::ostream& os) const override;
+
+    bool is_simple() const { return simple_; }
 
     size_t num_option_decls() const { return option_decls_.size(); }
     const OptionDecls& option_decls() const { return option_decls_; }
@@ -954,6 +970,7 @@ private:
     void check(TypeSema&) const override;
     void emit(CodeGen&) const override;
 
+    bool simple_;
     OptionDecls option_decls_;
     mutable OptionTable option_table_;
 };
@@ -982,10 +999,10 @@ private:
 
 class FnDecl : public ValueItem, public Fn {
 public:
-    FnDecl(Location location, Visibility vis, bool is_extern, Symbol abi, Symbol export_name,
+    FnDecl(Location location, Visibility vis, bool is_extern, Symbol abi, const Expr* pe_expr, Symbol export_name,
            const Identifier* id, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
         : ValueItem(location, vis, /*mut*/ false, id, /*ast_type*/ nullptr)
-        , Fn(std::move(ast_type_params), std::move(params), body)
+        , Fn(pe_expr, std::move(ast_type_params), std::move(params), body)
         , abi_(abi)
         , export_name_(export_name)
         , is_extern_(is_extern)
@@ -1095,6 +1112,8 @@ public:
 
     const thorin::Def* extra() const { return extra_; }
 
+    const Expr* skip_rvalue() const;
+
     virtual void write() const {}
     virtual bool has_side_effect() const { return false; }
     virtual void take_address() const {}
@@ -1129,6 +1148,7 @@ protected:
 
     template<class T, class...Args>
     friend const T* interlope(const Expr* expr, Args&&... args);
+    friend const PrefixExpr* replace_rvalue_by_addrof(const RValueExpr* expr);
     friend class Args;
     friend class CodeGen;
     friend class InferSema;
@@ -1142,7 +1162,6 @@ protected:
  */
 template<class T, class...Args>
 const T* interlope(const Expr* expr, Args&&... args) {
-    std::unique_ptr<const Expr> ptr;
     auto parent = expr->back_ref_;
     parent->release();
     expr->back_ref_ = nullptr;
@@ -1151,6 +1170,8 @@ const T* interlope(const Expr* expr, Args&&... args) {
     new_expr->back_ref_ = parent;
     return new_expr;
 }
+
+const PrefixExpr* replace_rvalue_by_addrof(const RValueExpr* rvalue);
 
 /// Use as mixin for anything which uses args: (expr_1, ..., expr_n)
 class Args {
@@ -1265,9 +1286,9 @@ private:
 
 class FnExpr : public Expr, public Fn {
 public:
-    FnExpr(Location location, Params&& params, const Expr* body)
+    FnExpr(Location location, const Expr* pe_expr, Params&& params, const Expr* body)
         : Expr(location)
-        , Fn(ASTTypeParams(), std::move(params), body)
+        , Fn(pe_expr, ASTTypeParams(), std::move(params), body)
     {}
 
     const FnType* fn_type() const override { return type()->as<FnType>(); }
@@ -1288,6 +1309,9 @@ public:
     PathExpr(const Path* path)
         : Expr(path->location())
         , path_(path)
+    {}
+    PathExpr(const Identifier* identifier)
+        : PathExpr(new Path(identifier))
     {}
 
     const Path* path() const { return path_.get(); }
@@ -1326,7 +1350,7 @@ public:
         return interlope<PrefixExpr>(rhs, rhs->location(), tag, rhs);
     }
     static const PrefixExpr* create_deref(const Expr* rhs) { return create(rhs, MUL); }
-    static const PrefixExpr* create_addrof(const Expr* rhs) { return create(rhs, AND); }
+    static const PrefixExpr* create_addrof(const Expr* rhs);
 
     const Expr* rhs() const { return rhs_.get(); }
     Tag tag() const { return tag_; }
@@ -1500,17 +1524,17 @@ private:
     const Type* infer(InferSema&) const override;
 };
 
-class Ref2ValueExpr : public CastExpr {
+class RValueExpr : public CastExpr {
 public:
-    Ref2ValueExpr(const Expr* src)
+    RValueExpr(const Expr* src)
         : CastExpr(src->location(), src)
-    {
-        type_ = src->type()->as<RefType>()->pointee();
+    {}
+
+    static const RValueExpr* create(const Expr* src) {
+        return interlope<RValueExpr>(src, src);
     }
 
-    static const Ref2ValueExpr* create(const Expr* src) {
-        return interlope<Ref2ValueExpr>(src, src);
-    }
+    bool has_side_effect() const override;
 
     void bind(NameSema&) const override { THORIN_UNREACHABLE; }
     std::ostream& stream(std::ostream&) const override;
@@ -1710,10 +1734,6 @@ public:
         , lhs_(dock(lhs_, lhs))
     {}
 
-    enum State {
-        None, Run, Hlt
-    };
-
     const Expr* lhs() const { return lhs_.get(); }
 
     void write() const override;
@@ -1727,19 +1747,22 @@ private:
     void check(TypeSema&) const override;
     thorin::Value lemit(CodeGen&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-    const thorin::Def* remit(CodeGen&, State, Location) const;
 
     std::unique_ptr<const Expr> lhs_;
 
     friend class CodeGen;
 };
 
-class BlockExprBase : public Expr {
+class BlockExpr : public Expr {
 public:
-    BlockExprBase(Location location, Stmts&& stmts, const Expr* expr)
+    BlockExpr(Location location, Stmts&& stmts, const Expr* expr)
         : Expr(location)
         , stmts_(std::move(stmts))
         , expr_(dock(expr_, expr))
+    {}
+    /// An empty BlockExpr with no @p stmts and an @p EmptyExpr as @p expr.
+    BlockExpr(Location location)
+        : BlockExpr(location, Stmts(), new EmptyExpr(location))
     {}
 
     const Stmts& stmts() const { return stmts_; }
@@ -1749,7 +1772,6 @@ public:
     const LocalDecls& locals() const { return locals_; }
     void add_local(const LocalDecl* local) const { locals_.push_back(local); }
 
-    virtual const char* prefix() const = 0;
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
     std::ostream& stream(std::ostream&) const override;
@@ -1761,32 +1783,7 @@ protected:
 
     Stmts stmts_;
     std::unique_ptr<const Expr> expr_;
-    mutable LocalDecls locals_; ///< All \p LocalDecl%s in this \p BlockExprBase from top to bottom.
-};
-
-class BlockExpr : public BlockExprBase {
-public:
-    BlockExpr(Location location, Stmts&& stmts, const Expr* expr)
-        : BlockExprBase(location, std::move(stmts), expr)
-    {}
-
-    BlockExpr(Location location)
-        : BlockExprBase(location, Stmts(), new EmptyExpr(location))
-    {}
-
-    const char* prefix() const override { return "{"; }
-};
-
-class RunBlockExpr : public BlockExprBase {
-public:
-    RunBlockExpr(Location location, Stmts&& stmts, const Expr* expr)
-        : BlockExprBase(location, std::move(stmts), expr)
-    {}
-
-    const char* prefix() const override { return "@{"; }
-
-private:
-    const thorin::Def* remit(CodeGen&) const override;
+    mutable LocalDecls locals_; ///< All @p LocalDecl%s in this @p BlockExpr from top to bottom.
 };
 
 class IfExpr : public Expr {
@@ -1876,7 +1873,7 @@ public:
     {}
 
     const Expr* cond() const { return cond_.get(); }
-    const BlockExprBase* body() const { return body_.get()->as<BlockExprBase>(); }
+    const BlockExpr* body() const { return body_.get()->as<BlockExpr>(); }
     const LocalDecl* break_decl() const { return break_decl_.get(); }
     const LocalDecl* continue_decl() const { return continue_decl_.get(); }
 

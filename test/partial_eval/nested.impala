@@ -1,11 +1,11 @@
-fn range(a: int, z: int, body: fn(int)->()) -> () {
+fn @(?a & ?z) range(a: int, z: int, body: fn(int)->()) -> () {
     if a < z {
-        body(a);
+        @@body(a);
         range(a+1, z, body)
     }
 }
 
-fn foo(a: int, b: int) -> int {
+fn @ foo(a: int, b: int) -> int {
     let mut res1 = 0;
     let mut res2 = 0;
 
@@ -20,5 +20,5 @@ fn foo(a: int, b: int) -> int {
 }
 
 fn main(i: int) -> int {
-    @foo(i, 10)
+    foo(i, 10)
 }

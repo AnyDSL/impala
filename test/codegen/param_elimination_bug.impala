@@ -12,14 +12,14 @@ fn call_me(body: fn() -> ()) -> () {
     body();
 }
 
-fn test(i: &mut i32, body: fn() -> ()) -> () @{
+fn test(i: &mut i32, body: fn() -> ()) -> () {
     call_me(|| {
-        @body();
+        body();
         *i = 42;
     });
 }
 
-extern fn cleanup_bug(i: &mut i32) -> () @{
+extern fn cleanup_bug(i: &mut i32) -> () {
     for test(i) {
         let thing = Thing { count: 42 };
 

@@ -92,16 +92,7 @@ std::ostream& ASTTypeParamList::stream_ast_type_params(std::ostream& os) const {
  */
 
 std::ostream& Fn::stream_params(std::ostream& os, bool returning) const {
-    return stream_list(os, returning ? params().skip_back() : params(), [&](const auto& param) {
-        if (!param->is_anonymous())
-            os << (param->is_mut() ? "mut " : "") << param->symbol() <<
-                ((param->ast_type() || param->type()) ? ": " : "");
-        if (auto type = param->type())
-            os << type;
-        else if (auto ast_type = param->ast_type())
-            os << ast_type;
-    });
-
+    return stream_list(os, returning ? params().skip_back() : params(), [&](const auto& param) { param->stream(os); });
 }
 
 std::ostream& LocalDecl::stream(std::ostream& os) const {
@@ -113,6 +104,21 @@ std::ostream& LocalDecl::stream(std::ostream& os) const {
         else if (ast_type())
             os << ": " << ast_type();
     }
+
+    return os;
+}
+
+std::ostream& Param::stream(std::ostream& os) const {
+    if (pe_expr())
+        os << '@' << pe_expr() << ' ';
+    if (!is_anonymous())
+        os << (is_mut() ? "mut " : "") << symbol() <<
+            ((ast_type() || type()) ? ": " : "");
+
+    if (type())
+        os << type();
+    else if (ast_type())
+        os << ast_type();
 
     return os;
 }
@@ -142,6 +148,8 @@ std::ostream& FnDecl::stream(std::ostream& os) const {
     if (is_extern())
         os << "extern ";
     os << "fn ";
+    if (pe_expr())
+        os << '@' << pe_expr() << ' ';
     if (export_name_)
         os << export_name_ << ' ';
     stream_ast_type_params(os << symbol());
@@ -232,8 +240,8 @@ std::ostream& ImplItem::stream(std::ostream& os) const {
  * expressions
  */
 
-std::ostream& BlockExprBase::stream(std::ostream& os) const {
-    os << prefix();
+std::ostream& BlockExpr::stream(std::ostream& os) const {
+    os << '{';
     if (empty())
         return os << endl << '}';
 
@@ -382,9 +390,12 @@ std::ostream& ImplicitCastExpr::stream(std::ostream& os) const {
     return close(os, open_state);
 }
 
-std::ostream& Ref2ValueExpr::stream(std::ostream& os) const {
+std::ostream& RValueExpr::stream(std::ostream& os) const {
     auto open_state = open(os, Prec::As);
-    streamf(os, "ref2value({}, {})", src(), type());
+    if (type())
+        streamf(os, "rvalue({}, {})", src(), type());
+    else
+        streamf(os, "rvalue({}, ?)", src());
     return close(os, open_state);
 }
 

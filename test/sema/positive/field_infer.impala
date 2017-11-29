@@ -1,0 +1,16 @@
+fn blurb(baz: &mut int) -> () {
+    *baz = 42
+}
+
+fn test(stuff: &mut Stuff) -> () {
+    blurb(&mut stuff.thing.blah);
+}
+
+struct Stuff {
+    thing: Thingy
+}
+
+struct Thingy {
+    blah: int
+}
+

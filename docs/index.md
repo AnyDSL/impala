@@ -1,3 +1,0 @@
-# Impala
-
-under construction

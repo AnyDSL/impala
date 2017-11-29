@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
         bool help,
              emit_cint, emit_thorin, emit_ast, emit_annotated,
              emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
-             nocleanup, nossa, simple_pe, fancy;
+             nocleanup, nossa, fancy;
 
 #ifndef NDEBUG
 #define LOG_LEVELS "{error|warn|info|verbose|debug}"
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
             .add_option<string>          ("log-level",          LOG_LEVELS,  "set log level", log_level, "error")
             .add_option<string>          ("log",                "<arg>", "specifies log file; use '-' for stdout (default)", log_name, "-")
 #ifndef NDEBUG
-            .add_option<vector<string>>  ("break",              "<arg>", "breakpoint at definition generation of with global id <arg>; may be used multiple times", breakpoints)
+            .add_option<vector<string>>  ("break",              "<args>", "breakpoint at definition generation with global id <arg>; may be used multiple times separated by space or '_'", breakpoints)
             .add_option<bool>             ("track-history",     "", "track hisotry of names - useful for debugging", track_history, false)
 #endif
             .add_option<string>          ("o",                  "", "specifies the output module name", out_name, "")
@@ -78,8 +78,7 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("f",                  "", "use fancy output: Impala's AST dump uses only parentheses where necessary", fancy, false)
             .add_option<bool>            ("g",                  "", "emit debug information", debug, false)
             .add_option<bool>            ("nocleanup",          "", "no clean-up phase", nocleanup, false)
-            .add_option<bool>            ("nossa",              "", "use slots + load/store instead of SSA construction", nossa, false)
-            .add_option<bool>            ("simple-pe",          "", "use syntax instead of the CFG to determine when to stop PE", simple_pe, false);
+            .add_option<bool>            ("nossa",              "", "use slots + load/store instead of SSA construction", nossa, false);
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
@@ -149,14 +148,21 @@ int main(int argc, char** argv) {
             size_t num = 0;
             for (size_t i = 0, e = b.size(); i != e; ++i) {
                 char c = b[i];
-                if (!std::isdigit(c)) {
+                if (c == '_') {
+                    if (num != 0) {
+                        init.world.breakpoint(num);
+                        num = 0;
+                    }
+                } else if (std::isdigit(c)) {
+                    num = num*10 + c - '0';
+                } else {
                     std::cerr << "invalid breakpoint '" << b << "'" << std::endl;
                     return EXIT_FAILURE;
                 }
-                num = num*10 + c - '0';
             }
 
-            init.world.breakpoint(num);
+            if (num != 0)
+                init.world.breakpoint(num);
         }
 
         init.world.enable_history(track_history);
@@ -211,7 +217,7 @@ int main(int argc, char** argv) {
             if (!nocleanup)
                 init.world.cleanup();
             if (opt_thorin)
-                init.world.opt(simple_pe);
+                init.world.opt();
             if (emit_thorin)
                 init.world.dump();
             if (emit_llvm) {

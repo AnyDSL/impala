@@ -52,11 +52,14 @@
     case Token::NOT: \
     case Token::INC: \
     case Token::DEC: \
+    case Token::RUN: \
+    case Token::RUNKNOWN: \
+    case Token::RUNRUN: \
     case Token::OR: \
     case Token::OROR: \
     case Token::ID: \
-    case Token::RUN: \
     case Token::HLT: \
+    case Token::KNOWN: \
     case Token::IF: \
     case Token::MATCH: \
     case Token::FOR: \
@@ -64,7 +67,6 @@
     case Token::WHILE: \
     case Token::L_PAREN: \
     case Token::L_BRACE: \
-    case Token::RUN_BLOCK: \
     case Token::L_BRACKET: \
     case Token::SIMD
 
@@ -227,25 +229,26 @@ public:
     const Typedef*     parse_typedef(Tracker, Visibility);
 
     // expressions
-    const Expr*             parse_expr(Prec prec);
-    const Expr*             parse_expr() { return parse_expr(Prec::Bottom); }
-    const Expr*             parse_prefix_expr();
-    const Expr*             parse_infix_expr(Tracker, const Expr* lhs);
-    const Expr*             parse_postfix_expr(Tracker, const Expr* lhs);
-    const MapExpr*          parse_map_expr(Tracker, const Expr* lhs);
-    const TypeAppExpr*      parse_type_app_expr(Tracker, const Expr* lhs);
-    const Expr*             parse_primary_expr();
-    const LiteralExpr*      parse_literal_expr();
-    const CharExpr*         parse_char_expr();
-    const StrExpr*          parse_str_expr();
-    const FnExpr*           parse_fn_expr();
-    const IfExpr*           parse_if_expr();
-    const MatchExpr*        parse_match_expr();
-    const ForExpr*          parse_for_expr();
-    const ForExpr*          parse_with_expr();
-    const WhileExpr*        parse_while_expr();
-    const BlockExprBase*    parse_block_expr();
-    const BlockExprBase*    try_block_expr(const std::string& context);
+    const Expr*         parse_expr(Prec prec);
+    const Expr*         parse_expr() { return parse_expr(Prec::Bottom); }
+    const Expr*         parse_prefix_expr();
+    const Expr*         parse_infix_expr(Tracker, const Expr* lhs);
+    const Expr*         parse_postfix_expr(Tracker, const Expr* lhs);
+    const MapExpr*      parse_map_expr(Tracker, const Expr* lhs);
+    const TypeAppExpr*  parse_type_app_expr(Tracker, const Expr* lhs);
+    const Expr*         parse_primary_expr();
+    const LiteralExpr*  parse_literal_expr();
+    const CharExpr*     parse_char_expr();
+    const StrExpr*      parse_str_expr();
+    const FnExpr*       parse_fn_expr(bool nested = false);
+    const IfExpr*       parse_if_expr();
+    const MatchExpr*    parse_match_expr();
+    const ForExpr*      parse_for_expr();
+    const ForExpr*      parse_with_expr();
+    const WhileExpr*    parse_while_expr();
+    const BlockExpr*    parse_block_expr();
+    const BlockExpr*    try_block_expr(const std::string& context);
+    const Expr*         parse_pe_expr(const char* context);
 
     // patterns
     const Ptrn*        parse_ptrn();
@@ -423,6 +426,13 @@ Params Parser::parse_param_list(TokenTag delimiter, bool lambda) {
 
 const Param* Parser::parse_param(int i, bool lambda) {
     auto tracker = track();
+
+    const Expr* pe_expr = nullptr;
+    if (lookahead() == Token::RUNKNOWN) {
+        eat(Token::RUNKNOWN);
+    } else
+        pe_expr = parse_pe_expr("partial evaluation profile of function parameter");
+
     bool mut = accept(Token::MUT);
     const Identifier* identifier = nullptr;
     const ASTType* type = nullptr;
@@ -463,8 +473,14 @@ const Param* Parser::parse_param(int i, bool lambda) {
         oss << '<' << i << ">";
         identifier = create<Identifier>(oss.str().c_str());
     }
+    if (pe_expr == nullptr) {
+        Path::Elems elems;
+        elems.emplace_back(new Path::Elem(new Identifier(tracker, identifier->symbol())));
+        auto id = new PathExpr(new Path(tracker, false, std::move(elems)));
+        pe_expr = new PrefixExpr(tracker, PrefixExpr::Tag::KNOWN, id);
+    }
 
-    return new Param(tracker, cur_var_handle++, mut, identifier, ast_type);
+    return new Param(tracker, cur_var_handle++, mut, identifier, ast_type, pe_expr);
 }
 
 const Param* Parser::parse_return_param() {
@@ -549,6 +565,8 @@ const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility v
 
     eat(Token::FN);
     auto export_name = lookahead() == Token::LIT_str ? lex().symbol() : Symbol();
+
+    const Expr* pe_expr = parse_pe_expr("partial evaluation profile of function declaration");
     auto identifier = try_identifier("function name");
     auto ast_type_params = parse_ast_type_params();
     expect(Token::L_PAREN, "function head");
@@ -566,8 +584,8 @@ const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility v
             break;
     }
 
-    return new FnDecl(tracker, vis, is_extern, abi, export_name, identifier, std::move(ast_type_params),
-                      std::move(params), body);
+    return new FnDecl(tracker, vis, is_extern, abi, pe_expr, export_name, identifier,
+                      std::move(ast_type_params), std::move(params), body);
 }
 
 const ImplItem* Parser::parse_impl(Tracker tracker, Visibility vis) {
@@ -872,13 +890,19 @@ const Expr* Parser::parse_expr(Prec prec) {
 }
 
 const Expr* Parser::parse_prefix_expr() {
-    if (lookahead() == Token::OR || lookahead() == Token::OROR)
+    if (lookahead() == Token::OR || lookahead() == Token::OROR || lookahead() == Token::RUN)
         return parse_fn_expr();
 
     auto tracker = track();
     auto tag = lex().tag();
     bool mut = tag == Token::AND ? accept(Token::MUT) : false;
-    auto rhs = parse_expr(Prec::Unary);
+    Prec prec;
+    switch (tag) {
+        case Token::HLT:    prec = Prec::Hlt; break;
+        case Token::RUNRUN: prec = Prec::RunRun; break;
+        default:            prec = Prec::Unary;
+    }
+    auto rhs = parse_expr(prec);
 
     return new PrefixExpr(tracker, mut ? PrefixExpr::MUT : (PrefixExpr::Tag) tag, rhs);
 }
@@ -1013,8 +1037,7 @@ const Expr* Parser::parse_primary_expr() {
         case Token::FOR:        return parse_for_expr();
         case Token::WITH:       return parse_with_expr();
         case Token::WHILE:      return parse_while_expr();
-        case Token::L_BRACE:
-        case Token::RUN_BLOCK:  return parse_block_expr();
+        case Token::L_BRACE:    return parse_block_expr();
         default:                error("expression", ""); return new EmptyExpr(lex().location());
     }
 }
@@ -1096,14 +1119,31 @@ const StrExpr* Parser::parse_str_expr() {
     return new StrExpr(tracker, std::move(symbols), std::move(values));
 }
 
-const FnExpr* Parser::parse_fn_expr() {
+const FnExpr* Parser::parse_fn_expr(bool nested) {
     //THORIN_PUSH(cur_var_handle, cur_var_handle);
     auto tracker = track();
 
-    Params params;
-    if (accept(Token::OR))
-        params = parse_param_list(Token::OR, true);
+    const Expr* pe_expr = nullptr;
+    if (nested)
+        pe_expr = new LiteralExpr(lookahead().location(), LiteralExpr::LIT_bool, Box(false));
     else
+        pe_expr = parse_pe_expr("partial evaluation profile of function expression");
+
+    Params params;
+    if (accept(Token::OR) || nested) {
+        // cannot use parse_param_list here because the list may end with OR or OROR
+        int i = 0;
+        nibble_comma_list({ Token::OR, Token::OROR }, [&] {
+            params.emplace_back(parse_param(i++, true));
+        });
+        // special case for nested lambdas (e.g. |x||y| x + y)
+        if (accept(Token::OROR)) {
+            params.emplace_back(parse_return_param());
+            auto body = parse_fn_expr(true);
+            return new FnExpr(tracker, pe_expr, std::move(params), body);
+        }
+        expect(Token::OR, "parameter list of function expression");
+    } else
         expect(Token::OROR, "parameter list of function expression");
 
     if (auto ret_param = parse_return_param())
@@ -1111,7 +1151,7 @@ const FnExpr* Parser::parse_fn_expr() {
 
     auto body = parse_expr();
 
-    return new FnExpr(tracker, std::move(params), body);
+    return new FnExpr(tracker, pe_expr, std::move(params), body);
 }
 
 const IfExpr* Parser::parse_if_expr() {
@@ -1122,9 +1162,8 @@ const IfExpr* Parser::parse_if_expr() {
     const Expr* else_expr = nullptr;
     if (accept(Token::ELSE)) {
         switch (lookahead()) {
-            case Token::IF:         else_expr =  parse_if_expr(); break;
-            case Token::L_BRACE:
-            case Token::RUN_BLOCK:  else_expr =  parse_block_expr(); break;
+            case Token::IF:      else_expr =  parse_if_expr(); break;
+            case Token::L_BRACE: else_expr =  parse_block_expr(); break;
             default:
                 error("block or if expression", "alternative of an if expression");
         }
@@ -1157,11 +1196,11 @@ const ForExpr* Parser::parse_for_expr() {
     eat(Token::FOR);
     auto params = param_list() ? parse_param_list(Token::IN, true) : Params();
     params.emplace_back(create<Param>(cur_var_handle++, create<Identifier>("continue"), nullptr));
-    //fn_expr->is_continuation_ = false;
     auto expr = parse_expr();
+    auto pe_expr = parse_pe_expr("partial evaluation profile of for loop");
     auto body = try_block_expr("body of for loop");
     auto break_decl = create_continuation_decl("break", /*set type during InferSema*/ false);
-    return new ForExpr(tracker, new FnExpr(tracker, std::move(params), body), expr, break_decl);
+    return new ForExpr(tracker, new FnExpr(tracker, pe_expr, std::move(params), body), expr, break_decl);
 }
 
 const ForExpr* Parser::parse_with_expr() {
@@ -1173,9 +1212,10 @@ const ForExpr* Parser::parse_with_expr() {
     auto params = param_list() ? parse_param_list(Token::IN, true) : Params();
     params.emplace_back(create<Param>(cur_var_handle++, create<Identifier>("break"), nullptr));
     auto expr = parse_expr();
+    auto pe_expr = parse_pe_expr("partial evaluation profile of with statement");
     auto body = try_block_expr("body of with statement");
     auto break_decl = create_continuation_decl("_", /*set type during InferSema*/ false);
-    return new ForExpr(tracker, new FnExpr(tracker, std::move(params), body), expr, break_decl);
+    return new ForExpr(tracker, new FnExpr(tracker, pe_expr, std::move(params), body), expr, break_decl);
 }
 
 const WhileExpr* Parser::parse_while_expr() {
@@ -1188,11 +1228,9 @@ const WhileExpr* Parser::parse_while_expr() {
     return new WhileExpr(tracker, continue_decl, cond, body, break_decl);
 }
 
-const BlockExprBase* Parser::parse_block_expr() {
+const BlockExpr* Parser::parse_block_expr() {
     auto tracker = track();
-    bool run = accept(Token::RUN_BLOCK);
-    if (!run)
-        eat(Token::L_BRACE);
+    eat(Token::L_BRACE);
     Stmts stmts;
     const Expr* final_expr = nullptr;
     while (true) {
@@ -1211,8 +1249,7 @@ const BlockExprBase* Parser::parse_block_expr() {
                     case Token::FOR:        expr = parse_for_expr(); break;
                     case Token::WITH:       expr = parse_with_expr(); break;
                     case Token::WHILE:      expr = parse_while_expr(); break;
-                    case Token::L_BRACE:
-                    case Token::RUN_BLOCK:  expr = parse_block_expr(); break;
+                    case Token::L_BRACE:    expr = parse_block_expr(); break;
                     default:                expr = parse_expr(); stmt_like = false;
                 }
 
@@ -1228,23 +1265,35 @@ const BlockExprBase* Parser::parse_block_expr() {
                 expect(Token::R_BRACE, "block expression");
                 if (final_expr == nullptr)
                     final_expr = create<EmptyExpr>();
-                if (run)
-                    return new RunBlockExpr(tracker, std::move(stmts), final_expr);
-                else
-                    return new BlockExpr(tracker, std::move(stmts), final_expr);
+                return new BlockExpr(tracker, std::move(stmts), final_expr);
         }
     }
 }
 
-const BlockExprBase* Parser::try_block_expr(const std::string& context) {
+const BlockExpr* Parser::try_block_expr(const std::string& context) {
     switch (lookahead()) {
         case Token::L_BRACE:
-        case Token::RUN_BLOCK:
             return parse_block_expr();
         default:
             error("block expression", context);
             return create<BlockExpr>();
     }
+}
+
+const Expr* Parser::parse_pe_expr(const char* context) {
+    const Expr* pe_expr = nullptr;
+    if (accept(Token::RUN)) {
+        if (lookahead() == Token::L_PAREN) {
+            eat(Token::L_PAREN);
+            pe_expr = parse_expr();
+            expect(Token::R_PAREN, context);
+        } else {
+            pe_expr = new LiteralExpr(lookahead().location(), LiteralExpr::LIT_bool, Box(true));
+        }
+    } else
+        pe_expr = new LiteralExpr(lookahead().location(), LiteralExpr::LIT_bool, Box(false));
+
+    return pe_expr;
 }
 
 /*

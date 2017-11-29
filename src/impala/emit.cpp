@@ -15,7 +15,7 @@ class CodeGen : public IRBuilder {
 public:
     CodeGen(World& world)
         : IRBuilder(world)
-        , empty_fn_type(world.fn_type({ world.mem_type(), world.unit() }))
+        , empty_fn_type(world.fn_type({ world.mem_type() }))
     {}
 
     const Def* frame() const { assert(cur_fn); return cur_fn->frame(); }
@@ -48,15 +48,12 @@ public:
 
     void jump_to_continuation(Continuation* continuation, const thorin::Location& loc) {
         if (is_reachable())
-            cur_bb->jump(continuation, {get_mem(), world().tuple({})}, loc);
+            cur_bb->jump(continuation, {get_mem()}, loc);
         set_continuation(continuation);
     }
 
     Value lemit(const Expr* expr) { return expr->lemit(*this); }
     const Def* remit(const Expr* expr) { return expr->remit(*this); }
-    const Def* remit(const Expr* expr, MapExpr::State state, Location eval_loc) {
-        return expr->as<MapExpr>()->remit(*this, state, eval_loc);
-    }
     void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
     void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
     void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }
@@ -84,27 +81,22 @@ public:
         return thorin_type(type) = t;
     }
 
-    void convert_ops(const Type*, std::vector<const thorin::Type*>& nops);
     const thorin::Type* convert_rec(const Type*);
-    size_t bitwidth(const Type* t);
 
     const thorin::Type*& thorin_type(const Type* type) { return impala2thorin_[type]; }
     const thorin::StructType*& thorin_struct_type(const StructType* type) { return struct_type_impala2thorin_[type]; }
+    const thorin::StructType*& thorin_enum_type(const EnumType* type) { return enum_type_impala2thorin_[type]; }
 
     const Fn* cur_fn = nullptr;
     const thorin::Type* empty_fn_type;
     TypeMap<const thorin::Type*> impala2thorin_;
     GIDMap<const StructType*, const thorin::StructType*> struct_type_impala2thorin_;
+    GIDMap<const EnumType*,   const thorin::StructType*> enum_type_impala2thorin_;
 };
 
 /*
  * Type
  */
-
-void CodeGen::convert_ops(const Type* type, std::vector<const thorin::Type*>& nops) {
-    for (const auto& op : type->ops())
-        nops.push_back(convert(op));
-}
 
 const thorin::Type* CodeGen::convert_rec(const Type* type) {
     if (auto lambda = type->isa<Lambda>()) {
@@ -121,11 +113,13 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
     } else if (auto fn_type = type->isa<FnType>()) {
         std::vector<const thorin::Type*> nops;
         nops.push_back(world().mem_type());
-        convert_ops(fn_type, nops);
+        for (size_t i = 0, e = fn_type->num_params(); i != e; ++i)
+            nops.push_back(convert(fn_type->param(i)));
         return world().fn_type(nops);
     } else if (auto tuple_type = type->isa<TupleType>()) {
         std::vector<const thorin::Type*> nops;
-        convert_ops(tuple_type, nops);
+        for (const auto& op : tuple_type->ops())
+            nops.push_back(convert(op));
         return world().tuple_type(nops);
     } else if (auto struct_type = type->isa<StructType>()) {
         auto s = world().struct_type(struct_type->struct_decl()->symbol().str(), struct_type->num_ops());
@@ -133,16 +127,25 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         thorin_type(type) = s;
         size_t i = 0;
         for (const auto& op : struct_type->ops())
-            thorin_struct_type(struct_type)->set(i++, convert(op));
+            s->set(i++, convert(op));
         thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
-        return thorin_struct_type(struct_type);
+        return s;
     } else if (auto enum_type = type->isa<EnumType>()) {
-        size_t bytes = (bitwidth(enum_type) - 32) / 8;
-        if (bytes != 0) {
-            return world().tuple_type({ world().type_qu32(), world().definite_array_type(world().type_qu8(), bytes) });
-        } else {
-            return world().type_qu32();
-        }
+        auto s = world().struct_type(enum_type->enum_decl()->symbol().str(), 2);
+        thorin_enum_type(enum_type) = s;
+        thorin_type(enum_type) = s;
+
+        auto enum_decl = enum_type->enum_decl();
+        thorin::TypeSet variants;
+        for (const auto& option : enum_decl->option_decls())
+            variants.insert(option->variant_type(*this));
+        thorin::Array<const thorin::Type*> ops(variants.size());
+        std::copy(variants.begin(), variants.end(), ops.begin());
+
+        s->set(0, world().type_qu32());
+        s->set(1, world().variant_type(ops));
+        thorin_type(enum_type) = nullptr;
+        return s;
     } else if (auto ptr_type = type->isa<PtrType>()) {
         return world().ptr_type(convert(ptr_type->pointee()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
@@ -151,47 +154,6 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         return world().indefinite_array_type(convert(indefinite_array_type->elem_type()));
     } else if (auto simd_type = type->isa<SimdType>()) {
         return world().type(convert(simd_type->elem_type())->as<thorin::PrimType>()->primtype_tag(), simd_type->dim());
-    }
-    THORIN_UNREACHABLE;
-}
-
-size_t CodeGen::bitwidth(const Type* t) {
-    if (auto tuple_type = t->isa<TupleType>()) {
-        size_t bits = 0;
-        for (const auto& op : tuple_type->ops()) bits += bitwidth(op);
-        return bits;
-    } else if (auto enum_type = t->isa<EnumType>()) {
-        size_t bits = 0;
-        for (const auto & op : enum_type->ops()) {
-            size_t op_bits = 0;
-            if (auto fn_type = op->isa<FnType>()) {
-                for (size_t i = 0, e = fn_type->num_ops() - 1; i != e; i++)
-                    op_bits += bitwidth(fn_type->op(i));
-            } else {
-                op_bits = 0;
-            }
-            bits = std::max(bits, op_bits);
-        }
-        return 32 + bits;
-    } else if (auto prim_type = t->isa<PrimType>()) {
-        switch (prim_type->primtype_tag()) {
-            case PrimType_i8:  return 8;
-            case PrimType_i16: return 16;
-            case PrimType_i32: return 32;
-            case PrimType_i64: return 64;
-            case PrimType_u8:  return 8;
-            case PrimType_u16: return 16;
-            case PrimType_u32: return 32;
-            case PrimType_u64: return 64;
-            case PrimType_f16: return 16;
-            case PrimType_f32: return 32;
-            case PrimType_f64: return 64;
-
-            case PrimType_bool:
-                // cannot reliably estimate the type of a boolean (LLVM will do its own stuff)
-            default:
-              THORIN_UNREACHABLE;
-        }
     }
     THORIN_UNREACHABLE;
 }
@@ -224,6 +186,7 @@ const thorin::Type* OptionDecl::variant_type(CodeGen& cg) const {
     std::vector<const thorin::Type*> types;
     for (const auto& arg : args())
         types.push_back(cg.convert(arg->type()));
+    if (num_args() == 1) return types.back();
     return cg.world().tuple_type(types);
 }
 
@@ -239,27 +202,63 @@ void Fn::emit_body(CodeGen& cg, Location location) const {
     THORIN_PUSH(cg.cur_bb, continuation());
 
     // setup memory + frame
-    size_t i = 0;
-    const Def* mem_param = continuation()->param(i++);
-    mem_param->debug().set("mem");
-    cg.set_mem(mem_param);
-    frame_ = cg.create_frame(location);
+    {
+        size_t i = 0;
+        const Def* mem_param = continuation()->param(i++);
+        mem_param->debug().set("mem");
+        cg.set_mem(mem_param);
+        frame_ = cg.create_frame(location);
 
-    // name params and setup store locations
-    for (const auto& param : params()) {
-        auto p = continuation()->param(i++);
-        p->debug().set(param->symbol().str());
-        cg.emit(param.get(), p);
+        // name params and setup store locations
+        for (const auto& param : params()) {
+            auto p = continuation()->param(i++);
+            p->debug().set(param->symbol().str());
+            cg.emit(param.get(), p);
+        }
+
+        assert(i == continuation()->num_params() || continuation()->type() == cg.empty_fn_type);
+
+        if (continuation()->num_params() != 0
+                && continuation()->params().back()->type()->isa<thorin::FnType>())
+            ret_param_ = continuation()->params().back();
     }
-    assert(i == continuation()->num_params() || continuation()->type() == cg.empty_fn_type);
-    if (continuation()->num_params() != 0 && continuation()->params().back()->type()->isa<thorin::FnType>())
-        ret_param_ = continuation()->params().back();
 
     // descend into body
     auto def = cg.remit(body());
     if (def) {
         const Def* mem = cg.get_mem();
-        cg.cur_bb->jump(ret_param(), {mem, def}, location.back());
+        // flatten returned values
+        if (auto tuple = body()->type()->isa<TupleType>()) {
+            Array<const Def*> ret_values(tuple->num_ops() + 1);
+            for (size_t i = 0, e = tuple->num_ops(); i != e; ++i)
+                ret_values[i + 1] = cg.world().extract(def, i);
+            ret_values[0] = mem;
+            cg.cur_bb->jump(ret_param(), ret_values, location.back());
+        } else
+            cg.cur_bb->jump(ret_param(), {mem, def}, location.back());
+    }
+
+    // now handle the pe_profile
+    {
+        size_t i = 0;
+        auto global = pe_expr() ? cg.remit(pe_expr()) : cg.world().literal_bool(false, location);
+        Array<const Def*> pe_profile(continuation()->num_params());
+        pe_profile[i++] = global; // mem param
+
+        for (const auto& param : params()) {
+            auto pe_expr = param->pe_expr();
+            pe_profile[i++] = pe_expr
+                          ? cg.world().arithop_or(global, cg.remit(pe_expr), pe_expr->location())
+                          : global;
+        }
+
+        // HACK for unit
+        if (auto tuple_type = continuation()->type()->ops().back()->isa<thorin::TupleType>()) {
+            if (tuple_type->num_ops() == 0)
+                pe_profile[i++] = global;
+        }
+
+        continuation()->set_pe_profile(pe_profile);
     }
 }
 
@@ -338,13 +337,23 @@ void ImplItem::emit(CodeGen& cg) const {
 
 Value OptionDecl::emit(CodeGen& cg, const Def* init) const {
     assert(!init);
-    size_t bytes = (cg.bitwidth(enum_decl()->type()) - 32) / 8;
+    auto enum_type = enum_decl()->type()->as<EnumType>();
+    auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
     auto id = cg.world().literal_qu32(index(), location());
-    if (bytes != 0) {
-        auto bot = cg.world().bottom(cg.world().definite_array_type(cg.world().type_qu8(), bytes));
-        return Value::create_val(cg, cg.world().tuple({ id, bot }) );
+    if (num_args() == 0) {
+        auto bot = cg.world().bottom(variant_type);
+        return Value::create_val(cg, cg.world().struct_agg(cg.thorin_enum_type(enum_type), { id, bot }) );
     } else {
-        return Value::create_val(cg, id);
+        auto continuation = cg.world().continuation(cg.convert(type())->as<thorin::FnType>(), { location(), symbol().str() });
+        auto ret = continuation->param(continuation->num_params() - 1);
+        auto mem = continuation->param(0);
+        Array<const Def*> defs(num_args());
+        for (size_t i = 1, e = continuation->num_params(); i + 1 < e; i++)
+            defs[i-1] = continuation->param(i);
+        auto option_val = num_args() == 1 ? defs.back() : cg.world().tuple(defs);
+        auto enum_val = cg.world().struct_agg(cg.thorin_enum_type(enum_type), { id, cg.world().variant(variant_type, option_val) });
+        continuation->jump(ret, { mem, enum_val }, location());
+        return Value::create_val(cg, continuation);
     }
 }
 
@@ -416,12 +425,15 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     return cg.world().convert(thorin_type, def, location());
 }
 
-Value Ref2ValueExpr::lemit(CodeGen& cg) const {
+Value RValueExpr::lemit(CodeGen& cg) const {
+    assert(src()->type()->isa<RefType>());
     return cg.lemit(src());
 }
 
-const Def* Ref2ValueExpr::remit(CodeGen& cg) const {
-    return cg.lemit(this).load(location());
+const Def* RValueExpr::remit(CodeGen& cg) const {
+    if (src()->type()->isa<RefType>())
+        return cg.lemit(this).load(location());
+    return cg.remit(src());
 }
 
 Value PathExpr::lemit(CodeGen& cg) const {
@@ -468,10 +480,21 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             assert(var.tag() == Value::PtrRef);
             return var.def();
         }
-
-        case RUN: return cg.remit(rhs(), MapExpr::Run, location());
-        case HLT: return cg.remit(rhs(), MapExpr::Hlt, location());
-        case OR: case OROR: THORIN_UNREACHABLE;
+        case RUNRUN: {
+            auto def = cg.remit(rhs()->skip_rvalue());
+            return cg.world().run(def, location());
+        }
+        case HLT: {
+            auto def = cg.remit(rhs()->skip_rvalue());
+            return cg.world().hlt(def, location());
+        }
+        case KNOWN: {
+            auto def = cg.remit(rhs()->skip_rvalue());
+            return cg.world().known(def, location());
+        }
+        case OR:
+        case OROR:
+            THORIN_UNREACHABLE;
         default:  return cg.lemit(this).load(location());
     }
 }
@@ -612,9 +635,7 @@ Value MapExpr::lemit(CodeGen& cg) const {
     return Value::create_agg(agg, cg.remit(arg(0)));
 }
 
-const Def* MapExpr::remit(CodeGen& cg) const { return remit(cg, None, Location()); }
-
-const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
+const Def* MapExpr::remit(CodeGen& cg) const {
     auto ltype = unpack_ref_type(lhs()->type());
 
     if (auto fn_type = ltype->isa<FnType>()) {
@@ -622,7 +643,8 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
 
         // Handle primops here
         if (auto type_expr = lhs()->isa<TypeAppExpr>()) { // Bitcast, sizeof and select are all polymorphic
-            if (auto path = type_expr->lhs()->isa<PathExpr>()) {
+            auto callee = type_expr->lhs()->skip_rvalue();
+            if (auto path = callee->isa<PathExpr>()) {
                 if (auto fn_decl = path->value_decl()->isa<FnDecl>()) {
                     if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {
                         auto name = fn_decl->fn_symbol().remove_quotation();
@@ -658,7 +680,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
                             auto fn_type = cg.world().fn_type({
                                 cg.world().mem_type(), ptr_type, poly_type, poly_type,
-                                cg.world().fn_type({ cg.world().mem_type(), cg.world().tuple_type({ poly_type, cg.world().type_bool() }) })
+                                cg.world().fn_type({ cg.world().mem_type(), poly_type, cg.world().type_bool() })
                             });
                             auto cont = cg.world().continuation(fn_type, {location(), "cmpxchg"});
                             cont->set_intrinsic();
@@ -668,7 +690,7 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
                             auto string_type = cg.world().ptr_type(cg.world().indefinite_array_type(cg.world().type_pu8()));
                             auto fn_type = cg.world().fn_type({
                                 cg.world().mem_type(), string_type, poly_type,
-                                cg.world().fn_type({ cg.world().mem_type(), cg.world().unit() }) });
+                                cg.world().fn_type({ cg.world().mem_type() }) });
                             auto cont = cg.world().continuation(fn_type, {location(), "pe_info"});
                             cont->set_intrinsic();
                             dst = cont;
@@ -686,43 +708,18 @@ const Def* MapExpr::remit(CodeGen& cg, State state, Location eval_loc) const {
             }
         }
 
-        if (auto path_expr = lhs()->isa<PathExpr>()) {
-            if (auto option = path_expr->path()->decl()->isa<OptionDecl>()) {
-                // handle option creation here
-                auto bytes = (cg.bitwidth(option->enum_decl()->type()) - 32) / 8;
-                assert(bytes != 0);
-                auto dst_type = cg.world().definite_array_type(cg.world().type_qu8(), bytes);
-                std::vector<const Def*> defs;
-                for (const auto& arg : args())
-                    defs.push_back(cg.remit(arg.get()));
-                return cg.world().tuple({
-                    cg.world().literal_qu32(option->index(), location()),
-                    cg.world().bitcast(dst_type, cg.world().tuple(defs, location()), location())
-                });
-            }
-        }
-
         dst = dst ? dst : cg.remit(lhs());
 
         std::vector<const Def*> defs;
         defs.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
-        if (num_args() == 0 && cg.convert(fn_type) == cg.empty_fn_type) // add dummy () to be able to call break() instead of break(())
-            defs.push_back(cg.world().tuple({}));
         for (const auto& arg : args())
             defs.push_back(cg.remit(arg.get()));
         defs.front() = cg.get_mem(); // now get the current memory monad
 
-        auto ret_type = defs.size() - 1 == fn_type->num_ops() ? nullptr : cg.convert(fn_type->return_type());
-        auto old_bb = cg.cur_bb;
+        auto ret_type = num_args() == fn_type->num_params() ? nullptr : cg.convert(fn_type->return_type());
         auto ret = cg.call(dst, defs, ret_type, thorin::Debug(location(), dst->name()) + "_cont");
         if (ret_type)
             cg.set_mem(cg.cur_bb->param(0));
-
-        if (state != None) {
-            auto eval = state == Run ? &thorin::World::run : &thorin::World::hlt;
-            auto cont = old_bb->args().back();
-            old_bb->update_callee((cg.world().*eval)(old_bb->callee(), cont, eval_loc));
-        }
 
         return ret;
     } else if (ltype->isa<ArrayType>() || ltype->isa<TupleType>() || ltype->isa<SimdType>()) {
@@ -741,32 +738,10 @@ const Def* FieldExpr::remit(CodeGen& cg) const {
     return cg.extract(cg.remit(lhs()), index(), location());
 }
 
-const Def* BlockExprBase::remit(CodeGen& cg) const {
+const Def* BlockExpr::remit(CodeGen& cg) const {
     for (const auto& stmt : stmts())
         cg.emit(stmt.get());
     return cg.remit(expr());
-}
-
-const Def* RunBlockExpr::remit(CodeGen& cg) const {
-    if (cg.is_reachable()) {
-        World& w = cg.world();
-        auto lrun = w.basicblock({location(), "run_block"});
-        auto next = w.basicblock({location(), "run_next"});
-        auto old_bb = cg.cur_bb;
-        cg.cur_bb->jump(lrun, {}, location());
-        cg.enter(lrun);
-        auto res = BlockExprBase::remit(cg);
-        if (cg.is_reachable()) {
-            assert(res);
-            cg.cur_bb->jump(next, {}, location());
-            cg.enter(next);
-            old_bb->update_callee(w.run(lrun, next, location()));
-            return res;
-        }
-
-        old_bb->update_callee(w.run(lrun, w.bottom(w.fn_type(), location()), location()));
-    }
-    return nullptr;
 }
 
 void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
@@ -787,7 +762,11 @@ const Def* IfExpr::remit(CodeGen& cg) const {
 
 void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     auto matcher = cg.remit(expr());
-    if (is_int(expr()->type())) {
+    auto enum_type = expr()->type()->isa<EnumType>();
+    bool is_integer = is_int(expr()->type());
+    bool is_simple = enum_type && enum_type->enum_decl()->is_simple();
+
+    if (is_integer || is_simple) {
         // integers: match continuation
         JumpTarget otherwise;
         size_t num_targets = num_arms();
@@ -795,20 +774,28 @@ void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
         Array<JumpTarget> targets(num_targets);
 
         for (size_t i = 0, e = num_targets; i != e; ++i) {
-            if (!arm(i)->ptrn()->is_refutable()) {
+            // last pattern will always be taken
+            if (!arm(i)->ptrn()->is_refutable() || i == e - 1) {
                 num_targets = i;
                 cg.emit(arm(i)->ptrn(), matcher);
                 otherwise = JumpTarget({arm(i)->location().front(), "otherwise"});
                 break;
             } else {
-                defs[i] = cg.remit(arm(i)->ptrn()->as<LiteralPtrn>()->literal());
+                if (is_integer)
+                    defs[i] = cg.remit(arm(i)->ptrn()->as<LiteralPtrn>()->literal());
+                else {
+                    auto enum_ptrn = arm(i)->ptrn()->as<EnumPtrn>();
+                    auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
+                    defs[i] = cg.world().literal_qu32(option_decl->index(), arm(i)->ptrn()->location());
+                }
                 targets[i] = JumpTarget({arm(i)->location().front(), "case"});
             }
         }
         targets.shrink(num_targets);
         defs.shrink(num_targets);
 
-        cg.match(matcher, otherwise, defs, targets, {location().front(), "match"});
+        auto matcher_int = is_integer ? matcher : cg.world().extract(matcher, 0_u32, matcher->debug());
+        cg.match(matcher_int, otherwise, defs, targets, {location().front(), "match"});
 
         for (size_t i = 0; i < num_targets; i++) {
             if (cg.enter(targets[i]))
@@ -824,7 +811,10 @@ void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
             JumpTarget next({arm(i)->location().front(), "case_false"});
 
             arm(i)->ptrn()->emit(cg, matcher);
-            auto cond = arm(i)->ptrn()->emit_cond(cg, matcher);
+            // last pattern will always be taken
+            auto cond = i == e - 1
+                ? cg.world().literal_bool(true, arm(i)->ptrn()->location())
+                : arm(i)->ptrn()->emit_cond(cg, matcher);
 
             cg.branch(cond, cur, next);
             if (cg.enter(cur))
@@ -875,9 +865,6 @@ const Def* ForExpr::remit(CodeGen& cg) const {
 
     // peel off run and halt
     auto forexpr = expr();
-    auto prefix = forexpr->isa<PrefixExpr>();
-    if (prefix && (prefix->tag() == PrefixExpr::RUN || prefix->tag() == PrefixExpr::HLT))
-        forexpr = prefix->rhs();
 
     // emit call
     auto map_expr = forexpr->as<MapExpr>();
@@ -886,8 +873,6 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     defs.push_back(cg.remit(fn_expr()));
     defs.push_back(break_continuation);
     auto fun = cg.remit(map_expr->lhs());
-    if (prefix && prefix->tag() == PrefixExpr::RUN) fun = cg.world().run(fun, break_continuation, location());
-    if (prefix && prefix->tag() == PrefixExpr::HLT) fun = cg.world().hlt(fun, break_continuation, location());
 
     defs.front() = cg.get_mem(); // now get the current memory monad
     cg.call(fun, defs, nullptr, map_expr->location());
@@ -925,21 +910,22 @@ const thorin::Def* IdPtrn::emit_cond(CodeGen& cg, const thorin::Def*) const {
 void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     if (num_args() == 0) return;
     auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
-    auto variant = cg.world().bitcast(variant_type, cg.world().extract(init, 1), location());
+    auto variant = cg.world().cast(variant_type, cg.world().extract(init, 1), location());
     for (size_t i = 0, e = num_args(); i != e; ++i) {
-        cg.emit(arg(i), cg.extract(variant, i, location()));
+        cg.emit(arg(i), num_args() == 1 ? variant : cg.extract(variant, i, location()));
     }
 }
 
 const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     auto index = path()->decl()->as<OptionDecl>()->index();
-    auto cond = cg.world().cmp_eq(cg.world().extract(init, size_t(0), location()), cg.world().literal_qu32(index, location()));
+    auto cond = cg.world().cmp_eq(cg.world().extract(init, 0_u32, location()), cg.world().literal_qu32(index, location()));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
-        auto variant = cg.world().bitcast(variant_type, cg.world().extract(init, 1, location()), location());
+        auto variant = cg.world().cast(variant_type, cg.world().extract(init, 1, location()), location());
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
-            cond = cg.world().arithop_and(cond, arg(i)->emit_cond(cg, cg.world().extract(variant, i, location())), location());
+            auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? variant : cg.world().extract(variant, i, location()));
+            cond = cg.world().arithop_and(cond, arg_cond, location());
         }
     }
     return cond;

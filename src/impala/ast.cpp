@@ -46,10 +46,15 @@ PrimTypeTag LiteralExpr::literal2type() const {
     }
 }
 
+const Expr* Expr::skip_rvalue() const {
+    if (auto rvalue = isa<RValueExpr>()) return rvalue->src();
+    return this;
+}
+
 uint64_t LiteralExpr::get_u64() const { return thorin::bcast<uint64_t, thorin::Box>(box()); }
 
 bool IfExpr::has_else() const {
-    if (auto block = else_expr_->isa<BlockExprBase>())
+    if (auto block = else_expr_->isa<BlockExpr>())
         return !block->empty();
     return true;
 }
@@ -84,8 +89,12 @@ void CastExpr::write() const { src()->write(); }
  * has_side_effect
  */
 
+bool RValueExpr::has_side_effect() const {
+    return src()->has_side_effect();
+}
+
 bool PrefixExpr::has_side_effect() const {
-    return tag() == INC || tag() == DEC || tag() == TILDE || tag() == RUN || tag() == HLT;
+    return tag() == INC || tag() == DEC || tag() == TILDE || tag() == HLT;
 }
 
 bool InfixExpr::has_side_effect() const {
@@ -94,7 +103,7 @@ bool InfixExpr::has_side_effect() const {
 
 bool PostfixExpr::has_side_effect() const { return true; }
 bool MapExpr::has_side_effect() const { return bool(lhs()->type()->isa<FnType>()); }
-bool BlockExprBase::has_side_effect() const { return !stmts().empty() || expr()->has_side_effect(); }
+bool BlockExpr::has_side_effect() const { return !stmts().empty() || expr()->has_side_effect(); }
 
 bool IfExpr::has_side_effect() const {
     return cond()->has_side_effect() || then_expr()->has_side_effect() || else_expr()->has_side_effect();
@@ -146,6 +155,27 @@ bool EnumPtrn::is_refutable() const {
 
 bool LiteralPtrn::is_refutable() const {
     return true;
+}
+
+//------------------------------------------------------------------------------
+
+const PrefixExpr* replace_rvalue_by_addrof(const RValueExpr* rvalue) {
+    auto parent = rvalue->back_ref_;
+    parent->release();
+    auto src = rvalue->src()->back_ref_->release();
+    src->back_ref_ = nullptr;
+    auto new_expr = new PrefixExpr(rvalue->location(), PrefixExpr::AND, src);
+    delete rvalue;
+    parent->reset(new_expr);
+    new_expr->back_ref_ = parent;
+    return new_expr;
+}
+
+const PrefixExpr* PrefixExpr::create_addrof(const Expr* rhs) {
+    if (auto rvalue = rhs->isa<RValueExpr>()) {
+        return replace_rvalue_by_addrof(rvalue);
+    }
+    return create(rhs, AND);
 }
 
 }
