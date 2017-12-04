@@ -92,6 +92,7 @@ bool is_strict_subtype(const Type* dst, const Type* src);
 /// Common base Type for PtrType%s and RefType.
 class RefTypeBase : public Type {
 protected:
+    /// @param addr_space use @c -1 as unknown address space.
     RefTypeBase(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
         : Type(typetable, tag, {pointee})
         , mut_(mut)
@@ -463,22 +464,6 @@ private:
     friend class TypeTable;
 };
 
-class InferError : public Type {
-    InferError(TypeTable& typetable, const Type* dst, const Type* src)
-        : Type(typetable, Tag_infer_error, {dst, src})
-    {}
-
-public:
-    const Type* dst() const { return op(0); }
-    const Type* src() const { return op(1); }
-    virtual std::ostream& stream(std::ostream&) const override;
-
-private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
-
-    friend class TypeTable;
-};
-
 inline bool is_no_ret_or_type_error(const Type* t) {
     return t->isa<NoRetType>() || t->isa<TypeError>();
 }
@@ -520,6 +505,7 @@ public:
     const OwnedPtrType* owned_ptr_type(const Type* pointee, int addr_space) {
         return unify(new OwnedPtrType(*this, pointee, addr_space));
     }
+    /// @param addr_space use @c -1 as unknown address space.
     const RefType* ref_type(const Type* pointee, bool mut, int addr_space) {
         return unify(new RefType(*this, pointee, mut, addr_space));
     }
@@ -527,7 +513,6 @@ public:
     const PrimType* prim_type(PrimTypeTag tag);
     const UnknownType* unknown_type() { return unify(new UnknownType(*this)); }
     const TypeError* type_error() { return type_error_; }
-    const InferError* infer_error(const Type* dst, const Type* src);
 
 private:
     const TupleType* unit_;

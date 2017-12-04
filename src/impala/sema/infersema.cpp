@@ -41,6 +41,8 @@ public:
     const Type*& constrain(const    Type*& t, const Type* u);
     const Type*& constrain(const Typeable* t, const Type* u, const Type* v) { return constrain(constrain(t, u), v); }
     const Type*& constrain(const Typeable* t, const Type* u)                { return constrain(t->type_, u); }
+    const Type*& update(const    Type*& t, const Type* u);
+    const Type*& update(const Typeable* t, const Type* u)                { return update(t->type_, u); }
 
     /// TODO doxygen
     const Type* coerce(const Type* dst, const Expr* src);
@@ -53,18 +55,18 @@ public:
         constrain(local, type);
         return type;
     }
-    const Type* infer(const Ptrn* p) { return constrain(p, p->infer(*this)); }
-    const Type* infer(const FieldDecl* f) { return constrain(f, f->infer(*this)); }
-    const Type* infer(const OptionDecl* o) { return constrain(o, o->infer(*this)); }
+    const Type* infer(const Ptrn* p) { return update(p, p->infer(*this)); }
+    const Type* infer(const FieldDecl* f) { return update(f, f->infer(*this)); }
+    const Type* infer(const OptionDecl* o) { return update(o, o->infer(*this)); }
     void infer(const Item* n) { n->infer(*this); }
     const Type* infer_head(const Item* n) {
         return (n->type_ == nullptr || n->type_->isa<UnknownType>()) ? n->type_ = n->infer_head(*this) : n->type_;
     }
     void infer(const Stmt* n) { n->infer(*this); }
-    const Type* infer(const Expr* expr) { return constrain(expr, expr->infer(*this)); }
-    const Type* infer(const Expr* expr, const Type* t) { return constrain(expr, expr->infer(*this), t); }
-    const Type* infer(const Path* path) { return constrain(path, path->infer(*this)); }
-    const Type* infer(const Path* path, const Type* t) { return constrain(path, path->infer(*this), t); }
+    const Type* infer(const Expr* expr) { return update(expr, expr->infer(*this)); }
+    //const Type* infer(const Expr* expr, const Type* t) { return update(expr, expr->infer(*this), t); }
+    const Type* infer(const Path* path) { return update(path, path->infer(*this)); }
+    //const Type* infer(const Path* path, const Type* t) { return update(path, path->infer(*this), t); }
 
     const Var* infer(const ASTTypeParam* ast_type_param) {
         if (!ast_type_param->type())
@@ -73,7 +75,7 @@ public:
     }
 
     const Type* infer(const ASTType* ast_type) {
-        return constrain(ast_type, ast_type->infer(*this));
+        return update(ast_type, ast_type->infer(*this));
     }
 
     const Type* infer_call(const Expr* lhs, ArrayRef<const Expr*> args, const Type* call_type);
@@ -200,6 +202,12 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
     return t = unify(t, u);
 }
 
+const Type*& InferSema::update(const Type*& t, const Type* u) {
+    if (t == nullptr)
+        return t = find(u);
+    return t = unify(u, t);
+}
+
 const Type* InferSema::coerce(const Type* dst, const Expr* src) {
     if (!dst->isa<UnknownType>() || !src->type()->isa<UnknownType>()) {
         find_type(src);
@@ -227,18 +235,14 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     dst = dst_repr->type;
     src = src_repr->type;
 
+    if (dst == src) return dst;
+
     // normalize singleton tuples to their element
     if (src->isa<TupleType>() && src->num_ops() == 1) src = src->op(0);
     if (dst->isa<TupleType>() && dst->num_ops() == 1) dst = dst->op(0);
 
-    if (dst->isa<UnknownType>() && src->isa<UnknownType>())
-        return unify(dst_repr, src_repr)->type;
     if (dst->isa<UnknownType>()) return unify(src_repr, dst_repr)->type;
     if (src->isa<UnknownType>()) return unify(dst_repr, src_repr)->type;
-
-    if (dst == src && dst->is_known()) return dst;
-    if (dst->isa<TypeError>() || dst->isa<InferError>()) return dst; // propagate errors
-    if (src->isa<TypeError>() || src->isa<InferError>()) return src; // dito
 
     if (dst->num_ops() == src->num_ops()) {
         // do not unify the operands if the types do not match
@@ -251,13 +255,22 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
             }
         }
 
+        // if RefTypes only differ in unknown addr_space '-1'
+        if (auto dst_ref_type = dst->isa<RefType>()) {
+            if (auto src_ref_type = src->isa<RefType>()) {
+                if (       dst_ref_type->pointee() == src_ref_type->pointee()
+                        && dst_ref_type->is_mut()  == src_ref_type->is_mut()
+                        && dst_ref_type->addr_space() == -1)
+                    return src_ref_type;
+            }
+        }
+
         if (dst->isa<IndefiniteArrayType>() && src->isa<DefiniteArrayType>())
             return indefinite_array_type(unify(dst->op(0), src->op(0)));
 
         if (dst->tag() == src->tag()) {
-            // Handle nominal types
             if (src->is_nominal() && src != dst)
-                return infer_error(dst, src);
+                return dst;
 
             Array<const Type*> op(dst->num_ops());
             for (size_t i = 0, e = op.size(); i != e; ++i)
@@ -266,7 +279,7 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
         }
     }
 
-    return infer_error(dst, src);
+    return dst;
 }
 
 //------------------------------------------------------------------------------
@@ -711,7 +724,7 @@ const Type* InfixExpr::infer(InferSema& sema) const {
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN: {
             sema.infer(lhs());
             sema.rvalue(rhs());
-            sema.coerce(lhs(), rhs());
+            sema.coerce(sema.ref_type(rhs()->type(), true, -1), lhs());
             return sema.unit();
         }
         case AS:
@@ -1026,11 +1039,13 @@ const Type* EnumPtrn::infer(InferSema& sema) const {
     auto ret_type = sema.find_type(this);
     if (num_args() > 0) {
         Array<const Type*> params(num_args() + 1);
-        for (size_t i = 0, e = num_args(); i != e; ++i) {
+        for (size_t i = 0, e = num_args(); i != e; ++i)
             params[i] = sema.infer(arg(i));
-        }
         params.back() = sema.fn_type(ret_type);
-        sema.infer(path(), sema.fn_type(params));
+
+        auto t = sema.infer(path());
+        sema.constrain(t, sema.fn_type(params));
+        //const Type* infer(const Path* path, const Type* t) { return update(path, path->infer(*this), t); }
         return ret_type;
     } else {
         return sema.infer(path());

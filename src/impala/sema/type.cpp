@@ -169,7 +169,6 @@ std::ostream& PrimType::stream(std::ostream& os) const {
 }
 
 std::ostream& NoRetType::stream(std::ostream& os) const { return os << "<no-return>"; }
-std::ostream& InferError::stream(std::ostream& os) const { return streamf(os, "<infer error: {}, {}>", dst(), src()); }
 std::ostream& TypeError::stream(std::ostream& os) const { return os << "<type error>"; }
 
 std::ostream& FnType::stream(std::ostream& os) const {
@@ -224,7 +223,6 @@ const Type* IndefiniteArrayType::vrebuild(TypeTable& to, Types ops) const { retu
 const Type* BorrowedPtrType    ::vrebuild(TypeTable& to, Types ops) const { return to.borrowed_ptr_type(ops[0], is_mut(), addr_space()); }
 const Type* OwnedPtrType       ::vrebuild(TypeTable& to, Types ops) const { return to.   owned_ptr_type(ops[0], addr_space()); }
 const Type* RefType            ::vrebuild(TypeTable& to, Types ops) const { return to.      ref_type(ops[0], is_mut(), addr_space()); }
-const Type* InferError         ::vrebuild(TypeTable& to, Types ops) const { return to.infer_error(ops[0], ops[1]); }
 const Type* NoRetType          ::vrebuild(TypeTable&,    Types    ) const { return this; }
 const Type* UnknownType        ::vrebuild(TypeTable&,    Types    ) const { return this; }
 const Type* TypeError          ::vrebuild(TypeTable&,    Types    ) const { return this; }
@@ -309,20 +307,6 @@ const PrimType* TypeTable::prim_type(const PrimTypeTag tag) {
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
-}
-
-const InferError* TypeTable::infer_error(const Type* dst, const Type* src) {
-    if (auto di = dst->isa<InferError>()) {
-        if (di->src() == src)
-            return di;
-    }
-
-    if (auto si = src->isa<InferError>()) {
-        if (si->dst() == dst)
-            return si;
-    }
-
-    return unify(new InferError(*this, dst, src));
 }
 
 }
