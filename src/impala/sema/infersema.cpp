@@ -42,10 +42,9 @@ public:
     const Type*& constrain(const Typeable* t, const Type* u, const Type* v) { return constrain(constrain(t, u), v); }
     const Type*& constrain(const Typeable* t, const Type* u)                { return constrain(t->type_, u); }
 
-    /// obeys subtyping
+    /// TODO doxygen
     const Type* coerce(const Type* dst, const Expr* src);
     const Type* coerce(const Typeable* dst, const Expr* src) { return dst->type_ = coerce(dst->type_, src); }
-    void assign(const Expr* dst, const Expr* src);
 
     // infer wrappers
 
@@ -202,25 +201,23 @@ const Type*& InferSema::constrain(const Type*& t, const Type* u) {
 }
 
 const Type* InferSema::coerce(const Type* dst, const Expr* src) {
-    find_type(src);
-    auto ref = split_ref_type(dst);
+    if (!dst->isa<UnknownType>() || !src->type()->isa<UnknownType>()) {
+        find_type(src);
+        auto ref = split_ref_type(dst);
 
-    // automatically take address of src if dst is a BorrowedPtrType
-    if (auto borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
-        if (!borrowed_ptr_type->is_mut() && !src->type()->isa<UnknownType>() && !src->type()->isa<PtrType>())
-            infer(src = PrefixExpr::create_addrof(src));
+        // automatically take address of src if dst is a BorrowedPtrType
+        if (auto borrowed_ptr_type = dst->isa<BorrowedPtrType>()) {
+            if (!borrowed_ptr_type->is_mut() && !src->type()->isa<UnknownType>() && !src->type()->isa<PtrType>())
+                infer(src = PrefixExpr::create_addrof(src));
+        }
+
+        // insert implicit cast for subtyping
+        if (dst->is_known() && src->type()->is_known() && is_strict_subtype(dst, src->type()))
+            infer(src = ImplicitCastExpr::create(src, dst));
+
+        return wrap_ref(ref, unify(dst, src->type()));
     }
-
-    // insert implicit cast for subtyping
-    if (dst->is_known() && src->type()->is_known() && is_strict_subtype(dst, src->type()))
-        infer(src = ImplicitCastExpr::create(src, dst));
-
-    return wrap_ref(ref, unify(dst, src->type()));
-}
-
-void InferSema::assign(const Expr* dst, const Expr* src) {
-    if (!dst->type()->isa<UnknownType>() && src->type()->is_known())
-        coerce(dst->type(), src);
+    return dst;
 }
 
 const Type* InferSema::unify(const Type* dst, const Type* src) {
@@ -714,7 +711,7 @@ const Type* InfixExpr::infer(InferSema& sema) const {
         case AND_ASGN: case  OR_ASGN: case XOR_ASGN: {
             sema.infer(lhs());
             sema.rvalue(rhs());
-            sema.assign(lhs(), rhs());
+            sema.coerce(lhs(), rhs());
             return sema.unit();
         }
         case AS:
