@@ -124,12 +124,6 @@ private:
      */
     Representative* unify(Representative* x, Representative* y);
 
-    /**
-     * Depending on the rank either @p x or @p y will be the new representative.
-     * Returns the new representative.
-     */
-    Representative* unify_by_rank(Representative* x, Representative* y);
-
     TypeMap<std::unique_ptr<Representative>> representatives_;
     bool todo_ = true;
 
@@ -241,7 +235,7 @@ const Type* InferSema::unify(const Type* dst, const Type* src) {
     if (dst->isa<TupleType>() && dst->num_ops() == 1) dst = dst->op(0);
 
     if (dst->isa<UnknownType>() && src->isa<UnknownType>())
-        return unify_by_rank(dst_repr, src_repr)->type;
+        return unify(dst_repr, src_repr)->type;
     if (dst->isa<UnknownType>()) return unify(src_repr, dst_repr)->type;
     if (src->isa<UnknownType>()) return unify(dst_repr, src_repr)->type;
 
@@ -314,21 +308,6 @@ auto InferSema::unify(Representative* x, Representative* y) -> Representative* {
     ++x->rank;
     todo_ = true;
     return y->parent = x;
-}
-
-auto InferSema::unify_by_rank(Representative* x, Representative* y) -> Representative* {
-    assert(x->is_root() && y->is_root());
-
-    if (x == y)
-        return x;
-    if (x->rank < y->rank)
-        return x->parent = y;
-    else if (x->rank > y->rank)
-        return y->parent = x;
-    else {
-        ++x->rank;
-        return y->parent = x;
-    }
 }
 
 //------------------------------------------------------------------------------
