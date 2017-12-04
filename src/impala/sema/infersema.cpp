@@ -19,7 +19,7 @@ public:
 
     const Type* reduce(const Lambda* lambda, ASTTypeArgs ast_type_args, std::vector<const Type*>& type_args);
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
-    const Type* close(int num_lambdas, const Type* body);
+    const Type* lambdas(int num_lambdas, const Type* body);
     size_t num_lambdas(const Lambda* lambda);
 
     // unification related stuff
@@ -180,7 +180,7 @@ size_t InferSema::num_lambdas(const Lambda* lambda) {
     return num;
 }
 
-const Type* InferSema::close(int num_lambdas, const Type* body) {
+const Type* InferSema::lambdas(int num_lambdas, const Type* body) {
     auto result = body;
     while (num_lambdas-- != 0) {
         result = lambda(result, "TODO");
@@ -442,7 +442,7 @@ const Type* FnASTType::infer(InferSema& sema) const {
     Array<const Type*> types(num_ast_type_args());
     for (size_t i = 0, e = num_ast_type_args(); i != e; ++i)
         types[i] = sema.infer(ast_type_arg(i));
-    return sema.close(num_ast_type_params(), sema.fn_type(types));
+    return sema.lambdas(num_ast_type_params(), sema.fn_type(types));
 }
 
 const Type* Typeof::infer(InferSema& sema) const { return unpack_ref_type(sema.infer(expr())); }
@@ -504,7 +504,7 @@ const Type* FnDecl::infer_head(InferSema& sema) const {
     for (size_t i = 0, e = num_params(); i != e; ++i)
         param_types[i] = sema.infer(param(i));
 
-    return sema.close(num_ast_type_params(), sema.fn_type(param_types));
+    return sema.lambdas(num_ast_type_params(), sema.fn_type(param_types));
 }
 
 const Type* TraitDecl::infer_head(InferSema&) const { /*TODO*/ return nullptr; }
@@ -585,7 +585,7 @@ void FnDecl::infer(InferSema& sema) const {
             sema.constrain(param(i), fn_type()->param(i));
     }
 
-    sema.constrain(this, sema.close(num_ast_type_params(), sema.fn_type(param_types)));
+    sema.constrain(this, sema.lambdas(num_ast_type_params(), sema.fn_type(param_types)));
 
     if (body() != nullptr) {
         if (!sema.infer(body())->isa<NoRetType>())
