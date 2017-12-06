@@ -218,7 +218,8 @@ const Type* InferSema::coerce(const Type* dst, const Expr* src) {
         if (dst->is_known() && src->type()->is_known() && is_strict_subtype(dst, src->type()))
             infer(src = ImplicitCastExpr::create(src, dst));
 
-        return wrap_ref(ref, unify(dst, src->type()));
+        //return wrap_ref(ref, unify(dst, src->type()));
+        return unify(ref ? ref : dst, src->type());
     }
     return dst;
 }
