@@ -68,6 +68,7 @@ public:
                 error(value_decl, "cannot infer a return type, maybe you forgot to mark the function with '-> !'?");
             else
                 error(value_decl, "cannot infer type for '{}'", value_decl->symbol());
+            error(value_decl, "so far I have found: {}", value_decl->type());
         }
     }
 

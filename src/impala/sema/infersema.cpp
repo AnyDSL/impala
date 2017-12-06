@@ -50,11 +50,7 @@ public:
 
     // infer wrappers
 
-    const Type* infer(const LocalDecl* local) {
-        auto type = local->infer(*this);
-        constrain(local, type);
-        return type;
-    }
+    const Type* infer(const LocalDecl* local) { return update(local, local->infer(*this)); }
     const Type* infer(const Ptrn* p) { return update(p, p->infer(*this)); }
     const Type* infer(const FieldDecl* f) { return update(f, f->infer(*this)); }
     const Type* infer(const OptionDecl* o) { return update(o, o->infer(*this)); }
@@ -88,7 +84,7 @@ public:
 
     const Type* rvalue(const Expr* expr) {
         auto type = infer(expr);
-        if (type->isa<RefType>() || (type->isa<UnknownType>() && !expr->isa<RValueExpr>())) {
+        if (!expr->isa<RValueExpr>() && (type->isa<RefType>() || type->isa<UnknownType>())) {
             todo_ = true;
             return infer(RValueExpr::create(expr));
         }
@@ -112,7 +108,6 @@ private:
 
         Representative* parent = nullptr;
         const Type* type = nullptr;
-        int rank = 0;
     };
 
     Representative* representative(const Type* type);
@@ -300,8 +295,11 @@ auto InferSema::representative(const Type* type) -> Representative* {
 
 auto InferSema::find(Representative* repr) -> Representative* {
     if (repr->parent != repr) {
-        todo_ = true;
-        repr->parent = find(repr->parent);
+        auto new_parent = find(repr->parent);
+        if (repr->parent != new_parent) {
+            todo_ = true;
+            repr->parent = new_parent;
+        }
     }
     return repr->parent;
 }
@@ -315,7 +313,6 @@ auto InferSema::unify(Representative* x, Representative* y) -> Representative* {
 
     if (x == y)
         return x;
-    ++x->rank;
     todo_ = true;
     return y->parent = x;
 }
@@ -328,6 +325,7 @@ void type_inference(Init& init, const Module* module) {
 
     int i = 0;
     for (;sema->todo_; ++i) {
+        DLOG("iteration {}\n", i);
         sema->todo_ = false;
         sema->infer(module);
     }
@@ -357,7 +355,7 @@ const Type* LocalDecl::infer(InferSema& sema) const {
         return sema.infer(ast_type());
     else if (!type())
         return sema.unknown_type();
-    return type();
+    return sema.find_type(type_);
 }
 
 const Type* Path::infer(InferSema& sema) const {
@@ -1032,7 +1030,8 @@ const Type* TuplePtrn::infer(InferSema& sema) const {
 }
 
 const Type* IdPtrn::infer(InferSema& sema) const {
-    return sema.infer(local());
+    sema.infer(local());
+    return sema.constrain(local(), sema.find_type(type_));
 }
 
 const Type* EnumPtrn::infer(InferSema& sema) const {
