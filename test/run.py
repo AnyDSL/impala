@@ -1,112 +1,108 @@
 #!/usr/bin/env python
 
-import argparse
-import math
+# get rid of '-p'
+# TODO search for impala binary in path
+# TODO search for clang binary in path
+# priority:
+# - option
+# - $PATH
+# - directory structure
+#
+# codegen tests:
+# -emit-llvm
+# clang -lm -l... 
+#
+#  codegen/foo.impala
+#  codegen/foo.log
+#  codegen/foo.in
+#  codegen/foo.out
+#  -> foo.tmp.log
+#  -> foo.ll
+#  -> foo
+#  -> foo.tmp.out
+#  diff foo.out codegen/foo.output  (see infrastructure/tests.py)
+#
+
 import os
-import subprocess
+import argparse
 import sys
+import subprocess
 
-categories = ["codegen", "sema_pos", "sema_neg"];
-
-def is_exe(filename):
-    return os.path.isfile(filename) and os.access(filename, os.X_OK)
-
-def remove(filename):
-    if os.access(filename, os.W_OK):
-        os.remove(filename)
-
-def find_impala():
-    impala_exe = "impala.exe" if sys.platform == "win32" else "impala"
-
-    for path in os.environ["PATH"].split(os.pathsep):
-        path = path.strip('"')
-        impala_path = os.path.join(path, impala_exe)
-        if is_exe(impala_path):
-            return impala_path
-
-    return os.path.abspath(os.path.join("..", "build", "bin", impala_exe))
-
-def main():
+def argumentParser():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('test',                    nargs='*', help='path to test or test directory',    default='.',           type=str)
-    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                    default=find_impala(), type=str)
-    parser.add_argument('-c', '--compile-timeout', nargs='?', help='timeout for compiling test case',   default=5,             type=int)
-    parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',     default=5,             type=int)
-    parser.add_argument('-n', '--nocleanup',                  help='don\'t clean up temporary files',   action='store_true')
-    parser.add_argument('-b', '--broken',                     help='also run tests known to be broken', action='store_true')
+    parser.add_argument('-p', '--path', help='path to test  or test directory', default='./', type=str)
+    parser.add_argument('-b', '--binary', help='path to impala binary', default='../build/bin/impala', type=str)
+    parser.add_argument('-n', '--no-cleanup', action='store_true', default=False, dest='noCleanUp', help='keep log files after test run')
+    parser.add_argument('-c', '--compile-timeout', help='timeout for running test case',     default=10,             type=int)
+    parser.add_argument('-r', '--run-timeout', help='timeout for compiling project', default=5, type=int)
     args = parser.parse_args()
+    return args
 
-    if not os.access("lib.o", os.R_OK):
-        print(">>> building lib.o")
-        subprocess.run(["clang", "-c", "-O2", "infrastructure/lib.c"])
+def setupTestSuit(args):
+    categories = {}
+    tests = []    
+    
+    if os.path.isfile(args.path):
+        tests.append([args.path])
+        return categories, tests
 
-    tests = [[], [], []]
+    if args.path=='./':
+        actualDir = os.getcwd().split('/')[-1:][0]
+        categories[0]=actualDir
+    else: 
+        underDir = args.path.split('/')[-1:][0]
+        categories[0]=underDir    
+    counter=1
 
-    def classify(path):
-        with open(path, 'r') as f:
-            line = f.readline()
-            if line.startswith("//"):
-                tokens = line[2:].split()
-                if len(tokens) >= 1 and tokens[0] in categories:
-                    if args.broken or len(tokens) == 1 or tokens[1] != "broken":
-                        tests[categories.index(tokens[0])].append(path)
 
-    for test in args.test:
-        if os.path.isfile(test):
-            classify(test)
-        else:
-            for dirpath, dirs, files in os.walk(test):
-                for filename in files:
-                    if os.path.splitext(filename)[1] == ".impala":
-                        classify(os.path.join(dirpath,filename))
+    for subdir, dirs, files in os.walk(args.path):
+        for dir in dirs:
+            categories[counter]=dir
+            counter+=1
+        list = []
+        for file in files:
+            if (file[-7:]=='.impala'):
+                list.append([os.path.join(subdir, file),file])
+        tests.append(list)   
+    return categories, tests        
 
-    total = sum([len(l) for l in tests])
-    align = int(math.log10(total)) + 1
-    i = 1
-    for cat in tests:
-        for test in cat:
-            base = os.path.splitext(test)[0]
-            test_log     = base + ".log"
-            test_log_new = base + ".log.new"
-            test_ll      = base + ".ll"
-            test_exe     = base
-            test_in      = base + ".in"
-            test_out     = base + ".out"
-            test_out_new = base + ".out.new"
+def runTests(categories, tests, log):
+    categorieCounter = 0
+    totalTestCounter = 0
+    totalSuccessCounter = 0
+    totalTimeoutCounter = 0
+    for testsuit in tests:
+        sys.stdout.write('----------running Category ' + categories[categorieCounter] + '----------\n')
+        testCounter=0
+        successCounter=0
+        timeoutCounter=0
+        for test in testsuit:
+            testCounter+=1
+            sys.stdout.write('[' + test[1][:-7] + '] : ' ) 
+            cmd = [args.binary]
+            cmd.append(test[0])
+            try:
+                p = subprocess.run(cmd, stderr=log, stdout=log, timeout=args.run_timeout)
+                if (p.returncode==0):
+                    sys.stdout.write('SUCCESS\n')
+                    successCounter+=1
+                else:
+                    sys.stdout.write('FAILED\n')
+            except subprocess.TimeoutExpired as timeout:
+                sys.stdout.write('Timed out after ' + str(args.run_timeout) + ' \n')
+                timeoutCounter+=1            
+        categorieCounter+=1
+        totalTestCounter+=testCounter
+        totalSuccessCounter+=successCounter
+        totalTimeoutCounter+=timeoutCounter
+        sys.stdout.write('Tests: ' + str(testCounter) + ' Passed: ' + str(successCounter) + ' Timed out: ' + str(timeoutCounter) + ' Failed: ' + str(testCounter-successCounter-timeoutCounter) + '\n\n')
+    sys.stdout.write('Total >>  Tests: ' + str(totalTestCounter) + ' Passed: ' + str(totalSuccessCounter) + ' Timed out: ' + str(totalTimeoutCounter) + ' Failed: ' + str(totalTestCounter-totalSuccessCounter-totalTimeoutCounter) + '\n\n')
 
-            def impala(flags):
-                try:
-                    log = open(test_log_new, 'w')
-                    return subprocess.run([args.impala] + flags + [test], timeout=args.compile_timeout, stdout=log, stderr=log).returncode == 0
-                except subprocess.TimeoutExpired as timeout:
-                    print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
-                    return False
 
-            def link():
-                return subprocess.run(["clang", "-s", test_ll, "lib.o", "-o", test_exe]).returncode == 0
+log = open('log', 'w')
+args =  argumentParser()
+categories, tests = setupTestSuit(args)
+runTests(categories, tests, log)
 
-            def run():
-                try:
-                    out = open(test_out_new, 'w')
-                    input = open(test_in, 'r') if os.access(test_in, os.R_OK) else None
-                    return subprocess.run([test_exe], args.run_timeout, stdin=input, stdout=out, stderr=out, encoding="utf-8").returncode == 0
-                except subprocess.TimeoutExpired as timeout:
-                    print("!!! '{}' timed out after {} seconds".format(timeout.cmd, timeout.timeout))
-                    return False
-
-            print((">>> [{:>%i}/{}] {}" % align).format(i, total, test))
-
-            if impala(["-emit-llvm", "-O2", "-o", base]) and link() and run():
-                pass
-            else:
-                print("fail")
-
-            if not args.nocleanup:
-                remove(test_log_new)
-                remove(test_ll)
-                remove(test_exe)
-                remove(test_out_new)
-
-            i = i + 1
-
-sys.exit(main())
+if  not args.noCleanUp:
+    subprocess.run(['rm','log']) 
