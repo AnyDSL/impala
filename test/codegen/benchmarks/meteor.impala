@@ -1,4 +1,4 @@
-// codegen
+// codegen "2098"
 
 /* The Computer Language Benchmarks Game
  * http://benchmarksgame.alioth.debian.org/
@@ -57,7 +57,7 @@ static mut board = 0xFFFC000000000000_u64;
  * from one end to the other along 12 hexagonal directions.
  *
  *   Piece 0   Piece 1   Piece 2   Piece 3   Piece 4
- *                   
+ *
  *  O O O O    O   O O   O O O     O O O     O   O
  *         O    O O           O       O       O O
  *                           O         O         O
@@ -100,7 +100,7 @@ static mut piece_def = [
    [  E,  E,  E, SW]
 ];
 
- 
+
 /* To minimize the amount of work done in the recursive solve function below,
  * I'm going to allocate enough space for all legal rotations of each piece
  * at each position on the board. That's 10 pieces x 50 board positions x
@@ -211,7 +211,7 @@ fn out_of_bounds(cell: i8, dir: i8) -> bool {
    } else if dir == SW {
       cell % 10_i8 == 0_i8 || cell >= 45_i8
    } else if dir == WSW {
-      let i = cell % 10_i8;   
+      let i = cell % 10_i8;
       i == 0_i8 || i == 1_i8 || i == 5_i8 || cell >= 45_i8
    } else if dir == W {
       cell % 5_i8 == 0_i8
@@ -257,9 +257,9 @@ fn calc_cell_indices(cell: &mut [i8], piece: int, index: i8) -> () {
 
 /* Convenience function to quickly calculate if a piece fits on the board */
 fn cells_fit_on_board(cell: &[i8], piece: int) -> bool {
-        !out_of_bounds(cell(0), piece_def(piece)(0)) 
-    &&  !out_of_bounds(cell(1), piece_def(piece)(1)) 
-    &&  !out_of_bounds(cell(2), piece_def(piece)(2)) 
+        !out_of_bounds(cell(0), piece_def(piece)(0))
+    &&  !out_of_bounds(cell(1), piece_def(piece)(1))
+    &&  !out_of_bounds(cell(2), piece_def(piece)(2))
     &&  !out_of_bounds(cell(3), piece_def(piece)(3))
 }
 
@@ -307,7 +307,7 @@ fn bitmask_from_cells(cell: &[i8]) -> u64 {
 fn record_piece(piece: int, minimum: int, first_empty: i8, piece_mask: u64) -> () {
     pieces(piece)(minimum)(piece_counts(piece)(minimum)) = piece_mask;
     next_cell(piece)(minimum)(piece_counts(piece)(minimum)) = first_empty;
-    piece_counts(piece)(minimum)++;         
+    piece_counts(piece)(minimum)++;
 }
 
 /* Fill the entire board going cell by cell.  If any cells are "trapped"
@@ -317,7 +317,7 @@ fn fill_contiguous_space(board: &mut [i8], index: int) -> () {
    if (board(index) == 1_i8) {
       return()
    }
-   
+
    board(index) = 1_i8;
    let indexi8 = index as i8;
    if(!out_of_bounds(indexi8, E)) {
@@ -380,7 +380,7 @@ fn calc_six_rotations(piece: i8, index: i8) -> () {
     let mut cell: [i8*5];
 
     for rotation in range_i8(0_i8, 6_i8) {
-        if piece != 3_i8 || rotation < 3_i8 { 
+        if piece != 3_i8 || rotation < 3_i8 {
             calc_cell_indices(&mut cell, piece as int, index);
             if cells_fit_on_board(&cell, piece as int) && !has_island(&cell, piece as int) {
                 let minimum = minimum_of_cells(&cell);
@@ -465,9 +465,9 @@ fn triple_is_okay(row1: int, row2: int, row3: int, even: bool) -> bool {
        * row2: 01011  00101  10001  10001
        * row3: 011??  00110  ?????  ?????
        */
-      ((row1 == 0x03) && (row2 == 0x0B) && ((row3 & 0x1C) == 0x0C)) 
-          || ((row1 == 0x01) && (row2 == 0x05) && (row3 == 0x06)) 
-          || ((row1 == 0x19) && (row2 == 0x11)) 
+      ((row1 == 0x03) && (row2 == 0x0B) && ((row3 & 0x1C) == 0x0C))
+          || ((row1 == 0x01) && (row2 == 0x05) && (row3 == 0x06))
+          || ((row1 == 0x19) && (row2 == 0x11))
           || ((row1 == 0x15) && (row2 == 0x11))
    } else {
       /* There are two cases:
@@ -475,7 +475,7 @@ fn triple_is_okay(row1: int, row2: int, row3: int, even: bool) -> bool {
        * row2: 10001  10001
        * row3: ?????  ?????
        */
-      ((row1 == 0x13) && (row2 == 0x11)) 
+      ((row1 == 0x13) && (row2 == 0x11))
           || ((row1 == 0x15) && (row2 == 0x11))
    }
 }
@@ -571,7 +571,7 @@ fn solve(depth: int, mut cell: int) -> () {
       if (avail & piece_no_mask) == 0_i16 {
          continue()
       }
-      
+
       avail ^= piece_no_mask;
       let max_rots = piece_counts(piece)(cell);
       let piece_mask = &pieces(piece)(cell);

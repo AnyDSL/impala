@@ -1,4 +1,4 @@
-// codegen -lm
+// codegen -lm "1800"
 
 type char = u8;
 type str = [char];
@@ -16,7 +16,7 @@ fn range(a: int, b: int, body: fn(int) -> ()) -> () {
     }
 }
 
-fn eval_A(i: int, j: int) -> f64 { 
+fn eval_A(i: int, j: int) -> f64 {
     1.0/(((i+j)*(i+j+1)/2+i+1) as f64)
 }
 
@@ -40,8 +40,8 @@ fn eval_At_times_u(N: int, u: &[f64], Au: &mut [f64]) -> () {
 
 fn eval_AtA_times_u(N: int, u: &[f64], AtAu: &mut [f64]) -> () {
     let v = ~[N: f64];
-    eval_A_times_u(N, u, v); 
-    eval_At_times_u(N, v, AtAu); 
+    eval_A_times_u(N, u, v);
+    eval_At_times_u(N, v, AtAu);
 }
 
 fn main(argc: int, argv: &[&str]) -> int {
@@ -62,7 +62,7 @@ fn main(argc: int, argv: &[&str]) -> int {
     let mut vv = 0.0;
 
     for i in range(0, n) {
-        vBv += u(i)*v(i); 
+        vBv += u(i)*v(i);
         vv  += v(i)*v(i);
     }
 

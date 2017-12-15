@@ -1,4 +1,4 @@
-// codegen
+// codegen "10"
 
 type char = u8;
 type str = [char];
@@ -72,7 +72,7 @@ fn tk(n: int) -> () {
         i = 1;
         odd = !odd;
         if s(0) != 0 {
-            let f = 
+            let f =
                 if s(s(0)) != 0 {
                     flip()
                 } else {
