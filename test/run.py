@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-# get rid of '-p'
+# get rid of '-p' --> done
 # TODO search for impala binary in path
 # TODO search for clang binary in path
 # priority:
-# - option
-# - $PATH
-# - directory structure
+# - option --> done
+# - $PATH--> done
+# - directory structure --> done
 #
 # codegen tests:
 # -emit-llvm
@@ -30,43 +30,113 @@ import subprocess
 
 def argumentParser():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-p', '--path', help='path to test  or test directory', default='./', type=str)
-    parser.add_argument('-b', '--binary', help='path to impala binary', default='../build/bin/impala', type=str)
+    parser.add_argument('path', nargs='*', help='path to test  or test directory', default='./', type=str)
+    parser.add_argument('-b', '--binary', help='path to impala binary', default=None, type=str)
     parser.add_argument('-n', '--no-cleanup', action='store_true', default=False, dest='noCleanUp', help='keep log files after test run')
     parser.add_argument('-c', '--compile-timeout', help='timeout for running test case',     default=10,             type=int)
     parser.add_argument('-r', '--run-timeout', help='timeout for compiling project', default=5, type=int)
     args = parser.parse_args()
     return args
 
+def binary(args):
+    if args.binary != None:
+        return args.binary
+    p = subprocess.Popen(['printenv', 'PATH'],stdout=subprocess.PIPE)
+    (out,err) = p.communicate()
+    sout = str(out)[2:-3]
+    list = sout.split(':')
+
+    for dir in list:
+        bin = dir + '/impala'
+        if os.path.isfile(bin):
+            return bin
+
+    return '../build/bin/impala'
+
+def compare(expect, was):
+    return 0
+
+def giveCategorie(categories, file):
+    with open(file) as rfile:
+        line = rfile.readline()
+        if line[:2]!='//':
+            return 0 #default
+        cat = line.strip('/').strip()
+        try:
+            num = categories[cat]
+            return num
+        except:
+            return 0
+    
+
+def sortIn(categories, tests, file):
+    cat = giveCategorie(categories, file)
+    testpath = file.split('/')
+    testname = testpath[-1][:-7]
+    entry = [file,testname]
+    return cat,entry
+
+
 def setupTestSuit(args):
     categories = {}
-    tests = []    
+    categories['undefined']=0
+    categories['codegen']=1
+    categories['sema']=2
+    categories['type_inferr']=3
+    tests = [[],[],[],[]]    
     
-    if os.path.isfile(args.path):
-        tests.append([args.path])
-        return categories, tests
+    if args.path==[]:
+        args.path.append('./')
 
-    if args.path=='./':
-        actualDir = os.getcwd().split('/')[-1:][0]
-        categories[0]=actualDir
-    else: 
-        underDir = args.path.split('/')[-1:][0]
-        categories[0]=underDir    
-    counter=1
+    for x in args.path:
+        if os.path.isfile(x):
+            (cat,entry) = sortIn(categories,tests,x)
+            tests[cat].append(entry)
+            continue
+
+        for subdir, dirs, files in os.walk(x):
+            for file in files:
+                if (file[-7:]=='.impala'):
+                    cat, entry = sortIn(categories,tests,os.path.join(subdir, file))
+                    tests[cat].append(entry)
+    return categories, tests 
 
 
-    for subdir, dirs, files in os.walk(args.path):
-        for dir in dirs:
-            categories[counter]=dir
-            counter+=1
-        list = []
-        for file in files:
-            if (file[-7:]=='.impala'):
-                list.append([os.path.join(subdir, file),file])
-        tests.append(list)   
-    return categories, tests        
 
-def runTests(categories, tests, log):
+def runCodegenTest(args, test):
+    sys.stdout.write('[' + test[1] + '] : ' )
+    cmd = [args.binary]
+    cmd.append(test[0])
+    cmd.append('-emit-llvm')
+    logname = test[1] +'.tmp.log'
+    logfile = open(logname, 'w')
+    try:
+        p = subprocess.run(cmd, stderr=logfile, stdout=logfile, timeout=args.run_timeout)
+        if p.returncode!=0:
+            return 1
+    except subprocess.TimeoutExpired as timeout:
+        return 2
+    cmd = ['clang','-lm','-l',test[1]+'.ll',lib.c,'-o',test[1]]
+    subprocess.run(cmd)
+    cmd2 = ['./'+test[1]]
+    outputfile = test[1]+'.tmp.out'
+    output = open(outputfile, 'w')
+    subprocess.run(cmd2, stdout=output)
+
+    comparedOut = test[0][:-7]+'.out'
+    if os.path.isfile(comparedOut):
+        diff = compare(comparedOut, outputfile)
+    
+    if not args.noCleanUp:
+        subprocess.run(['rm', test[1]+'.ll'])
+        subprocess.run(['rm', outputfile])
+        subprocess.run(['rm', logname])
+        subprocess.run(['rm', test[1] ])
+
+    return comparedOut
+
+
+def runTests(categories, tests, log, args):
     categorieCounter = 0
     totalTestCounter = 0
     totalSuccessCounter = 0
@@ -78,7 +148,7 @@ def runTests(categories, tests, log):
         timeoutCounter=0
         for test in testsuit:
             testCounter+=1
-            sys.stdout.write('[' + test[1][:-7] + '] : ' ) 
+            sys.stdout.write('[' + test[1] + '] : ' ) 
             cmd = [args.binary]
             cmd.append(test[0])
             try:
@@ -101,8 +171,11 @@ def runTests(categories, tests, log):
 
 log = open('log', 'w')
 args =  argumentParser()
+bin = binary(args)
+args.binary = bin
 categories, tests = setupTestSuit(args)
-runTests(categories, tests, log)
-
+#runTests(categories, tests, log, args)
+print(tests[0][0])
+runCodegenTest(args,tests[0][0])
 if  not args.noCleanUp:
     subprocess.run(['rm','log']) 
