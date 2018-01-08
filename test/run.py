@@ -126,7 +126,7 @@ def runCodegenTest(args, test): #0 passed 1 failed 2 timeout
     outputfile = test[1]+'.tmp.out'
     output = open(outputfile, 'w')
     try:
-        p = subprocess.run(cmd2, stdout=output)
+        p = subprocess.run(cmd2, stdout=output, timeout=args.run_timeout)
     except subprocess.TimeoutExpired as timeout:
         return 2 
     comparedOut = test[0][:-7]+'.out'
