@@ -40,9 +40,9 @@ def argumentParser():
     args = parser.parse_args()
     return args
 
-def binary(args):
-    if args.binary != None:
-        return args.binary
+def find_impala(args):
+    if args.impala != None:
+        return args.impala
     p = subprocess.Popen(['printenv', 'PATH'],stdout=subprocess.PIPE)
     (out,err) = p.communicate()
     sout = str(out)[2:-3]
@@ -99,17 +99,15 @@ def setupTestSuit(args):
                     tests[cat].append(entry)
     return categories, tests 
 
-def compareFiles(file1, file2): # True if equal, false otherwise
-    if os.path.isfile(file1):
-        if  not os.path.isfile(file2):
-            return False
-        return filecmp.cmp(file1, file2)
+def compareFiles(tmp_out, out): # True if equal, false otherwise
+    if os.path.isfile(out):
+        return filecmp.cmp(tmp_out, out)
     else: 
-        return False
+        return True
 
 # TODO use constants instead of magic numbers as return value
 def runCodegenTest(args, test): #0 passed 1 failed 2 timeout
-    cmd = [args.binary]
+    cmd = [args.impala]
     cmd.append(test[0])
     cmd.append('-emit-llvm')
     logname = test[1] +'.tmp.log'
@@ -124,22 +122,22 @@ def runCodegenTest(args, test): #0 passed 1 failed 2 timeout
     except subprocess.TimeoutExpired as timeout:
         return 2   
     cmd2 = ['./'+test[1]]
-    outputfile = test[1]+'.tmp.out'
-    output = open(outputfile, 'w')
+    tmp_out = test[1]+'.tmp.out'
+    output = open(tmp_out, 'w')
     try:
         p = subprocess.run(cmd2, stdout=output, timeout=args.run_timeout)
     except subprocess.TimeoutExpired as timeout:
         return 2 
-    comparedOut = test[0][:-7]+'.out'
-    diff =compareFiles(comparedOut, outputfile)
+    out = test[0][:-7]+'.out'
+    diff = compareFiles(tmp_out, out)
 
     if not args.noCleanUp:
         subprocess.run(['rm', test[1]+'.ll'])
-        subprocess.run(['rm', outputfile])
+        subprocess.run(['rm', tmp_out])
         subprocess.run(['rm', logname])
         subprocess.run(['rm', test[1] ])
 
-    if not diff:
+    if diff:
         return 0
     return 1
 
@@ -178,8 +176,8 @@ def runTests(categories, tests, log, args):
 
 log = open('log', 'w')
 args =  argumentParser()
-bin = binary(args)
-args.binary = bin
+impala = find_impala(args)
+args.impala = impala
 print('set up testsuit')
 categories, tests = setupTestSuit(args)
 #sys.stdout.write('----------running Category ' + categories[0] + '----------\n')
