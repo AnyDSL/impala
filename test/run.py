@@ -19,6 +19,12 @@
 #  -> foo
 #  -> foo.tmp.out
 #  diff foo.out codegen/foo.output  (see infrastructure/tests.py)
+# 
+#  - deal with foo.in for stdin
+#  - deal with 'broken'
+#  - deal with cmd line arguments for the test case (see codegen/benchmarks/fannkuch.impala)
+#  - deal with linker option e.g. '-lm' (in first-line comment)
+#  - sort test cases
 
 import os
 import argparse
@@ -153,7 +159,7 @@ def runTests(categories, tests, log, args):
         successCounter=0
         timeoutCounter=0
         for test in testsuit:
-            sys.stdout.write('[' + test[1] + '] : ' )
+            sys.stdout.write('[' + test[0] + '] : ' )
             testCounter+=1
             x = runCodegenTest(args, test)
             if x==0:
