@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-# get rid of '-p' --> done
-# TODO search for impala binary in path
 # TODO search for clang binary in path
 # priority:
 # - option --> done
@@ -21,7 +19,6 @@
 #  -> foo
 #  -> foo.tmp.out
 #  diff foo.out codegen/foo.output  (see infrastructure/tests.py)
-#
 
 import os
 import argparse
@@ -32,11 +29,12 @@ import filecmp
 def argumentParser():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('path', nargs='*',          help='path to test  or test directory',      default='./', type=str)
-    parser.add_argument('-c', '--compile-timeout',  help='timeout for compiling impala & clang', default=5,    type=int)
-    parser.add_argument('-i', '--impala',           help='path to impala binary',                default=None, type=str)
-    parser.add_argument('-r', '--run-timeout',      help='timeout for running binary',           default=10,   type=int)
-    parser.add_argument('-b', '--broken',           help='also run broken tests',                default=False, action='store_true', dest='broken')
-    parser.add_argument('-n', '--no-cleanup',       help='keep log files after test run',        default=False, action='store_true', dest='noCleanUp')
+    parser.add_argument('-c',  '--clang',           help='path to clang binary',                 default=None, type=str) # TODO
+    parser.add_argument('-i',  '--impala',          help='path to impala binary',                default=None, type=str)
+    parser.add_argument('-ct', '--compile-timeout', help='timeout for compiling impala & clang', default=5,    type=int)
+    parser.add_argument('-rt', '--run-timeout',     help='timeout for running binary',           default=10,   type=int)
+    parser.add_argument('-b',  '--broken',          help='also run broken tests',                default=False, action='store_true', dest='broken')
+    parser.add_argument('-n',  '--no-cleanup',      help='keep log files after test run',        default=False, action='store_true', dest='noCleanUp')
     args = parser.parse_args()
     return args
 
