@@ -31,11 +31,12 @@ import filecmp
 
 def argumentParser():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('path', nargs='*', help='path to test  or test directory', default='./', type=str)
-    parser.add_argument('-b', '--binary', help='path to impala binary', default=None, type=str)
-    parser.add_argument('-n', '--no-cleanup', action='store_true', default=False, dest='noCleanUp', help='keep log files after test run')
-    parser.add_argument('-c', '--compile-timeout', help='timeout for compiling impala & clang',     default=5,             type=int)
-    parser.add_argument('-r', '--run-timeout', help='timeout for running binary', default=10, type=int)
+    parser.add_argument('path', nargs='*',          help='path to test  or test directory',      default='./', type=str)
+    parser.add_argument('-c', '--compile-timeout',  help='timeout for compiling impala & clang', default=5,    type=int)
+    parser.add_argument('-i', '--impala',           help='path to impala binary',                default=None, type=str)
+    parser.add_argument('-r', '--run-timeout',      help='timeout for running binary',           default=10,   type=int)
+    parser.add_argument('-b', '--broken',           help='also run broken tests',                default=False, action='store_true', dest='broken')
+    parser.add_argument('-n', '--no-cleanup',       help='keep log files after test run',        default=False, action='store_true', dest='noCleanUp')
     args = parser.parse_args()
     return args
 
