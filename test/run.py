@@ -27,14 +27,15 @@ import os
 import argparse
 import sys
 import subprocess
+import filecmp
 
 def argumentParser():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('path', nargs='*', help='path to test  or test directory', default='./', type=str)
     parser.add_argument('-b', '--binary', help='path to impala binary', default=None, type=str)
     parser.add_argument('-n', '--no-cleanup', action='store_true', default=False, dest='noCleanUp', help='keep log files after test run')
-    parser.add_argument('-c', '--compile-timeout', help='timeout for running test case',     default=10,             type=int)
-    parser.add_argument('-r', '--run-timeout', help='timeout for compiling project', default=5, type=int)
+    parser.add_argument('-c', '--compile-timeout', help='timeout for compiling impala & clang',     default=5,             type=int)
+    parser.add_argument('-r', '--run-timeout', help='timeout for running binary', default=10, type=int)
     args = parser.parse_args()
     return args
 
@@ -52,9 +53,6 @@ def binary(args):
             return bin
 
     return '../build/bin/impala'
-
-def compare(expect, was):
-    return 0
 
 def giveCategorie(categories, file):
     with open(file) as rfile:
@@ -103,37 +101,44 @@ def setupTestSuit(args):
 
 
 
-def runCodegenTest(args, test):
-    sys.stdout.write('[' + test[1] + '] : ' )
+def runCodegenTest(args, test): #0 passed 1 failed 2 timeout
     cmd = [args.binary]
     cmd.append(test[0])
     cmd.append('-emit-llvm')
     logname = test[1] +'.tmp.log'
     logfile = open(logname, 'w')
     try:
-        p = subprocess.run(cmd, stderr=logfile, stdout=logfile, timeout=args.run_timeout)
+        p = subprocess.run(cmd, stderr=logfile, stdout=logfile, timeout=args.compile_timeout)
         if p.returncode!=0:
+            print('failed here')
             return 1
+        cmd = ['clang','-lm',test[1]+'.ll','lib.c','-o',test[1]]
+        p = subprocess.run(cmd)
     except subprocess.TimeoutExpired as timeout:
-        return 2
-    cmd = ['clang','-lm','-l',test[1]+'.ll',lib.c,'-o',test[1]]
-    subprocess.run(cmd)
+        return 2   
     cmd2 = ['./'+test[1]]
     outputfile = test[1]+'.tmp.out'
     output = open(outputfile, 'w')
-    subprocess.run(cmd2, stdout=output)
-
+    try:
+        p = subprocess.run(cmd2, stdout=output)
+    except subprocess.TimeoutExpired as timeout:
+        return 2 
     comparedOut = test[0][:-7]+'.out'
     if os.path.isfile(comparedOut):
-        diff = compare(comparedOut, outputfile)
-    
+        diff = filecmp.cmp(comparedOut, outputfile)
+    else: 
+        diff = False
+
     if not args.noCleanUp:
         subprocess.run(['rm', test[1]+'.ll'])
         subprocess.run(['rm', outputfile])
         subprocess.run(['rm', logname])
         subprocess.run(['rm', test[1] ])
 
-    return comparedOut
+    if not diff:
+        return 0
+    return 1
+
 
 
 def runTests(categories, tests, log, args):
@@ -141,26 +146,26 @@ def runTests(categories, tests, log, args):
     totalTestCounter = 0
     totalSuccessCounter = 0
     totalTimeoutCounter = 0
-    for testsuit in tests:
-        sys.stdout.write('----------running Category ' + categories[categorieCounter] + '----------\n')
+    executable = ['codegen']
+    for exec in executable:
+        index = categories[exec]
+        testsuit = tests[index]
+        sys.stdout.write('----------running Category ' + exec + '----------\n')
         testCounter=0
         successCounter=0
         timeoutCounter=0
         for test in testsuit:
+            sys.stdout.write('[' + test[1] + '] : ' )
             testCounter+=1
-            sys.stdout.write('[' + test[1] + '] : ' ) 
-            cmd = [args.binary]
-            cmd.append(test[0])
-            try:
-                p = subprocess.run(cmd, stderr=log, stdout=log, timeout=args.run_timeout)
-                if (p.returncode==0):
-                    sys.stdout.write('SUCCESS\n')
-                    successCounter+=1
-                else:
-                    sys.stdout.write('FAILED\n')
-            except subprocess.TimeoutExpired as timeout:
-                sys.stdout.write('Timed out after ' + str(args.run_timeout) + ' \n')
-                timeoutCounter+=1            
+            x = runCodegenTest(args, test)
+            if x==0:
+                successCounter+=1
+                sys.stdout.write('passed\n')
+                continue
+            if x==2:
+                timeoutCounter+=1
+                sys.stdout.write('timed out\n')
+            sys.stdout.write('failed\n')         
         categorieCounter+=1
         totalTestCounter+=testCounter
         totalSuccessCounter+=successCounter
@@ -173,9 +178,10 @@ log = open('log', 'w')
 args =  argumentParser()
 bin = binary(args)
 args.binary = bin
+executable = ['default', 'codegen']
+print('set up testsuit')
 categories, tests = setupTestSuit(args)
-#runTests(categories, tests, log, args)
-print(tests[0][0])
-runCodegenTest(args,tests[0][0])
-if  not args.noCleanUp:
-    subprocess.run(['rm','log']) 
+#sys.stdout.write('----------running Category ' + categories[0] + '----------\n')
+runTests(categories, tests, log, args)
+
+
