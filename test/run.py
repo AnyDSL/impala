@@ -99,7 +99,13 @@ def setupTestSuit(args):
                     tests[cat].append(entry)
     return categories, tests 
 
-
+def compareFiles(file1, file2): # True if equal, false otherwise
+    if os.path.isfile(file1):
+        if  not os.path.isfile(file2):
+            return False
+        return filecmp.cmp(file1, file2)
+    else: 
+        return False
 
 def runCodegenTest(args, test): #0 passed 1 failed 2 timeout
     cmd = [args.binary]
@@ -124,10 +130,7 @@ def runCodegenTest(args, test): #0 passed 1 failed 2 timeout
     except subprocess.TimeoutExpired as timeout:
         return 2 
     comparedOut = test[0][:-7]+'.out'
-    if os.path.isfile(comparedOut):
-        diff = filecmp.cmp(comparedOut, outputfile)
-    else: 
-        diff = False
+    diff =compareFiles(comparedOut, outputfile)
 
     if not args.noCleanUp:
         subprocess.run(['rm', test[1]+'.ll'])
@@ -138,6 +141,9 @@ def runCodegenTest(args, test): #0 passed 1 failed 2 timeout
     if not diff:
         return 0
     return 1
+
+
+
 
 
 
