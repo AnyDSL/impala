@@ -60,12 +60,12 @@ def giveCategorie(categories, file):
         if line[:2]!='//':
             return 0 #default
         cat = line.strip('/').strip()
+        # TODO use 'if' here and report warning in stderr if applicable
         try:
             num = categories[cat]
             return num
         except:
             return 0
-    
 
 def sortIn(categories, tests, file):
     cat = giveCategorie(categories, file)
@@ -73,7 +73,6 @@ def sortIn(categories, tests, file):
     testname = testpath[-1][:-7]
     entry = [file,testname]
     return cat,entry
-
 
 def setupTestSuit(args):
     categories = {}
@@ -107,6 +106,7 @@ def compareFiles(file1, file2): # True if equal, false otherwise
     else: 
         return False
 
+# TODO use constants instead of magic numbers as return value
 def runCodegenTest(args, test): #0 passed 1 failed 2 timeout
     cmd = [args.binary]
     cmd.append(test[0])
@@ -141,11 +141,6 @@ def runCodegenTest(args, test): #0 passed 1 failed 2 timeout
     if not diff:
         return 0
     return 1
-
-
-
-
-
 
 def runTests(categories, tests, log, args):
     categorieCounter = 0
@@ -184,10 +179,7 @@ log = open('log', 'w')
 args =  argumentParser()
 bin = binary(args)
 args.binary = bin
-executable = ['default', 'codegen']
 print('set up testsuit')
 categories, tests = setupTestSuit(args)
 #sys.stdout.write('----------running Category ' + categories[0] + '----------\n')
 runTests(categories, tests, log, args)
-
-
