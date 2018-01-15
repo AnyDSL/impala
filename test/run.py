@@ -143,35 +143,47 @@ def compareFiles(tmp_out, out): # True if equal, false otherwise
     else: 
         return True
 
+def split_arguments(arguments):
+    clang_Arguments = []
+    exec_Arguments = []
+    for argument in arguments:
+        if argument[0]=='-':
+            clang_Arguments.append(argument)
+        else:
+            exec_Arguments.append(argument[1:-1])
+    return clang_Arguments, exec_Arguments
+
+
 def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
-    cmd = [args.impala]
-    cmd.append(test[0])
-    cmd.append('-emit-llvm')
+    clang_Arguments,exec_Arguments = split_arguments(arguments)
+    cmd_impala = [args.impala]
+    cmd_impala.append(test[0])
+    cmd_impala.append('-emit-llvm')
     logname = test[1] +'.tmp.log'
     logfile = open(logname, 'w')
-    print(cmd)
     try:
-        p = subprocess.run(cmd, stderr=logfile, stdout=logfile, timeout=args.compile_timeout)
+        p = subprocess.run(cmd_impala, stderr=logfile, stdout=logfile, timeout=args.compile_timeout)
         if p.returncode!=0:
             print('failed here')
             return FAILED
-        cmd = [args.clang,'-lm',test[1]+'.ll','lib.c','-o',test[1]]
-        cmd.extend(arguments)
-        print(cmd)
-        p = subprocess.run(cmd)
+        cmd_clang = [args.clang,test[1]+'.ll','lib.c','-o',test[1]]
+        cmd_clang.extend(clang_Arguments)
+        print(cmd_clang)
+        p = subprocess.run(cmd_clang)
     except subprocess.TimeoutExpired as timeout:
         return TIMEDOUT  
-    cmd2 = ['./'+test[1]]
+    cmd_exec = ['./'+test[1]]
+    cmd_exec.extend(exec_Arguments)
     orig_in = test[0][:-7] + '.in'
     try:
         orig_in_file = open(orig_in)
     except:
         orig_in_file = None
     tmp_out = test[1]+'.tmp.out'
-    print(cmd2)
+    print(cmd_exec)
     tmp_out_file = open(tmp_out, 'w')
     try:
-        p = subprocess.run(cmd2, stdin = orig_in_file,  stdout=tmp_out_file, timeout=args.run_timeout)
+        p = subprocess.run(cmd_exec, stdin = orig_in_file,  stdout=tmp_out_file, timeout=args.run_timeout)
     except subprocess.TimeoutExpired as timeout:
         return TIMEDOUT 
     orig_out = test[0][:-7]+'.out'
