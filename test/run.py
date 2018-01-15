@@ -136,7 +136,7 @@ def split_arguments(arguments):
             exec_args.append(argument[1:-1])
     return clang_args, exec_args
 
-
+# TODO why is test a pair?
 def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
     orig_impala = test[0]
     orig_in     = test[0][:-7] + '.in'
