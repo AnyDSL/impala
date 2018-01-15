@@ -95,20 +95,13 @@ def isBroken(X):
             return True,res
     return False, X
 
-# TODO remove code duplication
 def giveCategorie(categories, file):
-    with open(file) as rfile:
-        line = rfile.readline()
-        if line[:2]!='//':
-            return 0 #default
-        cat = line.strip('/').strip()
-        print(cat)
-        # TODO use 'if' here and report warning in stderr if applicable
-        try:
-            num = categories[cat[0]]
-            return num
-        except:
-            return 0
+    line = readFirstLine(file) 
+    if line == None:
+        return 0
+    if line[0] in categories:
+        return categories[line[0]] 
+    return 0
 
 def sortIn(categories, tests, file):
     cat = giveCategorie(categories, file)
