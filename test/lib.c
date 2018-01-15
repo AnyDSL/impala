@@ -77,13 +77,11 @@ void print_digits(unsigned long long i) {
     printf("\t:%llu\n", i);
 }
 
-void saveppm(const char *fname, int w, int h, unsigned char *img) {
-    FILE *fp = fopen(fname, "wb");
-    fprintf(fp, "P6\n");
-    fprintf(fp, "%d %d\n", w, h);
-    fprintf(fp, "255\n");
-    fwrite(img, w * h * 3, 1, fp);
-    fclose(fp);
+void saveppm(int w, int h, unsigned char *img) {
+    printf("P6\n");
+    printf("%d %d\n", w, h);
+    printf("255\n");
+    fwrite(img, w * h * 3, 1, stdout);
 }
 
 // reverse
