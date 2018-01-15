@@ -164,11 +164,9 @@ def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
     try:
         p = subprocess.run(cmd_impala, stderr=logfile, stdout=logfile, timeout=args.compile_timeout)
         if p.returncode!=0:
-            print('failed here')
             return FAILED
         cmd_clang = [args.clang,test[1]+'.ll','lib.c','-o',test[1]]
         cmd_clang.extend(clang_Arguments)
-        print(cmd_clang)
         p = subprocess.run(cmd_clang)
     except subprocess.TimeoutExpired as timeout:
         return TIMEDOUT  
@@ -180,7 +178,6 @@ def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
     except:
         orig_in_file = None
     tmp_out = test[1]+'.tmp.out'
-    print(cmd_exec)
     tmp_out_file = open(tmp_out, 'w')
     try:
         p = subprocess.run(cmd_exec, stdin = orig_in_file,  stdout=tmp_out_file, timeout=args.run_timeout)
@@ -247,7 +244,5 @@ clang = find_clang(args)
 args.clang = clang
 
 
-print('set up testsuit')
 categories, tests = setupTestSuit(args)
-print(tests)
 runTests(categories, tests, log, args)
