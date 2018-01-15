@@ -1,30 +1,12 @@
 #!/usr/bin/env python
 
-# TODO search for clang binary in path
-# priority:
-# - option --> done
-# - $PATH--> done
-# - directory structure --> done
-#
-# codegen tests:
-# -emit-llvm
-# clang -lm -l... 
-#
-#  codegen/foo.impala
-#  codegen/foo.log
-#  codegen/foo.in
-#  codegen/foo.out
-#  -> foo.tmp.log
-#  -> foo.ll
-#  -> foo
-#  -> foo.tmp.out
-#  diff foo.out codegen/foo.output  (see infrastructure/tests.py)
-# 
-#  - deal with foo.in for stdin
-#  - deal with 'broken'
-#  - deal with cmd line arguments for the test case (see codegen/benchmarks/fannkuch.impala)
-#  - deal with linker option e.g. '-lm' (in first-line comment)
-#  - sort test cases
+# - remove code duplication
+# - camal_case
+# - three time outs: impala/clang/exec
+# - more fail constants
+# - make output nicer (better error messages)
+# - parallelize: -j (std: num cpu cores)
+# # diff output if compareFiles don't match (not for binary)
 
 import os
 import argparse
@@ -32,6 +14,7 @@ import sys
 import subprocess
 import filecmp
 
+# more constants here
 SUCCESS = 0
 FAILED = 1
 TIMEDOUT = 2
