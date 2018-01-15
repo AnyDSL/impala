@@ -143,20 +143,21 @@ def compareFiles(tmp_out, out): # True if equal, false otherwise
     else: 
         return True
 
-# TODO use constants instead of magic numbers as return value
 def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
     cmd = [args.impala]
     cmd.append(test[0])
     cmd.append('-emit-llvm')
-    cmd.extend(arguments)
     logname = test[1] +'.tmp.log'
     logfile = open(logname, 'w')
+    print(cmd)
     try:
         p = subprocess.run(cmd, stderr=logfile, stdout=logfile, timeout=args.compile_timeout)
         if p.returncode!=0:
             print('failed here')
             return FAILED
         cmd = [args.clang,'-lm',test[1]+'.ll','lib.c','-o',test[1]]
+        cmd.extend(arguments)
+        print(cmd)
         p = subprocess.run(cmd)
     except subprocess.TimeoutExpired as timeout:
         return TIMEDOUT  
