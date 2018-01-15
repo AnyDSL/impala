@@ -168,8 +168,12 @@ def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
     cmd2 = ['./'+test[1]]
     inputFile = test[0][:-7] + '.in'
     if os.path.isfile(inputFile):
-        cmd2.append(inputFile)
+        with open(inputFile, 'r') as inFile:
+            input = inFile.read()
+            cmd2.append('<')
+            cmd2.append(input)
     tmp_out = test[1]+'.tmp.out'
+    print(cmd2)
     output = open(tmp_out, 'w')
     try:
         p = subprocess.run(cmd2, stdout=output, timeout=args.run_timeout)
