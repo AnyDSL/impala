@@ -39,7 +39,7 @@ TIMEDOUT = 2
 def argumentParser():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('path', nargs='*',          help='path to test  or test directory',      default='./', type=str)
-    parser.add_argument('-c',  '--clang',           help='path to clang binary',                 default=None, type=str) # TODO
+    parser.add_argument('-c',  '--clang',           help='path to clang binary',                 default=None, type=str)
     parser.add_argument('-i',  '--impala',          help='path to impala binary',                default=None, type=str)
     parser.add_argument('-ct', '--compile-timeout', help='timeout for compiling impala & clang', default=5,    type=int)
     parser.add_argument('-rt', '--run-timeout',     help='timeout for running binary',           default=10,   type=int)
@@ -95,15 +95,17 @@ def isBroken(X):
             return True,res
     return False, X
 
+# TODO remove code duplication
 def giveCategorie(categories, file):
     with open(file) as rfile:
         line = rfile.readline()
         if line[:2]!='//':
             return 0 #default
         cat = line.strip('/').strip()
+        print(cat)
         # TODO use 'if' here and report warning in stderr if applicable
         try:
-            num = categories[cat]
+            num = categories[cat[0]]
             return num
         except:
             return 0
@@ -166,19 +168,20 @@ def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
     except subprocess.TimeoutExpired as timeout:
         return TIMEDOUT  
     cmd2 = ['./'+test[1]]
-    inputFile = test[0][:-7] + '.in'
-    print(inputFile)
-    if not os.path.isfile(inputFile):    
-        inputFile = None
+    orig_in = test[0][:-7] + '.in'
+    try:
+        orig_in_file = open(orig_in)
+    except:
+        orig_in_file = None
     tmp_out = test[1]+'.tmp.out'
     print(cmd2)
-    output = open(tmp_out, 'w')
+    tmp_out_file = open(tmp_out, 'w')
     try:
-        p = subprocess.run(cmd2, stdin = inputFile,  stdout=output, timeout=args.run_timeout)
+        p = subprocess.run(cmd2, stdin = orig_in_file,  stdout=tmp_out_file, timeout=args.run_timeout)
     except subprocess.TimeoutExpired as timeout:
         return TIMEDOUT 
-    out = test[0][:-7]+'.out'
-    diff = compareFiles(tmp_out, out)
+    orig_out = test[0][:-7]+'.out'
+    diff = compareFiles(tmp_out, orig_out)
 
     if not args.noCleanUp:
         subprocess.run(['rm', test[1]+'.ll'])
