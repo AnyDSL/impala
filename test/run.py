@@ -127,57 +127,66 @@ def compareFiles(tmp_out, out): # True if equal, false otherwise
         return True
 
 def split_arguments(arguments):
-    clang_Arguments = []
-    exec_Arguments = []
+    clang_args = []
+    exec_args = []
     for argument in arguments:
         if argument[0]=='-':
-            clang_Arguments.append(argument)
+            clang_args.append(argument)
         else:
-            exec_Arguments.append(argument[1:-1])
-    return clang_Arguments, exec_Arguments
+            exec_args.append(argument[1:-1])
+    return clang_args, exec_args
 
 
 def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
-    clang_Arguments,exec_Arguments = split_arguments(arguments)
+    orig_impala = test[0]
+    orig_in     = test[0][:-7] + '.in'
+    orig_out    = test[0][:-7]+'.out'
+
+    tmp_log = test[1] +'.tmp.log'
+    tmp_exe = test[1]
+    tmp_ll  = test[1] + '.ll'
+    tmp_out = test[1]+'.tmp.out'
+
+    clang_args, exec_args = split_arguments(arguments)
     cmd_impala = [args.impala]
-    cmd_impala.append(test[0])
+    cmd_impala.append(orig_impala)
     cmd_impala.append('-emit-llvm')
-    logname = test[1] +'.tmp.log'
-    logfile = open(logname, 'w')
+
     try:
-        p = subprocess.run(cmd_impala, stderr=logfile, stdout=logfile, timeout=args.compile_timeout)
+        tmp_log_file = open(tmp_log, 'w')
+        p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.compile_timeout)
         if p.returncode!=0:
             return FAILED
-        cmd_clang = [args.clang,test[1]+'.ll','lib.c','-o',test[1]]
-        cmd_clang.extend(clang_Arguments)
+        cmd_clang = [args.clang, tmp_ll, 'lib.c', '-o', tmp_exe]
+        cmd_clang.extend(clang_args)
         p = subprocess.run(cmd_clang)
     except subprocess.TimeoutExpired as timeout:
         return TIMEDOUT  
     except:
         return FAILED
-    cmd_exec = ['./'+test[1]]
-    cmd_exec.extend(exec_Arguments)
-    orig_in = test[0][:-7] + '.in'
+
+    cmd_exec = ['./' + tmp_exe]
+    cmd_exec.extend(exec_args)
     try:
         orig_in_file = open(orig_in)
     except:
         orig_in_file = None
-    tmp_out = test[1]+'.tmp.out'
     tmp_out_file = open(tmp_out, 'w')
+
     try:
         p = subprocess.run(cmd_exec, stdin = orig_in_file, stdout=tmp_out_file, timeout=args.run_timeout)
     except subprocess.TimeoutExpired as timeout:
         return TIMEDOUT 
     except:
         return FAILED
-    orig_out = test[0][:-7]+'.out'
+
     diff = compareFiles(tmp_out, orig_out)
 
     if not args.noCleanUp:
-        subprocess.run(['rm', test[1]+'.ll'])
+        subprocess.run(['rm', tmp_ll])
         subprocess.run(['rm', tmp_out])
-        subprocess.run(['rm', logname])
-        subprocess.run(['rm', test[1] ])
+        subprocess.run(['rm', tmp_log])
+        subprocess.run(['rm', tmp_exe])
 
     if diff:
         return SUCCESS
