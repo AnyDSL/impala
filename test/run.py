@@ -32,6 +32,10 @@ import sys
 import subprocess
 import filecmp
 
+SUCCESS = 0
+FAILED = 1
+TIMEDOUT = 2
+
 def argumentParser():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('path', nargs='*',          help='path to test  or test directory',      default='./', type=str)
@@ -58,6 +62,38 @@ def find_impala(args):
             return bin
 
     return '../build/bin/impala'
+
+def find_clang(args):
+    if args.clang != None:
+        return args.clang
+    p = subprocess.Popen(['printenv', 'PATH'],stdout=subprocess.PIPE)
+    (out,err) = p.communicate()
+    sout = str(out)[2:-3]
+    list = sout.split(':')
+
+    for dir in list:
+        bin = dir + '/clang'
+        if os.path.isfile(bin):
+            return bin
+
+    return 'clang'
+
+def readFirstLine(file):
+    with open(file) as rfile:
+        line = rfile.readline()
+        if line[:2]!='//':
+            return None
+        return line[2:].split()
+
+def isBroken(X):
+    for x in X:
+        if (x=='broken'):
+            res = []
+            for y in X:
+                if y!=x:
+                    res.append(y)
+            return True,res
+    return False, X
 
 def giveCategorie(categories, file):
     with open(file) as rfile:
@@ -101,7 +137,10 @@ def setupTestSuit(args):
                 if (file[-7:]=='.impala'):
                     cat, entry = sortIn(categories,tests,os.path.join(subdir, file))
                     tests[cat].append(entry)
-    return categories, tests 
+    sortedTests = []  
+    for t in tests:
+        sortedTests.append(sorted(t))             
+    return categories, sortedTests 
 
 def compareFiles(tmp_out, out): # True if equal, false otherwise
     if os.path.isfile(out):
@@ -110,28 +149,32 @@ def compareFiles(tmp_out, out): # True if equal, false otherwise
         return True
 
 # TODO use constants instead of magic numbers as return value
-def runCodegenTest(args, test): #0 passed 1 failed 2 timeout
+def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
     cmd = [args.impala]
     cmd.append(test[0])
     cmd.append('-emit-llvm')
+    cmd.extend(arguments)
     logname = test[1] +'.tmp.log'
     logfile = open(logname, 'w')
     try:
         p = subprocess.run(cmd, stderr=logfile, stdout=logfile, timeout=args.compile_timeout)
         if p.returncode!=0:
             print('failed here')
-            return 1
-        cmd = ['clang','-lm',test[1]+'.ll','lib.c','-o',test[1]]
+            return FAILED
+        cmd = [args.clang,'-lm',test[1]+'.ll','lib.c','-o',test[1]]
         p = subprocess.run(cmd)
     except subprocess.TimeoutExpired as timeout:
-        return 2   
+        return TIMEDOUT  
     cmd2 = ['./'+test[1]]
+    inputFile = test[0][:-7] + '.in'
+    if os.path.isfile(inputFile):
+        cmd2.append(inputFile)
     tmp_out = test[1]+'.tmp.out'
     output = open(tmp_out, 'w')
     try:
         p = subprocess.run(cmd2, stdout=output, timeout=args.run_timeout)
     except subprocess.TimeoutExpired as timeout:
-        return 2 
+        return TIMEDOUT 
     out = test[0][:-7]+'.out'
     diff = compareFiles(tmp_out, out)
 
@@ -142,8 +185,8 @@ def runCodegenTest(args, test): #0 passed 1 failed 2 timeout
         subprocess.run(['rm', test[1] ])
 
     if diff:
-        return 0
-    return 1
+        return SUCCESS
+    return FAILED
 
 def runTests(categories, tests, log, args):
     categorieCounter = 0
@@ -159,16 +202,21 @@ def runTests(categories, tests, log, args):
         successCounter=0
         timeoutCounter=0
         for test in testsuit:
+            firstLine = readFirstLine(test[0])
+            broken, arguments = isBroken(firstLine)
+            if  (not args.broken) and broken:
+                continue
             sys.stdout.write('[' + test[0] + '] : ' )
             testCounter+=1
-            x = runCodegenTest(args, test)
-            if x==0:
+            x = runCodegenTest(args, test, arguments[1:])
+            if x==SUCCESS:
                 successCounter+=1
                 sys.stdout.write('passed\n')
                 continue
-            if x==2:
+            if x==TIMEDOUT:
                 timeoutCounter+=1
                 sys.stdout.write('timed out\n')
+                continue
             sys.stdout.write('failed\n')         
         categorieCounter+=1
         totalTestCounter+=testCounter
@@ -180,9 +228,15 @@ def runTests(categories, tests, log, args):
 
 log = open('log', 'w')
 args =  argumentParser()
+
 impala = find_impala(args)
 args.impala = impala
+
+clang = find_clang(args)
+args.clang = clang
+
+
 print('set up testsuit')
 categories, tests = setupTestSuit(args)
-#sys.stdout.write('----------running Category ' + categories[0] + '----------\n')
+print(tests)
 runTests(categories, tests, log, args)
