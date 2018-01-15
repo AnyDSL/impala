@@ -170,6 +170,8 @@ def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
         p = subprocess.run(cmd_clang)
     except subprocess.TimeoutExpired as timeout:
         return TIMEDOUT  
+    except:
+        return FAILED
     cmd_exec = ['./'+test[1]]
     cmd_exec.extend(exec_Arguments)
     orig_in = test[0][:-7] + '.in'
@@ -180,9 +182,11 @@ def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
     tmp_out = test[1]+'.tmp.out'
     tmp_out_file = open(tmp_out, 'w')
     try:
-        p = subprocess.run(cmd_exec, stdin = orig_in_file,  stdout=tmp_out_file, timeout=args.run_timeout)
+        p = subprocess.run(cmd_exec, stdin = orig_in_file, stdout=tmp_out_file, timeout=args.run_timeout)
     except subprocess.TimeoutExpired as timeout:
         return TIMEDOUT 
+    except:
+        return FAILED
     orig_out = test[0][:-7]+'.out'
     diff = compareFiles(tmp_out, orig_out)
 
