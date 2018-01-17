@@ -31,7 +31,7 @@ def argumentParser():
     args = parser.parse_args()
     return args
 
-def find_impala(args):
+def find_impala():
     if args.impala != None:
         return args.impala
     p = subprocess.Popen(['printenv', 'PATH'],stdout=subprocess.PIPE)
@@ -46,7 +46,7 @@ def find_impala(args):
 
     return '../build/bin/impala'
 
-def find_clang(args):
+def find_clang():
     if args.clang != None:
         return args.clang
     p = subprocess.Popen(['printenv', 'PATH'],stdout=subprocess.PIPE)
@@ -93,7 +93,7 @@ def sortIn(categories, tests, file):
     entry = [file,testname]
     return cat,entry
 
-def setupTestSuit(args):
+def setupTestSuit():
     categories = {}
     categories['undefined']=0
     categories['codegen']=1
@@ -137,7 +137,7 @@ def split_arguments(arguments):
     return clang_args, exec_args
 
 # TODO why is test a pair?
-def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
+def runCodegenTest(test, arguments): #0 passed 1 failed 2 timeout
     orig_impala = test[0]
     orig_in     = test[0][:-7] + '.in'
     orig_out    = test[0][:-7]+'.out'
@@ -192,7 +192,7 @@ def runCodegenTest(args, test, arguments): #0 passed 1 failed 2 timeout
         return SUCCESS
     return FAILED
 
-def runTests(categories, tests, log, args):
+def runTests():
     categorieCounter = 0
     totalTestCounter = 0
     totalSuccessCounter = 0
@@ -212,7 +212,7 @@ def runTests(categories, tests, log, args):
                 continue
             sys.stdout.write('[' + test[0] + '] : ' )
             testCounter+=1
-            x = runCodegenTest(args, test, arguments[1:])
+            x = runCodegenTest(test, arguments[1:])
             if x==SUCCESS:
                 successCounter+=1
                 sys.stdout.write('passed\n')
@@ -233,12 +233,12 @@ def runTests(categories, tests, log, args):
 log = open('log', 'w')
 args =  argumentParser()
 
-impala = find_impala(args)
+impala = find_impala()
 args.impala = impala
 
-clang = find_clang(args)
+clang = find_clang()
 args.clang = clang
 
 
-categories, tests = setupTestSuit(args)
-runTests(categories, tests, log, args)
+categories, tests = setupTestSuit()
+runTests()
