@@ -6,7 +6,7 @@
 # - more fail constants
 # - make output nicer (better error messages)
 # - parallelize: -j (std: num cpu cores)
-# # diff output if compareFiles don't match (not for binary)
+# # diff output if compare_Files don't match (not for binary)
 
 import os
 import argparse
@@ -61,14 +61,14 @@ def find_clang():
 
     return 'clang'
 
-def readFirstLine(file):
+def read_first_line(file):
     with open(file) as rfile:
         line = rfile.readline()
         if line[:2]!='//':
             return None
         return line[2:].split()
 
-def isBroken(X):
+def is_broken(X):
     for x in X:
         if (x=='broken'):
             res = []
@@ -78,22 +78,22 @@ def isBroken(X):
             return True,res
     return False, X
 
-def giveCategorie(categories, file):
-    line = readFirstLine(file) 
+def give_categorie(categories, file):
+    line = read_first_line(file) 
     if line == None:
         return 0
     if line[0] in categories:
         return categories[line[0]] 
     return 0
 
-def sortIn(categories, tests, file):
-    cat = giveCategorie(categories, file)
+def sort_in(categories, tests, file):
+    cat = give_categorie(categories, file)
     testpath = file.split('/')
     testname = testpath[-1][:-7]
     entry = [file,testname]
     return cat,entry
 
-def setupTestSuit():
+def set_up_test_suit():
     categories = {}
     categories['undefined']=0
     categories['codegen']=1
@@ -106,21 +106,21 @@ def setupTestSuit():
 
     for x in args.path:
         if os.path.isfile(x):
-            (cat,entry) = sortIn(categories,tests,x)
+            (cat,entry) = sort_in(categories,tests,x)
             tests[cat].append(entry)
             continue
 
         for subdir, dirs, files in os.walk(x):
             for file in files:
                 if (file[-7:]=='.impala'):
-                    cat, entry = sortIn(categories,tests,os.path.join(subdir, file))
+                    cat, entry = sort_in(categories,tests,os.path.join(subdir, file))
                     tests[cat].append(entry)
-    sortedTests = []  
+    sorted_tests = []  
     for t in tests:
-        sortedTests.append(sorted(t))             
-    return categories, sortedTests 
+        sorted_tests.append(sorted(t))             
+    return categories, sorted_tests 
 
-def compareFiles(tmp_out, out): # True if equal, false otherwise
+def compare_Files(tmp_out, out): # True if equal, false otherwise
     if os.path.isfile(out):
         return filecmp.cmp(tmp_out, out)
     else: 
@@ -137,7 +137,7 @@ def split_arguments(arguments):
     return clang_args, exec_args
 
 # TODO why is test a pair?
-def runCodegenTest(test, arguments): #0 passed 1 failed 2 timeout
+def runCodegenTest(test, arguments): 
     orig_impala = test[0]
     orig_in     = test[0][:-7] + '.in'
     orig_out    = test[0][:-7]+'.out'
@@ -180,7 +180,7 @@ def runCodegenTest(test, arguments): #0 passed 1 failed 2 timeout
     except:
         return FAILED
 
-    diff = compareFiles(tmp_out, orig_out)
+    diff = compare_Files(tmp_out, orig_out)
 
     if not args.noCleanUp:
         subprocess.run(['rm', tmp_ll])
@@ -193,41 +193,41 @@ def runCodegenTest(test, arguments): #0 passed 1 failed 2 timeout
     return FAILED
 
 def runTests():
-    categorieCounter = 0
-    totalTestCounter = 0
-    totalSuccessCounter = 0
-    totalTimeoutCounter = 0
+    categorie_Counter = 0
+    total_test_counter = 0
+    total_success_counter = 0
+    total_timeout_counter = 0
     executable = ['codegen']
     for exec in executable:
         index = categories[exec]
         testsuit = tests[index]
         sys.stdout.write('----------running Category ' + exec + '----------\n')
-        testCounter=0
-        successCounter=0
-        timeoutCounter=0
+        test_counter=0
+        sucess_counter=0
+        timeout_counter=0
         for test in testsuit:
-            firstLine = readFirstLine(test[0])
-            broken, arguments = isBroken(firstLine)
+            firstLine = read_first_line(test[0])
+            broken, arguments = is_broken(firstLine)
             if  (not args.broken) and broken:
                 continue
             sys.stdout.write('[' + test[0] + '] : ' )
-            testCounter+=1
+            test_counter+=1
             x = runCodegenTest(test, arguments[1:])
             if x==SUCCESS:
-                successCounter+=1
+                sucess_counter+=1
                 sys.stdout.write('passed\n')
                 continue
             if x==TIMEDOUT:
-                timeoutCounter+=1
+                timeout_counter+=1
                 sys.stdout.write('timed out\n')
                 continue
             sys.stdout.write('failed\n')         
-        categorieCounter+=1
-        totalTestCounter+=testCounter
-        totalSuccessCounter+=successCounter
-        totalTimeoutCounter+=timeoutCounter
-        sys.stdout.write('Tests: ' + str(testCounter) + ' Passed: ' + str(successCounter) + ' Timed out: ' + str(timeoutCounter) + ' Failed: ' + str(testCounter-successCounter-timeoutCounter) + '\n\n')
-    sys.stdout.write('Total >>  Tests: ' + str(totalTestCounter) + ' Passed: ' + str(totalSuccessCounter) + ' Timed out: ' + str(totalTimeoutCounter) + ' Failed: ' + str(totalTestCounter-totalSuccessCounter-totalTimeoutCounter) + '\n\n')
+        categorie_Counter+=1
+        total_test_counter+=test_counter
+        total_success_counter+=success_counter
+        total_timeout_counter+=timeout_counter
+        sys.stdout.write('Tests: ' + str(test_counter) + ' Passed: ' + str(success_counter) + ' Timed out: ' + str(timeout_counter) + ' Failed: ' + str(test_counter - success_counter - timeout_counter) + '\n\n')
+    sys.stdout.write('Total >>  Tests: ' + str(total_test_counter) + ' Passed: ' + str(total_success_counter) + ' Timed out: ' + str(total_timeout_counter) + ' Failed: ' + str(total_test_counter - total_success_counter - total_timeout_counter) + '\n\n')
 
 
 log = open('log', 'w')
@@ -240,5 +240,5 @@ clang = find_clang()
 args.clang = clang
 
 
-categories, tests = setupTestSuit()
+categories, tests = set_up_test_suit()
 runTests()
