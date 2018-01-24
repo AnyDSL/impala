@@ -64,16 +64,16 @@ def find_clang():
 def read_first_line(file):
     with open(file) as rfile:
         line = rfile.readline()
-        if line[:2]!='//':
+        if line[:2] != '//':
             return None
         return line[2:].split()
 
 def is_broken(X):
     for x in X:
-        if (x=='broken'):
+        if (x == 'broken'):
             res = []
             for y in X:
-                if y!=x:
+                if y != x:
                     res.append(y)
             return True,res
     return False, X
@@ -101,7 +101,7 @@ def set_up_test_suit():
     categories['type_inferr']=3
     tests = [[],[],[],[]]    
     
-    if args.path==[]:
+    if args.path == []:
         args.path.append('./')
 
     for x in args.path:
@@ -112,7 +112,7 @@ def set_up_test_suit():
 
         for subdir, dirs, files in os.walk(x):
             for file in files:
-                if (file[-7:]=='.impala'):
+                if (file[-7:] == '.impala'):
                     cat, entry = sort_in(categories,tests,os.path.join(subdir, file))
                     tests[cat].append(entry)
     sorted_tests = []  
@@ -130,7 +130,7 @@ def split_arguments(arguments):
     clang_args = []
     exec_args = []
     for argument in arguments:
-        if argument[0]=='-':
+        if argument[0] == '-':
             clang_args.append(argument)
         else:
             exec_args.append(argument[1:-1])
@@ -155,7 +155,7 @@ def runCodegenTest(test, arguments):
     try:
         tmp_log_file = open(tmp_log, 'w')
         p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.compile_timeout)
-        if p.returncode!=0:
+        if p.returncode != 0:
             return FAILED
         cmd_clang = [args.clang, tmp_ll, 'lib.c', '-o', tmp_exe]
         cmd_clang.extend(clang_args)
@@ -211,21 +211,21 @@ def runTests():
             if  (not args.broken) and broken:
                 continue
             sys.stdout.write('[' + test[0] + '] : ' )
-            test_counter+=1
+            test_counter += 1
             x = runCodegenTest(test, arguments[1:])
-            if x==SUCCESS:
-                sucess_counter+=1
+            if x == SUCCESS:
+                success_counter += 1
                 sys.stdout.write('passed\n')
                 continue
-            if x==TIMEDOUT:
-                timeout_counter+=1
+            if x == TIMEDOUT:
+                timeout_counter += 1
                 sys.stdout.write('timed out\n')
                 continue
             sys.stdout.write('failed\n')         
-        categorie_Counter+=1
-        total_test_counter+=test_counter
-        total_success_counter+=success_counter
-        total_timeout_counter+=timeout_counter
+        categorie_Counter += 1
+        total_test_counter += test_counter
+        total_success_counter += success_counter
+        total_timeout_counter += timeout_counter
         sys.stdout.write('Tests: ' + str(test_counter) + ' Passed: ' + str(success_counter) + ' Timed out: ' + str(timeout_counter) + ' Failed: ' + str(test_counter - success_counter - timeout_counter) + '\n\n')
     sys.stdout.write('Total >>  Tests: ' + str(total_test_counter) + ' Passed: ' + str(total_success_counter) + ' Timed out: ' + str(total_timeout_counter) + ' Failed: ' + str(total_test_counter - total_success_counter - total_timeout_counter) + '\n\n')
 
