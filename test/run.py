@@ -20,7 +20,7 @@ FAILED = 1
 TIMEDOUT = 2
 
 def argumentParser():
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('path', nargs='*',          help='path to test  or test directory',      default='./', type=str)
     parser.add_argument('-c',  '--clang',           help='path to clang binary',                 default=None, type=str)
     parser.add_argument('-i',  '--impala',          help='path to impala binary',                default=None, type=str)
@@ -34,8 +34,8 @@ def argumentParser():
 def find_impala():
     if args.impala != None:
         return args.impala
-    p = subprocess.Popen(['printenv', 'PATH'],stdout=subprocess.PIPE)
-    (out,err) = p.communicate()
+    p = subprocess.Popen(['printenv', 'PATH'], stdout = subprocess.PIPE)
+    (out, err) = p.communicate()
     sout = str(out)[2:-3]
     list = sout.split(':')
 
@@ -49,8 +49,8 @@ def find_impala():
 def find_clang():
     if args.clang != None:
         return args.clang
-    p = subprocess.Popen(['printenv', 'PATH'],stdout=subprocess.PIPE)
-    (out,err) = p.communicate()
+    p = subprocess.Popen(['printenv', 'PATH'], stdout=subprocess.PIPE)
+    (out, err) = p.communicate()
     sout = str(out)[2:-3]
     list = sout.split(':')
 
@@ -75,7 +75,7 @@ def is_broken(X):
             for y in X:
                 if y != x:
                     res.append(y)
-            return True,res
+            return True, res
     return False, X
 
 def give_categorie(categories, file):
@@ -90,8 +90,8 @@ def sort_in(categories, tests, file):
     cat = give_categorie(categories, file)
     testpath = file.split('/')
     testname = testpath[-1][:-7]
-    entry = [file,testname]
-    return cat,entry
+    entry = [file, testname]
+    return cat, entry
 
 def set_up_test_suit():
     categories = {}
@@ -106,14 +106,14 @@ def set_up_test_suit():
 
     for x in args.path:
         if os.path.isfile(x):
-            (cat,entry) = sort_in(categories,tests,x)
+            (cat, entry) = sort_in(categories, tests, x)
             tests[cat].append(entry)
             continue
 
         for subdir, dirs, files in os.walk(x):
             for file in files:
                 if (file[-7:] == '.impala'):
-                    cat, entry = sort_in(categories,tests,os.path.join(subdir, file))
+                    cat, entry = sort_in(categories, tests, os.path.join(subdir, file))
                     tests[cat].append(entry)
     sorted_tests = []  
     for t in tests:
@@ -202,9 +202,9 @@ def runTests():
         index = categories[exec]
         testsuit = tests[index]
         sys.stdout.write('----------running Category ' + exec + '----------\n')
-        test_counter=0
-        sucess_counter=0
-        timeout_counter=0
+        test_counter = 0
+        success_counter = 0
+        timeout_counter = 0
         for test in testsuit:
             firstLine = read_first_line(test[0])
             broken, arguments = is_broken(firstLine)
