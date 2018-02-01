@@ -22,7 +22,6 @@ class Module;
 typedef std::vector<std::unique_ptr<const Item>> Items;
 
 void init();
-void destroy();
 
 struct Init {
     Init(std::string module_name)
@@ -30,7 +29,6 @@ struct Init {
     {
         init();
     }
-    ~Init() { destroy(); }
 
     thorin::World world;
     std::unique_ptr<TypeTable> typetable;

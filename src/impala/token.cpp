@@ -80,9 +80,9 @@ Token::Token(Location location, Tag tag, const std::string& str)
                       ival = strtoll (nptr, 0, base);  err = errno; break;
         case LIT_u8: case LIT_u16: case LIT_u32: case LIT_u64:
                       uval = strtoull(nptr, 0, base);  err = errno; break;
-        case LIT_f16: hval = strtof(symbol_.str(), 0); err = errno; break; // TODO: errno for half not correctly set
-        case LIT_f32: fval = strtof(symbol_.str(), 0); err = errno; break;
-        case LIT_f64: dval = strtod(symbol_.str(), 0); err = errno; break;
+        case LIT_f16: hval = strtof(symbol_.c_str(), 0); err = errno; break; // TODO: errno for half not correctly set
+        case LIT_f32: fval = strtof(symbol_.c_str(), 0); err = errno; break;
+        case LIT_f64: dval = strtod(symbol_.c_str(), 0); err = errno; break;
         default: THORIN_UNREACHABLE;
     }
 
@@ -208,7 +208,7 @@ void Token::init() {
 #define IMPALA_INFIX_ASGN(tok, str)       insert(tok, str); tok2op_[tok] |= Infix | Asgn_Op;
 #define IMPALA_MISC(      tok, str)       insert(tok, str);
 #define IMPALA_KEY(       tok, str)       insert_key(tok, str);
-#define IMPALA_LIT(       tok, atype)     tok2str_[LIT_##tok] = Symbol("<literal>").str();
+#define IMPALA_LIT(       tok, atype)     tok2str_[LIT_##tok] = Symbol("<literal>").c_str();
 #define IMPALA_TYPE(itype, atype)         insert_key(TYPE_ ## itype, #itype );
 #include "impala/tokenlist.h"
 
@@ -233,7 +233,7 @@ void Token::init() {
     sym2lit_["f64"] = LIT_f64; sym2flit_["f64"] = LIT_f64;
 
     // special tokens
-    tok2str_[ID]         = Symbol("<identifier>").str();
+    tok2str_[ID]         = Symbol("<identifier>").c_str();
     insert(Eof, "<end of file>");
     insert_key(AS, "as");
     insert_key(MUT, "mut");
@@ -243,7 +243,7 @@ void Token::insert_key(TokenTag tok, const char* str) {
     Symbol s = str;
     assert(keywords_.find(s) == keywords_.end() && "already inserted");
     keywords_[s] = tok;
-    tok2str_ [tok] = s.str();
+    tok2str_ [tok] = s.c_str();
 }
 
 Symbol Token::insert(TokenTag tok, const char* str) {
@@ -258,7 +258,7 @@ Symbol Token::insert(TokenTag tok, const char* str) {
     }
 #endif
 
-    tok2str_[tok] = s.str();
+    tok2str_[tok] = s.c_str();
     return p.first->second;
 }
 
@@ -267,15 +267,15 @@ Symbol Token::insert(TokenTag tok, const char* str) {
 const char* Token::tok2str(TokenTag tag) {
     auto i = Token::tok2str_.find(tag);
     assert(i != Token::tok2str_.end() && "must be found");
-    return Symbol(i->second).str();
+    return Symbol(i->second).c_str();
 }
 
 std::ostream& operator<<(std::ostream& os, const TokenTag& tag) { return os << Token::tok2str(tag); }
 
 std::ostream& operator<<(std::ostream& os, const Token& tok) {
-    const char* sym = tok.symbol().str();
+    const char* sym = tok.symbol().c_str();
     if (std::strcmp(sym, "") == 0)
-        return os << Symbol(Token::tok2str_[tok.tag()]).str();
+        return os << Symbol(Token::tok2str_[tok.tag()]).c_str();
     else
         return os << sym;
 }

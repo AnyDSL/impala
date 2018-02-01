@@ -10,7 +10,6 @@
 #include "thorin/util/types.h"
 
 #include "impala/impala.h"
-#include "impala/symbol.h"
 #include "impala/token.h"
 #include "impala/sema/type.h"
 
@@ -550,10 +549,10 @@ public:
     // identifier
     const Identifier* identifier() const { assert(!is_no_decl()); return identifier_.get(); }
     Symbol symbol() const { assert(!is_no_decl()); return identifier_->symbol(); }
-    bool is_anonymous() const { assert(!is_no_decl()); return symbol() == Symbol() || symbol().str()[0] == '<'; }
+    bool is_anonymous() const { assert(!is_no_decl()); return symbol() == Symbol() || symbol().c_str()[0] == '<'; }
     size_t depth() const { assert(!is_no_decl()); return depth_; }
     const Decl* shadows() const { assert(!is_no_decl()); return shadows_; }
-    thorin::Debug debug() const { return {location(), symbol().str()}; }
+    thorin::Debug debug() const { return {location(), symbol()}; }
 
     // ValueDecl
     const ASTType* ast_type() const { assert(is_value_decl()); return ast_type_.get(); } ///< Original @p ASTType.

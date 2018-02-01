@@ -1,7 +1,8 @@
 #include "impala/impala.h"
 
+#include "thorin/util/symbol.h"
+
 #include "impala/ast.h"
-#include "impala/symbol.h"
 #include "impala/token.h"
 
 namespace impala {
@@ -11,7 +12,6 @@ bool fancy_output = false;
 bool& fancy() { return fancy_output; }
 
 void init() { PrecTable::init(); Token::init(); }
-void destroy() { Symbol::destroy(); }
 void check(Init& init, const Module* mod, bool nossa) {
     name_analysis(mod);
     type_inference(init, mod);

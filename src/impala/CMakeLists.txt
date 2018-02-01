@@ -15,8 +15,6 @@ set(IMPALA_SOURCES
     sema/type.h
     sema/typesema.cpp
     stream.cpp
-    symbol.cpp
-    symbol.h
     token.cpp
     token.h
     tokenlist.h
