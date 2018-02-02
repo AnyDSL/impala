@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 # - remove code duplication
-# - camal_case
-# - three time outs: impala/clang/exec
-# - more fail constants
+# - camal_case 
+# - three time outs: impala/clang/exec - done
+# - more fail constants 
 # - make output nicer (better error messages)
 # - parallelize: -j (std: num cpu cores)
 # # diff output if compare_Files don't match (not for binary)
@@ -16,15 +16,20 @@ import filecmp
 
 # more constants here
 SUCCESS = 0
-FAILED = 1
-TIMEDOUT = 2
+CLANG_FAILED = 1
+CLANG_TIMEDOUT = 2
+IMPALA_FAILED = 3
+IMPALA_TIMEDOUT = 4
+RUN_FAILED = 5
+RUN_TIMEOUT = 6
 
 def argumentParser():
     parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('path', nargs='*',          help='path to test  or test directory',      default='./', type=str)
     parser.add_argument('-c',  '--clang',           help='path to clang binary',                 default=None, type=str)
     parser.add_argument('-i',  '--impala',          help='path to impala binary',                default=None, type=str)
-    parser.add_argument('-ct', '--compile-timeout', help='timeout for compiling impala & clang', default=5,    type=int)
+    parser.add_argument('-it', '--impala-timeout', help='timeout for compiling impala ', default=5,    type=int)
+    parser.add_argument('-ct', '--clang-timeout', help='timeout for compiling  clang', default=5,    type=int)
     parser.add_argument('-rt', '--run-timeout',     help='timeout for running binary',           default=10,   type=int)
     parser.add_argument('-b',  '--broken',          help='also run broken tests',                default=False, action='store_true', dest='broken')
     parser.add_argument('-n',  '--no-cleanup',      help='keep log files after test run',        default=False, action='store_true', dest='noCleanUp')
@@ -136,63 +141,70 @@ def split_arguments(arguments):
             exec_args.append(argument[1:-1])
     return clang_args, exec_args
 
-# TODO why is test a pair?
-def runCodegenTest(test, arguments): 
-    orig_impala = test[0]
-    orig_in     = test[0][:-7] + '.in'
-    orig_out    = test[0][:-7]+'.out'
-
-    tmp_log = test[1] +'.tmp.log'
-    tmp_exe = test[1]
-    tmp_ll  = test[1] + '.ll'
-    tmp_out = test[1]+'.tmp.out'
-
-    clang_args, exec_args = split_arguments(arguments)
-    cmd_impala = [args.impala]
-    cmd_impala.append(orig_impala)
-    cmd_impala.append('-emit-llvm')
-
-    try:
-        tmp_log_file = open(tmp_log, 'w')
-        p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.compile_timeout)
-        if p.returncode != 0:
-            return FAILED
-        cmd_clang = [args.clang, tmp_ll, 'lib.c', '-o', tmp_exe]
-        cmd_clang.extend(clang_args)
-        p = subprocess.run(cmd_clang)
-    except subprocess.TimeoutExpired as timeout:
-        return TIMEDOUT  
-    except:
-        return FAILED
-
-    cmd_exec = ['./' + tmp_exe]
-    cmd_exec.extend(exec_args)
-    try:
-        orig_in_file = open(orig_in)
-    except:
-        orig_in_file = None
-    tmp_out_file = open(tmp_out, 'w')
-
-    try:
-        p = subprocess.run(cmd_exec, stdin = orig_in_file, stdout=tmp_out_file, timeout=args.run_timeout)
-    except subprocess.TimeoutExpired as timeout:
-        return TIMEDOUT 
-    except:
-        return FAILED
-
-    diff = compare_Files(tmp_out, orig_out)
-
-    if not args.noCleanUp:
-        subprocess.run(['rm', tmp_ll])
-        subprocess.run(['rm', tmp_out])
-        subprocess.run(['rm', tmp_log])
-        subprocess.run(['rm', tmp_exe])
-
-    if diff:
-        return SUCCESS
-    return FAILED
 
 def runTests():
+    def runCodegenTest():
+        orig_impala = test_path
+        orig_in     = test_path[:-7] + '.in'
+        orig_out    = test_path[:-7]+'.out'
+        
+        tmp_log = test_name +'.tmp.log'
+        tmp_exe = test_name
+        tmp_ll  = test_name + '.ll'
+        tmp_out = test_name+'.tmp.out'
+
+        clang_args, exec_args = split_arguments(arguments)
+        cmd_impala = [args.impala]
+        cmd_impala.append(orig_impala)
+        cmd_impala.append('-emit-llvm')
+
+        try:
+            tmp_log_file = open(tmp_log, 'w')
+            p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.impala_timeout)
+            if p.returncode != 0:
+                return IMPALA_FAILED
+        except subprocess.TimeoutExpired as timeout:
+            return IMPALA_TIMEDOUT    
+        except:   
+            return IMPALA_FAILED
+      
+        try:          
+            cmd_clang = [args.clang, tmp_ll, 'lib.c', '-o', tmp_exe]
+            cmd_clang.extend(clang_args)
+            p = subprocess.run(cmd_clang,  stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.clang_timeout)
+        except subprocess.TimeoutExpired as timeout:
+            return CLANG_TIMEDOUT  
+        except:
+            return CLANG_FAILED      
+
+        cmd_exec = ['./' + tmp_exe]
+        cmd_exec.extend(exec_args)
+        try:
+            orig_in_file = open(orig_in)
+        except:
+            orig_in_file = None
+            tmp_out_file = open(tmp_out, 'w') 
+
+        try:
+            p = subprocess.run(cmd_exec, stdin = orig_in_file, stdout=tmp_out_file, timeout=args.run_timeout)
+        except subprocess.TimeoutExpired as timeout:
+            return RUN_TIMEDOUT 
+        except:
+            return RUN_FAILED    
+
+        diff = compare_Files(tmp_out, orig_out)
+
+        if not args.noCleanUp:
+            subprocess.run(['rm', tmp_ll])
+            subprocess.run(['rm', tmp_out])
+            subprocess.run(['rm', tmp_log])
+            subprocess.run(['rm', tmp_exe])
+
+        if diff:
+            return SUCCESS
+        return FAILED
+
+
     categorie_Counter = 0
     total_test_counter = 0
     total_success_counter = 0
@@ -205,23 +217,37 @@ def runTests():
         test_counter = 0
         success_counter = 0
         timeout_counter = 0
-        for test in testsuit:
-            firstLine = read_first_line(test[0])
+        for test_path, test_name in testsuit:
+            firstLine = read_first_line(test_path)
             broken, arguments = is_broken(firstLine)
             if  (not args.broken) and broken:
                 continue
-            sys.stdout.write('[' + test[0] + '] : ' )
+            arguments = arguments[1:]    
+            sys.stdout.write('[' + test_name + '] : ' )
             test_counter += 1
-            x = runCodegenTest(test, arguments[1:])
+            x = runCodegenTest()
             if x == SUCCESS:
                 success_counter += 1
                 sys.stdout.write('passed\n')
                 continue
-            if x == TIMEDOUT:
+            if x == IMPALA_TIMEDOUT:
                 timeout_counter += 1
-                sys.stdout.write('timed out\n')
+                sys.stdout.write('Impala timed out\n')
                 continue
-            sys.stdout.write('failed\n')         
+            if x == CLANG_TIMEDOUT:
+                timeout_counter += 1
+                sys.stdout.write('Clang timed out\n')
+                continue
+            if x == RUN_TIMEOUT:
+                timeout_counter += 1
+                sys.stdout.write('Binary timed out\n')
+                continue
+            if x == IMPALA_FAILED:
+                sys.stdout.write('Impala failed\n') 
+            if x == CLANG_FAILED:
+                sys.stdout.write('Clang failed\n') 
+            if x == RUN_FAILED:
+                sys.stdout.write('Binary failed\n')         
         categorie_Counter += 1
         total_test_counter += test_counter
         total_success_counter += success_counter
