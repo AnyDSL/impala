@@ -264,7 +264,7 @@ args.impala = impala
 
 clang = find_clang()
 args.clang = clang
-
+ 
 
 categories, tests = set_up_test_suit()
 runTests()
