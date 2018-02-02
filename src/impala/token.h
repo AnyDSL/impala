@@ -6,12 +6,12 @@
 
 #include "thorin/enums.h"
 #include "thorin/util/location.h"
-
-#include "impala/symbol.h"
+#include "thorin/util/symbol.h"
 
 namespace impala {
 
 using thorin::Location;
+using thorin::Symbol;
 
 class Token {
 public:
@@ -99,7 +99,7 @@ private:
     typedef thorin::HashMap<Tag, const char*, TagHash> Tag2Str;
     typedef thorin::HashMap<Tag, Symbol, TagHash> Tag2Sym;
     static int tok2op_[Num];
-    static Tag2Str tok2str_;
+    static Tag2Str tok2str_; // TODO do we need this thing?
     static Tag2Sym tok2sym_;
     static Sym2Tag keywords_;
     static Sym2Tag sym2lit_; ///< Table of \em all (including floating) suffixes for literals.

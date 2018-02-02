@@ -122,7 +122,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
             nops.push_back(convert(op));
         return world().tuple_type(nops);
     } else if (auto struct_type = type->isa<StructType>()) {
-        auto s = world().struct_type(struct_type->struct_decl()->symbol().str(), struct_type->num_ops());
+        auto s = world().struct_type(struct_type->struct_decl()->symbol(), struct_type->num_ops());
         thorin_struct_type(struct_type) = s;
         thorin_type(type) = s;
         size_t i = 0;
@@ -131,7 +131,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
         return s;
     } else if (auto enum_type = type->isa<EnumType>()) {
-        auto s = world().struct_type(enum_type->enum_decl()->symbol().str(), 2);
+        auto s = world().struct_type(enum_type->enum_decl()->symbol(), 2);
         thorin_enum_type(enum_type) = s;
         thorin_type(enum_type) = s;
 
@@ -212,7 +212,7 @@ void Fn::emit_body(CodeGen& cg, Location location) const {
         // name params and setup store locations
         for (const auto& param : params()) {
             auto p = continuation()->param(i++);
-            p->debug().set(param->symbol().str());
+            p->debug().set(param->symbol());
             cg.emit(param.get(), p);
         }
 
@@ -344,7 +344,7 @@ Value OptionDecl::emit(CodeGen& cg, const Def* init) const {
         auto bot = cg.world().bottom(variant_type);
         return Value::create_val(cg, cg.world().struct_agg(cg.thorin_enum_type(enum_type), { id, bot }) );
     } else {
-        auto continuation = cg.world().continuation(cg.convert(type())->as<thorin::FnType>(), { location(), symbol().str() });
+        auto continuation = cg.world().continuation(cg.convert(type())->as<thorin::FnType>(), {location(), symbol()});
         auto ret = continuation->param(continuation->num_params() - 1);
         auto mem = continuation->param(0);
         Array<const Def*> defs(num_args());
@@ -899,7 +899,7 @@ const Def* FnExpr::remit(CodeGen& cg) const {
  */
 
 void IdPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
-    init->debug().set(local()->symbol().str());
+    init->debug().set(local()->symbol());
     cg.emit(local(), init);
 }
 

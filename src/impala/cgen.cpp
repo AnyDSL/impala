@@ -105,7 +105,7 @@ private:
         // Structure types
         if (auto struct_type = type->isa<StructType>()) {
             const StructDecl* decl = struct_type->struct_decl();
-            ctype_prefix = "struct " + std::string(decl->symbol().str());
+            ctype_prefix = "struct " + decl->symbol().str();
             ctype_suffix = "";
             return true;
         }
@@ -268,7 +268,7 @@ public:
                     return false;
                 }
 
-                o << "    " << ctype_pref << ' ' << field->symbol().str() << ctype_suf << ";\n";
+                o << "    " << ctype_pref << ' ' << field->symbol() << ctype_suf << ";\n";
             }
             o << "};\n" << std::endl;
         }
@@ -292,7 +292,7 @@ public:
                 return false;
             }
 
-            o << return_pref << ' ' << fn->symbol().str() << '(';
+            o << return_pref << ' ' << fn->symbol() << '(';
 
             // Generate all arguments except the last one which is the implicit continuation
             for (size_t i = 0, e = fn_type->num_params() - 1; i != e; ++i) {
@@ -302,7 +302,7 @@ public:
                     return false;
                 }
 
-                o << ctype_pref << ' ' << fn->param(i)->symbol().str() << ctype_suf;
+                o << ctype_pref << ' ' << fn->param(i)->symbol() << ctype_suf;
 
                 if (i < fn_type->num_params() - 2)
                     o << ", ";

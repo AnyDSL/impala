@@ -1082,7 +1082,7 @@ char Parser::char_value(const char*& p) {
 
 const CharExpr* Parser::parse_char_expr() {
     auto symbol = lookahead().symbol();
-    const char* p = symbol.str();
+    const char* p = symbol.c_str();
     assert(*p == '\'');
     ++p;
     char value = 0;
@@ -1106,7 +1106,7 @@ const StrExpr* Parser::parse_str_expr() {
     do {
        symbols.emplace_back(lookahead().symbol());
 
-        const char* p = symbols.back().str();
+        const char* p = symbols.back().c_str();
         assert(*p == '"');
         ++p;
         while (*p != '"')
@@ -1318,7 +1318,7 @@ const Ptrn* Parser::parse_ptrn() {
                 return parse_enum_ptrn(path.release());
             }
             auto id = path->elem(0)->identifier();
-            return parse_id_ptrn(new Identifier(path->location(), id->symbol().str()));
+            return parse_id_ptrn(new Identifier(path->location(), id->symbol()));
         }
     }
 }
@@ -1427,7 +1427,7 @@ out:
 std::string Parser::parse_str() {
     std::string str;
     do {
-        std::string res = lookahead().symbol().str() + 1;
+        std::string res = lookahead().symbol().c_str() + 1;
         // replaces special characters
         for (size_t i = 0; i < res.length() - 1; ++i) {
             if (res[i] != '\\') {

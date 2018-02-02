@@ -5,7 +5,6 @@
 #include <stdexcept>
 
 #include "impala/impala.h"
-#include "impala/symbol.h"
 
 using namespace thorin;
 
@@ -289,7 +288,7 @@ Token Lexer::lex_suffix(std::string& str, bool floating) {
             }
             tok = lit;
         }
-        str += suffix.str();
+        str += suffix.c_str();
     }
 
     return {location(), tok, str};
