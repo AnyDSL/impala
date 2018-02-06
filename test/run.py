@@ -13,6 +13,7 @@ import argparse
 import sys
 import subprocess
 import filecmp
+import difflib
 
 # more constants here
 SUCCESS = 0
@@ -144,6 +145,13 @@ def split_arguments(arguments):
 
 def runTests():
     def runCodegenTest():
+        def cleanUp():
+            if not args.noCleanUp:
+                subprocess.run(['rm', tmp_ll])
+                subprocess.run(['rm', tmp_out])
+                subprocess.run(['rm', tmp_log])
+                subprocess.run(['rm', tmp_exe])
+
         orig_impala = test_path
         orig_in     = test_path[:-7] + '.in'
         orig_out    = test_path[:-7]+'.out'
@@ -183,27 +191,38 @@ def runTests():
             orig_in_file = open(orig_in)
         except:
             orig_in_file = None
-            tmp_out_file = open(tmp_out, 'w') 
+        tmp_out_file = open(tmp_out, 'w') 
 
         try:
             p = subprocess.run(cmd_exec, stdin = orig_in_file, stdout=tmp_out_file, timeout=args.run_timeout)
         except subprocess.TimeoutExpired as timeout:
-            return RUN_TIMEDOUT 
+            return RUN_TIMEOUT 
         except:
             return RUN_FAILED    
-
+        tmp_out_file.close()
         diff = compare_Files(tmp_out, orig_out)
 
-        if not args.noCleanUp:
-            subprocess.run(['rm', tmp_ll])
-            subprocess.run(['rm', tmp_out])
-            subprocess.run(['rm', tmp_log])
-            subprocess.run(['rm', tmp_exe])
-
         if diff:
+            cleanUp()
             return SUCCESS
-        return FAILED
 
+        sys.stdout.write('Output did not match expectation:\n')
+        with open(orig_out) as orig_out_file:
+            orig_lines = orig_out_file.readlines()
+        with open(tmp_out) as tmp_out_file:
+            tmp_lines = tmp_out_file.readlines()
+            
+        orig_length = len(orig_lines)
+        tmp_length  = len(tmp_lines)
+        
+        for i in range(orig_length):
+            orig_line = orig_lines[i]
+            tmp_line = tmp_lines[i]
+            if (orig_line != tmp_line):
+                difference = ''.join(difflib.ndiff(orig_line, tmp_line))
+                sys.stdout.write('line ' + str(i) +': ' + difference)
+        cleanUp()
+        return RUN_FAILED
 
     categorie_Counter = 0
     total_test_counter = 0
@@ -247,13 +266,13 @@ def runTests():
             if x == CLANG_FAILED:
                 sys.stdout.write('Clang failed\n') 
             if x == RUN_FAILED:
-                sys.stdout.write('Binary failed\n')         
+                sys.stdout.write('Binary failed\n')        
         categorie_Counter += 1
         total_test_counter += test_counter
         total_success_counter += success_counter
         total_timeout_counter += timeout_counter
         sys.stdout.write('Tests: ' + str(test_counter) + ' Passed: ' + str(success_counter) + ' Timed out: ' + str(timeout_counter) + ' Failed: ' + str(test_counter - success_counter - timeout_counter) + '\n\n')
-    sys.stdout.write('Total >>  Tests: ' + str(total_test_counter) + ' Passed: ' + str(total_success_counter) + ' Timed out: ' + str(total_timeout_counter) + ' Failed: ' + str(total_test_counter - total_success_counter - total_timeout_counter) + '\n\n')
+    sys.stdout.write('>>>>>Total>>>>  Tests: ' + str(total_test_counter) + ' Passed: ' + str(total_success_counter) + ' Timed out: ' + str(total_timeout_counter) + ' Failed: ' + str(total_test_counter - total_success_counter - total_timeout_counter) + '\n\n')
 
 
 log = open('log', 'w')
