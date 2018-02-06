@@ -207,10 +207,15 @@ def runTests():
             return SUCCESS
 
         sys.stdout.write('Output did not match expectation:\n')
-        with open(orig_out) as orig_out_file:
-            orig_lines = orig_out_file.readlines()
-        with open(tmp_out) as tmp_out_file:
-            tmp_lines = tmp_out_file.readlines()
+        try:
+            with open(orig_out) as orig_out_file:
+                orig_lines = orig_out_file.readlines()
+            with open(tmp_out) as tmp_out_file:
+                tmp_lines = tmp_out_file.readlines()
+        except:
+            sys.stdout.write('this is a binary output:\n')
+            return RUN_FAILED
+
             
         orig_length = len(orig_lines)
         tmp_length  = len(tmp_lines)
