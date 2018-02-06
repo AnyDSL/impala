@@ -272,9 +272,11 @@ def runTests():
         total_test_counter += test_counter
         total_success_counter += success_counter
         total_timeout_counter += timeout_counter
-        sys.stdout.write('Tests: ' + str(test_counter) + ' Passed: ' + str(success_counter) + ' Timed out: ' + str(timeout_counter) + ' Failed: ' + str(test_counter - success_counter - timeout_counter) + '\n\n')
-    sys.stdout.write('>>>>>Total>>>>  Tests: ' + str(total_test_counter) + ' Passed: ' + str(total_success_counter) + ' Timed out: ' + str(total_timeout_counter) + ' Failed: ' + str(total_test_counter - total_success_counter - total_timeout_counter) + '\n\n')
-
+        total_failed_counter = total_test_counter - total_success_counter - total_timeout_counter
+    sys.stdout.write('>>> Total:    {}\n'.format(total_test_counter));
+    sys.stdout.write('>>> Passed:   {}\n'.format(total_success_counter));
+    sys.stdout.write('>>> Time out: {}\n'.format(total_timeout_counter));
+    sys.stdout.write('>>> Failed:   {}\n'.format(total_failed_counter));
 
 log = open('log', 'w')
 args =  parse_args()
