@@ -19,6 +19,8 @@ IMPALA_FAILED = 3
 IMPALA_TIMEDOUT = 4
 RUN_FAILED = 5
 RUN_TIMEOUT = 6
+OUTPUT_DIFFER = 7
+LOG_DIFFER = 8
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
@@ -30,6 +32,7 @@ def parse_args():
     parser.add_argument('-rt', '--run-timeout',     help='timeout for running binary',           default=10,   type=int)
     parser.add_argument('-b',  '--broken',          help='also run broken tests',                default=False, action='store_true', dest='broken')
     parser.add_argument('-n',  '--no-cleanup',      help='keep log files after test run',        default=False, action='store_true', dest='noCleanUp')
+    parser.add_argument('-l',  '--logfile',         help='create non existing logfiles',         default=False, action='store_true', dest='logfile')
     args = parser.parse_args()
     return args
 
@@ -122,9 +125,9 @@ def set_up_test_suit():
         sorted_tests.append(sorted(t))             
     return categories, sorted_tests 
 
-def compare_Files(tmp_out, out): # True if equal, false otherwise
-    if os.path.isfile(out):
-        return filecmp.cmp(tmp_out, out)
+def compare_Files(a, b): # True if equal, false otherwise
+    if os.path.isfile(b):
+        return filecmp.cmp(a, b)
     else: 
         return True
 
@@ -147,10 +150,17 @@ def runTests():
                 subprocess.run(['rm', tmp_out])
                 subprocess.run(['rm', tmp_log])
                 subprocess.run(['rm', tmp_exe])
+        
+        def create_logfile():
+            if os.path.isfile(orig_log):
+                return
+            if os.path.isfile(tmp_log) and  os.path.getsize(tmp_log) > 0:
+                subprocess.run(['cp', tmp_log, orig_log])
 
         orig_impala = test_path
         orig_in     = test_path[:-7] + '.in'
-        orig_out    = test_path[:-7]+'.out'
+        orig_out    = test_path[:-7] + '.out'
+        orig_log    = test_path[:-7] + '.log'
         
         tmp_log = test_name +'.tmp.log'
         tmp_exe = test_name
@@ -181,6 +191,8 @@ def runTests():
         except:
             return CLANG_FAILED      
 
+        tmp_log_file.close()
+
         cmd_exec = ['./' + tmp_exe]
         cmd_exec.extend(exec_args)
         try:
@@ -198,9 +210,16 @@ def runTests():
         tmp_out_file.close()
         diff = compare_Files(tmp_out, orig_out)
 
+        if (args.logfile):
+            create_logfile()
+
         if diff:
+            diff = compare_Files(tmp_log, orig_log)
             cleanUp()
-            return SUCCESS
+            if (diff):
+                return SUCCESS
+            else:
+                return LOG_DIFFER
 
         sys.stdout.write('Output did not match expectation:\n')
         try:
@@ -267,18 +286,28 @@ def runTests():
             if x == CLANG_FAILED:
                 sys.stdout.write('Clang failed\n') 
             if x == RUN_FAILED:
-                sys.stdout.write('Binary failed\n')        
+                sys.stdout.write('Binary failed\n')  
+            if x == OUTPUT_DIFFER:
+                pass
+            if x ==  LOG_DIFFER:
+                sys.stdout.write('Logfile differed')    
         categorie_Counter += 1
         total_test_counter += test_counter
         total_success_counter += success_counter
         total_timeout_counter += timeout_counter
         total_failed_counter = total_test_counter - total_success_counter - total_timeout_counter
-    sys.stdout.write('>>> Total:    {}\n'.format(total_test_counter));
-    sys.stdout.write('>>> Passed:   {}\n'.format(total_success_counter));
-    sys.stdout.write('>>> Time out: {}\n'.format(total_timeout_counter));
-    sys.stdout.write('>>> Failed:   {}\n'.format(total_failed_counter));
+    sys.stdout.write('>>> Total:    {}\n'.format(total_test_counter))
+    sys.stdout.write('>>> Passed:   {}\n'.format(total_success_counter))
+    sys.stdout.write('>>> Time out: {}\n'.format(total_timeout_counter))
+    sys.stdout.write('>>> Failed:   {}\n'.format(total_failed_counter))
 
-log = open('log', 'w')
+def create_logfiles():
+    executable = ['codegen']
+    for exec in executable:
+        index = categories[exec]
+        testsuit = tests[index]
+
+
 args =  parse_args()
 
 impala = find_impala()
@@ -288,4 +317,5 @@ clang = find_clang()
 args.clang = clang
 
 categories, tests = set_up_test_suit()
+
 runTests()
