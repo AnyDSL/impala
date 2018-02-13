@@ -301,13 +301,6 @@ def runTests():
     sys.stdout.write('>>> Time out: {}\n'.format(total_timeout_counter))
     sys.stdout.write('>>> Failed:   {}\n'.format(total_failed_counter))
 
-def create_logfiles():
-    executable = ['codegen']
-    for exec in executable:
-        index = categories[exec]
-        testsuit = tests[index]
-
-
 args =  parse_args()
 
 impala = find_impala()
