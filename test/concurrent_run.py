@@ -12,6 +12,7 @@ import filecmp
 import difflib
 
 # more constants here
+UNHANDLED = -1
 SUCCESS = 0
 CLANG_FAILED = 1
 CLANG_TIMEDOUT = 2
@@ -22,6 +23,9 @@ RUN_TIMEOUT = 6
 OUTPUT_DIFFER = 7
 LOG_DIFFER = 8
 
+POSITIVE = [SUCCESS]
+NEGATIVE = [CLANG_FAILED, IMPALA_FAILED, RUN_FAILED, OUTPUT_DIFFER, LOG_DIFFER]
+TIMEOUT = [CLANG_TIMEDOUT, IMPALA_TIMEDOUT, RUN_TIMEOUT]
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('path', nargs='*',          help='path to test  or test directory',      default='./', type=str)
@@ -96,7 +100,7 @@ def sort_in(categories, tests, file):
     cat = give_categorie(categories, file)
     testpath = file.split('/')
     testname = testpath[-1][:-7]
-    entry = [file, testname]
+    entry = [file, testname, UNHANDLED]
     return cat, entry
 
 def set_up_test_suit():
@@ -142,21 +146,37 @@ def split_arguments(arguments):
             exec_args.append(argument[1:-1])
     return clang_args, exec_args
 
-def run_codegen_test(test_name, test_path, arguments):
-    def cleanUp():
-        if not args.noCleanUp:
-            subprocess.run(['rm', tmp_ll])
-            subprocess.run(['rm', tmp_out])
-            subprocess.run(['rm', tmp_log])
-            subprocess.run(['rm', tmp_exe])
-    
-    def create_logfile():
-        if os.path.isfile(orig_log):
-            return
-        if os.path.isfile(tmp_log) and  os.path.getsize(tmp_log) > 0:
-            subprocess.run(['cp', tmp_log, orig_log])
 
-    def handle_impala():
+def runTest(test):
+    def run_codegen_test():
+        def cleanUp():
+            if not args.noCleanUp:
+                subprocess.run(['rm', tmp_ll])
+                subprocess.run(['rm', tmp_out])
+                subprocess.run(['rm', tmp_log])
+                subprocess.run(['rm', tmp_exe])
+        
+        def create_logfile():
+            if os.path.isfile(orig_log):
+                return
+            if os.path.isfile(tmp_log) and  os.path.getsize(tmp_log) > 0:
+                subprocess.run(['cp', tmp_log, orig_log])
+
+        orig_impala = test_path
+        orig_in     = test_path[:-7] + '.in'
+        orig_out    = test_path[:-7] + '.out'
+        orig_log    = test_path[:-7] + '.log'
+        
+        tmp_log = test_name +'.tmp.log'
+        tmp_exe = test_name
+        tmp_ll  = test_name + '.ll'
+        tmp_out = test_name+'.tmp.out'
+
+        print_string = ('[' + test_name + '] : ' )
+
+        clang_args, exec_args = split_arguments(arguments)
+        tmp_log_file = open(tmp_log, 'w')
+    #####IMPALA#####
         cmd_impala = [args.impala,orig_impala, '-emit-llvm']
 
         try:
@@ -170,23 +190,21 @@ def run_codegen_test(test_name, test_path, arguments):
         except:   
             print_string += 'Impala failed'
             return IMPALA_FAILED
-        return SUCCESS
-    def handle_clang():
+
+    #####CLANG#####        
         try:          
             cmd_clang = [args.clang, tmp_ll, 'lib.c', '-o', tmp_exe]
             cmd_clang.extend(clang_args)
             p = subprocess.run(cmd_clang,  stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.clang_timeout)
         except subprocess.TimeoutExpired as timeout:
-            print_string+= 'Clang time out'
+            print_string += 'Clang time out'
             return CLANG_TIMEDOUT  
         except:
-            print_string+='Clang failed'
+            print_string +='Clang failed'
             return CLANG_FAILED      
 
         tmp_log_file.close()
-        return SUCCESS
-
-    def handle_execution():
+    #####EXECUTION#####
         cmd_exec = ['./' + tmp_exe]
         cmd_exec.extend(exec_args)
         try:
@@ -198,21 +216,24 @@ def run_codegen_test(test_name, test_path, arguments):
         try:
             p = subprocess.run(cmd_exec, stdin = orig_in_file, stdout=tmp_out_file, timeout=args.run_timeout)
         except subprocess.TimeoutExpired as timeout:
-            print_string+='Execution time out'
+            print_string +='Execution time out'
             return RUN_TIMEOUT 
         except:
-            print_string =+ 'Execution failed'
+            print_string += 'Execution failed'
             return RUN_FAILED    
         tmp_out_file.close()
-        return SUCCESS
-    
-    def handle_comparison():
+
+    #####LOGFILE-CREATION#####    
+        if (args.logfile):
+            create_logfile()
+    #####FILE COMPARISON#####
         diff = compare_Files(tmp_out, orig_out)
         if diff:
             diff = compare_Files(tmp_log, orig_log)
             cleanUp()
             if (diff):
                 print_string += 'passed'
+                print(print_string)
                 return SUCCESS
             else:
                 print_string += 'Log-files differed'
@@ -239,102 +260,43 @@ def run_codegen_test(test_name, test_path, arguments):
                 difference = ''.join(difflib.ndiff(orig_line, tmp_line))
                 print_string+=('line ' + str(i) +': ' + difference + '\n')
         cleanUp()
-        return RUN_FAILED
-
-    orig_impala = test_path
-    orig_in     = test_path[:-7] + '.in'
-    orig_out    = test_path[:-7] + '.out'
-    orig_log    = test_path[:-7] + '.log'
+        return RUN_FAILED           
     
-    tmp_log = test_name +'.tmp.log'
-    tmp_exe = test_name
-    tmp_ll  = test_name + '.ll'
-    tmp_out = test_name+'.tmp.out'
-
-    print_string = ('[' + test_name + '] : ' )
-    
-
-    clang_args, exec_args = split_arguments(arguments)
-    tmp_log_file = open(tmp_log, 'w')
-#####IMPALA#####
-    x = handle_impala()
-    if x != SUCCESS:
-        sys.stdout.write(print_string)
-        return x
-
-#####CLANG#####        
-    x = handle_clang()
-    if x != SUCCESS:
-        sys.stdout.write(print_string)
-        return x 
-#####EXECUTION#####
-    x = handle_execution()
-    if x != SUCCESS:
-        sys.stdout.write(print_string)
-        return x
-#####LOGFILE-CREATION#####    
-    if (args.logfile):
-        create_logfile()
-#####FILE COMPARISON#####
-    x = handle_execution()
-
-    sys.stdout.write(print_string)
-    return x
-
+    #####RUN-TEST#####
+    test_path, test_name, result = test
+    firstLine = read_first_line(test_path)
+    broken, arguments = is_broken(firstLine)
+    if  (not args.broken) and broken:
+        return
+    arguments = arguments[1:]    
+    result = run_codegen_test()  
+    test[2] = result
 
 
 def runTests():
     categorie_Counter = 0
+    total_failed_counter = 0
     total_test_counter = 0
     total_success_counter = 0
     total_timeout_counter = 0
+
     executable = ['codegen']
     for exec in executable:
         index = categories[exec]
         testsuit = tests[index]
+        
         sys.stdout.write('----------running Category ' + exec + '----------\n')
-        test_counter = 0
-        success_counter = 0
-        timeout_counter = 0
-        for test_path, test_name in testsuit:
-            firstLine = read_first_line(test_path)
-            broken, arguments = is_broken(firstLine)
-            if  (not args.broken) and broken:
-                continue
-            arguments = arguments[1:]    
-            test_counter += 1
-            x = run_codegen_test(test_name, test_path, arguments)  
-            if x == SUCCESS:
-                success_counter += 1
-                sys.stdout.write('passed\n')
-                continue
-            if x == IMPALA_TIMEDOUT:
-                timeout_counter += 1
-                sys.stdout.write('Impala timed out\n')
-                continue
-            if x == CLANG_TIMEDOUT:
-                timeout_counter += 1
-                sys.stdout.write('Clang timed out\n')
-                continue
-            if x == RUN_TIMEOUT:
-                timeout_counter += 1
-                sys.stdout.write('Binary timed out\n')
-                continue
-            if x == IMPALA_FAILED:
-                sys.stdout.write('Impala failed\n') 
-            if x == CLANG_FAILED:
-                sys.stdout.write('Clang failed\n') 
-            if x == RUN_FAILED:
-                sys.stdout.write('Binary failed\n')  
-            if x == OUTPUT_DIFFER:
-                pass
-            if x ==  LOG_DIFFER:
-                sys.stdout.write('Logfile differed')              
-        categorie_Counter += 1
-        total_test_counter += test_counter
-        total_success_counter += success_counter
-        total_timeout_counter += timeout_counter
-        total_failed_counter = total_test_counter - total_success_counter - total_timeout_counter
+        for test in testsuit: # replace with test 
+            runTest(test)  
+        for test in testsuit:
+            if test[2] in POSITIVE:
+                total_success_counter += 1
+            if test[2]  in NEGATIVE:
+                total_failed_counter += 1
+            if test[2] in TIMEOUT:
+                total_timeout_counter +=1
+            if test[2] != UNHANDLED:
+                total_test_counter +=1
     sys.stdout.write('>>> Total:    {}\n'.format(total_test_counter))
     sys.stdout.write('>>> Passed:   {}\n'.format(total_success_counter))
     sys.stdout.write('>>> Time out: {}\n'.format(total_timeout_counter))
