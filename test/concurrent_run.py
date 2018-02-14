@@ -27,6 +27,7 @@ LOG_DIFFER = 8
 POSITIVE = [SUCCESS]
 NEGATIVE = [CLANG_FAILED, IMPALA_FAILED, RUN_FAILED, OUTPUT_DIFFER, LOG_DIFFER]
 TIMEOUT = [CLANG_TIMEDOUT, IMPALA_TIMEDOUT, RUN_TIMEOUT]
+
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('path', nargs='*',          help='path to test  or test directory',      default='./', type=str)
@@ -290,9 +291,9 @@ def run_Tests():
             job_number = job_counter 
             job_counter +=1 
             lock.release()
-            if job_counter >= job_bound:
+            if job_number >= job_bound:
                 return  
-            test = testsuit[job_counter]
+            test = testsuit[job_number]
             run_Test()
         #end worker
     
