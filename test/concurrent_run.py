@@ -11,6 +11,7 @@ import subprocess
 import filecmp
 import difflib
 import threading
+from collections import namedtuple
 
 # more constants here
 UNHANDLED = -1
@@ -27,6 +28,33 @@ LOG_DIFFER = 8
 POSITIVE = [SUCCESS]
 NEGATIVE = [CLANG_FAILED, IMPALA_FAILED, RUN_FAILED, OUTPUT_DIFFER, LOG_DIFFER]
 TIMEOUT = [CLANG_TIMEDOUT, IMPALA_TIMEDOUT, RUN_TIMEOUT]
+
+class test:
+    name=''
+    path=''
+    result = UNHANDLED
+
+    def __init__(self,test_path, test_name):
+        self.name = test_name
+        self.path = test_path
+
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def ___le__(self, other):
+        return self.name <= other.name
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __ne__(self, other):
+        return self.name != other.name
+
+    def __gt__(self, other):
+        return self.name > other.name
+
+    def __ge__(self, other):
+        return self.name >= other.name
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
@@ -102,7 +130,7 @@ def sort_in(categories, tests, file):
     cat = give_categorie(categories, file)
     testpath = file.split('/')
     testname = testpath[-1][:-7]
-    entry = [file, testname, UNHANDLED]
+    entry = test(file, testname)
     return cat, entry
 
 def set_up_test_suit():
@@ -273,14 +301,17 @@ def run_Tests():
                 # end run-codegentest
             
             # start run_test
-            test_path, test_name, result = test
+            test_path = test.path
+            test_name = test.name
+            result = test.result
+            
             firstLine = read_first_line(test_path)
             broken, arguments = is_broken(firstLine)
             if  (not args.broken) and broken:
                 return
             arguments = arguments[1:]    
-            result = run_codegen_test()  
-            test[2] = result
+            result = run_codegen_test()
+            test.result = result
             #end run_test
 
         #start worker    
@@ -319,13 +350,13 @@ def run_Tests():
             threads[i].join()
         
         for test in testsuit:
-            if test[2] in POSITIVE:
+            if test.result in POSITIVE:
                 total_success_counter += 1
-            if test[2]  in NEGATIVE:
+            if test.result  in NEGATIVE:
                 total_failed_counter += 1
-            if test[2] in TIMEOUT:
+            if test.result in TIMEOUT:
                 total_timeout_counter +=1
-            if test[2] != UNHANDLED:
+            if test.result != UNHANDLED:
                 total_test_counter +=1
     sys.stdout.write('>>> Total:    {}\n'.format(total_test_counter))
     sys.stdout.write('>>> Passed:   {}\n'.format(total_success_counter))
