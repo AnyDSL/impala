@@ -12,6 +12,7 @@ import filecmp
 import difflib
 import threading
 from collections import namedtuple
+import time
 
 # more constants here
 UNHANDLED = -1
@@ -375,5 +376,10 @@ args.clang = clang
 
 categories, tests = set_up_test_suit()
 
+
+start = time.time()
 job_counter = 0
 run_Tests()
+end = time.time()
+passed_time = end - start
+print('Time for testing: ' + str(passed_time) + ' seconds')
