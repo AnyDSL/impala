@@ -781,9 +781,12 @@ void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
                 otherwise = JumpTarget({arm(i)->location().front(), "otherwise"});
                 break;
             } else {
-                if (is_integer)
-                    defs[i] = cg.remit(arm(i)->ptrn()->as<LiteralPtrn>()->literal());
-                else {
+                if (is_integer) {
+                    auto ptrn = arm(i)->ptrn()->as<LiteralPtrn>();
+                    defs[i] = cg.remit(ptrn->literal());
+                    if (ptrn->has_minus())
+                        defs[i] = cg.world().arithop_minus(defs[i]);
+                } else {
                     auto enum_ptrn = arm(i)->ptrn()->as<EnumPtrn>();
                     auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
                     defs[i] = cg.world().literal_qu32(option_decl->index(), arm(i)->ptrn()->location());

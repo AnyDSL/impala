@@ -784,6 +784,8 @@ void EnumPtrn::check(TypeSema& sema) const {
 
 void LiteralPtrn::check(TypeSema& sema) const {
     sema.check(literal());
+    if (has_minus())
+        sema.expect_num(literal(), "literal pattern");
 }
 
 //------------------------------------------------------------------------------

@@ -2019,12 +2019,14 @@ private:
 
 class LiteralPtrn : public Ptrn {
 public:
-    LiteralPtrn(const LiteralExpr* literal)
+    LiteralPtrn(const LiteralExpr* literal, bool minus)
         : Ptrn(literal->location())
         , literal_(dock(literal_, literal))
+        , minus_(minus)
     {}
 
     const LiteralExpr* literal() const { return literal_.get()->as<LiteralExpr>(); }
+    bool has_minus() const { return minus_; }
 
     void bind(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
@@ -2037,6 +2039,7 @@ private:
     void check(TypeSema&) const override;
 
     std::unique_ptr<const Expr> literal_;
+    bool minus_;
 };
 
 //------------------------------------------------------------------------------
