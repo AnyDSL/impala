@@ -782,10 +782,7 @@ void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
                 break;
             } else {
                 if (is_integer) {
-                    auto ptrn = arm(i)->ptrn()->as<LiteralPtrn>();
-                    defs[i] = cg.remit(ptrn->literal());
-                    if (ptrn->has_minus())
-                        defs[i] = cg.world().arithop_minus(defs[i]);
+                    defs[i] = arm(i)->ptrn()->as<LiteralPtrn>()->emit_literal(cg);
                 } else {
                     auto enum_ptrn = arm(i)->ptrn()->as<EnumPtrn>();
                     auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
@@ -950,10 +947,15 @@ const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) co
     return cond ? cond : cg.world().literal(true);
 }
 
+const thorin::Def* LiteralPtrn::emit_literal(CodeGen& cg) const {
+    auto def = cg.remit(literal());
+    return has_minus() ? cg.world().arithop_minus(def, def->debug()) : def;
+}
+
 void LiteralPtrn::emit(CodeGen&, const thorin::Def*) const {}
 
 const thorin::Def* LiteralPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
-    return cg.world().cmp_eq(init, cg.remit(literal()));
+    return cg.world().cmp_eq(init, emit_literal(cg));
 }
 
 /*

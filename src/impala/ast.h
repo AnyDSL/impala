@@ -2031,6 +2031,7 @@ public:
     void bind(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
     const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const override;
+    const thorin::Def* emit_literal(CodeGen&) const;
     bool is_refutable() const override;
     std::ostream& stream(std::ostream&) const override;
 
