@@ -102,7 +102,10 @@ if(NOT AnyDSL_runtime_FOUND)
 endif()
 
 find_path(Impala_INCLUDE_DIR NAMES impala/impala.h PATHS ${IMPALA_ROOT_DIR}/src)
-set(Impala_LIBRARY impala)
+if(NOT TARGET impala)
+    include(${Impala_DIR}/impala-exports.cmake)
+endif()
+set(Impala_LIBRARY libimpala)
 
 set(Impala_RUNTIME_LIBRARIES)
 
