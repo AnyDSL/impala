@@ -133,7 +133,7 @@ private:
     TypeMap<std::unique_ptr<Representative>> representatives_;
     bool todo_ = true;
 
-    friend void type_inference(Init&, const Module*);
+    friend void type_inference(std::unique_ptr<TypeTable>& typetable, const Module*);
 };
 
 //------------------------------------------------------------------------------
@@ -333,9 +333,9 @@ auto InferSema::unify_by_rank(Representative* x, Representative* y) -> Represent
 
 //------------------------------------------------------------------------------
 
-void type_inference(Init& init, const Module* module) {
-    auto sema = new InferSema();
-    init.typetable.reset(sema);
+void type_inference(std::unique_ptr<TypeTable>& typetable, const Module* module) {
+    auto sema = new InferSema;
+    typetable.reset(sema);
 
     int i = 0;
     for (;sema->todo_; ++i) {

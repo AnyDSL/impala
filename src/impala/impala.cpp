@@ -7,23 +7,25 @@
 
 namespace impala {
 
+int global_num_warnings = 0;
+int global_num_errors = 0;
 bool fancy_output = false;
 
 bool& fancy() { return fancy_output; }
+int num_warnings() { return global_num_warnings; }
+int num_errors() { return global_num_errors; }
 
-void init() { PrecTable::init(); Token::init(); }
-void check(Init& init, const Module* mod, bool nossa) {
+void init() {
+    PrecTable::init();
+    Token::init();
+}
+
+void check(std::unique_ptr<TypeTable>& typetable, const Module* mod, bool nossa) {
     name_analysis(mod);
-    type_inference(init, mod);
+    type_inference(typetable, mod);
     type_analysis(mod, nossa);
     //borrow_check(mod);
 }
-
-int global_num_warnings = 0;
-int global_num_errors = 0;
-
-int num_warnings() { return global_num_warnings; }
-int num_errors() { return global_num_errors; }
 
 Prec PrecTable::infix[Token::Num];
 

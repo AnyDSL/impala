@@ -16,16 +16,13 @@
 
 //------------------------------------------------------------------------------
 
-using namespace thorin;
-using namespace std;
-
-typedef vector<string> Names;
+typedef std::vector<std::string> Names;
 
 //------------------------------------------------------------------------------
 
-ostream* open(ofstream& stream, const string& name) {
+std::ostream* open(std::ofstream& stream, const std::string& name) {
     if (name == "-")
-        return &cout;
+        return &std::cout;
 
     stream.open(name);
     return &stream;
@@ -34,15 +31,15 @@ ostream* open(ofstream& stream, const string& name) {
 int main(int argc, char** argv) {
     try {
         if (argc < 1)
-            throw logic_error("bad number of arguments");
+            throw std::logic_error("bad number of arguments");
 
-        string prgname = argv[0];
+        std::string prgname = argv[0];
         Names infiles;
 #ifndef NDEBUG
         Names breakpoints;
         bool track_history;
 #endif
-        string out_name, log_name, log_level;
+        std::string out_name, log_name, log_level;
         bool help,
              emit_cint, emit_thorin, emit_ast, emit_annotated,
              emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
@@ -54,16 +51,16 @@ int main(int argc, char** argv) {
 #define LOG_LEVELS "{error|warn|info}"
 #endif
 
-        auto cmd_parser = ArgParser()
+        auto cmd_parser = thorin::ArgParser()
             .implicit_option             (                      "<infiles>", "input files", infiles)
             .add_option<bool>            ("help",               "",          "produce this help message", help, false)
-            .add_option<string>          ("log-level",          LOG_LEVELS,  "set log level", log_level, "error")
-            .add_option<string>          ("log",                "<arg>", "specifies log file; use '-' for stdout (default)", log_name, "-")
+            .add_option<std::string>     ("log-level",          LOG_LEVELS,  "set log level", log_level, "error")
+            .add_option<std::string>     ("log",                "<arg>", "specifies log file; use '-' for stdout (default)", log_name, "-")
 #ifndef NDEBUG
-            .add_option<vector<string>>  ("break",              "<args>", "breakpoint at definition generation with global id <arg>; may be used multiple times separated by space or '_'", breakpoints)
-            .add_option<bool>             ("track-history",     "", "track hisotry of names - useful for debugging", track_history, false)
+            .add_option<Names>           ("break",              "<args>", "breakpoint at definition generation with global id <arg>; may be used multiple times separated by space or '_'", breakpoints)
+            .add_option<bool>            ("track-history",      "", "track hisotry of names - useful for debugging", track_history, false)
 #endif
-            .add_option<string>          ("o",                  "", "specifies the output module name", out_name, "")
+            .add_option<std::string>     ("o",                  "", "specifies the output module name", out_name, "")
             .add_option<bool>            ("O0",                 "", "reduce compilation time and make debugging produce the expected results (default)", opt_0, false)
             .add_option<bool>            ("O1",                 "", "optimize", opt_1, false)
             .add_option<bool>            ("O2",                 "", "optimize even more", opt_2, false)
@@ -86,23 +83,23 @@ int main(int argc, char** argv) {
 
         impala::fancy() = fancy;
 
-        ofstream log_stream;
+        std::ofstream log_stream;
         if (log_level == "error") {
-            Log::set(Log::Error, open(log_stream, log_name));
+            thorin::Log::set(thorin::Log::Error, open(log_stream, log_name));
         } else if (log_level == "warn") {
-            Log::set(Log::Warn, open(log_stream, log_name));
+            thorin::Log::set(thorin::Log::Warn, open(log_stream, log_name));
         } else if (log_level == "info") {
-            Log::set(Log::Info, open(log_stream, log_name));
+            thorin::Log::set(thorin::Log::Info, open(log_stream, log_name));
         } else if (log_level == "verbose") {
-            Log::set(Log::Verbose, open(log_stream, log_name));
+            thorin::Log::set(thorin::Log::Verbose, open(log_stream, log_name));
         } else if (log_level == "debug") {
-            Log::set(Log::Debug, open(log_stream, log_name));
+            thorin::Log::set(thorin::Log::Debug, open(log_stream, log_name));
         } else
-            throw invalid_argument("log level must be one of " LOG_LEVELS);
+            throw std::invalid_argument("log level must be one of " LOG_LEVELS);
 
         // check optimization levels
         if (opt_s + opt_0 + opt_1 + opt_2 + opt_3 > 1)
-            throw invalid_argument("multiple optimization levels specified");
+            throw std::invalid_argument("multiple optimization levels specified");
 
         int opt = 0;
         if (opt_s) opt = -1;
@@ -111,12 +108,12 @@ int main(int argc, char** argv) {
         else if (opt_3) opt = 3;
 
         if (infiles.empty() && !help) {
-            errf("no input files\n");
+            thorin::errf("no input files\n");
             return EXIT_FAILURE;
         }
 
         if (help) {
-            outf("Usage: {} [options] file...\n", prgname);
+            thorin::outf("Usage: {} [options] file...\n", prgname);
             cmd_parser.print_help();
             return EXIT_SUCCESS;
         }
@@ -128,19 +125,20 @@ int main(int argc, char** argv) {
             for (const auto& infile : infiles) {
                 auto i = infile.find_last_of('.');
                 if (infile.substr(i + 1) != "impala")
-                    throw invalid_argument("input file '" + infile + "' does not have '.impala' extension");
+                    throw std::invalid_argument("input file '" + infile + "' does not have '.impala' extension");
                 auto rest = infile.substr(0, i);
                 auto f = rest.find_last_of('/');
-                if (f != string::npos) {
+                if (f != std::string::npos) {
                     rest = rest.substr(f+1);
                 }
                 if (rest.empty())
-                    throw invalid_argument("input file '" + infile + "' has empty module name");
+                    throw std::invalid_argument("input file '" + infile + "' has empty module name");
                 module_name = rest;
             }
         }
 
-        impala::Init init(module_name);
+        thorin::World world(module_name);
+        impala::init();
 
 #ifndef NDEBUG
         for (auto b : breakpoints) {
@@ -150,7 +148,7 @@ int main(int argc, char** argv) {
                 char c = b[i];
                 if (c == '_') {
                     if (num != 0) {
-                        init.world.breakpoint(num);
+                        world.breakpoint(num);
                         num = 0;
                     }
                 } else if (std::isdigit(c)) {
@@ -162,16 +160,16 @@ int main(int argc, char** argv) {
             }
 
             if (num != 0)
-                init.world.breakpoint(num);
+                world.breakpoint(num);
         }
 
-        init.world.enable_history(track_history);
+        world.enable_history(track_history);
 #endif
 
         impala::Items items;
         for (const auto& infile : infiles) {
             auto filename = infile.c_str();
-            ifstream file(filename);
+            std::ifstream file(filename);
             impala::parse(items, file, filename);
         }
 
@@ -180,7 +178,8 @@ int main(int argc, char** argv) {
         if (emit_ast)
             module->stream(std::cout);
 
-        check(init, module.get(), nossa);
+        std::unique_ptr<impala::TypeTable> typetable;
+        impala::check(typetable, module.get(), nossa);
         bool result = impala::num_errors() == 0;
 
         if (emit_annotated)
@@ -202,40 +201,40 @@ int main(int argc, char** argv) {
             });
             opts.guard[opts.guard.length() - 2] = '_';
 
-            ofstream out_file(module_name + ".h");
+            std::ofstream out_file(module_name + ".h");
             if (!out_file) {
-                errf("cannot open file '{}' for writing\n", opts.file_name);
+                thorin::errf("cannot open file '{}' for writing\n", opts.file_name);
                 return EXIT_FAILURE;
             }
             impala::generate_c_interface(module.get(), opts, out_file);
         }
 
         if (result && (emit_llvm || emit_thorin))
-            emit(init.world, module.get());
+            impala::emit(world, module.get());
 
         if (result) {
             if (!nocleanup)
-                init.world.cleanup();
+                world.cleanup();
             if (opt_thorin)
-                init.world.opt();
+                world.opt();
             if (emit_thorin)
-                init.world.dump();
+                world.dump();
             if (emit_llvm) {
 #ifdef LLVM_SUPPORT
-                thorin::emit_llvm(init.world, opt, debug);
+                thorin::emit_llvm(world, opt, debug);
 #else
-                outf("warning: built without LLVM support - I don't emit an LLVM file\n");
+                thorin::outf("warning: built without LLVM support - I don't emit an LLVM file\n");
 #endif
             }
         } else
             return EXIT_FAILURE;
 
         return EXIT_SUCCESS;
-    } catch (exception const& e) {
-        cerr << e.what() << std::endl;
+    } catch (std::exception const& e) {
+        thorin::errf("{}\n", e.what());
         return EXIT_FAILURE;
     } catch (...) {
-        cerr << "unknown exception" << std::endl;
+        thorin::errf("unknown exception\n");
         return EXIT_FAILURE;
     }
 }
