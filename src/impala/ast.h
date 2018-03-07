@@ -137,9 +137,7 @@ public:
     ASTNode(const ASTNode&) = delete;
     ASTNode(ASTNode&&) = delete;
     ASTNode(Location location);
-#ifndef NDEBUG
     virtual ~ASTNode() { assert(location_.is_set()); }
-#endif
 
     size_t gid() const { return gid_; }
     Location location() const { return location_; }
@@ -1105,9 +1103,7 @@ public:
         : Typeable(location)
     {}
 
-#ifndef NDEBUG
     virtual ~Expr() { assert(back_ref_ != nullptr); }
-#endif
 
     const thorin::Def* extra() const { return extra_; }
 
