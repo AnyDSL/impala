@@ -137,9 +137,7 @@ public:
     ASTNode(const ASTNode&) = delete;
     ASTNode(ASTNode&&) = delete;
     ASTNode(Location location);
-#ifndef NDEBUG
     virtual ~ASTNode() { assert(location_.is_set()); }
-#endif
 
     size_t gid() const { return gid_; }
     Location location() const { return location_; }
@@ -1105,9 +1103,7 @@ public:
         : Typeable(location)
     {}
 
-#ifndef NDEBUG
     virtual ~Expr() { assert(back_ref_ != nullptr); }
-#endif
 
     const thorin::Def* extra() const { return extra_; }
 
@@ -2019,16 +2015,19 @@ private:
 
 class LiteralPtrn : public Ptrn {
 public:
-    LiteralPtrn(const LiteralExpr* literal)
+    LiteralPtrn(const LiteralExpr* literal, bool minus)
         : Ptrn(literal->location())
         , literal_(dock(literal_, literal))
+        , minus_(minus)
     {}
 
     const LiteralExpr* literal() const { return literal_.get()->as<LiteralExpr>(); }
+    bool has_minus() const { return minus_; }
 
     void bind(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
     const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const override;
+    const thorin::Def* emit_literal(CodeGen&) const;
     bool is_refutable() const override;
     std::ostream& stream(std::ostream&) const override;
 
@@ -2037,6 +2036,7 @@ private:
     void check(TypeSema&) const override;
 
     std::unique_ptr<const Expr> literal_;
+    bool minus_;
 };
 
 //------------------------------------------------------------------------------

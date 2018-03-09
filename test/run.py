@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 
-# - remove code duplication
-# - make output nicer (better error messages)
 # - parallelize: -j (std: num cpu cores)
+# - flag to auto-generate xxx.log file if not present
 
 import os
 import argparse

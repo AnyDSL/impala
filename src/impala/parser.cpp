@@ -1302,6 +1302,7 @@ const Expr* Parser::parse_pe_expr(const char* context) {
 
 const Ptrn* Parser::parse_ptrn() {
     switch (lookahead()) {
+        case Token::SUB:
         case Token::TRUE:
         case Token::FALSE:
 #define IMPALA_LIT(itype, atype) case Token::LIT_##itype:
@@ -1354,7 +1355,8 @@ const EnumPtrn* Parser::parse_enum_ptrn(const Path* path) {
 }
 
 const LiteralPtrn* Parser::parse_literal_ptrn() {
-    return new LiteralPtrn(parse_literal_expr());
+    bool minus = accept(Token::SUB);
+    return new LiteralPtrn(parse_literal_expr(), minus);
 }
 
 /*

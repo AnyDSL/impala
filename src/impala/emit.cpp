@@ -238,16 +238,16 @@ void Fn::emit_body(CodeGen& cg, Location location) const {
             cg.cur_bb->jump(ret_param(), {mem, def}, location.back());
     }
 
-    // now handle the pe_profile
+    // now handle the filter
     {
         size_t i = 0;
         auto global = pe_expr() ? cg.remit(pe_expr()) : cg.world().literal_bool(false, location);
-        Array<const Def*> pe_profile(continuation()->num_params());
-        pe_profile[i++] = global; // mem param
+        Array<const Def*> filter(continuation()->num_params());
+        filter[i++] = global; // mem param
 
         for (const auto& param : params()) {
             auto pe_expr = param->pe_expr();
-            pe_profile[i++] = pe_expr
+            filter[i++] = pe_expr
                           ? cg.world().arithop_or(global, cg.remit(pe_expr), pe_expr->location())
                           : global;
         }
@@ -255,10 +255,10 @@ void Fn::emit_body(CodeGen& cg, Location location) const {
         // HACK for unit
         if (auto tuple_type = continuation()->type()->ops().back()->isa<thorin::TupleType>()) {
             if (tuple_type->num_ops() == 0)
-                pe_profile[i++] = global;
+                filter[i++] = global;
         }
 
-        continuation()->set_pe_profile(pe_profile);
+        continuation()->set_filter(filter);
     }
 }
 
@@ -781,9 +781,9 @@ void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
                 otherwise = JumpTarget({arm(i)->location().front(), "otherwise"});
                 break;
             } else {
-                if (is_integer)
-                    defs[i] = cg.remit(arm(i)->ptrn()->as<LiteralPtrn>()->literal());
-                else {
+                if (is_integer) {
+                    defs[i] = arm(i)->ptrn()->as<LiteralPtrn>()->emit_literal(cg);
+                } else {
                     auto enum_ptrn = arm(i)->ptrn()->as<EnumPtrn>();
                     auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
                     defs[i] = cg.world().literal_qu32(option_decl->index(), arm(i)->ptrn()->location());
@@ -947,10 +947,15 @@ const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) co
     return cond ? cond : cg.world().literal(true);
 }
 
+const thorin::Def* LiteralPtrn::emit_literal(CodeGen& cg) const {
+    auto def = cg.remit(literal());
+    return has_minus() ? cg.world().arithop_minus(def, def->debug()) : def;
+}
+
 void LiteralPtrn::emit(CodeGen&, const thorin::Def*) const {}
 
 const thorin::Def* LiteralPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
-    return cg.world().cmp_eq(init, cg.remit(literal()));
+    return cg.world().cmp_eq(init, emit_literal(cg));
 }
 
 /*

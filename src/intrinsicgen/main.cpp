@@ -19,9 +19,11 @@ static const char * const IntrinsicNameTable[] = {
 const impala::Type* llvm2impala(impala::TypeTable&, llvm::Type*);
 
 int main() {
-    impala::Init init("dummy");
+    impala::init();
+    std::unique_ptr<impala::TypeTable> typetable;
+
     auto module = std::make_unique<impala::Module>("dummy.impala");
-    check(init, module.get(), false);
+    check(typetable, module.get(), false);
 
     llvm::LLVMContext context;
     int num = llvm::Intrinsic::num_intrinsics - 1;
@@ -48,7 +50,7 @@ int main() {
             std::cout << "// fn \"" << llvm_name << "\" " << name;
             std::cout << " (...) -> (...); // is overloaded";
         } else {
-            if (auto itype = llvm2impala(*init.typetable, llvm::Intrinsic::getType(context, id))) {
+            if (auto itype = llvm2impala(*typetable, llvm::Intrinsic::getType(context, id))) {
                 std::cout << thorin::endl;
                 auto fn = itype->as<impala::FnType>();
                 std::cout << "fn \"" << llvm_name << "\" " << name << "(";

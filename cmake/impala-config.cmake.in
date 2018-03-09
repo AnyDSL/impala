@@ -12,6 +12,8 @@
 #     [ IMPALA_FLAGS_DEBUG -flag1 -flag2 ...]
 #     FILES file1.impala file2.impala
 # )
+# Impala_INCLUDE_DIR
+# Impala_LIBRARY
 # Impala_RUNTIME_LIBRARIES
 # Impala_FOUND
 
@@ -32,6 +34,10 @@ find_path(Impala_DIR
 )
 # legacy fallback
 set(IMPALA_DIR ${Impala_DIR})
+
+find_path(IMPALA_ROOT_DIR
+    NAMES cmake/impala-config.cmake.in src/impala/impala.h
+    PATHS ${Impala_DIR} $ENV{Impala_DIR} ${IMPALA_ROOT_DIR} "@CMAKE_CURRENT_SOURCE_DIR@" "@CMAKE_SOURCE_DIR@")
 
 if(NOT TARGET impala)
     include(${Impala_DIR}/impala-exports.cmake)
@@ -94,6 +100,12 @@ find_package(AnyDSL_runtime QUIET)
 if(NOT AnyDSL_runtime_FOUND)
     message(STATUS "AnyDSL runtime not found. Set AnyDSL_runtime_DIR to enable runtime features.")
 endif()
+
+find_path(Impala_INCLUDE_DIR NAMES impala/impala.h PATHS ${IMPALA_ROOT_DIR}/src)
+if(NOT TARGET impala)
+    include(${Impala_DIR}/impala-exports.cmake)
+endif()
+set(Impala_LIBRARY libimpala)
 
 set(Impala_RUNTIME_LIBRARIES)
 

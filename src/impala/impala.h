@@ -14,32 +14,18 @@
 
 namespace impala {
 
-bool& fancy();
-
 class ASTNode;
 class Item;
 class Module;
 typedef std::vector<std::unique_ptr<const Item>> Items;
 
 void init();
-
-struct Init {
-    Init(std::string module_name)
-        : world(std::move(module_name))
-    {
-        init();
-    }
-
-    thorin::World world;
-    std::unique_ptr<TypeTable> typetable;
-};
-
 void parse(Items&, std::istream&, const char*);
 void name_analysis(const Module*);
-void type_inference(Init&, const Module*);
+void type_inference(std::unique_ptr<TypeTable>& typetable, const Module*);
 void type_analysis(const Module*, bool nossa);
 //void borrow_check(const ModContents*);
-void check(Init&, const Module*, bool nossa);
+void check(std::unique_ptr<TypeTable>& typetable, const Module*, bool nossa);
 void emit(thorin::World&, const Module*);
 
 enum class Prec {
@@ -62,8 +48,7 @@ struct PrecTable {
 
 private:
     static void init();
-
-    friend void init();
+    friend void impala::init();
 };
 
 extern int global_num_warnings;
@@ -71,6 +56,7 @@ extern int global_num_errors;
 
 int num_warnings();
 int num_errors();
+bool& fancy();
 
 template<typename... Args>
 std::ostream& warning(const thorin::Location& loc, const char* fmt, Args... args) {
