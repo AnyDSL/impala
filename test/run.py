@@ -63,9 +63,9 @@ def parse_args():
     parser.add_argument('-it', '--impala-timeout',  help='timeout for compiling impala ',        default=5,    type=int)
     parser.add_argument('-ct', '--clang-timeout',   help='timeout for compiling  clang',         default=5,    type=int)
     parser.add_argument('-rt', '--run-timeout',     help='timeout for running binary',           default=10,   type=int)
-    parser.add_argument('-j', '--concurrency',     help='numbers of threads to use',             default=1,    type=int)
+    parser.add_argument('-j', '--concurrency',      help='numbers of threads to use',            default=1,    type=int)
     parser.add_argument('-b',  '--broken',          help='also run broken tests',                default=False, action='store_true', dest='broken')
-    parser.add_argument('-n',  '--no-clean_up',      help='keep log files after test run',        default=False, action='store_true', dest='noclean_up')
+    parser.add_argument('-n',  '--no-clean_up',     help='keep log files after test run',        default=False, action='store_true', dest='noclean_up')
     parser.add_argument('-l',  '--logfile',         help='create non existing logfiles',         default=False, action='store_true', dest='logfile')
     args = parser.parse_args()
     return args
