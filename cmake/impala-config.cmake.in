@@ -2,16 +2,6 @@
 # in order to compile and link against .impala files
 #
 # Impala_BIN
-# FUNCTION wrap_impala_sources( <output variable>
-#     [ OUTPUT_NAME basename ]
-#     [ CLANG_FLAGS --flag1 --flag2 ...]
-#     [ CLANG_FLAGS_RELEASE --flag1 --flag2 ...]
-#     [ CLANG_FLAGS_DEBUG --flag1 --flag2 ...]
-#     [ IMPALA_FLAGS -emit-c-interface ...]
-#     [ IMPALA_FLAGS_RELEASE -flag1 -flag2 ...]
-#     [ IMPALA_FLAGS_DEBUG -flag1 -flag2 ...]
-#     FILES file1.impala file2.impala
-# )
 # Impala_INCLUDE_DIR
 # Impala_LIBRARY
 # Impala_FOUND
@@ -20,23 +10,26 @@ cmake_minimum_required(VERSION 3.1)
 
 find_path(Impala_BUILD_DIR
     NAMES CMakeCache.txt
-    PATHS ${Impala_BUILD_DIR} ${IMPALA_BUILD_DIR} "@CMAKE_CURRENT_BINARY_DIR@"
+    PATHS ${Impala_BUILD_DIR} ${Impala_BUILD_DIR} "@CMAKE_CURRENT_BINARY_DIR@"
 )
 find_path(Impala_INSTALL_DIR
-    NAMES share/impala/cmake/impala-config.cmake
+    NAMES share/anydsl/cmake/impala-config.cmake
     PATHS "@CMAKE_INSTALL_PREFIX@"
 )
 find_path(Impala_DIR
     NAMES impala-config.cmake
-    PATHS ${Impala_DIR} ${IMPALA_DIR} $ENV{IMPALA_DIR} $ENV{Impala_DIR} ${CMAKE_CURRENT_LIST_DIR} ${IMPALA_BUILD_DIR} ${IMPALA_INSTALL_DIR} ${IMPALA_SOURCE_DIR} "@CMAKE_CURRENT_BINARY_DIR@/share/impala/cmake"
-    PATH_SUFFIXES share/impala/cmake
+    PATHS ${Impala_DIR} $ENV{Impala_DIR} ${CMAKE_CURRENT_LIST_DIR} ${Impala_BUILD_DIR} ${Impala_INSTALL_DIR} ${Impala_SOURCE_DIR} "@CMAKE_CURRENT_BINARY_DIR@/share/anydsl/cmake"
+    PATH_SUFFIXES share/anydsl/cmake
 )
-# legacy fallback
-set(IMPALA_DIR ${Impala_DIR})
+find_path(Thorin_DIR
+    NAMES thorin-config.cmake
+    PATHS ${Thorin_DIR} $ENV{Thorin_DIR} ${CMAKE_CURRENT_LIST_DIR} "@CMAKE_CURRENT_BINARY_DIR@/share/anydsl/cmake" @Thorin_DIR@
+    PATH_SUFFIXES share/anydsl/cmake
+)
 
-find_path(IMPALA_ROOT_DIR
+find_path(Impala_ROOT_DIR
     NAMES cmake/impala-config.cmake.in src/impala/impala.h
-    PATHS ${Impala_DIR} $ENV{Impala_DIR} ${IMPALA_ROOT_DIR} "@CMAKE_CURRENT_SOURCE_DIR@" "@CMAKE_SOURCE_DIR@")
+    PATHS ${Impala_DIR} $ENV{Impala_DIR} ${Impala_ROOT_DIR} "@CMAKE_CURRENT_SOURCE_DIR@" "@CMAKE_SOURCE_DIR@")
 
 if(NOT TARGET impala)
     include(${Impala_DIR}/impala-exports.cmake)
@@ -52,13 +45,13 @@ find_program(Impala_BIN
 )
 message(STATUS "Impala_BIN: ${Impala_BIN}")
 
-find_path(Impala_INCLUDE_DIR NAMES impala/impala.h PATHS ${IMPALA_ROOT_DIR}/src)
+find_path(Impala_INCLUDE_DIR NAMES impala/impala.h PATHS ${Impala_ROOT_DIR}/src)
 if(NOT TARGET impala)
     include(${Impala_DIR}/impala-exports.cmake)
 endif()
 set(Impala_LIBRARY libimpala)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Impala DEFAULT_MSG Impala_DIR Impala_BIN)
+find_package_handle_standard_args(Impala DEFAULT_MSG Impala_DIR Impala_INCLUDE_DIR Impala_BIN)
 
-mark_as_advanced(Impala_BUILD_DIR Impala_INSTALL_DIR)
+mark_as_advanced(Impala_ROOT_DIR Impala_BUILD_DIR Impala_INSTALL_DIR)
