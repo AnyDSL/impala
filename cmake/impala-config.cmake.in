@@ -26,6 +26,7 @@ find_path(Thorin_DIR
     PATHS ${Thorin_DIR} $ENV{Thorin_DIR} ${CMAKE_CURRENT_LIST_DIR} "@CMAKE_CURRENT_BINARY_DIR@/share/anydsl/cmake" @Thorin_DIR@
     PATH_SUFFIXES share/anydsl/cmake
 )
+find_path(LLVM_DIR LLVMConfig.cmake PATHS ${LLVM_DIR} $ENV{LLVM_DIR} "@LLVM_DIR@")
 
 find_path(Impala_ROOT_DIR
     NAMES cmake/impala-config.cmake.in src/impala/impala.h
