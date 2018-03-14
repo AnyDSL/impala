@@ -44,7 +44,6 @@ find_program(Impala_BIN
     PATHS ${Impala_DIR}/../../../bin ${Impala_BUILD_DIR}/bin ${Impala_INSTALL_DIR}/bin "@CMAKE_RUNTIME_OUTPUT_DIRECTORY@"
     PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
 )
-message(STATUS "Impala_BIN: ${Impala_BIN}")
 
 if(TARGET libimpala)
     find_path(Impala_INCLUDE_DIR NAMES impala/impala.h PATHS ${Impala_ROOT_DIR}/src)
