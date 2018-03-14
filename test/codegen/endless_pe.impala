@@ -1,0 +1,13 @@
+// codegen
+
+struct Node {
+    next: &Node
+}
+
+extern
+fn ext(p: &Node) -> i32 {
+    if p != 0 as &Node {
+        ext(p.next);
+    }
+    0
+}
