@@ -46,13 +46,12 @@ find_program(Impala_BIN
 )
 message(STATUS "Impala_BIN: ${Impala_BIN}")
 
-find_path(Impala_INCLUDE_DIR NAMES impala/impala.h PATHS ${Impala_ROOT_DIR}/src)
-if(NOT TARGET impala)
-    include(${Impala_DIR}/impala-exports.cmake)
+if(TARGET libimpala)
+    find_path(Impala_INCLUDE_DIR NAMES impala/impala.h PATHS ${Impala_ROOT_DIR}/src)
+    set(Impala_LIBRARY libimpala)
 endif()
-set(Impala_LIBRARY libimpala)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Impala DEFAULT_MSG Impala_DIR Impala_INCLUDE_DIR Impala_BIN)
+find_package_handle_standard_args(Impala DEFAULT_MSG Impala_DIR Impala_BIN)
 
 mark_as_advanced(Impala_ROOT_DIR Impala_BUILD_DIR Impala_INSTALL_DIR)
