@@ -12,8 +12,8 @@ int global_num_errors = 0;
 bool fancy_output = false;
 
 bool& fancy() { return fancy_output; }
-int num_warnings() { return global_num_warnings; }
-int num_errors() { return global_num_errors; }
+int& num_warnings() { return global_num_warnings; }
+int& num_errors() { return global_num_errors; }
 
 void init() {
     PrecTable::init();

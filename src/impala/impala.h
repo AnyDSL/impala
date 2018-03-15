@@ -51,23 +51,20 @@ private:
     friend void impala::init();
 };
 
-extern int global_num_warnings;
-extern int global_num_errors;
-
-int num_warnings();
-int num_errors();
+int& num_warnings();
+int& num_errors();
 bool& fancy();
 
 template<typename... Args>
 std::ostream& warning(const thorin::Location& loc, const char* fmt, Args... args) {
-    ++global_num_warnings;
+    ++num_warnings();
     thorin::streamf(std::cerr, "{}: warning: ", loc);
     return thorin::streamf(std::cerr, fmt, args...) << std::endl;;
 }
 
 template<typename... Args>
 std::ostream& error(const thorin::Location& loc, const char* fmt, Args... args) {
-    ++global_num_errors;
+    ++num_errors();
     thorin::streamf(std::cerr, "{}: error: ", loc);
     return thorin::streamf(std::cerr, fmt, args...) << std::endl;;
 }
