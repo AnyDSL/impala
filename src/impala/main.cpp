@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
         thorin::World world(module_name);
         impala::init();
 
-#ifndef NDEBUG
+#if THORIN_ENABLE_CHECKS && !defined(NDEBUG)
         for (auto b : breakpoints) {
             assert(b.size() > 0);
             size_t num = 0;
