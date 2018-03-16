@@ -339,7 +339,8 @@ void PathExpr::check(TypeSema& sema) const {
             if (local->is_mut() && (sema.nossa() || local->fn() != sema.cur_fn_))
                 local->take_address();
         }
-    }
+    } else
+        error(this, "expected value but found '{}'", path());
 }
 
 void PrefixExpr::check(TypeSema& sema) const {
