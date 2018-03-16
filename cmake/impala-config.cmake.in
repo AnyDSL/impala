@@ -36,14 +36,13 @@ if(NOT TARGET impala)
     include(${Impala_DIR}/impala-exports.cmake)
 endif()
 if(TARGET impala AND NOT Impala_BIN)
-    get_target_property(Impala_BIN impala LOCATION)
-    set(Impala_BIN ${Impala_BIN} CACHE FILEPATH "path to impala executable")
+    set(Impala_BIN impala)
+else()
+    find_program(Impala_BIN
+        NAMES impala
+        PATHS ${Impala_DIR}/../../../bin ${Impala_BUILD_DIR}/bin ${Impala_INSTALL_DIR}/bin "@CMAKE_RUNTIME_OUTPUT_DIRECTORY@"
+        PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@)
 endif()
-find_program(Impala_BIN
-    NAMES impala
-    PATHS ${Impala_DIR}/../../../bin ${Impala_BUILD_DIR}/bin ${Impala_INSTALL_DIR}/bin "@CMAKE_RUNTIME_OUTPUT_DIRECTORY@"
-    PATH_SUFFIXES @CMAKE_CONFIGURATION_TYPES@
-)
 
 if(TARGET libimpala)
     find_path(Impala_INCLUDE_DIR NAMES impala/impala.h PATHS ${Impala_ROOT_DIR}/src)
@@ -51,6 +50,6 @@ if(TARGET libimpala)
 endif()
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Impala DEFAULT_MSG Impala_DIR Impala_BIN)
+find_package_handle_standard_args(Impala DEFAULT_MSG Impala_DIR)
 
 mark_as_advanced(Impala_ROOT_DIR Impala_BUILD_DIR Impala_INSTALL_DIR)
