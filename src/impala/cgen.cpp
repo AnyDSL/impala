@@ -193,17 +193,14 @@ private:
         }
     }
 
-    void process_fn_decl(const FnDecl* fn_decl) {
-        // If the function is not extern, skip it
-        if (!fn_decl->is_extern())
-            return;
-
+    void process_fn_decl(const FnDecl* fn_decl, bool should_export = true) {
         // Read each argument in turn and record the structures that have to be exported
         struct_from_type(fn_decl->fn_type(), [this] (const StructDecl* decl) {
             export_structs.insert(decl);
         });
 
-        export_fns.push_back(fn_decl);
+        if (should_export)
+            export_fns.push_back(fn_decl);
     }
 
     thorin::GIDSet<const StructDecl*> export_structs;
@@ -214,8 +211,17 @@ public:
 
     void process_module(const Module* mod) {
         for (const auto& item : mod->items()) {
-            if (auto decl = item->isa<FnDecl>())
+            if (auto block = item->isa<ExternBlock>()) {
+                if (block->abi().remove_quotation() != "C")
+                    continue;
+                for (auto& decl : block->fn_decls())
+                    process_fn_decl(decl.get(), false);
+            }
+            if (auto decl = item->isa<FnDecl>()) {
+                if (!decl->is_extern())
+                    continue;
                 process_fn_decl(decl);
+            }
         }
     }
 
