@@ -424,7 +424,7 @@ Params Parser::parse_param_list(TokenTag delimiter, bool lambda) {
     return params;
 }
 
-const Param* Parser::parse_param(int i, bool lambda) {
+const Param* Parser::parse_param(int /*i*/, bool lambda) {
     auto tracker = track();
 
     const Expr* pe_expr = nullptr;
@@ -468,11 +468,8 @@ const Param* Parser::parse_param(int i, bool lambda) {
         ast_type = type;
     }
 
-    if (identifier == nullptr) {
-        std::ostringstream oss;
-        oss << '<' << i << ">";
-        identifier = create<Identifier>(oss.str().c_str());
-    }
+    if (identifier == nullptr)
+        identifier = create<Identifier>("_");
     if (pe_expr == nullptr) {
         Path::Elems elems;
         elems.emplace_back(new Path::Elem(new Identifier(tracker, identifier->symbol())));
