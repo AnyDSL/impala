@@ -221,7 +221,22 @@ int main(int argc, char** argv) {
                 world.dump();
             if (emit_llvm) {
 #ifdef LLVM_SUPPORT
-                thorin::emit_llvm(world, opt, debug);
+                thorin::Backends backends(world);
+                auto emit_to_file = [&](thorin::CodeGen* cg, std::string ext) {
+                    if (cg) {
+                        auto name = module_name + ext;
+                        std::ofstream file(name);
+                        if (!file)
+                            throw std::runtime_error("cannot write '" + name + "': " + strerror(errno));
+                        cg->emit(file, opt, debug);
+                    }
+                };
+                emit_to_file(backends.cpu_cg.get(),    ".ll");
+                emit_to_file(backends.opencl_cg.get(), ".cl");
+                emit_to_file(backends.cuda_cg.get(),   ".cu");
+                emit_to_file(backends.hls_cg.get(),    ".hls");
+                emit_to_file(backends.nvvm_cg.get(),   ".nvvm");
+                emit_to_file(backends.amdgpu_cg.get(), ".amdgpu");
 #else
                 thorin::outf("warning: built without LLVM support - I don't emit an LLVM file\n");
 #endif
