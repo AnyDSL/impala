@@ -232,11 +232,12 @@ int main(int argc, char** argv) {
                     }
                 };
                 emit_to_file(backends.cpu_cg.get(),    ".ll");
-                emit_to_file(backends.opencl_cg.get(), ".cl");
                 emit_to_file(backends.cuda_cg.get(),   ".cu");
-                emit_to_file(backends.hls_cg.get(),    ".hls");
+                emit_to_file(backends.nvptx_cg.get(),  ".ptx");
                 emit_to_file(backends.nvvm_cg.get(),   ".nvvm");
+                emit_to_file(backends.opencl_cg.get(), ".cl");
                 emit_to_file(backends.amdgpu_cg.get(), ".amdgpu");
+                emit_to_file(backends.hls_cg.get(),    ".hls");
 #else
                 thorin::outf("warning: built without LLVM support - I don't emit an LLVM file\n");
 #endif
