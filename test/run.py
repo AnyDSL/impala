@@ -328,12 +328,12 @@ def run_Tests():
     total_timeout_counter = 0
 
     executable = ['codegen']
-    for exec in executable:
-        index = categories[exec]
+    for e in executable:
+        index = categories[e]
         testsuit = tests[index]
         threads = []
         lock = threading.Lock()
-        sys.stdout.write('----------running Category ' + exec + '----------\n')
+        sys.stdout.write('----------running Category ' + e + '----------\n')
         for i in range(args.concurrency):
             threads.append(threading.Thread(target = worker, args=(testsuit,)))
             threads[i].start()
