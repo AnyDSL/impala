@@ -689,6 +689,7 @@ const Type* PrefixExpr::infer(InferSema& sema) const {
         case HLT:
             return sema.rvalue(rhs());
         case KNOWN:
+            sema.infer(rhs());
             return sema.type_bool();
         case RUNRUN:
             return sema.infer(rhs());
