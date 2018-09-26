@@ -250,6 +250,13 @@ def run_tests():
                     return RUN_FAILED
                 tmp_out_file.close()
 
+                if p.returncode < 0:
+                    output += 'execution was terminated by signal {}'.format(-p.returncode)
+                    return (RUN_FAILED, output)
+                if p.returncode > 0:
+                    output += "execution didn't run successfully and return exit code {}".format(p.returncode)
+                    return (RUN_FAILED, output)
+
                 # log file
                 if (args.logfile):
                     create_logfile()
