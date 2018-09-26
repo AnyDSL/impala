@@ -14,7 +14,7 @@ import time
 
 # more constants here
 UNHANDLED = -1
-SUCCESS = 0
+PASSED = 0
 CLANG_FAILED = 1
 CLANG_TIMEOUT = 2
 IMPALA_FAILED = 3
@@ -24,7 +24,7 @@ RUN_TIMEOUT = 6
 OUTPUT_DIFFER = 7
 LOG_DIFFER = 8
 
-POSITIVE = [SUCCESS]
+POSITIVE = [PASSED]
 NEGATIVE = [CLANG_FAILED, IMPALA_FAILED, RUN_FAILED, OUTPUT_DIFFER, LOG_DIFFER]
 TIMEOUT = [CLANG_TIMEOUT, IMPALA_TIMEOUT, RUN_TIMEOUT]
 
@@ -196,8 +196,7 @@ def run_tests():
                 orig_in     = test_path[:-7] + '.in'
                 orig_out    = test_path[:-7] + '.out'
                 orig_log    = test_path[:-7] + '.log'
-
-                output = '[{}] : '.format(test_name)
+                error      = '\n---> '
 
                 clang_args, exec_args = split_arguments(arguments)
                 tmp_log_file = open(tmp_log, 'w')
@@ -208,14 +207,14 @@ def run_tests():
                 try:
                     p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.impala_timeout)
                     if p.returncode != 0:
-                        output += 'impala failed'
-                        return (IMPALA_FAILED, output)
+                        error += 'impala failed'
+                        return (IMPALA_FAILED, error)
                 except subprocess.TimeoutExpired as timeout:
-                    output += 'impala time out'
-                    return (IMPALA_TIMEOUT, output)
+                    error += 'impala time out'
+                    return (IMPALA_TIMEOUT, error)
                 except:
-                    output += 'impala failed'
-                    return (IMPALA_FAILED, output)
+                    error += 'impala failed'
+                    return (IMPALA_FAILED, error)
 
                 # invoke clang
                 try:
@@ -223,11 +222,11 @@ def run_tests():
                     cmd_clang.extend(clang_args)
                     p = subprocess.run(cmd_clang, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.clang_timeout)
                 except subprocess.TimeoutExpired as timeout:
-                    output += 'clang time out'
-                    return (CLANG_TIMEOUT, output)
+                    error += 'clang time out'
+                    return (CLANG_TIMEOUT, error)
                 except:
-                    output += 'clang failed'
-                    return (CLANG_FAILED, output)
+                    error += 'clang failed'
+                    return (CLANG_FAILED, error)
 
                 tmp_log_file.close()
 
@@ -243,46 +242,45 @@ def run_tests():
                 try:
                     p = subprocess.run(cmd_exec, stdin = orig_in_file, stdout=tmp_out_file, timeout=args.run_timeout)
                 except subprocess.TimeoutExpired as timeout:
-                    output += 'execution time out'
-                    return (RUN_TIMEOUT, output)
+                    error += 'execution time out'
+                    return (RUN_TIMEOUT, error)
                 except:
-                    output += 'execution failed'
+                    error += 'execution failed'
                     return RUN_FAILED
                 tmp_out_file.close()
 
                 if p.returncode < 0:
-                    output += 'execution was terminated by signal {}'.format(-p.returncode)
-                    return (RUN_FAILED, output)
+                    error += 'execution was terminated by signal {}'.format(-p.returncode)
+                    return (RUN_FAILED, error)
                 if p.returncode > 0:
-                    output += "execution didn't run successfully and return exit code {}".format(p.returncode)
-                    return (RUN_FAILED, output)
+                    error += "execution didn't run successfully and return exit code {}".format(p.returncode)
+                    return (RUN_FAILED, error)
 
                 # log file
                 if (args.logfile):
                     create_logfile()
 
                 if not compare_files(tmp_log, orig_log):
-                    output += 'log files differed'
-                    return (LOG_DIFFER, output)
+                    error += 'log files differed'
+                    return (LOG_DIFFER, error)
 
                 # out file
                 if not compare_files(tmp_out, orig_out):
-                    output += 'outputs did not match:\n'
+                    error += 'outputs did not match:\n'
                     try:
                         with open(orig_out) as orig_out_file:
                             orig_lines = orig_out_file.readlines()
                         with open(tmp_out) as tmp_out_file:
                             tmp_lines = tmp_out_file.readlines()
                     except:
-                        output += '(this is a binary output)\n'
-                        return (RUN_FAILED, output)
+                        error += '(this is a binary output)'
+                        return (RUN_FAILED, error)
 
                     diff = difflib.context_diff(orig_lines, tmp_lines, fromfile=orig_log, tofile=tmp_log)
-                    output += 'outputs differ:\n' + ''.join(list(diff))
-                    return (RUN_FAILED, output)
+                    error += 'outputs differ:\n' + ''.join(list(diff))
+                    return (RUN_FAILED, error)
 
-                output += 'passed'
-                return (SUCCESS, output)
+                return (PASSED, '')
 
             # run_test
             firstLine = read_first_line(test_path)
@@ -292,6 +290,7 @@ def run_tests():
 
             arguments = arguments[1:]
             (test.result, output) = run_codegen_test()
+            output = '{} {}{}'.format('passed' if test.result == PASSED else 'FAILED', test_name, output)
             print(output)
 
             # remove tmp files
