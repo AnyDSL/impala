@@ -290,7 +290,7 @@ def run_tests():
 
             arguments = arguments[1:]
             (test.result, output) = run_codegen_test()
-            output = '{} {}{}'.format('passed' if test.result == PASSED else 'FAILED', test_name, output)
+            output = '{} {}{}'.format('passed' if test.result == PASSED else 'FAILED', test_path, output)
             print(output)
 
             # remove tmp files
