@@ -16,9 +16,9 @@ import time
 UNHANDLED = -1
 SUCCESS = 0
 CLANG_FAILED = 1
-CLANG_TIMEDOUT = 2
+CLANG_TIMEOUT = 2
 IMPALA_FAILED = 3
-IMPALA_TIMEDOUT = 4
+IMPALA_TIMEOUT = 4
 RUN_FAILED = 5
 RUN_TIMEOUT = 6
 OUTPUT_DIFFER = 7
@@ -26,7 +26,7 @@ LOG_DIFFER = 8
 
 POSITIVE = [SUCCESS]
 NEGATIVE = [CLANG_FAILED, IMPALA_FAILED, RUN_FAILED, OUTPUT_DIFFER, LOG_DIFFER]
-TIMEOUT = [CLANG_TIMEDOUT, IMPALA_TIMEDOUT, RUN_TIMEOUT]
+TIMEOUT = [CLANG_TIMEOUT, IMPALA_TIMEOUT, RUN_TIMEOUT]
 
 class test:
     name=''
@@ -118,11 +118,11 @@ def is_broken(X):
     return False, X
 
 def give_categorie(categories, file):
-    line = read_first_line(file) 
+    line = read_first_line(file)
     if line == None:
         return 0
     if line[0] in categories:
-        return categories[line[0]] 
+        return categories[line[0]]
     return 0
 
 def sort_in(categories, tests, file):
@@ -138,8 +138,8 @@ def set_up_test_suit():
     categories['codegen']=1
     categories['sema']=2
     categories['type_inferr']=3
-    tests = [[],[],[],[]]    
-    
+    tests = [[],[],[],[]]
+
     if args.path == []:
         args.path.append('./')
 
@@ -154,15 +154,15 @@ def set_up_test_suit():
                 if (file[-7:] == '.impala'):
                     cat, entry = sort_in(categories, tests, os.path.join(subdir, file))
                     tests[cat].append(entry)
-    sorted_tests = []  
+    sorted_tests = []
     for t in tests:
-        sorted_tests.append(sorted(t))             
-    return categories, sorted_tests 
+        sorted_tests.append(sorted(t))
+    return categories, sorted_tests
 
-def compare_Files(a, b): # True if equal, false otherwise
+def compare_files(a, b): # True if equal, false otherwise
     if os.path.isfile(b):
         return filecmp.cmp(a, b)
-    else: 
+    else:
         return True
 
 def split_arguments(arguments):
@@ -175,34 +175,29 @@ def split_arguments(arguments):
             exec_args.append(argument[1:-1])
     return clang_args, exec_args
 
-def run_Tests():
+def run_tests():
     def worker(testsuit):
-        def run_Test():
-            def run_codegen_test():
-                def clean_up():
-                    if not args.noclean_up:
-                        subprocess.run(['rm', tmp_ll])
-                        subprocess.run(['rm', tmp_out])
-                        subprocess.run(['rm', tmp_log])
-                        subprocess.run(['rm', tmp_exe])
+        def run_test():
+            test_path = test.path
+            test_name = test.name
+            tmp_log   = test_name +'.tmp.log'
+            tmp_exe   = test_name
+            tmp_ll    = test_name + '.ll'
+            tmp_out   = test_name + '.tmp.out'
 
+            def run_codegen_test():
                 def create_logfile():
                     if os.path.isfile(orig_log):
                         return
-                    if os.path.isfile(tmp_log) and  os.path.getsize(tmp_log) > 0:
+                    if os.path.isfile(tmp_log) and os.path.getsize(tmp_log) > 0:
                         subprocess.run(['cp', tmp_log, orig_log])
 
                 orig_impala = test_path
                 orig_in     = test_path[:-7] + '.in'
                 orig_out    = test_path[:-7] + '.out'
                 orig_log    = test_path[:-7] + '.log'
-                
-                tmp_log = test_name +'.tmp.log'
-                tmp_exe = test_name
-                tmp_ll  = test_name + '.ll'
-                tmp_out = test_name+'.tmp.out'
 
-                print_string = ('[' + test_name + '] : ' )
+                output = '[{}] : '.format(test_name)
 
                 clang_args, exec_args = split_arguments(arguments)
                 tmp_log_file = open(tmp_log, 'w')
@@ -213,29 +208,29 @@ def run_Tests():
                 try:
                     p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.impala_timeout)
                     if p.returncode != 0:
-                        print_string += 'Impala failed'
-                        return IMPALA_FAILED
+                        output += 'impala failed'
+                        return (IMPALA_FAILED, output)
                 except subprocess.TimeoutExpired as timeout:
-                    print_string += 'Impala timed out'    
-                    return IMPALA_TIMEDOUT
-                except:   
-                    print_string += 'Impala failed'
-                    return IMPALA_FAILED
+                    output += 'impala time out'
+                    return (IMPALA_TIMEOUT, output)
+                except:
+                    output += 'impala failed'
+                    return (IMPALA_FAILED, output)
 
                 # invoke clang
-                try:          
+                try:
                     cmd_clang = [args.clang, tmp_ll, 'lib.c', '-o', tmp_exe]
                     cmd_clang.extend(clang_args)
-                    p = subprocess.run(cmd_clang,  stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.clang_timeout)
+                    p = subprocess.run(cmd_clang, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.clang_timeout)
                 except subprocess.TimeoutExpired as timeout:
-                    print_string += 'Clang time out'
-                    return CLANG_TIMEDOUT  
+                    output += 'clang time out'
+                    return (CLANG_TIMEOUT, output)
                 except:
-                    print_string +='Clang failed'
-                    return CLANG_FAILED      
+                    output += 'clang failed'
+                    return (CLANG_FAILED, output)
 
                 tmp_log_file.close()
-                
+
                 # execute
                 cmd_exec = ['./' + tmp_exe]
                 cmd_exec.extend(exec_args)
@@ -243,85 +238,77 @@ def run_Tests():
                     orig_in_file = open(orig_in)
                 except:
                     orig_in_file = None
-                tmp_out_file = open(tmp_out, 'w') 
+                tmp_out_file = open(tmp_out, 'w')
 
                 try:
                     p = subprocess.run(cmd_exec, stdin = orig_in_file, stdout=tmp_out_file, timeout=args.run_timeout)
                 except subprocess.TimeoutExpired as timeout:
-                    print_string +='Execution time out'
-                    return RUN_TIMEOUT 
+                    output += 'execution time out'
+                    return (RUN_TIMEOUT, output)
                 except:
-                    print_string += 'Execution failed'
-                    return RUN_FAILED    
+                    output += 'execution failed'
+                    return RUN_FAILED
                 tmp_out_file.close()
 
-                # post-processing
+                # log file
                 if (args.logfile):
                     create_logfile()
-                
-                diff = compare_Files(tmp_out, orig_out)
-                if diff:
-                    diff = compare_Files(tmp_log, orig_log)
-                    clean_up()
-                    if (diff):
-                        print_string += 'passed'
-                        print(print_string)
-                        return SUCCESS
-                    else:
-                        print_string += 'Log-files differed'
-                        return LOG_DIFFER
 
-                print_string +=('Output did not match expectation:\n')
-                try:
-                    with open(orig_out) as orig_out_file:
-                        orig_lines = orig_out_file.readlines()
-                    with open(tmp_out) as tmp_out_file:
-                        tmp_lines = tmp_out_file.readlines()
-                except:
-                    print_string += ('this is a binary output:\n')
-                    return RUN_FAILED
+                if not compare_files(tmp_log, orig_log):
+                    output += 'log files differed'
+                    return (LOG_DIFFER, output)
 
-                    
-                orig_length = len(orig_lines)
-                tmp_length  = len(tmp_lines)
-                
-                for i in range(orig_length):
-                    orig_line = orig_lines[i]
-                    tmp_line = tmp_lines[i]
-                    if (orig_line != tmp_line):
-                        difference = ''.join(difflib.ndiff(orig_line, tmp_line))
-                        print_string+=('line ' + str(i) +': ' + difference + '\n')
-                clean_up()
-                return RUN_FAILED           
-            
+                # out file
+                if not compare_files(tmp_out, orig_out):
+                    output += 'outputs did not match:\n'
+                    try:
+                        with open(orig_out) as orig_out_file:
+                            orig_lines = orig_out_file.readlines()
+                        with open(tmp_out) as tmp_out_file:
+                            tmp_lines = tmp_out_file.readlines()
+                    except:
+                        output += '(this is a binary output)\n'
+                        return (RUN_FAILED, output)
+
+                    diff = difflib.context_diff(orig_lines, tmp_lines, fromfile=orig_log, tofile=tmp_log)
+                    output += 'outputs differ:\n' + ''.join(list(diff))
+                    return (RUN_FAILED, output)
+
+                output += 'passed'
+                return (SUCCESS, output)
+
             # run_test
-            test_path = test.path
-            test_name = test.name
-            result = test.result
-            
             firstLine = read_first_line(test_path)
             broken, arguments = is_broken(firstLine)
-            if  (not args.broken) and broken:
+            if (not args.broken) and broken:
                 return
-            arguments = arguments[1:]    
-            result = run_codegen_test()
-            test.result = result
 
-        # worker    
+            arguments = arguments[1:]
+            (test.result, output) = run_codegen_test()
+            print(output)
+
+            # remove tmp files
+            if not args.noclean_up:
+                subprocess.run(['rm', '-f', tmp_ll])
+                subprocess.run(['rm', '-f', tmp_out])
+                subprocess.run(['rm', '-f', tmp_log])
+                subprocess.run(['rm', '-f', tmp_exe])
+
+        # worker
         global job_counter
         job_bound = len(testsuit)
         while(True):
             lock.acquire()
-            job_number = job_counter 
-            job_counter +=1 
+            job_number = job_counter
+            job_counter +=1
             lock.release()
             if job_number >= job_bound:
-                return  
+                return
             test = testsuit[job_number]
-            run_Test()
-    
-    # run_tests    
-    categorie_Counter = 0
+            run_test()
+
+    # run_tests
+    categorie_counter = 0
     total_failed_counter = 0
     total_test_counter = 0
     total_success_counter = 0
@@ -337,10 +324,10 @@ def run_Tests():
         for i in range(args.concurrency):
             threads.append(threading.Thread(target = worker, args=(testsuit,)))
             threads[i].start()
-        
+
         for i in range(args.concurrency):
             threads[i].join()
-        
+
         for test in testsuit:
             if test.result in POSITIVE:
                 total_success_counter += 1
@@ -367,7 +354,7 @@ categories, tests = set_up_test_suit()
 
 start = time.time()
 job_counter = 0
-run_Tests()
+run_tests()
 end = time.time()
 passed_time = end - start
-print('Time for testing: ' + str(passed_time) + ' seconds')
+print('time for testing: ' + str(passed_time) + ' seconds')
