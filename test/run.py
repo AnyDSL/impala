@@ -175,6 +175,13 @@ def split_arguments(arguments):
             exec_args.append(argument[1:-1])
     return clang_args, exec_args
 
+def analyze_returncode(returncode):
+    if returncode < 0:
+        return (False, 'execution was terminated by signal {}'.format(-returncode))
+    if returncode > 0:
+        return (False, "execution didn't run successfully and return exit code {}".format(returncode))
+    return (True, '')
+
 def run_tests():
     def worker(testsuit):
         def run_test():
@@ -206,14 +213,16 @@ def run_tests():
 
                 try:
                     p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.impala_timeout)
-                    if p.returncode != 0:
-                        error += 'impala failed'
-                        return (IMPALA_FAILED, error)
                 except subprocess.TimeoutExpired as timeout:
                     error += 'impala time out'
                     return (IMPALA_TIMEOUT, error)
                 except:
                     error += 'impala failed'
+                    return (IMPALA_FAILED, error)
+
+                (passed, msg) = analyze_returncode(p.returncode)
+                if not passed:
+                    error += 'impala ' + msg
                     return (IMPALA_FAILED, error)
 
                 # invoke clang
@@ -246,14 +255,12 @@ def run_tests():
                     return (RUN_TIMEOUT, error)
                 except:
                     error += 'execution failed'
-                    return RUN_FAILED
+                    return (RUN_FAILED, error)
                 tmp_out_file.close()
 
-                if p.returncode < 0:
-                    error += 'execution was terminated by signal {}'.format(-p.returncode)
-                    return (RUN_FAILED, error)
-                if p.returncode > 0:
-                    error += "execution didn't run successfully and return exit code {}".format(p.returncode)
+                (passed, msg) = analyze_returncode(p.returncode)
+                if not passed:
+                    error += 'execution ' + msg
                     return (RUN_FAILED, error)
 
                 # log file
