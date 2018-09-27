@@ -209,7 +209,7 @@ def run_tests():
                 tmp_log_file = open(tmp_log, 'w')
 
                 # invoke impala
-                cmd_impala = [args.impala,orig_impala, '-emit-llvm']
+                cmd_impala = [args.impala,orig_impala, '-emit-llvm', '-O2']
 
                 try:
                     p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.impala_timeout)
