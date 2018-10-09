@@ -677,7 +677,7 @@ public:
     size_t num_params() const { return params_.size(); }
     const Expr* body() const { return body_.get(); }
     thorin::Continuation* continuation() const { return continuation_; }
-    const thorin::Param* ret_param() const { return ret_param_; }
+    const thorin::Def* ret_param() const { return ret_param_; }
     const thorin::Def* frame() const { return frame_; }
     std::ostream& stream_params(std::ostream& p, bool returning) const;
     void fn_bind(NameSema&) const;
@@ -692,7 +692,7 @@ protected:
     std::unique_ptr<const Expr> pe_expr_;
     Params params_;
     mutable thorin::Continuation* continuation_ = nullptr;
-    mutable const thorin::Param* ret_param_ = nullptr;
+    mutable const thorin::Def* ret_param_ = nullptr;
     mutable const thorin::Def* frame_ = nullptr;
 
 private:

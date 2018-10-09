@@ -111,11 +111,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
             default: THORIN_UNREACHABLE;
         }
     } else if (auto fn_type = type->isa<FnType>()) {
-        std::vector<const thorin::Type*> nops;
-        nops.push_back(world().mem_type());
-        for (size_t i = 0, e = fn_type->num_params(); i != e; ++i)
-            nops.push_back(convert(fn_type->param(i)));
-        return world().fn_type(nops);
+        return merge_tuple_type(world().mem_type(),  convert(fn_type->domain()));
     } else if (auto tuple_type = type->isa<TupleType>()) {
         std::vector<const thorin::Type*> nops;
         for (const auto& op : tuple_type->ops())
@@ -258,7 +254,7 @@ void Fn::emit_body(CodeGen& cg, Location location) const {
                 filter[i++] = global;
         }
 
-        continuation()->set_filter(filter);
+        continuation()->set_filter(cg.world().tuple(filter));
     }
 }
 

@@ -201,6 +201,7 @@ private:
     }
 
 public:
+    const Type* domain() const { return op(0); }
     const Type* param(size_t) const;
     size_t num_params() const;
     const Type* last_param() const;
