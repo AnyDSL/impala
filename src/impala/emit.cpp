@@ -111,7 +111,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
             default: THORIN_UNREACHABLE;
         }
     } else if (auto fn_type = type->isa<FnType>()) {
-        return merge_tuple_type(world().mem_type(),  convert(fn_type->domain()));
+        return world().fn_type(merge_tuple_type(world().mem_type(),  convert(fn_type->domain())));
     } else if (auto tuple_type = type->isa<TupleType>()) {
         std::vector<const thorin::Type*> nops;
         for (const auto& op : tuple_type->ops())
