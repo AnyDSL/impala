@@ -1,6 +1,5 @@
 #include "impala/ast.h"
 
-#include "thorin/irbuilder.h"
 #include "thorin/continuation.h"
 #include "thorin/primop.h"
 #include "thorin/type.h"
@@ -11,33 +10,33 @@ using namespace thorin;
 
 namespace impala {
 
-class CodeGen : public IRBuilder {
+class CodeGen {
 public:
     CodeGen(World& world)
-        : IRBuilder(world)
+        : world(world)
         , empty_fn_type(world.fn_type({ world.mem_type() }))
     {}
 
     const Def* frame() const { assert(cur_fn); return cur_fn->frame(); }
-    /// Enter \p x and perform \p get_value to collect return value.
-    const Def* converge(const Expr* expr, JumpTarget& x) {
-        emit_jump(expr, x);
-        if (enter(x))
-            return cur_bb->get_value(1, convert(expr->type()), { expr->location(), "converge" });
-        return nullptr;
-    }
+    ///// Enter \p x and perform \p get_value to collect return value.
+    //const Def* converge(const Expr* expr, Continuation* x) {
+        //emit_jump(expr, x);
+        //if (enter(x))
+            //return cur_bb->get_value(1, convert(expr->type()), { expr->location(), "converge" });
+        //return nullptr;
+    //}
 
-    void emit_jump_boolean(bool val, JumpTarget& x, const thorin::Location& loc) {
-        if (is_reachable()) {
-            cur_bb->set_value(1, world().literal(val, loc));
-            jump(x, loc);
-        }
-    }
+    //void emit_jump_boolean(bool val, Continuation* x, const thorin::Location& loc) {
+        //if (is_reachable()) {
+            //cur_bb->set_value(1, world().literal(val, loc));
+            //jump(x, loc);
+        //}
+    //}
 
     Continuation* create_continuation(const LocalDecl* decl) {
-        auto result = continuation(convert(decl->type())->as<thorin::FnType>(), decl->debug());
+        auto result = world.continuation(convert(decl->type())->as<thorin::FnType>(), decl->debug());
         result->param(0)->debug().set("mem");
-        decl->value_ = Value::create_val(*this, result);
+        decl->value_ = result;
         return result;
     }
 
@@ -52,10 +51,10 @@ public:
         set_continuation(continuation);
     }
 
-    Value lemit(const Expr* expr) { return expr->lemit(*this); }
+    const Def* lemit(const Expr* expr) { return expr->lemit(*this); }
     const Def* remit(const Expr* expr) { return expr->remit(*this); }
-    void emit_jump(const Expr* expr, JumpTarget& x) { if (is_reachable()) expr->emit_jump(*this, x); }
-    void emit_branch(const Expr* expr, JumpTarget& t, JumpTarget& f) { expr->emit_branch(*this, t, f); }
+    void emit_jump(const Expr* expr, Continuation* x) { if (is_reachable()) expr->emit_jump(*this, x); }
+    void emit_branch(const Expr* expr, Continuation* t, Continuation* f) { expr->emit_branch(*this, t, f); }
     void emit(const Stmt* stmt) { if (is_reachable()) stmt->emit(*this); }
     void emit(const Item* item) {
         assert(!item->done_);
@@ -65,11 +64,11 @@ public:
 #endif
     }
     void emit(const Ptrn* ptrn, const thorin::Def* def) { ptrn->emit(*this, def); }
-    Value emit(const Decl* decl) {
+    const Def* emit(const Decl* decl) {
         assert(decl->value_.tag() != thorin::Value::Empty);
         return decl->value_;
     }
-    Value emit(const Decl* decl, const Def* init) {
+    const Def* emit(const Decl* decl, const Def* init) {
         if (!decl->value_)
             decl->value_ = decl->emit(*this, init);
         return decl->value_;
@@ -87,11 +86,14 @@ public:
     const thorin::StructType*& thorin_struct_type(const StructType* type) { return struct_type_impala2thorin_[type]; }
     const thorin::StructType*& thorin_enum_type(const EnumType* type) { return enum_type_impala2thorin_[type]; }
 
+    World& world;
     const Fn* cur_fn = nullptr;
     const thorin::Type* empty_fn_type;
     TypeMap<const thorin::Type*> impala2thorin_;
     GIDMap<const StructType*, const thorin::StructType*> struct_type_impala2thorin_;
     GIDMap<const EnumType*,   const thorin::StructType*> enum_type_impala2thorin_;
+    Continuation* cur_bb = nullptr;
+    const Def* cur_mem = nullptr;
 };
 
 /*
@@ -162,7 +164,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
  * Decls and Function
  */
 
-Value LocalDecl::emit(CodeGen& cg, const Def* init) const {
+const Def* LocalDecl::emit(CodeGen& cg, const Def* init) const {
     auto thorin_type = cg.convert(type());
 
     auto do_init = [&]() {
@@ -283,7 +285,7 @@ static bool is_primop(const Symbol& name) {
     return false;
 }
 
-Value FnDecl::emit(CodeGen& cg, const Def*) const {
+const Def* FnDecl::emit(CodeGen& cg, const Def*) const {
     // no code is emitted for primops
     if (is_extern() && abi() == "\"thorin\"" && is_primop(symbol()))
         return value_;
@@ -335,7 +337,7 @@ void ImplItem::emit(CodeGen& cg) const {
     def_ = cg.world().tuple(args, location());
 }
 
-Value OptionDecl::emit(CodeGen& cg, const Def* init) const {
+const Def* OptionDecl::emit(CodeGen& cg, const Def* init) const {
     assert(!init);
     auto enum_type = enum_decl()->type()->as<EnumType>();
     auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
@@ -357,7 +359,7 @@ Value OptionDecl::emit(CodeGen& cg, const Def* init) const {
     }
 }
 
-Value StaticItem::emit(CodeGen& cg, const Def* init) const {
+const Def* StaticItem::emit(CodeGen& cg, const Def* init) const {
     assert(!init);
     init = !this->init() ? cg.world().bottom(cg.convert(type()), location()) : cg.remit(this->init());
     if (!is_mut())
@@ -380,9 +382,9 @@ void Typedef::emit(CodeGen&) const {}
  * expressions
  */
 
-Value Expr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
+const Def* Expr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
 const Def* Expr::remit(CodeGen& cg) const { return lemit(cg).load(location()); }
-void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
+void Expr::emit_jump(CodeGen& cg, Continuation* x) const {
     if (auto def = cg.remit(this)) {
         assert(cg.is_reachable());
         cg.cur_bb->set_value(1, def);
@@ -390,7 +392,7 @@ void Expr::emit_jump(CodeGen& cg, JumpTarget& x) const {
     } else
         assert(!cg.is_reachable());
 }
-void Expr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const { cg.branch(cg.remit(this), t, f, location().back()); }
+void Expr::emit_branch(CodeGen& cg, Continuation* t, Continuation* f) const { cg.branch(cg.remit(this), t, f, location().back()); }
 const Def* EmptyExpr::remit(CodeGen& cg) const { return cg.world().tuple({}, location()); }
 
 const Def* LiteralExpr::remit(CodeGen& cg) const {
@@ -425,7 +427,7 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     return cg.world().convert(thorin_type, def, location());
 }
 
-Value RValueExpr::lemit(CodeGen& cg) const {
+const Def* RValueExpr::lemit(CodeGen& cg) const {
     assert(src()->type()->isa<RefType>());
     return cg.lemit(src());
 }
@@ -436,7 +438,7 @@ const Def* RValueExpr::remit(CodeGen& cg) const {
     return cg.remit(src());
 }
 
-Value PathExpr::lemit(CodeGen& cg) const {
+const Def* PathExpr::lemit(CodeGen& cg) const {
     return cg.emit(value_decl(), nullptr);
 }
 
@@ -499,30 +501,30 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
     }
 }
 
-Value PrefixExpr::lemit(CodeGen& cg) const {
+const Def* PrefixExpr::lemit(CodeGen& cg) const {
     if (tag() == MUL)
         return Value::create_ptr(cg, cg.remit(rhs()));
     THORIN_UNREACHABLE; // TODO
 }
 
-void PrefixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
+void PrefixExpr::emit_branch(CodeGen& cg, Continuation* t, Continuation* f) const {
     if (tag() == NOT && is_type_bool(cg.convert(type())))
         cg.emit_branch(rhs(), f, t);
     else
         cg.branch(cg.remit(this), t, f, location().back());
 }
 
-void InfixExpr::emit_branch(CodeGen& cg, JumpTarget& t, JumpTarget& f) const {
+void InfixExpr::emit_branch(CodeGen& cg, Continuation* t, Continuation* f) const {
     switch (tag()) {
         case ANDAND: {
-            JumpTarget x({rhs()->location().front(), "and_extra"});
+            auto x = cg.world().basicblock({rhs()->location().front(), "and_extra"});
             cg.emit_branch(lhs(), x, f);
             if (cg.enter(x))
                 cg.emit_branch(rhs(), t, f);
             return;
         }
         case OROR: {
-            JumpTarget x({rhs()->location().front(), "or_extra"});
+            auto x = cg.world().basicblock({rhs()->location().front(), "or_extra"});
             cg.emit_branch(lhs(), t, x);
             if (cg.enter(x))
                 cg.emit_branch(rhs(), t, f);
@@ -623,14 +625,14 @@ const Def* StructExpr::remit(CodeGen& cg) const {
     return cg.world().struct_agg(cg.convert(type())->as<thorin::StructType>(), defs, location());
 }
 
-Value TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
+const Def* TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
 
 const Def* TypeAppExpr::remit(CodeGen& /*cg*/) const {
     assert(false && "TODO");
     THORIN_UNREACHABLE;
 }
 
-Value MapExpr::lemit(CodeGen& cg) const {
+const Def* MapExpr::lemit(CodeGen& cg) const {
     auto agg = cg.lemit(lhs());
     return Value::create_agg(agg, cg.remit(arg(0)));
 }
@@ -729,7 +731,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
     THORIN_UNREACHABLE;
 }
 
-Value FieldExpr::lemit(CodeGen& cg) const {
+const Def* FieldExpr::lemit(CodeGen& cg) const {
     auto value = cg.lemit(lhs());
     return Value::create_agg(value, cg.world().literal_qu32(index(), location()));
 }
@@ -744,7 +746,7 @@ const Def* BlockExpr::remit(CodeGen& cg) const {
     return cg.remit(expr());
 }
 
-void IfExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
+void IfExpr::emit_jump(CodeGen& cg, Continuation* x) const {
     JumpTarget t({then_expr()->location().front(), "if_then"});
     JumpTarget f({else_expr()->location().front(), "if_else"});
     cg.emit_branch(cond(), t, f);
@@ -760,7 +762,7 @@ const Def* IfExpr::remit(CodeGen& cg) const {
     return cg.converge(this, x);
 }
 
-void MatchExpr::emit_jump(CodeGen& cg, JumpTarget& x) const {
+void MatchExpr::emit_jump(CodeGen& cg, Continuation* x) const {
     auto matcher = cg.remit(expr());
     auto enum_type = expr()->type()->isa<EnumType>();
     bool is_integer = is_int(expr()->type());
@@ -840,7 +842,7 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
     return cg.world().tuple({}, location());
 }
 
-void WhileExpr::emit_jump(CodeGen& cg, JumpTarget& exit_bb) const {
+void WhileExpr::emit_jump(CodeGen& cg, Continuation* exit_bb) const {
     JumpTarget head_bb({cond()->location().front(), "while_head"});
     JumpTarget body_bb({body()->location().front(), "while_body"});
     auto continue_continuation = cg.create_continuation(continue_decl());

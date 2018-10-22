@@ -3,7 +3,6 @@
 
 #include <vector>
 
-#include "thorin/irbuilder.h"
 #include "thorin/util/array.h"
 #include "thorin/util/cast.h"
 #include "thorin/util/location.h"
@@ -15,7 +14,6 @@
 
 namespace thorin {
 
-class JumpTarget;
 class Continuation;
 class Param;
 
@@ -557,7 +555,7 @@ public:
     bool is_mut() const { assert(is_value_decl()); return mut_; }
     bool is_written() const { assert(is_value_decl()); return written_; }
     void write() const { assert(is_value_decl()); written_ = true; }
-    virtual thorin::Value emit(CodeGen&, const thorin::Def*) const { THORIN_UNREACHABLE; }
+    virtual const thorin::Def* emit(CodeGen&, const thorin::Def*) const { THORIN_UNREACHABLE; }
 
 private:
     Tag tag_;
@@ -565,7 +563,7 @@ private:
     std::unique_ptr<const ASTType> ast_type_;
 
 protected:
-    mutable thorin::Value value_;
+    mutable const thorin::Def* value_;
     mutable const Decl* shadows_;
     mutable unsigned depth_   : 24;
     unsigned mut_             :  1;
@@ -579,17 +577,14 @@ protected:
 /// Base class for all values which may be mutated within a function.
 class LocalDecl : public Decl {
 public:
-    LocalDecl(Location location, size_t handle, bool mut, const Identifier* id, const ASTType* ast_type)
+    LocalDecl(Location location, bool mut, const Identifier* id, const ASTType* ast_type)
         : Decl(location, mut, id, ast_type)
-        , handle_(handle)
     {}
 
-    LocalDecl(Location location, size_t handle, const Identifier* id, const ASTType* ast_type)
-        : LocalDecl(location, handle, /*mut*/ false, id, ast_type)
+    LocalDecl(Location location, const Identifier* id, const ASTType* ast_type)
+        : LocalDecl(location, /*mut*/ false, id, ast_type)
     {}
 
-    size_t handle() const { return handle_; }
-    bool is_address_taken() const { return is_address_taken_; }
     const Fn* fn() const { return fn_; }
     void take_address() const { is_address_taken_ = true; }
     void bind(NameSema&) const;
@@ -599,10 +594,9 @@ public:
 private:
     const Type* infer(InferSema&) const;
     void check(TypeSema&) const;
-    thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
+    const thorin::Def* emit(CodeGen&, const thorin::Def* init) const override;
 
 protected:
-    size_t handle_;
     mutable const Fn* fn_;
     mutable bool is_address_taken_ = false;
 
@@ -646,13 +640,13 @@ private:
 
 class Param : public LocalDecl {
 public:
-    Param(Location location, size_t handle, bool mut, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
-        : LocalDecl(location, handle, mut, id, ast_type)
+    Param(Location location, bool mut, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
+        : LocalDecl(location, mut, id, ast_type)
         , pe_expr_(dock(pe_expr_, pe_expr))
     {}
 
-    Param(Location location, size_t handle, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
-        : Param(location, handle, /*mut*/ false, id, ast_type, pe_expr)
+    Param(Location location, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
+        : Param(location, /*mut*/ false, id, ast_type, pe_expr)
     {}
 
     const Expr* pe_expr() const { return pe_expr_.get(); }
@@ -926,7 +920,7 @@ public:
 private:
     const Type* infer(InferSema&) const;
     void check(TypeSema&) const;
-    thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
+    const thorin::Def* emit(CodeGen&, const thorin::Def* init) const override;
 
     uint32_t index_;
     ASTTypes args_;
@@ -989,7 +983,7 @@ private:
     void infer(InferSema&) const override;
     const Type* infer_head(InferSema&) const override;
     void check(TypeSema&) const override;
-    thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
+    const thorin::Def* emit(CodeGen&, const thorin::Def* init) const override;
 
     std::unique_ptr<const Expr> init_;
 };
@@ -1022,7 +1016,7 @@ private:
     void infer(InferSema&) const override;
     const Type* infer_head(InferSema&) const override;
     void check(TypeSema&) const override;
-    thorin::Value emit(CodeGen&, const thorin::Def* init) const override;
+    const thorin::Def* emit(CodeGen&, const thorin::Def* init) const override;
 
     Symbol abi_;
     Symbol export_name_;
@@ -1117,10 +1111,10 @@ public:
 private:
     virtual const Type* infer(InferSema&) const = 0;
     virtual void check(TypeSema&) const = 0;
-    virtual thorin::Value lemit(CodeGen&) const;
+    virtual const thorin::Def* lemit(CodeGen&) const;
     virtual const thorin::Def* remit(CodeGen&) const;
-    virtual void emit_jump(CodeGen&, thorin::JumpTarget&) const;
-    virtual void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const;
+    virtual void emit_jump(CodeGen&, thorin::Continuation*) const;
+    virtual void emit_branch(CodeGen&, thorin::Continuation*, thorin::Continuation*) const;
 
 protected:
     /// Needed to propagate extend of indefinite arrays.
@@ -1295,8 +1289,6 @@ private:
     const Type* infer(InferSema&) const override;
     void check(TypeSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-
-    size_t ret_var_handle_;
 };
 
 class PathExpr : public Expr {
@@ -1322,7 +1314,7 @@ public:
 private:
     const Type* infer(InferSema&) const override;
     void check(TypeSema&) const override;
-    thorin::Value lemit(CodeGen&) const override;
+    const thorin::Def* lemit(CodeGen&) const override;
 
     std::unique_ptr<const Path> path_;
 };
@@ -1353,9 +1345,9 @@ public:
     void write() const override;
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
-    thorin::Value lemit(CodeGen&) const override;
+    const thorin::Def* lemit(CodeGen&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-    void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
+    void emit_branch(CodeGen&, thorin::Continuation*, thorin::Continuation*) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1388,7 +1380,7 @@ public:
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-    void emit_branch(CodeGen&, thorin::JumpTarget&, thorin::JumpTarget&) const override;
+    void emit_branch(CodeGen&, thorin::Continuation*, thorin::Continuation*) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1455,7 +1447,7 @@ public:
 private:
     const Type* infer(InferSema&) const override;
     void check(TypeSema&) const override;
-    thorin::Value lemit(CodeGen&) const override;
+    const thorin::Def* lemit(CodeGen&) const override;
     const thorin::Def* remit(CodeGen&) const override;
 
     std::unique_ptr<const Expr> lhs_;
@@ -1537,7 +1529,7 @@ public:
 private:
     void check(TypeSema&) const override;
     const Type* infer(InferSema&) const override;
-    thorin::Value lemit(CodeGen&) const override;
+    const thorin::Def* lemit(CodeGen&) const override;
     const thorin::Def* remit(CodeGen&) const override;
 };
 
@@ -1713,7 +1705,7 @@ public:
 private:
     const Type* infer(InferSema&) const override;
     void check(TypeSema&) const override;
-    thorin::Value lemit(CodeGen&) const override;
+    const thorin::Def* lemit(CodeGen&) const override;
     const thorin::Def* remit(CodeGen&) const override;
 
     std::unique_ptr<const Expr> lhs_;
@@ -1740,7 +1732,7 @@ public:
 private:
     const Type* infer(InferSema&) const override;
     void check(TypeSema&) const override;
-    thorin::Value lemit(CodeGen&) const override;
+    const thorin::Def* lemit(CodeGen&) const override;
     const thorin::Def* remit(CodeGen&) const override;
 
     std::unique_ptr<const Expr> lhs_;
@@ -1798,7 +1790,7 @@ public:
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-    void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
+    void emit_jump(CodeGen&, thorin::Continuation*) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1845,7 +1837,7 @@ public:
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-    void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
+    void emit_jump(CodeGen&, thorin::Continuation*) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1875,7 +1867,7 @@ public:
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-    void emit_jump(CodeGen&, thorin::JumpTarget&) const override;
+    void emit_jump(CodeGen&, thorin::Continuation*) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
