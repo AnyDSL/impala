@@ -14,29 +14,25 @@ class CodeGen {
 public:
     CodeGen(World& world)
         : world(world)
-        , empty_fn_type(world.fn_type({ world.mem_type() }))
     {}
 
-    const Def* frame() const { assert(cur_fn); return cur_fn->frame(); }
-    ///// Enter \p x and perform \p get_value to collect return value.
-    //const Def* converge(const Expr* expr, Continuation* x) {
-        //emit_jump(expr, x);
-        //if (enter(x))
-            //return cur_bb->get_value(1, convert(expr->type()), { expr->location(), "converge" });
-        //return nullptr;
-    //}
+    /// Continuation of type cn()
+    Continuation* basicblock(Debug dbg) { return world.continuation(world.fn_type(), CC::C, Intrinsic::None, dbg); }
+    /// Continuation of type cn(mem, type) - a point in the program where control flow *j*oins
+    Continuation* basicblock(const thorin::Type* type, Debug dbg) { return world.continuation(world.fn_type({world.mem_type(), type}), CC::C, Intrinsic::None, dbg); }
 
-    //void emit_jump_boolean(bool val, Continuation* x, const thorin::Location& loc) {
-        //if (is_reachable()) {
-            //cur_bb->set_value(1, world.literal(val, loc));
-            //jump(x, loc);
-        //}
-    //}
-
-    void enter(Continuation* bb) {
+    Continuation* enter(Continuation* bb, const Def* mem) {
         cur_bb = bb;
-        cur_mem = bb->mem_param();
+        cur_mem = mem;
+        return bb;
     }
+
+    const Def* enter(Continuation* bb) {
+        enter(bb, bb->param(0));
+        return bb->param(1);
+    }
+
+    const Def* frame() const { assert(cur_fn); return cur_fn->frame(); }
 
     Continuation* create_continuation(const LocalDecl* decl) {
         auto result = world.continuation(convert(decl->type())->as<thorin::FnType>(), decl->debug());
@@ -75,8 +71,6 @@ public:
 
     const Def* lemit(const Expr* expr) { return expr->lemit(*this); }
     const Def* remit(const Expr* expr) { return expr->remit(*this); }
-    void emit_jump(const Expr* expr, Continuation* x) { expr->emit_jump(*this, x); }
-    void emit_branch(const Expr* expr, Continuation* t, Continuation* f) { expr->emit_branch(*this, t, f); }
     void emit(const Stmt* stmt) { stmt->emit(*this); }
     void emit(const Item* item) {
         assert(!item->done_);
@@ -109,7 +103,6 @@ public:
 
     World& world;
     const Fn* cur_fn = nullptr;
-    const thorin::Type* empty_fn_type;
     TypeMap<const thorin::Type*> impala2thorin_;
     GIDMap<const StructType*, const thorin::StructType*> struct_type_impala2thorin_;
     GIDMap<const EnumType*,   const thorin::StructType*> enum_type_impala2thorin_;
@@ -233,7 +226,7 @@ void Fn::emit_body(CodeGen& cg, Location location) const {
             cg.emit(param.get(), p);
         }
 
-        assert(i == continuation()->num_params() || continuation()->type() == cg.empty_fn_type);
+        //assert(i == continuation()->num_params() || continuation()->type() == cg.empty_fn_type);
 
         if (continuation()->num_params() != 0
                 && continuation()->params().back()->type()->isa<thorin::FnType>())
@@ -331,24 +324,8 @@ void ExternBlock::emit(CodeGen& cg) const {
     }
 }
 
-void ModuleDecl::emit(CodeGen&) const {
-}
-
-void ImplItem::emit(CodeGen& cg) const {
-    if (def_)
-        return;
-
-    Array<const Def*> args(num_methods());
-    for (size_t i = 0, e = args.size(); i != e; ++i) {
-        cg.emit(method(i), nullptr); // TODO use init
-        args[i] = method(i)->continuation();
-    }
-
-    for (size_t i = 0, e = args.size(); i != e; ++i)
-        method(i)->emit_body(cg, location());
-
-    def_ = cg.world.tuple(args, location());
-}
+void ModuleDecl::emit(CodeGen&) const {}
+void ImplItem::emit(CodeGen&) const {}
 
 const Def* OptionDecl::emit(CodeGen& cg, const Def* init) const {
     assert(!init);
@@ -396,23 +373,7 @@ void Typedef::emit(CodeGen&) const {}
  */
 
 const Def* Expr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
-
 const Def* Expr::remit(CodeGen& cg) const { return cg.load(lemit(cg), location()); }
-
-#if 0
-void Expr::emit_jump(CodeGen& cg, Continuation* x) const {
-    if (auto def = cg.remit(this)) {
-        cg.cur_bb->set_value(1, def);
-        cg.jump(x, location().back());
-    } else
-        assert(!cg.is_reachable());
-}
-#endif
-
-void Expr::emit_branch(CodeGen& cg, Continuation* t, Continuation* f) const {
-    cg.cur_bb->branch(cg.remit(this), t, f, location().back());
-}
-
 const Def* EmptyExpr::remit(CodeGen& cg) const { return cg.world.tuple({}, location()); }
 
 const Def* LiteralExpr::remit(CodeGen& cg) const {
@@ -524,60 +485,39 @@ const Def* PrefixExpr::lemit(CodeGen& cg) const {
     return cg.remit(rhs());
 }
 
-void PrefixExpr::emit_branch(CodeGen& cg, Continuation* t, Continuation* f) const {
-    if (tag() == NOT && is_type_bool(cg.convert(type())))
-        cg.emit_branch(rhs(), f, t);
-    else
-        cg.cur_bb->branch(cg.remit(this), t, f, location().back());
-}
-
-void InfixExpr::emit_branch(CodeGen& cg, Continuation* t, Continuation* f) const {
-    switch (tag()) {
-        case ANDAND: {
-            auto x = cg.world.basicblock({rhs()->location().front(), "and_extra"});
-            cg.emit_branch(lhs(), x, f);
-            cg.cur_bb = x;
-            cg.emit_branch(rhs(), t, f);
-            return;
-        }
-        case OROR: {
-            auto x = cg.world.basicblock({rhs()->location().front(), "or_extra"});
-            cg.emit_branch(lhs(), t, x);
-            cg.cur_bb = x;
-            cg.emit_branch(rhs(), t, f);
-            return;
-        }
-        default:
-            cg.cur_bb->branch(cg.remit(this), t, f, location().back());
-            return;
-    }
-}
-
 const Def* InfixExpr::remit(CodeGen& cg) const {
     switch (tag()) {
         case ANDAND: {
-            auto t = cg.world.basicblock({lhs()->location().front(), "and_true"});
-            auto f = cg.world.basicblock({rhs()->location().front(), "and_false"});
-            auto x = cg.world.basicblock({location().back(), "and_exit"});
-            cg.emit_branch(lhs(), t, f);
-            cg.cur_bb = t;
-            cg.emit_jump(rhs(), x);
-            cg.cur_bb = f;
-            // TODO
-            //cg.emit_jump_boolean(false, x, lhs()->location().back());
-            //return cg.converge(this, x);
+            auto t = cg.basicblock({lhs()->location().front(), "and_lhs_t"});
+            auto f = cg.basicblock({rhs()->location().front(), "and_lhs_f"});
+            auto r = cg.basicblock(cg.world.type_bool(), {location().back(), "and_result"});
+
+            auto lcond = cg.remit(lhs());
+            auto mem = cg.cur_mem;
+            cg.cur_bb->branch(lcond, t, f);
+
+            cg.enter(t, mem);
+            auto rcond = cg.remit(lhs());
+            cg.cur_bb->jump(r, {cg.cur_mem, rcond});
+
+            cg.enter(f, mem)->jump(r, {cg.cur_mem, cg.world.literal(false)});
+            return cg.enter(r);
         }
         case OROR: {
-            auto t = cg.world.basicblock({lhs()->location().front(), "or_true"});
-            auto f = cg.world.basicblock({rhs()->location().front(), "or_false"});
-            auto x = cg.world.basicblock({location().back(), "or_exit"});
-            cg.emit_branch(lhs(), t, f);
-            cg.cur_bb = t;
-            // TODO
-            //cg.emit_jump_boolean(true, x, rhs()->location().back());
-            cg.cur_bb = f;
-            cg.emit_jump(rhs(), x);
-            //return cg.converge(this, x);
+            auto t = cg.basicblock({lhs()->location().front(), "or_lhs_t"});
+            auto f = cg.basicblock({rhs()->location().front(), "or_lhs_f"});
+            auto r = cg.basicblock(cg.world.type_bool(), {location().back(), "or_result"});
+
+            auto lcond = cg.remit(lhs());
+            auto mem = cg.cur_mem;
+            cg.cur_bb->branch(lcond, t, f);
+
+            cg.enter(f, mem);
+            auto rcond = cg.remit(lhs());
+            cg.cur_bb->jump(r, {cg.cur_mem, rcond});
+
+            cg.enter(t, mem)->jump(r, {cg.cur_mem, cg.world.literal(true)});
+            return cg.enter(r);
         }
         default:
             const TokenTag op = (TokenTag) tag();
@@ -770,23 +710,25 @@ const Def* BlockExpr::remit(CodeGen& cg) const {
     return cg.remit(expr());
 }
 
-void IfExpr::emit_jump(CodeGen& cg, Continuation* x) const {
-    auto t = cg.world.basicblock({then_expr()->location().front(), "if_then"});
-    auto f = cg.world.basicblock({else_expr()->location().front(), "if_else"});
-    cg.emit_branch(cond(), t, f);
-    cg.cur_bb = t;
-    cg.emit_jump(then_expr(), x);
-    cg.cur_bb = f;
-    cg.emit_jump(else_expr(), x);
-    //TODO
-    //cg.cur_bb->jump(x, location().back());
-}
-
 const Def* IfExpr::remit(CodeGen& cg) const {
-    // TODO
-    /*auto x =*/ cg.world.basicblock({location().back(), "next"});
-    //return cg.converge(this, x);
-    return nullptr;
+    auto thorin_type = cg.convert(type());
+
+    auto t = cg.basicblock({then_expr()->location().front(), "if_then"});
+    auto f = cg.basicblock({else_expr()->location().front(), "if_else"});
+    auto j = cg.basicblock(thorin_type, {location().back(), "if_join"});
+
+    cg.cur_bb->branch(cg.remit(cond()), t, f, cond()->location().back());
+    auto mem = cg.cur_mem;
+
+    cg.enter(t, mem);
+    auto tdef = cg.remit(then_expr());
+    cg.cur_bb->jump(j, {cg.cur_mem, tdef}, location().back());
+
+    cg.enter(f, mem);
+    auto fdef = cg.remit(else_expr());
+    cg.cur_bb->jump(j, {cg.cur_mem, fdef}, location().back());
+
+    return cg.enter(j);
 }
 
 #if 0
@@ -860,20 +802,11 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
     JumpTarget x({location().back(), "next"});
     return cg.converge(this, x);
 }
-#endif
 
-const Def* WhileExpr::remit(CodeGen& cg) const {
-    auto x = cg.world.basicblock({location().back(), "next"});
-    auto break_continuation = cg.create_continuation(break_decl());
-
-    cg.emit_jump(this, x);
-    cg.jump_to_continuation(break_continuation, location().back());
-    return cg.world.tuple({}, location());
-}
-
-void WhileExpr::emit_jump(CodeGen& cg, Continuation* exit_bb) const {
+void WhileExpr::remit(CodeGen& cg) const {
     auto head_bb = cg.world.basicblock({cond()->location().front(), "while_head"});
     auto body_bb = cg.world.basicblock({body()->location().front(), "while_body"});
+    auto exit_bb = cg.world.basicblock({body()->location().front(), "while_exit"});
     auto continue_continuation = cg.create_continuation(continue_decl());
 
     cg.cur_bb->jump(head_bb, {cg.cur_mem}, cond()->location().back());
@@ -888,6 +821,7 @@ void WhileExpr::emit_jump(CodeGen& cg, Continuation* exit_bb) const {
 
     cg.enter(exit_bb);
 }
+#endif
 
 const Def* ForExpr::remit(CodeGen& cg) const {
     std::vector<const Def*> defs;

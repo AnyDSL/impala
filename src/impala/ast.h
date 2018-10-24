@@ -1113,8 +1113,6 @@ private:
     virtual void check(TypeSema&) const = 0;
     virtual const thorin::Def* lemit(CodeGen&) const;
     virtual const thorin::Def* remit(CodeGen&) const;
-    virtual void emit_jump(CodeGen&, thorin::Continuation*) const;
-    virtual void emit_branch(CodeGen&, thorin::Continuation*, thorin::Continuation*) const;
 
 protected:
     /// Needed to propagate extend of indefinite arrays.
@@ -1347,7 +1345,6 @@ public:
     void bind(NameSema&) const override;
     const thorin::Def* lemit(CodeGen&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-    void emit_branch(CodeGen&, thorin::Continuation*, thorin::Continuation*) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1380,7 +1377,6 @@ public:
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-    void emit_branch(CodeGen&, thorin::Continuation*, thorin::Continuation*) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1790,7 +1786,6 @@ public:
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-    void emit_jump(CodeGen&, thorin::Continuation*) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1837,7 +1832,6 @@ public:
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-    void emit_jump(CodeGen&, thorin::Continuation*) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1867,7 +1861,6 @@ public:
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
-    void emit_jump(CodeGen&, thorin::Continuation*) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
