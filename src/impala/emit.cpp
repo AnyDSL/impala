@@ -33,6 +33,11 @@ public:
         //}
     //}
 
+    void enter(Continuation* bb) {
+        cur_bb = bb;
+        cur_mem = bb->mem_param();
+    }
+
     Continuation* create_continuation(const LocalDecl* decl) {
         auto result = world.continuation(convert(decl->type())->as<thorin::FnType>(), decl->debug());
         result->param(0)->debug().set("mem");
@@ -871,15 +876,16 @@ void WhileExpr::emit_jump(CodeGen& cg, Continuation* exit_bb) const {
     auto body_bb = cg.world.basicblock({body()->location().front(), "while_body"});
     auto continue_continuation = cg.create_continuation(continue_decl());
 
-    cg.jump(head_bb, cond()->location().back());
-    cg.enter_unsealed(head_bb);
+    cg.cur_bb->jump(head_bb, {cg.cur_mem}, cond()->location().back());
+
+    cg.enter(head_bb);
     cg.emit_branch(cond(), body_bb, exit_bb);
-    if (cg.enter(body_bb)) {
-        cg.remit(body());
-        cg.jump_to_continuation(continue_continuation, cond()->location().back());
-    }
-    cg.jump(head_bb, cond()->location().back());
-    head_bb.seal();
+
+    cg.enter(body_bb);
+    cg.remit(body());
+    cg.jump_to_continuation(continue_continuation, cond()->location().back());
+    cg.cur_bb->jump(head_bb, {cg.cur_mem}, cond()->location().back());
+
     cg.enter(exit_bb);
 }
 
@@ -898,10 +904,12 @@ const Def* ForExpr::remit(CodeGen& cg) const {
         defs.push_back(cg.remit(arg.get()));
     defs.push_back(cg.remit(fn_expr()));
     defs.push_back(break_continuation);
-    auto fun = cg.remit(map_expr->lhs());
+    //TODO
+    //auto fun = cg.remit(map_expr->lhs());
 
-    defs.front() = cg.get_mem(); // now get the current memory monad
-    cg.call(fun, defs, nullptr, map_expr->location());
+    defs.front() = cg.cur_mem; // now get the current memory monad
+    //TODO
+    //cg.call(fun, defs, nullptr, map_expr->location());
 
     cg.set_continuation(break_continuation);
     if (break_continuation->num_params() == 2)
@@ -938,7 +946,7 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
     auto variant = cg.world.cast(variant_type, cg.world.extract(init, 1), location());
     for (size_t i = 0, e = num_args(); i != e; ++i) {
-        cg.emit(arg(i), num_args() == 1 ? variant : cg.extract(variant, i, location()));
+        cg.emit(arg(i), num_args() == 1 ? variant : cg.world.extract(variant, i, location()));
     }
 }
 
@@ -959,7 +967,7 @@ const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) con
 
 void TuplePtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     for (size_t i = 0, e = num_elems(); i != e; ++i)
-        cg.emit(elem(i), cg.extract(init, i, location()));
+        cg.emit(elem(i), cg.world.extract(init, i, location()));
 }
 
 const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
@@ -967,7 +975,7 @@ const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) co
     for (size_t i = 0, e = num_elems(); i != e; ++i) {
         if (!elem(i)->is_refutable()) continue;
 
-        auto next = elem(i)->emit_cond(cg, cg.extract(init, i, location()));
+        auto next = elem(i)->emit_cond(cg, cg.world.extract(init, i, location()));
         cond = cond ? cg.world.arithop_and(cond, next) : next;
     }
     return cond ? cond : cg.world.literal(true);
@@ -1019,13 +1027,13 @@ void AsmStmt::emit(CodeGen& cg) const {
             flags |= thorin::Assembly::Flags::IsIntelDialect;
     }
 
-    auto assembly = cg.world.assembly(outs, cg.get_mem(), ins, asm_template(),
+    auto assembly = cg.world.assembly(outs, cg.cur_mem, ins, asm_template(),
             output_constraints(), input_constraints(), clobbers(), flags, location());
 
     size_t i = 0;
-    cg.set_mem(assembly->out(i++));
+    cg.cur_mem = assembly->out(i++);
     for (const auto& output: outputs())
-        cg.lemit(output->expr()).store(assembly->out(i++), location());
+        cg.store(cg.lemit(output->expr()), assembly->out(i++), location());
 }
 
 //------------------------------------------------------------------------------
@@ -1033,7 +1041,6 @@ void AsmStmt::emit(CodeGen& cg) const {
 void emit(World& world, const Module* mod) {
     CodeGen cg(world);
     mod->emit(cg);
-    clear_value_numbering_table(world);
 }
 
 //------------------------------------------------------------------------------
