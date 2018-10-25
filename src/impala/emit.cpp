@@ -39,6 +39,48 @@ public:
 
     const Def* frame() const { assert(cur_fn); return cur_fn->frame(); }
 
+    std::pair<Continuation*, const Def*> call(const Def* callee, Defs args, const thorin::Type* ret_type, Debug dbg) {
+        if (ret_type == nullptr) {
+            cur_bb->jump(callee, args, dbg);
+            auto next = basicblock(dbg + "_unrechable");
+            return std::make_pair(next, nullptr);
+        }
+
+        std::vector<const thorin::Type*> cont_args;
+        cont_args.push_back(world.mem_type());
+
+        // if the return type is a tuple, flatten it
+        auto tuple = ret_type->isa<thorin::TupleType>();
+        if (tuple) {
+            for (auto op : tuple->ops())
+                cont_args.push_back(op);
+        } else
+            cont_args.push_back(ret_type);
+
+        // next is the return continuation
+        auto next = world.continuation(world.fn_type(cont_args), dbg);
+        next->param(0)->debug().set("mem");
+
+        // create jump to next
+        size_t csize = args.size() + 1;
+        Array<const Def*> cargs(csize);
+        *std::copy(args.begin(), args.end(), cargs.begin()) = next;
+        cur_bb->jump(callee, cargs, dbg);
+
+        // determine return value
+        const Def* ret = nullptr;
+        if (tuple) {
+            Array<const Def*> params(next->num_params() - 1);
+            for (size_t i = 1, e = next->num_params(); i != e; ++i)
+                params[i - 1] = next->param(i);
+            ret = world.tuple(params);
+        } else
+            ret = next->param(1);
+        ret->debug().set(callee->name());
+
+        return std::make_pair(next, ret);
+    }
+
     Continuation* create_continuation(const LocalDecl* decl) {
         auto result = world.continuation(convert(decl->type())->as<thorin::FnType>(), decl->debug());
         result->param(0)->debug().set("mem");
@@ -685,7 +727,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
 
         auto ret_type = num_args() == fn_type->num_params() ? nullptr : cg.convert(fn_type->return_type());
         const Def* ret;
-        std::tie(cg.cur_bb, ret) = cg.cur_bb->call(dst, defs, ret_type, thorin::Debug(location(), dst->name()) + "_cont");
+        std::tie(cg.cur_bb, ret) = cg.call(dst, defs, ret_type, thorin::Debug(location(), dst->name()) + "_cont");
         if (ret_type)
             cg.cur_mem = cg.cur_bb->param(0);
 
@@ -826,10 +868,10 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
     cg.remit(body());
     cg.cur_bb->jump(cont_bb, {cg.cur_mem}, cond()->location().back());
 
-    cg.enter(cont_bb);
+    cg.enter(cont_bb, cont_bb->param(0));
     cg.cur_bb->jump(head_bb, {cg.cur_mem}, cond()->location().back());
 
-    cg.enter(exit_bb);
+    cg.enter(exit_bb, mem);
     return cg.world.tuple({}, location());
 }
 
