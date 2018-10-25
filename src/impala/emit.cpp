@@ -809,25 +809,28 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
-#if 0
-    auto head_bb = cg.world.basicblock({cond()->location().front(), "while_head"});
-    auto body_bb = cg.world.basicblock({body()->location().front(), "while_body"});
-    auto exit_bb = cg.world.basicblock({body()->location().front(), "while_exit"});
-    auto continue_continuation = cg.create_continuation(continue_decl());
+    auto head_bb = cg.world.continuation(cg.world.fn_type({cg.world.mem_type()}), CC::C, Intrinsic::None, {cond()->location().front(), "while_head"});
+    head_bb->param(0)->debug().set("mem");
+    auto body_bb = cg.basicblock({body()->location().front(), "while_body"});
+    auto exit_bb = cg.basicblock({body()->location().front(), "while_exit"});
+    auto cont_bb = cg.create_continuation(continue_decl());
 
     cg.cur_bb->jump(head_bb, {cg.cur_mem}, cond()->location().back());
 
-    cg.enter(head_bb);
-    cg.emit_branch(cond(), body_bb, exit_bb);
+    cg.enter(head_bb, head_bb->param(0));
+    auto mem = cg.cur_mem;
+    auto c = cg.remit(cond());
+    cg.cur_bb->branch(c, body_bb, exit_bb);
 
-    cg.enter(body_bb);
+    cg.enter(body_bb, mem);
     cg.remit(body());
-    cg.jump_to_continuation(continue_continuation, cond()->location().back());
+    cg.cur_bb->jump(cont_bb, {cg.cur_mem}, cond()->location().back());
+
+    cg.enter(cont_bb);
     cg.cur_bb->jump(head_bb, {cg.cur_mem}, cond()->location().back());
 
     cg.enter(exit_bb);
-#endif
-    return cg.world.tuple({});
+    return cg.world.tuple({}, location());
 }
 
 const Def* ForExpr::remit(CodeGen& cg) const {
