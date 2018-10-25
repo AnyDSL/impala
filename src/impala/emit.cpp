@@ -766,12 +766,12 @@ const Def* IfExpr::remit(CodeGen& cg) const {
     auto mem = cg.cur_mem;
 
     cg.enter(t, mem);
-    auto tdef = cg.remit(then_expr());
-    cg.cur_bb->jump(j, {cg.cur_mem, tdef}, location().back());
+    if (auto tdef = cg.remit(then_expr()))
+        cg.cur_bb->jump(j, {cg.cur_mem, tdef}, location().back());
 
     cg.enter(f, mem);
-    auto fdef = cg.remit(else_expr());
-    cg.cur_bb->jump(j, {cg.cur_mem, fdef}, location().back());
+    if (auto fdef = cg.remit(else_expr()))
+        cg.cur_bb->jump(j, {cg.cur_mem, fdef}, location().back());
 
     return cg.enter(j);
 }
@@ -851,11 +851,12 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
-    auto head_bb = cg.world.continuation(cg.world.fn_type({cg.world.mem_type()}), CC::C, Intrinsic::None, {cond()->location().front(), "while_head"});
+    auto head_bb = cg.world.continuation(cg.world.fn_type({cg.world.mem_type()}), CC::C, Intrinsic::None, {location().front(), "while_head"});
     head_bb->param(0)->debug().set("mem");
     auto body_bb = cg.basicblock({body()->location().front(), "while_body"});
-    auto exit_bb = cg.basicblock({body()->location().front(), "while_exit"});
+    auto exit_bb = cg.basicblock({body()->location().back(),  "while_exit"});
     auto cont_bb = cg.create_continuation(continue_decl());
+    auto brk__bb = cg.create_continuation(break_decl());
 
     cg.cur_bb->jump(head_bb, {cg.cur_mem}, cond()->location().back());
 
@@ -866,12 +867,13 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
 
     cg.enter(body_bb, mem);
     cg.remit(body());
-    cg.cur_bb->jump(cont_bb, {cg.cur_mem}, cond()->location().back());
+    cg.cur_bb->jump(cont_bb, {cg.cur_mem}, body()->location().back());
 
     cg.enter(cont_bb, cont_bb->param(0));
-    cg.cur_bb->jump(head_bb, {cg.cur_mem}, cond()->location().back());
+    cg.cur_bb->jump(head_bb, {cg.cur_mem}, body()->location().back());
 
     cg.enter(exit_bb, mem);
+    cg.enter(brk__bb, brk__bb->param(0));
     return cg.world.tuple({}, location());
 }
 
