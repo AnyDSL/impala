@@ -37,18 +37,8 @@ public:
     Continuation* create_continuation(const LocalDecl* decl) {
         auto result = world.continuation(convert(decl->type())->as<thorin::FnType>(), decl->debug());
         result->param(0)->debug().set("mem");
-        decl->value_ = result;
+        decl->def_ = result;
         return result;
-    }
-
-    void set_continuation(Continuation* continuation) {
-        cur_bb = continuation;
-        cur_mem = continuation->param(0);
-    }
-
-    void jump_to_continuation(Continuation* continuation, const thorin::Location& loc) {
-        cur_bb->jump(continuation, {cur_mem}, loc);
-        set_continuation(continuation);
     }
 
     const Def* load(const Def* ptr, Location location) {
@@ -81,12 +71,12 @@ public:
     }
     void emit(const Ptrn* ptrn, const thorin::Def* def) { ptrn->emit(*this, def); }
     const Def* emit(const Decl* decl) {
-        return decl->value_;
+        return decl->def_;
     }
     const Def* emit(const Decl* decl, const Def* init) {
-        if (!decl->value_)
-            decl->value_ = decl->emit(*this, init);
-        return decl->value_;
+        if (!decl->def_)
+            decl->def_ = decl->emit(*this, init);
+        return decl->def_;
     }
     const thorin::Type* convert(const Type* type) {
         if (auto t = thorin_type(type))
@@ -179,17 +169,19 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
  */
 
 const Def* LocalDecl::emit(CodeGen& cg, const Def* init) const {
+    assert(def_ == nullptr);
+
     auto thorin_type = cg.convert(type());
     init = init ? init : cg.world.bottom(thorin_type);
 
     if (is_mut()) {
-        value_ = cg.world.slot(thorin_type, cg.frame(), debug());
-        cg.cur_mem = cg.world.store(cg.cur_mem, value_, init, debug());
+        def_ = cg.world.slot(thorin_type, cg.frame(), debug());
+        cg.cur_mem = cg.world.store(cg.cur_mem, def_, init, debug());
     } else {
-        value_ = init;
+        def_ = init;
     }
 
-    return value_;
+    return def_;
 }
 
 const thorin::Type* OptionDecl::variant_type(CodeGen& cg) const {
@@ -293,12 +285,13 @@ static bool is_primop(const Symbol& name) {
 }
 
 const Def* FnDecl::emit(CodeGen& cg, const Def*) const {
+    assert(def_ == nullptr);
     // no code is emitted for primops
     if (is_extern() && abi() == "\"thorin\"" && is_primop(symbol()))
-        return value_;
+        return def_;
 
     // create thorin function
-    value_ = emit_head(cg, location());
+    def_ = emit_head(cg, location());
     if (is_extern() && abi() == "")
         continuation_->make_external();
 
@@ -308,7 +301,7 @@ const Def* FnDecl::emit(CodeGen& cg, const Def*) const {
 
     if (body())
         emit_body(cg, location());
-    return value_;
+    return def_;
 }
 
 void ExternBlock::emit(CodeGen& cg) const {
@@ -413,16 +406,15 @@ const Def* RValueExpr::lemit(CodeGen& cg) const {
     return cg.lemit(src());
 }
 
-#if 0
 const Def* RValueExpr::remit(CodeGen& cg) const {
     if (src()->type()->isa<RefType>())
-        return cg.lemit(this).load(location());
+        return cg.load(cg.lemit(this), location());
     return cg.remit(src());
 }
-#endif
 
 const Def* PathExpr::lemit(CodeGen& cg) const {
-    return cg.emit(value_decl(), nullptr);
+    auto def = value_decl()->def();
+    return value_decl()->is_mut() ? cg.load(def, location()) : def;
 }
 
 const Def* PrefixExpr::remit(CodeGen& cg) const {
@@ -798,12 +790,15 @@ void MatchExpr::emit_jump(CodeGen& cg, Continuation* x) const {
     cg.jump(x, location().back());
 }
 
+#endif
 const Def* MatchExpr::remit(CodeGen& cg) const {
-    JumpTarget x({location().back(), "next"});
-    return cg.converge(this, x);
+    //JumpTarget x({location().back(), "next"});
+    return cg.world.tuple({});
 }
 
-void WhileExpr::remit(CodeGen& cg) const {
+
+const Def* WhileExpr::remit(CodeGen& cg) const {
+#if 0
     auto head_bb = cg.world.basicblock({cond()->location().front(), "while_head"});
     auto body_bb = cg.world.basicblock({body()->location().front(), "while_body"});
     auto exit_bb = cg.world.basicblock({body()->location().front(), "while_exit"});
@@ -820,8 +815,9 @@ void WhileExpr::remit(CodeGen& cg) const {
     cg.cur_bb->jump(head_bb, {cg.cur_mem}, cond()->location().back());
 
     cg.enter(exit_bb);
-}
 #endif
+    return cg.world.tuple({});
+}
 
 const Def* ForExpr::remit(CodeGen& cg) const {
     std::vector<const Def*> defs;
@@ -845,7 +841,7 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     //TODO
     //cg.call(fun, defs, nullptr, map_expr->location());
 
-    cg.set_continuation(break_continuation);
+    cg.enter(break_continuation);
     if (break_continuation->num_params() == 2)
         return break_continuation->param(1);
     else {

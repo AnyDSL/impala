@@ -519,17 +519,14 @@ public:
         , written_(false)
         , done_(false)
     {}
-
     /// @p NoDecl.
     Decl(Location location)
         : Decl(NoDecl, location, false, nullptr, nullptr)
     {}
-
     /// @p TypeableDecl, @p TypeDecl or @p ValueDecl.
     Decl(Tag tag, Location location, const Identifier* id)
         : Decl(tag, location, false, id, nullptr)
     {}
-
     /// @p ValueDecl.
     Decl(Location location, bool mut, const Identifier* id, const ASTType* ast_type)
         : Decl(ValueDecl, location, mut, id, ast_type)
@@ -556,6 +553,7 @@ public:
     bool is_written() const { assert(is_value_decl()); return written_; }
     void write() const { assert(is_value_decl()); written_ = true; }
     virtual const thorin::Def* emit(CodeGen&, const thorin::Def*) const { THORIN_UNREACHABLE; }
+    const thorin::Def* def() const { return def_; }
 
 private:
     Tag tag_;
@@ -563,7 +561,7 @@ private:
     std::unique_ptr<const ASTType> ast_type_;
 
 protected:
-    mutable const thorin::Def* value_;
+    mutable const thorin::Def* def_ = nullptr;
     mutable const Decl* shadows_;
     mutable unsigned depth_   : 24;
     unsigned mut_             :  1;
