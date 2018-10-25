@@ -18,8 +18,13 @@ public:
 
     /// Continuation of type cn()
     Continuation* basicblock(Debug dbg) { return world.continuation(world.fn_type(), CC::C, Intrinsic::None, dbg); }
+
     /// Continuation of type cn(mem, type) - a point in the program where control flow *j*oins
-    Continuation* basicblock(const thorin::Type* type, Debug dbg) { return world.continuation(world.fn_type({world.mem_type(), type}), CC::C, Intrinsic::None, dbg); }
+    Continuation* basicblock(const thorin::Type* type, Debug dbg) {
+        auto bb = world.continuation(world.fn_type({world.mem_type(), type}), CC::C, Intrinsic::None, dbg);
+        bb->param(0)->debug().set("mem");
+        return bb;
+    }
 
     Continuation* enter(Continuation* bb, const Def* mem) {
         cur_bb = bb;
@@ -412,7 +417,12 @@ const Def* RValueExpr::remit(CodeGen& cg) const {
     return cg.remit(src());
 }
 
-const Def* PathExpr::lemit(CodeGen& cg) const {
+const Def* PathExpr::lemit(CodeGen&) const {
+    assert(value_decl()->is_mut());
+    return value_decl()->def();
+}
+
+const Def* PathExpr::remit(CodeGen& cg) const {
     auto def = value_decl()->def();
     return value_decl()->is_mut() ? cg.load(def, location()) : def;
 }
@@ -709,7 +719,8 @@ const Def* IfExpr::remit(CodeGen& cg) const {
     auto f = cg.basicblock({else_expr()->location().front(), "if_else"});
     auto j = cg.basicblock(thorin_type, {location().back(), "if_join"});
 
-    cg.cur_bb->branch(cg.remit(cond()), t, f, cond()->location().back());
+    auto c = cg.remit(cond());
+    cg.cur_bb->branch(c, t, f, cond()->location().back());
     auto mem = cg.cur_mem;
 
     cg.enter(t, mem);

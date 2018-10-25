@@ -1311,6 +1311,7 @@ private:
     const Type* infer(InferSema&) const override;
     void check(TypeSema&) const override;
     const thorin::Def* lemit(CodeGen&) const override;
+    const thorin::Def* remit(CodeGen&) const override;
 
     std::unique_ptr<const Path> path_;
 };
