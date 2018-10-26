@@ -873,6 +873,8 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
     cg.cur_bb->jump(head_bb, {cg.cur_mem}, body()->location().back());
 
     cg.enter(exit_bb, mem);
+    cg.cur_bb->jump(brk__bb, {cg.cur_mem}, body()->location().back());
+
     cg.enter(brk__bb, brk__bb->param(0));
     return cg.world.tuple({}, location());
 }
