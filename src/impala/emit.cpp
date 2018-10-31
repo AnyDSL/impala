@@ -188,6 +188,8 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         return world.indefinite_array_type(convert(indefinite_array_type->elem_type()));
     } else if (auto simd_type = type->isa<SimdType>()) {
         return world.type(convert(simd_type->elem_type())->as<thorin::PrimType>()->primtype_tag(), simd_type->dim());
+    } else if (type->isa<NoRetType>()) {
+        return nullptr; // TODO use bottom type - once it is available in thorin
     }
     THORIN_UNREACHABLE;
 }
@@ -735,7 +737,7 @@ const Def* IfExpr::remit(CodeGen& cg) const {
 
     auto t = cg.basicblock({then_expr()->location().front(), "if_then"});
     auto f = cg.basicblock({else_expr()->location().front(), "if_else"});
-    auto j = cg.basicblock(thorin_type, {location().back(), "if_join"});
+    auto j = thorin_type ? cg.basicblock(thorin_type, {location().back(), "if_join"}) : nullptr; // TODO rewrite with bottom type
 
     auto c = cond()->remit(cg);
     cg.cur_bb->branch(c, t, f, cond()->location().back());
@@ -749,7 +751,9 @@ const Def* IfExpr::remit(CodeGen& cg) const {
     if (auto fdef = else_expr()->remit(cg))
         cg.cur_bb->jump(j, {cg.cur_mem, fdef}, location().back());
 
-    return cg.enter(j);
+    if (thorin_type)
+        return cg.enter(j);
+    return nullptr; // TODO use bottom type
 }
 
 #if 0
