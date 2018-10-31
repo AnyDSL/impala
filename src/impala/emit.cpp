@@ -227,6 +227,7 @@ void Fn::fn_emit_body(CodeGen& cg, Location location) const {
     // setup function nest
     THORIN_PUSH(cg.cur_fn, this);
     THORIN_PUSH(cg.cur_bb, continuation());
+    auto old_mem = cg.cur_mem;
 
     // setup memory + frame
     {
@@ -287,6 +288,8 @@ void Fn::fn_emit_body(CodeGen& cg, Location location) const {
 
         continuation()->set_filter(filter);
     }
+
+    cg.cur_mem = old_mem;
 }
 
 /*
@@ -364,7 +367,7 @@ const Def* OptionDecl::emit(CodeGen& cg) const {
     }
 }
 
-void StaticItem::emit(CodeGen& cg) const {
+void StaticItem::emit_head(CodeGen& cg) const {
     auto i = init() ? init()->remit(cg) : cg.world.bottom(cg.convert(type()), location());
     def_ = is_mut() ? cg.world.global(i, true, debug()) : i;
 }
@@ -605,11 +608,7 @@ const Def* StructExpr::remit(CodeGen& cg) const {
 }
 
 const Def* TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
-
-const Def* TypeAppExpr::remit(CodeGen& /*cg*/) const {
-    assert(false && "TODO");
-    THORIN_UNREACHABLE;
-}
+const Def* TypeAppExpr::remit(CodeGen& /*cg*/) const { THORIN_UNREACHABLE; }
 
 const Def* MapExpr::lemit(CodeGen& cg) const {
     auto agg = lhs()->lemit(cg);
@@ -721,7 +720,13 @@ const Def* FieldExpr::remit(CodeGen& cg) const {
 }
 
 const Def* BlockExpr::remit(CodeGen& cg) const {
+    for (auto&& stmt : stmts()) {
+        if (auto item_stmnt = stmt->isa<ItemStmt>())
+            item_stmnt->item()->emit_head(cg);
+    }
+
     for (auto&& stmt : stmts()) stmt->emit(cg);
+
     return expr()->remit(cg);
 }
 
@@ -851,35 +856,30 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
 }
 
 const Def* ForExpr::remit(CodeGen& cg) const {
-    std::vector<const Def*> defs;
-    defs.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
+    std::vector<const Def*> args;
+    args.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
 
-    auto break_continuation = cg.create_continuation(break_decl());
-
-    // peel off run and halt
-    auto forexpr = expr();
+    auto break_bb = cg.create_continuation(break_decl());
 
     // emit call
-    auto map_expr = forexpr->as<MapExpr>();
+    auto map_expr = expr()->as<MapExpr>();
     for (auto&& arg : map_expr->args())
-        defs.push_back(arg.get()->remit(cg));
-    defs.push_back(fn_expr()->remit(cg));
-    defs.push_back(break_continuation);
-    //TODO
-    //auto fun = map_expr->lhs()->remit(cg);
+        args.push_back(arg.get()->remit(cg));
+    args.push_back(fn_expr()->remit(cg));
+    args.push_back(break_bb);
+    auto fun = map_expr->lhs()->remit(cg);
 
-    defs.front() = cg.cur_mem; // now get the current memory monad
-    //TODO
-    //cg.call(fun, defs, nullptr, map_expr->location());
+    args.front() = cg.cur_mem; // now get the current memory monad
+    cg.call(fun, args, nullptr, map_expr->location());
 
-    cg.enter(break_continuation);
-    if (break_continuation->num_params() == 2)
-        return break_continuation->param(1);
+    cg.enter(break_bb, break_bb->param(0));
+    if (break_bb->num_params() == 2)
+        return break_bb->param(1);
     else {
-        Array<const Def*> defs(break_continuation->num_params()-1);
-        for (size_t i = 0, e = defs.size(); i != e; ++i)
-            defs[i] = break_continuation->param(i+1);
-        return cg.world.tuple(defs, location());
+        Array<const Def*> args(break_bb->num_params()-1);
+        for (size_t i = 0, e = args.size(); i != e; ++i)
+            args[i] = break_bb->param(i+1);
+        return cg.world.tuple(args, location());
     }
 }
 
@@ -989,7 +989,7 @@ void AsmStmt::emit(CodeGen& cg) const {
     size_t i = 0;
     cg.cur_mem = assembly->out(i++);
     for (auto&& output: outputs())
-        cg.store(output->expr()->remit(cg), assembly->out(i++), location());
+        cg.store(output->expr()->lemit(cg), assembly->out(i++), location());
 }
 
 //------------------------------------------------------------------------------

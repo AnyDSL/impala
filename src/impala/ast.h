@@ -968,7 +968,8 @@ public:
     const Expr* init() const { return init_.get(); }
 
     void bind(NameSema&) const override;
-    void emit(CodeGen&) const override;
+    void emit(CodeGen&) const override {}
+    void emit_head(CodeGen&) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
