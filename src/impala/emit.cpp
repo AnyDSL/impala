@@ -705,6 +705,14 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto cont = cg.world.continuation(fn_type, {location(), "pe_known"});
                             cont->set_intrinsic();
                             dst = cont;
+                        } else if (name == "deep_copy") {
+                            auto poly_type = cg.convert(arg(0)->type());
+                            auto fn_type = cg.world().fn_type({
+                                cg.world().mem_type(), poly_type,
+                                cg.world().fn_type({ cg.world().mem_type(), poly_type }) });
+                            auto cont = cg.world().continuation(fn_type, {location(), "deep_copy"});
+                            cont->set_intrinsic();
+                            dst = cont;
                         }
                     }
                 }
