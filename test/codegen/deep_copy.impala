@@ -1,0 +1,16 @@
+// codegen
+
+extern "thorin" {
+    fn deep_copy[T](&T) -> &mut T;
+}
+
+struct A {
+    x: int,
+    y: int,
+}
+
+fn main() -> int {
+    let a = A{x: 23, y: 42};
+    let b = deep_copy(a);
+    1
+}
