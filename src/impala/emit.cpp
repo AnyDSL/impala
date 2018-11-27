@@ -348,13 +348,13 @@ void ExternBlock::emit(CodeGen& cg) const {
 void ModuleDecl::emit(CodeGen&) const {}
 void ImplItem::emit(CodeGen&) const {}
 
-const Def* OptionDecl::emit(CodeGen& cg) const {
+void OptionDecl::emit(CodeGen& cg) const {
     auto enum_type = enum_decl()->type()->as<EnumType>();
     auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
     auto id = cg.world.literal_qu32(index(), location());
     if (num_args() == 0) {
         auto bot = cg.world.bottom(variant_type);
-        return cg.world.struct_agg(cg.thorin_enum_type(enum_type), { id, bot });
+        def_ = cg.world.struct_agg(cg.thorin_enum_type(enum_type), { id, bot });
     } else {
         auto continuation = cg.world.continuation(cg.convert(type())->as<thorin::FnType>(), {location(), symbol()});
         auto ret = continuation->param(continuation->num_params() - 1);
@@ -365,7 +365,7 @@ const Def* OptionDecl::emit(CodeGen& cg) const {
         auto option_val = num_args() == 1 ? defs.back() : cg.world.tuple(defs);
         auto enum_val = cg.world.struct_agg(cg.thorin_enum_type(enum_type), { id, cg.world.variant(variant_type, option_val) });
         continuation->jump(ret, { mem, enum_val }, location());
-        return continuation;
+        def_ = continuation;
     }
 }
 
@@ -379,6 +379,8 @@ void StructDecl::emit(CodeGen& cg) const {
 }
 
 void EnumDecl::emit(CodeGen& cg) const {
+    for (auto&& option_decl : option_decls())
+        option_decl->emit(cg);
     cg.convert(type());
 }
 

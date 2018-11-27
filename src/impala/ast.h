@@ -879,7 +879,7 @@ public:
     const StructType* struct_type() const { return type_->as<StructType>(); }
 
     void bind(NameSema&) const override;
-    void emit(CodeGen&) const override;
+    void emit(CodeGen&) const; 
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -906,7 +906,7 @@ public:
     const EnumDecl* enum_decl() const { return enum_decl_; }
 
     void bind(NameSema&) const;
-    const thorin::Def* emit(CodeGen&) const;
+    void emit(CodeGen&) const;
     std::ostream& stream(std::ostream&) const override;
 
     const thorin::Type* variant_type(CodeGen&) const;
