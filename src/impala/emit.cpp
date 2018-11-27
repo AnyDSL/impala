@@ -693,7 +693,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         dst = dst ? dst : lhs()->remit(cg);
 
         std::vector<const Def*> defs;
-        defs.push_back(nullptr);    // reserve for mem but set later - some other args may update the monad
+        defs.push_back(nullptr);    // reserve for mem but set later - some other args may update mem
         for (auto&& arg : args())
             defs.push_back(arg.get()->remit(cg));
         defs.front() = cg.cur_mem; // now get the current memory value
@@ -735,29 +735,32 @@ const Def* BlockExpr::remit(CodeGen& cg) const {
 const Def* IfExpr::remit(CodeGen& cg) const {
     auto thorin_type = cg.convert(type());
 
-    auto t = cg.basicblock({then_expr()->location().front(), "if_then"});
-    auto f = cg.basicblock({else_expr()->location().front(), "if_else"});
-    auto j = thorin_type ? cg.basicblock(thorin_type, {location().back(), "if_join"}) : nullptr; // TODO rewrite with bottom type
+    auto if_then = cg.basicblock({then_expr()->location().front(), "if_then"});
+    auto if_else = cg.basicblock({else_expr()->location().front(), "if_else"});
+    auto if_join = thorin_type ? cg.basicblock(thorin_type, {location().back(), "if_join"}) : nullptr; // TODO rewrite with bottom type
 
     auto c = cond()->remit(cg);
-    cg.cur_bb->branch(c, t, f, cond()->location().back());
+    cg.cur_bb->branch(c, if_then, if_else, cond()->location().back());
     auto mem = cg.cur_mem;
 
-    cg.enter(t, mem);
+    cg.enter(if_then, mem);
     if (auto tdef = then_expr()->remit(cg))
-        cg.cur_bb->jump(j, {cg.cur_mem, tdef}, location().back());
+        cg.cur_bb->jump(if_join, {cg.cur_mem, tdef}, location().back());
 
-    cg.enter(f, mem);
+    cg.enter(if_else, mem);
     if (auto fdef = else_expr()->remit(cg))
-        cg.cur_bb->jump(j, {cg.cur_mem, fdef}, location().back());
+        cg.cur_bb->jump(if_join, {cg.cur_mem, fdef}, location().back());
 
     if (thorin_type)
-        return cg.enter(j);
+        return cg.enter(if_join);
     return nullptr; // TODO use bottom type
 }
 
-#if 0
-void MatchExpr::emit_jump(CodeGen& cg, Continuation* x) const {
+const Def* MatchExpr::remit(CodeGen& cg) const {
+    auto thorin_type = cg.convert(type());
+
+    auto join = thorin_type ? cg.basicblock(thorin_type, {location().back(), "match_join"}) : nullptr; // TODO rewrite with bottom type
+
     auto matcher = expr()->remit(cg);
     auto enum_type = expr()->type()->isa<EnumType>();
     bool is_integer = is_int(expr()->type());
@@ -765,17 +768,17 @@ void MatchExpr::emit_jump(CodeGen& cg, Continuation* x) const {
 
     if (is_integer || is_simple) {
         // integers: match continuation
-        JumpTarget otherwise;
+        Continuation* otherwise;
         size_t num_targets = num_arms();
         Array<const Def*> defs(num_targets);
-        Array<JumpTarget> targets(num_targets);
+        Array<Continuation*> targets(num_targets);
 
         for (size_t i = 0, e = num_targets; i != e; ++i) {
             // last pattern will always be taken
             if (!arm(i)->ptrn()->is_refutable() || i == e - 1) {
                 num_targets = i;
                 arm(i)->ptrn()->emit(cg, matcher);
-                otherwise = JumpTarget({arm(i)->location().front(), "otherwise"});
+                otherwise = cg.basicblock({arm(i)->location().front(), "otherwise"});
                 break;
             } else {
                 if (is_integer) {
@@ -785,50 +788,57 @@ void MatchExpr::emit_jump(CodeGen& cg, Continuation* x) const {
                     auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
                     defs[i] = cg.world.literal_qu32(option_decl->index(), arm(i)->ptrn()->location());
                 }
-                targets[i] = JumpTarget({arm(i)->location().front(), "case"});
+                targets[i] = cg.basicblock({arm(i)->location().front(), "case"});
             }
         }
+
         targets.shrink(num_targets);
         defs.shrink(num_targets);
 
         auto matcher_int = is_integer ? matcher : cg.world.extract(matcher, 0_u32, matcher->debug());
-        cg.match(matcher_int, otherwise, defs, targets, {location().front(), "match"});
+        cg.cur_bb->match(matcher_int, otherwise, defs, targets, {location().front(), "match"});
+        auto mem = cg.cur_mem;
 
-        for (size_t i = 0; i < num_targets; i++) {
-            if (cg.enter(targets[i]))
-                cg.emit_jump(arm(i)->expr(), x);
+        for (size_t i = 0; i != num_targets; ++i) {
+            cg.enter(targets[i], mem);
+            if (auto def = arm(i)->expr()->remit(cg))
+                cg.cur_bb->jump(join, {cg.cur_mem, def}, location().back());
         }
+
         bool no_otherwise = num_arms() == num_targets;
-        if (!no_otherwise && cg.enter(otherwise))
-            cg.emit_jump(arm(num_targets)->expr(), x);
+        if (!no_otherwise) {
+            cg.enter(otherwise, mem);
+            if (auto def = arm(num_targets)->expr()->remit(cg))
+                cg.cur_bb->jump(join, {cg.cur_mem, def}, location().back());
+        }
     } else {
+        auto mem = cg.cur_mem;
         // general case: if/else
         for (size_t i = 0, e = num_arms(); i != e; ++i) {
-            JumpTarget  cur({arm(i)->location().front(), "case_true"});
-            JumpTarget next({arm(i)->location().front(), "case_false"});
+            auto case_true  = cg.basicblock({arm(i)->location().front(), "case_true"});
+            auto case_false = cg.basicblock({arm(i)->location().front(), "case_false"});
 
             arm(i)->ptrn()->emit(cg, matcher);
+
             // last pattern will always be taken
             auto cond = i == e - 1
                 ? cg.world.literal_bool(true, arm(i)->ptrn()->location())
                 : arm(i)->ptrn()->emit_cond(cg, matcher);
 
-            cg.branch(cond, cur, next);
-            if (cg.enter(cur))
-                cg.emit_jump(arm(i)->expr(), x);
+            cg.cur_bb->branch(cond, case_true, case_false, arm(i)->ptrn()->location().back());
 
-            cg.enter(next);
+            cg.enter(case_true, mem);
+            if (auto def = arm(i)->expr()->remit(cg))
+                cg.cur_bb->jump(join, {cg.cur_mem, def}, arm(i)->location().back());
+
+            cg.enter(case_false, mem);
         }
     }
-    cg.jump(x, location().back());
-}
 
-#endif
-const Def* MatchExpr::remit(CodeGen& cg) const {
-    //JumpTarget x({location().back(), "next"});
-    return cg.world.tuple({});
+    if (thorin_type)
+        return cg.enter(join);
+    return nullptr; // TODO use bottom type
 }
-
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
     auto head_bb = cg.world.continuation(cg.world.fn_type({cg.world.mem_type()}), CC::C, Intrinsic::None, {location().front(), "while_head"});
