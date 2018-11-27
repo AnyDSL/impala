@@ -1,0 +1,25 @@
+// codegen
+
+extern "C" {
+    fn forty_two() -> int;
+}
+
+enum Color {
+    Red(int),
+    Green(int),
+    Blue(int),
+    Nil,
+}
+
+fn main() -> int {
+    let x = Color::Red(forty_two());
+
+    match x {
+        Color::Red(42)  => 0,
+        Color::Red(y)   => y,
+        Color::Green(y) => y,
+        Color::Blue(y)  => y,
+        Color::Nil      => 1,
+        _               => 2,
+    }
+}
