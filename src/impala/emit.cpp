@@ -332,7 +332,7 @@ void FnDecl::emit(CodeGen& cg) const {
         fn_emit_body(cg, location());
 }
 
-void ExternBlock::emit(CodeGen& cg) const {
+void ExternBlock::emit_head(CodeGen& cg) const {
     for (auto&& fn_decl : fn_decls()) {
         fn_decl->emit_head(cg);
         auto continuation = fn_decl->continuation();
@@ -347,6 +347,15 @@ void ExternBlock::emit(CodeGen& cg) const {
 
 void ModuleDecl::emit(CodeGen&) const {}
 void ImplItem::emit(CodeGen&) const {}
+
+void StaticItem::emit_head(CodeGen& cg) const {
+    auto i = init() ? init()->remit(cg) : cg.world.bottom(cg.convert(type()), location());
+    def_ = is_mut() ? cg.world.global(i, true, debug()) : i;
+}
+
+void StructDecl::emit_head(CodeGen& cg) const {
+    cg.convert(type());
+}
 
 void OptionDecl::emit(CodeGen& cg) const {
     auto enum_type = enum_decl()->type()->as<EnumType>();
@@ -369,16 +378,7 @@ void OptionDecl::emit(CodeGen& cg) const {
     }
 }
 
-void StaticItem::emit_head(CodeGen& cg) const {
-    auto i = init() ? init()->remit(cg) : cg.world.bottom(cg.convert(type()), location());
-    def_ = is_mut() ? cg.world.global(i, true, debug()) : i;
-}
-
-void StructDecl::emit(CodeGen& cg) const {
-    cg.convert(type());
-}
-
-void EnumDecl::emit(CodeGen& cg) const {
+void EnumDecl::emit_head(CodeGen& cg) const {
     for (auto&& option_decl : option_decls())
         option_decl->emit(cg);
     cg.convert(type());

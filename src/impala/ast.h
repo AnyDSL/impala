@@ -715,8 +715,8 @@ public:
 
     Visibility visibility() const { return visibility_; }
     virtual void bind(NameSema&) const = 0;
-    virtual void emit(CodeGen&) const = 0;
     virtual void emit_head(CodeGen&) const {};
+    virtual void emit(CodeGen&) const = 0;
 
 private:
     virtual void infer(InferSema&) const = 0;
@@ -800,7 +800,8 @@ public:
     const FnDecls& fn_decls() const { return fn_decls_; }
 
     void bind(NameSema&) const override;
-    void emit(CodeGen&) const override;
+    void emit_head(CodeGen&) const override;
+    void emit(CodeGen&) const override {}
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -879,7 +880,8 @@ public:
     const StructType* struct_type() const { return type_->as<StructType>(); }
 
     void bind(NameSema&) const override;
-    void emit(CodeGen&) const; 
+    void emit_head(CodeGen&) const override;
+    void emit(CodeGen&) const override {}
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -944,7 +946,8 @@ public:
     const EnumType* enum_type() const { return type_->as<EnumType>(); }
 
     void bind(NameSema&) const override;
-    void emit(CodeGen&) const override;
+    void emit_head(CodeGen&) const override;
+    void emit(CodeGen&) const override {}
     std::ostream& stream(std::ostream& os) const override;
 
 private:
@@ -968,8 +971,8 @@ public:
     const Expr* init() const { return init_.get(); }
 
     void bind(NameSema&) const override;
-    void emit(CodeGen&) const override {}
     void emit_head(CodeGen&) const override;
+    void emit(CodeGen&) const override {}
     std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -1003,8 +1006,8 @@ public:
     Symbol fn_symbol() const override { return export_name_ != "" ? export_name_ : identifier()->symbol(); }
 
     void bind(NameSema&) const override;
-    void emit_head(CodeGen& cg) const override;
-    void emit(CodeGen& cg) const override;
+    void emit_head(CodeGen&) const override;
+    void emit(CodeGen&) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:
