@@ -6,6 +6,7 @@
 #ifdef LLVM_SUPPORT
 #include "thorin/be/llvm/llvm.h"
 #endif
+#include "thorin/analyses/schedule.h"
 #include "thorin/util/args.h"
 #include "thorin/util/log.h"
 #include "thorin/util/location.h"
@@ -213,6 +214,7 @@ int main(int argc, char** argv) {
             impala::emit(world, module.get());
 
         if (result) {
+            thorin::verify_mem(world);
             if (!nocleanup)
                 world.cleanup();
             if (opt_thorin)
