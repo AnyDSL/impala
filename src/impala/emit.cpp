@@ -743,13 +743,13 @@ const Def* IfExpr::remit(CodeGen& cg) const {
 
     auto c = cond()->remit(cg);
     cg.cur_bb->branch(c, if_then, if_else, cond()->location().back());
-    auto mem = cg.cur_mem;
+    auto head_mem = cg.cur_mem;
 
-    cg.enter(if_then, mem);
+    cg.enter(if_then, head_mem);
     if (auto tdef = then_expr()->remit(cg))
         cg.cur_bb->jump(if_join, {cg.cur_mem, tdef}, location().back());
 
-    cg.enter(if_else, mem);
+    cg.enter(if_else, head_mem);
     if (auto fdef = else_expr()->remit(cg))
         cg.cur_bb->jump(if_join, {cg.cur_mem, fdef}, location().back());
 
@@ -853,18 +853,18 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
     cg.cur_bb->jump(head_bb, {cg.cur_mem}, cond()->location().back());
 
     cg.enter(head_bb, head_bb->param(0));
-    auto mem = cg.cur_mem;
     auto c = cond()->remit(cg);
     cg.cur_bb->branch(c, body_bb, exit_bb);
+    auto head_mem = cg.cur_mem;
 
-    cg.enter(body_bb, mem);
+    cg.enter(body_bb, cg.cur_mem);
     body()->remit(cg);
     cg.cur_bb->jump(cont_bb, {cg.cur_mem}, body()->location().back());
 
     cg.enter(cont_bb, cont_bb->param(0));
     cg.cur_bb->jump(head_bb, {cg.cur_mem}, body()->location().back());
 
-    cg.enter(exit_bb, mem);
+    cg.enter(exit_bb, head_mem);
     cg.cur_bb->jump(brk__bb, {cg.cur_mem}, body()->location().back());
 
     cg.enter(brk__bb, brk__bb->param(0));
