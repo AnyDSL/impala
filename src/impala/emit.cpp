@@ -349,8 +349,12 @@ void ModuleDecl::emit(CodeGen&) const {}
 void ImplItem::emit(CodeGen&) const {}
 
 void StaticItem::emit_head(CodeGen& cg) const {
-    auto i = init() ? init()->remit(cg) : cg.world.bottom(cg.convert(type()), location());
-    def_ = is_mut() ? cg.world.global(i, true, debug()) : i;
+    def_ = cg.world.global(cg.world.bottom(cg.convert(type()), location()));
+}
+
+void StaticItem::emit(CodeGen& cg) const {
+    if (init())
+        def_->replace(cg.world.global(init()->remit(cg), is_mut(), debug()));
 }
 
 void StructDecl::emit_head(CodeGen& cg) const {
@@ -445,7 +449,7 @@ const Def* PathExpr::lemit(CodeGen&) const {
 
 const Def* PathExpr::remit(CodeGen& cg) const {
     auto def = value_decl()->def();
-    return value_decl()->is_mut() ? cg.load(def, location()) : def;
+    return value_decl()->is_mut() || def->isa<Global>() ? cg.load(def, location()) : def;
 }
 
 const Def* PrefixExpr::remit(CodeGen& cg) const {
