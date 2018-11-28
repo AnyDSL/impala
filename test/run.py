@@ -57,7 +57,7 @@ class test:
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('path', nargs='*',          help='path to test  or test directory',      default='./', type=str)
+    parser.add_argument('path', nargs='+',          help='path to test  or test directory',      default='./', type=str)
     parser.add_argument('-c',  '--clang',           help='path to clang binary',                 default=None, type=str)
     parser.add_argument('-i',  '--impala',          help='path to impala binary',                default=None, type=str)
     parser.add_argument('-it', '--impala-timeout',  help='timeout for compiling impala ',        default=5,    type=int)
