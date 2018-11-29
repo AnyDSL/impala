@@ -353,8 +353,11 @@ void StaticItem::emit_head(CodeGen& cg) const {
 }
 
 void StaticItem::emit(CodeGen& cg) const {
-    if (init())
-        def_->replace(cg.world.global(init()->remit(cg), is_mut(), debug()));
+    if (init()) {
+        auto old_def = def_;
+        def_ = cg.world.global(init()->remit(cg), is_mut(), debug());
+        old_def->replace(def_);
+    }
 }
 
 void StructDecl::emit_head(CodeGen& cg) const {
@@ -449,7 +452,19 @@ const Def* PathExpr::lemit(CodeGen&) const {
 
 const Def* PathExpr::remit(CodeGen& cg) const {
     auto def = value_decl()->def();
-    return value_decl()->is_mut() || def->isa<Global>() ? cg.load(def, location()) : def;
+    // This whole global thing is incorrect.
+    // Example:
+    // static a = 1;
+    // static b = a;
+    // Emitting this requires a load. Currently, it works because of the following hack.
+    // But the hack no longer works if the order is reversed:
+    // static b = a;
+    // static a = 1;
+    // In this case, during the emission of 'static b = a', the static item 'a' has not been replaced yet and is considered mutable.
+    auto global = def->isa<Global>();
+    if (global && !global->is_mutable())
+        return global->init();
+    return value_decl()->is_mut() || global ? cg.load(def, location()) : def;
 }
 
 const Def* PrefixExpr::remit(CodeGen& cg) const {
