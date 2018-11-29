@@ -833,7 +833,6 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
                 cg.cur_bb->jump(join, {cg.cur_mem, def}, location().back());
         }
     } else {
-        auto mem = cg.cur_mem;
         // general case: if/else
         for (size_t i = 0, e = num_arms(); i != e; ++i) {
             auto case_true  = cg.basicblock({arm(i)->location().front(), "case_true"});
@@ -848,6 +847,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 
             cg.cur_bb->branch(cond, case_true, case_false, arm(i)->ptrn()->location().back());
 
+            auto mem = cg.cur_mem;
             cg.enter(case_true, mem);
             if (auto def = arm(i)->expr()->remit(cg))
                 cg.cur_bb->jump(join, {cg.cur_mem, def}, arm(i)->location().back());
