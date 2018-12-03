@@ -172,6 +172,7 @@ Token Lexer::lex() {
 
         // '.', floats
         if (accept('.')) {
+            str += '.';
             if (accept(str, dec)) goto l_fractional_dot_rest;
             if (accept('.'))      return {location(), Token::DOTDOT};
             return {location(), Token::DOT};

@@ -109,7 +109,6 @@ class Parser {
 public:
     Parser(std::istream& stream, const char* filename)
         : lexer_(stream, filename)
-        , cur_var_handle(2) // reserve 1 for conditionals, 0 for mem
     {
         lookahead_[0] = lexer_.lex();
         lookahead_[1] = lexer_.lex();
@@ -273,12 +272,11 @@ private:
     const LocalDecl* create_continuation_decl(const char* name, bool set_type) {
         auto identifier = create<Identifier>(name);
         auto ast_type = set_type ? create<FnASTType>() : nullptr;
-        return create<LocalDecl>(cur_var_handle++, identifier, ast_type);
+        return create<LocalDecl>(identifier, ast_type);
     }
 
     Lexer lexer_;        ///< invoked in order to get next token
     Token lookahead_[3]; ///< SLL(3) look ahead
-    size_t cur_var_handle;
     Location prev_location_;
 };
 
@@ -477,7 +475,7 @@ const Param* Parser::parse_param(int /*i*/, bool lambda) {
         pe_expr = new PrefixExpr(tracker, PrefixExpr::Tag::KNOWN, id);
     }
 
-    return new Param(tracker, cur_var_handle++, mut, identifier, ast_type, pe_expr);
+    return new Param(tracker, mut, identifier, ast_type, pe_expr);
 }
 
 const Param* Parser::parse_return_param() {
@@ -486,7 +484,7 @@ const Param* Parser::parse_return_param() {
 
     if (!is_continuation) {
         auto location = fn_type ? fn_type->location() : prev_location();
-        return new Param(location, cur_var_handle++, new Identifier(location, "return"), fn_type);
+        return new Param(location, new Identifier(location, "return"), fn_type);
     } else
         return nullptr;
 }
@@ -558,8 +556,6 @@ const Item* Parser::parse_extern_block_or_fn_decl(Tracker tracker, Visibility vi
 }
 
 const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility vis, bool is_extern, Symbol abi) {
-    //THORIN_PUSH(cur_var_handle, cur_var_handle);
-
     eat(Token::FN);
     auto export_name = lookahead() == Token::LIT_str ? lex().symbol() : Symbol();
 
@@ -622,7 +618,6 @@ const Item* Parser::parse_module_or_module_decl(Tracker tracker, Visibility vis)
 
 void Parser::parse_items(Items& items) {
     while (true) {
-        cur_var_handle = 2; // HACK
         switch (lookahead()) {
             case VISIBILITY:
             case ITEM:
@@ -1117,7 +1112,6 @@ const StrExpr* Parser::parse_str_expr() {
 }
 
 const FnExpr* Parser::parse_fn_expr(bool nested) {
-    //THORIN_PUSH(cur_var_handle, cur_var_handle);
     auto tracker = track();
 
     const Expr* pe_expr = nullptr;
@@ -1188,11 +1182,10 @@ const MatchExpr* Parser::parse_match_expr() {
 }
 
 const ForExpr* Parser::parse_for_expr() {
-    //THORIN_PUSH(cur_var_handle, cur_var_handle);
     auto tracker = track();
     eat(Token::FOR);
     auto params = param_list() ? parse_param_list(Token::IN, true) : Params();
-    params.emplace_back(create<Param>(cur_var_handle++, create<Identifier>("continue"), nullptr));
+    params.emplace_back(create<Param>(create<Identifier>("continue"), nullptr));
     auto expr = parse_expr();
     auto pe_expr = parse_pe_expr("partial evaluation profile of for loop");
     auto body = try_block_expr("body of for loop");
@@ -1207,7 +1200,7 @@ const ForExpr* Parser::parse_with_expr() {
     auto tracker = track();
     eat(Token::WITH);
     auto params = param_list() ? parse_param_list(Token::IN, true) : Params();
-    params.emplace_back(create<Param>(cur_var_handle++, create<Identifier>("break"), nullptr));
+    params.emplace_back(create<Param>(create<Identifier>("break"), nullptr));
     auto expr = parse_expr();
     auto pe_expr = parse_pe_expr("partial evaluation profile of with statement");
     auto body = try_block_expr("body of with statement");
@@ -1336,7 +1329,7 @@ const IdPtrn* Parser::parse_id_ptrn(const Identifier* id) {
     auto mut = id ? false : accept(Token::MUT);
     auto identifier = id ? id : try_identifier("local variable in let binding");
     auto ast_type = accept(Token::COLON) ? parse_type() : nullptr;
-    return new IdPtrn(new LocalDecl(tracker, cur_var_handle++, mut, identifier, ast_type));
+    return new IdPtrn(new LocalDecl(tracker, mut, identifier, ast_type));
 }
 
 const EnumPtrn* Parser::parse_enum_ptrn(const Path* path) {

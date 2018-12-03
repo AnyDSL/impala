@@ -32,7 +32,7 @@ public:
     void bind_head(const Item* item) {
         if (item->is_no_decl()) {
             if (const auto& extern_block = item->isa<ExternBlock>()) {
-                for (const auto& fn_decl : extern_block->fn_decls())
+                for (auto&& fn_decl : extern_block->fn_decls())
                     insert(fn_decl.get());
             }
         } else
@@ -112,7 +112,7 @@ void NameSema::pop_scope() {
  */
 
 void ASTTypeParam::bind(NameSema& sema) const {
-    for (const auto& bound : bounds())
+    for (auto&& bound : bounds())
         bound->bind(sema);
 }
 
@@ -132,13 +132,13 @@ void LocalDecl::bind(NameSema& sema) const {
 void ASTTypeParamList::bind_ast_type_params(NameSema& sema) const {
     // we need two runs for types like fn[A:T[B], B:T[A]](A, B)
     // first, insert names and generate De Bruijn index
-    for (const auto& ast_type_param : ast_type_params()) {
+    for (auto&& ast_type_param : ast_type_params()) {
         sema.insert(ast_type_param.get());
         ast_type_param->lambda_depth_ = ++sema.lambda_depth_;
     }
 
     // then, bind bounds
-    for (const auto& ast_type_param : ast_type_params())
+    for (auto&& ast_type_param : ast_type_params())
         ast_type_param->bind(sema);
 }
 
@@ -151,20 +151,20 @@ void SimdASTType::bind(NameSema& sema) const { elem_ast_type()->bind(sema); }
 void Typeof::bind(NameSema& sema) const { expr()->bind(sema); }
 
 void TupleASTType::bind(NameSema& sema) const {
-    for (const auto& ast_type_arg : ast_type_args())
+    for (auto&& ast_type_arg : ast_type_args())
         ast_type_arg->bind(sema);
 }
 
 void ASTTypeApp::bind(NameSema& sema) const {
     path()->bind(sema);
-    for (const auto& ast_type_arg : ast_type_args())
+    for (auto&& ast_type_arg : ast_type_args())
         ast_type_arg->bind(sema);
 }
 
 void FnASTType::bind(NameSema& sema) const {
     sema.push_scope();
     bind_ast_type_params(sema);
-    for (const auto& ast_type_arg : ast_type_args())
+    for (auto&& ast_type_arg : ast_type_args())
         ast_type_arg->bind(sema);
     sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
@@ -180,18 +180,18 @@ void ModuleDecl::bind(NameSema& ) const {}
 
 void Module::bind(NameSema& sema) const {
     sema.push_scope();
-    for (const auto& item : items()) {
+    for (auto&& item : items()) {
         sema.bind_head(item.get());
         if (item->is_named_decl())
             symbol2item_[item->symbol()] = item.get();
     }
-    for (const auto& item : items())
+    for (auto&& item : items())
         item->bind(sema);
     sema.pop_scope();
 }
 
 void ExternBlock::bind(NameSema& sema) const {
-    for (const auto& fn_decl : fn_decls())
+    for (auto&& fn_decl : fn_decls())
         fn_decl->bind(sema);
 }
 
@@ -206,7 +206,7 @@ void Typedef::bind(NameSema& sema) const {
 void EnumDecl::bind(NameSema& sema) const {
     sema.push_scope();
     bind_ast_type_params(sema);
-    for (const auto& option : option_decls()) {
+    for (auto&& option : option_decls()) {
         option->bind(sema);
         option->enum_decl_ = this;
         option_table_[option->symbol()] = option.get();
@@ -217,7 +217,7 @@ void EnumDecl::bind(NameSema& sema) const {
 
 void OptionDecl::bind(NameSema& sema) const {
     sema.insert(this);
-    for (const auto& arg : args()) arg->bind(sema);
+    for (auto&& arg : args()) arg->bind(sema);
 }
 
 void StaticItem::bind(NameSema& sema) const {
@@ -231,7 +231,7 @@ void Fn::fn_bind(NameSema& sema) const {
     sema.push_scope();
     bind_ast_type_params(sema);
 
-    for (const auto& param : params()) {
+    for (auto&& param : params()) {
         sema.insert(param.get());
         if (param->ast_type())
             param->ast_type()->bind(sema);
@@ -240,7 +240,7 @@ void Fn::fn_bind(NameSema& sema) const {
     if (pe_expr())
         pe_expr()->bind(sema);
 
-    for (const auto& param : params()) {
+    for (auto&& param : params()) {
         if (auto pe_expr = param->pe_expr())
             pe_expr->bind(sema);
     }
@@ -259,7 +259,7 @@ void FnDecl::bind(NameSema& sema) const {
 void StructDecl::bind(NameSema& sema) const {
     sema.push_scope();
     bind_ast_type_params(sema);
-    for (const auto& field_decl : field_decls()) {
+    for (auto&& field_decl : field_decls()) {
         field_decl->bind(sema);
         field_table_[field_decl->symbol()] = field_decl.get();
     }
@@ -275,9 +275,9 @@ void FieldDecl::bind(NameSema& sema) const {
 void TraitDecl::bind(NameSema& sema) const {
     sema.push_scope();
     bind_ast_type_params(sema);
-    for (const auto& t : super_traits())
+    for (auto&& t : super_traits())
         t->bind(sema);
-    for (const auto& method : methods()) {
+    for (auto&& method : methods()) {
         method->bind(sema);
         method_table_[method->symbol()] = method.get();
     }
@@ -291,7 +291,7 @@ void ImplItem::bind(NameSema& sema) const {
     if (trait())
         trait()->bind(sema);
     ast_type()->bind(sema);
-    for (const auto& fn : methods())
+    for (auto&& fn : methods())
         fn->bind(sema);
     sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();
@@ -307,11 +307,11 @@ void EmptyExpr::bind(NameSema&) const {}
 
 void BlockExpr::bind(NameSema& sema) const {
     sema.push_scope();
-    for (const auto& stmt : stmts()) {
+    for (auto&& stmt : stmts()) {
         if (auto item_stmt = stmt->isa<ItemStmt>())
             sema.bind_head(item_stmt->item());
     }
-    for (const auto& stmt : stmts())
+    for (auto&& stmt : stmts())
         stmt->bind(sema);
     expr()->bind(sema);
     sema.pop_scope();
@@ -345,7 +345,7 @@ void ExplicitCastExpr::bind(NameSema& sema) const {
 }
 
 void DefiniteArrayExpr::bind(NameSema& sema) const {
-    for (const auto& arg : args())
+    for (auto&& arg : args())
         arg->bind(sema);
 }
 
@@ -359,30 +359,30 @@ void IndefiniteArrayExpr::bind(NameSema& sema) const {
 }
 
 void TupleExpr::bind(NameSema& sema) const {
-    for (const auto& arg : args())
+    for (auto&& arg : args())
         arg->bind(sema);
 }
 
 void SimdExpr::bind(NameSema& sema) const {
-    for (const auto& arg : args())
+    for (auto&& arg : args())
         arg->bind(sema);
 }
 
 void StructExpr::bind(NameSema& sema) const {
     ast_type_app()->bind(sema);
-    for (const auto& elem : elems())
+    for (auto&& elem : elems())
         elem->expr()->bind(sema);
 }
 
 void TypeAppExpr::bind(NameSema& sema) const {
     lhs()->bind(sema);
-    for (const auto& ast_type_arg : ast_type_args())
+    for (auto&& ast_type_arg : ast_type_args())
         ast_type_arg->bind(sema);
 }
 
 void MapExpr::bind(NameSema& sema) const {
     lhs()->bind(sema);
-    for (const auto& arg : args())
+    for (auto&& arg : args())
         arg->bind(sema);
 }
 
@@ -426,7 +426,7 @@ void ForExpr::bind(NameSema& sema) const {
  */
 
 void TuplePtrn::bind(NameSema& sema) const {
-    for (const auto& elem : elems()) {
+    for (auto&& elem : elems()) {
         elem->bind(sema);
     }
 }
@@ -437,7 +437,7 @@ void IdPtrn::bind(NameSema& sema) const {
 
 void EnumPtrn::bind(NameSema& sema) const {
     path()->bind(sema);
-    for (const auto& arg : args()) {
+    for (auto&& arg : args()) {
         arg->bind(sema);
     }
 }
@@ -458,9 +458,9 @@ void LetStmt::bind(NameSema& sema) const {
     ptrn()->bind(sema);
 }
 void AsmStmt::bind(NameSema& sema) const {
-    for (const auto& output : outputs())
+    for (auto&& output : outputs())
         output->expr()->bind(sema);
-    for (const auto& input : inputs())
+    for (auto&& input : inputs())
         input->expr()->bind(sema);
 }
 
