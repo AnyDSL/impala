@@ -47,6 +47,7 @@ endif()
 if(TARGET libimpala)
     find_path(Impala_INCLUDE_DIR NAMES impala/impala.h PATHS ${Impala_ROOT_DIR}/src)
     set(Impala_LIBRARY libimpala)
+    find_package(Thorin REQUIRED)
 endif()
 
 include(FindPackageHandleStandardArgs)
