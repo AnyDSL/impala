@@ -1,0 +1,15 @@
+// codegen
+struct S {
+    a: int,
+    b: int
+}
+extern "thorin" { fn sizeof[T]() -> int; }
+extern "C" { fn impala_memmove(&mut [u8], &[u8], i32) -> (); }
+
+fn main() -> int {
+    let mut s = S { a: 0, b: 1 };
+    let mut a = s.a;
+    let b = s.b;
+    impala_memmove(&mut a as &mut[u8], &s.a as &[u8], sizeof[int]());
+    if ?b { 0 } else { 1 }
+}
