@@ -13,6 +13,7 @@ set(IMPALA_SOURCES
     sema/namesema.cpp
     sema/type.cpp
     sema/type.h
+    sema/type_table.h
     sema/typesema.cpp
     stream.cpp
     token.cpp
