@@ -17,11 +17,11 @@ public:
     {}
 
     /// Continuation of type cn()
-    Continuation* basicblock(Debug dbg) { return world.continuation(world.fn_type(), CC::C, Intrinsic::None, dbg); }
+    Continuation* basicblock(Debug dbg) { return world.continuation(world.cn(), CC::C, Intrinsic::None, dbg); }
 
     /// Continuation of type cn(mem, type) - a point in the program where control flow *j*oins
     Continuation* basicblock(const thorin::Type* type, Debug dbg) {
-        auto bb = world.continuation(world.fn_type({world.mem_type(), type}), CC::C, Intrinsic::None, dbg);
+        auto bb = world.continuation(world.cn({world.mem_type(), type}), CC::C, Intrinsic::None, dbg);
         bb->param(0)->debug().set("mem");
         return bb;
     }
@@ -58,7 +58,7 @@ public:
             cont_args.push_back(ret_type);
 
         // next is the return continuation
-        auto next = world.continuation(world.fn_type(cont_args), dbg);
+        auto next = world.continuation(world.cn(cont_args), dbg);
         next->param(0)->debug().set("mem");
 
         // create jump to next
@@ -82,7 +82,7 @@ public:
     }
 
     Continuation* create_continuation(const LocalDecl* decl) {
-        auto result = world.continuation(convert(decl->type())->as<thorin::FnType>(), decl->debug());
+        auto result = world.continuation(convert(decl->type())->as<thorin::Pi>(), decl->debug());
         result->param(0)->debug().set("mem");
         decl->def_ = result;
         return result;
@@ -144,12 +144,12 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
 #include "impala/tokenlist.h"
             default: THORIN_UNREACHABLE;
         }
-    } else if (auto fn_type = type->isa<FnType>()) {
+    } else if (auto cn = type->isa<FnType>()) {
         std::vector<const thorin::Type*> nops;
         nops.push_back(world.mem_type());
-        for (size_t i = 0, e = fn_type->num_params(); i != e; ++i)
-            nops.push_back(convert(fn_type->param(i)));
-        return world.fn_type(nops);
+        for (size_t i = 0, e = cn->num_params(); i != e; ++i)
+            nops.push_back(convert(cn->param(i)));
+        return world.cn(nops);
     } else if (auto tuple_type = type->isa<TupleType>()) {
         std::vector<const thorin::Type*> nops;
         for (auto&& op : tuple_type->ops())
@@ -221,7 +221,7 @@ const thorin::Type* OptionDecl::variant_type(CodeGen& cg) const {
 }
 
 Continuation* Fn::fn_emit_head(CodeGen& cg, Location location) const {
-    auto t = cg.convert(fn_type())->as<thorin::FnType>();
+    auto t = cg.convert(fn_type())->as<thorin::Pi>();
     return continuation_ = cg.world.continuation(t, {location, fn_symbol().remove_quotation()});
 }
 
@@ -247,10 +247,10 @@ void Fn::fn_emit_body(CodeGen& cg, Location location) const {
             param->emit(cg, p);
         }
 
-        //assert(i == continuation()->num_params() || continuation()->type() == cg.empty_fn_type);
+        //assert(i == continuation()->num_params() || continuation()->type() == cg.cn);
 
         if (continuation()->num_params() != 0
-                && continuation()->params().back()->type()->isa<thorin::FnType>())
+                && continuation()->params().back()->type()->isa<Pi>())
             ret_param_ = continuation()->params().back();
     }
 
@@ -372,7 +372,7 @@ void OptionDecl::emit(CodeGen& cg) const {
         auto bot = cg.world.bottom(variant_type);
         def_ = cg.world.struct_agg(cg.thorin_enum_type(enum_type), { id, bot });
     } else {
-        auto continuation = cg.world.continuation(cg.convert(type())->as<thorin::FnType>(), {location(), symbol()});
+        auto continuation = cg.world.continuation(cg.convert(type())->as<thorin::Pi>(), {location(), symbol()});
         auto ret = continuation->param(continuation->num_params() - 1);
         auto mem = continuation->param(0);
         Array<const Def*> defs(num_args());
@@ -641,7 +641,7 @@ const Def* MapExpr::lemit(CodeGen& cg) const {
 const Def* MapExpr::remit(CodeGen& cg) const {
     auto ltype = unpack_ref_type(lhs()->type());
 
-    if (auto fn_type = ltype->isa<FnType>()) {
+    if (auto cn = ltype->isa<FnType>()) {
         const Def* dst = nullptr;
 
         // Handle primops here
@@ -663,46 +663,46 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             return cg.world.bottom(cg.convert(type_expr->type_arg(0)), location());
                         } else if (name == "reserve_shared") {
                             auto ptr_type = cg.convert(type());
-                            auto fn_type = cg.world.fn_type({
+                            auto cn = cg.world.cn({
                                 cg.world.mem_type(), cg.world.type_qs32(),
-                                cg.world.fn_type({ cg.world.mem_type(), ptr_type }) });
-                            auto cont = cg.world.continuation(fn_type, {location(), "reserve_shared"});
+                                cg.world.cn({ cg.world.mem_type(), ptr_type }) });
+                            auto cont = cg.world.continuation(cn, {location(), "reserve_shared"});
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "atomic") {
                             auto poly_type = cg.convert(type());
                             auto ptr_type = cg.convert(arg(1)->type());
-                            auto fn_type = cg.world.fn_type({
+                            auto cn = cg.world.cn({
                                 cg.world.mem_type(), cg.world.type_pu32(), ptr_type, poly_type,
-                                cg.world.fn_type({ cg.world.mem_type(), poly_type }) });
-                            auto cont = cg.world.continuation(fn_type, {location(), "atomic"});
+                                cg.world.cn({ cg.world.mem_type(), poly_type }) });
+                            auto cont = cg.world.continuation(cn, {location(), "atomic"});
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "cmpxchg") {
                             auto ptr_type = cg.convert(arg(0)->type());
                             auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
-                            auto fn_type = cg.world.fn_type({
+                            auto cn = cg.world.cn({
                                 cg.world.mem_type(), ptr_type, poly_type, poly_type,
-                                cg.world.fn_type({ cg.world.mem_type(), poly_type, cg.world.type_bool() })
+                                cg.world.cn({ cg.world.mem_type(), poly_type, cg.world.type_bool() })
                             });
-                            auto cont = cg.world.continuation(fn_type, {location(), "cmpxchg"});
+                            auto cont = cg.world.continuation(cn, {location(), "cmpxchg"});
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "pe_info") {
                             auto poly_type = cg.convert(arg(1)->type());
                             auto string_type = cg.world.ptr_type(cg.world.indefinite_array_type(cg.world.type_pu8()));
-                            auto fn_type = cg.world.fn_type({
+                            auto cn = cg.world.cn({
                                 cg.world.mem_type(), string_type, poly_type,
-                                cg.world.fn_type({ cg.world.mem_type() }) });
-                            auto cont = cg.world.continuation(fn_type, {location(), "pe_info"});
+                                cg.world.cn({ cg.world.mem_type() }) });
+                            auto cont = cg.world.continuation(cn, {location(), "pe_info"});
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "pe_known") {
                             auto poly_type = cg.convert(arg(0)->type());
-                            auto fn_type = cg.world.fn_type({
+                            auto cn = cg.world.cn({
                                 cg.world.mem_type(), poly_type,
-                                cg.world.fn_type({ cg.world.mem_type(), cg.world.type_bool() }) });
-                            auto cont = cg.world.continuation(fn_type, {location(), "pe_known"});
+                                cg.world.cn({ cg.world.mem_type(), cg.world.type_bool() }) });
+                            auto cont = cg.world.continuation(cn, {location(), "pe_known"});
                             cont->set_intrinsic();
                             dst = cont;
                         }
@@ -719,7 +719,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
             defs.push_back(arg.get()->remit(cg));
         defs.front() = cg.cur_mem; // now get the current memory value
 
-        auto ret_type = num_args() == fn_type->num_params() ? nullptr : cg.convert(fn_type->return_type());
+        auto ret_type = num_args() == cn->num_params() ? nullptr : cg.convert(cn->return_type());
         const Def* ret;
         std::tie(cg.cur_bb, ret) = cg.call(dst, defs, ret_type, thorin::Debug(location(), dst->name()) + "_cont");
         if (ret_type)
@@ -862,7 +862,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 }
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
-    auto head_bb = cg.world.continuation(cg.world.fn_type({cg.world.mem_type()}), CC::C, Intrinsic::None, {location().front(), "while_head"});
+    auto head_bb = cg.world.continuation(cg.world.cn({cg.world.mem_type()}), CC::C, Intrinsic::None, {location().front(), "while_head"});
     head_bb->param(0)->debug().set("mem");
     auto body_bb = cg.basicblock({body()->location().front(), "while_body"});
     auto exit_bb = cg.basicblock({body()->location().back(),  "while_exit"});
