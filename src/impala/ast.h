@@ -13,10 +13,7 @@
 #include "impala/sema/type.h"
 
 namespace thorin {
-
-class Continuation;
-class Param;
-
+    class Lam;
 }
 
 namespace impala {
@@ -664,13 +661,13 @@ public:
     ArrayRef<std::unique_ptr<const Param>> params() const { return params_; }
     size_t num_params() const { return params_.size(); }
     const Expr* body() const { return body_.get(); }
-    thorin::Continuation* continuation() const { return continuation_; }
+    thorin::Lam* lam() const { return lam_; }
     const thorin::Def* ret_param() const { return ret_param_; }
     const thorin::Def* frame() const { return frame_; }
     std::ostream& stream_params(std::ostream& p, bool returning) const;
     void fn_bind(NameSema&) const;
     const Type* check_body(TypeSema&) const;
-    thorin::Continuation* fn_emit_head(CodeGen&, Location) const;
+    thorin::Lam* fn_emit_head(CodeGen&, Location) const;
     void fn_emit_body(CodeGen&, Location) const;
 
     virtual const FnType* fn_type() const = 0;
@@ -679,7 +676,7 @@ public:
 protected:
     std::unique_ptr<const Expr> pe_expr_;
     Params params_;
-    mutable thorin::Continuation* continuation_ = nullptr;
+    mutable thorin::Lam* lam_ = nullptr;
     mutable const thorin::Def* ret_param_ = nullptr;
     mutable const thorin::Def* frame_ = nullptr;
 

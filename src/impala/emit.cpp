@@ -1,6 +1,6 @@
 #include "impala/ast.h"
 
-#include "thorin/continuation.h"
+#include "thorin/lam.h"
 #include "thorin/primop.h"
 #include "thorin/type.h"
 #include "thorin/world.h"
@@ -16,32 +16,32 @@ public:
         : world(world)
     {}
 
-    /// Continuation of type cn()
-    Continuation* basicblock(Debug dbg) { return world.continuation(world.cn(), CC::C, Intrinsic::None, dbg); }
+    /// Lam of type cn()
+    Lam* basicblock(Debug dbg) { return world.lam(world.cn(), CC::C, Intrinsic::None, dbg); }
 
-    /// Continuation of type cn(mem, type) - a point in the program where control flow *j*oins
-    Continuation* basicblock(const thorin::Type* type, Debug dbg) {
-        auto bb = world.continuation(world.cn({world.mem_type(), type}), CC::C, Intrinsic::None, dbg);
+    /// Lam of type cn(mem, type) - a point in the program where control flow *j*oins
+    Lam* basicblock(const thorin::Type* type, Debug dbg) {
+        auto bb = world.lam(world.cn({world.mem_type(), type}), CC::C, Intrinsic::None, dbg);
         bb->param(0)->debug().set("mem");
         return bb;
     }
 
-    Continuation* enter(Continuation* bb, const Def* mem) {
+    Lam* enter(Lam* bb, const Def* mem) {
         cur_bb = bb;
         cur_mem = mem;
         return bb;
     }
 
-    const Def* enter(Continuation* bb) {
+    const Def* enter(Lam* bb) {
         enter(bb, bb->param(0));
         return bb->param(1);
     }
 
     const Def* frame() const { assert(cur_fn); return cur_fn->frame(); }
 
-    std::pair<Continuation*, const Def*> call(const Def* callee, Defs args, const thorin::Type* ret_type, Debug dbg) {
+    std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Type* ret_type, Debug dbg) {
         if (ret_type == nullptr) {
-            cur_bb->jump(callee, args, dbg);
+            cur_bb->app(callee, args, dbg);
             auto next = basicblock(dbg + "_unrechable");
             return std::make_pair(next, nullptr);
         }
@@ -57,15 +57,15 @@ public:
         } else
             cont_args.push_back(ret_type);
 
-        // next is the return continuation
-        auto next = world.continuation(world.cn(cont_args), dbg);
+        // next is the return lam
+        auto next = world.lam(world.cn(cont_args), dbg);
         next->param(0)->debug().set("mem");
 
         // create jump to next
         size_t csize = args.size() + 1;
         Array<const Def*> cargs(csize);
         *std::copy(args.begin(), args.end(), cargs.begin()) = next;
-        cur_bb->jump(callee, cargs, dbg);
+        cur_bb->app(callee, cargs, dbg);
 
         // determine return value
         const Def* ret = nullptr;
@@ -81,8 +81,8 @@ public:
         return std::make_pair(next, ret);
     }
 
-    Continuation* create_continuation(const LocalDecl* decl) {
-        auto result = world.continuation(convert(decl->type())->as<thorin::Pi>(), decl->debug());
+    Lam* create_lam(const LocalDecl* decl) {
+        auto result = world.lam(convert(decl->type())->as<thorin::Pi>(), decl->debug());
         result->param(0)->debug().set("mem");
         decl->def_ = result;
         return result;
@@ -124,7 +124,7 @@ public:
     TypeMap<const thorin::Type*> impala2thorin_;
     GIDMap<const StructType*, const thorin::StructType*> struct_type_impala2thorin_;
     GIDMap<const EnumType*,   const thorin::StructType*> enum_type_impala2thorin_;
-    Continuation* cur_bb = nullptr;
+    Lam* cur_bb = nullptr;
     const Def* cur_mem = nullptr;
 };
 
@@ -220,21 +220,21 @@ const thorin::Type* OptionDecl::variant_type(CodeGen& cg) const {
     return cg.world.tuple_type(types);
 }
 
-Continuation* Fn::fn_emit_head(CodeGen& cg, Location location) const {
+Lam* Fn::fn_emit_head(CodeGen& cg, Location location) const {
     auto t = cg.convert(fn_type())->as<thorin::Pi>();
-    return continuation_ = cg.world.continuation(t, {location, fn_symbol().remove_quotation()});
+    return lam_ = cg.world.lam(t, {location, fn_symbol().remove_quotation()});
 }
 
 void Fn::fn_emit_body(CodeGen& cg, Location location) const {
     // setup function nest
     THORIN_PUSH(cg.cur_fn, this);
-    THORIN_PUSH(cg.cur_bb, continuation());
+    THORIN_PUSH(cg.cur_bb, lam());
     auto old_mem = cg.cur_mem;
 
     // setup memory + frame
     {
         size_t i = 0;
-        auto mem_param = continuation()->param(i++);
+        auto mem_param = lam()->param(i++);
         mem_param->debug().set("mem");
         auto enter = cg.world.enter(mem_param, location);
         cg.cur_mem = cg.world.extract(enter, 0_s, location);
@@ -242,16 +242,16 @@ void Fn::fn_emit_body(CodeGen& cg, Location location) const {
 
         // name params and setup store locations
         for (auto&& param : params()) {
-            auto p = continuation()->param(i++);
+            auto p = lam()->param(i++);
             p->debug().set(param->symbol());
             param->emit(cg, p);
         }
 
-        //assert(i == continuation()->num_params() || continuation()->type() == cg.cn);
+        //assert(i == lam()->num_params() || lam()->type() == cg.cn);
 
-        if (continuation()->num_params() != 0
-                && continuation()->params().back()->type()->isa<Pi>())
-            ret_param_ = continuation()->params().back();
+        if (lam()->num_params() != 0
+                && lam()->params().back()->type()->isa<Pi>())
+            ret_param_ = lam()->params().back();
     }
 
     // descend into body
@@ -263,16 +263,16 @@ void Fn::fn_emit_body(CodeGen& cg, Location location) const {
             for (size_t i = 0, e = tuple->num_ops(); i != e; ++i)
                 ret_values[i + 1] = cg.world.extract(def, i);
             ret_values[0] = cg.cur_mem;
-            cg.cur_bb->jump(ret_param(), ret_values, location.back());
+            cg.cur_bb->app(ret_param(), ret_values, location.back());
         } else
-            cg.cur_bb->jump(ret_param(), {cg.cur_mem, def}, location.back());
+            cg.cur_bb->app(ret_param(), {cg.cur_mem, def}, location.back());
     }
 
     // now handle the filter
     {
         size_t i = 0;
         auto global = pe_expr() ? pe_expr()->remit(cg) : cg.world.literal_bool(false, location);
-        Array<const Def*> filter(continuation()->num_params());
+        Array<const Def*> filter(lam()->num_params());
         filter[i++] = global; // mem param
 
         for (auto&& param : params()) {
@@ -283,12 +283,12 @@ void Fn::fn_emit_body(CodeGen& cg, Location location) const {
         }
 
         // HACK for unit
-        if (auto tuple_type = continuation()->type()->ops().back()->isa<thorin::TupleType>()) {
+        if (auto tuple_type = lam()->type()->ops().back()->isa<thorin::TupleType>()) {
             if (tuple_type->num_ops() == 0)
                 filter[i++] = global;
         }
 
-        continuation()->set_filter(cg.world.tuple(filter));
+        lam()->set_filter(cg.world.tuple(filter));
     }
 
     cg.cur_mem = old_mem;
@@ -320,11 +320,11 @@ void FnDecl::emit_head(CodeGen& cg) const {
     // create thorin function
     def_ = fn_emit_head(cg, location());
     if (is_extern() && abi() == "")
-        continuation_->make_external();
+        lam_->make_external();
 
     // handle main function
     if (symbol() == "main")
-        continuation()->make_external();
+        lam()->make_external();
 }
 
 void FnDecl::emit(CodeGen& cg) const {
@@ -335,13 +335,13 @@ void FnDecl::emit(CodeGen& cg) const {
 void ExternBlock::emit_head(CodeGen& cg) const {
     for (auto&& fn_decl : fn_decls()) {
         fn_decl->emit_head(cg);
-        auto continuation = fn_decl->continuation();
+        auto lam = fn_decl->lam();
         if (abi() == "\"C\"")
-            continuation->cc() = thorin::CC::C;
+            lam->cc() = thorin::CC::C;
         else if (abi() == "\"device\"")
-            continuation->cc() = thorin::CC::Device;
-        else if (abi() == "\"thorin\"" && continuation) // no continuation for primops
-            continuation->set_intrinsic();
+            lam->cc() = thorin::CC::Device;
+        else if (abi() == "\"thorin\"" && lam) // no lam for primops
+            lam->set_intrinsic();
     }
 }
 
@@ -372,16 +372,16 @@ void OptionDecl::emit(CodeGen& cg) const {
         auto bot = cg.world.bottom(variant_type);
         def_ = cg.world.struct_agg(cg.thorin_enum_type(enum_type), { id, bot });
     } else {
-        auto continuation = cg.world.continuation(cg.convert(type())->as<thorin::Pi>(), {location(), symbol()});
-        auto ret = continuation->param(continuation->num_params() - 1);
-        auto mem = continuation->param(0);
+        auto lam = cg.world.lam(cg.convert(type())->as<thorin::Pi>(), {location(), symbol()});
+        auto ret = lam->param(lam->num_params() - 1);
+        auto mem = lam->param(0);
         Array<const Def*> defs(num_args());
-        for (size_t i = 1, e = continuation->num_params(); i + 1 < e; i++)
-            defs[i-1] = continuation->param(i);
+        for (size_t i = 1, e = lam->num_params(); i + 1 < e; i++)
+            defs[i-1] = lam->param(i);
         auto option_val = num_args() == 1 ? defs.back() : cg.world.tuple(defs);
         auto enum_val = cg.world.struct_agg(cg.thorin_enum_type(enum_type), { id, cg.world.variant(variant_type, option_val) });
-        continuation->jump(ret, { mem, enum_val }, location());
-        def_ = continuation;
+        lam->app(ret, { mem, enum_val }, location());
+        def_ = lam;
     }
 }
 
@@ -540,9 +540,9 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
             cg.enter(t, mem);
             auto rcond = rhs()->remit(cg);
-            cg.cur_bb->jump(r, {cg.cur_mem, rcond});
+            cg.cur_bb->app(r, {cg.cur_mem, rcond});
 
-            cg.enter(f, mem)->jump(r, {cg.cur_mem, cg.world.literal(false)});
+            cg.enter(f, mem)->app(r, {cg.cur_mem, cg.world.literal(false)});
             return cg.enter(r);
         }
         case OROR: {
@@ -556,9 +556,9 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
             cg.enter(f, mem);
             auto rcond = rhs()->remit(cg);
-            cg.cur_bb->jump(r, {cg.cur_mem, rcond});
+            cg.cur_bb->app(r, {cg.cur_mem, rcond});
 
-            cg.enter(t, mem)->jump(r, {cg.cur_mem, cg.world.literal(true)});
+            cg.enter(t, mem)->app(r, {cg.cur_mem, cg.world.literal(true)});
             return cg.enter(r);
         }
         default:
@@ -666,7 +666,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto cn = cg.world.cn({
                                 cg.world.mem_type(), cg.world.type_qs32(),
                                 cg.world.cn({ cg.world.mem_type(), ptr_type }) });
-                            auto cont = cg.world.continuation(cn, {location(), "reserve_shared"});
+                            auto cont = cg.world.lam(cn, {location(), "reserve_shared"});
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "atomic") {
@@ -675,7 +675,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto cn = cg.world.cn({
                                 cg.world.mem_type(), cg.world.type_pu32(), ptr_type, poly_type,
                                 cg.world.cn({ cg.world.mem_type(), poly_type }) });
-                            auto cont = cg.world.continuation(cn, {location(), "atomic"});
+                            auto cont = cg.world.lam(cn, {location(), "atomic"});
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "cmpxchg") {
@@ -685,7 +685,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                                 cg.world.mem_type(), ptr_type, poly_type, poly_type,
                                 cg.world.cn({ cg.world.mem_type(), poly_type, cg.world.type_bool() })
                             });
-                            auto cont = cg.world.continuation(cn, {location(), "cmpxchg"});
+                            auto cont = cg.world.lam(cn, {location(), "cmpxchg"});
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "pe_info") {
@@ -694,7 +694,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto cn = cg.world.cn({
                                 cg.world.mem_type(), string_type, poly_type,
                                 cg.world.cn({ cg.world.mem_type() }) });
-                            auto cont = cg.world.continuation(cn, {location(), "pe_info"});
+                            auto cont = cg.world.lam(cn, {location(), "pe_info"});
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "pe_known") {
@@ -702,7 +702,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto cn = cg.world.cn({
                                 cg.world.mem_type(), poly_type,
                                 cg.world.cn({ cg.world.mem_type(), cg.world.type_bool() }) });
-                            auto cont = cg.world.continuation(cn, {location(), "pe_known"});
+                            auto cont = cg.world.lam(cn, {location(), "pe_known"});
                             cont->set_intrinsic();
                             dst = cont;
                         }
@@ -766,11 +766,11 @@ const Def* IfExpr::remit(CodeGen& cg) const {
 
     cg.enter(if_then, head_mem);
     if (auto tdef = then_expr()->remit(cg))
-        cg.cur_bb->jump(if_join, {cg.cur_mem, tdef}, location().back());
+        cg.cur_bb->app(if_join, {cg.cur_mem, tdef}, location().back());
 
     cg.enter(if_else, head_mem);
     if (auto fdef = else_expr()->remit(cg))
-        cg.cur_bb->jump(if_join, {cg.cur_mem, fdef}, location().back());
+        cg.cur_bb->app(if_join, {cg.cur_mem, fdef}, location().back());
 
     if (thorin_type)
         return cg.enter(if_join);
@@ -788,11 +788,11 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
     bool is_simple = enum_type && enum_type->enum_decl()->is_simple();
 
     if (is_integer || is_simple) {
-        // integers: match continuation
-        Continuation* otherwise;
+        // integers: match lam
+        Lam* otherwise;
         size_t num_targets = num_arms();
         Array<const Def*> defs(num_targets);
-        Array<Continuation*> targets(num_targets);
+        Array<Lam*> targets(num_targets);
 
         for (size_t i = 0, e = num_targets; i != e; ++i) {
             // last pattern will always be taken
@@ -823,14 +823,14 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
         for (size_t i = 0; i != num_targets; ++i) {
             cg.enter(targets[i], mem);
             if (auto def = arm(i)->expr()->remit(cg))
-                cg.cur_bb->jump(join, {cg.cur_mem, def}, location().back());
+                cg.cur_bb->app(join, {cg.cur_mem, def}, location().back());
         }
 
         bool no_otherwise = num_arms() == num_targets;
         if (!no_otherwise) {
             cg.enter(otherwise, mem);
             if (auto def = arm(num_targets)->expr()->remit(cg))
-                cg.cur_bb->jump(join, {cg.cur_mem, def}, location().back());
+                cg.cur_bb->app(join, {cg.cur_mem, def}, location().back());
         }
     } else {
         // general case: if/else
@@ -850,7 +850,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
             auto mem = cg.cur_mem;
             cg.enter(case_true, mem);
             if (auto def = arm(i)->expr()->remit(cg))
-                cg.cur_bb->jump(join, {cg.cur_mem, def}, arm(i)->location().back());
+                cg.cur_bb->app(join, {cg.cur_mem, def}, arm(i)->location().back());
 
             cg.enter(case_false, mem);
         }
@@ -862,14 +862,14 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 }
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
-    auto head_bb = cg.world.continuation(cg.world.cn({cg.world.mem_type()}), CC::C, Intrinsic::None, {location().front(), "while_head"});
+    auto head_bb = cg.world.lam(cg.world.cn({cg.world.mem_type()}), CC::C, Intrinsic::None, {location().front(), "while_head"});
     head_bb->param(0)->debug().set("mem");
     auto body_bb = cg.basicblock({body()->location().front(), "while_body"});
     auto exit_bb = cg.basicblock({body()->location().back(),  "while_exit"});
-    auto cont_bb = cg.create_continuation(continue_decl());
-    auto brk__bb = cg.create_continuation(break_decl());
+    auto cont_bb = cg.create_lam(continue_decl());
+    auto brk__bb = cg.create_lam(break_decl());
 
-    cg.cur_bb->jump(head_bb, {cg.cur_mem}, cond()->location().back());
+    cg.cur_bb->app(head_bb, {cg.cur_mem}, cond()->location().back());
 
     cg.enter(head_bb, head_bb->param(0));
     auto c = cond()->remit(cg);
@@ -878,13 +878,13 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
 
     cg.enter(body_bb, cg.cur_mem);
     body()->remit(cg);
-    cg.cur_bb->jump(cont_bb, {cg.cur_mem}, body()->location().back());
+    cg.cur_bb->app(cont_bb, {cg.cur_mem}, body()->location().back());
 
     cg.enter(cont_bb, cont_bb->param(0));
-    cg.cur_bb->jump(head_bb, {cg.cur_mem}, body()->location().back());
+    cg.cur_bb->app(head_bb, {cg.cur_mem}, body()->location().back());
 
     cg.enter(exit_bb, head_mem);
-    cg.cur_bb->jump(brk__bb, {cg.cur_mem}, body()->location().back());
+    cg.cur_bb->app(brk__bb, {cg.cur_mem}, body()->location().back());
 
     cg.enter(brk__bb, brk__bb->param(0));
     return cg.world.tuple({}, location());
@@ -894,7 +894,7 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     std::vector<const Def*> args;
     args.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
 
-    auto break_bb = cg.create_continuation(break_decl());
+    auto break_bb = cg.create_lam(break_decl());
 
     // emit call
     auto map_expr = expr()->as<MapExpr>();
@@ -919,9 +919,9 @@ const Def* ForExpr::remit(CodeGen& cg) const {
 }
 
 const Def* FnExpr::remit(CodeGen& cg) const {
-    auto continuation = fn_emit_head(cg, location());
+    auto lam = fn_emit_head(cg, location());
     fn_emit_body(cg, location());
-    return continuation;
+    return lam;
 }
 
 /*
