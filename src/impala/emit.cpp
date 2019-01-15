@@ -1,8 +1,6 @@
 #include "impala/ast.h"
 
-#include "thorin/lam.h"
 #include "thorin/primop.h"
-#include "thorin/type.h"
 #include "thorin/world.h"
 #include "thorin/util/array.h"
 
@@ -17,10 +15,10 @@ public:
     {}
 
     /// Lam of type cn()
-    Lam* basicblock(Debug dbg) { return world.lam(world.cn(), CC::C, Intrinsic::None, dbg); }
+    Lam* basicblock(Debug dbg) { return world.lam(world.cn({}), CC::C, Intrinsic::None, dbg); }
 
     /// Lam of type cn(mem, type) - a point in the program where control flow *j*oins
-    Lam* basicblock(const thorin::Type* type, Debug dbg) {
+    Lam* basicblock(const thorin::Def* type, Debug dbg) {
         auto bb = world.lam(world.cn({world.mem_type(), type}), CC::C, Intrinsic::None, dbg);
         bb->param(0)->debug().set("mem");
         return bb;
@@ -39,18 +37,18 @@ public:
 
     const Def* frame() const { assert(cur_fn); return cur_fn->frame(); }
 
-    std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Type* ret_type, Debug dbg) {
+    std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, Debug dbg) {
         if (ret_type == nullptr) {
             cur_bb->app(callee, args, dbg);
             auto next = basicblock(dbg + "_unrechable");
             return std::make_pair(next, nullptr);
         }
 
-        std::vector<const thorin::Type*> cont_args;
+        std::vector<const thorin::Def*> cont_args;
         cont_args.push_back(world.mem_type());
 
         // if the return type is a tuple, flatten it
-        auto tuple = ret_type->isa<thorin::TupleType>();
+        auto tuple = ret_type->isa<thorin::Sigma>();
         if (tuple) {
             for (auto op : tuple->ops())
                 cont_args.push_back(op);
@@ -98,7 +96,7 @@ public:
         cur_mem = world.store(cur_mem, ptr, val, location);
     }
 
-    const Def* alloc(const thorin::Type* type, const Def* extra, Debug dbg) {
+    const Def* alloc(const thorin::Def* type, const Def* extra, Debug dbg) {
         if (!extra)
             extra = world.literal_qu64(0, dbg);
         auto alloc = world.alloc(type, cur_mem, extra, dbg);
@@ -106,24 +104,24 @@ public:
         return world.extract(alloc, 1, dbg);
     }
 
-    const thorin::Type* convert(const Type* type) {
+    const thorin::Def* convert(const Type* type) {
         if (auto t = thorin_type(type))
             return t;
         auto t = convert_rec(type);
         return thorin_type(type) = t;
     }
 
-    const thorin::Type* convert_rec(const Type*);
+    const thorin::Def* convert_rec(const Type*);
 
-    const thorin::Type*& thorin_type(const Type* type) { return impala2thorin_[type]; }
-    const thorin::StructType*& thorin_struct_type(const StructType* type) { return struct_type_impala2thorin_[type]; }
-    const thorin::StructType*& thorin_enum_type(const EnumType* type) { return enum_type_impala2thorin_[type]; }
+    const thorin::Def*& thorin_type(const Type* type) { return impala2thorin_[type]; }
+    const thorin::Sigma*& thorin_struct_type(const StructType* type) { return struct_type_impala2thorin_[type]; }
+    const thorin::Sigma*& thorin_enum_type(const EnumType* type) { return enum_type_impala2thorin_[type]; }
 
     World& world;
     const Fn* cur_fn = nullptr;
-    TypeMap<const thorin::Type*> impala2thorin_;
-    GIDMap<const StructType*, const thorin::StructType*> struct_type_impala2thorin_;
-    GIDMap<const EnumType*,   const thorin::StructType*> enum_type_impala2thorin_;
+    TypeMap<const thorin::Def*> impala2thorin_;
+    GIDMap<const StructType*, const thorin::Sigma*> struct_type_impala2thorin_;
+    GIDMap<const EnumType*,   const thorin::Sigma*> enum_type_impala2thorin_;
     Lam* cur_bb = nullptr;
     const Def* cur_mem = nullptr;
 };
@@ -132,11 +130,11 @@ public:
  * Type
  */
 
-const thorin::Type* CodeGen::convert_rec(const Type* type) {
+const thorin::Def* CodeGen::convert_rec(const Type* type) {
     if (auto lambda = type->isa<Lambda>()) {
-        return world.lambda(convert(lambda->body()), lambda->name());
+        return world.lam(world.star(), convert(lambda->body()), {lambda->name()});
     } else if (auto var = type->isa<Var>()) {
-        return world.var(var->depth());
+        return world.var(world.star(), var->depth());
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_tag()) {
 #define IMPALA_TYPE(itype, ttype) \
@@ -145,18 +143,18 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
             default: THORIN_UNREACHABLE;
         }
     } else if (auto cn = type->isa<FnType>()) {
-        std::vector<const thorin::Type*> nops;
+        std::vector<const thorin::Def*> nops;
         nops.push_back(world.mem_type());
         for (size_t i = 0, e = cn->num_params(); i != e; ++i)
             nops.push_back(convert(cn->param(i)));
         return world.cn(nops);
     } else if (auto tuple_type = type->isa<TupleType>()) {
-        std::vector<const thorin::Type*> nops;
+        std::vector<const thorin::Def*> nops;
         for (auto&& op : tuple_type->ops())
             nops.push_back(convert(op));
-        return world.tuple_type(nops);
+        return world.sigma(nops);
     } else if (auto struct_type = type->isa<StructType>()) {
-        auto s = world.struct_type(struct_type->struct_decl()->symbol(), struct_type->num_ops());
+        auto s = world.sigma(struct_type->num_ops(), struct_type->struct_decl()->symbol());
         thorin_struct_type(struct_type) = s;
         thorin_type(type) = s;
         size_t i = 0;
@@ -165,15 +163,15 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
         return s;
     } else if (auto enum_type = type->isa<EnumType>()) {
-        auto s = world.struct_type(enum_type->enum_decl()->symbol(), 2);
+        auto s = world.sigma(2, enum_type->enum_decl()->symbol());
         thorin_enum_type(enum_type) = s;
         thorin_type(enum_type) = s;
 
         auto enum_decl = enum_type->enum_decl();
-        thorin::TypeSet variants;
+        thorin::DefSet variants;
         for (auto&& option : enum_decl->option_decls())
             variants.insert(option->variant_type(*this));
-        thorin::Array<const thorin::Type*> ops(variants.size());
+        thorin::Array<const thorin::Def*> ops(variants.size());
         std::copy(variants.begin(), variants.end(), ops.begin());
 
         s->set(0, world.type_qu32());
@@ -212,12 +210,12 @@ void LocalDecl::emit(CodeGen& cg, const Def* init) const {
     }
 }
 
-const thorin::Type* OptionDecl::variant_type(CodeGen& cg) const {
-    std::vector<const thorin::Type*> types;
+const thorin::Def* OptionDecl::variant_type(CodeGen& cg) const {
+    std::vector<const thorin::Def*> types;
     for (auto&& arg : args())
         types.push_back(cg.convert(arg->type()));
     if (num_args() == 1) return types.back();
-    return cg.world.tuple_type(types);
+    return cg.world.sigma(types);
 }
 
 Lam* Fn::fn_emit_head(CodeGen& cg, Location location) const {
@@ -283,7 +281,7 @@ void Fn::fn_emit_body(CodeGen& cg, Location location) const {
         }
 
         // HACK for unit
-        if (auto tuple_type = lam()->type()->ops().back()->isa<thorin::TupleType>()) {
+        if (auto tuple_type = lam()->type()->ops().back()->isa<thorin::Sigma>()) {
             if (tuple_type->num_ops() == 0)
                 filter[i++] = global;
         }
@@ -370,7 +368,7 @@ void OptionDecl::emit(CodeGen& cg) const {
     auto id = cg.world.literal_qu32(index(), location());
     if (num_args() == 0) {
         auto bot = cg.world.bottom(variant_type);
-        def_ = cg.world.struct_agg(cg.thorin_enum_type(enum_type), { id, bot });
+        def_ = cg.world.tuple({ id, bot });
     } else {
         auto lam = cg.world.lam(cg.convert(type())->as<thorin::Pi>(), {location(), symbol()});
         auto ret = lam->param(lam->num_params() - 1);
@@ -379,7 +377,7 @@ void OptionDecl::emit(CodeGen& cg) const {
         for (size_t i = 1, e = lam->num_params(); i + 1 < e; i++)
             defs[i-1] = lam->param(i);
         auto option_val = num_args() == 1 ? defs.back() : cg.world.tuple(defs);
-        auto enum_val = cg.world.struct_agg(cg.thorin_enum_type(enum_type), { id, cg.world.variant(variant_type, option_val) });
+        auto enum_val = cg.world.tuple({ id, cg.world.variant(variant_type, option_val) });
         lam->app(ret, { mem, enum_val }, location());
         def_ = lam;
     }
@@ -627,7 +625,7 @@ const Def* StructExpr::remit(CodeGen& cg) const {
     Array<const Def*> defs(num_elems());
     for (auto&& elem : elems())
         defs[elem->field_decl()->index()] = elem->expr()->remit(cg);
-    return cg.world.struct_agg(cg.convert(type())->as<thorin::StructType>(), defs, location());
+    return cg.world.tuple(defs, location());
 }
 
 const Def* TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
@@ -1000,7 +998,7 @@ void LetStmt::emit(CodeGen& cg) const {
 }
 
 void AsmStmt::emit(CodeGen& cg) const {
-    Array<const thorin::Type*> outs(num_outputs());
+    Array<const thorin::Def*> outs(num_outputs());
     for (size_t i = 0, e = num_outputs(); i != e; ++i)
         outs[i] = cg.convert(output(i)->expr()->type()->as<RefType>()->pointee());
 

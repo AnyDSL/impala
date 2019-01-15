@@ -908,7 +908,7 @@ public:
     void emit(CodeGen&) const;
     std::ostream& stream(std::ostream&) const override;
 
-    const thorin::Type* variant_type(CodeGen&) const;
+    const thorin::Def* variant_type(CodeGen&) const;
 
 private:
     const Type* infer(InferSema&) const;
