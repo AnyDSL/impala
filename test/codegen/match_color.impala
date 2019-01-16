@@ -4,13 +4,6 @@ extern "C" {
     fn forty_two() -> int;
 }
 
-enum Color {
-    Red(int),
-    Green(int),
-    Blue(int),
-    Nil,
-}
-
 fn main() -> int {
     let x = Color::Red(forty_two());
 
@@ -22,4 +15,11 @@ fn main() -> int {
         Color::Nil      => 1,
         _               => 2,
     }
+}
+
+enum Color {
+    Red(int),
+    Green(int),
+    Blue(int),
+    Nil,
 }

@@ -1,0 +1,7 @@
+// codegen
+
+// see https://github.com/AnyDSL/thorin/pull/97#issuecomment-442962062
+
+fn main() -> int {
+    if !true { 1 } else { 0 }
+}

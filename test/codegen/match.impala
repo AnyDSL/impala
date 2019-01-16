@@ -4,13 +4,13 @@ extern "C" {
     fn forty_two() -> int;
 }
 
-fn test1(i: (int, int)) -> int {
-    match i {
-        (2, 3) => 5,
-        (1, x) => x,
-        _ => 0
-    }
-}
+//fn test1(i: (int, int)) -> int {
+    //match i {
+        //(2, 3) => 5,
+        //(1, x) => x,
+        //_ => 0
+    //}
+//}
 
 fn test2(i: int) -> int {
     match i {
@@ -21,8 +21,11 @@ fn test2(i: int) -> int {
 }
 
 fn main() -> int {
+    test2(forty_two())
+    /*
     match (test1((forty_two(), forty_two())), test2(forty_two())) {
         (0, 0) => 0,
         _ => 1,
     }
+    */
 }
