@@ -15,7 +15,7 @@ public:
     {}
 
     /// Lam of type cn()
-    Lam* basicblock(Debug dbg) { return world.lam(world.cn({}), CC::C, Intrinsic::None, dbg); }
+    Lam* basicblock(Debug dbg) { return world.lam(world.cn(), CC::C, Intrinsic::None, dbg); }
 
     /// Lam of type cn(mem, type) - a point in the program where control flow *j*oins
     Lam* basicblock(const thorin::Def* type, Debug dbg) {
