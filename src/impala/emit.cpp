@@ -368,7 +368,7 @@ void OptionDecl::emit(CodeGen& cg) const {
     auto id = cg.world.literal_qu32(index(), location());
     if (num_args() == 0) {
         auto bot = cg.world.bottom(variant_type);
-        def_ = cg.world.tuple({ id, bot });
+        def_ = cg.world.tuple(cg.thorin_enum_type(enum_type), { id, bot });
     } else {
         auto lam = cg.world.lam(cg.convert(type())->as<thorin::Pi>(), {location(), symbol()});
         auto ret = lam->param(lam->num_params() - 1);
@@ -377,7 +377,7 @@ void OptionDecl::emit(CodeGen& cg) const {
         for (size_t i = 1, e = lam->num_params(); i + 1 < e; i++)
             defs[i-1] = lam->param(i);
         auto option_val = num_args() == 1 ? defs.back() : cg.world.tuple(defs);
-        auto enum_val = cg.world.tuple({ id, cg.world.variant(variant_type, option_val) });
+        auto enum_val = cg.world.tuple(cg.thorin_enum_type(enum_type), { id, cg.world.variant(variant_type, option_val) });
         lam->app(ret, { mem, enum_val }, location());
         def_ = lam;
     }
@@ -625,7 +625,7 @@ const Def* StructExpr::remit(CodeGen& cg) const {
     Array<const Def*> defs(num_elems());
     for (auto&& elem : elems())
         defs[elem->field_decl()->index()] = elem->expr()->remit(cg);
-    return cg.world.tuple(defs, location());
+    return cg.world.tuple(cg.convert(type())->as<thorin::Sigma>(), defs, location());
 }
 
 const Def* TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
