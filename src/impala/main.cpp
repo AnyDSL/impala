@@ -14,6 +14,7 @@
 #include "impala/ast.h"
 #include "impala/cgen.h"
 #include "impala/impala.h"
+#include "mpigen.h"
 
 //------------------------------------------------------------------------------
 
@@ -44,7 +45,7 @@ int main(int argc, char** argv) {
         bool help,
              emit_cint, emit_thorin, emit_ast, emit_annotated,
              emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
-             nocleanup, nossa, fancy;
+             nocleanup, nossa, fancy, emit_mpi;
 
 #ifndef NDEBUG
 #define LOG_LEVELS "{error|warn|info|verbose|debug}"
@@ -76,7 +77,8 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("f",                  "", "use fancy output: Impala's AST dump uses only parentheses where necessary", fancy, false)
             .add_option<bool>            ("g",                  "", "emit debug information", debug, false)
             .add_option<bool>            ("nocleanup",          "", "no clean-up phase", nocleanup, false)
-            .add_option<bool>            ("nossa",              "", "use slots + load/store instead of SSA construction", nossa, false);
+            .add_option<bool>            ("nossa",              "", "use slots + load/store instead of SSA construction", nossa, false)
+            .add_option<bool>            ("emit-mpi",           "", "emit mpi helper C file for all structs which call mpi_type()", emit_mpi, false);
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
@@ -208,6 +210,11 @@ int main(int argc, char** argv) {
                 return EXIT_FAILURE;
             }
             impala::generate_c_interface(module.get(), opts, out_file);
+        }
+
+        if (result && emit_mpi) {
+            impala::MpiStructs::instance().emitMpiCode();
+            exit(0);
         }
 
         if (result && (emit_llvm || emit_thorin))

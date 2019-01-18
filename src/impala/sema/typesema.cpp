@@ -1,5 +1,6 @@
 #include <sstream>
 
+#include <impala/mpigen.h>
 #include "impala/ast.h"
 #include "impala/impala.h"
 
@@ -601,6 +602,27 @@ void MapExpr::check(TypeSema& sema) const {
 
     for (auto&& arg : args())
         sema.check(arg.get());
+
+    //mpi helpers
+    if (auto type_expr = lhs()->isa<TypeAppExpr>()) { // Bitcast, sizeof and select are all polymorphic
+        auto callee = type_expr->lhs()->skip_rvalue();
+        if (auto path = callee->isa<PathExpr>()) {
+            if (auto fn_decl = path->value_decl()->isa<FnDecl>()) {
+                if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {
+                    auto name = fn_decl->fn_symbol().remove_quotation();
+                    if(name == "mpi_type") {
+                        auto inputType = arg(0)->type();
+                        if(auto ptrType = inputType->isa<PtrType>()) {
+                            if (auto structType = ptrType->pointee()->isa<StructType>()) {
+                                //found struct (mpi helper method must be generated)
+                                MpiStructs::instance().addStruct(structType);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     if (ltype->isa<FnType>()) {
         if (!type()->is_known())
