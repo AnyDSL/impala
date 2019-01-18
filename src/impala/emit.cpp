@@ -789,7 +789,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 
     if (is_integer || is_simple) {
         // integers: match continuation
-        Continuation* otherwise;
+        Continuation* otherwise = nullptr;
         size_t num_targets = num_arms();
         Array<const Def*> defs(num_targets);
         Array<Continuation*> targets(num_targets);
