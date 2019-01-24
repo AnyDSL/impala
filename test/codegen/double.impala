@@ -1,0 +1,39 @@
+// codegen
+
+extern "C" {
+    fn print_int(i32) -> ();
+    fn print_f64(f64) -> ();
+}
+
+fn gi(mut a: i32, b: i32, f: fn(i32) -> ()) -> () {
+    while a < b {
+        f(a++)
+    }
+}
+
+fn gf(mut a: f64, b: f64, f: fn(f64) -> ()) -> () {
+    while a < b {
+        f(a++)
+    }
+}
+
+
+fn g(   ai: i32, bi: i32, af: f64, bf: f64,
+        gi: fn(i32, i32, fn(i32) -> ()) -> (),
+        gf: fn(f64, f64, fn(f64) -> ()) -> (),
+        f: fn(i32, f64) -> ()) -> () {
+    gi(ai, bi, |x, outer| -> !
+        gf(af, bf, |y| {
+            f(x, y);
+            outer()
+        })
+    )
+}
+
+fn main() -> int {
+    for i, f in g(3, 7, 3.0, 7.0, gi, gf) {
+        print_int(i);
+        print_f64(f);
+    }
+    0
+}
