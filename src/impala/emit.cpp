@@ -200,7 +200,7 @@ void LocalDecl::emit(CodeGen& cg, const Def* init) const {
     assert(def_ == nullptr);
 
     auto thorin_type = cg.convert(type());
-    init = init ? init : cg.world.bottom(thorin_type);
+    init = init ? init : cg.world.bot(thorin_type);
 
     if (is_mut()) {
         def_ = cg.world.slot(thorin_type, cg.frame(), debug());
@@ -347,7 +347,7 @@ void ModuleDecl::emit(CodeGen&) const {}
 void ImplItem::emit(CodeGen&) const {}
 
 void StaticItem::emit_head(CodeGen& cg) const {
-    def_ = cg.world.global(cg.world.bottom(cg.convert(type()), location()));
+    def_ = cg.world.global(cg.world.bot(cg.convert(type()), location()));
 }
 
 void StaticItem::emit(CodeGen& cg) const {
@@ -367,7 +367,7 @@ void OptionDecl::emit(CodeGen& cg) const {
     auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
     auto id = cg.world.literal_qu32(index(), location());
     if (num_args() == 0) {
-        auto bot = cg.world.bottom(variant_type);
+        auto bot = cg.world.bot(variant_type);
         def_ = cg.world.tuple(cg.thorin_enum_type(enum_type), { id, bot });
     } else {
         auto lam = cg.world.lam(cg.convert(type())->as<thorin::Pi>(), {location(), symbol()});
@@ -658,7 +658,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         } else if (name == "sizeof") {
                             return cg.world.size_of(cg.convert(type_expr->type_arg(0)), location());
                         } else if (name == "undef") {
-                            return cg.world.bottom(cg.convert(type_expr->type_arg(0)), location());
+                            return cg.world.bot(cg.convert(type_expr->type_arg(0)), location());
                         } else if (name == "reserve_shared") {
                             auto ptr_type = cg.convert(type());
                             auto cn = cg.world.cn({
@@ -994,7 +994,7 @@ void ExprStmt::emit(CodeGen& cg) const { expr()->remit(cg); }
 void ItemStmt::emit(CodeGen& cg) const { item()->emit(cg); }
 
 void LetStmt::emit(CodeGen& cg) const {
-    ptrn()->emit(cg, init() ? init()->remit(cg) : cg.world.bottom(cg.convert(ptrn()->type()), ptrn()->location()));
+    ptrn()->emit(cg, init() ? init()->remit(cg) : cg.world.bot(cg.convert(ptrn()->type()), ptrn()->location()));
 }
 
 void AsmStmt::emit(CodeGen& cg) const {
