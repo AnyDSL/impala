@@ -40,7 +40,7 @@ public:
     std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, Debug dbg) {
         if (ret_type == nullptr) {
             cur_bb->app(callee, args, dbg);
-            auto next = basicblock(dbg + "_unrechable");
+            auto next = basicblock(dbg + "_unreachable");
             return std::make_pair(next, nullptr);
         }
 
