@@ -49,6 +49,8 @@ public:
 
         // if the return type is a tuple, flatten it
         auto tuple = ret_type->isa<thorin::Sigma>();
+        if (tuple && tuple->is_nominal())
+            tuple = nullptr;
         if (tuple) {
             for (auto op : tuple->ops())
                 cont_args.push_back(op);
@@ -71,7 +73,7 @@ public:
             Array<const Def*> params(next->num_params() - 1);
             for (size_t i = 1, e = next->num_params(); i != e; ++i)
                 params[i - 1] = next->param(i);
-            ret = world.tuple(params);
+            ret = world.tuple(ret_type, params);
         } else
             ret = next->param(1);
         ret->debug().set(callee->name());
