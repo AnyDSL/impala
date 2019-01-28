@@ -90,8 +90,8 @@ public:
 
     const Def* load(const Def* ptr, Location location) {
         auto l = world.load(cur_mem, ptr, location);
-        cur_mem = world.extract(l, 0_s, location);
-        return world.extract(l, 1_s, location);
+        cur_mem = world.extract(l, 0_u32, location);
+        return world.extract(l, 1_u32, location);
     }
 
     void store(const Def* ptr, const Def* val, Location location) {
@@ -102,7 +102,7 @@ public:
         if (!extra)
             extra = world.literal_qu64(0, dbg);
         auto alloc = world.alloc(type, cur_mem, extra, dbg);
-        cur_mem = world.extract(alloc, 0_s, dbg);
+        cur_mem = world.extract(alloc, 0_u32, dbg);
         return world.extract(alloc, 1, dbg);
     }
 
@@ -237,8 +237,8 @@ void Fn::fn_emit_body(CodeGen& cg, Location location) const {
         auto mem_param = lam()->param(i++);
         mem_param->debug().set("mem");
         auto enter = cg.world.enter(mem_param, location);
-        cg.cur_mem = cg.world.extract(enter, 0_s, location);
-        frame_ =     cg.world.extract(enter, 1_s, location);
+        cg.cur_mem = cg.world.extract(enter, 0_u32, location);
+        frame_ =     cg.world.extract(enter, 1_u32, location);
 
         // name params and setup store locations
         for (auto&& param : params()) {
