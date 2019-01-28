@@ -1,4 +1,4 @@
-// codegen broken
+// codegen
 
 fn seq(a: int, b: int) -> (int, fn(int, fn(int) -> ()) -> ()) {
     fn stream(i: int, body: fn(int) -> ()) -> () {
