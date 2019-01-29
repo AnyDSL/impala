@@ -40,14 +40,14 @@ public:
     std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, Debug dbg) {
         if (ret_type == nullptr) {
             cur_bb->app(callee, args, dbg);
-            auto next = basicblock(dbg + "_unrechable");
+            auto next = basicblock(dbg + "_unreachable");
             return std::make_pair(next, nullptr);
         }
 
         std::vector<const thorin::Def*> cont_args;
         cont_args.push_back(world.mem_type());
 
-        // if the return type is a structural sigma, flatten it
+        // if the return type is a sigma, flatten it
         auto sigma = ret_type->isa<thorin::Sigma>();
         if (sigma && !sigma->is_nominal()) {
             for (auto op : sigma->ops())
@@ -71,7 +71,7 @@ public:
             Array<const Def*> params(next->num_params() - 1);
             for (size_t i = 1, e = next->num_params(); i != e; ++i)
                 params[i - 1] = next->param(i);
-            ret = world.tuple(params);
+            ret = world.tuple(ret_type, params);
         } else
             ret = next->param(1);
         ret->debug().set(callee->name());
@@ -88,8 +88,8 @@ public:
 
     const Def* load(const Def* ptr, Location location) {
         auto l = world.load(cur_mem, ptr, location);
-        cur_mem = world.extract(l, 0_s, location);
-        return world.extract(l, 1_s, location);
+        cur_mem = world.extract(l, 0_u32, location);
+        return world.extract(l, 1_u32, location);
     }
 
     void store(const Def* ptr, const Def* val, Location location) {
@@ -100,7 +100,7 @@ public:
         if (!extra)
             extra = world.literal_qu64(0, dbg);
         auto alloc = world.alloc(type, cur_mem, extra, dbg);
-        cur_mem = world.extract(alloc, 0_s, dbg);
+        cur_mem = world.extract(alloc, 0_u32, dbg);
         return world.extract(alloc, 1, dbg);
     }
 
@@ -233,8 +233,8 @@ void Fn::fn_emit_body(CodeGen& cg, Location location) const {
         auto mem_param = lam()->param(i++);
         mem_param->debug().set("mem");
         auto enter = cg.world.enter(mem_param, location);
-        cg.cur_mem = cg.world.extract(enter, 0_s, location);
-        frame_ =     cg.world.extract(enter, 1_s, location);
+        cg.cur_mem = cg.world.extract(enter, 0_u32, location);
+        frame_ =     cg.world.extract(enter, 1_u32, location);
 
         // name params and setup store locations
         for (auto&& param : params()) {

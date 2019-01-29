@@ -1,0 +1,19 @@
+// codegen
+
+extern fn test(cond1: bool, cond2: bool, a: int, b: int) -> int {
+    let d = if cond1 {
+        a / b
+    } else {
+        a
+    };
+    let e = if cond2 {
+        a / b
+    } else {
+        a
+    };
+    d + e
+}
+
+extern fn main() -> int {
+    if test(false, false, 42, 0) == 84 { 0 } else { 1 }
+}
