@@ -425,7 +425,6 @@ const Type* PtrASTType::infer(InferSema& sema) const {
 
 const Type* IndefiniteArrayASTType::infer(InferSema& sema) const { return sema.indefinite_array_type(sema.infer(elem_ast_type())); }
 const Type* DefiniteArrayASTType::infer(InferSema& sema) const { return sema.definite_array_type(sema.infer(elem_ast_type()), dim()); }
-const Type* SimdASTType::infer(InferSema& sema) const { return sema.simd_type(sema.infer(elem_ast_type()), size()); }
 
 const Type* TupleASTType::infer(InferSema& sema) const {
     Array<const Type*> types(num_ast_type_args());
@@ -792,24 +791,6 @@ const Type* DefiniteArrayExpr::infer(InferSema& sema) const {
     return sema.definite_array_type(expected_elem_type, num_args());
 }
 
-const Type* SimdExpr::infer(InferSema& sema) const {
-    const Type* expected_elem_type;
-    if (type_ == nullptr)
-        expected_elem_type = sema.unknown_type();
-    else if (auto simd_type = type_->isa<SimdType>())
-        expected_elem_type = simd_type->elem_type();
-    else
-        expected_elem_type = sema.type_error();
-
-    for (auto&& arg : args())
-        sema.rvalue(arg.get());
-
-    for (auto&& arg : args())
-        expected_elem_type = sema.coerce(expected_elem_type, arg.get());
-
-    return sema.simd_type(expected_elem_type, num_args());
-}
-
 const Type* RepeatedDefiniteArrayExpr::infer(InferSema& sema) const {
     return sema.definite_array_type(sema.rvalue(value()), count());
 }
@@ -939,9 +920,6 @@ const Type* MapExpr::infer(InferSema& sema) const {
         else
             return sema.wrap_ref(ref, sema.type_error());
     }
-
-    if (auto simd_type = ltype->isa<SimdType>())
-        return sema.wrap_ref(ref, simd_type->elem_type());
 
     if (ref && (ltype->isa<Lambda>() || ltype->isa<FnType>()))
         ltype = sema.rvalue(lhs());

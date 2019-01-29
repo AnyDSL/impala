@@ -47,10 +47,10 @@ public:
         std::vector<const thorin::Def*> cont_args;
         cont_args.push_back(world.mem_type());
 
-        // if the return type is a tuple, flatten it
-        auto tuple = ret_type->isa<thorin::Sigma>();
-        if (tuple) {
-            for (auto op : tuple->ops())
+        // if the return type is a structural sigma, flatten it
+        auto sigma = ret_type->isa<thorin::Sigma>();
+        if (sigma && !sigma->is_nominal()) {
+            for (auto op : sigma->ops())
                 cont_args.push_back(op);
         } else
             cont_args.push_back(ret_type);
@@ -67,7 +67,7 @@ public:
 
         // determine return value
         const Def* ret = nullptr;
-        if (tuple) {
+        if (sigma) {
             Array<const Def*> params(next->num_params() - 1);
             for (size_t i = 1, e = next->num_params(); i != e; ++i)
                 params[i - 1] = next->param(i);
@@ -179,13 +179,11 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
         thorin_type(enum_type) = nullptr;
         return s;
     } else if (auto ptr_type = type->isa<PtrType>()) {
-        return world.ptr_type(convert(ptr_type->pointee()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
+        return world.ptr_type(convert(ptr_type->pointee()), -1, thorin::AddrSpace(ptr_type->addr_space()));
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
         return world.definite_array_type(convert(definite_array_type->elem_type()), definite_array_type->dim());
     } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {
         return world.indefinite_array_type(convert(indefinite_array_type->elem_type()));
-    } else if (auto simd_type = type->isa<SimdType>()) {
-        return world.type(convert(simd_type->elem_type())->as<thorin::PrimType>()->primtype_tag(), simd_type->dim());
     } else if (type->isa<NoRetType>()) {
         return nullptr; // TODO use bottom type - once it is available in thorin
     }
@@ -614,13 +612,6 @@ const Def* IndefiniteArrayExpr::remit(CodeGen& cg) const {
     return cg.world.indefinite_array(cg.convert(type())->as<thorin::IndefiniteArrayType>()->elem_type(), extra_, location());
 }
 
-const Def* SimdExpr::remit(CodeGen& cg) const {
-    Array<const Def*> thorin_args(num_args());
-    for (size_t i = 0, e = num_args(); i != e; ++i)
-        thorin_args[i] = arg(i)->remit(cg);
-    return cg.world.vector(thorin_args, location());
-}
-
 const Def* StructExpr::remit(CodeGen& cg) const {
     Array<const Def*> defs(num_elems());
     for (auto&& elem : elems())
@@ -724,7 +715,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
             cg.cur_mem = cg.cur_bb->param(0);
 
         return ret;
-    } else if (ltype->isa<ArrayType>() || ltype->isa<TupleType>() || ltype->isa<SimdType>()) {
+    } else if (ltype->isa<ArrayType>() || ltype->isa<TupleType>()) {
         auto index = arg(0)->remit(cg);
         return cg.world.extract(lhs()->remit(cg), index, location());
     }

@@ -147,7 +147,6 @@ void PrimASTType::bind(NameSema&) const {}
 void PtrASTType::bind(NameSema& sema) const { referenced_ast_type()->bind(sema); }
 void IndefiniteArrayASTType::bind(NameSema& sema) const { elem_ast_type()->bind(sema); }
 void DefiniteArrayASTType::bind(NameSema& sema) const { elem_ast_type()->bind(sema); }
-void SimdASTType::bind(NameSema& sema) const { elem_ast_type()->bind(sema); }
 void Typeof::bind(NameSema& sema) const { expr()->bind(sema); }
 
 void TupleASTType::bind(NameSema& sema) const {
@@ -359,11 +358,6 @@ void IndefiniteArrayExpr::bind(NameSema& sema) const {
 }
 
 void TupleExpr::bind(NameSema& sema) const {
-    for (auto&& arg : args())
-        arg->bind(sema);
-}
-
-void SimdExpr::bind(NameSema& sema) const {
     for (auto&& arg : args())
         arg->bind(sema);
 }

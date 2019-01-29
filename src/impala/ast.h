@@ -470,25 +470,6 @@ private:
     std::unique_ptr<const Expr> expr_;
 };
 
-class SimdASTType : public ArrayASTType {
-public:
-    SimdASTType(Location location, const ASTType* elem_ast_type, uint64_t size)
-        : ArrayASTType(location, elem_ast_type)
-        , size_(size)
-    {}
-
-    uint64_t size() const { return size_; }
-
-    void bind(NameSema&) const override;
-    std::ostream& stream(std::ostream&) const override;
-
-private:
-    const Type* infer(InferSema&) const override;
-    void check(TypeSema&) const override;
-
-    uint64_t size_;
-};
-
 //------------------------------------------------------------------------------
 
 /*
@@ -1589,22 +1570,6 @@ private:
 class TupleExpr : public Expr, public Args {
 public:
     TupleExpr(Location location, Exprs&& args)
-        : Expr(location)
-        , Args(std::move(args))
-    {}
-
-    void bind(NameSema&) const override;
-    std::ostream& stream(std::ostream&) const override;
-
-private:
-    const Type* infer(InferSema&) const override;
-    void check(TypeSema&) const override;
-    const thorin::Def* remit(CodeGen&) const override;
-};
-
-class SimdExpr : public Expr, public Args {
-public:
-    SimdExpr(Location location, Exprs&& args)
         : Expr(location)
         , Args(std::move(args))
     {}

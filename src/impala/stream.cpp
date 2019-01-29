@@ -22,7 +22,6 @@ std::ostream& PtrASTType::stream(std::ostream& os) const {
 
 std::ostream& DefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[{} * {}]", elem_ast_type(), dim()); }
 std::ostream& IndefiniteArrayASTType::stream(std::ostream& os) const { return streamf(os, "[{}]", elem_ast_type()); }
-std::ostream& SimdASTType::stream(std::ostream& os) const { return streamf(os, "simd[{} * {}]", elem_ast_type(), size()); }
 
 std::ostream& TupleASTType::stream(std::ostream& os) const {
     return stream_list(os, ast_type_args(), [&](const auto& ast_type) { os << ast_type.get(); }, "(", ")");
@@ -301,10 +300,6 @@ std::ostream& RepeatedDefiniteArrayExpr::stream(std::ostream& os) const {
 
 std::ostream& IndefiniteArrayExpr::stream(std::ostream& os) const {
     return streamf(os, "[{}: {}]", dim(), elem_ast_type());
-}
-
-std::ostream& SimdExpr::stream(std::ostream& os) const {
-    return stream_list(os, args(), [&](const auto& expr) { os << expr.get(); }, "simd[", "]");
 }
 
 static std::pair<Prec, bool> open(std::ostream& os, Prec l) {

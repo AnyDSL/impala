@@ -156,11 +156,6 @@ void PtrASTType::check(TypeSema& sema) const { sema.check(referenced_ast_type())
 void IndefiniteArrayASTType::check(TypeSema& sema) const { sema.check(elem_ast_type()); }
 void   DefiniteArrayASTType::check(TypeSema& sema) const { sema.check(elem_ast_type()); }
 
-void SimdASTType::check(TypeSema& sema) const {
-    if (!sema.check(elem_ast_type())->isa<PrimType>())
-        error(this, "non primitive types forbidden in simd type");
-}
-
 void TupleASTType::check(TypeSema& sema) const {
     for (auto&& ast_type_arg : ast_type_args()) {
         sema.check(ast_type_arg.get());
@@ -538,18 +533,6 @@ void DefiniteArrayExpr::check(TypeSema& sema) const {
         sema.check(arg.get());
         if (elem_type)
             sema.expect_type(elem_type, arg.get(), "element of definite array expression");
-    }
-}
-
-void SimdExpr::check(TypeSema& sema) const {
-    const Type* elem_type = nullptr;
-    if (auto simd_type = type()->isa<SimdType>())
-        elem_type = simd_type->elem_type();
-
-    for (auto&& arg : args()) {
-        sema.check(arg.get());
-        if (elem_type)
-            sema.expect_type(elem_type, arg.get(), "element of simd expression");
     }
 }
 
