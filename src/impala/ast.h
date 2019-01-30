@@ -5,7 +5,7 @@
 
 #include "thorin/util/array.h"
 #include "thorin/util/cast.h"
-#include "thorin/util/location.h"
+#include "thorin/util/debug.h"
 #include "thorin/util/types.h"
 
 #include "impala/impala.h"
@@ -67,8 +67,8 @@ std::unique_ptr<const Expr> expr_;
 @endcode
 The constructor should look like this:
 @code{.cpp}
-MyExpr(Location location, ..., const Expr* expr, ...)
-    : Expr(location)
+MyExpr(Loc loc, ..., const Expr* expr, ...)
+    : Expr(loc)
     , ...
     , expr_(dock(expr_, expr))
 {}
@@ -131,32 +131,32 @@ public:
     ASTNode() = delete;
     ASTNode(const ASTNode&) = delete;
     ASTNode(ASTNode&&) = delete;
-    ASTNode(Location location);
-    virtual ~ASTNode() { assert(location_.is_set()); }
+    ASTNode(Loc loc);
+    virtual ~ASTNode() { assert(loc_.is_set()); }
 
     size_t gid() const { return gid_; }
-    Location location() const { return location_; }
+    Loc loc() const { return loc_; }
 
 private:
     static size_t gid_counter_;
 
     size_t gid_;
-    Location location_;
+    Loc loc_;
 };
 
 template<class... Args>
-std::ostream& warning(const ASTNode* n, const char* fmt, Args... args) { return warning(n->location(), fmt, args...); }
+std::ostream& warning(const ASTNode* n, const char* fmt, Args... args) { return warning(n->loc(), fmt, args...); }
 template<class... Args>
-std::ostream& error  (const ASTNode* n, const char* fmt, Args... args) { return error  (n->location(), fmt, args...); }
+std::ostream& error  (const ASTNode* n, const char* fmt, Args... args) { return error  (n->loc(), fmt, args...); }
 
 class Identifier : public ASTNode {
 public:
-    Identifier(Location location, Symbol symbol)
-        : ASTNode(location)
+    Identifier(Loc loc, Symbol symbol)
+        : ASTNode(loc)
         , symbol_(symbol)
     {}
     Identifier(Token tok)
-        : ASTNode(tok.location())
+        : ASTNode(tok.loc())
         , symbol_(tok.symbol())
     {}
 
@@ -169,7 +169,7 @@ private:
 
 class Typeable : public ASTNode {
 public:
-    Typeable(Location location) : ASTNode(location) {}
+    Typeable(Loc loc) : ASTNode(loc) {}
 
     const Type* type() const { return type_; }
 
@@ -190,7 +190,7 @@ public:
     class Elem : public Typeable {
     public:
         Elem(const Identifier* id)
-            : Typeable(id->location())
+            : Typeable(id->loc())
             , identifier_(id)
         {}
 
@@ -211,13 +211,13 @@ public:
 
     typedef std::deque<std::unique_ptr<const Elem>> Elems;
 
-    Path(Location location, bool global, Elems&& elems)
-        : Typeable(location)
+    Path(Loc loc, bool global, Elems&& elems)
+        : Typeable(loc)
         , global_(global)
         , elems_(std::move(elems))
     {}
     Path(const Identifier* id)
-        : Path(id->location(), false, Elems())
+        : Path(id->loc(), false, Elems())
     {
         elems_.emplace_back(new Elem(id));
     }
@@ -247,8 +247,8 @@ private:
 
 class ASTType : public Typeable {
 public:
-    ASTType(Location location)
-        : Typeable(location)
+    ASTType(Loc loc)
+        : Typeable(loc)
     {}
 
     virtual void bind(NameSema&) const = 0;
@@ -263,8 +263,8 @@ private:
 
 class ErrorASTType : public ASTType {
 public:
-    ErrorASTType(Location location)
-        : ASTType(location)
+    ErrorASTType(Loc loc)
+        : ASTType(loc)
     {}
 
     void bind(NameSema&) const override;
@@ -282,8 +282,8 @@ public:
 #include "impala/tokenlist.h"
     };
 
-    PrimASTType(Location location, Tag tag)
-        : ASTType(location)
+    PrimASTType(Loc loc, Tag tag)
+        : ASTType(loc)
         , tag_(tag)
     {}
 
@@ -303,8 +303,8 @@ class PtrASTType : public ASTType {
 public:
     enum Tag { Borrowed, Mut, Owned };
 
-    PtrASTType(Location location, Tag tag, int addr_space, const ASTType* referenced_ast_type)
-        : ASTType(location)
+    PtrASTType(Loc loc, Tag tag, int addr_space, const ASTType* referenced_ast_type)
+        : ASTType(loc)
         , tag_(tag)
         , addr_space_(addr_space)
         , referenced_ast_type_(referenced_ast_type)
@@ -329,8 +329,8 @@ private:
 
 class ArrayASTType : public ASTType {
 public:
-    ArrayASTType(Location location, const ASTType* elem_ast_type)
-        : ASTType(location)
+    ArrayASTType(Loc loc, const ASTType* elem_ast_type)
+        : ASTType(loc)
         , elem_ast_type_(elem_ast_type)
     {}
 
@@ -342,8 +342,8 @@ protected:
 
 class IndefiniteArrayASTType : public ArrayASTType {
 public:
-    IndefiniteArrayASTType(Location location, const ASTType* elem_ast_type)
-        : ArrayASTType(location, elem_ast_type)
+    IndefiniteArrayASTType(Loc loc, const ASTType* elem_ast_type)
+        : ArrayASTType(loc, elem_ast_type)
     {}
 
     void bind(NameSema&) const override;
@@ -356,8 +356,8 @@ private:
 
 class DefiniteArrayASTType : public ArrayASTType {
 public:
-    DefiniteArrayASTType(Location location, const ASTType* elem_ast_type, uint64_t dim)
-        : ArrayASTType(location, elem_ast_type)
+    DefiniteArrayASTType(Loc loc, const ASTType* elem_ast_type, uint64_t dim)
+        : ArrayASTType(loc, elem_ast_type)
         , dim_(dim)
     {}
 
@@ -375,8 +375,8 @@ private:
 
 class CompoundASTType : public ASTType {
 public:
-    CompoundASTType(Location location, ASTTypes&& ast_type_args)
-        : ASTType(location)
+    CompoundASTType(Loc loc, ASTTypes&& ast_type_args)
+        : ASTType(loc)
         , ast_type_args_(std::move(ast_type_args))
     {}
 
@@ -391,8 +391,8 @@ protected:
 
 class TupleASTType : public CompoundASTType {
 public:
-    TupleASTType(Location location, ASTTypes&& ast_type_args)
-        : CompoundASTType(location, std::move(ast_type_args))
+    TupleASTType(Loc loc, ASTTypes&& ast_type_args)
+        : CompoundASTType(loc, std::move(ast_type_args))
     {}
 
     void bind(NameSema&) const override;
@@ -405,13 +405,13 @@ private:
 
 class ASTTypeApp : public CompoundASTType {
 public:
-    ASTTypeApp(Location location, const Path* path, ASTTypes&& ast_type_args)
-        : CompoundASTType(location, std::move(ast_type_args))
+    ASTTypeApp(Loc loc, const Path* path, ASTTypes&& ast_type_args)
+        : CompoundASTType(loc, std::move(ast_type_args))
         , path_(path)
     {}
 
-    ASTTypeApp(Location location, const Path* path)
-        : ASTTypeApp(location, path, ASTTypes())
+    ASTTypeApp(Loc loc, const Path* path)
+        : ASTTypeApp(loc, path, ASTTypes())
     {}
 
     const Path* path() const { return path_.get(); }
@@ -431,14 +431,14 @@ private:
 
 class FnASTType : public ASTTypeParamList, public CompoundASTType {
 public:
-    FnASTType(Location location, ASTTypeParams&& ast_type_params, ASTTypes&& ast_type_args)
+    FnASTType(Loc loc, ASTTypeParams&& ast_type_params, ASTTypes&& ast_type_args)
         : ASTTypeParamList(std::move(ast_type_params))
-        , CompoundASTType(location, std::move(ast_type_args))
+        , CompoundASTType(loc, std::move(ast_type_args))
     {}
 
-    FnASTType(Location location, ASTTypes&& ast_type_args = ASTTypes())
+    FnASTType(Loc loc, ASTTypes&& ast_type_args = ASTTypes())
         : ASTTypeParamList(ASTTypeParams())
-        , CompoundASTType(location, std::move(ast_type_args))
+        , CompoundASTType(loc, std::move(ast_type_args))
     {}
 
     const FnASTType* ret_fn_ast_type() const;
@@ -453,8 +453,8 @@ private:
 
 class Typeof : public ASTType {
 public:
-    Typeof(Location location, const Expr* expr)
-        : ASTType(location)
+    Typeof(Loc loc, const Expr* expr)
+        : ASTType(loc)
         , expr_(dock(expr_, expr))
     {}
 
@@ -488,8 +488,8 @@ public:
     };
 
     /// General constructor.
-    Decl(Tag tag, Location location, bool mut, const Identifier* id, const ASTType* ast_type)
-        : Typeable(location)
+    Decl(Tag tag, Loc loc, bool mut, const Identifier* id, const ASTType* ast_type)
+        : Typeable(loc)
         , tag_(tag)
         , identifier_(id)
         , ast_type_(ast_type)
@@ -497,16 +497,16 @@ public:
         , written_(false)
     {}
     /// @p NoDecl.
-    Decl(Location location)
-        : Decl(NoDecl, location, false, nullptr, nullptr)
+    Decl(Loc loc)
+        : Decl(NoDecl, loc, false, nullptr, nullptr)
     {}
     /// @p TypeableDecl, @p TypeDecl or @p ValueDecl.
-    Decl(Tag tag, Location location, const Identifier* id)
-        : Decl(tag, location, false, id, nullptr)
+    Decl(Tag tag, Loc loc, const Identifier* id)
+        : Decl(tag, loc, false, id, nullptr)
     {}
     /// @p ValueDecl.
-    Decl(Location location, bool mut, const Identifier* id, const ASTType* ast_type)
-        : Decl(ValueDecl, location, mut, id, ast_type)
+    Decl(Loc loc, bool mut, const Identifier* id, const ASTType* ast_type)
+        : Decl(ValueDecl, loc, mut, id, ast_type)
     {}
 
     // tag
@@ -522,7 +522,7 @@ public:
     bool is_anonymous() const { assert(!is_no_decl()); return symbol() == Symbol() || symbol().c_str()[0] == '<'; }
     size_t depth() const { assert(!is_no_decl()); return depth_; }
     const Decl* shadows() const { assert(!is_no_decl()); return shadows_; }
-    thorin::Debug debug() const { return {location(), symbol()}; }
+    thorin::Debug debug() const { return {loc(), symbol()}; }
 
     // ValueDecl
     const ASTType* ast_type() const { assert(is_value_decl()); return ast_type_.get(); } ///< Original @p ASTType.
@@ -550,11 +550,11 @@ protected:
 /// Base class for all values which may be mutated within a function.
 class LocalDecl : public Decl {
 public:
-    LocalDecl(Location location, bool mut, const Identifier* id, const ASTType* ast_type)
-        : Decl(location, mut, id, ast_type)
+    LocalDecl(Loc loc, bool mut, const Identifier* id, const ASTType* ast_type)
+        : Decl(loc, mut, id, ast_type)
     {}
-    LocalDecl(Location location, const Identifier* id, const ASTType* ast_type)
-        : LocalDecl(location, /*mut*/ false, id, ast_type)
+    LocalDecl(Loc loc, const Identifier* id, const ASTType* ast_type)
+        : LocalDecl(loc, /*mut*/ false, id, ast_type)
     {}
 
     const Fn* fn() const { return fn_; }
@@ -585,8 +585,8 @@ protected:
 
 class ASTTypeParam : public Decl {
 public:
-    ASTTypeParam(Location location, const Identifier* id, ASTTypes&& bounds)
-        : Decl(TypeDecl, location, id)
+    ASTTypeParam(Loc loc, const Identifier* id, ASTTypes&& bounds)
+        : Decl(TypeDecl, loc, id)
         , bounds_(std::move(bounds))
     {}
 
@@ -612,13 +612,13 @@ private:
 
 class Param : public LocalDecl {
 public:
-    Param(Location location, bool mut, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
-        : LocalDecl(location, mut, id, ast_type)
+    Param(Loc loc, bool mut, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
+        : LocalDecl(loc, mut, id, ast_type)
         , pe_expr_(dock(pe_expr_, pe_expr))
     {}
 
-    Param(Location location, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
-        : Param(location, /*mut*/ false, id, ast_type, pe_expr)
+    Param(Loc loc, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
+        : Param(loc, /*mut*/ false, id, ast_type, pe_expr)
     {}
 
     const Expr* pe_expr() const { return pe_expr_.get(); }
@@ -648,8 +648,8 @@ public:
     std::ostream& stream_params(std::ostream& p, bool returning) const;
     void fn_bind(NameSema&) const;
     const Type* check_body(TypeSema&) const;
-    thorin::Lam* fn_emit_head(CodeGen&, Location) const;
-    void fn_emit_body(CodeGen&, Location) const;
+    thorin::Lam* fn_emit_head(CodeGen&, Loc) const;
+    void fn_emit_body(CodeGen&, Loc) const;
 
     virtual const FnType* fn_type() const = 0;
     virtual Symbol fn_symbol() const = 0;
@@ -674,20 +674,20 @@ private:
 class Item : public Decl {
 public:
     /// @p NoDecl.
-    Item(Location location, Visibility vis)
-        : Decl(location)
+    Item(Loc loc, Visibility vis)
+        : Decl(loc)
         , visibility_(vis)
     {}
 
     /// @p TypeableDecl, @p TypeDecl or @p ValueDecl.
-    Item(Tag tag, Location location, Visibility vis, const Identifier* id)
-        : Decl(tag, location, id)
+    Item(Tag tag, Loc loc, Visibility vis, const Identifier* id)
+        : Decl(tag, loc, id)
         , visibility_(vis)
     {}
 
     /// @p ValueDecl.
-    Item(Location location, Visibility vis, bool mut, const Identifier* id, const ASTType* ast_type)
-        : Decl(ValueDecl, location, mut, id, ast_type)
+    Item(Loc loc, Visibility vis, bool mut, const Identifier* id, const ASTType* ast_type)
+        : Decl(ValueDecl, loc, mut, id, ast_type)
         , visibility_(vis)
     {}
 
@@ -710,28 +710,28 @@ private:
 
 class TypeDeclItem : public Item, public ASTTypeParamList {
 public:
-    TypeDeclItem(Location location, Visibility vis, const Identifier* id, ASTTypeParams&& ast_type_params)
-        : Item(TypeDecl, location,  vis, id)
+    TypeDeclItem(Loc loc, Visibility vis, const Identifier* id, ASTTypeParams&& ast_type_params)
+        : Item(TypeDecl, loc,  vis, id)
         , ASTTypeParamList(std::move(ast_type_params))
     {}
 };
 
 class ValueItem : public Item {
 public:
-    ValueItem(Location location, Visibility vis, bool mut, const Identifier* id, const ASTType* ast_type)
-        : Item(location, vis, mut, id, ast_type)
+    ValueItem(Loc loc, Visibility vis, bool mut, const Identifier* id, const ASTType* ast_type)
+        : Item(loc, vis, mut, id, ast_type)
     {}
 };
 
 class Module : public TypeDeclItem {
 public:
-    Module(Location location, Visibility vis, const Identifier* id, ASTTypeParams&& ast_type_params, Items&& items)
-        : TypeDeclItem(location, vis, id, std::move(ast_type_params))
+    Module(Loc loc, Visibility vis, const Identifier* id, ASTTypeParams&& ast_type_params, Items&& items)
+        : TypeDeclItem(loc, vis, id, std::move(ast_type_params))
         , items_(std::move(items))
     {}
 
     Module(const char* first_file_name, Items&& items = Items())
-        : Module(items.empty() ? Location(first_file_name, 1, 1) : Location(items.front()->location(), items.back()->location()),
+        : Module(items.empty() ? Loc(first_file_name, 1, 1) : Loc(items.front()->loc(), items.back()->loc()),
                  Visibility::Pub, nullptr, ASTTypeParams(), std::move(items))
     {}
 
@@ -752,8 +752,8 @@ private:
 
 class ModuleDecl : public TypeDeclItem {
 public:
-    ModuleDecl(Location location, Visibility vis, const Identifier* id, ASTTypeParams&& ast_type_params)
-        : TypeDeclItem(location, vis, id, std::move(ast_type_params))
+    ModuleDecl(Loc loc, Visibility vis, const Identifier* id, ASTTypeParams&& ast_type_params)
+        : TypeDeclItem(loc, vis, id, std::move(ast_type_params))
     {}
 
     void bind(NameSema&) const override;
@@ -768,8 +768,8 @@ private:
 
 class ExternBlock : public Item {
 public:
-    ExternBlock(Location location, Visibility vis, Symbol abi, FnDecls&& fn_decls)
-        : Item(location, vis)
+    ExternBlock(Loc loc, Visibility vis, Symbol abi, FnDecls&& fn_decls)
+        : Item(loc, vis)
         , abi_(abi)
         , fn_decls_(std::move(fn_decls))
     {}
@@ -793,9 +793,9 @@ private:
 
 class Typedef : public TypeDeclItem {
 public:
-    Typedef(Location location, Visibility vis, const Identifier* id,
+    Typedef(Loc loc, Visibility vis, const Identifier* id,
             ASTTypeParams&& ast_type_params, const ASTType* ast_type)
-        : TypeDeclItem(location, vis, id, std::move(ast_type_params))
+        : TypeDeclItem(loc, vis, id, std::move(ast_type_params))
         , ast_type_(ast_type)
     {}
 
@@ -815,8 +815,8 @@ private:
 
 class FieldDecl : public Decl {
 public:
-    FieldDecl(Location location, size_t index, Visibility vis, const Identifier* id, const ASTType* ast_type)
-        : Decl(TypeableDecl, location, id)
+    FieldDecl(Loc loc, size_t index, Visibility vis, const Identifier* id, const ASTType* ast_type)
+        : Decl(TypeableDecl, loc, id)
         , index_(index)
         , visibility_(vis)
         , ast_type_(std::move(ast_type))
@@ -843,9 +843,9 @@ private:
 
 class StructDecl : public TypeDeclItem {
 public:
-    StructDecl(Location location, Visibility vis, const Identifier* id,
+    StructDecl(Loc loc, Visibility vis, const Identifier* id,
                ASTTypeParams&& ast_type_params, FieldDecls&& field_decls)
-        : TypeDeclItem(location, vis, id, std::move(ast_type_params))
+        : TypeDeclItem(loc, vis, id, std::move(ast_type_params))
         , field_decls_(std::move(field_decls))
     {}
 
@@ -873,8 +873,8 @@ private:
 
 class OptionDecl : public Decl {
 public:
-    OptionDecl(Location location, size_t index, const Identifier* id, ASTTypes args)
-        : Decl(ValueDecl, location, id)
+    OptionDecl(Loc loc, size_t index, const Identifier* id, ASTTypes args)
+        : Decl(ValueDecl, loc, id)
         , index_(index)
         , args_(std::move(args))
     {}
@@ -907,9 +907,9 @@ private:
 
 class EnumDecl : public TypeDeclItem {
 public:
-    EnumDecl(Location location, Visibility vis, const Identifier* id,
+    EnumDecl(Loc loc, Visibility vis, const Identifier* id,
              ASTTypeParams&& ast_type_params, OptionDecls&& option_decls)
-        : TypeDeclItem(location, vis, id, std::move(ast_type_params))
+        : TypeDeclItem(loc, vis, id, std::move(ast_type_params))
         , option_decls_(std::move(option_decls))
     {
         for (auto& option : option_decls_)
@@ -940,9 +940,9 @@ private:
 
 class StaticItem : public ValueItem {
 public:
-    StaticItem(Location location, Visibility vis, bool mut, const Identifier* id,
+    StaticItem(Loc loc, Visibility vis, bool mut, const Identifier* id,
                const ASTType* ast_type, const Expr* init)
-        : ValueItem(location, vis, mut, id, std::move(ast_type))
+        : ValueItem(loc, vis, mut, id, std::move(ast_type))
         , init_(dock(init_, init))
     {}
 
@@ -963,9 +963,9 @@ private:
 
 class FnDecl : public ValueItem, public Fn {
 public:
-    FnDecl(Location location, Visibility vis, bool is_extern, Symbol abi, const Expr* pe_expr, Symbol export_name,
+    FnDecl(Loc loc, Visibility vis, bool is_extern, Symbol abi, const Expr* pe_expr, Symbol export_name,
            const Identifier* id, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
-        : ValueItem(location, vis, /*mut*/ false, id, /*ast_type*/ nullptr)
+        : ValueItem(loc, vis, /*mut*/ false, id, /*ast_type*/ nullptr)
         , Fn(pe_expr, std::move(ast_type_params), std::move(params), body)
         , abi_(abi)
         , export_name_(export_name)
@@ -1000,9 +1000,9 @@ private:
 
 class TraitDecl : public Item, public ASTTypeParamList {
 public:
-    TraitDecl(Location location, Visibility vis, const Identifier* id,
+    TraitDecl(Loc loc, Visibility vis, const Identifier* id,
               ASTTypeParams&& ast_type_params, ASTTypeApps&& super_traits, FnDecls&& methods)
-        : Item(TypeDecl, location, vis, id)
+        : Item(TypeDecl, loc, vis, id)
         , ASTTypeParamList(std::move(ast_type_params))
         , super_traits_(std::move(super_traits))
         , methods_(std::move(methods))
@@ -1028,9 +1028,9 @@ private:
 
 class ImplItem : public Item, public ASTTypeParamList {
 public:
-    ImplItem(Location location, Visibility vis, ASTTypeParams&& ast_type_params,
+    ImplItem(Loc loc, Visibility vis, ASTTypeParams&& ast_type_params,
              const ASTType* trait, const ASTType* ast_type, FnDecls&& methods)
-        : Item(location, vis)
+        : Item(loc, vis)
         , ASTTypeParamList(std::move(ast_type_params))
         , trait_(std::move(trait))
         , ast_type_(std::move(ast_type))
@@ -1068,8 +1068,8 @@ private:
 
 class Expr : public Typeable {
 public:
-    Expr(Location location)
-        : Typeable(location)
+    Expr(Loc loc)
+        : Typeable(loc)
     {}
 
     virtual ~Expr() { assert(back_ref_ != nullptr); }
@@ -1156,8 +1156,8 @@ protected:
 
 class EmptyExpr : public Expr {
 public:
-    EmptyExpr(Location location)
-        : Expr(location)
+    EmptyExpr(Loc loc)
+        : Expr(loc)
     {}
 
     void bind(NameSema&) const override;
@@ -1177,8 +1177,8 @@ public:
         LIT_bool,
     };
 
-    LiteralExpr(Location location, Tag tag, thorin::Box box)
-        : Expr(location)
+    LiteralExpr(Loc loc, Tag tag, thorin::Box box)
+        : Expr(loc)
         , tag_(tag)
         , box_(box)
     {}
@@ -1202,8 +1202,8 @@ private:
 
 class CharExpr : public Expr {
 public:
-    CharExpr(Location location, Symbol symbol, char value)
-        : Expr(location)
+    CharExpr(Loc loc, Symbol symbol, char value)
+        : Expr(loc)
         , symbol_(symbol)
         , value_(value)
     {}
@@ -1225,8 +1225,8 @@ private:
 
 class StrExpr : public Expr {
 public:
-    StrExpr(Location location, Symbols&& symbols, std::vector<char>&& values)
-        : Expr(location)
+    StrExpr(Loc loc, Symbols&& symbols, std::vector<char>&& values)
+        : Expr(loc)
         , symbols_(std::move(symbols))
         , values_(std::move(values))
     {}
@@ -1248,8 +1248,8 @@ private:
 
 class FnExpr : public Expr, public Fn {
 public:
-    FnExpr(Location location, const Expr* pe_expr, Params&& params, const Expr* body)
-        : Expr(location)
+    FnExpr(Loc loc, const Expr* pe_expr, Params&& params, const Expr* body)
+        : Expr(loc)
         , Fn(pe_expr, ASTTypeParams(), std::move(params), body)
     {}
 
@@ -1267,7 +1267,7 @@ private:
 class PathExpr : public Expr {
 public:
     PathExpr(const Path* path)
-        : Expr(path->location())
+        : Expr(path->loc())
         , path_(path)
     {}
     PathExpr(const Identifier* identifier)
@@ -1301,14 +1301,14 @@ public:
         MUT
     };
 
-    PrefixExpr(Location location, Tag tag, const Expr* rhs)
-        : Expr(location)
+    PrefixExpr(Loc loc, Tag tag, const Expr* rhs)
+        : Expr(loc)
         , tag_(tag)
         , rhs_(dock(rhs_, rhs))
     {}
 
     static const PrefixExpr* create(const Expr* rhs, const Tag tag) {
-        return interlope<PrefixExpr>(rhs, rhs->location(), tag, rhs);
+        return interlope<PrefixExpr>(rhs, rhs->loc(), tag, rhs);
     }
     static const PrefixExpr* create_deref(const Expr* rhs) { return create(rhs, MUL); }
     static const PrefixExpr* create_addrof(const Expr* rhs);
@@ -1339,8 +1339,8 @@ public:
 #include "impala/tokenlist.h"
     };
 
-    InfixExpr(Location location, const Expr* lhs, Tag tag, const Expr* rhs)
-        : Expr(location)
+    InfixExpr(Loc loc, const Expr* lhs, Tag tag, const Expr* rhs)
+        : Expr(loc)
         , tag_(tag)
         , lhs_(dock(lhs_, lhs))
         , rhs_(dock(rhs_, rhs))
@@ -1375,8 +1375,8 @@ public:
         DEC = Token::DEC
     };
 
-    PostfixExpr(Location location, const Expr* lhs, Tag tag)
-        : Expr(location)
+    PostfixExpr(Loc loc, const Expr* lhs, Tag tag)
+        : Expr(loc)
         , tag_(tag)
         , lhs_(dock(lhs_, lhs))
     {}
@@ -1399,8 +1399,8 @@ private:
 
 class FieldExpr : public Expr {
 public:
-    FieldExpr(Location location, const Expr* lhs, const Identifier* id)
-        : Expr(location)
+    FieldExpr(Loc loc, const Expr* lhs, const Identifier* id)
+        : Expr(loc)
         , lhs_(dock(lhs_, lhs))
         , identifier_(id)
     {}
@@ -1429,8 +1429,8 @@ private:
 
 class CastExpr : public Expr {
 public:
-    CastExpr(Location location, const Expr* src)
-        : Expr(location)
+    CastExpr(Loc loc, const Expr* src)
+        : Expr(loc)
         , src_(dock(src_, src))
     {}
 
@@ -1447,8 +1447,8 @@ protected:
 
 class ExplicitCastExpr : public CastExpr {
 public:
-    ExplicitCastExpr(Location location, const Expr* src, const ASTType* ast_type)
-        : CastExpr(location, src)
+    ExplicitCastExpr(Loc loc, const Expr* src, const ASTType* ast_type)
+        : CastExpr(loc, src)
         , ast_type_(ast_type)
     {}
 
@@ -1467,7 +1467,7 @@ private:
 class ImplicitCastExpr : public CastExpr {
 public:
     ImplicitCastExpr(const Expr* src, const Type* type)
-        : CastExpr(src->location(), src)
+        : CastExpr(src->loc(), src)
     {
         type_ = type;
     }
@@ -1486,7 +1486,7 @@ private:
 class RValueExpr : public CastExpr {
 public:
     RValueExpr(const Expr* src)
-        : CastExpr(src->location(), src)
+        : CastExpr(src->loc(), src)
     {}
 
     static const RValueExpr* create(const Expr* src) {
@@ -1507,8 +1507,8 @@ private:
 
 class DefiniteArrayExpr : public Expr, public Args {
 public:
-    DefiniteArrayExpr(Location location, Exprs&& args)
-        : Expr(location)
+    DefiniteArrayExpr(Loc loc, Exprs&& args)
+        : Expr(loc)
         , Args(std::move(args))
     {}
 
@@ -1523,8 +1523,8 @@ private:
 
 class RepeatedDefiniteArrayExpr : public Expr {
 public:
-    RepeatedDefiniteArrayExpr(Location location, const Expr* value, uint64_t count)
-        : Expr(location)
+    RepeatedDefiniteArrayExpr(Loc loc, const Expr* value, uint64_t count)
+        : Expr(loc)
         , value_(dock(value_, value))
         , count_(count)
     {}
@@ -1546,8 +1546,8 @@ private:
 
 class IndefiniteArrayExpr : public Expr {
 public:
-    IndefiniteArrayExpr(Location location, const Expr* dim, const ASTType* elem_ast_type)
-        : Expr(location)
+    IndefiniteArrayExpr(Loc loc, const Expr* dim, const ASTType* elem_ast_type)
+        : Expr(loc)
         , dim_(dock(dim_, dim))
         , elem_ast_type_(elem_ast_type)
     {}
@@ -1569,8 +1569,8 @@ private:
 
 class TupleExpr : public Expr, public Args {
 public:
-    TupleExpr(Location location, Exprs&& args)
-        : Expr(location)
+    TupleExpr(Loc loc, Exprs&& args)
+        : Expr(loc)
         , Args(std::move(args))
     {}
 
@@ -1587,8 +1587,8 @@ class StructExpr : public Expr {
 public:
     class Elem : public ASTNode {
     public:
-        Elem(Location location, const Identifier* id, const Expr* expr)
-            : ASTNode(location)
+        Elem(Loc loc, const Identifier* id, const Expr* expr)
+            : ASTNode(loc)
             , identifier_(id)
             , expr_(dock(expr_, expr))
         {}
@@ -1610,8 +1610,8 @@ public:
 
     typedef std::deque<std::unique_ptr<const Elem>> Elems;
 
-    StructExpr(Location location, const ASTTypeApp* ast_type_app, Elems&& elems)
-        : Expr(location)
+    StructExpr(Loc loc, const ASTTypeApp* ast_type_app, Elems&& elems)
+        : Expr(loc)
         , ast_type_app_(ast_type_app)
         , elems_(std::move(elems))
     {}
@@ -1635,14 +1635,14 @@ private:
 
 class TypeAppExpr : public Expr {
 public:
-    TypeAppExpr(Location location, const Expr* lhs, ASTTypes&& ast_type_args)
-        : Expr(location)
+    TypeAppExpr(Loc loc, const Expr* lhs, ASTTypes&& ast_type_args)
+        : Expr(loc)
         , lhs_(dock(lhs_, lhs))
         , ast_type_args_(std::move(ast_type_args))
     {}
 
     static const TypeAppExpr* create(const Expr* lhs) {
-        return interlope<TypeAppExpr>(lhs, lhs->location(), lhs, ASTTypes());
+        return interlope<TypeAppExpr>(lhs, lhs->loc(), lhs, ASTTypes());
     }
 
     const Expr* lhs() const { return lhs_.get(); }
@@ -1671,8 +1671,8 @@ private:
 
 class MapExpr : public Expr, public Args {
 public:
-    MapExpr(Location location, const Expr* lhs, Exprs&& args)
-        : Expr(location)
+    MapExpr(Loc loc, const Expr* lhs, Exprs&& args)
+        : Expr(loc)
         , Args(std::move(args))
         , lhs_(dock(lhs_, lhs))
     {}
@@ -1698,14 +1698,14 @@ private:
 
 class BlockExpr : public Expr {
 public:
-    BlockExpr(Location location, Stmts&& stmts, const Expr* expr)
-        : Expr(location)
+    BlockExpr(Loc loc, Stmts&& stmts, const Expr* expr)
+        : Expr(loc)
         , stmts_(std::move(stmts))
         , expr_(dock(expr_, expr))
     {}
     /// An empty BlockExpr with no @p stmts and an @p EmptyExpr as @p expr.
-    BlockExpr(Location location)
-        : BlockExpr(location, Stmts(), new EmptyExpr(location))
+    BlockExpr(Loc loc)
+        : BlockExpr(loc, Stmts(), new EmptyExpr(loc))
     {}
 
     const Stmts& stmts() const { return stmts_; }
@@ -1731,8 +1731,8 @@ protected:
 
 class IfExpr : public Expr {
 public:
-    IfExpr(Location location, const Expr* cond, const Expr* then_expr, const Expr* else_expr)
-        : Expr(location)
+    IfExpr(Loc loc, const Expr* cond, const Expr* then_expr, const Expr* else_expr)
+        : Expr(loc)
         , cond_(dock(cond_, cond))
         , then_expr_(dock(then_expr_, then_expr))
         , else_expr_(dock(else_expr_, else_expr))
@@ -1761,8 +1761,8 @@ class MatchExpr : public Expr {
 public:
     class Arm : public ASTNode {
     public:
-        Arm(Location location, const Ptrn* ptrn, const Expr* expr)
-            : ASTNode(location)
+        Arm(Loc loc, const Ptrn* ptrn, const Expr* expr)
+            : ASTNode(loc)
             , ptrn_(ptrn)
             , expr_(dock(expr_, expr))
         {}
@@ -1778,8 +1778,8 @@ public:
 
     typedef std::deque<std::unique_ptr<const Arm>> Arms;
 
-    MatchExpr(Location location, const Expr* expr, Arms&& arms)
-        : Expr(location)
+    MatchExpr(Loc loc, const Expr* expr, Arms&& arms)
+        : Expr(loc)
         , expr_(dock(expr_, expr))
         , arms_(std::move(arms))
     {}
@@ -1804,9 +1804,9 @@ private:
 
 class WhileExpr : public Expr {
 public:
-    WhileExpr(Location location, const LocalDecl* continue_decl, const Expr* cond,
+    WhileExpr(Loc loc, const LocalDecl* continue_decl, const Expr* cond,
               const Expr* body, const LocalDecl* break_decl)
-        : Expr(location)
+        : Expr(loc)
         , continue_decl_(continue_decl)
         , cond_(dock(cond_, cond))
         , body_(dock(body_, body))
@@ -1835,8 +1835,8 @@ private:
 
 class ForExpr : public Expr {
 public:
-    ForExpr(Location location, const Expr* fn_expr, const Expr* expr, const LocalDecl* break_decl)
-        : Expr(location)
+    ForExpr(Loc loc, const Expr* fn_expr, const Expr* expr, const LocalDecl* break_decl)
+        : Expr(loc)
         , fn_expr_(dock(fn_expr_, fn_expr))
         , expr_(dock(expr_, expr))
         , break_decl_(break_decl)
@@ -1868,8 +1868,8 @@ private:
 
 class Ptrn : public Typeable {
 public:
-    Ptrn(Location location)
-        : Typeable(location)
+    Ptrn(Loc loc)
+        : Typeable(loc)
     {}
 
     virtual void bind(NameSema&) const = 0;
@@ -1887,8 +1887,8 @@ private:
 
 class TuplePtrn : public Ptrn {
 public:
-    TuplePtrn(Location location, Ptrns&& elems)
-        : Ptrn(location)
+    TuplePtrn(Loc loc, Ptrns&& elems)
+        : Ptrn(loc)
         , elems_(std::move(elems))
     {}
 
@@ -1912,7 +1912,7 @@ private:
 class IdPtrn : public Ptrn {
 public:
     IdPtrn(const LocalDecl* local)
-        : Ptrn(local->location())
+        : Ptrn(local->loc())
         , local_(local)
     {}
 
@@ -1933,8 +1933,8 @@ private:
 
 class EnumPtrn : public Ptrn {
 public:
-    EnumPtrn(Location location, const Path* path, Ptrns&& args)
-        : Ptrn(location)
+    EnumPtrn(Loc loc, const Path* path, Ptrns&& args)
+        : Ptrn(loc)
         , path_(path)
         , args_(std::move(args))
     {}
@@ -1961,7 +1961,7 @@ private:
 class LiteralPtrn : public Ptrn {
 public:
     LiteralPtrn(const LiteralExpr* literal, bool minus)
-        : Ptrn(literal->location())
+        : Ptrn(literal->loc())
         , literal_(dock(literal_, literal))
         , minus_(minus)
     {}
@@ -1992,8 +1992,8 @@ private:
 
 class Stmt : public ASTNode {
 public:
-    Stmt(Location location)
-        : ASTNode(location)
+    Stmt(Loc loc)
+        : ASTNode(loc)
     {}
 
     virtual void bind(NameSema&) const = 0;
@@ -2009,8 +2009,8 @@ private:
 
 class ExprStmt : public Stmt {
 public:
-    ExprStmt(Location location, const Expr* expr)
-        : Stmt(location)
+    ExprStmt(Loc loc, const Expr* expr)
+        : Stmt(loc)
         , expr_(dock(expr_, expr))
     {}
 
@@ -2029,8 +2029,8 @@ private:
 
 class ItemStmt : public Stmt {
 public:
-    ItemStmt(Location location, const Item* item)
-        : Stmt(location)
+    ItemStmt(Loc loc, const Item* item)
+        : Stmt(loc)
         , item_(item)
     {}
 
@@ -2049,8 +2049,8 @@ private:
 
 class LetStmt : public Stmt {
 public:
-    LetStmt(Location location, const Ptrn* ptrn, const Expr* init)
-        : Stmt(location)
+    LetStmt(Loc loc, const Ptrn* ptrn, const Expr* init)
+        : Stmt(loc)
         , ptrn_(ptrn)
         , init_(dock(init_, init))
     {}
@@ -2074,8 +2074,8 @@ class AsmStmt : public Stmt {
 public:
     class Elem : public ASTNode {
     public:
-        Elem(Location location, std::string&& constraint, const Expr* expr)
-            : ASTNode(location)
+        Elem(Loc loc, std::string&& constraint, const Expr* expr)
+            : ASTNode(loc)
             , constraint_(std::move(constraint))
             , expr_(dock(expr_, expr))
         {}
@@ -2092,9 +2092,9 @@ public:
 
     typedef std::deque<std::unique_ptr<const Elem>> Elems;
 
-    AsmStmt(Location location, std::string&& asm_template, Elems&& outputs, Elems&& inputs,
+    AsmStmt(Loc loc, std::string&& asm_template, Elems&& outputs, Elems&& inputs,
             Strings&& clobbers, Strings&& options)
-        : Stmt(location)
+        : Stmt(loc)
         , asm_template_(std::move(asm_template))
         , outputs_(std::move(outputs))
         , inputs_(std::move(inputs))

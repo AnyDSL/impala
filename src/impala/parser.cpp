@@ -113,11 +113,11 @@ public:
         lookahead_[0] = lexer_.lex();
         lookahead_[1] = lexer_.lex();
         lookahead_[2] = lexer_.lex();
-        prev_location_ = Location(filename, 1, 1, 1, 1);
+        prev_loc_ = Loc(filename, 1, 1, 1, 1);
     }
 
     const Token& lookahead(size_t i = 0) const { assert(i < 3); return lookahead_[i]; }
-    Location prev_location() const { return prev_location_; }
+    Loc prev_loc() const { return prev_loc_; }
 
 #ifdef NDEBUG
     Token eat(TokenTag) { return lex(); }
@@ -132,22 +132,22 @@ public:
 
     class Tracker {
     public:
-        Tracker(Parser& parser, const Location& location)
-            : parser_(parser), location_(location)
+        Tracker(Parser& parser, const Loc& loc)
+            : parser_(parser), loc_(loc)
         {}
 
-        operator Location() const { return {location_.front(), parser_.prev_location().back()}; }
+        operator Loc() const { return {loc_.front(), parser_.prev_loc().back()}; }
 
     private:
         Parser& parser_;
-        Location location_;
+        Loc loc_;
     };
 
-    Tracker track() { return Tracker(*this, lookahead().location().front()); }
-    Tracker track(const Location& location) { return Tracker(*this, location); }
+    Tracker track() { return Tracker(*this, lookahead().loc().front()); }
+    Tracker track(const Loc& loc) { return Tracker(*this, loc); }
 
     template<class T, class... Args>
-    const T* create(Args&&... args) { return new T(prev_location(), std::forward<Args>(args)...); }
+    const T* create(Args&&... args) { return new T(prev_loc(), std::forward<Args>(args)...); }
 
     /**
      * Parses a list of comma-separated items till one of the @p delimiters have been found.
@@ -276,7 +276,7 @@ private:
 
     Lexer lexer_;        ///< invoked in order to get next token
     Token lookahead_[3]; ///< SLL(3) look ahead
-    Location prev_location_;
+    Loc prev_loc_;
 };
 
 //------------------------------------------------------------------------------
@@ -299,7 +299,7 @@ Token Parser::lex() {
     lookahead_[0] = lookahead_[1]; // copy over LA2 to LA1
     lookahead_[1] = lookahead_[2]; // copy over LA3 to LA2
     lookahead_[2] = lexer_.lex();  // fill new LA3
-    prev_location_ = result.location(); // remember previous location
+    prev_loc_ = result.loc(); // remember previous loc
     return result;
 }
 
@@ -323,7 +323,7 @@ bool Parser::expect(TokenTag tok, const std::string& context) {
 }
 
 void Parser::error(const std::string& what, const std::string& context, const Token& tok) {
-    impala::error(tok.location(), "expected {}, got '{}'{}", what, tok,
+    impala::error(tok.loc(), "expected {}, got '{}'{}", what, tok,
             context.empty() ? "" : std::string(" while parsing ") + context.c_str());
 }
 
@@ -333,7 +333,7 @@ const Identifier* Parser::try_identifier(const std::string& what) {
         name = lex();
     else {
         error("identifier", what);
-        name = Token(lookahead().location(), "<error>");
+        name = Token(lookahead().loc(), "<error>");
     }
 
     return new Identifier(name);
@@ -444,7 +444,7 @@ const Param* Parser::parse_param(int /*i*/, bool lambda) {
                 type = parse_type();
                 break;
             default:
-                identifier = new Identifier(tok.location(), "<error>");
+                identifier = new Identifier(tok.loc(), "<error>");
                 error("identifier", "parameter");
         }
     }
@@ -459,7 +459,7 @@ const Param* Parser::parse_param(int /*i*/, bool lambda) {
     } else {
         if (type == nullptr) {
             // we assume that the identifier refers to a type
-            type = new ASTTypeApp(tok.location(), new Path(identifier));
+            type = new ASTTypeApp(tok.loc(), new Path(identifier));
             identifier = nullptr;
         }
         ast_type = type;
@@ -482,8 +482,8 @@ const Param* Parser::parse_return_param() {
     auto fn_type = parse_return_type(is_continuation, /*mandatory*/ false);
 
     if (!is_continuation) {
-        auto location = fn_type ? fn_type->location() : prev_location();
-        return new Param(location, new Identifier(location, "return"), fn_type);
+        auto loc = fn_type ? fn_type->loc() : prev_loc();
+        return new Param(loc, new Identifier(loc, "return"), fn_type);
     } else
         return nullptr;
 }
@@ -1010,7 +1010,7 @@ const Expr* Parser::parse_primary_expr() {
         case Token::WITH:       return parse_with_expr();
         case Token::WHILE:      return parse_while_expr();
         case Token::L_BRACE:    return parse_block_expr();
-        default:                error("expression", ""); return new EmptyExpr(lex().location());
+        default:                error("expression", ""); return new EmptyExpr(lex().loc());
     }
 }
 
@@ -1019,13 +1019,13 @@ const LiteralExpr* Parser::parse_literal_expr() {
     Box box;
 
     switch (lookahead()) {
-        case Token::TRUE:       return new LiteralExpr(lex().location(), LiteralExpr::LIT_bool, Box(true));
-        case Token::FALSE:      return new LiteralExpr(lex().location(), LiteralExpr::LIT_bool, Box(false));
+        case Token::TRUE:       return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, Box(true));
+        case Token::FALSE:      return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, Box(false));
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype: { \
             tag = LiteralExpr::LIT_##itype; \
             Box box = lookahead().box(); \
-            return new LiteralExpr(lex().location(), tag, box); \
+            return new LiteralExpr(lex().loc(), tag, box); \
         }
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
@@ -1043,8 +1043,8 @@ char Parser::char_value(const char*& p) {
         case '\"': value = '\"'; break;
         case '\\': value = '\\'; break;
         default:
-            // TODO make location precise inside strings, reduce redundancy for single chars
-            impala::error(lookahead().location(), "expected valid escape sequence, got '\\{}' while parsing {}", *(p-1), lookahead());
+            // TODO make loc precise inside strings, reduce redundancy for single chars
+            impala::error(lookahead().loc(), "expected valid escape sequence, got '\\{}' while parsing {}", *(p-1), lookahead());
         }
     } else
         value = *(p-1);
@@ -1068,7 +1068,7 @@ const CharExpr* Parser::parse_char_expr() {
     } else
         error("a character", "character constant");
 
-    return new CharExpr(lex().location(), symbol, value);
+    return new CharExpr(lex().loc(), symbol, value);
 }
 
 const StrExpr* Parser::parse_str_expr() {
@@ -1096,7 +1096,7 @@ const FnExpr* Parser::parse_fn_expr(bool nested) {
 
     const Expr* pe_expr = nullptr;
     if (nested)
-        pe_expr = new LiteralExpr(lookahead().location(), LiteralExpr::LIT_bool, Box(false));
+        pe_expr = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, Box(false));
     else
         pe_expr = parse_pe_expr("partial evaluation profile of function expression");
 
@@ -1258,10 +1258,10 @@ const Expr* Parser::parse_pe_expr(const char* context) {
             pe_expr = parse_expr();
             expect(Token::R_PAREN, context);
         } else {
-            pe_expr = new LiteralExpr(lookahead().location(), LiteralExpr::LIT_bool, Box(true));
+            pe_expr = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, Box(true));
         }
     } else
-        pe_expr = new LiteralExpr(lookahead().location(), LiteralExpr::LIT_bool, Box(false));
+        pe_expr = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, Box(false));
 
     return pe_expr;
 }
@@ -1289,7 +1289,7 @@ const Ptrn* Parser::parse_ptrn() {
                 return parse_enum_ptrn(path.release());
             }
             auto id = path->elem(0)->identifier();
-            return parse_id_ptrn(new Identifier(path->location(), id->symbol()));
+            return parse_id_ptrn(new Identifier(path->loc(), id->symbol()));
         }
     }
 }
@@ -1305,7 +1305,7 @@ const TuplePtrn* Parser::parse_tuple_ptrn() {
 }
 
 const IdPtrn* Parser::parse_id_ptrn(const Identifier* id) {
-    auto tracker = id ? track(id->location()) : track();
+    auto tracker = id ? track(id->loc()) : track();
     auto mut = id ? false : accept(Token::MUT);
     auto identifier = id ? id : try_identifier("local variable in let binding");
     auto ast_type = accept(Token::COLON) ? parse_type() : nullptr;
@@ -1313,7 +1313,7 @@ const IdPtrn* Parser::parse_id_ptrn(const Identifier* id) {
 }
 
 const EnumPtrn* Parser::parse_enum_ptrn(const Path* path) {
-    auto tracker = track(path->location());
+    auto tracker = track(path->loc());
     Ptrns args;
     if (lookahead() == Token::L_PAREN) {
         eat(Token::L_PAREN);

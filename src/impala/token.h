@@ -5,12 +5,12 @@
 #include <string>
 
 #include "thorin/enums.h"
-#include "thorin/util/location.h"
+#include "thorin/util/debug.h"
 #include "thorin/util/symbol.h"
 
 namespace impala {
 
-using thorin::Location;
+using thorin::Loc;
 using thorin::Symbol;
 
 class Token {
@@ -42,13 +42,13 @@ public:
 
     Token() {}
     /// Create an operator token
-    Token(Location location, Tag tok);
+    Token(Loc loc, Tag tok);
     /// Create an identifier or a keyword (depends on \p str)
-    Token(Location location, const std::string& str);
+    Token(Loc loc, const std::string& str);
     /// Create a literal
-    Token(Location location, Tag type, const std::string& str);
+    Token(Loc loc, Tag type, const std::string& str);
 
-    Location location() const { return location_; }
+    Loc loc() const { return loc_; }
     Symbol symbol() const { return symbol_; }
     thorin::Box box() const { return box_; }
     Tag tag() const { return tag_; }
@@ -90,7 +90,7 @@ private:
     static Symbol insert(Tag tok, const char* str);
     static void insert_key(Tag tok, const char* str);
 
-    Location location_;
+    Loc loc_;
     Symbol symbol_;
     Tag tag_;
     thorin::Box box_;

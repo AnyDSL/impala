@@ -8,8 +8,8 @@
 #endif
 #include "thorin/analyses/schedule.h"
 #include "thorin/util/args.h"
+#include "thorin/util/debug.h"
 #include "thorin/util/log.h"
-#include "thorin/util/location.h"
 
 #include "impala/ast.h"
 #include "impala/cgen.h"

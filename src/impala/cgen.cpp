@@ -3,7 +3,7 @@
 #include <cassert>
 
 #include "thorin/util/hash.h"
-#include "thorin/util/location.h"
+#include "thorin/util/debug.h"
 
 #include "impala/ast.h"
 #include "impala/cgen.h"
