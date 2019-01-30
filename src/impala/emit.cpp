@@ -98,7 +98,7 @@ public:
 
     const Def* alloc(const thorin::Def* type, const Def* extra, Debug dbg) {
         if (!extra)
-            extra = world.literal_qu64(0, dbg);
+            extra = world.lit_qu64(0, dbg);
         auto alloc = world.alloc(type, cur_mem, extra, dbg);
         cur_mem = world.extract(alloc, 0_u32, dbg);
         return world.extract(alloc, 1, dbg);
@@ -267,7 +267,7 @@ void Fn::fn_emit_body(CodeGen& cg, Location location) const {
     // now handle the filter
     {
         size_t i = 0;
-        auto global = pe_expr() ? pe_expr()->remit(cg) : cg.world.literal_bool(false, location);
+        auto global = pe_expr() ? pe_expr()->remit(cg) : cg.world.lit_bool(false, location);
         Array<const Def*> filter(lam()->num_params());
         filter[i++] = global; // mem param
 
@@ -363,7 +363,7 @@ void StructDecl::emit_head(CodeGen& cg) const {
 void OptionDecl::emit(CodeGen& cg) const {
     auto enum_type = enum_decl()->type()->as<EnumType>();
     auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
-    auto id = cg.world.literal_qu32(index(), location());
+    auto id = cg.world.lit_qu32(index(), location());
     if (num_args() == 0) {
         auto bot = cg.world.bot(variant_type);
         def_ = cg.world.tuple(cg.thorin_enum_type(enum_type), { id, bot });
@@ -409,17 +409,17 @@ const Def* LiteralExpr::remit(CodeGen& cg) const {
         default: THORIN_UNREACHABLE;
     }
 
-    return cg.world.literal(ttag, box(), location());
+    return cg.world.lit(ttag, box(), location());
 }
 
 const Def* CharExpr::remit(CodeGen& cg) const {
-    return cg.world.literal_pu8(value(), location());
+    return cg.world.lit_pu8(value(), location());
 }
 
 const Def* StrExpr::remit(CodeGen& cg) const {
     Array<const Def*> args(values_.size());
     for (size_t i = 0, e = args.size(); i != e; ++i)
-        args[i] = cg.world.literal_pu8(values_[i], location());
+        args[i] = cg.world.lit_pu8(values_[i], location());
 
     return cg.world.definite_array(args, location());
 }
@@ -538,7 +538,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             auto rcond = rhs()->remit(cg);
             cg.cur_bb->app(r, {cg.cur_mem, rcond});
 
-            cg.enter(f, mem)->app(r, {cg.cur_mem, cg.world.literal(false)});
+            cg.enter(f, mem)->app(r, {cg.cur_mem, cg.world.lit(false)});
             return cg.enter(r);
         }
         case OROR: {
@@ -554,7 +554,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             auto rcond = rhs()->remit(cg);
             cg.cur_bb->app(r, {cg.cur_mem, rcond});
 
-            cg.enter(t, mem)->app(r, {cg.cur_mem, cg.world.literal(true)});
+            cg.enter(t, mem)->app(r, {cg.cur_mem, cg.world.lit(true)});
             return cg.enter(r);
         }
         default:
@@ -724,7 +724,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
 
 const Def* FieldExpr::lemit(CodeGen& cg) const {
     auto value = lhs()->lemit(cg);
-    return cg.world.lea(value, cg.world.literal_qu32(index(), location()), location());
+    return cg.world.lea(value, cg.world.lit_qu32(index(), location()), location());
 }
 
 const Def* FieldExpr::remit(CodeGen& cg) const {
@@ -796,7 +796,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
                 } else {
                     auto enum_ptrn = arm(i)->ptrn()->as<EnumPtrn>();
                     auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
-                    defs[i] = cg.world.literal_qu32(option_decl->index(), arm(i)->ptrn()->location());
+                    defs[i] = cg.world.lit_qu32(option_decl->index(), arm(i)->ptrn()->location());
                 }
                 targets[i] = cg.basicblock({arm(i)->location().front(), "case"});
             }
@@ -831,7 +831,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 
             // last pattern will always be taken
             auto cond = i == e - 1
-                ? cg.world.literal_bool(true, arm(i)->ptrn()->location())
+                ? cg.world.lit_bool(true, arm(i)->ptrn()->location())
                 : arm(i)->ptrn()->emit_cond(cg, matcher);
 
             cg.cur_bb->branch(cond, case_true, case_false, arm(i)->ptrn()->location().back());
@@ -923,7 +923,7 @@ void IdPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 }
 
 const thorin::Def* IdPtrn::emit_cond(CodeGen& cg, const thorin::Def*) const {
-    return cg.world.literal(true);
+    return cg.world.lit(true);
 }
 
 void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
@@ -937,7 +937,7 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 
 const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     auto index = path()->decl()->as<OptionDecl>()->index();
-    auto cond = cg.world.cmp_eq(cg.world.extract(init, 0_u32, location()), cg.world.literal_qu32(index, location()));
+    auto cond = cg.world.cmp_eq(cg.world.extract(init, 0_u32, location()), cg.world.lit_qu32(index, location()));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
         auto variant = cg.world.cast(variant_type, cg.world.extract(init, 1, location()), location());
@@ -963,7 +963,7 @@ const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) co
         auto next = elem(i)->emit_cond(cg, cg.world.extract(init, i, location()));
         cond = cond ? cg.world.arithop_and(cond, next) : next;
     }
-    return cond ? cond : cg.world.literal(true);
+    return cond ? cond : cg.world.lit(true);
 }
 
 const thorin::Def* LiteralPtrn::emit_literal(CodeGen& cg) const {
