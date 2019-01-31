@@ -135,8 +135,8 @@ TypeBase<TypeTable>::TypeBase(TypeTable& table, int tag, Types ops)
 
 template <class TypeTable>
 const TypeBase<TypeTable>* TypeBase<TypeTable>::reduce(int depth, const TypeBase* type, Type2Type& map) const {
-    if (auto result = find(map, this))
-        return result;
+    if (auto result = map.lookup(this))
+        return *result;
     if (is_monomorphic())
         return this;
     auto new_type = vreduce(depth, type, map);

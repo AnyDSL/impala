@@ -545,7 +545,7 @@ void StructExpr::check(TypeSema& sema) const {
             sema.check(elem->expr());
 
             if (auto field_decl = elem->field_decl()) {
-                if (!thorin::visit(done, field_decl))
+                if (done.emplace(field_decl).second)
                     sema.expect_type(struct_type->op(field_decl->index()), elem->expr(), "initialization type for field");
                 else
                     error(elem->expr(), "field '{}' specified more than once", elem->symbol());
@@ -569,7 +569,7 @@ void FieldExpr::check(TypeSema& sema) const {
     if (auto struct_type = type->isa<StructType>()) {
         auto struct_decl = struct_type->struct_decl();
         if (auto field_decl = struct_decl->field_decl(symbol()))
-            field_decl_ = field_decl;
+            field_decl_ = *field_decl;
         else
             error(lhs(), "attempted access of field '{}' on type '{}', but no field with that name was found", symbol(), type);
     } else if (!type->isa<TypeError>())

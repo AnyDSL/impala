@@ -853,8 +853,8 @@ public:
     const FieldDecls& field_decls() const { return field_decls_; }
     const FieldTable& field_table() const { return field_table_; }
     const FieldDecl* field_decl(size_t i) const { return field_decls_[i].get(); }
-    const FieldDecl* field_decl(Symbol symbol) const { return thorin::find(field_table_, symbol); }
-    const FieldDecl* field_decl(const Identifier* ident) const { return field_decl(ident->symbol()); }
+    std::optional<const FieldDecl*> field_decl(Symbol symbol) const { return field_table_.lookup(symbol); }
+    std::optional<const FieldDecl*> field_decl(const Identifier* ident) const { return field_decl(ident->symbol()); }
     const StructType* struct_type() const { return type_->as<StructType>(); }
 
     void bind(NameSema&) const override;
@@ -920,7 +920,7 @@ public:
     size_t num_option_decls() const { return option_decls_.size(); }
     const OptionDecls& option_decls() const { return option_decls_; }
     const OptionDecl* option_decl(size_t i) const { return option_decls_[i].get(); }
-    const OptionDecl* option_decl(Symbol symbol) const { return thorin::find(option_table_, symbol); }
+    std::optional<const OptionDecl*> option_decl(Symbol symbol) const { return option_table_.lookup(symbol); }
     const EnumType* enum_type() const { return type_->as<EnumType>(); }
 
     void bind(NameSema&) const override;
