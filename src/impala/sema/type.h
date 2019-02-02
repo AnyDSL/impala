@@ -298,11 +298,9 @@ public:
 class StructType : public Type {
 private:
     StructType(TypeTable& table, const StructDecl* decl, size_t size)
-        : Type(table, Tag_struct, thorin::Array<const Type*>(size))
+        : Type(table, Tag_struct, size)
         , decl_(decl)
-    {
-        nominal_ = true;
-    }
+    {}
 
 public:
     const StructDecl* struct_decl() const { return decl_; }
@@ -321,11 +319,9 @@ private:
 class EnumType : public Type {
 private:
     EnumType(TypeTable& table, const EnumDecl* decl, size_t size)
-        : Type(table, Tag_enum, thorin::Array<const Type*>(size))
+        : Type(table, Tag_enum, size)
         , decl_(decl)
-    {
-        nominal_ = true;
-    }
+    {}
 
 public:
     const EnumDecl* enum_decl() const { return decl_; }
