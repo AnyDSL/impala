@@ -778,7 +778,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 
     if (is_integer || is_simple) {
         // integers: match lam
-        Lam* otherwise;
+        Lam* otherwise = nullptr;
         size_t num_targets = num_arms();
         Array<const Def*> defs(num_targets);
         Array<Lam*> targets(num_targets);

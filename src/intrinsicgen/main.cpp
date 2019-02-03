@@ -12,7 +12,7 @@
 static const char * const IntrinsicNameTable[] = {
   "not_intrinsic",
 #define GET_INTRINSIC_NAME_TABLE
-#include <llvm/IR/Intrinsics.gen>
+#include <llvm/IR/IntrinsicImpl.inc>
 #undef GET_INTRINSIC_NAME_TABLE
 };
 
