@@ -469,7 +469,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
         case DEC: {
             auto var = rhs()->lemit(cg);
             auto val = cg.load(var, loc());
-            auto one = cg.world.one(val->type(), loc());
+            auto one = cg.world.lit_one(val->type(), loc());
             val = cg.world.arithop(Token::to_arithop((TokenTag) tag()), val, one, loc());
             cg.store(var, val, loc());
             return val;
@@ -582,7 +582,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 const Def* PostfixExpr::remit(CodeGen& cg) const {
     auto var = lhs()->lemit(cg);
     auto def = cg.load(var, loc());
-    auto one = cg.world.one(def->type(), loc());
+    auto one = cg.world.lit_one(def->type(), loc());
     cg.store(var, cg.world.arithop(Token::to_arithop((TokenTag) tag()), def, one, loc()), loc());
     return def;
 }
