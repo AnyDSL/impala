@@ -18,8 +18,6 @@ set(IMPALA_SOURCES
     token.cpp
     token.h
     tokenlist.h
-    mpigen.cpp
-    mpigen.h
 )
 
 add_library(libimpala ${IMPALA_SOURCES})
