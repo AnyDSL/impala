@@ -49,7 +49,7 @@ public:
 
         // if the return type is a sigma, flatten it
         auto sigma = ret_type->isa<thorin::Sigma>();
-        if (sigma && !sigma->is_nominal()) {
+        if (sigma && !sigma->isa_nominal()) {
             for (auto op : sigma->ops())
                 cont_args.push_back(op);
         } else
