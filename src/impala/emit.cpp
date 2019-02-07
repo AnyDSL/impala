@@ -181,9 +181,9 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
     } else if (auto ptr_type = type->isa<PtrType>()) {
         return world.ptr_type(convert(ptr_type->pointee()), thorin::AddrSpace(ptr_type->addr_space()));
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
-        return world.definite_array_type(convert(definite_array_type->elem_type()), definite_array_type->dim());
+        return world.variadic(definite_array_type->dim(), convert(definite_array_type->elem_type()));
     } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {
-        return world.indefinite_array_type(convert(indefinite_array_type->elem_type()));
+        return world.unsafe_variadic(convert(indefinite_array_type->elem_type()));
     } else if (type->isa<NoRetType>()) {
         return nullptr; // TODO use bottom type - once it is available in thorin
     }
@@ -421,7 +421,7 @@ const Def* StrExpr::remit(CodeGen& cg) const {
     for (size_t i = 0, e = args.size(); i != e; ++i)
         args[i] = cg.world.lit_pu8(values_[i], loc());
 
-    return cg.world.definite_array(args, loc());
+    return cg.world.tuple(args, loc());
 }
 
 const Def* CastExpr::remit(CodeGen& cg) const {
@@ -591,13 +591,11 @@ const Def* DefiniteArrayExpr::remit(CodeGen& cg) const {
     Array<const Def*> thorin_args(num_args());
     for (size_t i = 0, e = num_args(); i != e; ++i)
         thorin_args[i] = arg(i)->remit(cg);
-    return cg.world.definite_array(cg.convert(type())->as<thorin::DefiniteArrayType>()->elem_type(), thorin_args, loc());
+    return cg.world.tuple(thorin_args, loc());
 }
 
 const Def* RepeatedDefiniteArrayExpr::remit(CodeGen& cg) const {
-    Array<const Def*> args(count());
-    std::fill_n(args.begin(), count(), value()->remit(cg));
-    return cg.world.definite_array(args, loc());
+    return cg.world.pack(count(), value()->remit(cg));
 }
 
 const Def* TupleExpr::remit(CodeGen& cg) const {
@@ -609,7 +607,7 @@ const Def* TupleExpr::remit(CodeGen& cg) const {
 
 const Def* IndefiniteArrayExpr::remit(CodeGen& cg) const {
     extra_ = dim()->remit(cg);
-    return cg.world.indefinite_array(cg.convert(type())->as<thorin::IndefiniteArrayType>()->elem_type(), extra_, loc());
+    return cg.world.pack(extra_, cg.world.bot(cg.convert(type()->as<IndefiniteArrayType>()->elem_type())), loc());
 }
 
 const Def* StructExpr::remit(CodeGen& cg) const {
@@ -679,7 +677,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             dst = cont;
                         } else if (name == "pe_info") {
                             auto poly_type = cg.convert(arg(1)->type());
-                            auto string_type = cg.world.ptr_type(cg.world.indefinite_array_type(cg.world.type_pu8()));
+                            auto string_type = cg.world.ptr_type(cg.world.unsafe_variadic(cg.world.type_pu8()));
                             auto cn = cg.world.cn({
                                 cg.world.mem_type(), string_type, poly_type,
                                 cg.world.cn({ cg.world.mem_type() }) });
