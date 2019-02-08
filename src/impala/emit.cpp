@@ -102,13 +102,11 @@ public:
         auto result = world.extract(alloc, 1, dbg);
         if (auto variadic = type->isa<Variadic>(); variadic && !variadic->arity()->isa<Lit>()) {
             auto elem = variadic->body();
-            auto to = world.ptr_type(world.unsafe_variadic(elem), result->as<thorin::PtrType>()->addr_space());
+            auto to = world.ptr_type(world.unsafe_variadic(elem), result->type()->as<thorin::PtrType>()->addr_space());
             result = world.bitcast(to, result);
         }
 
         return result;
-
-
     }
 
     const thorin::Def* convert(const Type* type) {
