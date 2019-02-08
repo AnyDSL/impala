@@ -177,9 +177,9 @@ def split_arguments(arguments):
 
 def analyze_returncode(returncode):
     if returncode < 0:
-        return (False, 'execution was terminated by signal {}'.format(-returncode))
+        return (False, 'was terminated by signal {}'.format(-returncode))
     if returncode > 0:
-        return (False, "execution didn't run successfully with exit code {}".format(returncode))
+        return (False, "didn't run successfully with exit code {}".format(returncode))
     return (True, '')
 
 def run_tests():
