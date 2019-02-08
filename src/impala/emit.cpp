@@ -100,12 +100,9 @@ public:
         auto alloc = world.alloc(type, cur_mem, dbg);
         cur_mem = world.extract(alloc, 0_u32, dbg);
         auto result = world.extract(alloc, 1, dbg);
-        if (auto variadic = type->isa<Variadic>(); variadic && !variadic->arity()->isa<Lit>()) {
-            auto elem = variadic->body();
-            auto to = world.ptr_type(world.unsafe_variadic(elem), result->type()->as<thorin::PtrType>()->addr_space());
-            result = world.bitcast(to, result);
-        }
-
+        auto ptr = result->type()->as<thorin::PtrType>();
+        if (auto variadic = ptr->pointee()->isa<Variadic>())
+            return world.bitcast(world.ptr_type(world.unsafe_variadic(variadic->body()), ptr->addr_space()), result);
         return result;
     }
 
