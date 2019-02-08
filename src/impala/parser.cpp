@@ -1229,7 +1229,7 @@ const BlockExpr* Parser::parse_block_expr() {
                 }
 
                 final_expr = expr;
-                // FALLTHROUGH
+                [[fallthrough]];
             }
             default:
                 expect(Token::R_BRACE, "block expression");
