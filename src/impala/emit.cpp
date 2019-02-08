@@ -607,7 +607,9 @@ const Def* TupleExpr::remit(CodeGen& cg) const {
 
 const Def* IndefiniteArrayExpr::remit(CodeGen& cg) const {
     extra_ = dim()->remit(cg);
-    return cg.world.pack(extra_, cg.world.bot(cg.convert(type()->as<IndefiniteArrayType>()->elem_type())), loc());
+    auto elem = cg.convert(type()->as<IndefiniteArrayType>()->elem_type());
+    auto pack = cg.world.pack(extra_, cg.world.bot(elem), loc());
+    return cg.world.cast(cg.world.unsafe_variadic(elem), pack);
 }
 
 const Def* StructExpr::remit(CodeGen& cg) const {
