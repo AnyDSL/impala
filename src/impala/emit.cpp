@@ -96,12 +96,19 @@ public:
         cur_mem = world.store(cur_mem, ptr, val, loc);
     }
 
-    const Def* alloc(const thorin::Def* type, const Def* extra, Debug dbg) {
-        if (!extra)
-            extra = world.lit_qu64(0, dbg);
-        auto alloc = world.alloc(type, cur_mem, extra, dbg);
+    const Def* alloc(const thorin::Def* type, Debug dbg) {
+        auto alloc = world.alloc(type, cur_mem, dbg);
         cur_mem = world.extract(alloc, 0_u32, dbg);
-        return world.extract(alloc, 1, dbg);
+        auto result = world.extract(alloc, 1, dbg);
+        if (auto variadic = type->isa<Variadic>(); variadic && !variadic->arity()->isa<Lit>()) {
+            auto elem = variadic->body();
+            auto to = world.ptr_type(world.unsafe_variadic(elem), result->as<thorin::PtrType>()->addr_space());
+            result = world.bitcast(to, result);
+        }
+
+        return result;
+
+
     }
 
     const thorin::Def* convert(const Type* type) {
@@ -479,7 +486,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
         case NOT: return cg.world.arithop_not(rhs()->remit(cg), loc());
         case TILDE: {
             auto def = rhs()->remit(cg);
-            auto ptr = cg.alloc(def->type(), rhs()->extra(), loc());
+            auto ptr = cg.alloc(def->type(), loc());
             cg.store(ptr, def, loc());
             return ptr;
         }
@@ -606,10 +613,9 @@ const Def* TupleExpr::remit(CodeGen& cg) const {
 }
 
 const Def* IndefiniteArrayExpr::remit(CodeGen& cg) const {
-    extra_ = dim()->remit(cg);
+    auto arity = dim()->remit(cg);
     auto elem = cg.convert(type()->as<IndefiniteArrayType>()->elem_type());
-    auto pack = cg.world.pack(extra_, cg.world.bot(elem), loc());
-    return cg.world.cast(cg.world.unsafe_variadic(elem), pack);
+    return cg.world.pack(arity, cg.world.bot(elem), loc());
 }
 
 const Def* StructExpr::remit(CodeGen& cg) const {

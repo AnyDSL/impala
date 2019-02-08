@@ -1074,8 +1074,6 @@ public:
 
     virtual ~Expr() { assert(back_ref_ != nullptr); }
 
-    const thorin::Def* extra() const { return extra_; }
-
     const Expr* skip_rvalue() const;
 
     virtual void write() const {}
@@ -1090,9 +1088,6 @@ private:
     virtual void check(TypeSema&) const = 0;
 
 protected:
-    /// Needed to propagate extend of indefinite arrays.
-    mutable const thorin::Def* extra_ = nullptr;
-
     /**
      * A back reference to the @p std::unique_ptr which owns this @p Expr.
      * This means that the address is @em not supposed to be changed in the future.
