@@ -13,6 +13,6 @@ fn bar(p: &mut i32) -> () {
 
 fn main() -> int {
     let mut a = [0, 1, 2, 3];
-    bar(&mut a(4));
+    bar(&mut a(3));
     if test(a) == 0 { 0 } else { 1 }
 }
