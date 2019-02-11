@@ -724,6 +724,25 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto cont = cg.world().continuation(fn_type, {location(), "mpi_type"});
                             cont->set_intrinsic();
                             dst = cont;
+                        } else if (name == "deep_copy") {
+                            auto poly_type = cg.convert(arg(0)->type());
+                            auto poly_type2 = cg.convert(arg(1)->type());
+                            auto fn_type = cg.world().fn_type({
+                                cg.world().mem_type(), poly_type, poly_type2,
+                                cg.world().fn_type({ cg.world().mem_type() }) });
+                            auto cont = cg.world().continuation(fn_type, {location(), "deep_copy"});
+                            cont->set_intrinsic();
+                            dst = cont;
+                        } else if (name == "mpi_type") {
+                            auto input = cg.convert(arg(0)->type());
+                            //mpi datatype
+                            auto mpi_type = cg.convert(arg(1)->type());
+                            auto fn_type = cg.world().fn_type({
+                                cg.world().mem_type(), input, mpi_type,
+                                cg.world().fn_type({ cg.world().mem_type() }) });
+                            auto cont = cg.world().continuation(fn_type, {location(), "mpi_type"});
+                            cont->set_intrinsic();
+                            dst = cont;
                         }
                     }
                 }
