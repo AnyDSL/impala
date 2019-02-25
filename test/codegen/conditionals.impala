@@ -1,0 +1,14 @@
+// codegen
+
+fn @scalar(f: f32) -> f32 { f }
+
+fn main() -> i32 {
+   	let mut value = 1.f;
+	if 1.f < scalar(0.01f) || 0.2f < scalar(0.01f) || 0.3f < scalar(0.01f) {
+		value = 0.7f;
+	}
+    if 1.f < scalar(0.01f) && 0.2f < scalar(0.01f) && 0.3f < scalar(0.01f) {
+		value = 0.7f;
+	}
+	if value == 1.0f { 0 } else { 1 }
+}

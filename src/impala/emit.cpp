@@ -542,7 +542,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             auto rcond = rhs()->remit(cg);
             cg.cur_bb->jump(r, {cg.cur_mem, rcond});
 
-            cg.enter(f, mem)->jump(r, {cg.cur_mem, cg.world.literal(false)});
+            cg.enter(f, mem)->jump(r, {mem, cg.world.literal(false)});
             return cg.enter(r);
         }
         case OROR: {
@@ -558,7 +558,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             auto rcond = rhs()->remit(cg);
             cg.cur_bb->jump(r, {cg.cur_mem, rcond});
 
-            cg.enter(t, mem)->jump(r, {cg.cur_mem, cg.world.literal(true)});
+            cg.enter(t, mem)->jump(r, {mem, cg.world.literal(true)});
             return cg.enter(r);
         }
         default:
