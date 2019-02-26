@@ -527,38 +527,44 @@ const Def* PrefixExpr::lemit(CodeGen& cg) const {
     return rhs()->remit(cg);
 }
 
+static void flatten_infix(const InfixExpr* infix, std::vector<const Expr*>& exprs) {
+    auto lhs = infix->lhs()->isa<InfixExpr>();
+    if (lhs && lhs->tag() == infix->tag()) {
+        flatten_infix(lhs, exprs);
+    } else {
+        exprs.push_back(infix->lhs());
+    }
+    auto rhs = infix->rhs()->isa<InfixExpr>();
+    if (rhs && rhs->tag() == infix->tag()) {
+        flatten_infix(rhs, exprs);
+    } else {
+        exprs.push_back(infix->rhs());
+    }
+}
+
 const Def* InfixExpr::remit(CodeGen& cg) const {
     switch (tag()) {
+        case OROR:
         case ANDAND: {
-            auto t = cg.basicblock({lhs()->location().front(), "and_lhs_t"});
-            auto f = cg.basicblock({rhs()->location().front(), "and_lhs_f"});
-            auto r = cg.basicblock(cg.world.type_bool(), {location().back(), "and_result"});
+            std::vector<const Expr*> exprs;
+            flatten_infix(this, exprs);
+            auto r = cg.basicblock(cg.world.type_bool(), { location().back(), "infix_result" });
+            for (size_t i = 0; i < exprs.size() - 1; ++i) {
+                auto t = cg.basicblock({ exprs[i]->location().front(), "infix_true" });
+                auto f = cg.basicblock({ exprs[i]->location().front(), "infix_false" });
 
-            auto lcond = lhs()->remit(cg);
-            auto mem = cg.cur_mem;
-            cg.cur_bb->branch(lcond, t, f);
-
-            cg.enter(t, mem);
-            auto rcond = rhs()->remit(cg);
-            cg.cur_bb->jump(r, {cg.cur_mem, rcond});
-
-            cg.enter(f, mem)->jump(r, {mem, cg.world.literal(false)});
-            return cg.enter(r);
-        }
-        case OROR: {
-            auto t = cg.basicblock({lhs()->location().front(), "or_lhs_t"});
-            auto f = cg.basicblock({rhs()->location().front(), "or_lhs_f"});
-            auto r = cg.basicblock(cg.world.type_bool(), {location().back(), "or_result"});
-
-            auto lcond = lhs()->remit(cg);
-            auto mem = cg.cur_mem;
-            cg.cur_bb->branch(lcond, t, f);
-
-            cg.enter(f, mem);
-            auto rcond = rhs()->remit(cg);
-            cg.cur_bb->jump(r, {cg.cur_mem, rcond});
-
-            cg.enter(t, mem)->jump(r, {mem, cg.world.literal(true)});
+                auto cond = exprs[i]->remit(cg);
+                cg.cur_bb->branch(cond, t, f);
+                if (tag() == OROR) {
+                    t->jump(r, { cg.cur_mem, cg.world.literal(true) });
+                    cg.enter(f, cg.cur_mem);
+                } else {
+                    f->jump(r, { cg.cur_mem, cg.world.literal(false) });
+                    cg.enter(t, cg.cur_mem);
+                }
+            }
+            auto last = exprs.back()->remit(cg);
+            cg.cur_bb->jump(r, { cg.cur_mem, last });
             return cg.enter(r);
         }
         default:
