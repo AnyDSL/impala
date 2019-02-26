@@ -81,6 +81,13 @@ public:
         return std::make_pair(next, ret);
     }
 
+    const Def* join(Continuation* t, Continuation* f, Location loc) {
+        auto j = basicblock(world.type_bool(), {loc, "join"});
+        t->jump(j, {cur_mem, world.literal(true )}, loc);
+        f->jump(j, {cur_mem, world.literal(false)}, loc);
+        return enter(j);
+    }
+
     Continuation* create_continuation(const LocalDecl* decl) {
         auto result = world.continuation(convert(decl->type())->as<thorin::FnType>(), decl->debug());
         result->param(0)->debug().set("mem");
@@ -527,45 +534,14 @@ const Def* PrefixExpr::lemit(CodeGen& cg) const {
     return rhs()->remit(cg);
 }
 
-static void flatten_infix(const InfixExpr* infix, std::vector<const Expr*>& exprs) {
-    auto lhs = infix->lhs()->isa<InfixExpr>();
-    if (lhs && lhs->tag() == infix->tag()) {
-        flatten_infix(lhs, exprs);
-    } else {
-        exprs.push_back(infix->lhs());
-    }
-    auto rhs = infix->rhs()->isa<InfixExpr>();
-    if (rhs && rhs->tag() == infix->tag()) {
-        flatten_infix(rhs, exprs);
-    } else {
-        exprs.push_back(infix->rhs());
-    }
-}
-
 const Def* InfixExpr::remit(CodeGen& cg) const {
     switch (tag()) {
-        case OROR:
-        case ANDAND: {
-            std::vector<const Expr*> exprs;
-            flatten_infix(this, exprs);
-            auto r = cg.basicblock(cg.world.type_bool(), { location().back(), "infix_result" });
-            for (size_t i = 0; i < exprs.size() - 1; ++i) {
-                auto t = cg.basicblock({ exprs[i]->location().front(), "infix_true" });
-                auto f = cg.basicblock({ exprs[i]->location().front(), "infix_false" });
-
-                auto cond = exprs[i]->remit(cg);
-                cg.cur_bb->branch(cond, t, f);
-                if (tag() == OROR) {
-                    t->jump(r, { cg.cur_mem, cg.world.literal(true) });
-                    cg.enter(f, cg.cur_mem);
-                } else {
-                    f->jump(r, { cg.cur_mem, cg.world.literal(false) });
-                    cg.enter(t, cg.cur_mem);
-                }
-            }
-            auto last = exprs.back()->remit(cg);
-            cg.cur_bb->jump(r, { cg.cur_mem, last });
-            return cg.enter(r);
+        case ANDAND:
+        case OROR: {
+            auto t = cg.basicblock({lhs()->location().front(), tag() == ANDAND ? "and_t" : "or_t" });
+            auto f = cg.basicblock({rhs()->location().front(), tag() == ANDAND ? "and_f" : "or_f" });
+            emit_branch(cg, t, f);
+            return cg.join(t, f, location().back());
         }
         default:
             const TokenTag op = (TokenTag) tag();
@@ -766,8 +742,7 @@ const Def* IfExpr::remit(CodeGen& cg) const {
     auto if_else = cg.basicblock({else_expr()->location().front(), "if_else"});
     auto if_join = thorin_type ? cg.basicblock(thorin_type, {location().back(), "if_join"}) : nullptr; // TODO rewrite with bottom type
 
-    auto c = cond()->remit(cg);
-    cg.cur_bb->branch(c, if_then, if_else, cond()->location().back());
+    cond()->emit_branch(cg, if_then, if_else);
     auto head_mem = cg.cur_mem;
 
     cg.enter(if_then, head_mem);
@@ -929,6 +904,49 @@ const Def* FnExpr::remit(CodeGen& cg) const {
     fn_emit_body(cg, location());
     return continuation;
 }
+
+/*
+ * expression emit_branch
+ */
+
+void Expr::emit_branch(CodeGen& cg, Continuation* t, Continuation* f) const {
+    auto cond = remit(cg);
+    cg.cur_bb->branch(cond, t, f, cond->location().back());
+}
+
+void InfixExpr::emit_branch(CodeGen& cg, Continuation* t, Continuation* f) const {
+    switch (tag()) {
+        case ANDAND: {
+            auto x = cg.basicblock({rhs()->location().front(), "and_x"});
+            auto mem = cg.cur_mem;
+            lhs()->emit_branch(cg, x, f);
+            cg.enter(x, mem);
+            return rhs()->emit_branch(cg, t, f);
+        }
+        case OROR: {
+            auto x = cg.basicblock({rhs()->location().front(), "or_x"});
+            auto mem = cg.cur_mem;
+            lhs()->emit_branch(cg, t, x);
+            cg.enter(x, mem);
+            return rhs()->emit_branch(cg, t, f);
+        }
+        default:
+            return Expr::emit_branch(cg, t, f);
+    }
+}
+
+void PrefixExpr::emit_branch(CodeGen& cg, Continuation* t, Continuation* f) const {
+    if (tag() == NOT && is_bool(type()))
+        rhs()->emit_branch(cg, f, t);
+    else
+        Expr::emit_branch(cg, t, f);
+}
+
+//void IfExpr::emit_branch(CodeGen&, Continuation*, Continuation*) const {
+//}
+
+//void WhileExpr::emit_branch(CodeGen&, Continuation*, Continuation*) const {
+//}
 
 /*
  * patterns
