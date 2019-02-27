@@ -133,7 +133,7 @@ private:
     TypeMap<std::unique_ptr<Representative>> representatives_;
     bool todo_ = true;
 
-    friend void type_inference(Init&, const Module*);
+    friend void type_inference(std::unique_ptr<TypeTable>& typetable, const Module*);
 };
 
 //------------------------------------------------------------------------------
@@ -333,9 +333,9 @@ auto InferSema::unify_by_rank(Representative* x, Representative* y) -> Represent
 
 //------------------------------------------------------------------------------
 
-void type_inference(Init& init, const Module* module) {
-    auto sema = new InferSema();
-    init.typetable.reset(sema);
+void type_inference(std::unique_ptr<TypeTable>& typetable, const Module* module) {
+    auto sema = new InferSema;
+    typetable.reset(sema);
 
     int i = 0;
     for (;sema->todo_; ++i) {
@@ -353,13 +353,13 @@ void type_inference(Init& init, const Module* module) {
  */
 
 const Var* ASTTypeParam::infer(InferSema& sema) const {
-    for (const auto& bound : bounds())
+    for (auto&& bound : bounds())
         sema.infer(bound.get());
     return sema.var(lambda_depth());
 }
 
 void ASTTypeParamList::infer_ast_type_params(InferSema& sema) const {
-    for (const auto& ast_type_param : ast_type_params())
+    for (auto&& ast_type_param : ast_type_params())
         sema.infer(ast_type_param.get());
 }
 
@@ -518,15 +518,15 @@ void ModuleDecl::infer(InferSema&) const {
 }
 
 void Module::infer(InferSema& sema) const {
-    for (const auto& item : items())
+    for (auto&& item : items())
         sema.infer_head(item.get());
 
-    for (const auto& item : items())
+    for (auto&& item : items())
         sema.infer(item.get());
 }
 
 void ExternBlock::infer(InferSema& sema) const {
-    for (const auto& fn_decl : fn_decls())
+    for (auto&& fn_decl : fn_decls())
         sema.infer(fn_decl.get());
 }
 
@@ -538,7 +538,7 @@ void Typedef::infer(InferSema& sema) const {
         // TODO parametric Typedefs
 #if 0
         auto abs = sema.typedef_abs(sema.type(ast_type())); // TODO might be nullptr
-        for (const auto& lambda : lambdas())
+        for (auto&& lambda : lambdas())
             abs->bind(lambda->lambda());
 #endif
     } else
@@ -689,6 +689,7 @@ const Type* PrefixExpr::infer(InferSema& sema) const {
         case HLT:
             return sema.rvalue(rhs());
         case KNOWN:
+            sema.infer(rhs());
             return sema.type_bool();
         case RUNRUN:
             return sema.infer(rhs());
@@ -782,10 +783,10 @@ const Type* DefiniteArrayExpr::infer(InferSema& sema) const {
     else
         expected_elem_type = sema.type_error();
 
-    for (const auto& arg : args())
+    for (auto&& arg : args())
         sema.rvalue(arg.get());
 
-    for (const auto& arg : args())
+    for (auto&& arg : args())
         expected_elem_type = sema.coerce(expected_elem_type, arg.get());
 
     return sema.definite_array_type(expected_elem_type, num_args());
@@ -800,10 +801,10 @@ const Type* SimdExpr::infer(InferSema& sema) const {
     else
         expected_elem_type = sema.type_error();
 
-    for (const auto& arg : args())
+    for (auto&& arg : args())
         sema.rvalue(arg.get());
 
-    for (const auto& arg : args())
+    for (auto&& arg : args())
         expected_elem_type = sema.coerce(expected_elem_type, arg.get());
 
     return sema.simd_type(expected_elem_type, num_args());
@@ -923,7 +924,7 @@ const Type* MapExpr::infer(InferSema& sema) const {
 
     auto ref = split_ref_type(ltype);
 
-    for (const auto& arg : args())
+    for (auto&& arg : args())
         sema.rvalue(arg.get());
 
     if (ltype->isa<UnknownType>())
@@ -958,12 +959,12 @@ const Type* MapExpr::infer(InferSema& sema) const {
 }
 
 const Type* BlockExpr::infer(InferSema& sema) const {
-    for (const auto& stmt : stmts()) {
+    for (auto&& stmt : stmts()) {
         if (auto item_stmt = stmt->isa<ItemStmt>())
             sema.infer_head(item_stmt->item());
     }
 
-    for (const auto& stmt : stmts())
+    for (auto&& stmt : stmts())
         sema.infer(stmt.get());
 
     return expr() ? sema.rvalue(expr()) : sema.unit()->as<Type>();
@@ -1083,8 +1084,8 @@ void LetStmt::infer(InferSema& sema) const {
 }
 
 void AsmStmt::infer(InferSema& sema) const {
-    for (const auto& output : outputs()) sema.infer(output->expr());
-    for (const auto&  input :  inputs()) sema.rvalue(input->expr());
+    for (auto&& output : outputs()) sema.infer(output->expr());
+    for (auto&&  input :  inputs()) sema.rvalue(input->expr());
 }
 
 //------------------------------------------------------------------------------

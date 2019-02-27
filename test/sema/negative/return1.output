@@ -1,1 +1,0 @@
-return1.impala:6 col 19 - 24: error: return type 'i32' does not match expected type 'bool'

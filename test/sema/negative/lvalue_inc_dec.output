@@ -1,4 +1,0 @@
-lvalue_inc_dec.impala:3 col 6 - 8: error: lvalue required for postfix '++'
-lvalue_inc_dec.impala:4 col 6 - 8: error: lvalue required for postfix '++'
-lvalue_inc_dec.impala:5 col 6 - 8: error: lvalue required for postfix '--'
-lvalue_inc_dec.impala:6 col 6 - 8: error: lvalue required for postfix '--'

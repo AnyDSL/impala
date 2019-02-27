@@ -1,0 +1,1 @@
+subtyping3_ptr.impala:3 col 22: error: mismatched types: expected 'bool' but found 'i32'

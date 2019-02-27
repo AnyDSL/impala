@@ -1,6 +1,0 @@
-simd.impala:2 col 5 - 32: error: mismatched types: expected 'f32' but found 'simd[f32 * 4]' as return type
-simd.impala:6 col 5 - 36: error: mismatched types: expected 'simd[f32 * 4]' but found 'f32' as return type
-simd.impala:10 col 36 - 51: error: mismatched types: expected 'simd[f32 * 4]' but found 'simd[i32 * 4]' as return type
-simd.impala:14 col 5 - 32: error: mismatched types: expected 'bool' but found 'simd[bool * 4]'
-simd.impala:18 col 36 - 71: error: mismatched types: expected 'simd[bool * 4]' but found 'simd[bool * 5]' as return type
-simd.impala:22 col 5 - 30: error: mismatched types: expected 'simd[bool * 4]' but found '[bool * 4]' as return type

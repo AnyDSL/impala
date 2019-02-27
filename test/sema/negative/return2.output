@@ -1,1 +1,0 @@
-return2.impala:2 col 4 - 7: error: mismatched types: expected 'i32' but found 'bool' as return type

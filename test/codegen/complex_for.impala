@@ -25,12 +25,12 @@ fn main() -> i32 {
     }
 
     let mut step = 1;
-    let sum = for i in sum_range(0, 16) { 
+    let sum = for i in sum_range(0, 16) {
         if step == 3 {
             step++;
             continue(1)
         }
-        print_int(i); 
+        print_int(i);
         step++
     };
     if sum == 29 { 0 } else { 1 }

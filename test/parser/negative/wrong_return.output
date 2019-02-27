@@ -1,4 +1,0 @@
-wrong_return.impala:1 col 11: error: expected block expression, got '-' while parsing body of function
-wrong_return.impala:1 col 11: error: expected module item, got '-' while parsing module contents
-wrong_return.impala:1 col 9: error: cannot infer a return type, maybe you forgot to mark the function with '-> !'?
-wrong_return.impala:1 col 9: error: mismatched types: expected '<no-return>' but found '()' as return type

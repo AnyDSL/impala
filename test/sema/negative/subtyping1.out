@@ -1,0 +1,1 @@
+subtyping1.impala:2 col 6: error: mismatched types: expected 'f64' but found 'i32' as argument type

@@ -1,1 +1,0 @@
-assign_no_lvalue.impala:2 col 5 - 6: error: lvalue required for assignment

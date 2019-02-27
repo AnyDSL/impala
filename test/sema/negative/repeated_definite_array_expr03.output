@@ -1,1 +1,0 @@
-repeated_definite_array_expr03.impala:2 col 22 - 29: error: mismatched types: expected '[i32 * 2]' but found '[i32 * 3]' as initialization type

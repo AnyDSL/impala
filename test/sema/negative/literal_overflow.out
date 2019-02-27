@@ -1,0 +1,3 @@
+literal_overflow.impala:2 col 19 - 27: error: literal out of range for type 'i16'
+literal_overflow.impala:3 col 19 - 31: error: literal out of range for type 'i32'
+literal_overflow.impala:4 col 19 - 39: error: literal out of range for type 'i64'

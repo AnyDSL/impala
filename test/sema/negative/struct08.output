@@ -1,2 +1,0 @@
-struct08.impala:4 col 23 - 25: error: expected different argument for type parameter 'X': expected 'bool' but found 'i32'
-struct08.impala:4 col 33: error: mismatched types: expected 'bool' but found 'i32' as initialization type for field 'x'

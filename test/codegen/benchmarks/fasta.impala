@@ -1,4 +1,5 @@
-// codegen
+// codegen "500000"
+
 
 type char = u8;
 type str = [char];
@@ -93,7 +94,7 @@ fn get_LCG_Pseudorandom_Number(max: float ) -> float {
 fn generate_And_Wrap_Pseudorandom_DNA_Sequence(
     nucleotides_Information: &[nucleotide_info],
     number_Of_Nucleotides: int,
-    number_Of_Characters_To_Create: int) -> () 
+    number_Of_Characters_To_Create: int) -> ()
 {
     // Cumulate the probabilities. Note that the probability is being multiplied
     // by IM because later on we'll also be calling the random number generator
@@ -191,7 +192,7 @@ fn main(argc: int, argv: &[&str]) -> int {
     let mut homo_Sapien_Nucleotides_Information = [
         nucleotide_info{letter: 'a', probability: 0.3029549426680f},
         nucleotide_info{letter: 'c', probability: 0.1979883004921f},
-        nucleotide_info{letter: 'g', probability: 0.1975473066391f}, 
+        nucleotide_info{letter: 'g', probability: 0.1975473066391f},
         nucleotide_info{letter: 't', probability: 0.3015094502008f}
     ];
     generate_And_Wrap_Pseudorandom_DNA_Sequence(&homo_Sapien_Nucleotides_Information, 4, 5*n);

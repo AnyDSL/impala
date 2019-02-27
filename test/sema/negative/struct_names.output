@@ -1,1 +1,0 @@
-struct_names.impala:8 col 22 - 32: error: mismatched types: expected 'T' but found 'S' as return type

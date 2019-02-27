@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 struct Thing {
     count: i32

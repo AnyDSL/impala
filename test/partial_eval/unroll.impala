@@ -10,7 +10,7 @@ fn foo(i: int) -> float {
 }
 
 fn main(n: int) -> () {
-    let mut arr = ~[n: float];
+    let arr = ~[n: float];
 
     let unroll = 100;
     for i in range(0, unroll) @{

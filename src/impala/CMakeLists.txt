@@ -15,15 +15,13 @@ set(IMPALA_SOURCES
     sema/type.h
     sema/typesema.cpp
     stream.cpp
-    symbol.cpp
-    symbol.h
     token.cpp
     token.h
     tokenlist.h
 )
 
 add_library(libimpala ${IMPALA_SOURCES})
-target_link_libraries(libimpala ${Thorin_LIBRARIES})
+target_link_libraries(libimpala PRIVATE ${Thorin_LIBRARIES})
 set_target_properties(libimpala PROPERTIES PREFIX "")
 
 add_executable(impala main.cpp)

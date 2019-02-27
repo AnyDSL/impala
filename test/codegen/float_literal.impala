@@ -1,0 +1,4 @@
+// codegen
+fn main() -> int {
+    if .5 == 0.5 { 0 } else { 1 }
+}

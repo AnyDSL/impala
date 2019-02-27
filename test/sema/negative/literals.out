@@ -1,0 +1,19 @@
+literals.impala:12 col 23: error: invalid constant '0b_'
+literals.impala:14 col 22: error: invalid constant '0b'
+literals.impala:14 col 22: error: expected ';', got '2' while parsing the end of an let statement
+literals.impala:15 col 23: error: invalid constant '0o_'
+literals.impala:17 col 22: error: invalid constant '0o'
+literals.impala:17 col 22: error: expected ';', got '8' while parsing the end of an let statement
+literals.impala:18 col 23: error: invalid constant '0x_'
+literals.impala:2 col 20 - 23: error: mismatched types: expected 'u8' but found 'u16' as initialization type
+literals.impala:3 col 20 - 23: error: mismatched types: expected 'u16' but found 'u32' as initialization type
+literals.impala:4 col 20 - 23: error: mismatched types: expected 'u32' but found 'u64' as initialization type
+literals.impala:5 col 20 - 22: error: mismatched types: expected 'u64' but found 'u8' as initialization type
+literals.impala:6 col 20 - 23: error: mismatched types: expected 'i8' but found 'i16' as initialization type
+literals.impala:7 col 20 - 23: error: mismatched types: expected 'i16' but found 'i32' as initialization type
+literals.impala:8 col 20 - 23: error: mismatched types: expected 'i32' but found 'i64' as initialization type
+literals.impala:9 col 20 - 22: error: mismatched types: expected 'i64' but found 'i8' as initialization type
+literals.impala:10 col 20 - 23: error: mismatched types: expected 'f32' but found 'f64' as initialization type
+literals.impala:11 col 20 - 23: error: mismatched types: expected 'f64' but found 'f32' as initialization type
+literals.impala:14 col 22: warning: statement with no effect
+literals.impala:17 col 22: warning: statement with no effect

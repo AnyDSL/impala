@@ -1,0 +1,1 @@
+struct09.impala:5 col 21 - 35: error: mismatched types: expected 'T[bool]' but found 'S[i32]' as initialization type

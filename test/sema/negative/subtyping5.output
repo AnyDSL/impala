@@ -1,1 +1,0 @@
-subtyping5.impala:5 col 34: error: mismatched types: expected 'fn[A: U]([i32], A)' but found 'fn[A: T]([i32 * 2], A)' as initialization type

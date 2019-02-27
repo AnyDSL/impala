@@ -1,0 +1,2 @@
+address_of_val_array.impala:2 col 6 - 8: error: lvalue required as unary '&' operand
+address_of_val_array.impala:2 col 5 - 8: warning: statement with no effect

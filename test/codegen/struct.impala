@@ -1,13 +1,13 @@
 // codegen
 
-struct Vec3 {
-    x: int,
-    y: int,
-    z: int,
-}
-
 fn main() -> int {
     let mut v = Vec3{x: 1, y: 2, z: 3};
     v.z += 36;
     if v.x + v.y + v.z == 42 { 0 } else { 1 }
+}
+
+struct Vec3 {
+    x: int,
+    y: int,
+    z: int,
 }

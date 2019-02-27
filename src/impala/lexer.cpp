@@ -5,7 +5,6 @@
 #include <stdexcept>
 
 #include "impala/impala.h"
-#include "impala/symbol.h"
 
 using namespace thorin;
 
@@ -173,6 +172,7 @@ Token Lexer::lex() {
 
         // '.', floats
         if (accept('.')) {
+            str += '.';
             if (accept(str, dec)) goto l_fractional_dot_rest;
             if (accept('.'))      return {location(), Token::DOTDOT};
             return {location(), Token::DOT};
@@ -289,7 +289,7 @@ Token Lexer::lex_suffix(std::string& str, bool floating) {
             }
             tok = lit;
         }
-        str += suffix.str();
+        str += suffix.c_str();
     }
 
     return {location(), tok, str};

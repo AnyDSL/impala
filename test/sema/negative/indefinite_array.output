@@ -1,7 +1,0 @@
-indefinite_array.impala:1 col 11 - 15: error: indefinite array '[i32]' not allowed as parameter type because its size is statically unknown; use a definite array or a pointer to an indefinite array instead
-indefinite_array.impala:1 col 21 - 25: error: indefinite array '[i32]' not allowed as element type in a function type because its size is statically unknown; use a definite array or a pointer to an indefinite array instead
-indefinite_array.impala:2 col 9: error: indefinite array '[i32]' not allowed as type for a local variable because its size is statically unknown; use a definite array or a pointer to an indefinite array instead
-indefinite_array.impala:3 col 14 - 22: error: indefinite array '[i32]' not allowed as type for an element in a tuple expression because its size is statically unknown; use a definite array or a pointer to an indefinite array instead
-indefinite_array.impala:4 col 22 - 26: error: indefinite array '[i32]' not allowed as element type in a tuple because its size is statically unknown; use a definite array or a pointer to an indefinite array instead
-indefinite_array.impala:4 col 9 - 27: warning: variable 'w' declared mutable but variable is never written to
-indefinite_array.impala:9 col 5 - 12: error: indefinite array '[i32]' not allowed as type for a struct field because its size is statically unknown; use a definite array or a pointer to an indefinite array instead

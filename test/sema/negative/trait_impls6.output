@@ -1,1 +1,0 @@
-trait_impls6.impala:5 col 6: error: wrong number of instances for bound type variables of trait 'T': 0 for 1
