@@ -16,10 +16,10 @@ find_program(Clang_BIN clang
     PATH_SUFFIXES Release ${CMAKE_CONFIGURATION_TYPES}
 )
 
-add_library(rtmock STATIC rtmock.cpp)
+# add_library(rtmock STATIC rtmock.cpp)
 
 set(TEST_SCRIPT perform.py)
-set(TEST_ARGS --impala $<TARGET_FILE:impala> --clang ${Clang_BIN} --temp ${CMAKE_CURRENT_BINARY_DIR} --rtmock $<TARGET_FILE:rtmock>)
+set(TEST_ARGS --impala $<TARGET_FILE:impala> --clang ${Clang_BIN} --temp ${CMAKE_CURRENT_BINARY_DIR} --rtmock "${CMAKE_CURRENT_SOURCE_DIR}/rtmock.cpp")
 
 file(GLOB_RECURSE _testcases RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.impala")
 
@@ -29,6 +29,6 @@ foreach(_test ${_testcases})
 endforeach()
 
 set(_content
-    "CONFIGURATION = \"$<CONFIG>\"\nIMPALA_BIN = \"$<TARGET_FILE:impala>\"\nCLANG_BIN = \"${Clang_BIN}\"\nLIBRTMOCK = \"$<TARGET_FILE:rtmock>\"\nTEMP_DIR = \"${CMAKE_CURRENT_BINARY_DIR}\"\n")
+    "CONFIGURATION = \"$<CONFIG>\"\nIMPALA_BIN = \"$<TARGET_FILE:impala>\"\nCLANG_BIN = \"${Clang_BIN}\"\nLIBRTMOCK = \"${CMAKE_CURRENT_SOURCE_DIR}/rtmock.cpp\"\nTEMP_DIR = \"${CMAKE_CURRENT_BINARY_DIR}\"\n")
 file(GENERATE OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/config$<CONFIG>.py CONTENT ${_content})
 

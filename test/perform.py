@@ -6,7 +6,7 @@ import sys
 
 
 EXE = '.exe' if sys.platform == 'win32' else ''
-LIBC = '-lmsvcrt' if sys.platform == 'win32' else ''
+LIBC = '' #'-lmsvcrt' if sys.platform == 'win32' else ''
 
 
 class TestMethod(object):
@@ -18,6 +18,7 @@ class TestMethod(object):
         self.returncode = None
 
     def __call__(self, args, input=None):
+        # print(args)
         self.stdin = input
         try:
             self.completed = subprocess.run([self.executable] + args, timeout=self.timeout, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=self.stdin)
@@ -37,11 +38,14 @@ class TestMethod(object):
         return expected != self.stdout
 
     def dump_output(self, filename, to_stdout=True, empty_too=False):
+        print(">>>", self.__class__.__name__)
         if self.stdout is None:
             return
         if len(self.stdout) > 0 or empty_too:
             if to_stdout:
-                print(self.stdout)
+                log = str(self.stdout, 'utf-8', 'ignore')
+                for line in log.splitlines():
+                    print(line)
             if filename is None:
                 return
             with open(filename, 'wb') as file:
@@ -86,8 +90,7 @@ class LinkFakeRuntime(TestMethod):
     def __call__(self, testfile):
         super().__call__([testfile.intermediate('.ll'), LIBC, self.runtime, "-o", testfile.intermediate(EXE)])
 
-        if self.stdout is not None and len(self.stdout) > 0:
-            print(self.stdout)
+        self.dump_output(None)
 
         if self.wrong_returncode():
             print("Linking with", self.runtime, "failed.")
@@ -109,7 +112,7 @@ class ExecuteTestOutput(TestMethod):
         stdin = self.loadinput(testfile)
         super().__call__([], input=stdin)
 
-        self.dump_output(testfile.intermediate('.out'))
+        self.dump_output(testfile.intermediate('.out'), to_stdout=False)
 
         if self.wrong_returncode():
             print("Executing output", testfile.filename(), "exited with non-zero returncode.")
