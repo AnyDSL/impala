@@ -1106,6 +1106,7 @@ public:
     virtual void bind(NameSema&) const = 0;
     virtual const thorin::Def* lemit(CodeGen&) const;
     virtual const thorin::Def* remit(CodeGen&) const;
+    virtual void emit_branch(CodeGen&, thorin::Continuation*, thorin::Continuation*) const;
 
 private:
     virtual const Type* infer(InferSema&) const = 0;
@@ -1375,6 +1376,7 @@ public:
     bool has_side_effect() const override;
     void bind(NameSema&) const override;
     const thorin::Def* remit(CodeGen&) const override;
+    void emit_branch(CodeGen&, thorin::Continuation*, thorin::Continuation*) const override;
     std::ostream& stream(std::ostream&) const override;
 
 private:

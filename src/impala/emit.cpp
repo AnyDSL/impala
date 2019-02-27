@@ -527,18 +527,34 @@ const Def* PrefixExpr::lemit(CodeGen& cg) const {
     return rhs()->remit(cg);
 }
 
-static void flatten_infix(const InfixExpr* infix, std::vector<const Expr*>& exprs) {
-    auto lhs = infix->lhs()->isa<InfixExpr>();
-    if (lhs && lhs->tag() == infix->tag()) {
-        flatten_infix(lhs, exprs);
-    } else {
-        exprs.push_back(infix->lhs());
-    }
-    auto rhs = infix->rhs()->isa<InfixExpr>();
-    if (rhs && rhs->tag() == infix->tag()) {
-        flatten_infix(rhs, exprs);
-    } else {
-        exprs.push_back(infix->rhs());
+void Expr::emit_branch(CodeGen& cg, Continuation* jump_true, Continuation* jump_false) const {
+    auto expr_true  = cg.basicblock({ location().back(), "expr_true"  });
+    auto expr_false = cg.basicblock({ location().back(), "expr_false" });
+    auto cond = remit(cg);
+    cg.cur_bb->branch(cond, expr_true, expr_false, location().back());
+    expr_true->jump(jump_true, { cg.cur_mem });
+    expr_false->jump(jump_false, { cg.cur_mem });
+}
+
+void InfixExpr::emit_branch(CodeGen& cg, Continuation* jump_true, Continuation* jump_false) const {
+    auto jump_type = jump_true->type();
+    switch (tag()) {
+        case OROR: {
+                auto or_false = cg.world.continuation(jump_type, { location().back(), "or_false" });
+                lhs()->emit_branch(cg, jump_true, or_false);
+                cg.enter(or_false, or_false->param(0));
+                rhs()->emit_branch(cg, jump_true, jump_false);
+            }
+            break;
+        case ANDAND: {
+                auto and_true = cg.world.continuation(jump_type, { location().back(), "and_true" });
+                lhs()->emit_branch(cg, and_true, jump_false);
+                cg.enter(and_true, and_true->param(0));
+                rhs()->emit_branch(cg, jump_true, jump_false);
+            }
+            break;
+        default:
+            return Expr::emit_branch(cg, jump_true, jump_false);
     }
 }
 
@@ -546,26 +562,14 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
     switch (tag()) {
         case OROR:
         case ANDAND: {
-            std::vector<const Expr*> exprs;
-            flatten_infix(this, exprs);
-            auto r = cg.basicblock(cg.world.type_bool(), { location().back(), "infix_result" });
-            for (size_t i = 0; i < exprs.size() - 1; ++i) {
-                auto t = cg.basicblock({ exprs[i]->location().front(), "infix_true" });
-                auto f = cg.basicblock({ exprs[i]->location().front(), "infix_false" });
-
-                auto cond = exprs[i]->remit(cg);
-                cg.cur_bb->branch(cond, t, f);
-                if (tag() == OROR) {
-                    t->jump(r, { cg.cur_mem, cg.world.literal(true) });
-                    cg.enter(f, cg.cur_mem);
-                } else {
-                    f->jump(r, { cg.cur_mem, cg.world.literal(false) });
-                    cg.enter(t, cg.cur_mem);
-                }
-            }
-            auto last = exprs.back()->remit(cg);
-            cg.cur_bb->jump(r, { cg.cur_mem, last });
-            return cg.enter(r);
+            auto result     = cg.basicblock(cg.world.type_bool(), { location().back(), "infix_result" });
+            auto jump_type  = cg.world.fn_type({ cg.world.mem_type() });
+            auto jump_true  = cg.world.continuation(jump_type, { location().back(), "jump_true" });
+            auto jump_false = cg.world.continuation(jump_type, { location().back(), "jump_true" });
+            emit_branch(cg, jump_true, jump_false);
+            jump_true->jump(result, { jump_true->param(0), cg.world.literal(true) });
+            jump_false->jump(result, { jump_false->param(0), cg.world.literal(false) });
+            return cg.enter(result);
         }
         default:
             const TokenTag op = (TokenTag) tag();
@@ -762,19 +766,18 @@ const Def* BlockExpr::remit(CodeGen& cg) const {
 const Def* IfExpr::remit(CodeGen& cg) const {
     auto thorin_type = cg.convert(type());
 
-    auto if_then = cg.basicblock({then_expr()->location().front(), "if_then"});
-    auto if_else = cg.basicblock({else_expr()->location().front(), "if_else"});
+    auto jump_type = cg.world.fn_type({ cg.world.mem_type() });
+    auto if_then = cg.world.continuation(jump_type, {then_expr()->location().front(), "if_then"});
+    auto if_else = cg.world.continuation(jump_type, {else_expr()->location().front(), "if_else"});
     auto if_join = thorin_type ? cg.basicblock(thorin_type, {location().back(), "if_join"}) : nullptr; // TODO rewrite with bottom type
 
-    auto c = cond()->remit(cg);
-    cg.cur_bb->branch(c, if_then, if_else, cond()->location().back());
-    auto head_mem = cg.cur_mem;
+    cond()->emit_branch(cg, if_then, if_else);
 
-    cg.enter(if_then, head_mem);
+    cg.enter(if_then, if_then->param(0));
     if (auto tdef = then_expr()->remit(cg))
         cg.cur_bb->jump(if_join, {cg.cur_mem, tdef}, location().back());
 
-    cg.enter(if_else, head_mem);
+    cg.enter(if_else, if_else->param(0));
     if (auto fdef = else_expr()->remit(cg))
         cg.cur_bb->jump(if_join, {cg.cur_mem, fdef}, location().back());
 
