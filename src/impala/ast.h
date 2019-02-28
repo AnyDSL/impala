@@ -614,7 +614,7 @@ public:
 
     size_t num_bounds() const { return bounds().size(); }
     const ASTTypes& bounds() const { return bounds_; }
-    int lambda_depth() const { return lambda_depth_; }
+    size_t lambda_depth() const { return lambda_depth_; }
     const Var* var() const { return type()->as<Var>(); }
 
     void bind(NameSema&) const;
@@ -625,7 +625,7 @@ private:
     const Var* infer(InferSema&) const;
 
     ASTTypes bounds_;
-    mutable int lambda_depth_ = -1;
+    mutable size_t lambda_depth_ = std::numeric_limits<size_t>::max();
 
     friend class ASTTypeApp;
     friend class ASTTypeParamList;
@@ -844,7 +844,7 @@ public:
         , ast_type_(std::move(ast_type))
     {}
 
-    uint32_t index() const { return index_; }
+    size_t index() const { return index_; }
     const ASTType* ast_type() const { return ast_type_.get(); }
     Visibility visibility() const { return  visibility_; }
 
@@ -855,7 +855,7 @@ private:
     const Type* infer(InferSema&) const;
     void check(TypeSema&) const;
 
-    uint32_t index_;
+    size_t index_;
     Visibility visibility_;
     std::unique_ptr<const ASTType> ast_type_;
 
@@ -901,7 +901,7 @@ public:
         , args_(std::move(args))
     {}
 
-    uint32_t index() const { return index_; }
+    size_t index() const { return index_; }
     size_t num_args() const { return args_.size(); }
     const ASTTypes& args() const { return args_; }
     const ASTType* arg(size_t i) const { return args_[i].get(); }
@@ -917,7 +917,7 @@ private:
     const Type* infer(InferSema&) const;
     void check(TypeSema&) const;
 
-    uint32_t index_;
+    size_t index_;
     ASTTypes args_;
 
     mutable const EnumDecl* enum_decl_;
@@ -1433,7 +1433,7 @@ public:
     const Identifier* identifier() const { return identifier_.get(); }
     Symbol symbol() const { return identifier()->symbol(); }
     const FieldDecl* field_decl() const { return field_decl_; }
-    uint32_t index() const { return field_decl()->index(); }
+    size_t index() const { return field_decl()->index(); }
 
     void write() const override;
     void take_address() const override;

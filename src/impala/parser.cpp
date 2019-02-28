@@ -366,9 +366,9 @@ uint64_t Parser::parse_integer(const char* what) {
 int Parser::parse_addr_space() {
     if (lookahead(0) == Token::L_BRACKET && lookahead(1) == Token::LIT_i32) {
         eat(Token::L_BRACKET);
-        int addr_space = parse_integer("address space");
+        uint64_t addr_space = parse_integer("address space");
         expect(Token::R_BRACKET, "address space annotation");
-        return addr_space;
+        return static_cast<int>(addr_space);
     }
     return 0;
 }

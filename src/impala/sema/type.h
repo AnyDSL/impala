@@ -239,7 +239,7 @@ private:
 
 class Var : public Type {
 private:
-    Var(TypeTable& table, int depth)
+    Var(TypeTable& table, size_t depth)
         : Type(table, Tag_var, {})
         , depth_(depth)
     {
@@ -247,7 +247,7 @@ private:
     }
 
 public:
-    int depth() const { return depth_; }
+    size_t depth() const { return depth_; }
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
@@ -256,7 +256,7 @@ private:
     virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
     virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
 
-    int depth_;
+    size_t depth_;
 
     friend class TypeTable;
 };
@@ -492,7 +492,7 @@ class TypeTable : public thorin::TypeTableBase<Type> {
 public:
     TypeTable();
 
-    const Var* var(int depth) { return unify(new Var(*this, depth)); }
+    const Var* var(size_t depth) { return unify(new Var(*this, depth)); }
     const Type* app(const Type* callee, const Type* op);
     const Lambda* lambda(const Type* body, const char* name) { return unify(new Lambda(*this, body, name)); }
 

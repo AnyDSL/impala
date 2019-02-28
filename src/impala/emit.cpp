@@ -367,7 +367,7 @@ void StructDecl::emit_head(CodeGen& cg) const {
 void OptionDecl::emit(CodeGen& cg) const {
     auto enum_type = enum_decl()->type()->as<EnumType>();
     auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
-    auto id = cg.world.literal_qu32(index(), location());
+    auto id = cg.world.literal_qu64(index(), location());
     if (num_args() == 0) {
         auto bot = cg.world.bottom(variant_type);
         def_ = cg.world.struct_agg(cg.thorin_enum_type(enum_type), { id, bot });
@@ -745,7 +745,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
 
 const Def* FieldExpr::lemit(CodeGen& cg) const {
     auto value = lhs()->lemit(cg);
-    return cg.world.lea(value, cg.world.literal_qu32(index(), location()), location());
+    return cg.world.lea(value, cg.world.literal_qu64(index(), location()), location());
 }
 
 const Def* FieldExpr::remit(CodeGen& cg) const {
@@ -816,7 +816,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
                 } else {
                     auto enum_ptrn = arm(i)->ptrn()->as<EnumPtrn>();
                     auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
-                    defs[i] = cg.world.literal_qu32(option_decl->index(), arm(i)->ptrn()->location());
+                    defs[i] = cg.world.literal_qu64(option_decl->index(), arm(i)->ptrn()->location());
                 }
                 targets[i] = cg.basicblock({arm(i)->location().front(), "case"});
             }
@@ -958,10 +958,10 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 
 const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     auto index = path()->decl()->as<OptionDecl>()->index();
-    auto cond = cg.world.cmp_eq(cg.world.extract(init, 0_u32, location()), cg.world.literal_qu32(index, location()));
+    auto cond = cg.world.cmp_eq(cg.world.extract(init, 0_s, location()), cg.world.literal_qu64(index, location()));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
-        auto variant = cg.world.cast(variant_type, cg.world.extract(init, 1, location()), location());
+        auto variant = cg.world.cast(variant_type, cg.world.extract(init, 1_s, location()), location());
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
             auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? variant : cg.world.extract(variant, i, location()));

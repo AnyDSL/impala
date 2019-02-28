@@ -250,7 +250,7 @@ public:
 
         for (auto st : export_structs)
             struct_decls.insert(std::make_pair(st, NOT_GEN));
-        int prev_id = 0;
+        size_t prev_id = 0;
         do {
             compute_struct_order(struct_decls, order, struct_decls.begin()->first);
 

@@ -19,7 +19,7 @@ public:
 
     const Type* reduce(const Lambda* lambda, ASTTypeArgs ast_type_args, std::vector<const Type*>& type_args);
     void fill_type_args(std::vector<const Type*>& type_args, const ASTTypes& ast_type_args);
-    const Type* close(int num_lambdas, const Type* body);
+    const Type* close(size_t num_lambdas, const Type* body);
     size_t num_lambdas(const Lambda* lambda);
 
     // unification related stuff
@@ -180,7 +180,7 @@ size_t InferSema::num_lambdas(const Lambda* lambda) {
     return num;
 }
 
-const Type* InferSema::close(int num_lambdas, const Type* body) {
+const Type* InferSema::close(size_t num_lambdas, const Type* body) {
     auto result = body;
     while (num_lambdas-- != 0) {
         result = lambda(result, "TODO");

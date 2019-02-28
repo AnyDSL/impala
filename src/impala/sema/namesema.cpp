@@ -47,7 +47,7 @@ private:
     std::vector<size_t> levels_;
 
 public: // HACK
-    int lambda_depth_ = 0;
+    size_t lambda_depth_ = 0;
 };
 
 //------------------------------------------------------------------------------
