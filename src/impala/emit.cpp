@@ -873,26 +873,27 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 const Def* WhileExpr::remit(CodeGen& cg) const {
     auto head_bb = cg.world.continuation(cg.world.fn_type({cg.world.mem_type()}), CC::C, Intrinsic::None, {location().front(), "while_head"});
     head_bb->param(0)->debug().set("mem");
-    auto body_bb = cg.basicblock({body()->location().front(), "while_body"});
-    auto exit_bb = cg.basicblock({body()->location().back(),  "while_exit"});
+
+    auto jump_type = cg.world.fn_type({ cg.world.mem_type() });
+    auto body_bb = cg.world.continuation(jump_type, {body()->location().front(), "while_body"});
+    auto exit_bb = cg.world.continuation(jump_type, {body()->location().back(),  "while_exit"});
+
     auto cont_bb = cg.create_continuation(continue_decl());
     auto brk__bb = cg.create_continuation(break_decl());
 
     cg.cur_bb->jump(head_bb, {cg.cur_mem}, cond()->location().back());
 
     cg.enter(head_bb, head_bb->param(0));
-    auto c = cond()->remit(cg);
-    cg.cur_bb->branch(c, body_bb, exit_bb);
-    auto head_mem = cg.cur_mem;
+    cond()->emit_branch(cg, body_bb, exit_bb);
 
-    cg.enter(body_bb, cg.cur_mem);
+    cg.enter(body_bb, body_bb->param(0));
     body()->remit(cg);
     cg.cur_bb->jump(cont_bb, {cg.cur_mem}, body()->location().back());
 
     cg.enter(cont_bb, cont_bb->param(0));
     cg.cur_bb->jump(head_bb, {cg.cur_mem}, body()->location().back());
 
-    cg.enter(exit_bb, head_mem);
+    cg.enter(exit_bb, exit_bb->param(0));
     cg.cur_bb->jump(brk__bb, {cg.cur_mem}, body()->location().back());
 
     cg.enter(brk__bb, brk__bb->param(0));

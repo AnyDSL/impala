@@ -1,5 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <cstring>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void print_char(char c) {
    printf("%c\n", (int)c);
@@ -34,10 +40,27 @@ void put_u8(unsigned char ui) {
    putc(ui, stdout);
 }
 
-void* anydsl_alloc(int32_t dev, int64_t size) {
-    void* p;
-    posix_memalign(&p, 64, size);
+#if _POSIX_VERSION >= 200112L || _XOPEN_SOURCE >= 600
+void* anydsl_aligned_malloc(size_t size, size_t alignment) {
+    void* p = nullptr;
+    posix_memalign(&p, alignment, size);
     return p;
+}
+void anydsl_aligned_free(void* ptr) { free(ptr); }
+#elif _ISOC11_SOURCE
+void* anydsl_aligned_malloc(size_t size, size_t alignment) { return ::aligned_alloc(alignment, size); }
+void anydsl_aligned_free(void* ptr) { ::free(ptr); }
+#elif defined(_WIN32) || defined(__CYGWIN__)
+#include <malloc.h>
+
+void* anydsl_aligned_malloc(size_t size, size_t alignment) { return ::_aligned_malloc(size, alignment); }
+void anydsl_aligned_free(void* ptr) { ::_aligned_free(ptr); }
+#else
+#error "There is no way to allocate aligned memory on this system"
+#endif
+void* anydsl_alloc(int32_t dev, int64_t size) {
+    // TODO: check whether aligned memory is actually necessary
+    return anydsl_aligned_malloc(size, 64);
 }
 
 // meteor printing
@@ -94,10 +117,29 @@ void* impala_realloc(void* ptr, int size) {
 }
 
 void impala_memmove(char* dest, const char* src, int size) {
-    __builtin_memmove(dest, src, size);
+    std::memmove(dest, src, size);
 }
 
 // pe_known
 int forty_two() {
     return 42;
 }
+
+#ifdef __cplusplus
+}
+#endif
+
+
+// polyfill of non-standard drand48()
+#ifdef _MSC_VER
+
+#include <random>
+static std::mt19937_64 std_gen64;
+static std::uniform_real_distribution<double> std_dist64(0., 1.);
+extern "C" void srand48(int64_t seed) { std_gen64.seed(seed); }
+extern "C" double drand48() { return std_dist64(std_gen64); }
+
+static std::uniform_int_distribution<int64_t> std_disti64(-(1 << 31), 1 << 31);
+extern "C" int64_t mrand48() { return std_disti64(std_gen64); }
+
+#endif // _MSC_VER
