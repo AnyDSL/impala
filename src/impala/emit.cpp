@@ -812,7 +812,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
                 break;
             } else {
                 if (is_integer) {
-                    defs[i] = arm(i)->ptrn()->as<LiteralPtrn>()->emit_literal(cg);
+                    defs[i] = arm(i)->ptrn()->emit(cg);
                 } else {
                     auto enum_ptrn = arm(i)->ptrn()->as<EnumPtrn>();
                     auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
@@ -986,7 +986,7 @@ const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) co
     return cond ? cond : cg.world.literal(true);
 }
 
-const thorin::Def* LiteralPtrn::emit_literal(CodeGen& cg) const {
+const thorin::Def* LiteralPtrn::emit(CodeGen& cg) const {
     auto def = literal()->remit(cg);
     return has_minus() ? cg.world.arithop_minus(def, def->debug()) : def;
 }
@@ -994,7 +994,17 @@ const thorin::Def* LiteralPtrn::emit_literal(CodeGen& cg) const {
 void LiteralPtrn::emit(CodeGen&, const thorin::Def*) const {}
 
 const thorin::Def* LiteralPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
-    return cg.world.cmp_eq(init, emit_literal(cg));
+    return cg.world.cmp_eq(init, emit(cg));
+}
+
+const thorin::Def* CharPtrn::emit(CodeGen& cg) const {
+    return chr()->remit(cg);
+}
+
+void CharPtrn::emit(CodeGen&, const thorin::Def*) const {}
+
+const thorin::Def* CharPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
+    return cg.world.cmp_eq(init, emit(cg));
 }
 
 /*

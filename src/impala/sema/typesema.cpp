@@ -703,7 +703,8 @@ void MatchExpr::check(TypeSema& sema) const {
         sema.check(arm(i)->expr());
 
         sema.expect_type(expr_type, arm(i)->ptrn(), "pattern type");
-        sema.expect_type(arg_type,  arm(i)->expr(), "matched expression type");
+        if (!is_no_ret_or_type_error(arm(i)->expr()->type()))
+            sema.expect_type(arg_type,  arm(i)->expr(), "matched expression type");
         if (!arm(i)->ptrn()->is_refutable() && i < e - 1)
             warning(arm(i)->ptrn(), "pattern is always true, subsequent patterns will not be executed");
     }
@@ -787,6 +788,10 @@ void LiteralPtrn::check(TypeSema& sema) const {
     sema.check(literal());
     if (has_minus())
         sema.expect_num(literal(), "literal pattern");
+}
+
+void CharPtrn::check(TypeSema& sema) const {
+    sema.check(chr());
 }
 
 //------------------------------------------------------------------------------

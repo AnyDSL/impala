@@ -1914,6 +1914,7 @@ public:
 
     virtual void bind(NameSema&) const = 0;
     virtual void emit(CodeGen&, const thorin::Def*) const = 0;
+    virtual const thorin::Def* emit(CodeGen&) const { return nullptr; }
     virtual const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const = 0;
     virtual bool is_refutable() const = 0;
 
@@ -2011,8 +2012,8 @@ public:
 
     void bind(NameSema&) const override;
     void emit(CodeGen&, const thorin::Def*) const override;
+    const thorin::Def* emit(CodeGen&) const override;
     const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const override;
-    const thorin::Def* emit_literal(CodeGen&) const;
     bool is_refutable() const override;
     std::ostream& stream(std::ostream&) const override;
 
@@ -2022,6 +2023,29 @@ private:
 
     std::unique_ptr<const Expr> literal_;
     bool minus_;
+};
+
+class CharPtrn : public Ptrn {
+public:
+    CharPtrn(const CharExpr* chr)
+        : Ptrn(chr->location())
+        , chr_(dock(chr_, chr))
+    {}
+
+    const CharExpr* chr() const { return chr_.get()->as<CharExpr>(); }
+
+    void bind(NameSema&) const override;
+    void emit(CodeGen&, const thorin::Def*) const override;
+    const thorin::Def* emit(CodeGen&) const override;
+    const thorin::Def* emit_cond(CodeGen&, const thorin::Def*) const override;
+    bool is_refutable() const override;
+    std::ostream& stream(std::ostream&) const override;
+
+private:
+    const Type* infer(InferSema&) const override;
+    void check(TypeSema&) const override;
+
+    std::unique_ptr<const Expr> chr_;
 };
 
 //------------------------------------------------------------------------------
