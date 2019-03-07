@@ -62,8 +62,12 @@ class TestMethod(object):
 
 
 class RunImpalaCompile(TestMethod):
+    def __init__(self, impala, add_flags=[], timeout=None):
+        super().__init__(impala, timeout=timeout)
+        self.flags = add_flags
+
     def __call__(self, testfile):
-        super().__call__(["-emit-llvm", "-O2", "-o", testfile.intermediate(), testfile.filename()])
+        super().__call__(["-emit-llvm", "-O2", "-o", testfile.intermediate(), testfile.filename()] + self.flags)
 
         self.dump_output(testfile.intermediate('.log'))
 
@@ -202,6 +206,7 @@ if __name__ == '__main__':
     parser.add_argument('testfile',     nargs='+', help='path to one or multiple test files', type=argparse.FileType('r'))
     parser.add_argument('-i', '--impala',          help='path to impala',                     type=str, default=config.IMPALA_BIN)
     parser.add_argument('-c', '--clang',           help='path to clang',                      type=str, default=config.CLANG_BIN)
+    parser.add_argument(      '--impala-flag',     help='additional flag(s) for impala',      type=str, default='')
     parser.add_argument(      '--clang-flag',      help='additional flag(s) for clang',       type=str, default='')
     parser.add_argument(      '--temp',            help='path to temp dir',                   type=str, default=config.TEMP_DIR)
     parser.add_argument(      '--rtmock',          help='path to rtmock',                     type=str, default=config.LIBRTMOCK)
@@ -224,11 +229,12 @@ if __name__ == '__main__':
     FAILED = 1
     SKIPPED = 77
 
+    impala_flags = [arg.strip() for arg in args.impala_flag.split(' ')] if len(args.impala_flag) else []
     clang_flags = [arg.strip() for arg in args.clang_flag.split(' ')] if len(args.clang_flag) else []
 
     test_methods = {
         'codegen' : MultiStepPipeline(
-            RunImpalaCompile(args.impala, timeout=args.compile_timeout),
+            RunImpalaCompile(args.impala, impala_flags, timeout=args.compile_timeout),
             LinkFakeRuntime(args.clang, args.rtmock, clang_flags),
             ExecuteTestOutput(timeout=args.run_timeout)
         )
