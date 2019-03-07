@@ -198,7 +198,7 @@ if __name__ == '__main__':
         pass
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('tests',                   nargs='*', help='path to one or multiple test files', type=argparse.FileType('r'))
+    parser.add_argument('testfile',     nargs='+', help='path to one or multiple test files', type=argparse.FileType('r'))
     parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                     type=str, default=config.IMPALA_BIN)
     parser.add_argument('-c', '--clang',           nargs='?', help='path to clang',                      type=str, default=config.CLANG_BIN)
     parser.add_argument(      '--temp',            nargs='?', help='path to temp dir',                   type=str, default=config.TEMP_DIR)
@@ -255,12 +255,12 @@ if __name__ == '__main__':
 
     result = None
 
-    if len(args.tests) == 1:
-        testfile = args.tests[0]
+    if len(args.testfile) == 1:
+        testfile = args.testfile[0]
         result = handle_test(testfile)
     else:
         result = True
-        for testfile in args.tests:
+        for testfile in args.testfile:
             success = handle_test(testfile)
             if success is None:
                 success = not args.pedantic
