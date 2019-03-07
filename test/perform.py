@@ -199,13 +199,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('testfile',     nargs='+', help='path to one or multiple test files', type=argparse.FileType('r'))
-    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                     type=str, default=config.IMPALA_BIN)
-    parser.add_argument('-c', '--clang',           nargs='?', help='path to clang',                      type=str, default=config.CLANG_BIN)
-    parser.add_argument(      '--temp',            nargs='?', help='path to temp dir',                   type=str, default=config.TEMP_DIR)
-    parser.add_argument('-l', '--rtmock',          nargs='?', help='path to rtmock',                     type=str, default=config.LIBRTMOCK)
-    parser.add_argument('-t', '--compile-timeout', nargs='?', help='timeout for compiling test case',    type=int, default=5)
-    parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',      type=int, default=5)
-    parser.add_argument('-p', '--pedantic',                   help='also run tests that are known to be broken or do not provide a valid testing procedure', action='store_true')
+    parser.add_argument('-i', '--impala',          help='path to impala',                     type=str, default=config.IMPALA_BIN)
+    parser.add_argument('-c', '--clang',           help='path to clang',                      type=str, default=config.CLANG_BIN)
+    parser.add_argument(      '--temp',            help='path to temp dir',                   type=str, default=config.TEMP_DIR)
+    parser.add_argument(      '--rtmock',          help='path to rtmock',                     type=str, default=config.LIBRTMOCK)
+    parser.add_argument('-t', '--compile-timeout', help='timeout for compiling test case',    type=int, default=5)
+    parser.add_argument('-r', '--run-timeout',     help='timeout for running test case',      type=int, default=5)
+    parser.add_argument('--pedantic', '-p',        help='also run tests that are known to be broken or do not provide a valid testing procedure', action='store_true')
     args = parser.parse_args()
 
     if args.impala is None:
