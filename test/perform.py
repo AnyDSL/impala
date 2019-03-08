@@ -62,8 +62,12 @@ class TestMethod(object):
 
 
 class RunImpalaCompile(TestMethod):
+    def __init__(self, impala, add_flags=[], timeout=None):
+        super().__init__(impala, timeout=timeout)
+        self.flags = add_flags
+
     def __call__(self, testfile):
-        super().__call__(["-emit-llvm", "-O2", "-o", testfile.intermediate(), testfile.filename()])
+        super().__call__(["-emit-llvm", "-O2", "-o", testfile.intermediate(), testfile.filename()] + self.flags)
 
         self.dump_output(testfile.intermediate('.log'))
 
@@ -83,12 +87,13 @@ class RunImpalaCompile(TestMethod):
         return True
 
 class LinkFakeRuntime(TestMethod):
-    def __init__(self, clang, runtime):
+    def __init__(self, clang, runtime, add_flags=[]):
         super().__init__(clang)
         self.runtime = runtime
+        self.flags = add_flags
 
     def __call__(self, testfile):
-        super().__call__([testfile.intermediate('.ll'), LIBC, self.runtime, "-o", testfile.intermediate(EXE)])
+        super().__call__([testfile.intermediate('.ll'), LIBC, self.runtime, "-o", testfile.intermediate(EXE)] + self.flags)
 
         self.dump_output(None)
 
@@ -198,14 +203,16 @@ if __name__ == '__main__':
         pass
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('tests',                   nargs='*', help='path to one or multiple test files', type=argparse.FileType('r'))
-    parser.add_argument('-i', '--impala',          nargs='?', help='path to impala',                     type=str, default=config.IMPALA_BIN)
-    parser.add_argument('-c', '--clang',           nargs='?', help='path to clang',                      type=str, default=config.CLANG_BIN)
-    parser.add_argument(      '--temp',            nargs='?', help='path to temp dir',                   type=str, default=config.TEMP_DIR)
-    parser.add_argument('-l', '--rtmock',          nargs='?', help='path to rtmock',                     type=str, default=config.LIBRTMOCK)
-    parser.add_argument('-t', '--compile-timeout', nargs='?', help='timeout for compiling test case',    type=int, default=5)
-    parser.add_argument('-r', '--run-timeout',     nargs='?', help='timeout for running test case',      type=int, default=5)
-    parser.add_argument('-p', '--pedantic',                   help='also run tests that are known to be broken or do not provide a valid testing procedure', action='store_true')
+    parser.add_argument('testfile',     nargs='+', help='path to one or multiple test files', type=argparse.FileType('r'))
+    parser.add_argument('-i', '--impala',          help='path to impala',                     type=str, default=config.IMPALA_BIN)
+    parser.add_argument('-c', '--clang',           help='path to clang',                      type=str, default=config.CLANG_BIN)
+    parser.add_argument(      '--impala-flag',     help='additional flag(s) for impala',      type=str, default='')
+    parser.add_argument(      '--clang-flag',      help='additional flag(s) for clang',       type=str, default='')
+    parser.add_argument(      '--temp',            help='path to temp dir',                   type=str, default=config.TEMP_DIR)
+    parser.add_argument(      '--rtmock',          help='path to rtmock',                     type=str, default=config.LIBRTMOCK)
+    parser.add_argument('-t', '--compile-timeout', help='timeout for compiling test case',    type=int, default=5)
+    parser.add_argument('-r', '--run-timeout',     help='timeout for running test case',      type=int, default=5)
+    parser.add_argument('--pedantic', '-p',        help='also run tests that are known to be broken or do not provide a valid testing procedure', action='store_true')
     args = parser.parse_args()
 
     if args.impala is None:
@@ -222,10 +229,13 @@ if __name__ == '__main__':
     FAILED = 1
     SKIPPED = 77
 
+    impala_flags = [arg.strip() for arg in args.impala_flag.split(' ')] if len(args.impala_flag) else []
+    clang_flags = [arg.strip() for arg in args.clang_flag.split(' ')] if len(args.clang_flag) else []
+
     test_methods = {
         'codegen' : MultiStepPipeline(
-            RunImpalaCompile(args.impala, timeout=args.compile_timeout),
-            LinkFakeRuntime(args.clang, args.rtmock),
+            RunImpalaCompile(args.impala, impala_flags, timeout=args.compile_timeout),
+            LinkFakeRuntime(args.clang, args.rtmock, clang_flags),
             ExecuteTestOutput(timeout=args.run_timeout)
         )
     }
@@ -255,12 +265,12 @@ if __name__ == '__main__':
 
     result = None
 
-    if len(args.tests) == 1:
-        testfile = args.tests[0]
+    if len(args.testfile) == 1:
+        testfile = args.testfile[0]
         result = handle_test(testfile)
     else:
         result = True
-        for testfile in args.tests:
+        for testfile in args.testfile:
             success = handle_test(testfile)
             if success is None:
                 success = not args.pedantic
