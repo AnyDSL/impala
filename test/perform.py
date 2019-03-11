@@ -66,7 +66,7 @@ class RunImpalaCompile(TestMethod):
         super().__init__(impala, timeout=timeout)
         self.flags = add_flags
 
-    def __call__(self, testfile):
+    def __call__(self, testfile, addflags):
         super().__call__(["-emit-llvm", "-O2", "-o", testfile.intermediate(), testfile.filename()] + self.flags)
 
         self.dump_output(testfile.intermediate('.log'))
@@ -92,8 +92,9 @@ class LinkFakeRuntime(TestMethod):
         self.runtime = runtime
         self.flags = add_flags
 
-    def __call__(self, testfile):
-        super().__call__([testfile.intermediate('.ll'), LIBC, self.runtime, "-o", testfile.intermediate(EXE)] + self.flags)
+    def __call__(self, testfile, addflags):
+        flags = self.flags + [flag for flag in addflags if flag.startswith('-l')]
+        super().__call__([testfile.intermediate('.ll'), LIBC, self.runtime, "-o", testfile.intermediate(EXE)] + flags)
 
         self.dump_output(None)
 
@@ -110,7 +111,7 @@ class ExecuteTestOutput(TestMethod):
     def loadinput(self, testfile):
         return self.load_source_file(testfile.source('.in'))
 
-    def __call__(self, testfile):
+    def __call__(self, testfile, addflags):
         if not os.path.isfile(testfile.intermediate(EXE)):
             return False
         self.executable = testfile.intermediate(EXE)
@@ -129,9 +130,9 @@ class MultiStepPipeline(object):
     def __init__(self, *args):
         self.steps = args
 
-    def __call__(self, testfile):
+    def __call__(self, testfile, addflags):
         for step in self.steps:
-            if not step(testfile):
+            if not step(testfile, addflags):
                 return False
         return True
 
@@ -165,18 +166,28 @@ def fetch_tokens(testfile, test_methods):
     firstline = testfile.readline()
 
     tokens = firstline.split()
+    flags = tokens
     if len(tokens) < 1 or tokens[0] != "//":
-        return None, None
+        return None, None, flags
+    flags.remove("//")
 
-    is_broken = "broken" in tokens
+    is_broken = False
+    platform_broken = "broken:" + sys.platform
+    if "broken" in tokens:
+        flags.remove("broken")
+        is_broken = True
+    elif platform_broken in tokens:
+        flags.remove(platform_broken)
+        is_broken = True
 
     procedure = list(set(tokens) & set(test_methods.keys()))
     if len(procedure) == 1:
         procedure = procedure[0]
     else:
-        return None, is_broken
+        return None, is_broken, flags
+    flags.remove(procedure)
 
-    return test_methods.get(procedure, None), is_broken
+    return test_methods.get(procedure, None), is_broken, flags
 
 def search_in_path(executable):
     executable = executable + EXE
@@ -244,7 +255,7 @@ if __name__ == '__main__':
     outcome = False if args.pedantic else None
 
     def handle_test(testfile):
-        method, broken = fetch_tokens(testfile, test_methods)
+        method, broken, addflags = fetch_tokens(testfile, test_methods)
         testfile.close()
         filename = testfile.name
 
@@ -262,7 +273,7 @@ if __name__ == '__main__':
             print(action, "test", filename, "-", "Unknown testing procedure!")
             return outcome
 
-        return method(file)
+        return method(file, addflags)
 
     result = None
 
