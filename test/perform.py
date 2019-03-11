@@ -241,6 +241,7 @@ if __name__ == '__main__':
     }
 
     action = "Fail" if args.pedantic else "Skip"
+    outcome = False if args.pedantic else None
 
     def handle_test(testfile):
         method, broken = fetch_tokens(testfile, test_methods)
@@ -251,7 +252,7 @@ if __name__ == '__main__':
 
         if broken:
             print(action, "test", filename, "-", "The test is known to be broken.")
-            return False if args.pedantic else None
+            return outcome
 
         file = TestFile(filename, args.temp)
         if not os.path.isdir(file.dirname()):
@@ -259,7 +260,7 @@ if __name__ == '__main__':
 
         if method is None:
             print(action, "test", filename, "-", "Unknown testing procedure!")
-            return False if args.pedantic else None
+            return outcome
 
         return method(file)
 
