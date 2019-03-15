@@ -919,7 +919,8 @@ const Def* FnExpr::remit(CodeGen& cg) const {
  */
 
 void IdPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
-    init->debug().set(local()->symbol());
+    if (!init->isa<Lit>())
+        init->debug().set(local()->symbol());
     local()->emit(cg, init);
 }
 
