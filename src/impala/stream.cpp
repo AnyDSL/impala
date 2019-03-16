@@ -523,6 +523,10 @@ std::ostream& LiteralPtrn::stream(std::ostream& os) const {
     return os << literal();
 }
 
+std::ostream& CharPtrn::stream(std::ostream& os) const {
+    return os << chr();
+}
+
 /*
  * statements
  */

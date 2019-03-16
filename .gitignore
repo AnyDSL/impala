@@ -1,14 +1,5 @@
-*.bc
-*.out
-*.cl
-*.cu
-*.ll
-*.nvvm
-*.pyc
 *.vcg
-CMakeCache.txt
-CMakeFiles/
 build*
 html
-test/impala
-test/lib.o
+test/config*
+test/__pycache__

@@ -255,6 +255,7 @@ public:
     const IdPtrn*      parse_id_ptrn(const Identifier*);
     const EnumPtrn*    parse_enum_ptrn(const Path*);
     const LiteralPtrn* parse_literal_ptrn();
+    const CharPtrn*    parse_char_ptrn();
 
     // statements
     const ItemStmt* parse_item_stmt();
@@ -1299,8 +1300,9 @@ const Ptrn* Parser::parse_ptrn() {
 #include "impala/tokenlist.h"
             return parse_literal_ptrn();
 
-        case Token::L_PAREN: return parse_tuple_ptrn();
-        case Token::MUT:     return parse_id_ptrn(nullptr);
+        case Token::LIT_char: return parse_char_ptrn();
+        case Token::L_PAREN:  return parse_tuple_ptrn();
+        case Token::MUT:      return parse_id_ptrn(nullptr);
         default: {
             std::unique_ptr<const Path> path(parse_path());
             if (lookahead() == Token::L_PAREN   ||
@@ -1347,6 +1349,10 @@ const EnumPtrn* Parser::parse_enum_ptrn(const Path* path) {
 const LiteralPtrn* Parser::parse_literal_ptrn() {
     bool minus = accept(Token::SUB);
     return new LiteralPtrn(parse_literal_expr(), minus);
+}
+
+const CharPtrn* Parser::parse_char_ptrn() {
+    return new CharPtrn(parse_char_expr());
 }
 
 /*

@@ -984,15 +984,16 @@ const Type* IfExpr::infer(InferSema& sema) const {
 }
 
 const Type* MatchExpr::infer(InferSema& sema) const {
+    const Type* match_type = nullptr;
     sema.rvalue(expr());
     for (size_t i = 0, e = num_arms(); i != e; ++i) {
         sema.infer(arm(i)->ptrn());
         sema.coerce(arm(i)->ptrn(), expr());
-        sema.rvalue(arm(i)->expr());
-        if (i > 0)
-            sema.coerce(arm(i)->expr(), arm(i-1)->expr());
+        auto arm_type = sema.rvalue(arm(i)->expr());
+        if (!arm_type->isa<NoRetType>())
+            match_type = match_type ? sema.constrain(arm(i)->expr(), match_type) : arm_type;
     }
-    return num_arms() > 0 ? arm(0)->expr()->type() : sema.type_error();
+    return match_type ? match_type : sema.find_type(this);
 }
 
 const Type* WhileExpr::infer(InferSema& sema) const {
@@ -1064,6 +1065,10 @@ const Type* EnumPtrn::infer(InferSema& sema) const {
 
 const Type* LiteralPtrn::infer(InferSema& sema) const {
     return sema.infer(literal());
+}
+
+const Type* CharPtrn::infer(InferSema& sema) const {
+    return sema.infer(chr());
 }
 
 //------------------------------------------------------------------------------
