@@ -615,7 +615,8 @@ void MapExpr::check(TypeSema& sema) const {
 void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
     auto fn_type = expr->type()->as<FnType>();
 
-    if (fn_type->num_params() == args.size() || fn_type->num_params() == args.size() + 1) {
+    if (fn_type->num_params() == args.size() ||
+        (fn_type->num_params() == args.size() + 1 && fn_type->is_returning())) {
         for (size_t i = 0; i < args.size(); i++)
             expect_type(fn_type->param(i), args[i], "argument type");
     } else
@@ -686,7 +687,8 @@ void MatchExpr::check(TypeSema& sema) const {
         sema.check(arm(i)->expr());
 
         sema.expect_type(expr_type, arm(i)->ptrn(), "pattern type");
-        sema.expect_type(arg_type,  arm(i)->expr(), "matched expression type");
+        if (!is_no_ret_or_type_error(arm(i)->expr()->type()))
+            sema.expect_type(arg_type,  arm(i)->expr(), "matched expression type");
         if (!arm(i)->ptrn()->is_refutable() && i < e - 1)
             warning(arm(i)->ptrn(), "pattern is always true, subsequent patterns will not be executed");
     }
@@ -770,6 +772,10 @@ void LiteralPtrn::check(TypeSema& sema) const {
     sema.check(literal());
     if (has_minus())
         sema.expect_num(literal(), "literal pattern");
+}
+
+void CharPtrn::check(TypeSema& sema) const {
+    sema.check(chr());
 }
 
 //------------------------------------------------------------------------------

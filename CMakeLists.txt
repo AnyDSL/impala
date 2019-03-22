@@ -28,3 +28,8 @@ endif()
 
 export(TARGETS libimpala impala FILE ${CMAKE_BINARY_DIR}/share/anydsl/cmake/impala-exports.cmake)
 configure_file(cmake/impala-config.cmake.in ${CMAKE_BINARY_DIR}/share/anydsl/cmake/impala-config.cmake @ONLY)
+
+if (BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(test)
+endif(BUILD_TESTING)

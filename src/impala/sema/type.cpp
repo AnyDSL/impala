@@ -34,17 +34,16 @@ const Type* FnType::last_param() const {
     return op(0)->isa<TupleType>() ? op(0)->ops().back() : op(0);
 }
 
+
 bool FnType::is_returning() const {
     if (auto tuple = op(0)->isa<TupleType>()) {
-        int ret = 0;
-        for (auto op : tuple->ops()) {
-            if (op->order() == 0) continue;
-            else if (op->order() == 1) ret++;
-            else ret = 2;
-        }
-        return ret == 1;
+        if (tuple->num_ops() == 0)
+            return false;
+        if (auto fn_type = tuple->ops().back()->isa<FnType>())
+            return !fn_type->is_returning();
+        return false;
     } else {
-        return op(0)->order() == 1;
+        return op(0)->isa<FnType>() && !op(0)->as<FnType>()->is_returning();
     }
 }
 
@@ -102,8 +101,7 @@ bool is_subtype(const Type* dst, const Type* src) {
                 result &= is_subtype(ret, src_fn->return_type());
                 nparams--;
             }
-            for (size_t i = 0, e = nparams; result && i != e; ++i)
-                result &= is_subtype(src_fn->param(i), dst_fn->param(i));
+            result &= is_subtype(src_fn->op(0), dst_fn->op(0));
         } else {
             for (size_t i = 0, e = dst->num_ops(); result && i != e; ++i)
                 result &= is_subtype(dst->op(i), src->op(i));

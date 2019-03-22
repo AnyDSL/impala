@@ -437,6 +437,7 @@ void EnumPtrn::bind(NameSema& sema) const {
 }
 
 void LiteralPtrn::bind(NameSema&) const {}
+void CharPtrn::bind(NameSema&) const {}
 
 //------------------------------------------------------------------------------
 

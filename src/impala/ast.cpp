@@ -145,17 +145,10 @@ bool TuplePtrn::is_refutable() const {
         [] (const std::unique_ptr<const Ptrn>& p) { return p->is_refutable(); });
 }
 
-bool IdPtrn::is_refutable() const {
-    return false;
-}
-
-bool EnumPtrn::is_refutable() const {
-    return true;
-}
-
-bool LiteralPtrn::is_refutable() const {
-    return true;
-}
+bool IdPtrn::is_refutable()      const { return false; }
+bool EnumPtrn::is_refutable()    const { return true;  }
+bool LiteralPtrn::is_refutable() const { return true;  }
+bool CharPtrn::is_refutable()    const { return true;  }
 
 //------------------------------------------------------------------------------
 
