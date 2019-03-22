@@ -101,8 +101,7 @@ bool is_subtype(const Type* dst, const Type* src) {
                 result &= is_subtype(ret, src_fn->return_type());
                 nparams--;
             }
-            for (size_t i = 0, e = nparams; result && i != e; ++i)
-                result &= is_subtype(src_fn->param(i), dst_fn->param(i));
+            result &= is_subtype(src_fn->op(0), dst_fn->op(0));
         } else {
             for (size_t i = 0, e = dst->num_ops(); result && i != e; ++i)
                 result &= is_subtype(dst->op(i), src->op(i));
