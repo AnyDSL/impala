@@ -521,11 +521,13 @@ const Def* PrefixExpr::lemit(CodeGen& cg) const {
 }
 
 void Expr::emit_branch(CodeGen& cg, Lam* jump_t, Lam* jump_f) const {
-    auto expr_t  = cg.basicblock({ loc().back(), "expr_t"  });
+    auto expr_t = cg.basicblock({ loc().back(), "expr_t"  });
     auto expr_f = cg.basicblock({ loc().back(), "expr_f" });
     auto cond = remit(cg);
     cg.cur_bb->branch(cond, expr_t, expr_f, cg.cur_mem, loc().back());
+    cg.enter(expr_t);
     expr_t->app(jump_t, { cg.cur_mem });
+    cg.enter(expr_f);
     expr_f->app(jump_f, { cg.cur_mem });
 }
 
@@ -562,7 +564,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             emit_branch(cg, jump_t, jump_f);
             jump_t->app(result, { jump_t->param(0), cg.world.lit(true) });
             jump_f->app(result, { jump_f->param(0), cg.world.lit(false) });
-            return cg.enter(result);
+            return cg.enter(result)->param(1);
         }
         default:
             const TokenTag op = (TokenTag) tag();
@@ -767,7 +769,7 @@ const Def* IfExpr::remit(CodeGen& cg) const {
         cg.cur_bb->app(if_join, {cg.cur_mem, fdef}, loc().back());
 
     if (thorin_type)
-        return cg.enter(if_join);
+        return cg.enter(if_join)->param(1);
     return nullptr; // TODO use bottom type
 }
 
@@ -849,7 +851,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
     }
 
     if (thorin_type)
-        return cg.enter(join);
+        return cg.enter(join)->param(1);
     return nullptr; // TODO use bottom type
 }
 
