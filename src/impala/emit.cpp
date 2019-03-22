@@ -14,26 +14,21 @@ public:
         : world(world)
     {}
 
-    /// Lam of type cn()
-    Lam* basicblock(Debug dbg) { return world.lam(world.cn(), CC::C, Intrinsic::None, dbg); }
-
-    /// Lam of type cn(mem, type) - a point in the program where control flow *j*oins
+    /// Lam of type { @c cn(mem) } or { @c cn(mem, type) } depending on whether @p type is @c nullptr.
     Lam* basicblock(const thorin::Def* type, Debug dbg) {
-        auto bb = world.lam(world.cn({world.mem_type(), type}), CC::C, Intrinsic::None, dbg);
+        auto cn = type ? world.cn({world.mem_type(), type}) : world.cn(world.mem_type());
+        auto bb = world.lam(cn, CC::C, Intrinsic::None, dbg);
         bb->param(0)->debug().set("mem");
         return bb;
     }
+    Lam* basicblock(Debug dbg) { return basicblock(nullptr, dbg); }
 
-    Lam* enter(Lam* bb, const Def* mem) {
+    Lam* enter(Lam* bb) {
         cur_bb = bb;
-        cur_mem = mem;
+        cur_mem = bb->param(0);
         return bb;
     }
 
-    const Def* enter(Lam* bb) {
-        enter(bb, bb->param(0));
-        return bb->param(1);
-    }
 
     const Def* frame() const { assert(cur_fn); return cur_fn->frame(); }
 
@@ -529,7 +524,7 @@ void Expr::emit_branch(CodeGen& cg, Lam* jump_t, Lam* jump_f) const {
     auto expr_t  = cg.basicblock({ loc().back(), "expr_t"  });
     auto expr_f = cg.basicblock({ loc().back(), "expr_f" });
     auto cond = remit(cg);
-    cg.cur_bb->branch(cond, expr_t, expr_f, loc().back());
+    cg.cur_bb->branch(cond, expr_t, expr_f, cg.cur_mem, loc().back());
     expr_t->app(jump_t, { cg.cur_mem });
     expr_f->app(jump_f, { cg.cur_mem });
 }
@@ -540,14 +535,14 @@ void InfixExpr::emit_branch(CodeGen& cg, Lam* jump_t, Lam* jump_f) const {
         case OROR: {
                 auto or_f = cg.world.lam(jump_type, { loc().back(), "or_f" });
                 lhs()->emit_branch(cg, jump_t, or_f);
-                cg.enter(or_f, or_f->param(0));
+                cg.enter(or_f);
                 rhs()->emit_branch(cg, jump_t, jump_f);
             }
             break;
         case ANDAND: {
                 auto and_t = cg.world.lam(jump_type, { loc().back(), "and_t" });
                 lhs()->emit_branch(cg, and_t, jump_f);
-                cg.enter(and_t, and_t->param(0));
+                cg.enter(and_t);
                 rhs()->emit_branch(cg, jump_t, jump_f);
             }
             break;
@@ -763,11 +758,11 @@ const Def* IfExpr::remit(CodeGen& cg) const {
 
     cond()->emit_branch(cg, if_then, if_else);
 
-    cg.enter(if_then, if_then->param(0));
+    cg.enter(if_then);
     if (auto tdef = then_expr()->remit(cg))
         cg.cur_bb->app(if_join, {cg.cur_mem, tdef}, loc().back());
 
-    cg.enter(if_else, if_else->param(0));
+    cg.enter(if_else);
     if (auto fdef = else_expr()->remit(cg))
         cg.cur_bb->app(if_join, {cg.cur_mem, fdef}, loc().back());
 
@@ -817,17 +812,16 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 
         auto matcher_int = is_integer ? matcher : cg.world.extract(matcher, 0_u32, matcher->debug());
         cg.cur_bb->match(matcher_int, otherwise, defs, targets, {loc().front(), "match"});
-        auto mem = cg.cur_mem;
 
         for (size_t i = 0; i != num_targets; ++i) {
-            cg.enter(targets[i], mem);
+            cg.enter(targets[i]);
             if (auto def = arm(i)->expr()->remit(cg))
                 cg.cur_bb->app(join, {cg.cur_mem, def}, loc().back());
         }
 
         bool no_otherwise = num_arms() == num_targets;
         if (!no_otherwise) {
-            cg.enter(otherwise, mem);
+            cg.enter(otherwise);
             if (auto def = arm(num_targets)->expr()->remit(cg))
                 cg.cur_bb->app(join, {cg.cur_mem, def}, loc().back());
         }
@@ -844,14 +838,13 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
                 ? cg.world.lit_bool(true, arm(i)->ptrn()->loc())
                 : arm(i)->ptrn()->emit_cond(cg, matcher);
 
-            cg.cur_bb->branch(cond, case_t, case_f, arm(i)->ptrn()->loc().back());
+            cg.cur_bb->branch(cond, case_t, case_f, cg.cur_mem, arm(i)->ptrn()->loc().back());
 
-            auto mem = cg.cur_mem;
-            cg.enter(case_t, mem);
+            cg.enter(case_t);
             if (auto def = arm(i)->expr()->remit(cg))
                 cg.cur_bb->app(join, {cg.cur_mem, def}, arm(i)->loc().back());
 
-            cg.enter(case_f, mem);
+            cg.enter(case_f);
         }
     }
 
@@ -872,20 +865,20 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
 
     cg.cur_bb->app(head_bb, {cg.cur_mem}, cond()->loc().back());
 
-    cg.enter(head_bb, head_bb->param(0));
+    cg.enter(head_bb);
     cond()->emit_branch(cg, body_bb, exit_bb);
 
-    cg.enter(body_bb, body_bb->param(0));
+    cg.enter(body_bb);
     body()->remit(cg);
     cg.cur_bb->app(cont_bb, {cg.cur_mem}, body()->loc().back());
 
-    cg.enter(cont_bb, cont_bb->param(0));
+    cg.enter(cont_bb);
     cg.cur_bb->app(head_bb, {cg.cur_mem}, body()->loc().back());
 
-    cg.enter(exit_bb, exit_bb->param(0));
+    cg.enter(exit_bb);
     cg.cur_bb->app(brk__bb, {cg.cur_mem}, body()->loc().back());
 
-    cg.enter(brk__bb, brk__bb->param(0));
+    cg.enter(brk__bb);
     return cg.world.tuple({}, loc());
 }
 
@@ -906,7 +899,7 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     args.front() = cg.cur_mem; // now get the current memory monad
     cg.call(fun, args, nullptr, map_expr->loc());
 
-    cg.enter(break_bb, break_bb->param(0));
+    cg.enter(break_bb);
     if (break_bb->num_params() == 2)
         return break_bb->param(1);
     else {
