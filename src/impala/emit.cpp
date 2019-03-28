@@ -1,6 +1,7 @@
 #include "impala/ast.h"
 
 #include "thorin/primop.h"
+#include "thorin/util.h"
 #include "thorin/world.h"
 #include "thorin/util/array.h"
 
@@ -28,9 +29,6 @@ public:
         cur_mem = bb->param(0);
         return bb;
     }
-
-
-    const Def* frame() const { assert(cur_fn); return cur_fn->frame(); }
 
     std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, Debug dbg) {
         if (ret_type == nullptr) {
@@ -87,9 +85,12 @@ public:
         return world.extract(l, 1_u32, loc);
     }
 
-    void store(const Def* ptr, const Def* val, Loc loc) {
-        cur_mem = world.store(cur_mem, ptr, val, loc);
+    const Def* slot(const Def* type, Debug dbg) {
+        auto slot = world.slot(type, cur_mem, dbg);
+        cur_mem = slot->out_mem();
+        return slot->out_ptr();
     }
+    void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = world.store(cur_mem, ptr, val, loc); }
 
     const Def* alloc(const thorin::Def* type, Debug dbg) {
         auto alloc = world.alloc(type, cur_mem, dbg);
@@ -198,8 +199,8 @@ void LocalDecl::emit(CodeGen& cg, const Def* init) const {
     init = init ? init : cg.world.bot(thorin_type);
 
     if (is_mut()) {
-        def_ = cg.world.slot(thorin_type, cg.frame(), debug());
-        cg.cur_mem = cg.world.store(cg.cur_mem, def_, init, debug());
+        def_ = cg.slot(thorin_type, debug());
+        cg.cur_mem = cg.world.store(cg.cur_mem, def_, init, loc());
     } else {
         def_ = init;
     }
@@ -224,14 +225,12 @@ void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
     THORIN_PUSH(cg.cur_bb, lam());
     auto old_mem = cg.cur_mem;
 
-    // setup memory + frame
+    // setup memory
     {
         size_t i = 0;
         auto mem_param = lam()->param(i++);
         mem_param->debug().set("mem");
-        auto enter = cg.world.enter(mem_param, loc);
-        cg.cur_mem = cg.world.extract(enter, 0_u32, loc);
-        frame_ =     cg.world.extract(enter, 1_u32, loc);
+        cg.cur_mem = mem_param;
 
         // name params and setup store locs
         for (auto&& param : params()) {
@@ -488,7 +487,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             if (is_const(def))
                 return cg.world.global(def, /*mutable*/ false, loc());
 
-            auto slot = cg.world.slot(cg.convert(rhs()->type()), cg.frame(), loc());
+            auto slot = cg.slot(cg.convert(rhs()->type()), loc());
             cg.store(slot, def, loc());
             return slot;
         }
