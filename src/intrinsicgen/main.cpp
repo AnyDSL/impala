@@ -23,7 +23,7 @@ int main() {
     std::unique_ptr<impala::TypeTable> typetable;
 
     auto module = std::make_unique<impala::Module>("dummy.impala");
-    check(typetable, module.get(), false);
+    check(typetable, module.get());
 
     llvm::LLVMContext context;
     int num = llvm::Intrinsic::num_intrinsics - 1;
