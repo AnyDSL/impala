@@ -7,6 +7,7 @@
 #include "thorin/be/llvm/llvm.h"
 #endif
 #include "thorin/analyses/schedule.h"
+#include "thorin/pass/optimize.h"
 #include "thorin/util/args.h"
 #include "thorin/util/debug.h"
 #include "thorin/util/log.h"
@@ -213,7 +214,7 @@ int main(int argc, char** argv) {
         if (result) {
             thorin::verify_mem(world);
             if (opt_thorin)
-                world.opt();
+                optimize_old(world);
             if (emit_thorin)
                 world.dump();
             if (emit_llvm) {
