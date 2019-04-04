@@ -23,9 +23,9 @@ void init();
 void parse(Items&, std::istream&, const char*);
 void name_analysis(const Module*);
 void type_inference(std::unique_ptr<TypeTable>& typetable, const Module*);
-void type_analysis(const Module*, bool nossa);
+void type_analysis(const Module*);
 //void borrow_check(const ModContents*);
-void check(std::unique_ptr<TypeTable>& typetable, const Module*, bool nossa);
+void check(std::unique_ptr<TypeTable>& typetable, const Module*);
 void emit(thorin::World&, const Module*);
 
 enum class Prec {

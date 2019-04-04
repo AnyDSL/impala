@@ -20,10 +20,10 @@ void init() {
     Token::init();
 }
 
-void check(std::unique_ptr<TypeTable>& typetable, const Module* mod, bool nossa) {
+void check(std::unique_ptr<TypeTable>& typetable, const Module* mod) {
     name_analysis(mod);
     type_inference(typetable, mod);
-    type_analysis(mod, nossa);
+    type_analysis(mod);
     //borrow_check(mod);
 }
 

@@ -43,8 +43,7 @@ int main(int argc, char** argv) {
         std::string out_name, log_name, log_level;
         bool help,
              emit_cint, emit_thorin, emit_ast, emit_annotated,
-             emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
-             nocleanup, nossa, fancy;
+             emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug, fancy;
 
 #ifndef NDEBUG
 #define LOG_LEVELS "{error|warn|info|verbose|debug}"
@@ -74,9 +73,7 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("emit-llvm",          "", "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
             .add_option<bool>            ("emit-thorin",        "", "emit textual Thorin representation of Impala program", emit_thorin, false)
             .add_option<bool>            ("f",                  "", "use fancy output: Impala's AST dump uses only parentheses where necessary", fancy, false)
-            .add_option<bool>            ("g",                  "", "emit debug information", debug, false)
-            .add_option<bool>            ("nocleanup",          "", "no clean-up phase", nocleanup, false)
-            .add_option<bool>            ("nossa",              "", "use slots + load/store instead of SSA construction", nossa, false);
+            .add_option<bool>            ("g",                  "", "emit debug information", debug, false);
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
@@ -180,7 +177,7 @@ int main(int argc, char** argv) {
             module->stream(std::cout);
 
         std::unique_ptr<impala::TypeTable> typetable;
-        impala::check(typetable, module.get(), nossa);
+        impala::check(typetable, module.get());
         bool result = impala::num_errors() == 0;
 
         if (emit_annotated)
@@ -215,8 +212,6 @@ int main(int argc, char** argv) {
 
         if (result) {
             thorin::verify_mem(world);
-            if (!nocleanup)
-                world.cleanup();
             if (opt_thorin)
                 world.opt();
             if (emit_thorin)

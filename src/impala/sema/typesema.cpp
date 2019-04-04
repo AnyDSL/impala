@@ -11,13 +11,8 @@ namespace impala {
 
 class TypeSema {
 public:
-    TypeSema(bool nossa)
-        : nossa_(nossa)
-    {}
-
     // helpers
 
-    bool nossa() const { return nossa_; }
     const Type* scalar_type(const Expr* expr) {
         auto result = unpack_ref_type(expr->type());
         if (auto simd_type = result->isa<SimdType>())
@@ -107,18 +102,12 @@ public:
         check_call(expr, array);
     }
 
-private:
-    bool nossa_;
-
 public:
     const BlockExpr* cur_block_ = nullptr;
     const Fn* cur_fn_ = nullptr;
 };
 
-void type_analysis(const Module* module, bool nossa) {
-    TypeSema sema(nossa);
-    sema.check(module);
-}
+void type_analysis(const Module* module) { TypeSema().check(module); }
 
 template<class T>
 TokenTag token_tag(const T* expr) { return TokenTag(expr->tag()); }
@@ -331,7 +320,7 @@ void PathExpr::check(TypeSema& sema) const {
     if (value_decl()) {
         if (auto local = value_decl()->isa<LocalDecl>()) {
             // if local lies in an outer function go through memory to implement closure
-            if (local->is_mut() && (sema.nossa() || local->fn() != sema.cur_fn_))
+            if (local->is_mut() && local->fn() != sema.cur_fn_)
                 local->take_address();
         }
     } else
