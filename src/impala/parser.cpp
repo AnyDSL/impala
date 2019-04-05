@@ -246,7 +246,7 @@ public:
     const WhileExpr*    parse_while_expr();
     const BlockExpr*    parse_block_expr();
     const BlockExpr*    try_block_expr(const std::string& context);
-    const Expr*         parse_pe_expr(const char* context);
+    const Expr*         parse_filter(const char* context);
 
     // patterns
     const Ptrn*        parse_ptrn();
@@ -425,12 +425,6 @@ Params Parser::parse_param_list(TokenTag delimiter, bool lambda) {
 const Param* Parser::parse_param(int /*i*/, bool lambda) {
     auto tracker = track();
 
-    const Expr* pe_expr = nullptr;
-    if (lookahead() == Token::RUNKNOWN) {
-        eat(Token::RUNKNOWN);
-    } else
-        pe_expr = parse_pe_expr("partial evaluation profile of function parameter");
-
     bool mut = accept(Token::MUT);
     const Identifier* identifier = nullptr;
     const ASTType* type = nullptr;
@@ -468,14 +462,8 @@ const Param* Parser::parse_param(int /*i*/, bool lambda) {
 
     if (identifier == nullptr)
         identifier = create<Identifier>("_");
-    if (pe_expr == nullptr) {
-        Path::Elems elems;
-        elems.emplace_back(new Path::Elem(new Identifier(tracker, identifier->symbol())));
-        auto id = new PathExpr(new Path(tracker, false, std::move(elems)));
-        pe_expr = new PrefixExpr(tracker, PrefixExpr::Tag::KNOWN, id);
-    }
 
-    return new Param(tracker, mut, identifier, ast_type, pe_expr);
+    return new Param(tracker, mut, identifier, ast_type);
 }
 
 const Param* Parser::parse_return_param() {
@@ -559,7 +547,7 @@ const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility v
     eat(Token::FN);
     auto export_name = lookahead() == Token::LIT_str ? lex().symbol() : Symbol();
 
-    const Expr* pe_expr = parse_pe_expr("partial evaluation profile of function declaration");
+    const Expr* filter = parse_filter("partial evaluation filter of function declaration");
     auto identifier = try_identifier("function name");
     auto ast_type_params = parse_ast_type_params();
     expect(Token::L_PAREN, "function head");
@@ -577,7 +565,7 @@ const FnDecl* Parser::parse_fn_decl(BodyMode mode, Tracker tracker, Visibility v
             break;
     }
 
-    return new FnDecl(tracker, vis, is_extern, abi, pe_expr, export_name, identifier,
+    return new FnDecl(tracker, vis, is_extern, abi, filter, export_name, identifier,
                       std::move(ast_type_params), std::move(params), body);
 }
 
@@ -1095,11 +1083,11 @@ const StrExpr* Parser::parse_str_expr() {
 const FnExpr* Parser::parse_fn_expr(bool nested) {
     auto tracker = track();
 
-    const Expr* pe_expr = nullptr;
+    const Expr* filter = nullptr;
     if (nested)
-        pe_expr = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, Box(false));
+        filter = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, Box(false));
     else
-        pe_expr = parse_pe_expr("partial evaluation profile of function expression");
+        filter = parse_filter("partial evaluation filter of function expression");
 
     Params params;
     if (accept(Token::OR) || nested) {
@@ -1112,7 +1100,7 @@ const FnExpr* Parser::parse_fn_expr(bool nested) {
         if (accept(Token::OROR)) {
             params.emplace_back(parse_return_param());
             auto body = parse_fn_expr(true);
-            return new FnExpr(tracker, pe_expr, std::move(params), body);
+            return new FnExpr(tracker, filter, std::move(params), body);
         }
         expect(Token::OR, "parameter list of function expression");
     } else
@@ -1123,7 +1111,7 @@ const FnExpr* Parser::parse_fn_expr(bool nested) {
 
     auto body = parse_expr();
 
-    return new FnExpr(tracker, pe_expr, std::move(params), body);
+    return new FnExpr(tracker, filter, std::move(params), body);
 }
 
 const IfExpr* Parser::parse_if_expr() {
@@ -1168,10 +1156,10 @@ const ForExpr* Parser::parse_for_expr() {
     auto params = param_list() ? parse_param_list(Token::IN, true) : Params();
     params.emplace_back(create<Param>(create<Identifier>("continue"), nullptr));
     auto expr = parse_expr();
-    auto pe_expr = parse_pe_expr("partial evaluation profile of for loop");
+    auto filter = parse_filter("partial evaluation filter of for loop");
     auto body = try_block_expr("body of for loop");
     auto break_decl = create_continuation_decl("break", /*set type during InferSema*/ false);
-    return new ForExpr(tracker, new FnExpr(tracker, pe_expr, std::move(params), body), expr, break_decl);
+    return new ForExpr(tracker, new FnExpr(tracker, filter, std::move(params), body), expr, break_decl);
 }
 
 const ForExpr* Parser::parse_with_expr() {
@@ -1183,10 +1171,10 @@ const ForExpr* Parser::parse_with_expr() {
     auto params = param_list() ? parse_param_list(Token::IN, true) : Params();
     params.emplace_back(create<Param>(create<Identifier>("break"), nullptr));
     auto expr = parse_expr();
-    auto pe_expr = parse_pe_expr("partial evaluation profile of with statement");
+    auto filter = parse_filter("partial evaluation filter of with statement");
     auto body = try_block_expr("body of with statement");
     auto break_decl = create_continuation_decl("_", /*set type during InferSema*/ false);
-    return new ForExpr(tracker, new FnExpr(tracker, pe_expr, std::move(params), body), expr, break_decl);
+    return new ForExpr(tracker, new FnExpr(tracker, filter, std::move(params), body), expr, break_decl);
 }
 
 const WhileExpr* Parser::parse_while_expr() {
@@ -1251,20 +1239,20 @@ const BlockExpr* Parser::try_block_expr(const std::string& context) {
     }
 }
 
-const Expr* Parser::parse_pe_expr(const char* context) {
-    const Expr* pe_expr = nullptr;
+const Expr* Parser::parse_filter(const char* context) {
+    const Expr* filter = nullptr;
     if (accept(Token::RUN)) {
         if (lookahead() == Token::L_PAREN) {
             eat(Token::L_PAREN);
-            pe_expr = parse_expr();
+            filter = parse_expr();
             expect(Token::R_PAREN, context);
         } else {
-            pe_expr = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, Box(true));
+            filter = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, Box(true));
         }
     } else
-        pe_expr = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, Box(false));
+        filter = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, Box(false));
 
-    return pe_expr;
+    return filter;
 }
 
 /*

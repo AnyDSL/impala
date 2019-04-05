@@ -612,32 +612,26 @@ private:
 
 class Param : public LocalDecl {
 public:
-    Param(Loc loc, bool mut, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
+    Param(Loc loc, bool mut, const Identifier* id, const ASTType* ast_type)
         : LocalDecl(loc, mut, id, ast_type)
-        , pe_expr_(dock(pe_expr_, pe_expr))
+    {}
+    Param(Loc loc, const Identifier* id, const ASTType* ast_type)
+        : Param(loc, /*mut*/ false, id, ast_type)
     {}
 
-    Param(Loc loc, const Identifier* id, const ASTType* ast_type, const Expr* pe_expr = nullptr)
-        : Param(loc, /*mut*/ false, id, ast_type, pe_expr)
-    {}
-
-    const Expr* pe_expr() const { return pe_expr_.get(); }
     std::ostream& stream(std::ostream&) const override;
-
-private:
-    std::unique_ptr<const Expr> pe_expr_;
 };
 
 class Fn : public ASTTypeParamList {
 public:
-    Fn(const Expr* pe_expr, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
+    Fn(const Expr* filter, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
         : ASTTypeParamList(std::move(ast_type_params))
-        , pe_expr_(dock(pe_expr_, pe_expr))
+        , filter_(dock(filter_, filter))
         , params_(std::move(params))
         , body_(dock(body_, body))
     {}
 
-    const Expr* pe_expr() const { return pe_expr_.get(); }
+    const Expr* filter() const { return filter_.get(); }
     const Param* param(size_t i) const { return params_[i].get(); }
     ArrayRef<std::unique_ptr<const Param>> params() const { return params_; }
     size_t num_params() const { return params_.size(); }
@@ -655,7 +649,7 @@ public:
     virtual Symbol fn_symbol() const = 0;
 
 protected:
-    std::unique_ptr<const Expr> pe_expr_;
+    std::unique_ptr<const Expr> filter_;
     Params params_;
     mutable thorin::Lam* lam_ = nullptr;
     mutable const thorin::Def* ret_param_ = nullptr;
@@ -963,10 +957,10 @@ private:
 
 class FnDecl : public ValueItem, public Fn {
 public:
-    FnDecl(Loc loc, Visibility vis, bool is_extern, Symbol abi, const Expr* pe_expr, Symbol export_name,
+    FnDecl(Loc loc, Visibility vis, bool is_extern, Symbol abi, const Expr* filter, Symbol export_name,
            const Identifier* id, ASTTypeParams&& ast_type_params, Params&& params, const Expr* body)
         : ValueItem(loc, vis, /*mut*/ false, id, /*ast_type*/ nullptr)
-        , Fn(pe_expr, std::move(ast_type_params), std::move(params), body)
+        , Fn(filter, std::move(ast_type_params), std::move(params), body)
         , abi_(abi)
         , export_name_(export_name)
         , is_extern_(is_extern)
@@ -1244,9 +1238,9 @@ private:
 
 class FnExpr : public Expr, public Fn {
 public:
-    FnExpr(Loc loc, const Expr* pe_expr, Params&& params, const Expr* body)
+    FnExpr(Loc loc, const Expr* filter, Params&& params, const Expr* body)
         : Expr(loc)
-        , Fn(pe_expr, ASTTypeParams(), std::move(params), body)
+        , Fn(filter, ASTTypeParams(), std::move(params), body)
     {}
 
     const FnType* fn_type() const override { return type()->as<FnType>(); }

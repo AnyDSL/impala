@@ -108,8 +108,6 @@ std::ostream& LocalDecl::stream(std::ostream& os) const {
 }
 
 std::ostream& Param::stream(std::ostream& os) const {
-    if (pe_expr())
-        os << '@' << pe_expr() << ' ';
     if (!is_anonymous())
         os << (is_mut() ? "mut " : "") << symbol() <<
             ((ast_type() || type()) ? ": " : "");
@@ -147,8 +145,8 @@ std::ostream& FnDecl::stream(std::ostream& os) const {
     if (is_extern())
         os << "extern ";
     os << "fn ";
-    if (pe_expr())
-        os << '@' << pe_expr() << ' ';
+    if (filter())
+        os << '@' << filter() << ' ';
     if (export_name_)
         os << export_name_ << ' ';
     stream_ast_type_params(os << symbol());

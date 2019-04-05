@@ -260,29 +260,7 @@ void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
             cg.cur_bb->app(ret_param(), {cg.cur_mem, def}, loc.back());
     }
 
-    // now handle the filter
-    {
-        size_t i = 0;
-        auto global = pe_expr() ? pe_expr()->remit(cg) : cg.world.lit_bool(false, loc);
-        Array<const Def*> filter(lam()->num_params());
-        filter[i++] = global; // mem param
-
-        for (auto&& param : params()) {
-            auto pe_expr = param->pe_expr();
-            filter[i++] = pe_expr
-                          ? cg.world.arithop_or(global, pe_expr->remit(cg), pe_expr->loc())
-                          : global;
-        }
-
-        // HACK for unit
-        if (auto tuple_type = lam()->type()->ops().back()->isa<thorin::Sigma>()) {
-            if (tuple_type->num_ops() == 0)
-                filter[i++] = global;
-        }
-
-        lam()->set_filter(cg.world.tuple(filter));
-    }
-
+    lam()->set_filter(filter() ? filter()->remit(cg) : cg.world.lit(false));
     cg.cur_mem = old_mem;
 }
 
