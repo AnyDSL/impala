@@ -226,25 +226,20 @@ void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
     auto old_mem = cg.cur_mem;
 
     // setup memory
-    {
-        size_t i = 0;
-        auto mem_param = lam()->param(i++);
-        mem_param->debug().set("mem");
-        cg.cur_mem = mem_param;
+    size_t i = 0;
+    auto mem_param = lam()->param(i++);
+    mem_param->debug().set("mem");
+    cg.cur_mem = mem_param;
 
-        // name params and setup store locs
-        for (auto&& param : params()) {
-            auto p = lam()->param(i++);
-            p->debug().set(param->symbol());
-            param->emit(cg, p);
-        }
-
-        //assert(i == lam()->num_params() || lam()->type() == cg.cn);
-
-        if (lam()->num_params() != 0
-                && lam()->params().back()->type()->isa<Pi>())
-            ret_param_ = lam()->params().back();
+    // name params and setup store locs
+    for (auto&& param : params()) {
+        auto p = lam()->param(i++);
+        p->debug().set(param->symbol());
+        param->emit(cg, p);
     }
+
+    if (lam()->num_params() != 0 && lam()->params().back()->type()->isa<Pi>())
+        ret_param_ = lam()->params().back();
 
     // descend into body
     auto def = body()->remit(cg);
