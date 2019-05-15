@@ -40,11 +40,12 @@ int main(int argc, char** argv) {
         Names breakpoints;
         bool track_history;
 #endif
-        std::string out_name, log_name, log_level;
+        std::string out_name, log_name, log_level, llvm_cpu_target;
         bool help,
              emit_cint, emit_thorin, emit_ast, emit_annotated,
              emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
-             nocleanup, nossa, fancy;
+             nocleanup, nossa, fancy,
+             list_llvm_targets;
 
 #ifndef NDEBUG
 #define LOG_LEVELS "{error|warn|info|verbose|debug}"
@@ -61,6 +62,8 @@ int main(int argc, char** argv) {
             .add_option<Names>           ("break",              "<args>", "breakpoint at definition generation with global id <arg>; may be used multiple times separated by space or '_'", breakpoints)
             .add_option<bool>            ("track-history",      "", "track hisotry of names - useful for debugging", track_history, false)
 #endif
+            .add_option<std::string>     ("llvm-target",        "", "LLVM IR target system (host if unspecified)", llvm_cpu_target, "")
+            .add_option<bool>            ("list-llvm-targets",  "", "Print a list of LLVM IR targets and exit", list_llvm_targets, false)
             .add_option<std::string>     ("o",                  "", "specifies the output module name", out_name, "")
             .add_option<bool>            ("O0",                 "", "reduce compilation time and make debugging produce the expected results (default)", opt_0, false)
             .add_option<bool>            ("O1",                 "", "optimize", opt_1, false)
@@ -108,9 +111,17 @@ int main(int argc, char** argv) {
         else if (opt_2) opt = 2;
         else if (opt_3) opt = 3;
 
-        if (infiles.empty() && !help) {
+        if (infiles.empty() && !(help || list_llvm_targets)) {
             thorin::errf("no input files\n");
             return EXIT_FAILURE;
+        }
+
+        if (list_llvm_targets) {
+          thorin::outf("Supported LLVM targets:\n");
+          for (auto & target_name : thorin::GetCPUTargets()) {
+            thorin::outf("{}\n", target_name);
+          }
+          return EXIT_SUCCESS;
         }
 
         if (help) {
@@ -223,7 +234,7 @@ int main(int argc, char** argv) {
                 world.dump();
             if (emit_llvm) {
 #ifdef LLVM_SUPPORT
-                thorin::Backends backends(world);
+                thorin::Backends backends(world, llvm_cpu_target);
                 auto emit_to_file = [&](thorin::CodeGen* cg, std::string ext) {
                     if (cg) {
                         auto name = module_name + ext;
