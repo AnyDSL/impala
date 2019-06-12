@@ -56,7 +56,16 @@ void anydsl_aligned_free(void* ptr) { ::free(ptr); }
 void* anydsl_aligned_malloc(size_t size, size_t alignment) { return ::_aligned_malloc(size, alignment); }
 void anydsl_aligned_free(void* ptr) { ::_aligned_free(ptr); }
 #else
-#error "There is no way to allocate aligned memory on this system"
+//#error "There is no way to allocate aligned memory on this system"
+void* anydsl_aligned_malloc(size_t size, size_t alignment) {
+    void* mem = malloc(size + sizeof(void*) + (alignment - 1));
+    void* ptr = (void**)((uintptr_t)((char*)mem + (alignment - 1) + sizeof(void*)) & ~(alignment - 1));
+    ((void**)ptr)[-1] = mem;
+    return ptr;
+}
+void anydsl_aligned_free(void* ptr) {
+    free(((void**)ptr)[-1]);
+}
 #endif
 void* anydsl_alloc(int32_t dev, int64_t size) {
     // TODO: check whether aligned memory is actually necessary
