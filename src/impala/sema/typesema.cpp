@@ -697,14 +697,13 @@ inline bool is_match_complete(const MatchExpr* match) {
 
 void MatchExpr::check(TypeSema& sema) const {
     auto expr_type = sema.check(expr());
-    auto arg_type  = num_arms() > 0 ? sema.check(arm(0)->expr()) : nullptr;
     for (size_t i = 0, e = num_arms(); i != e; ++i) {
         sema.check(arm(i)->ptrn());
         sema.check(arm(i)->expr());
 
         sema.expect_type(expr_type, arm(i)->ptrn(), "pattern type");
         if (!is_no_ret_or_type_error(arm(i)->expr()->type()))
-            sema.expect_type(arg_type,  arm(i)->expr(), "matched expression type");
+            sema.expect_type(type(), arm(i)->expr(), "matched expression type");
         if (!arm(i)->ptrn()->is_refutable() && i < e - 1)
             warning(arm(i)->ptrn(), "pattern is always true, subsequent patterns will not be executed");
     }
