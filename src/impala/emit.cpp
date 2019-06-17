@@ -19,7 +19,7 @@ public:
     Lam* basicblock(const thorin::Def* type, Debug dbg) {
         auto cn = type ? world.cn({world.mem_type(), type}) : world.cn(world.mem_type());
         auto bb = world.lam(cn, CC::C, Intrinsic::None, dbg);
-        bb->param(0)->debug().set("mem");
+        bb->param(0, {"mem"});
         return bb;
     }
     Lam* basicblock(Debug dbg) { return basicblock(nullptr, dbg); }
@@ -50,7 +50,7 @@ public:
 
         // next is the return lam
         auto next = world.lam(world.cn(cont_args), dbg);
-        next->param(0)->debug().set("mem");
+        next->param(0, {"mem"});
 
         // create jump to next
         size_t csize = args.size() + 1;
@@ -64,17 +64,16 @@ public:
             Array<const Def*> params(next->num_params() - 1);
             for (size_t i = 1, e = next->num_params(); i != e; ++i)
                 params[i - 1] = next->param(i);
-            ret = world.tuple(ret_type, params);
+            ret = world.tuple(ret_type, params, {callee->name()});
         } else
-            ret = next->param(1);
-        ret->debug().set(callee->name());
+            ret = next->param(1, {callee->name()});
 
         return std::make_pair(next, ret);
     }
 
     Lam* create_lam(const LocalDecl* decl) {
         auto result = world.lam(convert(decl->type())->as<thorin::Pi>(), decl->debug());
-        result->param(0)->debug().set("mem");
+        result->param(0, {"mem"});
         decl->def_ = result;
         return result;
     }
@@ -131,8 +130,6 @@ public:
 const thorin::Def* CodeGen::convert_rec(const Type* type) {
     if (auto lambda = type->isa<Lambda>()) {
         return world.lam(world.kind_star(), convert(lambda->body()), {lambda->name()});
-    } else if (auto var = type->isa<Var>()) {
-        return world.var(world.kind_star(), var->depth());
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_tag()) {
 #define IMPALA_TYPE(itype, ttype) \
@@ -227,14 +224,12 @@ void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
 
     // setup memory
     size_t i = 0;
-    auto mem_param = lam()->param(i++);
-    mem_param->debug().set("mem");
+    auto mem_param = lam()->param(i++, {"mem"});
     cg.cur_mem = mem_param;
 
     // name params and setup store locs
     for (auto&& param : params()) {
-        auto p = lam()->param(i++);
-        p->debug().set(param->symbol());
+        auto p = lam()->param(i++, {param->symbol()});
         param->emit(cg, p);
     }
 
@@ -829,7 +824,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
     auto head_bb = cg.world.lam(cg.world.cn({cg.world.mem_type()}), CC::C, Intrinsic::None, {loc().front(), "while_head"});
-    head_bb->param(0)->debug().set("mem");
+    head_bb->param(0, {"mem"});
 
     auto jump_type = cg.world.cn({ cg.world.mem_type() });
     auto body_bb = cg.world.lam(jump_type, {body()->loc().front(), "while_body"});
@@ -895,8 +890,6 @@ const Def* FnExpr::remit(CodeGen& cg) const {
  */
 
 void IdPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
-    if (!init->isa<Lit>())
-        init->debug().set(local()->symbol());
     local()->emit(cg, init);
 }
 
