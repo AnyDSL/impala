@@ -131,8 +131,6 @@ public:
 const thorin::Def* CodeGen::convert_rec(const Type* type) {
     if (auto lambda = type->isa<Lambda>()) {
         return world.lam(world.kind_star(), convert(lambda->body()), {lambda->name()});
-    } else if (auto var = type->isa<Var>()) {
-        return world.var(world.kind_star(), var->depth());
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_tag()) {
 #define IMPALA_TYPE(itype, ttype) \
