@@ -990,7 +990,7 @@ const Type* MatchExpr::infer(InferSema& sema) const {
         sema.infer(arm(i)->ptrn());
         sema.coerce(arm(i)->ptrn(), expr());
         auto arm_type = sema.rvalue(arm(i)->expr());
-        if (!arm_type->isa<NoRetType>())
+        if (!arm_type->isa<NoRetType>() && !arm_type->isa<UnknownType>())
             match_type = match_type ? sema.constrain(arm(i)->expr(), match_type) : arm_type;
     }
     return match_type ? match_type : sema.find_type(this);
