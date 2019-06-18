@@ -522,7 +522,7 @@ public:
     bool is_anonymous() const { assert(!is_no_decl()); return symbol() == Symbol() || symbol().c_str()[0] == '<'; }
     size_t depth() const { assert(!is_no_decl()); return depth_; }
     const Decl* shadows() const { assert(!is_no_decl()); return shadows_; }
-    thorin::Debug debug() const { return {loc(), symbol()}; }
+    thorin::Dbg debug() const { return {loc(), symbol().c_str()}; }
 
     // ValueDecl
     const ASTType* ast_type() const { assert(is_value_decl()); return ast_type_.get(); } ///< Original @p ASTType.

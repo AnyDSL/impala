@@ -9,6 +9,8 @@ set(IMPALA_SOURCES
     lexer.cpp
     lexer.h
     parser.cpp
+    symbol.cpp
+    symbol.h
     sema/infersema.cpp
     sema/namesema.cpp
     sema/type.cpp

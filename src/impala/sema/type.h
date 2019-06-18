@@ -6,7 +6,8 @@
 #include "thorin/util/cast.h"
 #include "thorin/util/hash.h"
 #include "thorin/util/stream.h"
-#include "thorin/util/symbol.h"
+
+#include "impala/symbol.h"
 #include "impala/sema/type_table.h"
 
 namespace impala {

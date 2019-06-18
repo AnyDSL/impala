@@ -1,8 +1,7 @@
 #include "impala/impala.h"
 
-#include "thorin/util/symbol.h"
-
 #include "impala/ast.h"
+#include "impala/symbol.h"
 #include "impala/token.h"
 
 namespace impala {

@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        thorin::World world(0, {module_name});
+        thorin::World world(0, module_name);
         impala::init();
 
 #if THORIN_ENABLE_CHECKS && !defined(NDEBUG)

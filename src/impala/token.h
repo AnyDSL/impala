@@ -6,7 +6,8 @@
 
 #include "thorin/enums.h"
 #include "thorin/util/debug.h"
-#include "thorin/util/symbol.h"
+
+#include "impala/symbol.h"
 
 namespace impala {
 
