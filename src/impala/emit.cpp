@@ -229,7 +229,7 @@ void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
 
     // name params and setup store locs
     for (auto&& param : params()) {
-        auto p = lam()->param(i++, {param->symbol().c_str()});
+        auto p = lam()->param(i++, {param->loc(), param->symbol().c_str()});
         param->emit(cg, p);
     }
 
