@@ -3,8 +3,7 @@
 
 #include <istream>
 
-#include "thorin/util/debug.h"
-
+#include "impala/loc.h"
 #include "impala/token.h"
 
 namespace impala {

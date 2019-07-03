@@ -5,13 +5,12 @@
 #include <string>
 
 #include "thorin/enums.h"
-#include "thorin/util/debug.h"
 
+#include "impala/loc.h"
 #include "impala/symbol.h"
 
 namespace impala {
 
-using thorin::Loc;
 using thorin::Symbol;
 
 class Token {

@@ -5,10 +5,10 @@
 
 #include "thorin/util/array.h"
 #include "thorin/util/cast.h"
-#include "thorin/util/debug.h"
 #include "thorin/util/types.h"
 
 #include "impala/impala.h"
+#include "impala/loc.h"
 #include "impala/token.h"
 #include "impala/sema/type.h"
 

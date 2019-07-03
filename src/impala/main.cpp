@@ -9,7 +9,6 @@
 #include "thorin/analyses/schedule.h"
 #include "thorin/pass/optimize.h"
 #include "thorin/util/args.h"
-#include "thorin/util/debug.h"
 #include "thorin/util/log.h"
 
 #include "impala/ast.h"

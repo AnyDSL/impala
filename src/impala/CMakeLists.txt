@@ -8,6 +8,8 @@ set(IMPALA_SOURCES
     impala.h
     lexer.cpp
     lexer.h
+    loc.cpp
+    loc.h
     parser.cpp
     symbol.cpp
     symbol.h
