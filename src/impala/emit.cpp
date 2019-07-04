@@ -178,7 +178,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
         thorin_type(enum_type) = nullptr;
         return s;
     } else if (auto ptr_type = type->isa<PtrType>()) {
-        return world.ptr_type(convert(ptr_type->pointee()), thorin::AddrSpace(ptr_type->addr_space()));
+        return world.ptr_type(convert(ptr_type->pointee()), ptr_type->addr_space());
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
         return world.variadic(definite_array_type->dim(), convert(definite_array_type->elem_type()));
     } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {

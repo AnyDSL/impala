@@ -93,7 +93,7 @@ bool is_strict_subtype(const Type* dst, const Type* src);
 /// Common base Type for PtrType%s and RefType.
 class RefTypeBase : public Type {
 protected:
-    RefTypeBase(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
+    RefTypeBase(TypeTable& typetable, int tag, const Type* pointee, bool mut, uint64_t addr_space)
         : Type(typetable, tag, {pointee})
         , mut_(mut)
         , addr_space_(addr_space)
@@ -102,7 +102,7 @@ protected:
 public:
     const Type* pointee() const { return op(0); }
     bool is_mut() const { return mut_; }
-    int addr_space() const { return addr_space_; }
+    uint64_t addr_space() const { return addr_space_; }
 
     virtual std::ostream& stream(std::ostream&) const override;
     virtual uint64_t vhash() const override;
@@ -111,7 +111,7 @@ public:
 
 private:
     bool mut_;
-    int addr_space_;
+    uint64_t addr_space_;
 
     friend class TypeTable;
 };
@@ -119,21 +119,21 @@ private:
 /// Pointer @p Type.
 class PtrType : public RefTypeBase {
 protected:
-    PtrType(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
+    PtrType(TypeTable& typetable, int tag, const Type* pointee, bool mut, uint64_t addr_space)
         : RefTypeBase(typetable, tag, pointee, mut, addr_space)
     {}
 
-    std::ostream& stream_ptr_type(std::ostream&, std::string prefix, int addr_space, const Type* ref_type) const;
+    std::ostream& stream_ptr_type(std::ostream&, std::string prefix, uint64_t addr_space, const Type* ref_type) const;
 
 private:
-    int addr_space_;
+    uint64_t addr_space_;
 
     friend class TypeTable;
 };
 
 class BorrowedPtrType : public PtrType {
 public:
-    BorrowedPtrType(TypeTable& typetable, const Type* pointee, bool mut, int addr_space)
+    BorrowedPtrType(TypeTable& typetable, const Type* pointee, bool mut, uint64_t addr_space)
         : PtrType(typetable, Tag_borrowed_ptr, pointee, mut, addr_space)
     {}
 
@@ -145,7 +145,7 @@ private:
 
 class OwnedPtrType : public PtrType {
 public:
-    OwnedPtrType(TypeTable& typetable, const Type* pointee, int addr_space)
+    OwnedPtrType(TypeTable& typetable, const Type* pointee, uint64_t addr_space)
         : PtrType(typetable, Tag_owned_ptr, pointee, true, addr_space)
     {}
 
@@ -157,7 +157,7 @@ private:
 
 class RefType : public RefTypeBase {
 protected:
-    RefType(TypeTable& typetable, const Type* pointee, bool mut, int addr_space)
+    RefType(TypeTable& typetable, const Type* pointee, bool mut, uint64_t addr_space)
         : RefTypeBase(typetable, Tag_ref, pointee, mut, addr_space)
     {}
 
@@ -516,13 +516,13 @@ public:
         return unify(new IndefiniteArrayType(*this, elem_type));
     }
     const SimdType* simd_type(const Type* elem_type, uint64_t size) { return unify(new SimdType(*this, elem_type, size)); }
-    const BorrowedPtrType* borrowed_ptr_type(const Type* pointee, bool mut, int addr_space) {
+    const BorrowedPtrType* borrowed_ptr_type(const Type* pointee, bool mut, uint64_t addr_space) {
         return unify(new BorrowedPtrType(*this, pointee, mut, addr_space));
     }
-    const OwnedPtrType* owned_ptr_type(const Type* pointee, int addr_space) {
+    const OwnedPtrType* owned_ptr_type(const Type* pointee, uint64_t addr_space) {
         return unify(new OwnedPtrType(*this, pointee, addr_space));
     }
-    const RefType* ref_type(const Type* pointee, bool mut, int addr_space) {
+    const RefType* ref_type(const Type* pointee, bool mut, uint64_t addr_space) {
         return unify(new RefType(*this, pointee, mut, addr_space));
     }
     const NoRetType* type_noret() { return type_noret_; }
