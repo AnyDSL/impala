@@ -123,12 +123,12 @@ bool is_strict_subtype(const Type* dst, const Type* src) {
  * hash
  */
 
-uint64_t RefTypeBase::vhash() const {
-    return thorin::hash_combine(Type::vhash(), ((uint64_t)addr_space() << 1) | uint64_t(is_mut()));
+uint32_t RefTypeBase::vhash() const {
+    return thorin::hash_combine(Type::vhash(), ((uint32_t)addr_space() << uint32_t(1)) | uint32_t(is_mut()));
 }
 
-uint64_t Var::vhash() const {
-    return thorin::murmur3(uint64_t(tag()) << uint64_t(56) | uint8_t(depth()));
+uint32_t Var::vhash() const {
+    return thorin::murmur3(uint32_t(tag()) << uint32_t(24) | uint32_t(depth()));
 }
 
 //------------------------------------------------------------------------------

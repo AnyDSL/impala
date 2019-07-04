@@ -35,7 +35,7 @@ public:
     };
 
     struct TagHash {
-        static uint64_t hash(Tag tag) { return uint64_t(tag); }
+        static uint32_t hash(Tag tag) { return uint32_t(tag); }
         static bool eq(Tag k1, Tag k2) { return k1 == k2; }
         static Tag sentinel() { return Num; }
     };

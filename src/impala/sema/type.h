@@ -105,7 +105,7 @@ public:
     uint64_t addr_space() const { return addr_space_; }
 
     virtual std::ostream& stream(std::ostream&) const override;
-    virtual uint64_t vhash() const override;
+    virtual uint32_t vhash() const override;
     virtual bool equal(const Type* other) const override;
     virtual std::string prefix() const = 0;
 
@@ -254,7 +254,7 @@ public:
     virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual uint64_t vhash() const override;
+    virtual uint32_t vhash() const override;
     virtual bool equal(const Type*) const override;
     virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
     virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
@@ -378,7 +378,7 @@ public:
     {}
 
     uint64_t dim() const { return dim_; }
-    virtual uint64_t vhash() const override { return thorin::hash_combine(Type::vhash(), dim()); }
+    virtual uint32_t vhash() const override { return thorin::hash_combine(Type::vhash(), dim()); }
     virtual bool equal(const Type* other) const override {
         return Type::equal(other) && this->dim() == other->as<DefiniteArrayType>()->dim();
     }
@@ -401,7 +401,7 @@ public:
     {}
 
     uint64_t dim() const { return dim_; }
-    virtual uint64_t vhash() const override { return thorin::hash_combine(Type::vhash(), dim()); }
+    virtual uint32_t vhash() const override { return thorin::hash_combine(Type::vhash(), dim()); }
     virtual bool equal(const Type* other) const override {
         return Type::equal(other) && this->dim() == other->as<SimdType>()->dim();
     }
@@ -444,7 +444,7 @@ public:
 
 private:
     virtual bool equal(const Type*) const override;
-    virtual uint64_t vhash() const override { return this->gid(); }
+    virtual uint32_t vhash() const override { return this->gid(); }
     virtual const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;

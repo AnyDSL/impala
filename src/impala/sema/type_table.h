@@ -54,7 +54,7 @@ public:
     bool is_polymorphic() const { return !is_monomorphic(); } ///< Does this @p Type depend on any @p Var%s?.
     int order() const { return order_; }
     size_t gid() const { return gid_; }
-    uint64_t hash() const { return hash_ == 0 ? hash_ = vhash() : hash_; }
+    uint32_t hash() const { return hash_ == 0 ? hash_ = vhash() : hash_; }
     virtual bool equal(const TypeBase*) const;
 
     const TypeBase* reduce(int, const TypeBase*, Type2Type&) const;
@@ -64,10 +64,10 @@ public:
     static size_t gid_counter() { return gid_counter_; }
 
 protected:
-    virtual uint64_t vhash() const;
+    virtual uint32_t vhash() const;
     virtual const TypeBase* vreduce(int, const TypeBase*, Type2Type&) const;
 
-    mutable uint64_t hash_ = 0;
+    mutable uint32_t hash_ = 0;
     int order_ = 0;
     mutable bool known_       = true;
     mutable bool monomorphic_ = true;
@@ -92,7 +92,7 @@ template <class Type>
 class TypeTableBase {
 public:
     struct TypeHash {
-        static uint64_t hash(const Type* t) { return t->hash(); }
+        static uint32_t hash(const Type* t) { return t->hash(); }
         static bool eq(const Type* t1, const Type* t2) { return t2->equal(t1); }
         static const Type* sentinel() { return (const Type*)(1); }
     };
@@ -163,11 +163,11 @@ const TypeBase<TypeTable>* TypeBase<TypeTable>::rebuild(TypeTable& to, Types ops
 }
 
 template <class TypeTable>
-uint64_t TypeBase<TypeTable>::vhash() const {
+uint32_t TypeBase<TypeTable>::vhash() const {
     if (is_nominal())
-        return thorin::murmur3(uint64_t(tag()) << uint64_t(56) | uint64_t(gid()));
+        return thorin::murmur3(uint32_t(gid()));
 
-    uint64_t seed = thorin::hash_begin(uint8_t(tag()));
+    uint32_t seed = thorin::hash_begin(uint8_t(tag()));
     for (auto op : ops_)
         seed = thorin::hash_combine(seed, uint32_t(op->gid()));
     return seed;
