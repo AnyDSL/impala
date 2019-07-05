@@ -15,17 +15,17 @@ public:
         : world(world)
     {}
 
-    Dbg loc2dbg(Loc loc) { return {loc.filename(), loc.front_line(), loc.front_col(), loc.back_line(), loc.back_col()}; }
-    Dbg loc2dbg(const char* s, Loc loc) { return {s, loc.filename(), loc.front_line(), loc.front_col(), loc.back_line(), loc.back_col()}; }
+    Debug loc2dbg(Loc loc) { return {loc.filename(), loc.front_line(), loc.front_col(), loc.back_line(), loc.back_col()}; }
+    Debug loc2dbg(const char* s, Loc loc) { return {s, loc.filename(), loc.front_line(), loc.front_col(), loc.back_line(), loc.back_col()}; }
 
     /// Lam of type { @c cn(mem) } or { @c cn(mem, type) } depending on whether @p type is @c nullptr.
-    Lam* basicblock(const thorin::Def* type, Dbg dbg) {
+    Lam* basicblock(const thorin::Def* type, Debug dbg) {
         auto cn = type ? world.cn({world.mem_type(), type}) : world.cn(world.mem_type());
         auto bb = world.lam(cn, CC::C, Intrinsic::None, dbg);
         bb->param(0, {"mem"});
         return bb;
     }
-    Lam* basicblock(Dbg dbg) { return basicblock(nullptr, dbg); }
+    Lam* basicblock(Debug dbg) { return basicblock(nullptr, dbg); }
 
     Lam* enter(Lam* bb) {
         cur_bb = bb;
@@ -33,7 +33,7 @@ public:
         return bb;
     }
 
-    std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, Dbg dbg) {
+    std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, Debug dbg) {
         if (ret_type == nullptr) {
             cur_bb->app(callee, args, dbg);
             auto next = basicblock({"unreachable"});
@@ -88,14 +88,14 @@ public:
         return world.extract(l, 1_u32, dbg);
     }
 
-    const Def* slot(const Def* type, Dbg dbg) {
+    const Def* slot(const Def* type, Debug dbg) {
         auto slot = world.slot(type, cur_mem, dbg);
         cur_mem = slot->out_mem();
         return slot->out_ptr();
     }
     void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = world.store(cur_mem, ptr, val, loc2dbg(loc)); }
 
-    const Def* alloc(const thorin::Def* type, Dbg dbg) {
+    const Def* alloc(const thorin::Def* type, Debug dbg) {
         auto alloc = world.alloc(type, cur_mem, dbg);
         cur_mem = world.extract(alloc, 0_u32, dbg);
         auto result = world.extract(alloc, 1, dbg);
