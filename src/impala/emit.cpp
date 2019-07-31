@@ -523,6 +523,9 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
 }
 
 const Def* PrefixExpr::lemit(CodeGen& cg) const {
+    if (tag() == RUNRUN)
+        return rhs()->lemit(cg);
+
     assert(tag() == MUL);
     return rhs()->remit(cg);
 }
