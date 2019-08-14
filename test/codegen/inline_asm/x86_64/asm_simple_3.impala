@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 fn main() -> int {
     let mut a = 4;
@@ -13,5 +13,5 @@ fn main() -> int {
         : "{eax}"
         );
 
-    if a == 14 && b == 0 { 0 } else { 1 }    
+    if a == 14 && b == 0 { 0 } else { 1 }
 }

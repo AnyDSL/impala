@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 fn main() -> int {
     let str = "I'm a string, get me out of here!\n";
@@ -12,7 +12,7 @@ fn main() -> int {
     // exits with 0
     asm("syscall;"                      /* Enter kernel mode */
         :: "{rax}"(60), "{rdi}"(0)
-       ); 
+       );
 
     1
 }

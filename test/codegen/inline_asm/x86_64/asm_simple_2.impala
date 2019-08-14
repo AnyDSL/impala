@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 fn main() -> int {
     let a = 10;
@@ -11,5 +11,5 @@ fn main() -> int {
             :"{eax}"        /* clobbered register */
         );
 
-    if b == 14 { 0 } else { 1 }    
+    if b == 14 { 0 } else { 1 }
 }

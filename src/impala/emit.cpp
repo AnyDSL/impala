@@ -971,7 +971,8 @@ void LetStmt::emit(CodeGen& cg) const {
     ptrn()->emit(cg, init() ? init()->remit(cg) : cg.world.bot(cg.convert(ptrn()->type()), cg.loc2dbg(ptrn()->loc())));
 }
 
-void AsmStmt::emit(CodeGen& cg) const {
+void AsmStmt::emit(CodeGen& /*cg*/) const {
+    /*
     Array<const thorin::Def*> outs(num_outputs());
     for (size_t i = 0, e = num_outputs(); i != e; ++i)
         outs[i] = cg.convert(output(i)->expr()->type()->as<RefType>()->pointee());
@@ -997,6 +998,7 @@ void AsmStmt::emit(CodeGen& cg) const {
     cg.cur_mem = assembly->out(i++);
     for (auto&& output: outputs())
         cg.store(output->expr()->lemit(cg), assembly->out(i++), loc());
+    */
 }
 
 //------------------------------------------------------------------------------

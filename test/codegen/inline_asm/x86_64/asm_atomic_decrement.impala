@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 fn main() -> int {
     let mut a = 1;
@@ -14,7 +14,7 @@ fn atomic_dec(p: &mut i32) -> bool {
     let mut res: bool = false;
     asm ("lock; decl $1; sete $0;"
             : /*"=r" (p),*/ "=q" (res)
-            : "*m" (p) 
+            : "*m" (p)
             : "memory"
             : "volatile"
         );
