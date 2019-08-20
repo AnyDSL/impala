@@ -75,11 +75,6 @@ public:
     static bool is_postfix(Tag tag) { return (tok2op_[tag] & Postfix) != 0; }
     static bool is_assign(Tag tag)  { return (tok2op_[tag] & Asgn_Op) != 0; }
     static bool is_op(Tag tag)      { return is_prefix(tag) || is_infix(tag) || is_postfix(tag); }
-    static bool is_rel(Tag tag);
-    static Tag separate_assign(Tag tag);
-    static int to_binop(Tag tag);
-    static thorin::ArithOpTag to_arithop(Tag tag) { return (thorin::ArithOpTag) to_binop(tag); }
-    static thorin::CmpTag     to_cmp    (Tag tag) { return (thorin::CmpTag)     to_binop(tag); }
     static const char* tok2str(Tag tag);
 
     bool operator==(const Token& t) const { return tag_ == t; }

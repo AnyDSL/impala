@@ -438,7 +438,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             auto var = rhs()->lemit(cg);
             auto val = cg.load(var, loc());
             auto one = cg.world.lit_one(val->type(), cg.loc2dbg(loc()));
-            val = cg.world.arithop(Token::to_arithop((TokenTag) tag()), val, one, cg.loc2dbg(loc()));
+            val = cg.world.arithop(tag() == INC ? ArithOp_add : ArithOp_sub, val, one, cg.loc2dbg(loc()));
             cg.store(var, val, loc());
             return val;
         }
@@ -537,16 +537,27 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             jump_f->app(result, { jump_f->param(0), cg.world.lit_false() });
             return cg.enter(result)->param(1);
         }
-        default:
+        default: {
             const TokenTag op = (TokenTag) tag();
+            auto dbg = cg.loc2dbg(loc());
 
             if (Token::is_assign(op)) {
                 auto lvar = lhs()->lemit(cg);
                 auto rdef = rhs()->remit(cg);
 
-                if (op != Token::ASGN) {
-                    auto sop = Token::separate_assign(op);
-                    rdef = cg.world.binop(Token::to_binop(sop), cg.load(lvar, loc()), rdef, cg.loc2dbg(loc()));
+                switch (op) {
+                    case     ASGN: break;
+                    case ADD_ASGN: rdef = cg.world.arithop_add(cg.load(lvar, loc()), rdef, dbg); break;
+                    case SUB_ASGN: rdef = cg.world.arithop_sub(cg.load(lvar, loc()), rdef, dbg); break;
+                    case MUL_ASGN: rdef = cg.world.arithop_mul(cg.load(lvar, loc()), rdef, dbg); break;
+                    case DIV_ASGN: rdef = cg.world.arithop_div(cg.load(lvar, loc()), rdef, dbg); break;
+                    case REM_ASGN: rdef = cg.world.arithop_rem(cg.load(lvar, loc()), rdef, dbg); break;
+                    case AND_ASGN: rdef = cg.world.arithop_and(cg.load(lvar, loc()), rdef, dbg); break;
+                    case  OR_ASGN: rdef = cg.world.arithop_or (cg.load(lvar, loc()), rdef, dbg); break;
+                    case XOR_ASGN: rdef = cg.world.arithop_xor(cg.load(lvar, loc()), rdef, dbg); break;
+                    case SHL_ASGN: rdef = cg.world.arithop_shl(cg.load(lvar, loc()), rdef, dbg); break;
+                    case SHR_ASGN: rdef = cg.world.arithop_shr(cg.load(lvar, loc()), rdef, dbg); break;
+                    default: THORIN_UNREACHABLE;
                 }
 
                 cg.store(lvar, rdef, loc());
@@ -555,7 +566,27 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
             auto ldef = lhs()->remit(cg);
             auto rdef = rhs()->remit(cg);
-            return cg.world.binop(Token::to_binop(op), ldef, rdef, cg.loc2dbg(loc()));
+
+            switch (op) {
+                case  EQ: return cg.world.cmp_eq     (ldef, rdef, dbg);
+                case  NE: return cg.world.cmp_ne     (ldef, rdef, dbg);
+                case  LT: return cg.world.cmp_lt     (ldef, rdef, dbg);
+                case  LE: return cg.world.cmp_le     (ldef, rdef, dbg);
+                case  GT: return cg.world.cmp_gt     (ldef, rdef, dbg);
+                case  GE: return cg.world.cmp_ge     (ldef, rdef, dbg);
+                case  OR: return cg.world.arithop_or (ldef, rdef, dbg);
+                case XOR: return cg.world.arithop_xor(ldef, rdef, dbg);
+                case AND: return cg.world.arithop_and(ldef, rdef, dbg);
+                case SHL: return cg.world.arithop_shl(ldef, rdef, dbg);
+                case SHR: return cg.world.arithop_shr(ldef, rdef, dbg);
+                case ADD: return cg.world.arithop_add(ldef, rdef, dbg);
+                case SUB: return cg.world.arithop_sub(ldef, rdef, dbg);
+                case MUL: return cg.world.arithop_mul(ldef, rdef, dbg);
+                case DIV: return cg.world.arithop_div(ldef, rdef, dbg);
+                case REM: return cg.world.arithop_rem(ldef, rdef, dbg);
+                default: THORIN_UNREACHABLE;
+            }
+        }
     }
 }
 
@@ -563,7 +594,7 @@ const Def* PostfixExpr::remit(CodeGen& cg) const {
     auto var = lhs()->lemit(cg);
     auto def = cg.load(var, loc());
     auto one = cg.world.lit_one(def->type(), cg.loc2dbg(loc()));
-    cg.store(var, cg.world.arithop(Token::to_arithop((TokenTag) tag()), def, one, cg.loc2dbg(loc())), loc());
+    cg.store(var, cg.world.arithop(tag() == INC ? ArithOp_add : ArithOp_sub, def, one, cg.loc2dbg(loc())), loc());
     return def;
 }
 

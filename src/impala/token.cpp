@@ -110,56 +110,6 @@ Token::Token(Loc loc, Tag tag, const std::string& str)
     }
 }
 
-bool Token::is_rel(Tag op) {
-    switch (op) {
-        case EQ: case LT: case LE:
-        case NE: case GT: case GE: return true;
-        default: return false;
-    }
-}
-
-TokenTag Token::separate_assign(TokenTag tag) {
-    assert(is_assign(tag) && "must be an assignment other than ASGN");
-
-    switch (tag) {
-        case ADD_ASGN: return ADD;
-        case SUB_ASGN: return SUB;
-        case MUL_ASGN: return MUL;
-        case DIV_ASGN: return DIV;
-        case REM_ASGN: return REM;
-        case AND_ASGN: return AND;
-        case  OR_ASGN: return OR;
-        case XOR_ASGN: return XOR;
-        case SHL_ASGN: return SHL;
-        case SHR_ASGN: return SHR;
-        default: THORIN_UNREACHABLE;
-    }
-}
-
-int Token::to_binop(Tag tag) {
-    switch (tag) {
-        case INC:
-        case ADD: return ArithOp_add;
-        case DEC:
-        case SUB: return ArithOp_sub;
-        case MUL: return ArithOp_mul;
-        case DIV: return ArithOp_div;
-        case REM: return ArithOp_rem;
-        case AND: return ArithOp_and;
-        case  OR: return ArithOp_or;
-        case XOR: return ArithOp_xor;
-        case SHL: return ArithOp_shl;
-        case SHR: return ArithOp_shr;
-        case  EQ: return Cmp_eq;
-        case  NE: return Cmp_ne;
-        case  LT: return Cmp_lt;
-        case  LE: return Cmp_le;
-        case  GT: return Cmp_gt;
-        case  GE: return Cmp_ge;
-        default: THORIN_UNREACHABLE;
-    }
-}
-
 /*
  * static member variables
  */
