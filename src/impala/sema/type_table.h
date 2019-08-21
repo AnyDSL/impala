@@ -3,12 +3,75 @@
 #ifndef THORIN_UTIL_TYPE_TABLE_H
 #define THORIN_UTIL_TYPE_TABLE_H
 
+#include <type_traits>
+
 #include "thorin/util/hash.h"
 #include "thorin/util/cast.h"
 #include "thorin/util/array.h"
 #include "thorin/util/stream.h"
 
 namespace thorin {
+
+/// @c static_cast checked in debug version
+template<class L, class R>
+inline L* scast(R* r) {
+    static_assert(std::is_base_of<R, L>::value, "R is not a base type of L");
+    assert((!r || dynamic_cast<L*>(r)) && "cast not possible" );
+    return static_cast<L*>(r);
+}
+
+/// @c static_cast checked in debug version -- @c const version
+template<class L, class R>
+inline const L* scast(const R* r) { return const_cast<const L*>(scast<L, R>(const_cast<R*>(r))); }
+
+/// shorthand for @c dynamic_cast
+template<class L, class R>
+inline L* dcast(R* u) {
+    static_assert(std::is_base_of<R, L>::value, "R is not a base type of L");
+    return dynamic_cast<L*>(u);
+}
+
+/// shorthand for @c dynamic_cast -- @c const version
+template<class L, class R>
+inline const L* dcast(const R* r) { return const_cast<const L*>(dcast<L, R>(const_cast<R*>(r))); }
+
+/**
+ * Provides handy @p as and @p isa methods.
+ * Inherit from this class in order to use
+ * @code
+Bar* bar = foo->as<Bar>();
+if (Bar* bar = foo->isa<Bar>()) { ... }
+ * @endcode
+ * instead of more combersume
+ * @code
+Bar* bar = thorin::scast<Bar>(foo);
+if (Bar* bar = thorin::dcast<Bar>(foo)) { ... }
+ * @endcode
+ */
+template<class Base>
+class RTTICast {
+public:
+    /**
+     * Acts as static cast -- checked for correctness in the debug version.
+     * Use if you @em know that @p this is of type @p To.
+     * It is a program error (an assertion is raised) if this does not hold.
+     */
+    template<class To> To* as() { return thorin::scast<To>(static_cast<Base*>(this)); }
+
+    /**
+     * Acts as dynamic cast.
+     * @return @p this cast to @p To if @p this is a @p To, 0 otherwise.
+     */
+    template<class To> To* isa() { return thorin::dcast<To>(static_cast<Base*>(this)); }
+
+    ///< @c const version of @see RTTICast#as.
+    template<class To>
+    const To* as()  const { return thorin::scast<To>(static_cast<const Base*>(this)); }
+
+    ///< @c const version of @see RTTICast#isa.
+    template<class To>
+    const To* isa() const { return thorin::dcast<To>(static_cast<const Base*>(this)); }
+};
 
 class Type;
 
@@ -21,7 +84,7 @@ using Type2Type = TypeMap<const Type*>;
 
 /// Base class for all \p Type%s.
 template <class TypeTable>
-class TypeBase : public RuntimeCast<TypeBase<TypeTable>>, public Streamable {
+class TypeBase : public RTTICast<TypeBase<TypeTable>>, public Streamable {
 protected:
     using Type2Type = GIDMap<const TypeBase*, const TypeBase*>;
     using Types     = ArrayRef<const TypeBase*>;

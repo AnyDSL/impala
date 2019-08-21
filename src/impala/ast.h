@@ -126,7 +126,7 @@ protected:
 
 //------------------------------------------------------------------------------
 
-class ASTNode : public thorin::RuntimeCast<ASTNode>, public thorin::Streamable  {
+class ASTNode : public thorin::RTTICast<ASTNode>, public thorin::Streamable  {
 public:
     ASTNode() = delete;
     ASTNode(const ASTNode&) = delete;
