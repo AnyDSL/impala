@@ -99,9 +99,9 @@ public:
         auto alloc = world.alloc(type, cur_mem, dbg);
         cur_mem = world.extract(alloc, 0_u32, dbg);
         auto result = world.extract(alloc, 1, dbg);
-        auto ptr = result->type()->as<thorin::PtrType>();
+        auto ptr = result->type()->as<thorin::Ptr>();
         if (auto variadic = ptr->pointee()->isa<Variadic>())
-            return world.bitcast(world.ptr_type(world.unsafe_variadic(variadic->body()), ptr->addr_space()), result);
+            return world.bitcast(world.type_ptr(world.unsafe_variadic(variadic->body()), ptr->addr_space()), result);
         return result;
     }
 
@@ -177,8 +177,8 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
         s->set(1, world.variant_type(ops));
         thorin_type(enum_type) = nullptr;
         return s;
-    } else if (auto ptr_type = type->isa<PtrType>()) {
-        return world.ptr_type(convert(ptr_type->pointee()), ptr_type->addr_space());
+    } else if (auto ptr = type->isa<PtrType>()) {
+        return world.type_ptr(convert(ptr->pointee()), ptr->addr_space());
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
         return world.variadic(definite_array_type->dim(), convert(definite_array_type->elem_type()));
     } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {
@@ -661,27 +661,27 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         } else if (name == "undef") {
                             return cg.world.bot(cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc()));
                         } else if (name == "reserve_shared") {
-                            auto ptr_type = cg.convert(type());
+                            auto ptr = cg.convert(type());
                             auto cn = cg.world.cn({
                                 cg.world.type_mem(), cg.world.type_qs32(),
-                                cg.world.cn({ cg.world.type_mem(), ptr_type }) });
+                                cg.world.cn({ cg.world.type_mem(), ptr }) });
                             auto cont = cg.world.lam(cn, cg.loc2dbg("reserve_shared", loc()));
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "atomic") {
                             auto poly_type = cg.convert(type());
-                            auto ptr_type = cg.convert(arg(1)->type());
+                            auto ptr = cg.convert(arg(1)->type());
                             auto cn = cg.world.cn({
-                                cg.world.type_mem(), cg.world.type_pu32(), ptr_type, poly_type,
+                                cg.world.type_mem(), cg.world.type_pu32(), ptr, poly_type,
                                 cg.world.cn({ cg.world.type_mem(), poly_type }) });
                             auto cont = cg.world.lam(cn, cg.loc2dbg("atomic", loc()));
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "cmpxchg") {
-                            auto ptr_type = cg.convert(arg(0)->type());
-                            auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
+                            auto ptr = cg.convert(arg(0)->type());
+                            auto poly_type = ptr->as<thorin::Ptr>()->pointee();
                             auto cn = cg.world.cn({
-                                cg.world.type_mem(), ptr_type, poly_type, poly_type,
+                                cg.world.type_mem(), ptr, poly_type, poly_type,
                                 cg.world.cn({ cg.world.type_mem(), poly_type, cg.world.type_bool() })
                             });
                             auto cont = cg.world.lam(cn, cg.loc2dbg("cmpxchg", loc()));
@@ -689,7 +689,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             dst = cont;
                         } else if (name == "pe_info") {
                             auto poly_type = cg.convert(arg(1)->type());
-                            auto string_type = cg.world.ptr_type(cg.world.unsafe_variadic(cg.world.type_pu8()));
+                            auto string_type = cg.world.type_ptr(cg.world.unsafe_variadic(cg.world.type_pu8()));
                             auto cn = cg.world.cn({
                                 cg.world.type_mem(), string_type, poly_type,
                                 cg.world.cn({ cg.world.type_mem() }) });
