@@ -38,9 +38,9 @@ public:
         if (auto uint = type->isa<Uint>()) return world.lit(uint, 1, dbg);
         if (auto real = type->isa<Real>()) {
             switch (real->lit_num_bits()) {
-                case 16: return world.lit_qreal(1._f16, dbg);
-                case 32: return world.lit_qreal(1._f32, dbg);
-                case 64: return world.lit_qreal(1._f64, dbg);
+                case 16: return world.lit_preal(1._f16, dbg);
+                case 32: return world.lit_preal(1._f32, dbg);
+                case 64: return world.lit_preal(1._f64, dbg);
                 default: THORIN_UNREACHABLE;
             }
         }
