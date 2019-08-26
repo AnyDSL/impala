@@ -51,7 +51,7 @@ const Expr* Expr::skip_rvalue() const {
     return this;
 }
 
-uint64_t LiteralExpr::get_u64() const { return thorin::bcast<uint64_t, thorin::Box>(box()); }
+uint64_t LiteralExpr::get_u64() const { return thorin::bitcast<uint64_t, thorin::Box>(box()); }
 
 bool IfExpr::has_else() const {
     if (auto block = else_expr_->isa<BlockExpr>())
