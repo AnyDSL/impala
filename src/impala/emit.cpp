@@ -33,6 +33,20 @@ public:
         return bb;
     }
 
+    const Def* lit_one(const Def* type, Debug dbg) {
+        if (auto sint = type->isa<Sint>()) return world.lit(sint, 1, dbg);
+        if (auto uint = type->isa<Uint>()) return world.lit(uint, 1, dbg);
+        if (auto real = type->isa<Real>()) {
+            switch (real->lit_num_bits()) {
+                case 16: return world.lit_qreal(1._f16, dbg);
+                case 32: return world.lit_qreal(1._f32, dbg);
+                case 64: return world.lit_qreal(1._f64, dbg);
+                default: THORIN_UNREACHABLE;
+            }
+        }
+        THORIN_UNREACHABLE;
+    }
+
     std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, Debug dbg) {
         if (ret_type == nullptr) {
             cur_bb->app(callee, args, dbg);
@@ -136,9 +150,18 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
         return world.lam(world.kind_star(), convert(lambda->body()), {lambda->name()});
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_tag()) {
-#define IMPALA_TYPE(itype, ttype) \
-            case PrimType_##itype: return world.type_##ttype();
-#include "impala/tokenlist.h"
+            case PrimType_bool: return world.type_bool();
+            case PrimType_i8  : return world.type_sint( 8, true);
+            case PrimType_i16 : return world.type_sint(16, true);
+            case PrimType_i32 : return world.type_sint(32, true);
+            case PrimType_i64 : return world.type_sint(64, true);
+            case PrimType_u8  : return world.type_sint( 8, false);
+            case PrimType_u16 : return world.type_sint(16, false);;
+            case PrimType_u32 : return world.type_sint(32, false);;
+            case PrimType_u64 : return world.type_sint(64, false);
+            case PrimType_f16 : return world.type_sint(16, false);
+            case PrimType_f32 : return world.type_sint(32, false);
+            case PrimType_f64 : return world.type_sint(64, false);
             default: THORIN_UNREACHABLE;
         }
     } else if (auto cn = type->isa<FnType>()) {
@@ -173,7 +196,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
         thorin::Array<const thorin::Def*> ops(variants.size());
         std::copy(variants.begin(), variants.end(), ops.begin());
 
-        s->set(0, world.type_qu32());
+        s->set(0, world.type_uint(32, true));
         s->set(1, world.variant_type(ops));
         thorin_type(enum_type) = nullptr;
         return s;
@@ -331,7 +354,7 @@ void StructDecl::emit_head(CodeGen& cg) const {
 void OptionDecl::emit(CodeGen& cg) const {
     auto enum_type = enum_decl()->type()->as<EnumType>();
     auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
-    auto id = cg.world.lit_qu32(index(), cg.loc2dbg(loc()));
+    auto id = cg.world.lit_quint(index(), cg.loc2dbg(loc()));
     if (num_args() == 0) {
         auto bot = cg.world.bot(variant_type);
         def_ = cg.world.tuple(cg.thorin_enum_type(enum_type), { id, bot });
@@ -367,27 +390,31 @@ const Def* Expr::remit(CodeGen& cg) const { return cg.load(lemit(cg), loc()); }
 const Def* EmptyExpr::remit(CodeGen& cg) const { return cg.world.tuple(); }
 
 const Def* LiteralExpr::remit(CodeGen& cg) const {
-    thorin::PrimTypeTag ttag;
-
     switch (tag()) {
-#define IMPALA_LIT(itype, ttype) \
-        case LIT_##itype: ttag = thorin::PrimType_##ttype; break;
-#include "impala/tokenlist.h"
-        case LIT_bool: ttag = thorin::PrimType_bool; break;
+        case LIT_bool: return cg.world.lit_bool (box().get<bool>());
+        case LIT_i8  : return cg.world.lit_qsint(box().get<  s8>(), cg.loc2dbg(loc()));
+        case LIT_i16 : return cg.world.lit_qsint(box().get< s16>(), cg.loc2dbg(loc()));
+        case LIT_i32 : return cg.world.lit_qsint(box().get< s32>(), cg.loc2dbg(loc()));
+        case LIT_i64 : return cg.world.lit_qsint(box().get< s64>(), cg.loc2dbg(loc()));
+        case LIT_u8  : return cg.world.lit_puint(box().get<  u8>(), cg.loc2dbg(loc()));
+        case LIT_u16 : return cg.world.lit_puint(box().get< u16>(), cg.loc2dbg(loc()));
+        case LIT_u32 : return cg.world.lit_puint(box().get< u32>(), cg.loc2dbg(loc()));
+        case LIT_u64 : return cg.world.lit_puint(box().get< u64>(), cg.loc2dbg(loc()));
+        case LIT_f16 : return cg.world.lit_preal(box().get< f16>(), cg.loc2dbg(loc()));
+        case LIT_f32 : return cg.world.lit_preal(box().get< f32>(), cg.loc2dbg(loc()));
+        case LIT_f64 : return cg.world.lit_preal(box().get< f64>(), cg.loc2dbg(loc()));
         default: THORIN_UNREACHABLE;
     }
-
-    return cg.world.lit(ttag, box(), cg.loc2dbg(loc()));
 }
 
 const Def* CharExpr::remit(CodeGen& cg) const {
-    return cg.world.lit_pu8(value(), cg.loc2dbg(loc()));
+    return cg.world.lit_puint<u8>(value(), cg.loc2dbg(loc()));
 }
 
 const Def* StrExpr::remit(CodeGen& cg) const {
     Array<const Def*> args(values_.size());
     for (size_t i = 0, e = args.size(); i != e; ++i)
-        args[i] = cg.world.lit_pu8(values_[i], cg.loc2dbg(loc()));
+        args[i] = cg.world.lit_puint<u8>(values_[i], cg.loc2dbg(loc()));
 
     return cg.world.tuple(args, cg.loc2dbg(loc()));
 }
@@ -437,7 +464,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
         case DEC: {
             auto var = rhs()->lemit(cg);
             auto val = cg.load(var, loc());
-            auto one = cg.world.lit_one(val->type(), cg.loc2dbg(loc()));
+            auto one = cg.lit_one(val->type(), cg.loc2dbg(loc()));
             val = cg.world.arithop(tag() == INC ? ArithOp_add : ArithOp_sub, val, one, cg.loc2dbg(loc()));
             cg.store(var, val, loc());
             return val;
@@ -593,7 +620,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 const Def* PostfixExpr::remit(CodeGen& cg) const {
     auto var = lhs()->lemit(cg);
     auto def = cg.load(var, loc());
-    auto one = cg.world.lit_one(def->type(), cg.loc2dbg(loc()));
+    auto one = cg.lit_one(def->type(), cg.loc2dbg(loc()));
     cg.store(var, cg.world.arithop(tag() == INC ? ArithOp_add : ArithOp_sub, def, one, cg.loc2dbg(loc())), loc());
     return def;
 }
@@ -663,7 +690,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         } else if (name == "reserve_shared") {
                             auto ptr = cg.convert(type());
                             auto cn = cg.world.cn({
-                                cg.world.type_mem(), cg.world.type_qs32(),
+                                cg.world.type_mem(), cg.world.type_sint(32, true),
                                 cg.world.cn({ cg.world.type_mem(), ptr }) });
                             auto cont = cg.world.lam(cn, cg.loc2dbg("reserve_shared", loc()));
                             cont->set_intrinsic();
@@ -672,7 +699,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto poly_type = cg.convert(type());
                             auto ptr = cg.convert(arg(1)->type());
                             auto cn = cg.world.cn({
-                                cg.world.type_mem(), cg.world.type_pu32(), ptr, poly_type,
+                                cg.world.type_mem(), cg.world.type_uint(32, false), ptr, poly_type,
                                 cg.world.cn({ cg.world.type_mem(), poly_type }) });
                             auto cont = cg.world.lam(cn, cg.loc2dbg("atomic", loc()));
                             cont->set_intrinsic();
@@ -689,7 +716,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             dst = cont;
                         } else if (name == "pe_info") {
                             auto poly_type = cg.convert(arg(1)->type());
-                            auto string_type = cg.world.type_ptr(cg.world.unsafe_variadic(cg.world.type_pu8()));
+                            auto string_type = cg.world.type_ptr(cg.world.unsafe_variadic(cg.world.type_uint(8, true)));
                             auto cn = cg.world.cn({
                                 cg.world.type_mem(), string_type, poly_type,
                                 cg.world.cn({ cg.world.type_mem() }) });
@@ -734,7 +761,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
 
 const Def* FieldExpr::lemit(CodeGen& cg) const {
     auto value = lhs()->lemit(cg);
-    return cg.world.unsafe_lea(value, cg.world.lit_qu32(index(), cg.loc2dbg(loc())), cg.loc2dbg(loc()));
+    return cg.world.unsafe_lea(value, cg.world.lit_nat(index(), cg.loc2dbg(loc())), cg.loc2dbg(loc()));
 }
 
 const Def* FieldExpr::remit(CodeGen& cg) const {
@@ -805,7 +832,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
                 } else {
                     auto enum_ptrn = arm(i)->ptrn()->as<EnumPtrn>();
                     auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
-                    defs[i] = cg.world.lit_qu32(option_decl->index(), cg.loc2dbg(arm(i)->ptrn()->loc()));
+                    defs[i] = cg.world.lit_nat(option_decl->index(), cg.loc2dbg(arm(i)->ptrn()->loc()));
                 }
                 targets[i] = cg.basicblock(cg.loc2dbg("case", arm(i)->loc().front()));
             }
@@ -941,7 +968,7 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 
 const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     auto index = path()->decl()->as<OptionDecl>()->index();
-    auto cond = cg.world.cmp_eq(cg.world.extract(init, 0_u32, cg.loc2dbg(loc())), cg.world.lit_qu32(index, cg.loc2dbg(loc())));
+    auto cond = cg.world.cmp_eq(cg.world.extract(init, 0_u32, cg.loc2dbg(loc())), cg.world.lit_nat(index, cg.loc2dbg(loc())));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
         auto variant = cg.world.cast(variant_type, cg.world.extract(init, 1, cg.loc2dbg(loc())), cg.loc2dbg(loc()));

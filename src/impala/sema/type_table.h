@@ -5,12 +5,44 @@
 
 #include <type_traits>
 
+#include "thorin/def.h"
 #include "thorin/util/hash.h"
 #include "thorin/util/cast.h"
 #include "thorin/util/array.h"
 #include "thorin/util/stream.h"
 
 namespace thorin {
+
+#define THORIN_S_TYPES(m) m(s8)  m(s16) m(s32) m(s64)
+#define THORIN_U_TYPES(m) m(u8)  m(u16) m(u32) m(u64)
+#define THORIN_F_TYPES(m)        m(f16) m(f32) m(f64)
+
+#define THORIN_TYPES(m) THORIN_S_TYPES(m) THORIN_U_TYPES(m) THORIN_F_TYPES(m)
+
+union Box {
+public:
+    Box() { u64_ = 0; }
+    Box(bool val) { u64_ = 0; bool_ = val; }
+#define CODE(T) \
+    Box(T val) { u64_ = 0; T ## _ = val; }
+    THORIN_TYPES(CODE)
+#undef CODE
+
+    bool get_bool() const { return bool_; }
+#define CODE(T) \
+    T get_ ## T() const { return T ## _; }
+    THORIN_TYPES(CODE)
+#undef CODE
+
+    bool operator==(Box other) const { return this->u64_ == other.get_u64(); }
+    template<typename T> T& get() { return *((T*)this); }
+
+private:
+    bool bool_;
+#define CODE(T) T T ## _;
+    THORIN_TYPES(CODE)
+#undef CODE
+};
 
 /// @c static_cast checked in debug version
 template<class L, class R>
