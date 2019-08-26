@@ -155,13 +155,13 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
             case PrimType_i16 : return world.type_sint(16, true);
             case PrimType_i32 : return world.type_sint(32, true);
             case PrimType_i64 : return world.type_sint(64, true);
-            case PrimType_u8  : return world.type_sint( 8, false);
-            case PrimType_u16 : return world.type_sint(16, false);;
-            case PrimType_u32 : return world.type_sint(32, false);;
-            case PrimType_u64 : return world.type_sint(64, false);
-            case PrimType_f16 : return world.type_sint(16, false);
-            case PrimType_f32 : return world.type_sint(32, false);
-            case PrimType_f64 : return world.type_sint(64, false);
+            case PrimType_u8  : return world.type_uint( 8, false);
+            case PrimType_u16 : return world.type_uint(16, false);;
+            case PrimType_u32 : return world.type_uint(32, false);;
+            case PrimType_u64 : return world.type_uint(64, false);
+            case PrimType_f16 : return world.type_real(16, false);
+            case PrimType_f32 : return world.type_real(32, false);
+            case PrimType_f64 : return world.type_real(64, false);
             default: THORIN_UNREACHABLE;
         }
     } else if (auto cn = type->isa<FnType>()) {
