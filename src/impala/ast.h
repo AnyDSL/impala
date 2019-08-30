@@ -1167,15 +1167,14 @@ public:
         LIT_bool,
     };
 
-    LiteralExpr(Loc loc, Tag tag, thorin::Box box)
+    LiteralExpr(Loc loc, Tag tag, uint64_t val)
         : Expr(loc)
         , tag_(tag)
-        , box_(box)
+        , val_(val)
     {}
 
     Tag tag() const { return tag_; }
-    thorin::Box box() const { return box_; }
-    uint64_t get_u64() const;
+    template<class T = uint64_t> T get() const { return thorin::bitcast<T>(val_); }
     PrimTypeTag literal2type() const;
 
     void bind(NameSema&) const override;
@@ -1187,7 +1186,7 @@ private:
     void check(TypeSema&) const override;
 
     Tag tag_;
-    thorin::Box box_;
+    uint64_t val_;
 };
 
 class CharExpr : public Expr {

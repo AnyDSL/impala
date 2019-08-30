@@ -33,7 +33,9 @@ public:
         return bb;
     }
 
-    const Def* lit_one(const Def* type, Debug dbg) {
+    const Def* lit_one(const Def* type, Debug dbg);
+#if 0
+    {
         if (auto sint = type->isa<Sint>()) return world.lit(sint, 1, dbg);
         if (auto uint = type->isa<Uint>()) return world.lit(uint, 1, dbg);
         if (auto real = type->isa<Real>()) {
@@ -46,6 +48,7 @@ public:
         }
         THORIN_UNREACHABLE;
     }
+#endif
 
     std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, Debug dbg) {
         if (ret_type == nullptr) {
@@ -151,17 +154,17 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_tag()) {
             case PrimType_bool: return world.type_bool();
-            case PrimType_i8  : return world.type_sint( 8, true);
-            case PrimType_i16 : return world.type_sint(16, true);
-            case PrimType_i32 : return world.type_sint(32, true);
-            case PrimType_i64 : return world.type_sint(64, true);
-            case PrimType_u8  : return world.type_uint( 8, false);
-            case PrimType_u16 : return world.type_uint(16, false);;
-            case PrimType_u32 : return world.type_uint(32, false);;
-            case PrimType_u64 : return world.type_uint(64, false);
-            case PrimType_f16 : return world.type_real(16, false);
-            case PrimType_f32 : return world.type_real(32, false);
-            case PrimType_f64 : return world.type_real(64, false);
+            case PrimType_i8  :
+            case PrimType_u8  : return world.type_int( 8);
+            case PrimType_i16 :
+            case PrimType_u16 : return world.type_int(16);
+            case PrimType_i32 :
+            case PrimType_u32 : return world.type_int(32);
+            case PrimType_i64 :
+            case PrimType_u64 : return world.type_int(64);
+            case PrimType_f16 : return world.type_real(16);
+            case PrimType_f32 : return world.type_real(32);
+            case PrimType_f64 : return world.type_real(64);
             default: THORIN_UNREACHABLE;
         }
     } else if (auto cn = type->isa<FnType>()) {
@@ -196,7 +199,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
         thorin::Array<const thorin::Def*> ops(variants.size());
         std::copy(variants.begin(), variants.end(), ops.begin());
 
-        s->set(0, world.type_uint(32, true));
+        s->set(0, world.type_int(32));
         s->set(1, world.variant_type(ops));
         thorin_type(enum_type) = nullptr;
         return s;
@@ -354,7 +357,7 @@ void StructDecl::emit_head(CodeGen& cg) const {
 void OptionDecl::emit(CodeGen& cg) const {
     auto enum_type = enum_decl()->type()->as<EnumType>();
     auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
-    auto id = cg.world.lit_quint(index(), cg.loc2dbg(loc()));
+    auto id = cg.world.lit_int(index(), cg.loc2dbg(loc()));
     if (num_args() == 0) {
         auto bot = cg.world.bot(variant_type);
         def_ = cg.world.tuple(cg.thorin_enum_type(enum_type), { id, bot });
@@ -391,30 +394,30 @@ const Def* EmptyExpr::remit(CodeGen& cg) const { return cg.world.tuple(); }
 
 const Def* LiteralExpr::remit(CodeGen& cg) const {
     switch (tag()) {
-        case LIT_bool: return cg.world.lit_bool (box().get<bool>());
-        case LIT_i8  : return cg.world.lit_qsint(box().get<  s8>(), cg.loc2dbg(loc()));
-        case LIT_i16 : return cg.world.lit_qsint(box().get< s16>(), cg.loc2dbg(loc()));
-        case LIT_i32 : return cg.world.lit_qsint(box().get< s32>(), cg.loc2dbg(loc()));
-        case LIT_i64 : return cg.world.lit_qsint(box().get< s64>(), cg.loc2dbg(loc()));
-        case LIT_u8  : return cg.world.lit_puint(box().get<  u8>(), cg.loc2dbg(loc()));
-        case LIT_u16 : return cg.world.lit_puint(box().get< u16>(), cg.loc2dbg(loc()));
-        case LIT_u32 : return cg.world.lit_puint(box().get< u32>(), cg.loc2dbg(loc()));
-        case LIT_u64 : return cg.world.lit_puint(box().get< u64>(), cg.loc2dbg(loc()));
-        case LIT_f16 : return cg.world.lit_preal(box().get< f16>(), cg.loc2dbg(loc()));
-        case LIT_f32 : return cg.world.lit_preal(box().get< f32>(), cg.loc2dbg(loc()));
-        case LIT_f64 : return cg.world.lit_preal(box().get< f64>(), cg.loc2dbg(loc()));
+        case LIT_bool: return cg.world.lit_bool(get<bool>());
+        case LIT_i8  : return cg.world.lit_int (get<  s8>(), cg.loc2dbg(loc()));
+        case LIT_i16 : return cg.world.lit_int (get< s16>(), cg.loc2dbg(loc()));
+        case LIT_i32 : return cg.world.lit_int (get< s32>(), cg.loc2dbg(loc()));
+        case LIT_i64 : return cg.world.lit_int (get< s64>(), cg.loc2dbg(loc()));
+        case LIT_u8  : return cg.world.lit_int (get<  u8>(), cg.loc2dbg(loc()));
+        case LIT_u16 : return cg.world.lit_int (get< u16>(), cg.loc2dbg(loc()));
+        case LIT_u32 : return cg.world.lit_int (get< u32>(), cg.loc2dbg(loc()));
+        case LIT_u64 : return cg.world.lit_int (get< u64>(), cg.loc2dbg(loc()));
+        case LIT_f16 : return cg.world.lit_real(get< r16>(), cg.loc2dbg(loc()));
+        case LIT_f32 : return cg.world.lit_real(get< r32>(), cg.loc2dbg(loc()));
+        case LIT_f64 : return cg.world.lit_real(get< r64>(), cg.loc2dbg(loc()));
         default: THORIN_UNREACHABLE;
     }
 }
 
 const Def* CharExpr::remit(CodeGen& cg) const {
-    return cg.world.lit_puint<u8>(value(), cg.loc2dbg(loc()));
+    return cg.world.lit_int<u8>(value(), cg.loc2dbg(loc()));
 }
 
 const Def* StrExpr::remit(CodeGen& cg) const {
     Array<const Def*> args(values_.size());
     for (size_t i = 0, e = args.size(); i != e; ++i)
-        args[i] = cg.world.lit_puint<u8>(values_[i], cg.loc2dbg(loc()));
+        args[i] = cg.world.lit_int<u8>(values_[i], cg.loc2dbg(loc()));
 
     return cg.world.tuple(args, cg.loc2dbg(loc()));
 }
@@ -458,6 +461,10 @@ const Def* PathExpr::remit(CodeGen& cg) const {
     return value_decl()->is_mut() || global ? cg.load(def, loc()) : def;
 }
 
+static WMode type2wmode(const Type* type) {
+    return Token::is_signed((TokenTag) type->as<PrimType>()->tag()) ? WMode::nsw : WMode::none;
+}
+
 const Def* PrefixExpr::remit(CodeGen& cg) const {
     switch (tag()) {
         case INC:
@@ -465,13 +472,19 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             auto var = rhs()->lemit(cg);
             auto val = cg.load(var, loc());
             auto one = cg.lit_one(val->type(), cg.loc2dbg(loc()));
-            val = cg.world.arithop(tag() == INC ? ArithOp_add : ArithOp_sub, val, one, cg.loc2dbg(loc()));
+            auto mode = type2wmode(rhs()->type());
+            if (tag() == INC)
+                val = cg.world.op<WOp::add>(mode, val, one, cg.loc2dbg(loc()));
+            else
+                val = cg.world.op<WOp::sub>(mode, val, one, cg.loc2dbg(loc()));
             cg.store(var, val, loc());
             return val;
         }
         case ADD: return rhs()->remit(cg);
+#if 0
         case SUB: return cg.world.arithop_minus(rhs()->remit(cg), cg.loc2dbg(loc()));
         case NOT: return cg.world.arithop_not(rhs()->remit(cg), cg.loc2dbg(loc()));
+#endif
         case TILDE: {
             auto def = rhs()->remit(cg);
             auto ptr = cg.alloc(def->type(), cg.loc2dbg(loc()));
@@ -571,19 +584,28 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             if (Token::is_assign(op)) {
                 auto lvar = lhs()->lemit(cg);
                 auto rdef = rhs()->remit(cg);
-
+                bool s = false; // TODO
+                bool r = false; // TODO
                 switch (op) {
                     case     ASGN: break;
-                    case ADD_ASGN: rdef = cg.world.arithop_add(cg.load(lvar, loc()), rdef, dbg); break;
-                    case SUB_ASGN: rdef = cg.world.arithop_sub(cg.load(lvar, loc()), rdef, dbg); break;
-                    case MUL_ASGN: rdef = cg.world.arithop_mul(cg.load(lvar, loc()), rdef, dbg); break;
-                    case DIV_ASGN: rdef = cg.world.arithop_div(cg.load(lvar, loc()), rdef, dbg); break;
-                    case REM_ASGN: rdef = cg.world.arithop_rem(cg.load(lvar, loc()), rdef, dbg); break;
-                    case AND_ASGN: rdef = cg.world.arithop_and(cg.load(lvar, loc()), rdef, dbg); break;
-                    case  OR_ASGN: rdef = cg.world.arithop_or (cg.load(lvar, loc()), rdef, dbg); break;
-                    case XOR_ASGN: rdef = cg.world.arithop_xor(cg.load(lvar, loc()), rdef, dbg); break;
-                    case SHL_ASGN: rdef = cg.world.arithop_shl(cg.load(lvar, loc()), rdef, dbg); break;
-                    case SHR_ASGN: rdef = cg.world.arithop_shr(cg.load(lvar, loc()), rdef, dbg); break;
+                    case ADD_ASGN:
+                        if (r)
+                            rdef = cg.world.op<ROp::radd>(cg.load(lvar, loc()), rdef, dbg);
+                        else if (s)
+                            rdef = cg.world.op<WOp:: add>(WMode::nsw, cg.load(lvar, loc()), rdef, dbg);
+                        else
+                            rdef = cg.world.op<WOp:: add>(WMode::none, cg.load(lvar, loc()), rdef, dbg);
+                        break;
+                    case SUB_ASGN: rdef = cg.world.op<WOp::sub>(mode, cg.load(lvar, loc()), rdef, dbg); break;
+                    case MUL_ASGN: rdef = cg.world.op<WOp::mul>(mode, cg.load(lvar, loc()), rdef, dbg); break;
+                    case SHL_ASGN: rdef = cg.world.op<WOp::shl>(cg.load(lvar, loc()), rdef, dbg); break;
+
+                    case AND_ASGN: rdef = cg.world.op<IOp::iand>(cg.load(lvar, loc()), rdef, dbg); break;
+                    case  OR_ASGN: rdef = cg.world.op<IOp::ior >(cg.load(lvar, loc()), rdef, dbg); break;
+                    case XOR_ASGN: rdef = cg.world.op<IOp::ixor>(cg.load(lvar, loc()), rdef, dbg); break;
+                    case SHR_ASGN: rdef = cg.world.op<WOp::ishr>(cg.load(lvar, loc()), rdef, dbg); break;
+                    case DIV_ASGN: rdef = cg.world.op<WOp::div>(cg.load(lvar, loc()), rdef, dbg); break;
+                    case REM_ASGN: rdef = cg.world.op<WOp::rem>(cg.load(lvar, loc()), rdef, dbg); break;
                     default: THORIN_UNREACHABLE;
                 }
 

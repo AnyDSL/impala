@@ -349,14 +349,14 @@ Visibility Parser::parse_visibility() {
 
 uint64_t Parser::parse_integer(const char* what) {
     switch (lookahead()) {
-        case Token::LIT_i8:  return lex().box().get_s8();
-        case Token::LIT_i16: return lex().box().get_s16();
-        case Token::LIT_i32: return lex().box().get_s32();
-        case Token::LIT_i64: return lex().box().get_s64();
-        case Token::LIT_u8:  return lex().box().get_u8();
-        case Token::LIT_u16: return lex().box().get_u16();
-        case Token::LIT_u32: return lex().box().get_u32();
-        case Token::LIT_u64: return lex().box().get_u64();
+        case Token::LIT_i8:  return lex().get< s8>();
+        case Token::LIT_i16: return lex().get<s16>();
+        case Token::LIT_i32: return lex().get<s32>();
+        case Token::LIT_i64: return lex().get<s64>();
+        case Token::LIT_u8:  return lex().get< u8>();
+        case Token::LIT_u16: return lex().get<u16>();
+        case Token::LIT_u32: return lex().get<u32>();
+        case Token::LIT_u64: return lex().get<u64>();
         default:
             error("integer literal", what);
             return 0;
@@ -1005,16 +1005,15 @@ const Expr* Parser::parse_primary_expr() {
 
 const LiteralExpr* Parser::parse_literal_expr() {
     LiteralExpr::Tag tag;
-    Box box;
 
     switch (lookahead()) {
-        case Token::TRUE:       return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, Box(true));
-        case Token::FALSE:      return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, Box(false));
+        case Token::TRUE:       return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, 1);
+        case Token::FALSE:      return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, 0);
 #define IMPALA_LIT(itype, atype) \
         case Token::LIT_##itype: { \
             tag = LiteralExpr::LIT_##itype; \
-            Box box = lookahead().box(); \
-            return new LiteralExpr(lex().loc(), tag, box); \
+            auto val = lookahead().get(); \
+            return new LiteralExpr(lex().loc(), tag, val); \
         }
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;

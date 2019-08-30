@@ -51,7 +51,7 @@ public:
 
     Loc loc() const { return loc_; }
     Symbol symbol() const { return symbol_; }
-    thorin::Box box() const { return box_; }
+    template<class T = uint64_t> T get() const { return thorin::bitcast<T>(val_); }
     Tag tag() const { return tag_; }
     operator Tag() const { return tag_; }
 
@@ -63,11 +63,11 @@ public:
         Asgn_Op = 8
     };
 
-    bool is_prefix()    const { return is_prefix(tag_); }
-    bool is_infix()     const { return is_infix(tag_); }
-    bool is_postfix()   const { return is_postfix(tag_); }
-    bool is_assign()    const { return is_assign(tag_); }
-    bool is_op()        const { return is_op(tag_); }
+    bool is_prefix()  const { return is_prefix(tag_); }
+    bool is_infix()   const { return is_infix(tag_); }
+    bool is_postfix() const { return is_postfix(tag_); }
+    bool is_assign()  const { return is_assign(tag_); }
+    bool is_op()      const { return is_op(tag_); }
 
     static Tag sym2lit(Symbol sym);
     static Tag sym2flit(Symbol sym);
@@ -76,6 +76,7 @@ public:
     static bool is_postfix(Tag tag) { return (tok2op_[tag] & Postfix) != 0; }
     static bool is_assign(Tag tag)  { return (tok2op_[tag] & Asgn_Op) != 0; }
     static bool is_op(Tag tag)      { return is_prefix(tag) || is_infix(tag) || is_postfix(tag); }
+    static bool is_signed(Tag tag);
     static const char* tok2str(Tag tag);
 
     bool operator==(const Token& t) const { return tag_ == t; }
@@ -89,7 +90,7 @@ private:
     Loc loc_;
     Symbol symbol_;
     Tag tag_;
-    thorin::Box box_;
+    uint64_t val_;
 
     typedef thorin::HashMap<Symbol, Tag> Sym2Tag;
     typedef thorin::HashMap<Tag, const char*, TagHash> Tag2Str;

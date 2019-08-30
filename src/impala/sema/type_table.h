@@ -19,31 +19,6 @@ namespace thorin {
 
 #define THORIN_TYPES(m) THORIN_S_TYPES(m) THORIN_U_TYPES(m) THORIN_F_TYPES(m)
 
-union Box {
-public:
-    Box() { u64_ = 0; }
-    Box(bool val) { u64_ = 0; bool_ = val; }
-#define CODE(T) \
-    Box(T val) { u64_ = 0; T ## _ = val; }
-    THORIN_TYPES(CODE)
-#undef CODE
-
-    bool get_bool() const { return bool_; }
-#define CODE(T) \
-    T get_ ## T() const { return T ## _; }
-    THORIN_TYPES(CODE)
-#undef CODE
-
-    bool operator==(Box other) const { return this->u64_ == other.get_u64(); }
-    template<typename T> T& get() { return *((T*)this); }
-
-private:
-    bool bool_;
-#define CODE(T) T T ## _;
-    THORIN_TYPES(CODE)
-#undef CODE
-};
-
 /// @c static_cast checked in debug version
 template<class L, class R>
 inline L* scast(R* r) {
