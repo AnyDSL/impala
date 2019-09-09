@@ -4,8 +4,6 @@
 #include <ostream>
 #include <string>
 
-#include "thorin/enums.h"
-
 #include "impala/loc.h"
 #include "impala/symbol.h"
 #include "impala/sema/type_table.h"

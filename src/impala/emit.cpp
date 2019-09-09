@@ -461,6 +461,7 @@ const Def* PathExpr::remit(CodeGen& cg) const {
     return value_decl()->is_mut() || global ? cg.load(def, loc()) : def;
 }
 
+#if 0
 static WMode type2wmode(const Type* type) {
     return Token::is_signed((TokenTag) type->as<PrimType>()->tag()) ? WMode::nsw : WMode::none;
 }
@@ -525,6 +526,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             return cg.load(lemit(cg), loc());
     }
 }
+#endif
 
 const Def* PrefixExpr::lemit(CodeGen& cg) const {
     assert(tag() == MUL);
@@ -564,6 +566,7 @@ void InfixExpr::emit_branch(CodeGen& cg, Lam* jump_t, Lam* jump_f) const {
     }
 }
 
+#if 0
 const Def* InfixExpr::remit(CodeGen& cg) const {
     switch (tag()) {
         case OROR:
@@ -646,6 +649,7 @@ const Def* PostfixExpr::remit(CodeGen& cg) const {
     cg.store(var, cg.world.arithop(tag() == INC ? ArithOp_add : ArithOp_sub, def, one, cg.loc2dbg(loc())), loc());
     return def;
 }
+#endif
 
 const Def* DefiniteArrayExpr::remit(CodeGen& cg) const {
     Array<const Def*> thorin_args(num_args());
@@ -702,17 +706,17 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         if (name == "bitcast") {
                             return cg.world.bitcast(cg.convert(type_expr->type_arg(0)), arg(0)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "select") {
-                            return cg.world.select(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
+                            return cg.world.op_select(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "insert") {
                             return cg.world.unsafe_insert(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "sizeof") {
-                            return cg.world.size_of(cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc()));
+                            return cg.world.op_sizeof(cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc()));
                         } else if (name == "undef") {
                             return cg.world.bot(cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc()));
                         } else if (name == "reserve_shared") {
                             auto ptr = cg.convert(type());
                             auto cn = cg.world.cn({
-                                cg.world.type_mem(), cg.world.type_sint(32, true),
+                                cg.world.type_mem(), cg.world.type_int(32),
                                 cg.world.cn({ cg.world.type_mem(), ptr }) });
                             auto cont = cg.world.lam(cn, cg.loc2dbg("reserve_shared", loc()));
                             cont->set_intrinsic();
@@ -721,7 +725,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto poly_type = cg.convert(type());
                             auto ptr = cg.convert(arg(1)->type());
                             auto cn = cg.world.cn({
-                                cg.world.type_mem(), cg.world.type_uint(32, false), ptr, poly_type,
+                                cg.world.type_mem(), cg.world.type_int(32), ptr, poly_type,
                                 cg.world.cn({ cg.world.type_mem(), poly_type }) });
                             auto cont = cg.world.lam(cn, cg.loc2dbg("atomic", loc()));
                             cont->set_intrinsic();
@@ -738,7 +742,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             dst = cont;
                         } else if (name == "pe_info") {
                             auto poly_type = cg.convert(arg(1)->type());
-                            auto string_type = cg.world.type_ptr(cg.world.unsafe_variadic(cg.world.type_uint(8, true)));
+                            auto string_type = cg.world.type_ptr(cg.world.unsafe_variadic(cg.world.type_int(8)));
                             auto cn = cg.world.cn({
                                 cg.world.type_mem(), string_type, poly_type,
                                 cg.world.cn({ cg.world.type_mem() }) });
@@ -979,6 +983,7 @@ void IdPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 
 const thorin::Def* IdPtrn::emit_cond(CodeGen& cg, const thorin::Def*) const { return cg.world.lit_true(); }
 
+#if 0
 void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     if (num_args() == 0) return;
     auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
@@ -987,6 +992,7 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
         arg(i)->emit(cg, num_args() == 1 ? variant : cg.world.extract(variant, i, cg.loc2dbg(loc())));
     }
 }
+#endif
 
 const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     auto index = path()->decl()->as<OptionDecl>()->index();

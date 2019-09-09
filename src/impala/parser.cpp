@@ -1084,7 +1084,7 @@ const FnExpr* Parser::parse_fn_expr(bool nested) {
 
     const Expr* filter = nullptr;
     if (nested)
-        filter = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, Box(false));
+        filter = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, false);
     else
         filter = parse_filter("partial evaluation filter of function expression");
 
@@ -1246,10 +1246,10 @@ const Expr* Parser::parse_filter(const char* context) {
             filter = parse_expr();
             expect(Token::R_PAREN, context);
         } else {
-            filter = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, Box(true));
+            filter = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, true);
         }
     } else
-        filter = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, Box(false));
+        filter = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, false);
 
     return filter;
 }
