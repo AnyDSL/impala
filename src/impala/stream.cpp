@@ -255,18 +255,18 @@ std::ostream& BlockExpr::stream(std::ostream& os) const {
 
 std::ostream& LiteralExpr::stream(std::ostream& os) const {
     switch (tag()) {
-        case LIT_i8:  return os << (int)box().get_s8()  << "i8";
-        case LIT_i16: return os <<      box().get_s16() << "i16";
-        case LIT_i32: return os <<      box().get_s32();
-        case LIT_i64: return os <<      box().get_s64() << "i64";
-        case LIT_u8:  return os << (int)box().get_s8()  << "u8";
-        case LIT_u16: return os <<      box().get_s16() << "u16";
-        case LIT_u32: return os <<      box().get_s32() << "u";
-        case LIT_u64: return os <<      box().get_s64() << "u64";
-        case LIT_f16: return os <<      box().get_f16() << "h";
-        case LIT_f32: return os <<      box().get_f32() << "f";
-        case LIT_f64: return os <<      box().get_f64() << "f64";
-        case LIT_bool: return os << (box().get_bool() ? "true" : "false");
+        case LIT_bool: return os << (get<bool>() ? "true" : "false");
+        case LIT_i8:   return os << (int)get< s8>() << "i8";
+        case LIT_i16:  return os <<      get<s16>() << "i16";
+        case LIT_i32:  return os <<      get<s32>();
+        case LIT_i64:  return os <<      get<s64>() << "i64";
+        case LIT_u8:   return os << (int)get< u8>() << "u8";
+        case LIT_u16:  return os <<      get<u16>() << "u16";
+        case LIT_u32:  return os <<      get<u32>() << "u";
+        case LIT_u64:  return os <<      get<u64>() << "u64";
+        case LIT_f16:  return os <<      get<r16>() << "h";
+        case LIT_f32:  return os <<      get<r32>() << "f";
+        case LIT_f64:  return os <<      get<r64>() << "f64";
         default: THORIN_UNREACHABLE;
     }
 }

@@ -916,7 +916,7 @@ const Type* MapExpr::infer(InferSema& sema) const {
 
     if (auto tuple_type = ltype->isa<TupleType>()) {
         if (auto lit = arg(0)->isa<LiteralExpr>())
-            return sema.wrap_ref(ref, tuple_type->op(lit->get_u64()));
+            return sema.wrap_ref(ref, tuple_type->op(lit->get()));
         else
             return sema.wrap_ref(ref, sema.type_error());
     }

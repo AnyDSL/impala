@@ -992,11 +992,10 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
         arg(i)->emit(cg, num_args() == 1 ? variant : cg.world.extract(variant, i, cg.loc2dbg(loc())));
     }
 }
-#endif
 
 const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     auto index = path()->decl()->as<OptionDecl>()->index();
-    auto cond = cg.world.cmp_eq(cg.world.extract(init, 0_u32, cg.loc2dbg(loc())), cg.world.lit_nat(index, cg.loc2dbg(loc())));
+    auto cond = cg.world.op<ICmp::e>(cg.world.extract(init, 0_u32, cg.loc2dbg(loc())), cg.world.lit_nat(index, cg.loc2dbg(loc())));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
         auto variant = cg.world.cast(variant_type, cg.world.extract(init, 1, cg.loc2dbg(loc())), cg.loc2dbg(loc()));
@@ -1008,6 +1007,7 @@ const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) con
     }
     return cond;
 }
+#endif
 
 void TuplePtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     for (size_t i = 0, e = num_elems(); i != e; ++i)
@@ -1020,20 +1020,22 @@ const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) co
         if (!elem(i)->is_refutable()) continue;
 
         auto next = elem(i)->emit_cond(cg, cg.world.extract(init, i, cg.loc2dbg(loc())));
-        cond = cond ? cg.world.arithop_and(cond, next) : next;
+        cond = cond ? cg.world.op<IOp::iand>(cond, next) : next;
     }
     return cond ? cond : cg.world.lit_true();
 }
 
+#if 0
 const thorin::Def* LiteralPtrn::emit(CodeGen& cg) const {
     auto def = literal()->remit(cg);
     return has_minus() ? cg.world.arithop_minus(def, def->debug()) : def;
 }
+#endif
 
 void LiteralPtrn::emit(CodeGen&, const thorin::Def*) const {}
 
 const thorin::Def* LiteralPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
-    return cg.world.cmp_eq(init, emit(cg));
+    return cg.world.op<ICmp::e>(init, emit(cg));
 }
 
 const thorin::Def* CharPtrn::emit(CodeGen& cg) const {
@@ -1043,7 +1045,7 @@ const thorin::Def* CharPtrn::emit(CodeGen& cg) const {
 void CharPtrn::emit(CodeGen&, const thorin::Def*) const {}
 
 const thorin::Def* CharPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
-    return cg.world.cmp_eq(init, emit(cg));
+    return cg.world.op<ICmp::e>(init, emit(cg));
 }
 
 /*

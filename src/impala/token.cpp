@@ -87,10 +87,20 @@ Token::Token(Loc loc, Tag tag, const std::string& str)
     int64_t ival; uint64_t uval; half hval; float fval; double dval;
 
     switch (tag_) {
-        case LIT_i8: case LIT_i16: case LIT_i32: case LIT_i64:
-                      ival = strtoll (nptr, 0, base);  err = errno; break;
-        case LIT_u8: case LIT_u16: case LIT_u32: case LIT_u64:
-                      uval = strtoull(nptr, 0, base);  err = errno; break;
+        case LIT_i8:
+        case LIT_i16:
+        case LIT_i32:
+        case LIT_i64:
+            ival = strtoll(nptr, 0, base);
+            err = errno;
+            break;
+        case LIT_u8:
+        case LIT_u16:
+        case LIT_u32:
+        case LIT_u64:
+            uval = strtoull(nptr, 0, base);
+            err = errno;
+            break;
         case LIT_f16: hval = strtof(symbol_.c_str(), 0); err = errno; break; // TODO: errno for half not correctly set
         case LIT_f32: fval = strtof(symbol_.c_str(), 0); err = errno; break;
         case LIT_f64: dval = strtod(symbol_.c_str(), 0); err = errno; break;
@@ -98,17 +108,17 @@ Token::Token(Loc loc, Tag tag, const std::string& str)
     }
 
     switch (tag_) {
-        case LIT_i8:  box_ =   int8_t(ival); err |= !inrange<  int8_t>(ival); break;
-        case LIT_i16: box_ =  int16_t(ival); err |= !inrange< int16_t>(ival); break;
-        case LIT_i32: box_ =  int32_t(ival); err |= !inrange< int32_t>(ival); break;
-        case LIT_i64: box_ =  int64_t(ival); err |= !inrange< int64_t>(ival); break;
-        case LIT_u8:  box_ =  uint8_t(uval); err |= !inrange< uint8_t>(uval); break;
-        case LIT_u16: box_ = uint16_t(uval); err |= !inrange<uint16_t>(uval); break;
-        case LIT_u32: box_ = uint32_t(uval); err |= !inrange<uint32_t>(uval); break;
-        case LIT_u64: box_ = uint64_t(uval); err |= !inrange<uint64_t>(uval); break;
-        case LIT_f16: box_ =     half(hval); err |= !inrange<    half>(hval); break;
-        case LIT_f32: box_ =    float(fval); err |= !inrange<   float>(fval); break;
-        case LIT_f64: box_ =   double(dval); err |= !inrange<  double>(dval); break;
+        case LIT_i8:  val_ = bitcast<u64>(  int8_t(ival)); err |= !inrange<  int8_t>(ival); break;
+        case LIT_i16: val_ = bitcast<u64>( int16_t(ival)); err |= !inrange< int16_t>(ival); break;
+        case LIT_i32: val_ = bitcast<u64>( int32_t(ival)); err |= !inrange< int32_t>(ival); break;
+        case LIT_i64: val_ = bitcast<u64>( int64_t(ival)); err |= !inrange< int64_t>(ival); break;
+        case LIT_u8:  val_ = bitcast<u64>( uint8_t(uval)); err |= !inrange< uint8_t>(uval); break;
+        case LIT_u16: val_ = bitcast<u64>(uint16_t(uval)); err |= !inrange<uint16_t>(uval); break;
+        case LIT_u32: val_ = bitcast<u64>(uint32_t(uval)); err |= !inrange<uint32_t>(uval); break;
+        case LIT_u64: val_ = bitcast<u64>(uint64_t(uval)); err |= !inrange<uint64_t>(uval); break;
+        case LIT_f16: val_ = bitcast<u64>(    half(hval)); err |= !inrange<    half>(hval); break;
+        case LIT_f32: val_ = bitcast<u64>(   float(fval)); err |= !inrange<   float>(fval); break;
+        case LIT_f64: val_ = bitcast<u64>(  double(dval)); err |= !inrange<  double>(dval); break;
         default: THORIN_UNREACHABLE;
     }
 
