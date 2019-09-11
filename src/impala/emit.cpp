@@ -91,18 +91,15 @@ public:
         return result;
     }
 
-    const Def* load(const Def* ptr, Loc loc) {
-        auto dbg = loc2dbg(loc);
-        auto l = world.load(cur_mem, ptr, dbg);
-        cur_mem = world.extract(l, 0_u32, dbg);
-        return world.extract(l, 1_u32, dbg);
+    const Def* handle_mem_res(const Def* mem_res) {
+        auto [mem, res] = split<2>(mem_res);
+        cur_mem = mem;
+        return res;
     }
 
-    const Def* slot(const Def* type, Debug dbg) {
-        auto slot = world.slot(type, cur_mem, dbg);
-        cur_mem = slot->out_mem();
-        return slot->out_ptr();
-    }
+    const Def* load(const Def*  ptr,   Loc loc) { return handle_mem_res(world.load(cur_mem, ptr, loc2dbg(loc))); }
+    const Def* slot(const Def* type, Debug dbg) { return handle_mem_res(world.slot(type, cur_mem, dbg)); }
+
     void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = world.store(cur_mem, ptr, val, loc2dbg(loc)); }
 
     const Def* alloc(const thorin::Def* type, Debug dbg) {
@@ -596,7 +593,6 @@ void InfixExpr::emit_branch(CodeGen& cg, Lam* jump_t, Lam* jump_f) const {
     }
 }
 
-#if 0
 const Def* InfixExpr::remit(CodeGen& cg) const {
     switch (tag()) {
         case OROR:
@@ -611,67 +607,97 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             return cg.enter(result)->param(1);
         }
         default: {
-            const TokenTag op = (TokenTag) tag();
+            auto op = tag();
             auto dbg = cg.loc2dbg(loc());
 
-            if (Token::is_assign(op)) {
+            if (Token::is_assign((TokenTag) op)) {
                 auto lvar = lhs()->lemit(cg);
                 auto rdef = rhs()->remit(cg);
-                bool s = false; // TODO
-                bool r = false; // TODO
-                switch (op) {
-                    case     ASGN: break;
-                    case ADD_ASGN:
-                        if (r)
-                            rdef = cg.world.op<ROp::radd>(cg.load(lvar, loc()), rdef, dbg);
-                        else if (s)
-                            rdef = cg.world.op<WOp:: add>(WMode::nsw, cg.load(lvar, loc()), rdef, dbg);
-                        else
-                            rdef = cg.world.op<WOp:: add>(WMode::none, cg.load(lvar, loc()), rdef, dbg);
-                        break;
-                    case SUB_ASGN: rdef = cg.world.op<WOp::sub>(mode, cg.load(lvar, loc()), rdef, dbg); break;
-                    case MUL_ASGN: rdef = cg.world.op<WOp::mul>(mode, cg.load(lvar, loc()), rdef, dbg); break;
-                    case SHL_ASGN: rdef = cg.world.op<WOp::shl>(cg.load(lvar, loc()), rdef, dbg); break;
 
-                    case AND_ASGN: rdef = cg.world.op<IOp::iand>(cg.load(lvar, loc()), rdef, dbg); break;
-                    case  OR_ASGN: rdef = cg.world.op<IOp::ior >(cg.load(lvar, loc()), rdef, dbg); break;
-                    case XOR_ASGN: rdef = cg.world.op<IOp::ixor>(cg.load(lvar, loc()), rdef, dbg); break;
-                    case SHR_ASGN: rdef = cg.world.op<WOp::ishr>(cg.load(lvar, loc()), rdef, dbg); break;
-                    case DIV_ASGN: rdef = cg.world.op<WOp::div>(cg.load(lvar, loc()), rdef, dbg); break;
-                    case REM_ASGN: rdef = cg.world.op<WOp::rem>(cg.load(lvar, loc()), rdef, dbg); break;
-                    default: THORIN_UNREACHABLE;
+                if (op == ASGN) {
+                    cg.store(lvar, rdef, loc());
+                    return cg.world.tuple();
                 }
 
-                cg.store(lvar, rdef, loc());
-                return cg.world.tuple();
+                auto ldef = cg.load(lhs()->lemit(cg), loc());
+
+                if (is_float(rhs()->type())) {
+                    switch (op) {
+                        case ADD_ASGN: rdef = cg.world.op<ROp::add>(ldef, rdef, dbg); break;
+                        case SUB_ASGN: rdef = cg.world.op<ROp::sub>(ldef, rdef, dbg); break;
+                        case MUL_ASGN: rdef = cg.world.op<ROp::mul>(ldef, rdef, dbg); break;
+                        case DIV_ASGN: rdef = cg.world.op<ROp::div>(ldef, rdef, dbg); break;
+                        case REM_ASGN: rdef = cg.world.op<ROp::mod>(ldef, rdef, dbg); break;
+                        default: THORIN_UNREACHABLE;
+                    }
+                } else {
+                    auto mode = type2wmode(lhs()->type());
+                    bool s = is_signed(lhs()->type());
+
+                    switch (op) {
+                        case ADD_ASGN: rdef = cg.world.op<WOp:: add>(mode, ldef, rdef, dbg); break;
+                        case SUB_ASGN: rdef = cg.world.op<WOp:: sub>(mode, ldef, rdef, dbg); break;
+                        case MUL_ASGN: rdef = cg.world.op<WOp:: mul>(mode, ldef, rdef, dbg); break;
+                        case SHL_ASGN: rdef = cg.world.op<WOp:: shl>(mode, ldef, rdef, dbg); break;
+                        case AND_ASGN: rdef = cg.world.op<IOp::iand>(      ldef, rdef, dbg); break;
+                        case  OR_ASGN: rdef = cg.world.op<IOp::ior >(      ldef, rdef, dbg); break;
+                        case XOR_ASGN: rdef = cg.world.op<IOp::ixor>(      ldef, rdef, dbg); break;
+                        case SHR_ASGN: rdef = s ? cg.world.op<IOp::ashr>(ldef, rdef, dbg) : cg.world.op<IOp::lshr>(ldef, rdef, dbg); break;
+                        case DIV_ASGN: rdef = cg.handle_mem_res(s ? cg.world.op<ZOp::sdiv>(cg.cur_mem, ldef, rdef, dbg) : cg.world.op<ZOp::udiv>(cg.cur_mem, ldef, rdef, dbg)); break;
+                        case REM_ASGN: rdef = cg.handle_mem_res(s ? cg.world.op<ZOp::smod>(cg.cur_mem, ldef, rdef, dbg) : cg.world.op<ZOp::umod>(cg.cur_mem, ldef, rdef, dbg)); break;
+                        default: THORIN_UNREACHABLE;
+                    }
+
+                    cg.store(lvar, rdef, loc());
+                    return cg.world.tuple();
+                }
             }
 
             auto ldef = lhs()->remit(cg);
             auto rdef = rhs()->remit(cg);
 
-            switch (op) {
-                case  EQ: return cg.world.cmp_eq     (ldef, rdef, dbg);
-                case  NE: return cg.world.cmp_ne     (ldef, rdef, dbg);
-                case  LT: return cg.world.cmp_lt     (ldef, rdef, dbg);
-                case  LE: return cg.world.cmp_le     (ldef, rdef, dbg);
-                case  GT: return cg.world.cmp_gt     (ldef, rdef, dbg);
-                case  GE: return cg.world.cmp_ge     (ldef, rdef, dbg);
-                case  OR: return cg.world.arithop_or (ldef, rdef, dbg);
-                case XOR: return cg.world.arithop_xor(ldef, rdef, dbg);
-                case AND: return cg.world.arithop_and(ldef, rdef, dbg);
-                case SHL: return cg.world.arithop_shl(ldef, rdef, dbg);
-                case SHR: return cg.world.arithop_shr(ldef, rdef, dbg);
-                case ADD: return cg.world.arithop_add(ldef, rdef, dbg);
-                case SUB: return cg.world.arithop_sub(ldef, rdef, dbg);
-                case MUL: return cg.world.arithop_mul(ldef, rdef, dbg);
-                case DIV: return cg.world.arithop_div(ldef, rdef, dbg);
-                case REM: return cg.world.arithop_rem(ldef, rdef, dbg);
-                default: THORIN_UNREACHABLE;
+            if (is_float(rhs()->type())) {
+                switch (op) {
+                    case  EQ: return cg.world.op<RCmp::  e>(ldef, rdef, dbg);
+                    case  NE: return cg.world.op<RCmp::une>(ldef, rdef, dbg);
+                    case  LT: return cg.world.op<RCmp::  l>(ldef, rdef, dbg);
+                    case  LE: return cg.world.op<RCmp:: le>(ldef, rdef, dbg);
+                    case  GT: return cg.world.op<RCmp::  g>(ldef, rdef, dbg);
+                    case  GE: return cg.world.op<RCmp:: ge>(ldef, rdef, dbg);
+                    case ADD: return cg.world.op<ROp ::add>(ldef, rdef, dbg);
+                    case SUB: return cg.world.op<ROp ::sub>(ldef, rdef, dbg);
+                    case MUL: return cg.world.op<ROp ::mul>(ldef, rdef, dbg);
+                    case DIV: return cg.world.op<ROp ::div>(ldef, rdef, dbg);
+                    case REM: return cg.world.op<ROp ::mod>(ldef, rdef, dbg);
+                    default: THORIN_UNREACHABLE;
+                }
+            } else {
+                auto mode = type2wmode(lhs()->type());
+                bool s = is_signed(lhs()->type());
+
+                switch (op) {
+                    case  EQ: return cg.world.op<ICmp::   e>(ldef, rdef, dbg);
+                    case  NE: return cg.world.op<ICmp::  ne>(ldef, rdef, dbg);
+                    case  LT: return s ? cg.world.op<ICmp::  sl>(ldef, rdef, dbg) : cg.world.op<ICmp::  ul>(ldef, rdef, dbg);
+                    case  LE: return s ? cg.world.op<ICmp:: sle>(ldef, rdef, dbg) : cg.world.op<ICmp:: ule>(ldef, rdef, dbg);
+                    case  GT: return s ? cg.world.op<ICmp::  sg>(ldef, rdef, dbg) : cg.world.op<ICmp::  ug>(ldef, rdef, dbg);
+                    case  GE: return s ? cg.world.op<ICmp:: sge>(ldef, rdef, dbg) : cg.world.op<ICmp:: uge>(ldef, rdef, dbg);
+                    case SHR: return s ? cg.world.op<IOp ::ashr>(ldef, rdef, dbg) : cg.world.op<IOp ::lshr>(ldef, rdef, dbg);
+                    case  OR: return cg.world.op<IOp :: ior>(ldef, rdef, dbg);
+                    case XOR: return cg.world.op<IOp ::ixor>(ldef, rdef, dbg);
+                    case AND: return cg.world.op<IOp ::iand>(ldef, rdef, dbg);
+                    case ADD: return cg.world.op<WOp :: add>(mode, ldef, rdef, dbg);
+                    case SUB: return cg.world.op<WOp :: sub>(mode, ldef, rdef, dbg);
+                    case MUL: return cg.world.op<WOp :: mul>(mode, ldef, rdef, dbg);
+                    case SHL: return cg.world.op<WOp :: shl>(mode, ldef, rdef, dbg);
+                    case DIV: return cg.handle_mem_res(s ? cg.world.op<ZOp::sdiv>(cg.cur_mem, ldef, rdef, dbg) : cg.world.op<ZOp::udiv>(cg.cur_mem, ldef, rdef, dbg));
+                    case REM: return cg.handle_mem_res(s ? cg.world.op<ZOp::smod>(cg.cur_mem, ldef, rdef, dbg) : cg.world.op<ZOp::umod>(cg.cur_mem, ldef, rdef, dbg));
+                    default: THORIN_UNREACHABLE;
+                }
             }
         }
     }
 }
-#endif
 
 const Def* PostfixExpr::remit(CodeGen& cg) const {
     auto var = lhs()->lemit(cg);
