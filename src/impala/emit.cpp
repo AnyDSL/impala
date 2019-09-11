@@ -1093,12 +1093,17 @@ const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) co
     return cond ? cond : cg.world.lit_true();
 }
 
-#if 0
 const thorin::Def* LiteralPtrn::emit(CodeGen& cg) const {
     auto def = literal()->remit(cg);
-    return has_minus() ? cg.world.arithop_minus(def, def->debug()) : def;
+    if (has_minus()) {
+        if (is_float(type()))
+            return cg.world.op_ROp_minus(def, def->debug());
+        else
+            return cg.world.op_WOp_minus(type2wmode(type()), def, def->debug());
+    } else {
+        return def;
+    }
 }
-#endif
 
 void LiteralPtrn::emit(CodeGen&, const thorin::Def*) const {}
 
