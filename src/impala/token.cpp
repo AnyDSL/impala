@@ -31,17 +31,6 @@ Token::Token(Loc loc, const std::string& str)
         tag_ = i->second;
 }
 
-static bool is_signed(Tag tag) {
-    switch (tag) {
-        case PrimType_bool:
-        case PrimType_i8:
-        case PrimType_i16:
-        case PrimType_i32:
-        case PrimType_i64: return true;
-        default: return false;
-    }
-}
-
 template<class T, class V>
 static bool inrange(V val) {
     return std::numeric_limits<T>::lowest() <= val && val <= std::numeric_limits<T>::max();

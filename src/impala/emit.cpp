@@ -33,22 +33,15 @@ public:
         return bb;
     }
 
-    const Def* lit_one(const Def* type, Debug dbg);
-#if 0
-    {
-        if (auto sint = type->isa<Sint>()) return world.lit(sint, 1, dbg);
-        if (auto uint = type->isa<Uint>()) return world.lit(uint, 1, dbg);
-        if (auto real = type->isa<Real>()) {
-            switch (real->lit_num_bits()) {
-                case 16: return world.lit_preal(1._f16, dbg);
-                case 32: return world.lit_preal(1._f32, dbg);
-                case 64: return world.lit_preal(1._f64, dbg);
-                default: THORIN_UNREACHABLE;
-            }
+    const Def* lit_one(const Type* type, Debug dbg) {
+        if (is_int(type)) return world.lit(convert(type), 1, dbg);
+        switch (type->tag()) {
+            case PrimType_f16: return world.lit_real(1._r16, dbg);
+            case PrimType_f32: return world.lit_real(1._r32, dbg);
+            case PrimType_f64: return world.lit_real(1._r64, dbg);
+            default: THORIN_UNREACHABLE;
         }
-        THORIN_UNREACHABLE;
     }
-#endif
 
     std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, Debug dbg) {
         if (ret_type == nullptr) {
@@ -422,11 +415,13 @@ const Def* StrExpr::remit(CodeGen& cg) const {
     return cg.world.tuple(args, cg.loc2dbg(loc()));
 }
 
+#if 0
 const Def* CastExpr::remit(CodeGen& cg) const {
     auto def = src()->remit(cg);
     auto thorin_type = cg.convert(type());
     return cg.world.convert(thorin_type, def, cg.loc2dbg(loc()));
 }
+#endif
 
 const Def* RValueExpr::lemit(CodeGen& cg) const {
     assert(src()->type()->isa<RefType>());
@@ -461,9 +456,8 @@ const Def* PathExpr::remit(CodeGen& cg) const {
     return value_decl()->is_mut() || global ? cg.load(def, loc()) : def;
 }
 
-#if 0
-static WMode type2wmode(const Type* type) {
-    return Token::is_signed((TokenTag) type->as<PrimType>()->tag()) ? WMode::nsw : WMode::none;
+static flags_t type2wmode(const Type* type) {
+    return is_signed(type) ? WMode::nsw : WMode::none;
 }
 
 const Def* PrefixExpr::remit(CodeGen& cg) const {
@@ -472,20 +466,31 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
         case DEC: {
             auto var = rhs()->lemit(cg);
             auto val = cg.load(var, loc());
-            auto one = cg.lit_one(val->type(), cg.loc2dbg(loc()));
-            auto mode = type2wmode(rhs()->type());
-            if (tag() == INC)
-                val = cg.world.op<WOp::add>(mode, val, one, cg.loc2dbg(loc()));
-            else
-                val = cg.world.op<WOp::sub>(mode, val, one, cg.loc2dbg(loc()));
+            auto one = cg.lit_one(type(), cg.loc2dbg(loc()));
+            if (is_int(type())) {
+                auto mode = type2wmode(type());
+                if (tag() == INC)
+                    val = cg.world.op<WOp::add>(mode, val, one, cg.loc2dbg(loc()));
+                else
+                    val = cg.world.op<WOp::sub>(mode, val, one, cg.loc2dbg(loc()));
+            } else {
+                if (tag() == INC)
+                    val = cg.world.op<ROp::add>(val, one, cg.loc2dbg(loc()));
+                else
+                    val = cg.world.op<ROp::sub>(val, one, cg.loc2dbg(loc()));
+            }
             cg.store(var, val, loc());
             return val;
         }
         case ADD: return rhs()->remit(cg);
-#if 0
-        case SUB: return cg.world.arithop_minus(rhs()->remit(cg), cg.loc2dbg(loc()));
-        case NOT: return cg.world.arithop_not(rhs()->remit(cg), cg.loc2dbg(loc()));
-#endif
+        case SUB:
+            if (is_int(type())) {
+                auto mode = type2wmode(type());
+                return cg.world.op_WOp_minus(mode, rhs()->remit(cg), cg.loc2dbg(loc()));
+            } else {
+                return cg.world.op_ROp_minus(rhs()->remit(cg), cg.loc2dbg(loc()));
+            }
+        case NOT: return cg.world.op_IOp_inot(rhs()->remit(cg), cg.loc2dbg(loc()));
         case TILDE: {
             auto def = rhs()->remit(cg);
             auto ptr = cg.alloc(def->type(), cg.loc2dbg(loc()));
@@ -526,7 +531,6 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             return cg.load(lemit(cg), loc());
     }
 }
-#endif
 
 const Def* PrefixExpr::lemit(CodeGen& cg) const {
     assert(tag() == MUL);

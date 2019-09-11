@@ -74,7 +74,6 @@ public:
     static bool is_postfix(Tag tag) { return (tok2op_[tag] & Postfix) != 0; }
     static bool is_assign(Tag tag)  { return (tok2op_[tag] & Asgn_Op) != 0; }
     static bool is_op(Tag tag)      { return is_prefix(tag) || is_infix(tag) || is_postfix(tag); }
-    static bool is_signed(Tag tag);
     static const char* tok2str(Tag tag);
 
     bool operator==(const Token& t) const { return tag_ == t; }
