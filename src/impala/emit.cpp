@@ -415,13 +415,39 @@ const Def* StrExpr::remit(CodeGen& cg) const {
     return cg.world.tuple(args, cg.loc2dbg(loc()));
 }
 
-#if 0
 const Def* CastExpr::remit(CodeGen& cg) const {
     auto def = src()->remit(cg);
-    auto thorin_type = cg.convert(type());
-    return cg.world.convert(thorin_type, def, cg.loc2dbg(loc()));
+    auto src_type = src()->type();
+    auto dst_type = type();
+    auto dst = cg.convert(dst_type);
+    auto dbg = cg.loc2dbg(loc());
+
+    if (is_int(src_type) || is_bool(src_type)) {
+        if (is_signed(src_type)) {
+            if (is_int(dst_type) || is_bool(dst_type)) {
+                return cg.world.op<Conv::s2s>(dst, def, dbg);
+            } else {
+                return cg.world.op<Conv::s2r>(dst, def, dbg);
+            }
+        } else {
+            if (is_int(dst_type) || is_bool(dst_type)) {
+                return cg.world.op<Conv::u2u>(dst, def, dbg);
+            } else {
+                return cg.world.op<Conv::u2r>(dst, def, dbg);
+            }
+        }
+    } else {
+        if (is_int(dst_type) || is_bool(dst_type)) {
+            if (is_signed(dst_type))
+                return cg.world.op<Conv::r2s>(dst, def, dbg);
+            else
+                return cg.world.op<Conv::r2u>(dst, def, dbg);
+        } else {
+            return cg.world.op<Conv::r2r>(dst, def, dbg);
+        }
+    }
+    THORIN_UNREACHABLE;
 }
-#endif
 
 const Def* RValueExpr::lemit(CodeGen& cg) const {
     assert(src()->type()->isa<RefType>());
