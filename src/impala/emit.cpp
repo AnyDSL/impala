@@ -1053,11 +1053,10 @@ void IdPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 
 const thorin::Def* IdPtrn::emit_cond(CodeGen& cg, const thorin::Def*) const { return cg.world.lit_true(); }
 
-#if 0
 void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     if (num_args() == 0) return;
     auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
-    auto variant = cg.world.cast(variant_type, cg.world.extract(init, 1), cg.loc2dbg(loc()));
+    auto variant = cg.world.bitcast(variant_type, cg.world.extract(init, 1), cg.loc2dbg(loc()));
     for (size_t i = 0, e = num_args(); i != e; ++i) {
         arg(i)->emit(cg, num_args() == 1 ? variant : cg.world.extract(variant, i, cg.loc2dbg(loc())));
     }
@@ -1068,16 +1067,15 @@ const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) con
     auto cond = cg.world.op<ICmp::e>(cg.world.extract(init, 0_u32, cg.loc2dbg(loc())), cg.world.lit_nat(index, cg.loc2dbg(loc())));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
-        auto variant = cg.world.cast(variant_type, cg.world.extract(init, 1, cg.loc2dbg(loc())), cg.loc2dbg(loc()));
+        auto variant = cg.world.bitcast(variant_type, cg.world.extract(init, 1, cg.loc2dbg(loc())), cg.loc2dbg(loc()));
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
             auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? variant : cg.world.extract(variant, i, cg.loc2dbg(loc())));
-            cond = cg.world.arithop_and(cond, arg_cond, cg.loc2dbg(loc()));
+            cond = cg.world.op<IOp::iand>(cond, arg_cond, cg.loc2dbg(loc()));
         }
     }
     return cond;
 }
-#endif
 
 void TuplePtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     for (size_t i = 0, e = num_elems(); i != e; ++i)
