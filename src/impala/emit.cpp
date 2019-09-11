@@ -671,15 +671,29 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
         }
     }
 }
+#endif
 
 const Def* PostfixExpr::remit(CodeGen& cg) const {
     auto var = lhs()->lemit(cg);
-    auto def = cg.load(var, loc());
-    auto one = cg.lit_one(def->type(), cg.loc2dbg(loc()));
-    cg.store(var, cg.world.arithop(tag() == INC ? ArithOp_add : ArithOp_sub, def, one, cg.loc2dbg(loc())), loc());
-    return def;
+    auto res = cg.load(var, loc());
+    auto one = cg.lit_one(type(), cg.loc2dbg(loc()));
+    const Def* val = nullptr;
+
+    if (is_int(type())) {
+        auto mode = type2wmode(type());
+        if (tag() == INC)
+            val = cg.world.op<WOp::add>(mode, val, one, cg.loc2dbg(loc()));
+        else
+            val = cg.world.op<WOp::sub>(mode, val, one, cg.loc2dbg(loc()));
+    } else {
+        if (tag() == INC)
+            val = cg.world.op<ROp::add>(val, one, cg.loc2dbg(loc()));
+        else
+            val = cg.world.op<ROp::sub>(val, one, cg.loc2dbg(loc()));
+    }
+    cg.store(var, val, loc());
+    return res;
 }
-#endif
 
 const Def* DefiniteArrayExpr::remit(CodeGen& cg) const {
     Array<const Def*> thorin_args(num_args());
