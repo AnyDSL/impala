@@ -419,7 +419,9 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     auto dst = cg.convert(dst_type);
     auto dbg = cg.loc2dbg(loc());
 
-    if (is_int(src_type) || is_bool(src_type)) {
+    if (src_type->isa<PtrType>() || dst_type->isa<PtrType>()) {
+        return cg.world.bitcast(dst, def, dbg);
+    } else if (is_int(src_type) || is_bool(src_type)) {
         if (is_signed(src_type)) {
             if (is_int(dst_type) || is_bool(dst_type)) {
                 return cg.world.op(Conv::s2s, dst, def, dbg);
