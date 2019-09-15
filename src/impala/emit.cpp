@@ -625,8 +625,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         default: THORIN_UNREACHABLE;
                     }
                 } else {
-                    auto mode = type2wmode(lhs()->type());
-                    bool s = is_signed(lhs()->type());
+                    auto mode = type2wmode(rhs()->type());
+                    bool s = is_signed(rhs()->type());
 
                     switch (op) {
                         case ADD_ASGN: rdef = cg.world.op(WOp:: add, mode, ldef, rdef, dbg); break;
