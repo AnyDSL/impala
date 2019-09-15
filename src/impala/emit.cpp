@@ -482,7 +482,7 @@ const Def* PathExpr::remit(CodeGen& cg) const {
 }
 
 static flags_t type2wmode(const Type* type) {
-    return is_signed(type) ? WMode::nsw : WMode::none;
+    return is_bool(type) ? WMode::nuw : (is_signed(type) ? WMode::nsw : WMode::none);
 }
 
 const Def* PrefixExpr::remit(CodeGen& cg) const {
