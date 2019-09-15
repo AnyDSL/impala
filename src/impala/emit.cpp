@@ -422,25 +422,25 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     if (is_int(src_type) || is_bool(src_type)) {
         if (is_signed(src_type)) {
             if (is_int(dst_type) || is_bool(dst_type)) {
-                return cg.world.op<Conv::s2s>(dst, def, dbg);
+                return cg.world.op(Conv::s2s, dst, def, dbg);
             } else {
-                return cg.world.op<Conv::s2r>(dst, def, dbg);
+                return cg.world.op(Conv::s2r, dst, def, dbg);
             }
         } else {
             if (is_int(dst_type) || is_bool(dst_type)) {
-                return cg.world.op<Conv::u2u>(dst, def, dbg);
+                return cg.world.op(Conv::u2u, dst, def, dbg);
             } else {
-                return cg.world.op<Conv::u2r>(dst, def, dbg);
+                return cg.world.op(Conv::u2r, dst, def, dbg);
             }
         }
     } else {
         if (is_int(dst_type) || is_bool(dst_type)) {
             if (is_signed(dst_type))
-                return cg.world.op<Conv::r2s>(dst, def, dbg);
+                return cg.world.op(Conv::r2s, dst, def, dbg);
             else
-                return cg.world.op<Conv::r2u>(dst, def, dbg);
+                return cg.world.op(Conv::r2u, dst, def, dbg);
         } else {
-            return cg.world.op<Conv::r2r>(dst, def, dbg);
+            return cg.world.op(Conv::r2r, dst, def, dbg);
         }
     }
     THORIN_UNREACHABLE;
@@ -490,18 +490,10 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             auto var = rhs()->lemit(cg);
             auto val = cg.load(var, loc());
             auto one = cg.lit_one(type(), cg.loc2dbg(loc()));
-            if (is_int(type())) {
-                auto mode = type2wmode(type());
-                if (tag() == INC)
-                    val = cg.world.op<WOp::add>(mode, val, one, cg.loc2dbg(loc()));
-                else
-                    val = cg.world.op<WOp::sub>(mode, val, one, cg.loc2dbg(loc()));
-            } else {
-                if (tag() == INC)
-                    val = cg.world.op<ROp::add>(val, one, cg.loc2dbg(loc()));
-                else
-                    val = cg.world.op<ROp::sub>(val, one, cg.loc2dbg(loc()));
-            }
+            if (is_int(type()))
+                val = cg.world.op(tag() == INC ? WOp::add : WOp::sub, type2wmode(type()), val, one, cg.loc2dbg(loc()));
+            else
+                val = cg.world.op(tag() == INC ? ROp::add : ROp::sub, val, one, cg.loc2dbg(loc()));
             cg.store(var, val, loc());
             return val;
         }
@@ -623,11 +615,11 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
                 if (is_float(rhs()->type())) {
                     switch (op) {
-                        case ADD_ASGN: rdef = cg.world.op<ROp::add>(ldef, rdef, dbg); break;
-                        case SUB_ASGN: rdef = cg.world.op<ROp::sub>(ldef, rdef, dbg); break;
-                        case MUL_ASGN: rdef = cg.world.op<ROp::mul>(ldef, rdef, dbg); break;
-                        case DIV_ASGN: rdef = cg.world.op<ROp::div>(ldef, rdef, dbg); break;
-                        case REM_ASGN: rdef = cg.world.op<ROp::mod>(ldef, rdef, dbg); break;
+                        case ADD_ASGN: rdef = cg.world.op(ROp::add, ldef, rdef, dbg); break;
+                        case SUB_ASGN: rdef = cg.world.op(ROp::sub, ldef, rdef, dbg); break;
+                        case MUL_ASGN: rdef = cg.world.op(ROp::mul, ldef, rdef, dbg); break;
+                        case DIV_ASGN: rdef = cg.world.op(ROp::div, ldef, rdef, dbg); break;
+                        case REM_ASGN: rdef = cg.world.op(ROp::mod, ldef, rdef, dbg); break;
                         default: THORIN_UNREACHABLE;
                     }
                 } else {
@@ -635,16 +627,16 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     bool s = is_signed(lhs()->type());
 
                     switch (op) {
-                        case ADD_ASGN: rdef = cg.world.op<WOp:: add>(mode, ldef, rdef, dbg); break;
-                        case SUB_ASGN: rdef = cg.world.op<WOp:: sub>(mode, ldef, rdef, dbg); break;
-                        case MUL_ASGN: rdef = cg.world.op<WOp:: mul>(mode, ldef, rdef, dbg); break;
-                        case SHL_ASGN: rdef = cg.world.op<WOp:: shl>(mode, ldef, rdef, dbg); break;
-                        case AND_ASGN: rdef = cg.world.op<IOp::iand>(      ldef, rdef, dbg); break;
-                        case  OR_ASGN: rdef = cg.world.op<IOp::ior >(      ldef, rdef, dbg); break;
-                        case XOR_ASGN: rdef = cg.world.op<IOp::ixor>(      ldef, rdef, dbg); break;
-                        case SHR_ASGN: rdef = s ? cg.world.op<IOp::ashr>(ldef, rdef, dbg) : cg.world.op<IOp::lshr>(ldef, rdef, dbg); break;
-                        case DIV_ASGN: rdef = cg.handle_mem_res(s ? cg.world.op<ZOp::sdiv>(cg.cur_mem, ldef, rdef, dbg) : cg.world.op<ZOp::udiv>(cg.cur_mem, ldef, rdef, dbg)); break;
-                        case REM_ASGN: rdef = cg.handle_mem_res(s ? cg.world.op<ZOp::smod>(cg.cur_mem, ldef, rdef, dbg) : cg.world.op<ZOp::umod>(cg.cur_mem, ldef, rdef, dbg)); break;
+                        case ADD_ASGN: rdef = cg.world.op(WOp:: add, mode, ldef, rdef, dbg); break;
+                        case SUB_ASGN: rdef = cg.world.op(WOp:: sub, mode, ldef, rdef, dbg); break;
+                        case MUL_ASGN: rdef = cg.world.op(WOp:: mul, mode, ldef, rdef, dbg); break;
+                        case SHL_ASGN: rdef = cg.world.op(WOp:: shl, mode, ldef, rdef, dbg); break;
+                        case AND_ASGN: rdef = cg.world.op(IOp::iand,       ldef, rdef, dbg); break;
+                        case  OR_ASGN: rdef = cg.world.op(IOp::ior ,       ldef, rdef, dbg); break;
+                        case XOR_ASGN: rdef = cg.world.op(IOp::ixor,       ldef, rdef, dbg); break;
+                        case SHR_ASGN: rdef = cg.world.op(s ? IOp::ashr : IOp::lshr, ldef, rdef, dbg); break;
+                        case DIV_ASGN: rdef = cg.handle_mem_res(cg.world.op(s ? ZOp::sdiv : ZOp::udiv, cg.cur_mem, ldef, rdef, dbg)); break;
+                        case REM_ASGN: rdef = cg.handle_mem_res(cg.world.op(s ? ZOp::smod : ZOp::umod, cg.cur_mem, ldef, rdef, dbg)); break;
                         default: THORIN_UNREACHABLE;
                     }
 
@@ -658,17 +650,17 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
             if (is_float(rhs()->type())) {
                 switch (op) {
-                    case  EQ: return cg.world.op<RCmp::  e>(ldef, rdef, dbg);
-                    case  NE: return cg.world.op<RCmp::une>(ldef, rdef, dbg);
-                    case  LT: return cg.world.op<RCmp::  l>(ldef, rdef, dbg);
-                    case  LE: return cg.world.op<RCmp:: le>(ldef, rdef, dbg);
-                    case  GT: return cg.world.op<RCmp::  g>(ldef, rdef, dbg);
-                    case  GE: return cg.world.op<RCmp:: ge>(ldef, rdef, dbg);
-                    case ADD: return cg.world.op<ROp ::add>(ldef, rdef, dbg);
-                    case SUB: return cg.world.op<ROp ::sub>(ldef, rdef, dbg);
-                    case MUL: return cg.world.op<ROp ::mul>(ldef, rdef, dbg);
-                    case DIV: return cg.world.op<ROp ::div>(ldef, rdef, dbg);
-                    case REM: return cg.world.op<ROp ::mod>(ldef, rdef, dbg);
+                    case  EQ: return cg.world.op(RCmp::  e, ldef, rdef, dbg);
+                    case  NE: return cg.world.op(RCmp::une, ldef, rdef, dbg);
+                    case  LT: return cg.world.op(RCmp::  l, ldef, rdef, dbg);
+                    case  LE: return cg.world.op(RCmp:: le, ldef, rdef, dbg);
+                    case  GT: return cg.world.op(RCmp::  g, ldef, rdef, dbg);
+                    case  GE: return cg.world.op(RCmp:: ge, ldef, rdef, dbg);
+                    case ADD: return cg.world.op(ROp ::add, ldef, rdef, dbg);
+                    case SUB: return cg.world.op(ROp ::sub, ldef, rdef, dbg);
+                    case MUL: return cg.world.op(ROp ::mul, ldef, rdef, dbg);
+                    case DIV: return cg.world.op(ROp ::div, ldef, rdef, dbg);
+                    case REM: return cg.world.op(ROp ::mod, ldef, rdef, dbg);
                     default: THORIN_UNREACHABLE;
                 }
             } else {
@@ -676,22 +668,22 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                 bool s = is_signed(lhs()->type());
 
                 switch (op) {
-                    case  EQ: return cg.world.op<ICmp::   e>(ldef, rdef, dbg);
-                    case  NE: return cg.world.op<ICmp::  ne>(ldef, rdef, dbg);
-                    case  LT: return s ? cg.world.op<ICmp::  sl>(ldef, rdef, dbg) : cg.world.op<ICmp::  ul>(ldef, rdef, dbg);
-                    case  LE: return s ? cg.world.op<ICmp:: sle>(ldef, rdef, dbg) : cg.world.op<ICmp:: ule>(ldef, rdef, dbg);
-                    case  GT: return s ? cg.world.op<ICmp::  sg>(ldef, rdef, dbg) : cg.world.op<ICmp::  ug>(ldef, rdef, dbg);
-                    case  GE: return s ? cg.world.op<ICmp:: sge>(ldef, rdef, dbg) : cg.world.op<ICmp:: uge>(ldef, rdef, dbg);
-                    case SHR: return s ? cg.world.op<IOp ::ashr>(ldef, rdef, dbg) : cg.world.op<IOp ::lshr>(ldef, rdef, dbg);
-                    case  OR: return cg.world.op<IOp :: ior>(ldef, rdef, dbg);
-                    case XOR: return cg.world.op<IOp ::ixor>(ldef, rdef, dbg);
-                    case AND: return cg.world.op<IOp ::iand>(ldef, rdef, dbg);
-                    case ADD: return cg.world.op<WOp :: add>(mode, ldef, rdef, dbg);
-                    case SUB: return cg.world.op<WOp :: sub>(mode, ldef, rdef, dbg);
-                    case MUL: return cg.world.op<WOp :: mul>(mode, ldef, rdef, dbg);
-                    case SHL: return cg.world.op<WOp :: shl>(mode, ldef, rdef, dbg);
-                    case DIV: return cg.handle_mem_res(s ? cg.world.op<ZOp::sdiv>(cg.cur_mem, ldef, rdef, dbg) : cg.world.op<ZOp::udiv>(cg.cur_mem, ldef, rdef, dbg));
-                    case REM: return cg.handle_mem_res(s ? cg.world.op<ZOp::smod>(cg.cur_mem, ldef, rdef, dbg) : cg.world.op<ZOp::umod>(cg.cur_mem, ldef, rdef, dbg));
+                    case  LT: return cg.world.op(s ? ICmp::  sl : ICmp::  ul, ldef, rdef, dbg);
+                    case  LE: return cg.world.op(s ? ICmp:: sle : ICmp:: ule, ldef, rdef, dbg);
+                    case  GT: return cg.world.op(s ? ICmp::  sg : ICmp::  ug, ldef, rdef, dbg);
+                    case  GE: return cg.world.op(s ? ICmp:: sge : ICmp:: uge, ldef, rdef, dbg);
+                    case SHR: return cg.world.op(s ? IOp ::ashr : IOp ::lshr, ldef, rdef, dbg);
+                    case  EQ: return cg.world.op(ICmp::   e, ldef, rdef, dbg);
+                    case  NE: return cg.world.op(ICmp::  ne, ldef, rdef, dbg);
+                    case  OR: return cg.world.op(IOp :: ior, ldef, rdef, dbg);
+                    case XOR: return cg.world.op(IOp ::ixor, ldef, rdef, dbg);
+                    case AND: return cg.world.op(IOp ::iand, ldef, rdef, dbg);
+                    case ADD: return cg.world.op(WOp :: add, mode, ldef, rdef, dbg);
+                    case SUB: return cg.world.op(WOp :: sub, mode, ldef, rdef, dbg);
+                    case MUL: return cg.world.op(WOp :: mul, mode, ldef, rdef, dbg);
+                    case SHL: return cg.world.op(WOp :: shl, mode, ldef, rdef, dbg);
+                    case DIV: return cg.handle_mem_res(cg.world.op(s ? ZOp::sdiv : ZOp::udiv, cg.cur_mem, ldef, rdef, dbg));
+                    case REM: return cg.handle_mem_res(cg.world.op(s ? ZOp::smod : ZOp::umod, cg.cur_mem, ldef, rdef, dbg));
                     default: THORIN_UNREACHABLE;
                 }
             }
@@ -705,18 +697,10 @@ const Def* PostfixExpr::remit(CodeGen& cg) const {
     auto one = cg.lit_one(type(), cg.loc2dbg(loc()));
     const Def* val = nullptr;
 
-    if (is_int(type())) {
-        auto mode = type2wmode(type());
-        if (tag() == INC)
-            val = cg.world.op<WOp::add>(mode, val, one, cg.loc2dbg(loc()));
-        else
-            val = cg.world.op<WOp::sub>(mode, val, one, cg.loc2dbg(loc()));
-    } else {
-        if (tag() == INC)
-            val = cg.world.op<ROp::add>(val, one, cg.loc2dbg(loc()));
-        else
-            val = cg.world.op<ROp::sub>(val, one, cg.loc2dbg(loc()));
-    }
+    if (is_int(type()))
+        val = cg.world.op(tag() == INC ? WOp::add : WOp::sub, type2wmode(type()), val, one, cg.loc2dbg(loc()));
+    else
+        val = cg.world.op(tag() == INC ? ROp::add : ROp::sub, val, one, cg.loc2dbg(loc()));
     cg.store(var, val, loc());
     return res;
 }
@@ -1064,14 +1048,14 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 
 const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     auto index = path()->decl()->as<OptionDecl>()->index();
-    auto cond = cg.world.op<ICmp::e>(cg.world.extract(init, 0_u32, cg.loc2dbg(loc())), cg.world.lit_nat(index, cg.loc2dbg(loc())));
+    auto cond = cg.world.op(ICmp::e, cg.world.extract(init, 0_u32, cg.loc2dbg(loc())), cg.world.lit_nat(index, cg.loc2dbg(loc())));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
         auto variant = cg.world.bitcast(variant_type, cg.world.extract(init, 1, cg.loc2dbg(loc())), cg.loc2dbg(loc()));
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
             auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? variant : cg.world.extract(variant, i, cg.loc2dbg(loc())));
-            cond = cg.world.op<IOp::iand>(cond, arg_cond, cg.loc2dbg(loc()));
+            cond = cg.world.op(IOp::iand, cond, arg_cond, cg.loc2dbg(loc()));
         }
     }
     return cond;
@@ -1088,7 +1072,7 @@ const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) co
         if (!elem(i)->is_refutable()) continue;
 
         auto next = elem(i)->emit_cond(cg, cg.world.extract(init, i, cg.loc2dbg(loc())));
-        cond = cond ? cg.world.op<IOp::iand>(cond, next) : next;
+        cond = cond ? cg.world.op(IOp::iand, cond, next) : next;
     }
     return cond ? cond : cg.world.lit_true();
 }
@@ -1108,7 +1092,7 @@ const thorin::Def* LiteralPtrn::emit(CodeGen& cg) const {
 void LiteralPtrn::emit(CodeGen&, const thorin::Def*) const {}
 
 const thorin::Def* LiteralPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
-    return cg.world.op<ICmp::e>(init, emit(cg));
+    return cg.world.op(ICmp::e, init, emit(cg));
 }
 
 const thorin::Def* CharPtrn::emit(CodeGen& cg) const {
@@ -1118,7 +1102,7 @@ const thorin::Def* CharPtrn::emit(CodeGen& cg) const {
 void CharPtrn::emit(CodeGen&, const thorin::Def*) const {}
 
 const thorin::Def* CharPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
-    return cg.world.op<ICmp::e>(init, emit(cg));
+    return cg.world.op(ICmp::e, init, emit(cg));
 }
 
 /*
