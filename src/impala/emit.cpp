@@ -639,10 +639,10 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case REM_ASGN: rdef = cg.handle_mem_res(cg.world.op(s ? ZOp::smod : ZOp::umod, cg.cur_mem, ldef, rdef, dbg)); break;
                         default: THORIN_UNREACHABLE;
                     }
-
-                    cg.store(lvar, rdef, loc());
-                    return cg.world.tuple();
                 }
+
+                cg.store(lvar, rdef, loc());
+                return cg.world.tuple();
             }
 
             auto ldef = lhs()->remit(cg);
