@@ -108,7 +108,7 @@ public:
         auto result = world.extract(alloc, 1, dbg);
         auto ptr = result->type()->as<thorin::Ptr>();
         if (auto variadic = ptr->pointee()->isa<Variadic>())
-            return world.bitcast(world.type_ptr(world.unsafe_variadic(variadic->body()), ptr->addr_space()), result);
+            return world.op_bitcast(world.type_ptr(world.unsafe_variadic(variadic->body()), ptr->addr_space()), result);
         return result;
     }
 
@@ -420,7 +420,7 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     auto dbg = cg.loc2dbg(loc());
 
     if (src_type->isa<PtrType>() || dst_type->isa<PtrType>()) {
-        return cg.world.bitcast(dst, def, dbg);
+        return cg.world.op_bitcast(dst, def, dbg);
     } else if (is_int(src_type) || is_bool(src_type)) {
         if (is_signed(src_type)) {
             if (is_int(dst_type) || is_bool(dst_type)) {
@@ -760,7 +760,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                     if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {
                         auto name = fn_decl->fn_symbol().remove_quotation();
                         if (name == "bitcast") {
-                            return cg.world.bitcast(cg.convert(type_expr->type_arg(0)), arg(0)->remit(cg), cg.loc2dbg(loc()));
+                            return cg.world.op_bitcast(cg.convert(type_expr->type_arg(0)), arg(0)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "select") {
                             return cg.world.op_select(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "insert") {
@@ -1042,7 +1042,7 @@ const thorin::Def* IdPtrn::emit_cond(CodeGen& cg, const thorin::Def*) const { re
 void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     if (num_args() == 0) return;
     auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
-    auto variant = cg.world.bitcast(variant_type, cg.world.extract(init, 1), cg.loc2dbg(loc()));
+    auto variant = cg.world.op_bitcast(variant_type, cg.world.extract(init, 1), cg.loc2dbg(loc()));
     for (size_t i = 0, e = num_args(); i != e; ++i) {
         arg(i)->emit(cg, num_args() == 1 ? variant : cg.world.extract(variant, i, cg.loc2dbg(loc())));
     }
@@ -1053,7 +1053,7 @@ const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) con
     auto cond = cg.world.op(ICmp::e, cg.world.extract(init, 0_u32, cg.loc2dbg(loc())), cg.world.lit_nat(index, cg.loc2dbg(loc())));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
-        auto variant = cg.world.bitcast(variant_type, cg.world.extract(init, 1, cg.loc2dbg(loc())), cg.loc2dbg(loc()));
+        auto variant = cg.world.op_bitcast(variant_type, cg.world.extract(init, 1, cg.loc2dbg(loc())), cg.loc2dbg(loc()));
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
             auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? variant : cg.world.extract(variant, i, cg.loc2dbg(loc())));
