@@ -700,9 +700,9 @@ const Def* PostfixExpr::remit(CodeGen& cg) const {
     const Def* val = nullptr;
 
     if (is_int(type()))
-        val = cg.world.op(tag() == INC ? WOp::add : WOp::sub, type2wmode(type()), val, one, cg.loc2dbg(loc()));
+        val = cg.world.op(tag() == INC ? WOp::add : WOp::sub, type2wmode(type()), res, one, cg.loc2dbg(loc()));
     else
-        val = cg.world.op(tag() == INC ? ROp::add : ROp::sub, val, one, cg.loc2dbg(loc()));
+        val = cg.world.op(tag() == INC ? ROp::add : ROp::sub, res, one, cg.loc2dbg(loc()));
     cg.store(var, val, loc());
     return res;
 }
