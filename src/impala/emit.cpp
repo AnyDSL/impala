@@ -92,7 +92,7 @@ public:
     }
 
     const Def* handle_mem_res(const Def* mem_res) {
-        auto [mem, res] = split<2>(mem_res);
+        auto [mem, res] = mem_res->split<2>();
         cur_mem = mem;
         return res;
     }
