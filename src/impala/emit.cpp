@@ -766,7 +766,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         } else if (name == "insert") {
                             return cg.world.unsafe_insert(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "sizeof") {
-                            return cg.world.op_sizeof(cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc()));
+                            return cg.world.op_bitcast(cg.world.type_int(32), cg.world.op_sizeof(cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
                         } else if (name == "undef") {
                             return cg.world.bot(cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc()));
                         } else if (name == "reserve_shared") {

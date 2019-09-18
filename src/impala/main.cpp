@@ -6,6 +6,7 @@
 #ifdef LLVM_SUPPORT
 #include "thorin/be/llvm/llvm.h"
 #endif
+#include "thorin/rewrite.h"
 #include "thorin/analyses/schedule.h"
 #include "thorin/pass/optimize.h"
 #include "thorin/util/args.h"
@@ -212,6 +213,7 @@ int main(int argc, char** argv) {
 
         if (result) {
             thorin::verify_mem(world);
+            thorin::cleanup(world);
             if (opt_thorin)
                 optimize_old(world);
             if (emit_thorin)
