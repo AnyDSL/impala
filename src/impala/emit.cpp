@@ -441,8 +441,10 @@ const Def* CastExpr::remit(CodeGen& cg) const {
                 return cg.world.op(Conv::r2s, dst, def, dbg);
             else
                 return cg.world.op(Conv::r2u, dst, def, dbg);
-        } else {
+        } else if (is_float(src_type) && is_float(dst_type)) {
             return cg.world.op(Conv::r2r, dst, def, dbg);
+        } else {
+            return cg.world.op_bitcast(dst, def, dbg);
         }
     }
     THORIN_UNREACHABLE;
