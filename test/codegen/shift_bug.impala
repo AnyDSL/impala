@@ -1,6 +1,0 @@
-// codegen
-
-// https://github.com/AnyDSL/impala/issues/34
-fn main() -> i32 {
-    if (1 << 31) as u32 == 0x80000000u32 { 0 } else { 1 }
-}
