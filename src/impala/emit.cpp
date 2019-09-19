@@ -669,6 +669,9 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                 auto mode = type2wmode(lhs()->type());
                 bool s = is_signed(lhs()->type());
 
+                if (ldef->type()->isa<Ptr>()) ldef = cg.world.op_bitcast(cg.world.type_int(64), ldef);
+                if (rdef->type()->isa<Ptr>()) rdef = cg.world.op_bitcast(cg.world.type_int(64), rdef);
+
                 switch (op) {
                     case  LT: return cg.world.op(s ? ICmp::  sl : ICmp::  ul, ldef, rdef, dbg);
                     case  LE: return cg.world.op(s ? ICmp:: sle : ICmp:: ule, ldef, rdef, dbg);
