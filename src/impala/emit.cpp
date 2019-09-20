@@ -732,7 +732,7 @@ const Def* TupleExpr::remit(CodeGen& cg) const {
 }
 
 const Def* IndefiniteArrayExpr::remit(CodeGen& cg) const {
-    auto arity = dim()->remit(cg);
+    auto arity = cg.world.op_bitcast(cg.world.kind_arity(), dim()->remit(cg));
     auto elem = cg.convert(type()->as<IndefiniteArrayType>()->elem_type());
     return cg.world.pack(arity, cg.world.bot(elem), cg.loc2dbg(loc()));
 }
