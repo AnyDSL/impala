@@ -1,6 +1,5 @@
 #include "impala/ast.h"
 
-#include "thorin/primop.h"
 #include "thorin/util.h"
 #include "thorin/world.h"
 #include "thorin/util/array.h"
