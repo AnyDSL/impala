@@ -97,18 +97,19 @@ public:
         return res;
     }
 
-    const Def* load(const Def*  ptr,   Loc loc) { return handle_mem_res(world.load(cur_mem, ptr, loc2dbg(loc))); }
-    const Def* slot(const Def* type, Debug dbg) { return handle_mem_res(world.slot(type, cur_mem, dbg)); }
+    const Def* load(const Def*  ptr,   Loc loc) { return handle_mem_res(world.op_load(cur_mem, ptr, loc2dbg(loc))); }
+    const Def* slot(const Def* type, Debug dbg) { return handle_mem_res(world.op_slot(type, cur_mem, dbg)); }
 
-    void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = world.store(cur_mem, ptr, val, loc2dbg(loc)); }
+    void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = world.op_store(cur_mem, ptr, val, loc2dbg(loc)); }
 
     const Def* alloc(const thorin::Def* type, Debug dbg) {
-        auto alloc = world.alloc(type, cur_mem, dbg);
+        auto alloc = world.op_alloc(type, cur_mem, dbg);
         cur_mem = world.extract(alloc, 0_u32, dbg);
         auto result = world.extract(alloc, 1, dbg);
-        auto ptr = result->type()->as<thorin::Ptr>();
-        if (auto variadic = ptr->pointee()->isa<Variadic>())
-            return world.op_bitcast(world.type_ptr(world.variadic_unsafe(variadic->body()), ptr->addr_space()), result);
+        auto ptr = as<thorin::Tag::Ptr>(result->type());
+        auto [pointee, addr_space] = ptr->args<2>();
+        if (auto variadic = pointee->isa<Variadic>())
+            return world.op_bitcast(world.type_ptr(world.variadic_unsafe(variadic->body()), addr_space), result);
         return result;
     }
 
@@ -217,7 +218,7 @@ void LocalDecl::emit(CodeGen& cg, const Def* init) const {
 
     if (is_mut()) {
         def_ = cg.slot(thorin_type, debug());
-        cg.cur_mem = cg.world.store(cg.cur_mem, def_, init, cg.loc2dbg(loc()));
+        cg.cur_mem = cg.world.op_store(cg.cur_mem, def_, init, cg.loc2dbg(loc()));
     } else {
         def_ = init;
     }
@@ -533,15 +534,15 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
         }
         case RUNRUN: {
             auto def = rhs()->skip_rvalue()->remit(cg);
-            return cg.world.run(def, cg.loc2dbg(loc()));
+            return cg.world.op(PE::run, def, cg.loc2dbg(loc()));
         }
         case HLT: {
             auto def = rhs()->skip_rvalue()->remit(cg);
-            return cg.world.hlt(def, cg.loc2dbg(loc()));
+            return cg.world.op(PE::hlt, def, cg.loc2dbg(loc()));
         }
         case KNOWN: {
             auto def = rhs()->skip_rvalue()->remit(cg);
-            return cg.world.known(def, cg.loc2dbg(loc()));
+            return cg.world.op(PE::known, def, cg.loc2dbg(loc()));
         }
         case OR:
         case OROR:
@@ -671,8 +672,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                 auto mode = type2wmode(lhs()->type());
                 bool s = is_signed(lhs()->type());
 
-                if (ldef->type()->isa<Ptr>()) ldef = cg.world.op_bitcast(cg.world.type_int(64), ldef);
-                if (rdef->type()->isa<Ptr>()) rdef = cg.world.op_bitcast(cg.world.type_int(64), rdef);
+                if (thorin::isa<thorin::Tag::Ptr>(ldef->type())) ldef = cg.world.op_bitcast(cg.world.type_int(64), ldef);
+                if (thorin::isa<thorin::Tag::Ptr>(rdef->type())) rdef = cg.world.op_bitcast(cg.world.type_int(64), rdef);
 
                 switch (op) {
                     case  LT: return cg.world.op(s ? ICmp::  sl : ICmp::  ul, ldef, rdef, dbg);
@@ -792,8 +793,9 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "cmpxchg") {
-                            auto ptr = cg.convert(arg(0)->type());
-                            auto poly_type = ptr->as<thorin::Ptr>()->pointee();
+                            auto ptr = thorin::as<thorin::Tag::Ptr>(cg.convert(arg(0)->type()));
+                            auto [pointee, addr_space] = ptr->args<2>();
+                            auto poly_type = pointee;
                             auto cn = cg.world.cn({
                                 cg.world.type_mem(), ptr, poly_type, poly_type,
                                 cg.world.cn({ cg.world.type_mem(), poly_type, cg.world.type_bool() })
