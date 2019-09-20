@@ -108,7 +108,7 @@ public:
         auto result = world.extract(alloc, 1, dbg);
         auto ptr = result->type()->as<thorin::Ptr>();
         if (auto variadic = ptr->pointee()->isa<Variadic>())
-            return world.op_bitcast(world.type_ptr(world.unsafe_variadic(variadic->body()), ptr->addr_space()), result);
+            return world.op_bitcast(world.type_ptr(world.variadic_unsafe(variadic->body()), ptr->addr_space()), result);
         return result;
     }
 
@@ -198,7 +198,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
         return world.variadic(definite_array_type->dim(), convert(definite_array_type->elem_type()));
     } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {
-        return world.unsafe_variadic(convert(indefinite_array_type->elem_type()));
+        return world.variadic_unsafe(convert(indefinite_array_type->elem_type()));
     } else if (type->isa<NoRetType>()) {
         return nullptr; // TODO use bottom type - once it is available in thorin
     }
@@ -748,7 +748,7 @@ const Def* TypeAppExpr::remit(CodeGen& /*cg*/) const { THORIN_UNREACHABLE; }
 
 const Def* MapExpr::lemit(CodeGen& cg) const {
     auto agg = lhs()->lemit(cg);
-    return cg.world.unsafe_lea(agg, arg(0)->remit(cg), cg.loc2dbg(loc()));
+    return cg.world.op_lea_unsafe(agg, arg(0)->remit(cg), cg.loc2dbg(loc()));
 }
 
 const Def* MapExpr::remit(CodeGen& cg) const {
@@ -769,7 +769,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         } else if (name == "select") {
                             return cg.world.op_select(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "insert") {
-                            return cg.world.unsafe_insert(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
+                            return cg.world.insert_unsafe(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "sizeof") {
                             return cg.world.op_bitcast(cg.world.type_int(32), cg.world.op_sizeof(cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
                         } else if (name == "undef") {
@@ -803,7 +803,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             dst = cont;
                         } else if (name == "pe_info") {
                             auto poly_type = cg.convert(arg(1)->type());
-                            auto string_type = cg.world.type_ptr(cg.world.unsafe_variadic(cg.world.type_int(8)));
+                            auto string_type = cg.world.type_ptr(cg.world.variadic_unsafe(cg.world.type_int(8)));
                             auto cn = cg.world.cn({
                                 cg.world.type_mem(), string_type, poly_type,
                                 cg.world.cn({ cg.world.type_mem() }) });
@@ -841,14 +841,14 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         return ret;
     } else if (ltype->isa<ArrayType>() || ltype->isa<TupleType>()) {
         auto index = arg(0)->remit(cg);
-        return cg.world.unsafe_extract(lhs()->remit(cg), index, cg.loc2dbg(loc()));
+        return cg.world.extract_unsafe(lhs()->remit(cg), index, cg.loc2dbg(loc()));
     }
     THORIN_UNREACHABLE;
 }
 
 const Def* FieldExpr::lemit(CodeGen& cg) const {
     auto value = lhs()->lemit(cg);
-    return cg.world.unsafe_lea(value, cg.world.lit_nat(index(), cg.loc2dbg(loc())), cg.loc2dbg(loc()));
+    return cg.world.op_lea_unsafe(value, cg.world.lit_nat(index(), cg.loc2dbg(loc())), cg.loc2dbg(loc()));
 }
 
 const Def* FieldExpr::remit(CodeGen& cg) const {
