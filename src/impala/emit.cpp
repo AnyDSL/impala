@@ -1056,7 +1056,8 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 
 const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     auto index = path()->decl()->as<OptionDecl>()->index();
-    auto cond = cg.world.op(ICmp::e, cg.world.extract(init, 0_u32, cg.loc2dbg(loc())), cg.world.lit_nat(index, cg.loc2dbg(loc())));
+    auto init_0 = cg.world.extract(init, 0_u32, cg.loc2dbg(loc()));
+    auto cond = cg.world.op(ICmp::e, init_0, cg.world.lit_int(u32(index), cg.loc2dbg(loc())));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
         auto variant = cg.world.op_bitcast(variant_type, cg.world.extract(init, 1, cg.loc2dbg(loc())), cg.loc2dbg(loc()));
