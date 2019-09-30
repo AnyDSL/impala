@@ -1,6 +1,6 @@
 #include "impala/loc.h"
 
-#include "thorin/util/stream.h"
+#include "thorin/util/streamf.h"
 
 namespace impala {
 

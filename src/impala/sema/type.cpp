@@ -198,9 +198,7 @@ std::ostream& IndefiniteArrayType::stream(std::ostream& os) const { return strea
 std::ostream& SimdType::stream(std::ostream& os) const { return streamf(os, "simd[{} * {}]", elem_type(), dim()); }
 std::ostream& StructType::stream(std::ostream& os) const { return os << struct_decl()->symbol(); }
 std::ostream& EnumType::stream(std::ostream& os) const { return os << enum_decl()->symbol(); }
-std::ostream& TupleType::stream(std::ostream& os) const {
-    return stream_list(os, ops(), [&](const Type* type) { os << type; }, "(", ")");
-}
+std::ostream& TupleType::stream(std::ostream& os) const { return streamf(os, "({, })", ops()); }
 
 //------------------------------------------------------------------------------
 
