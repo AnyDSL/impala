@@ -108,7 +108,7 @@ public:
         auto ptr = as<thorin::Tag::Ptr>(result->type());
         auto [pointee, addr_space] = ptr->args<2>();
         if (auto variadic = pointee->isa<Variadic>())
-            return world.op_bitcast(world.type_ptr(world.variadic_unsafe(variadic->body()), addr_space), result);
+            return world.op_bitcast(world.type_ptr(world.variadic_unsafe(variadic->codomain()), addr_space), result);
         return result;
     }
 
@@ -849,7 +849,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
 
 const Def* FieldExpr::lemit(CodeGen& cg) const {
     auto value = lhs()->lemit(cg);
-    return cg.world.op_lea_unsafe(value, cg.world.lit_nat(index(), cg.loc2dbg(loc())), cg.loc2dbg(loc()));
+    return cg.world.op_lea_unsafe(value, index(), cg.loc2dbg(loc()));
 }
 
 const Def* FieldExpr::remit(CodeGen& cg) const {
@@ -920,7 +920,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
                 } else {
                     auto enum_ptrn = arm(i)->ptrn()->as<EnumPtrn>();
                     auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
-                    defs[i] = cg.world.lit_nat(option_decl->index(), cg.loc2dbg(arm(i)->ptrn()->loc()));
+                    defs[i] = cg.world.lit_int(64, option_decl->index(), cg.loc2dbg(arm(i)->ptrn()->loc()));
                 }
                 targets[i] = cg.basicblock(cg.loc2dbg("case", arm(i)->loc().front()));
             }
