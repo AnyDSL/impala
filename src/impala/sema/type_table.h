@@ -9,7 +9,7 @@
 #include "thorin/util/hash.h"
 #include "thorin/util/cast.h"
 #include "thorin/util/array.h"
-#include "thorin/util/streamf.h"
+#include "thorin/util/stream.h"
 
 namespace thorin {
 
@@ -91,7 +91,7 @@ using Type2Type = TypeMap<const Type*>;
 
 /// Base class for all \p Type%s.
 template <class TypeTable>
-class TypeBase : public RTTICast<TypeBase<TypeTable>>, public Streamable {
+class TypeBase : public RTTICast<TypeBase<TypeTable>> {
 protected:
     using Type2Type = GIDMap<const TypeBase*, const TypeBase*>;
     using Types     = ArrayRef<const TypeBase*>;
@@ -110,6 +110,8 @@ protected:
     }
 
 public:
+    virtual ~TypeBase() {}
+
     int tag() const { return tag_; }
     TypeTable& table() const { return *table_; }
 
@@ -136,6 +138,7 @@ public:
 protected:
     virtual uint32_t vhash() const;
     virtual const TypeBase* vreduce(int, const TypeBase*, Type2Type&) const;
+    virtual Stream& stream(Stream&) const = 0;
 
     mutable uint32_t hash_ = 0;
     int order_ = 0;

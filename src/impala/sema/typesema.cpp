@@ -25,8 +25,9 @@ public:
     template<typename... Args>
     void error_msg(const Expr* expr, const char* what, const Type* type, const char* fmt, Args... args) {
         std::ostringstream os;
-        thorin::streamf(os, fmt, args...);
-        error(expr, "mismatched types: expected {} but found '{}' at {}", what, type, os.str());
+        Stream s(os);
+        s.streamf(fmt, args...);
+        error(expr, "mismatched types: expected {} but found '{}' at {}", what, type, ((std::ostringstream&) s.ostream()).str());
     }
 
 #define IMPALA_EXPECT(T, pred, what) \
@@ -50,7 +51,8 @@ public:
     template<typename... Args>
     const Type* expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
         std::ostringstream os;
-        thorin::streamf(os, fmt, args...);
+        Stream s(os);
+        s.streamf(fmt, args...);
         if (auto ref = is_lvalue(expr->type()))
             return ref->pointee();
         error(expr, "lvalue required for {}", os.str());

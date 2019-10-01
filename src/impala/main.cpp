@@ -16,6 +16,8 @@
 #include "impala/cgen.h"
 #include "impala/impala.h"
 
+using thorin::Stream;
+
 //------------------------------------------------------------------------------
 
 typedef std::vector<std::string> Names;
@@ -83,16 +85,18 @@ int main(int argc, char** argv) {
         impala::fancy() = fancy;
 
         std::ofstream log_stream;
+        Stream s(*open(log_stream, log_name));
+
         if (log_level == "error") {
-            thorin::Log::set(thorin::Log::Error, open(log_stream, log_name));
+            thorin::Log::set(thorin::Log::Error, &s);
         } else if (log_level == "warn") {
-            thorin::Log::set(thorin::Log::Warn, open(log_stream, log_name));
+            thorin::Log::set(thorin::Log::Warn, &s);
         } else if (log_level == "info") {
-            thorin::Log::set(thorin::Log::Info, open(log_stream, log_name));
+            thorin::Log::set(thorin::Log::Info, &s);
         } else if (log_level == "verbose") {
-            thorin::Log::set(thorin::Log::Verbose, open(log_stream, log_name));
+            thorin::Log::set(thorin::Log::Verbose, &s);
         } else if (log_level == "debug") {
-            thorin::Log::set(thorin::Log::Debug, open(log_stream, log_name));
+            thorin::Log::set(thorin::Log::Debug, &s);
         } else
             throw std::invalid_argument("log level must be one of " LOG_LEVELS);
 
@@ -175,14 +179,14 @@ int main(int argc, char** argv) {
         auto module = std::make_unique<const impala::Module>(infiles.front().c_str(), std::move(items));
 
         if (emit_ast)
-            module->stream(std::cout);
+            module->dump();
 
         std::unique_ptr<impala::TypeTable> typetable;
         impala::check(typetable, module.get());
         bool result = impala::num_errors() == 0;
 
         if (emit_annotated)
-            module->stream(std::cout);
+            module->dump();
 
         if (result && emit_cint) {
             impala::CGenOptions opts;

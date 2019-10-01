@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "thorin/world.h"
-#include "thorin/util/streamf.h"
+#include "thorin/util/stream.h"
 
 #include "impala/token.h"
 #include "impala/sema/type.h"
@@ -55,18 +55,18 @@ int& num_warnings();
 int& num_errors();
 bool& fancy();
 
-template<typename... Args>
-std::ostream& warning(const Loc& loc, const char* fmt, Args... args) {
+template<class... Args>
+void warning(const Loc& loc, const char* fmt, Args... args) {
     ++num_warnings();
-    thorin::streamf(std::cerr, "{}: warning: ", loc);
-    return thorin::streamf(std::cerr, fmt, args...) << std::endl;;
+    Stream s(std::cerr);
+    s.streamf("{}: warning: ", loc).streamf(fmt, std::forward<Args>(args)...).endl();
 }
 
-template<typename... Args>
-std::ostream& error(const Loc& loc, const char* fmt, Args... args) {
+template<class... Args>
+void error(const Loc& loc, const char* fmt, Args... args) {
     ++num_errors();
-    thorin::streamf(std::cerr, "{}: error: ", loc);
-    return thorin::streamf(std::cerr, fmt, args...) << std::endl;;
+    Stream s(std::cerr);
+    s.streamf("{}: error: ", loc).streamf(fmt, std::forward<Args>(args)...).endl();
 }
 
 }
