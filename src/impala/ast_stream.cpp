@@ -7,154 +7,147 @@ using namespace thorin;
 
 Prec prec = Prec::Bottom;
 
-void ASTNode::dump() const {
-    Stream s(std::cout);
-    stream(s);
-}
-
 /*
  * AST types
  */
 
-Stream& ErrorASTType::stream(Stream& os) const { return os << "<error>"; }
+Stream& ErrorASTType::stream(Stream& s) const { return s << "<error>"; }
 
-Stream& PtrASTType::stream(Stream& os) const {
-    os << prefix();
+Stream& PtrASTType::stream(Stream& s) const {
+    s << prefix();
     if (addr_space() != 0)
-        os << '[' << addr_space() << ']';
-    return os << referenced_ast_type();
+        s << '[' << addr_space() << ']';
+    return s << referenced_ast_type();
 }
 
-Stream& DefiniteArrayASTType::stream(Stream& os) const { return os.fmt("[{} * {}]", elem_ast_type(), dim()); }
-Stream& IndefiniteArrayASTType::stream(Stream& os) const { return os.fmt("[{}]", elem_ast_type()); }
+Stream& DefiniteArrayASTType::stream(Stream& s) const { return s.fmt("[{} * {}]", elem_ast_type(), dim()); }
+Stream& IndefiniteArrayASTType::stream(Stream& s) const { return s.fmt("[{}]", elem_ast_type()); }
 
-Stream& TupleASTType::stream(Stream& os) const {
-    return os.list(ast_type_args(), [&](const auto& ast_type) { os << ast_type.get(); }, "(", ")");
-}
+Stream& TupleASTType::stream(Stream& s) const { return s.fmt("({, })", ast_type_args()); }
 
-Stream& FnASTType::stream(Stream& os) const {
+Stream& FnASTType::stream(Stream& s) const {
     auto ret = ret_fn_ast_type();
-    stream_ast_type_params(os << "fn");
-    os.list(ret != nullptr ? ast_type_args().skip_back() : ast_type_args(), [&](const auto& ast_type) { os << ast_type.get(); }, "(", ")");
+    stream_ast_type_params(s << "fn");
+    s.fmt("({, })", ret != nullptr ? ast_type_args().skip_back() : ast_type_args());
     if (ret != nullptr) {
-        os << " -> ";
+        s << " -> ";
         if (ret->num_ast_type_args() == 1)
-            os << ret->ast_type_args().front().get();
+            s << ret->ast_type_args().front().get();
         else
-            os.list(ret->ast_type_args(), [&](const auto& ast_type) { os << ast_type.get(); }, "(", ")");
+            s.fmt("({, })", ret->ast_type_args());
     }
-    return os;
+    return s;
 }
 
-Stream& ASTTypeApp::stream(Stream& os) const {
-    os << symbol();
+Stream& ASTTypeApp::stream(Stream& s) const {
+    s << symbol();
     if (num_ast_type_args() != 0)
-        os.list(ast_type_args(), [&](const auto& ast_type) { os << ast_type.get(); }, "[", "]");
-    return os;
+        s.fmt("[{, }]", ast_type_args());
+    return s;
 }
 
-Stream& PrimASTType::stream(Stream& os) const {
+Stream& PrimASTType::stream(Stream& s) const {
     switch (tag()) {
-#define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return os << #itype;
+#define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return s << #itype;
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
 }
 
-Stream& Typeof::stream(Stream& os) const {
-    return os.fmt("typeof({})", expr());
+Stream& Typeof::stream(Stream& s) const {
+    return s.fmt("typeof({})", expr());
 }
 
 /*
  * paths
  */
 
-Stream& Identifier::stream(Stream& os) const { return os << symbol(); }
-Stream& Path::Elem::stream(Stream& os) const { return os << symbol(); }
-Stream& Path::stream(Stream& os) const {
-    os << (is_global() ? "::" : "");
-    return os.list(elems(), [&](const auto& elem) { os << elem.get(); }, "", "", "::");
+Stream& Identifier::stream(Stream& s) const { return s << symbol(); }
+Stream& Path::Elem::stream(Stream& s) const { return s << symbol(); }
+Stream& Path::stream(Stream& s) const {
+    s << (is_global() ? "::" : "");
+    return s.fmt("{::}", elems());
 }
 
 /*
  * parameters
  */
 
-Stream& ASTTypeParam::stream(Stream& os) const {
-    os << symbol() << (bounds_.empty() ? "" : ": ");
-    return os.list(bounds(), [&](const auto& type) { os << type.get(); }, "", "", " + ");
+Stream& ASTTypeParam::stream(Stream& s) const {
+    s << symbol() << (bounds_.empty() ? "" : ": ");
+    return s.fmt("{ + }", bounds());
 }
 
-Stream& ASTTypeParamList::stream_ast_type_params(Stream& os) const {
+Stream& ASTTypeParamList::stream_ast_type_params(Stream& s) const {
     if (!ast_type_params().empty())
-        os.list(ast_type_params(), [&](const auto& ast_type_param) { os << ast_type_param.get(); }, "[", "]");
-    return os;
+        s.fmt("[{, }]", ast_type_params());
+    return s;
 }
 
 /*
  * other decls
  */
 
-Stream& Fn::stream_params(Stream& os, bool returning) const {
-    return os.list(returning ? params().skip_back() : params(), [&](const auto& param) { param->stream(os); });
+Stream& Fn::stream_params(Stream& s, bool returning) const {
+    return s.fmt("({, })", returning ? params().skip_back() : params());
 }
 
-Stream& LocalDecl::stream(Stream& os) const {
-    os << (is_mut() ? "mut " : "" );
+Stream& LocalDecl::stream(Stream& s) const {
+    s << (is_mut() ? "mut " : "" );
     if (!is_anonymous()) {
-        os << symbol();
+        s << symbol();
         if (type())
-            os << ": " << type();
+            s << ": " << type();
         else if (ast_type())
-            os << ": " << ast_type();
+            s << ": " << ast_type();
     }
 
-    return os;
+    return s;
 }
 
-Stream& Param::stream(Stream& os) const {
+Stream& Param::stream(Stream& s) const {
     if (!is_anonymous())
-        os << (is_mut() ? "mut " : "") << symbol() <<
+        s << (is_mut() ? "mut " : "") << symbol() <<
             ((ast_type() || type()) ? ": " : "");
 
     if (type())
-        os << type();
+        s << type();
     else if (ast_type())
-        os << ast_type();
+        s << ast_type();
 
-    return os;
+    return s;
 }
 
 /*
  * items + item helpers
  */
 
-Stream& Module::stream(Stream& os) const {
-    return os.list(items(), [&](const auto& item) { (os << item.get()).endl(); }, "", "", "", true);
+Stream& Module::stream(Stream& s) const {
+    return s.fmt("{\n}", items());
 }
 
-Stream& ModuleDecl::stream(Stream& os) const {
-    return stream_ast_type_params(os << "mod " << symbol()) << ';';
+Stream& ModuleDecl::stream(Stream& s) const {
+    return stream_ast_type_params(s << "mod " << symbol()) << ';';
 }
 
-Stream& ExternBlock::stream(Stream& os) const {
-    os << "extern ";
+Stream& ExternBlock::stream(Stream& s) const {
+    s << "extern ";
     if (!abi_.empty())
-        os << abi_.str() << ' ';
-    (os << '{').indent().endl();
-    os.list(fn_decls(), [&](const auto& fn_decl) { os << fn_decl.get(); }, "", "", "", true);
-    return os.dedent().endl() << '}';
+        s << abi_.str() << ' ';
+    (s << '{').indent().endl();
+    s.list(fn_decls(), [&](const auto& fn_decl) { s << fn_decl.get(); }, "", "", "", true);
+    return s.dedent().endl() << '}';
 }
 
-Stream& FnDecl::stream(Stream& os) const {
+Stream& FnDecl::stream(Stream& s) const {
     if (is_extern())
-        os << "extern ";
-    os << "fn ";
+        s << "extern ";
+    s << "fn ";
     if (filter())
-        os << '@' << filter() << ' ';
+        s << '@' << filter() << ' ';
     if (export_name_)
-        os << export_name_ << ' ';
-    stream_ast_type_params(os << symbol());
+        s << export_name_ << ' ';
+    stream_ast_type_params(s << symbol());
 
     const FnASTType* ret = nullptr;
     if (!params().empty() && params().back()->symbol() == "return" && params().back()->ast_type()) {
@@ -162,172 +155,172 @@ Stream& FnDecl::stream(Stream& os) const {
             ret = fn_type;
     }
 
-    stream_params(os << '(', ret != nullptr) << ")";
+    stream_params(s << '(', ret != nullptr) << ")";
 
     if (ret) {
-        os << " -> ";
+        s << " -> ";
         if (ret->num_ast_type_args() == 1)
-            os << ret->ast_type_arg(0);
+            s << ret->ast_type_arg(0);
         else
-            os.list(ret->ast_type_args(), [&](const auto& ast_type) { os << ast_type.get(); }, "(", ")", ", ");
+            s.list(ret->ast_type_args(), [&](const auto& ast_type) { s << ast_type.get(); }, "(", ")", ", ");
     }
 
     if (body()) {
-        os << ' ' << body();
+        s << ' ' << body();
     } else
-        os << ';';
+        s << ';';
 
-    return os;
+    return s;
 }
 
-Stream& FieldDecl::stream(Stream& os) const {
-    return os.fmt("{}{}: {}", visibility().str(), symbol(), ast_type());
+Stream& FieldDecl::stream(Stream& s) const {
+    return s.fmt("{}{}: {}", visibility().str(), symbol(), ast_type());
 }
 
-Stream& OptionDecl::stream(Stream& os) const {
-    os.fmt("{}", symbol());
+Stream& OptionDecl::stream(Stream& s) const {
+    s.fmt("{}", symbol());
     if (num_args() > 0) {
-        return os.list(args(), [&](const auto& arg) { os << arg.get(); }, "(", ")", ", ");
+        return s.list(args(), [&](const auto& arg) { s << arg.get(); }, "(", ")", ", ");
     } else {
-        return os;
+        return s;
     }
 }
 
-Stream& StaticItem::stream(Stream& os) const {
-    os.fmt("static {}{}", is_mut() ? "mut " : "", identifier());
+Stream& StaticItem::stream(Stream& s) const {
+    s.fmt("static {}{}", is_mut() ? "mut " : "", identifier());
     if (type())
-        os << type();
+        s << type();
     else
-        os << ast_type();
+        s << ast_type();
 
     if (init())
-        os.fmt(" = {}", init());
+        s.fmt(" = {}", init());
 
-    return os << ";";
+    return s << ";";
 }
 
-Stream& StructDecl::stream(Stream& os) const {
-    (stream_ast_type_params(os.fmt("{}struct {}", visibility().str(), symbol())) << " {").indent().endl();
-    return os.list(field_decls(), [&](const auto& field) { os << field.get(); }, "", "", ",", true).dedent().endl() << "}";
+Stream& StructDecl::stream(Stream& s) const {
+    (stream_ast_type_params(s.fmt("{}struct {}", visibility().str(), symbol())) << " {").indent().endl();
+    return s.list(field_decls(), [&](const auto& field) { s << field.get(); }, "", "", ",", true).dedent().endl() << "}";
 }
 
-Stream& EnumDecl::stream(Stream& os) const {
-    (stream_ast_type_params(os.fmt("{}enum {}", visibility().str(), symbol())) << " {").indent().endl();
-    return os.list(option_decls(), [&](const auto& option) { os << option.get(); }, "", "", ",", true).dedent().endl() << "}";
+Stream& EnumDecl::stream(Stream& s) const {
+    (stream_ast_type_params(s.fmt("{}enum {}", visibility().str(), symbol())) << " {").indent().endl();
+    return s.list(option_decls(), [&](const auto& option) { s << option.get(); }, "", "", ",", true).dedent().endl() << "}";
 }
 
-Stream& Typedef::stream(Stream& os) const {
-    return stream_ast_type_params(os.fmt("{}type {}", visibility().str(), symbol())) << " = " << ast_type() << ';';
+Stream& Typedef::stream(Stream& s) const {
+    return stream_ast_type_params(s.fmt("{}type {}", visibility().str(), symbol())) << " = " << ast_type() << ';';
 }
 
-Stream& TraitDecl::stream(Stream& os) const {
-    os << "trait " << symbol();
-    stream_ast_type_params(os);
+Stream& TraitDecl::stream(Stream& s) const {
+    s << "trait " << symbol();
+    stream_ast_type_params(s);
 
     if (!super_traits().empty()) {
-        os << " : ";
-        os.list(super_traits(), [&](const auto& type_app) { os << type_app.get(); });
+        s << " : ";
+        s.list(super_traits(), [&](const auto& type_app) { s << type_app.get(); });
     }
 
-    (os << " {").indent().endl();
-    os.list(methods(), [&](const auto& method) { os << method.get(); }, "", "", "", true);
-    return os.dedent().endl() << '}';
+    (s << " {").indent().endl();
+    s.list(methods(), [&](const auto& method) { s << method.get(); }, "", "", "", true);
+    return s.dedent().endl() << '}';
 }
 
-Stream& ImplItem::stream(Stream& os) const {
-    os << "impl";
-    stream_ast_type_params(os) << ' ';
+Stream& ImplItem::stream(Stream& s) const {
+    s << "impl";
+    stream_ast_type_params(s) << ' ';
     if (trait())
-        os << trait() << " for ";
-    (os << ast_type() << " {").indent().endl();
-    os.list(methods(), [&](const auto& method) { os << method.get(); }, "", "", "", true);
-    return os.dedent().endl() << "}";
+        s << trait() << " for ";
+    (s << ast_type() << " {").indent().endl();
+    s.list(methods(), [&](const auto& method) { s << method.get(); }, "", "", "", true);
+    return s.dedent().endl() << "}";
 }
 
 /*
  * expressions
  */
 
-Stream& BlockExpr::stream(Stream& os) const {
-    os << '{';
+Stream& BlockExpr::stream(Stream& s) const {
+    s << '{';
     if (empty())
-        return os.endl() << '}';
+        return s.endl() << '}';
 
-    os.indent().endl().list(stmts(), [&](const auto& stmt) { os << stmt.get(); }, "", "", "", true);
+    s.indent().endl().list(stmts(), [&](const auto& stmt) { s << stmt.get(); }, "", "", "", true);
 
     if (!expr()->isa<EmptyExpr>()) {
         if (!stmts().empty())
-            os.endl();
-        os << expr();
+            s.endl();
+        s << expr();
     }
 
-    return os.dedent().endl() << "}";
+    return s.dedent().endl() << "}";
 }
 
-Stream& LiteralExpr::stream(Stream& os) const {
+Stream& LiteralExpr::stream(Stream& s) const {
     switch (tag()) {
-        case LIT_bool: return os << (get<bool>() ? "true" : "false");
-        case LIT_i8:   return os << (int)get< s8>() << "i8";
-        case LIT_i16:  return os <<      get<s16>() << "i16";
-        case LIT_i32:  return os <<      get<s32>();
-        case LIT_i64:  return os <<      get<s64>() << "i64";
-        case LIT_u8:   return os << (int)get< u8>() << "u8";
-        case LIT_u16:  return os <<      get<u16>() << "u16";
-        case LIT_u32:  return os <<      get<u32>() << "u";
-        case LIT_u64:  return os <<      get<u64>() << "u64";
-        case LIT_f16:  return os <<      get<r16>() << "h";
-        case LIT_f32:  return os <<      get<r32>() << "f";
-        case LIT_f64:  return os <<      get<r64>() << "f64";
+        case LIT_bool: return s << (get<bool>() ? "true" : "false");
+        case LIT_i8:   return s << (int)get< s8>() << "i8";
+        case LIT_i16:  return s <<      get<s16>() << "i16";
+        case LIT_i32:  return s <<      get<s32>();
+        case LIT_i64:  return s <<      get<s64>() << "i64";
+        case LIT_u8:   return s << (int)get< u8>() << "u8";
+        case LIT_u16:  return s <<      get<u16>() << "u16";
+        case LIT_u32:  return s <<      get<u32>() << "u";
+        case LIT_u64:  return s <<      get<u64>() << "u64";
+        case LIT_f16:  return s <<      get<r16>() << "h";
+        case LIT_f32:  return s <<      get<r32>() << "f";
+        case LIT_f64:  return s <<      get<r64>() << "f64";
         default: THORIN_UNREACHABLE;
     }
 }
 
-Stream& CharExpr::stream(Stream& os) const {
-    return os << symbol();
+Stream& CharExpr::stream(Stream& s) const {
+    return s << symbol();
 }
 
-Stream& StrExpr::stream(Stream& os) const {
+Stream& StrExpr::stream(Stream& s) const {
     if (symbols().size() == 1)
-        return os << '\'' << symbols().front().remove_quotation() << '\'';
-    return os.indent().endl().list(symbols() , [&](Symbol symbol) { os << symbol; }, "", "", "", true).dedent().endl();
+        return s << '\'' << symbols().front().remove_quotation() << '\'';
+    return s.indent().endl().list(symbols() , [&](Symbol symbol) { s << symbol; }, "", "", "", true).dedent().endl();
 }
 
-Stream& PathExpr ::stream(Stream& os) const { return os << path(); }
-Stream& EmptyExpr::stream(Stream& os) const { return os << "/*empty*/"; }
-Stream& TupleExpr::stream(Stream& os) const {
-    return os.list(args(), [&](const auto& expr) { os << expr.get(); }, "(", ")");
+Stream& PathExpr ::stream(Stream& s) const { return s << path(); }
+Stream& EmptyExpr::stream(Stream& s) const { return s << "/*empty*/"; }
+Stream& TupleExpr::stream(Stream& s) const {
+    return s.list(args(), [&](const auto& expr) { s << expr.get(); }, "(", ")");
 }
 
-Stream& DefiniteArrayExpr::stream(Stream& os) const {
-    return os.list(args(), [&](const auto& expr) { os << expr.get(); }, "[", "]");
+Stream& DefiniteArrayExpr::stream(Stream& s) const {
+    return s.list(args(), [&](const auto& expr) { s << expr.get(); }, "[", "]");
 }
 
-Stream& RepeatedDefiniteArrayExpr::stream(Stream& os) const {
-    return os.fmt("[{}, .. {}]", value(), count());
+Stream& RepeatedDefiniteArrayExpr::stream(Stream& s) const {
+    return s.fmt("[{}, .. {}]", value(), count());
 }
 
-Stream& IndefiniteArrayExpr::stream(Stream& os) const {
-    return os.fmt("[{}: {}]", dim(), elem_ast_type());
+Stream& IndefiniteArrayExpr::stream(Stream& s) const {
+    return s.fmt("[{}: {}]", dim(), elem_ast_type());
 }
 
-static std::pair<Prec, bool> open(Stream& os, Prec l) {
+static std::pair<Prec, bool> open(Stream& s, Prec l) {
     std::pair<Prec, bool> result;
     result.first = prec;
     result.second = !fancy() || prec > l;
     if (result.second)
-        os << "(";
+        s << "(";
     prec = l;
     return result;
 }
 
-static Stream& close(Stream& os, std::pair<Prec, bool> pair) {
+static Stream& close(Stream& s, std::pair<Prec, bool> pair) {
     prec = pair.first;
     if (pair.second)
-        os << ")";
-    return os;
+        s << ")";
+    return s;
 }
 
-Stream& PrefixExpr::stream(Stream& os) const {
+Stream& PrefixExpr::stream(Stream& s) const {
     const char* op;
     switch (tag()) {
 #define IMPALA_PREFIX(tok, str) case tok: op = str; break;
@@ -336,19 +329,19 @@ Stream& PrefixExpr::stream(Stream& os) const {
         default: THORIN_UNREACHABLE;
     }
 
-    os << op;
+    s << op;
     if (auto prefix_expr = rhs()->isa<PrefixExpr>()) {
         if ((tag() == ADD || tag() == SUB) && tag() == prefix_expr->tag())
-            os << ' ';
+            s << ' ';
     }
 
-    auto open_state = open(os, Prec::Unary);
-    os << rhs();
-    return close(os, open_state);
+    auto open_state = open(s, Prec::Unary);
+    s << rhs();
+    return close(s, open_state);
 }
 
-Stream& InfixExpr::stream(Stream& os) const {
-    auto open_state = open(os, PrecTable::infix_l(tag()));
+Stream& InfixExpr::stream(Stream& s) const {
+    auto open_state = open(s, PrecTable::infix_l(tag()));
     const char* op;
     switch (tag()) {
 #define IMPALA_INFIX_ASGN(tok, str)       case tok: op = str; break;
@@ -356,14 +349,14 @@ Stream& InfixExpr::stream(Stream& os) const {
 #include "impala/tokenlist.h"
     }
 
-    os << lhs() << " " << op << " ";
+    s << lhs() << " " << op << " ";
     prec = PrecTable::infix_r(tag());
-    os << rhs();
-    return close(os, open_state);
+    s << rhs();
+    return close(s, open_state);
 }
 
-Stream& PostfixExpr::stream(Stream& os) const {
-    auto open_state = open(os, Prec::Unary);
+Stream& PostfixExpr::stream(Stream& s) const {
+    auto open_state = open(s, Prec::Unary);
     const char* op;
     switch (tag()) {
         case INC: op = "++"; break;
@@ -371,196 +364,196 @@ Stream& PostfixExpr::stream(Stream& os) const {
         default: THORIN_UNREACHABLE;
     }
 
-    os << lhs() << op;
-    return close(os, open_state);
+    s << lhs() << op;
+    return close(s, open_state);
 }
 
-Stream& FieldExpr::stream(Stream& os) const {
-    auto open_state = open(os, Prec::Unary);
-    os << lhs() << '.' << symbol();
-    return close(os, open_state);
+Stream& FieldExpr::stream(Stream& s) const {
+    auto open_state = open(s, Prec::Unary);
+    s << lhs() << '.' << symbol();
+    return close(s, open_state);
 }
 
-Stream& ExplicitCastExpr::stream(Stream& os) const {
-    auto open_state = open(os, Prec::As);
-    os.fmt("{} as {}", src(), ast_type());
-    return close(os, open_state);
+Stream& ExplicitCastExpr::stream(Stream& s) const {
+    auto open_state = open(s, Prec::As);
+    s.fmt("{} as {}", src(), ast_type());
+    return close(s, open_state);
 }
 
-Stream& ImplicitCastExpr::stream(Stream& os) const {
-    auto open_state = open(os, Prec::As);
-    os.fmt("implicit_cast({}, {})", src(), type());
-    return close(os, open_state);
+Stream& ImplicitCastExpr::stream(Stream& s) const {
+    auto open_state = open(s, Prec::As);
+    s.fmt("implicit_cast({}, {})", src(), type());
+    return close(s, open_state);
 }
 
-Stream& RValueExpr::stream(Stream& os) const {
-    auto open_state = open(os, Prec::As);
+Stream& RValueExpr::stream(Stream& s) const {
+    auto open_state = open(s, Prec::As);
     if (type())
-        os.fmt("rvalue({}, {})", src(), type());
+        s.fmt("rvalue({}, {})", src(), type());
     else
-        os.fmt("rvalue({}, ?)", src());
-    return close(os, open_state);
+        s.fmt("rvalue({}, ?)", src());
+    return close(s, open_state);
 }
 
-Stream& StructExpr::Elem::stream(Stream& os) const {
-    return os.fmt("{}: {}", symbol(), expr());
+Stream& StructExpr::Elem::stream(Stream& s) const {
+    return s.fmt("{}: {}", symbol(), expr());
 }
 
-Stream& StructExpr::stream(Stream& os) const {
-    ast_type_app()->stream(os);
-    return os.list(elems(), [&](const auto& elem) { os << elem.get(); }, "{", "}");
+Stream& StructExpr::stream(Stream& s) const {
+    ast_type_app()->stream(s);
+    return s.list(elems(), [&](const auto& elem) { s << elem.get(); }, "{", "}");
 }
 
-Stream& TypeAppExpr::stream(Stream& os) const {
+Stream& TypeAppExpr::stream(Stream& s) const {
     Prec l = Prec::Unary;
     Prec old = prec;
     bool paren = !fancy() || prec > l;
-    if (paren) os << "(";
+    if (paren) s << "(";
 
     prec = l;
-    os << lhs();
+    s << lhs();
     if (num_type_args() == 0)
-        os.list(ast_type_args(), [&](const auto& ast_type) { os << ast_type.get(); }, "[", "]");
+        s.list(ast_type_args(), [&](const auto& ast_type) { s << ast_type.get(); }, "[", "]");
     else
-        os.list(type_args(), [&](const Type* type) { os << type; }, "[", "]");
+        s.list(type_args(), [&](const Type* type) { s << type; }, "[", "]");
 
     prec = old;
-    if (paren) os << ")";
-    return os;
+    if (paren) s << ")";
+    return s;
 }
 
-Stream& MapExpr::stream(Stream& os) const {
+Stream& MapExpr::stream(Stream& s) const {
     Prec l = Prec::Unary;
     Prec old = prec;
     bool paren = !fancy() || prec > l;
-    if (paren) os << "(";
+    if (paren) s << "(";
 
     prec = l;
-    os << lhs();
-    os.list(args(), [&](const auto& expr) { os << expr.get(); }, "(", ")");
+    s << lhs();
+    s.list(args(), [&](const auto& expr) { s << expr.get(); }, "(", ")");
     prec = old;
-    if (paren) os << ")";
-    return os;
+    if (paren) s << ")";
+    return s;
 }
 
-Stream& FnExpr::stream(Stream& os) const {
+Stream& FnExpr::stream(Stream& s) const {
     bool has_return_type = !params().empty() && params().back()->symbol() == "return";
-    os << '|';
-    stream_params(os, has_return_type);
-    os << "| ";
+    s << '|';
+    stream_params(s, has_return_type);
+    s << "| ";
 
     if (has_return_type) {
-        os << "-> ";
+        s << "-> ";
         auto ret = params().back().get();
         if (ret->type()) {
             auto rettype = ret->type()->as<FnType>();
             if (rettype->num_ops() == 1)
-                os << rettype->op(0);
+                s << rettype->op(0);
             else
-                os.list(rettype->ops(), [&](const Type* type) { os << type; }, "(", ")", ", ");
+                s.list(rettype->ops(), [&](const Type* type) { s << type; }, "(", ")", ", ");
         } else if (ret->ast_type()) {
             auto rettype = ret->ast_type()->as<FnASTType>();
             if (rettype->num_ast_type_args() == 1)
-                os << rettype->ast_type_arg(0);
+                s << rettype->ast_type_arg(0);
             else
-                os.list(rettype->ast_type_args(), [&](const auto& ast_type) { os << ast_type.get(); }, "(", ")", ", ");
+                s.list(rettype->ast_type_args(), [&](const auto& ast_type) { s << ast_type.get(); }, "(", ")", ", ");
         }
-        os << " ";
+        s << " ";
     }
 
-    return os << body();
+    return s << body();
 }
 
-Stream& IfExpr::stream(Stream& os) const {
-    os.fmt("if {} {}", cond(), then_expr());
+Stream& IfExpr::stream(Stream& s) const {
+    s.fmt("if {} {}", cond(), then_expr());
     if (has_else())
-        os << " else " << else_expr();
-    return os;
+        s << " else " << else_expr();
+    return s;
 }
 
-Stream& MatchExpr::Arm::stream(Stream& os) const {
-    return os << ptrn() << " => " << expr() << ",";
+Stream& MatchExpr::Arm::stream(Stream& s) const {
+    return s << ptrn() << " => " << expr() << ",";
 }
 
-Stream& MatchExpr::stream(Stream& os) const {
-    (os << "match " << expr() << " {").indent().endl();
+Stream& MatchExpr::stream(Stream& s) const {
+    (s << "match " << expr() << " {").indent().endl();
     for (size_t i = 0, e = num_arms(); i != e; ++i) {
-        os << arm(i);
-        if (i == e - 1) os.dedent();
-        os.endl();
+        s << arm(i);
+        if (i == e - 1) s.dedent();
+        s.endl();
     }
-    return (os << "}");
+    return (s << "}");
 }
 
-Stream& WhileExpr::stream(Stream& os) const {
-    return os.fmt("while {} {}", cond(), body());
+Stream& WhileExpr::stream(Stream& s) const {
+    return s.fmt("while {} {}", cond(), body());
 }
 
-Stream& ForExpr::stream(Stream& os) const {
-    (os << "for ").list(fn_expr()->params().skip_back(), [&](const auto& param) { os << param.get(); }) << " in ";
-    return os << expr() << ' ' << fn_expr()->body();
+Stream& ForExpr::stream(Stream& s) const {
+    (s << "for ").list(fn_expr()->params().skip_back(), [&](const auto& param) { s << param.get(); }) << " in ";
+    return s << expr() << ' ' << fn_expr()->body();
 }
 
 /*
  * patterns
  */
 
-Stream& TuplePtrn::stream(Stream& os) const {
-    return os.list(elems(), [&] (const auto& ptrn) { os << ptrn.get(); }, "(", ")");
+Stream& TuplePtrn::stream(Stream& s) const {
+    return s.list(elems(), [&] (const auto& ptrn) { s << ptrn.get(); }, "(", ")");
 }
 
-Stream& IdPtrn::stream(Stream& os) const {
-    return os << local();
+Stream& IdPtrn::stream(Stream& s) const {
+    return s << local();
 }
 
-Stream& EnumPtrn::stream(Stream& os) const {
+Stream& EnumPtrn::stream(Stream& s) const {
     if (num_args() > 0) {
-        return (os << path()).list(args(), [&] (const auto& arg) { os << arg.get(); }, "(", ")");
+        return (s << path()).list(args(), [&] (const auto& arg) { s << arg.get(); }, "(", ")");
     } else {
-        return os << path();
+        return s << path();
     }
 }
 
-Stream& LiteralPtrn::stream(Stream& os) const {
-    return os << literal();
+Stream& LiteralPtrn::stream(Stream& s) const {
+    return s << literal();
 }
 
-Stream& CharPtrn::stream(Stream& os) const {
-    return os << chr();
+Stream& CharPtrn::stream(Stream& s) const {
+    return s << chr();
 }
 
 /*
  * statements
  */
 
-Stream& ItemStmt::stream(Stream& os) const { return os << item(); }
+Stream& ItemStmt::stream(Stream& s) const { return s << item(); }
 
-Stream& LetStmt::stream(Stream& os) const {
-    os << "let " << ptrn();
+Stream& LetStmt::stream(Stream& s) const {
+    s << "let " << ptrn();
     if (init())
-        os << " = " << init();
-    return os << ';';
+        s << " = " << init();
+    return s << ';';
 }
 
-Stream& ExprStmt::stream(Stream& os) const {
+Stream& ExprStmt::stream(Stream& s) const {
     bool no_semi = expr()->isa<IfExpr>() || expr()->isa<ForExpr>();
-    os << expr();
+    s << expr();
     if (!no_semi)
-        os << ';';
-    return os;
+        s << ';';
+    return s;
 }
 
-Stream& AsmStmt::Elem::stream(Stream& os) const {
-    return os.fmt("\"{}\"({})", constraint(), expr());
+Stream& AsmStmt::Elem::stream(Stream& s) const {
+    return s.fmt("\"{}\"({})", constraint(), expr());
 }
 
-Stream& AsmStmt::stream(Stream& os) const {
-    (os << "asm(\"" << asm_template() << "\"").indent().endl() << ": ";
-    os.list( outputs(), [&](const auto& elem) { os << elem.get(); });
-    os.list(  inputs(), [&](const auto& elem) { os << elem.get(); });
-    os.list(clobbers(), [&](const auto& clob) { os << "\"" << clob << "\""; });
-    os.list( options(), [&](const auto& opt ) { os << "\"" << opt << "\""; });
-    return (os << ");").dedent().endl();
+Stream& AsmStmt::stream(Stream& s) const {
+    (s << "asm(\"" << asm_template() << "\"").indent().endl() << ": ";
+    s.list( outputs(), [&](const auto& elem) { s << elem.get(); });
+    s.list(  inputs(), [&](const auto& elem) { s << elem.get(); });
+    s.list(clobbers(), [&](const auto& clob) { s << "\"" << clob << "\""; });
+    s.list( options(), [&](const auto& opt ) { s << "\"" << opt << "\""; });
+    return (s << ");").dedent().endl();
 }
 
 }

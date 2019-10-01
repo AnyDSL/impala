@@ -94,12 +94,12 @@ int main(int argc, char** argv) {
         else if (opt_3) opt = 3;
 
         if (infiles.empty() && !help) {
-            thorin::errf("no input files\n");
+            thorin::errf("no input files");
             return EXIT_FAILURE;
         }
 
         if (help) {
-            thorin::outf("Usage: {} [options] file...\n", prgname);
+            thorin::outf("Usage: {} [options] file...", prgname);
             cmd_parser.print_help();
             return EXIT_SUCCESS;
         }
@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
 
             std::ofstream out_file(module_name + ".h");
             if (!out_file) {
-                thorin::errf("cannot open file '{}' for writing\n", opts.file_name);
+                thorin::errf("cannot open file '{}' for writing", opts.file_name);
                 return EXIT_FAILURE;
             }
             impala::generate_c_interface(module.get(), opts, out_file);
@@ -238,7 +238,7 @@ int main(int argc, char** argv) {
                 emit_to_file(backends.hls_cg.get(),    ".hls");
 #endif
 #else
-                thorin::outf("warning: built without LLVM support - I don't emit an LLVM file\n");
+                thorin::outf("warning: built without LLVM support - I don't emit an LLVM file");
 #endif
             }
         } else
@@ -246,10 +246,10 @@ int main(int argc, char** argv) {
 
         return EXIT_SUCCESS;
     } catch (std::exception const& e) {
-        thorin::errf("{}\n", e.what());
+        thorin::errf("{}", e.what());
         return EXIT_FAILURE;
     } catch (...) {
-        thorin::errf("unknown exception\n");
+        thorin::errf("unknown exception");
         return EXIT_FAILURE;
     }
 }

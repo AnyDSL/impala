@@ -127,7 +127,7 @@ protected:
 
 //------------------------------------------------------------------------------
 
-class ASTNode : public thorin::RTTICast<ASTNode> {
+class ASTNode : public thorin::RTTICast<ASTNode>, public thorin::Streamable<ASTNode> {
 public:
     ASTNode() = delete;
     ASTNode(const ASTNode&) = delete;
@@ -138,8 +138,6 @@ public:
     size_t gid() const { return gid_; }
     Loc loc() const { return loc_; }
     virtual Stream& stream(Stream&) const = 0;
-    void dump() const;
-    Stream& operator<<(Stream& s) const { return stream(s); }
 
 private:
     static size_t gid_counter_;
