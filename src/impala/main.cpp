@@ -10,7 +10,6 @@
 #include "thorin/analyses/schedule.h"
 #include "thorin/pass/optimize.h"
 #include "thorin/util/args.h"
-#include "thorin/util/log.h"
 
 #include "impala/ast.h"
 #include "impala/cgen.h"
@@ -84,22 +83,6 @@ int main(int argc, char** argv) {
 
         impala::fancy() = fancy;
 
-        std::ofstream log_stream;
-        auto s = open(log_stream, log_name);
-
-        if (log_level == "error") {
-            thorin::Log::set(thorin::Log::Error, s);
-        } else if (log_level == "warn") {
-            thorin::Log::set(thorin::Log::Warn, s);
-        } else if (log_level == "info") {
-            thorin::Log::set(thorin::Log::Info, s);
-        } else if (log_level == "verbose") {
-            thorin::Log::set(thorin::Log::Verbose, s);
-        } else if (log_level == "debug") {
-            thorin::Log::set(thorin::Log::Debug, s);
-        } else
-            throw std::invalid_argument("log level must be one of " LOG_LEVELS);
-
         // check optimization levels
         if (opt_s + opt_0 + opt_1 + opt_2 + opt_3 > 1)
             throw std::invalid_argument("multiple optimization levels specified");
@@ -140,8 +123,20 @@ int main(int argc, char** argv) {
             }
         }
 
-        thorin::World world(0, module_name);
+        thorin::World world(module_name);
         impala::init();
+
+        std::ofstream log_stream;
+        auto ostream = open(log_stream, log_name);
+        Stream s(*ostream);
+
+        if (false) {}
+        else if (log_level == "error")   world.set(thorin::LogLevel::Error,   s);
+        else if (log_level == "warn")    world.set(thorin::LogLevel::Warn,    s);
+        else if (log_level == "info")    world.set(thorin::LogLevel::Info,    s);
+        else if (log_level == "verbose") world.set(thorin::LogLevel::Verbose, s);
+        else if (log_level == "debug")   world.set(thorin::LogLevel::Debug,   s);
+        else throw std::invalid_argument("log level must be one of " LOG_LEVELS);
 
 #if THORIN_ENABLE_CHECKS && !defined(NDEBUG)
         for (auto b : breakpoints) {

@@ -2,7 +2,6 @@
 
 #include "thorin/util/array.h"
 #include "thorin/util/iterator.h"
-#include "thorin/util/log.h"
 
 #include "impala/ast.h"
 #include "impala/impala.h"
@@ -343,7 +342,7 @@ void type_inference(std::unique_ptr<TypeTable>& typetable, const Module* module)
         sema->infer(module);
     }
 
-    DLOG("iterations needed for type inference: {}", i);
+    //DLOG("iterations needed for type inference: {}", i);
 }
 
 //------------------------------------------------------------------------------
