@@ -59,14 +59,14 @@ template<class... Args>
 void warning(const Loc& loc, const char* fmt, Args... args) {
     ++num_warnings();
     Stream s(std::cerr);
-    s.streamf("{}: warning: ", loc).streamf(fmt, std::forward<Args>(args)...).endl();
+    s.fmt("{}: warning: ", loc).fmt(fmt, std::forward<Args>(args)...).endl();
 }
 
 template<class... Args>
 void error(const Loc& loc, const char* fmt, Args... args) {
     ++num_errors();
     Stream s(std::cerr);
-    s.streamf("{}: error: ", loc).streamf(fmt, std::forward<Args>(args)...).endl();
+    s.fmt("{}: error: ", loc).fmt(fmt, std::forward<Args>(args)...).endl();
 }
 
 }

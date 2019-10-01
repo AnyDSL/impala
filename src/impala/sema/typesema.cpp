@@ -26,7 +26,7 @@ public:
     void error_msg(const Expr* expr, const char* what, const Type* type, const char* fmt, Args... args) {
         std::ostringstream os;
         Stream s(os);
-        s.streamf(fmt, args...);
+        s.fmt(fmt, args...);
         error(expr, "mismatched types: expected {} but found '{}' at {}", what, type, ((std::ostringstream&) s.ostream()).str());
     }
 
@@ -52,7 +52,7 @@ public:
     const Type* expect_lvalue(const Expr* expr, const char* fmt, Args... args) {
         std::ostringstream os;
         Stream s(os);
-        s.streamf(fmt, args...);
+        s.fmt(fmt, args...);
         if (auto ref = is_lvalue(expr->type()))
             return ref->pointee();
         error(expr, "lvalue required for {}", os.str());

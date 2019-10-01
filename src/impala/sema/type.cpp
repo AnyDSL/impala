@@ -155,7 +155,7 @@ bool UnknownType::equal(const Type* other) const { return this == other; }
  * stream
  */
 
-Stream& Lambda::stream(Stream& os) const { return os.streamf("[{}].{}", name(), body()); }
+Stream& Lambda::stream(Stream& os) const { return os.fmt("[{}].{}", name(), body()); }
 Stream& UnknownType::stream(Stream& os) const { return os << '?' << gid(); }
 
 Stream& PrimType::stream(Stream& os) const {
@@ -167,24 +167,24 @@ Stream& PrimType::stream(Stream& os) const {
 }
 
 Stream& NoRetType::stream(Stream& os) const { return os << "<no-return>"; }
-Stream& InferError::stream(Stream& os) const { return os.streamf("<infer error: {}, {}>", dst(), src()); }
+Stream& InferError::stream(Stream& os) const { return os.fmt("<infer error: {}, {}>", dst(), src()); }
 Stream& TypeError::stream(Stream& os) const { return os << "<type error>"; }
 
 Stream& FnType::stream(Stream& os) const {
     os << "fn";
     if (auto tuple = op(0)->isa<TupleType>())
-        os.streamf("{}", tuple);
+        os.fmt("{}", tuple);
     else
-        os.streamf("({})", op(0));
+        os.fmt("({})", op(0));
     auto ret_type = return_type();
-    return !ret_type->isa<NoRetType>() ? os.streamf(" -> {}", ret_type) : os;
+    return !ret_type->isa<NoRetType>() ? os.fmt(" -> {}", ret_type) : os;
 }
 
 Stream& Var::stream(Stream& os) const {
-    return os.streamf("<{}>", depth());
+    return os.fmt("<{}>", depth());
 }
 
-Stream& App::stream(Stream& os) const { return os.streamf("{}[{}]", callee(), arg()); }
+Stream& App::stream(Stream& os) const { return os.fmt("{}[{}]", callee(), arg()); }
 
 Stream& RefTypeBase::stream(Stream& os) const {
     os << prefix();
@@ -193,9 +193,9 @@ Stream& RefTypeBase::stream(Stream& os) const {
     return os << pointee();
 }
 
-Stream& DefiniteArrayType::stream(Stream& os) const { return os.streamf("[{} * {}]", elem_type(), dim()); }
-Stream& IndefiniteArrayType::stream(Stream& os) const { return os.streamf("[{}]", elem_type()); }
-Stream& SimdType::stream(Stream& os) const { return os.streamf("simd[{} * {}]", elem_type(), dim()); }
+Stream& DefiniteArrayType::stream(Stream& os) const { return os.fmt("[{} * {}]", elem_type(), dim()); }
+Stream& IndefiniteArrayType::stream(Stream& os) const { return os.fmt("[{}]", elem_type()); }
+Stream& SimdType::stream(Stream& os) const { return os.fmt("simd[{} * {}]", elem_type(), dim()); }
 Stream& StructType::stream(Stream& os) const { return os << struct_decl()->symbol(); }
 Stream& EnumType::stream(Stream& os) const { return os << enum_decl()->symbol(); }
 Stream& TupleType::stream(Stream& os) const { return os.list(ops(), [&](auto t) { os << t; }, "(", ")"); }

@@ -85,18 +85,18 @@ int main(int argc, char** argv) {
         impala::fancy() = fancy;
 
         std::ofstream log_stream;
-        Stream s(*open(log_stream, log_name));
+        auto s = open(log_stream, log_name);
 
         if (log_level == "error") {
-            thorin::Log::set(thorin::Log::Error, &s);
+            thorin::Log::set(thorin::Log::Error, s);
         } else if (log_level == "warn") {
-            thorin::Log::set(thorin::Log::Warn, &s);
+            thorin::Log::set(thorin::Log::Warn, s);
         } else if (log_level == "info") {
-            thorin::Log::set(thorin::Log::Info, &s);
+            thorin::Log::set(thorin::Log::Info, s);
         } else if (log_level == "verbose") {
-            thorin::Log::set(thorin::Log::Verbose, &s);
+            thorin::Log::set(thorin::Log::Verbose, s);
         } else if (log_level == "debug") {
-            thorin::Log::set(thorin::Log::Debug, &s);
+            thorin::Log::set(thorin::Log::Debug, s);
         } else
             throw std::invalid_argument("log level must be one of " LOG_LEVELS);
 
