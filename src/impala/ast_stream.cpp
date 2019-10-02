@@ -131,12 +131,8 @@ Stream& ModuleDecl::stream(Stream& s) const {
 }
 
 Stream& ExternBlock::stream(Stream& s) const {
-    s << "extern ";
-    if (!abi_.empty())
-        s << abi_.str() << ' ';
-    (s << '{').indent().endl();
-    s.list(fn_decls(), [&](const auto& fn_decl) { s << fn_decl.get(); }, "", "", "", true);
-    return s.dedent().endl() << '}';
+    s.fmt("extern {}{{", !abi_.empty() ? abi_.str() + " " : std::string()).indent().endl();
+    return s.fmt("{\n}", fn_decls()).dedent().endl() << '}';
 }
 
 Stream& FnDecl::stream(Stream& s) const {
@@ -162,7 +158,7 @@ Stream& FnDecl::stream(Stream& s) const {
         if (ret->num_ast_type_args() == 1)
             s << ret->ast_type_arg(0);
         else
-            s.list(ret->ast_type_args(), [&](const auto& ast_type) { s << ast_type.get(); }, "(", ")", ", ");
+            s.fmt("({, })", ret->ast_type_args());
     }
 
     if (body()) {
@@ -180,7 +176,7 @@ Stream& FieldDecl::stream(Stream& s) const {
 Stream& OptionDecl::stream(Stream& s) const {
     s.fmt("{}", symbol());
     if (num_args() > 0) {
-        return s.list(args(), [&](const auto& arg) { s << arg.get(); }, "(", ")", ", ");
+        return s.fmt("({, })", args());
     } else {
         return s;
     }
@@ -201,12 +197,12 @@ Stream& StaticItem::stream(Stream& s) const {
 
 Stream& StructDecl::stream(Stream& s) const {
     (stream_ast_type_params(s.fmt("{}struct {}", visibility().str(), symbol())) << " {").indent().endl();
-    return s.list(field_decls(), [&](const auto& field) { s << field.get(); }, "", "", ",", true).dedent().endl() << "}";
+    return s.fmt("{\n}", field_decls()).dedent().endl() << "}";
 }
 
 Stream& EnumDecl::stream(Stream& s) const {
     (stream_ast_type_params(s.fmt("{}enum {}", visibility().str(), symbol())) << " {").indent().endl();
-    return s.list(option_decls(), [&](const auto& option) { s << option.get(); }, "", "", ",", true).dedent().endl() << "}";
+    return s.fmt("{\n}", option_decls()).dedent().endl() << "}";
 }
 
 Stream& Typedef::stream(Stream& s) const {
@@ -217,14 +213,11 @@ Stream& TraitDecl::stream(Stream& s) const {
     s << "trait " << symbol();
     stream_ast_type_params(s);
 
-    if (!super_traits().empty()) {
-        s << " : ";
-        s.list(super_traits(), [&](const auto& type_app) { s << type_app.get(); });
-    }
+    if (!super_traits().empty())
+        s.fmt(" : {, }", super_traits());
 
     (s << " {").indent().endl();
-    s.list(methods(), [&](const auto& method) { s << method.get(); }, "", "", "", true);
-    return s.dedent().endl() << '}';
+    return s.fmt("{\n}", methods()).dedent().endl() << '}';
 }
 
 Stream& ImplItem::stream(Stream& s) const {
@@ -233,8 +226,7 @@ Stream& ImplItem::stream(Stream& s) const {
     if (trait())
         s << trait() << " for ";
     (s << ast_type() << " {").indent().endl();
-    s.list(methods(), [&](const auto& method) { s << method.get(); }, "", "", "", true);
-    return s.dedent().endl() << "}";
+    return s.fmt("{\n}", methods()).dedent().endl() << '}';
 }
 
 /*
@@ -246,7 +238,7 @@ Stream& BlockExpr::stream(Stream& s) const {
     if (empty())
         return s.endl() << '}';
 
-    s.indent().endl().list(stmts(), [&](const auto& stmt) { s << stmt.get(); }, "", "", "", true);
+    s.indent().endl().fmt("{\n}", stmts());
 
     if (!expr()->isa<EmptyExpr>()) {
         if (!stmts().empty())
@@ -282,17 +274,17 @@ Stream& CharExpr::stream(Stream& s) const {
 Stream& StrExpr::stream(Stream& s) const {
     if (symbols().size() == 1)
         return s << '\'' << symbols().front().remove_quotation() << '\'';
-    return s.indent().endl().list(symbols() , [&](Symbol symbol) { s << symbol; }, "", "", "", true).dedent().endl();
+    return s.indent().endl().fmt("{\n}", symbols()).dedent().endl();
 }
 
 Stream& PathExpr ::stream(Stream& s) const { return s << path(); }
 Stream& EmptyExpr::stream(Stream& s) const { return s << "/*empty*/"; }
 Stream& TupleExpr::stream(Stream& s) const {
-    return s.list(args(), [&](const auto& expr) { s << expr.get(); }, "(", ")");
+    return s.fmt("({, })", args());
 }
 
 Stream& DefiniteArrayExpr::stream(Stream& s) const {
-    return s.list(args(), [&](const auto& expr) { s << expr.get(); }, "[", "]");
+    return s.fmt("([{, }]", args());
 }
 
 Stream& RepeatedDefiniteArrayExpr::stream(Stream& s) const {
@@ -400,8 +392,7 @@ Stream& StructExpr::Elem::stream(Stream& s) const {
 }
 
 Stream& StructExpr::stream(Stream& s) const {
-    ast_type_app()->stream(s);
-    return s.list(elems(), [&](const auto& elem) { s << elem.get(); }, "{", "}");
+    return s.fmt("{}{{{, }}}", ast_type_app(), elems());
 }
 
 Stream& TypeAppExpr::stream(Stream& s) const {
@@ -413,9 +404,9 @@ Stream& TypeAppExpr::stream(Stream& s) const {
     prec = l;
     s << lhs();
     if (num_type_args() == 0)
-        s.list(ast_type_args(), [&](const auto& ast_type) { s << ast_type.get(); }, "[", "]");
+        s.fmt("[{, }]", ast_type_args());
     else
-        s.list(type_args(), [&](const Type* type) { s << type; }, "[", "]");
+        s.fmt("[{, }]", type_args());
 
     prec = old;
     if (paren) s << ")";
@@ -430,7 +421,7 @@ Stream& MapExpr::stream(Stream& s) const {
 
     prec = l;
     s << lhs();
-    s.list(args(), [&](const auto& expr) { s << expr.get(); }, "(", ")");
+    s.fmt("({, })", args());
     prec = old;
     if (paren) s << ")";
     return s;
@@ -450,13 +441,13 @@ Stream& FnExpr::stream(Stream& s) const {
             if (rettype->num_ops() == 1)
                 s << rettype->op(0);
             else
-                s.list(rettype->ops(), [&](const Type* type) { s << type; }, "(", ")", ", ");
+                s.fmt("({, })", rettype->ops());
         } else if (ret->ast_type()) {
             auto rettype = ret->ast_type()->as<FnASTType>();
             if (rettype->num_ast_type_args() == 1)
                 s << rettype->ast_type_arg(0);
             else
-                s.list(rettype->ast_type_args(), [&](const auto& ast_type) { s << ast_type.get(); }, "(", ")", ", ");
+                s.fmt("({, })", rettype->ast_type_args());
         }
         s << " ";
     }
@@ -490,8 +481,7 @@ Stream& WhileExpr::stream(Stream& s) const {
 }
 
 Stream& ForExpr::stream(Stream& s) const {
-    (s << "for ").list(fn_expr()->params().skip_back(), [&](const auto& param) { s << param.get(); }) << " in ";
-    return s << expr() << ' ' << fn_expr()->body();
+    return s.fmt("for {} in {} {}", fn_expr()->params().skip_back(), expr(), fn_expr()->body());
 }
 
 /*
@@ -499,7 +489,7 @@ Stream& ForExpr::stream(Stream& s) const {
  */
 
 Stream& TuplePtrn::stream(Stream& s) const {
-    return s.list(elems(), [&] (const auto& ptrn) { s << ptrn.get(); }, "(", ")");
+    return s.fmt("({, })", elems());
 }
 
 Stream& IdPtrn::stream(Stream& s) const {
@@ -508,7 +498,7 @@ Stream& IdPtrn::stream(Stream& s) const {
 
 Stream& EnumPtrn::stream(Stream& s) const {
     if (num_args() > 0) {
-        return (s << path()).list(args(), [&] (const auto& arg) { s << arg.get(); }, "(", ")");
+        return s.fmt("{}({, })", path(), args());
     } else {
         return s << path();
     }
@@ -548,11 +538,11 @@ Stream& AsmStmt::Elem::stream(Stream& s) const {
 }
 
 Stream& AsmStmt::stream(Stream& s) const {
-    (s << "asm(\"" << asm_template() << "\"").indent().endl() << ": ";
-    s.list( outputs(), [&](const auto& elem) { s << elem.get(); });
-    s.list(  inputs(), [&](const auto& elem) { s << elem.get(); });
-    s.list(clobbers(), [&](const auto& clob) { s << "\"" << clob << "\""; });
-    s.list( options(), [&](const auto& opt ) { s << "\"" << opt << "\""; });
+    s.fmt("asm(\"{}\"", asm_template()).indent().endl() << ": ";
+    s.fmt("{, }", outputs());
+    s.fmt("{, }",  inputs());
+    s.fmt("{, }",clobbers());
+    s.fmt("{, }", options());
     return (s << ");").dedent().endl();
 }
 
