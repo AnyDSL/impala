@@ -158,11 +158,9 @@ Stream& FieldDecl::stream(Stream& s) const {
 
 Stream& OptionDecl::stream(Stream& s) const {
     s.fmt("{}", symbol());
-    if (num_args() > 0) {
+    if (num_args() > 0)
         return s.fmt("({, })", args());
-    } else {
-        return s;
-    }
+    return s;
 }
 
 Stream& StaticItem::stream(Stream& s) const {
@@ -185,7 +183,7 @@ Stream& StructDecl::stream(Stream& s) const {
 
 Stream& EnumDecl::stream(Stream& s) const {
     stream_ast_type_params(s.fmt("{}enum {}", visibility().str(), symbol()));
-    return s.fmt("{{\t\n{,\n}\b\n", option_decls());
+    return s.fmt("{{\t\n{,\n}\b\n}}", option_decls());
 }
 
 Stream& Typedef::stream(Stream& s) const {

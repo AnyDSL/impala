@@ -509,7 +509,10 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             } else {
                 return cg.world.op_ROp_minus(rhs()->remit(cg), cg.loc2dbg(loc()));
             }
-        case NOT: return cg.world.op_IOp_inot(rhs()->remit(cg), cg.loc2dbg(loc()));
+        case NOT:
+            if (is_bool(type()))
+                return cg.world.extract_not(rhs()->remit(cg), cg.loc2dbg(loc()));
+            return cg.world.op_IOp_inot(rhs()->remit(cg), cg.loc2dbg(loc()));
         case TILDE: {
             auto def = rhs()->remit(cg);
             auto ptr = cg.alloc(def->type(), cg.loc2dbg(loc()));
@@ -626,6 +629,13 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case REM_ASGN: rdef = cg.world.op(ROp::mod, ldef, rdef, dbg); break;
                         default: THORIN_UNREACHABLE;
                     }
+                } else if (is_bool(rhs()->type())) {
+                    switch (op) {
+                        case AND_ASGN: rdef = cg.world.extract_and(ldef, rdef, dbg); break;
+                        case  OR_ASGN: rdef = cg.world.extract_or (ldef, rdef, dbg); break;
+                        case XOR_ASGN: rdef = cg.world.extract_xor(ldef, rdef, dbg); break;
+                        default: THORIN_UNREACHABLE;
+                    }
                 } else {
                     auto mode = type2wmode(rhs()->type());
                     bool s = is_signed(rhs()->type());
@@ -665,6 +675,15 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case MUL: return cg.world.op(ROp ::mul, ldef, rdef, dbg);
                     case DIV: return cg.world.op(ROp ::div, ldef, rdef, dbg);
                     case REM: return cg.world.op(ROp ::mod, ldef, rdef, dbg);
+                    default: THORIN_UNREACHABLE;
+                }
+            } else if (is_bool(rhs()->type())) {
+                switch (op) {
+                    case  EQ: return cg.world.op(ICmp::   e, ldef, rdef, dbg); // TODO cast
+                    case  NE: return cg.world.op(ICmp::  ne, ldef, rdef, dbg); // TODO cast
+                    case AND: return cg.world.extract_and(ldef, rdef, dbg);
+                    case  OR: return cg.world.extract_or (ldef, rdef, dbg);
+                    case XOR: return cg.world.extract_xor(ldef, rdef, dbg);
                     default: THORIN_UNREACHABLE;
                 }
             } else {
@@ -766,8 +785,8 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         auto name = fn_decl->fn_symbol().remove_quotation();
                         if (name == "bitcast") {
                             return cg.world.op_bitcast(cg.convert(type_expr->type_arg(0)), arg(0)->remit(cg), cg.loc2dbg(loc()));
-                        } else if (name == "select") {
-                            return cg.world.op_select(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
+                        //} else if (name == "select") {
+                            //return cg.world.op_select(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "insert") {
                             return cg.world.insert_unsafe(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "sizeof") {
