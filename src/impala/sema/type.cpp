@@ -322,3 +322,5 @@ const InferError* TypeTable::infer_error(const Type* dst, const Type* src) {
 }
 
 }
+
+template void thorin::Streamable<thorin::TypeBase<impala::TypeTable>>::dump() const;

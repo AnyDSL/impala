@@ -134,11 +134,11 @@ public:
     const TypeBase* rebuild(Types ops) const { return rebuild(table(), ops); }
 
     static size_t gid_counter() { return gid_counter_; }
+    virtual Stream& stream(Stream&) const = 0;
 
 protected:
     virtual uint32_t vhash() const;
     virtual const TypeBase* vreduce(int, const TypeBase*, Type2Type&) const;
-    virtual Stream& stream(Stream&) const = 0;
 
     mutable uint32_t hash_ = 0;
     int order_ = 0;
