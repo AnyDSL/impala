@@ -12,6 +12,9 @@ Prec prec = Prec::Bottom;
  */
 
 Stream& ErrorASTType::stream(Stream& s) const { return s << "<error>"; }
+Stream& DefiniteArrayASTType::stream(Stream& s) const { return s.fmt("[{} * {}]", elem_ast_type(), dim()); }
+Stream& IndefiniteArrayASTType::stream(Stream& s) const { return s.fmt("[{}]", elem_ast_type()); }
+Stream& TupleASTType::stream(Stream& s) const { return s.fmt("({, })", ast_type_args()); }
 
 Stream& PtrASTType::stream(Stream& s) const {
     s << prefix();
@@ -19,11 +22,6 @@ Stream& PtrASTType::stream(Stream& s) const {
         s << '[' << addr_space() << ']';
     return s << referenced_ast_type();
 }
-
-Stream& DefiniteArrayASTType::stream(Stream& s) const { return s.fmt("[{} * {}]", elem_ast_type(), dim()); }
-Stream& IndefiniteArrayASTType::stream(Stream& s) const { return s.fmt("[{}]", elem_ast_type()); }
-
-Stream& TupleASTType::stream(Stream& s) const { return s.fmt("({, })", ast_type_args()); }
 
 Stream& FnASTType::stream(Stream& s) const {
     auto ret = ret_fn_ast_type();
@@ -258,21 +256,10 @@ Stream& StrExpr::stream(Stream& s) const {
 
 Stream& PathExpr ::stream(Stream& s) const { return s << path(); }
 Stream& EmptyExpr::stream(Stream& s) const { return s << "/*empty*/"; }
-Stream& TupleExpr::stream(Stream& s) const {
-    return s.fmt("({, })", args());
-}
-
-Stream& DefiniteArrayExpr::stream(Stream& s) const {
-    return s.fmt("([{, }]", args());
-}
-
-Stream& RepeatedDefiniteArrayExpr::stream(Stream& s) const {
-    return s.fmt("[{}, .. {}]", value(), count());
-}
-
-Stream& IndefiniteArrayExpr::stream(Stream& s) const {
-    return s.fmt("[{}: {}]", dim(), elem_ast_type());
-}
+Stream& TupleExpr::stream(Stream& s) const { return s.fmt("({, })", args()); }
+Stream& DefiniteArrayExpr::stream(Stream& s) const { return s.fmt("([{, }]", args()); }
+Stream& RepeatedDefiniteArrayExpr::stream(Stream& s) const { return s.fmt("[{}, .. {}]", value(), count()); }
+Stream& IndefiniteArrayExpr::stream(Stream& s) const { return s.fmt("[{}: {}]", dim(), elem_ast_type()); }
 
 static std::pair<Prec, bool> open(Stream& s, Prec l) {
     std::pair<Prec, bool> result;
@@ -366,13 +353,8 @@ Stream& RValueExpr::stream(Stream& s) const {
     return close(s, open_state);
 }
 
-Stream& StructExpr::Elem::stream(Stream& s) const {
-    return s.fmt("{}: {}", symbol(), expr());
-}
-
-Stream& StructExpr::stream(Stream& s) const {
-    return s.fmt("{}{{{, }}}", ast_type_app(), elems());
-}
+Stream& StructExpr::Elem::stream(Stream& s) const { return s.fmt("{}: {}", symbol(), expr()); }
+Stream& StructExpr::stream(Stream& s) const { return s.fmt("{}{{{, }}}", ast_type_app(), elems()); }
 
 Stream& TypeAppExpr::stream(Stream& s) const {
     Prec l = Prec::Unary;
@@ -441,39 +423,17 @@ Stream& IfExpr::stream(Stream& s) const {
     return s;
 }
 
-Stream& MatchExpr::Arm::stream(Stream& s) const {
-    return s << ptrn() << " => " << expr() << ",";
-}
-
-Stream& MatchExpr::stream(Stream& s) const {
-    (s << "match " << expr() << " {").indent().endl();
-    for (size_t i = 0, e = num_arms(); i != e; ++i) {
-        s << arm(i);
-        if (i == e - 1) s.dedent();
-        s.endl();
-    }
-    return (s << "}");
-}
-
-Stream& WhileExpr::stream(Stream& s) const {
-    return s.fmt("while {} {}", cond(), body());
-}
-
-Stream& ForExpr::stream(Stream& s) const {
-    return s.fmt("for {} in {} {}", fn_expr()->params().skip_back(), expr(), fn_expr()->body());
-}
+Stream& MatchExpr::Arm::stream(Stream& s) const { return s.fmt("{} => {}", ptrn(), expr()); }
+Stream& MatchExpr::stream(Stream& s) const { return s.fmt("match {} {{\t\n{,\n}\b\t}}", expr(), arms()); }
+Stream& WhileExpr::stream(Stream& s) const { return s.fmt("while {} {}", cond(), body()); }
+Stream& ForExpr::stream(Stream& s) const { return s.fmt("for {} in {} {}", fn_expr()->params().skip_back(), expr(), fn_expr()->body()); }
 
 /*
  * patterns
  */
 
-Stream& TuplePtrn::stream(Stream& s) const {
-    return s.fmt("({, })", elems());
-}
-
-Stream& IdPtrn::stream(Stream& s) const {
-    return s << local();
-}
+Stream& TuplePtrn::stream(Stream& s) const { return s.fmt("({, })", elems()); }
+Stream& IdPtrn::stream(Stream& s) const { return s << local(); }
 
 Stream& EnumPtrn::stream(Stream& s) const {
     if (num_args() > 0) {
@@ -483,13 +443,8 @@ Stream& EnumPtrn::stream(Stream& s) const {
     }
 }
 
-Stream& LiteralPtrn::stream(Stream& s) const {
-    return s << literal();
-}
-
-Stream& CharPtrn::stream(Stream& s) const {
-    return s << chr();
-}
+Stream& LiteralPtrn::stream(Stream& s) const { return s << literal(); }
+Stream& CharPtrn::stream(Stream& s) const { return s << chr(); }
 
 /*
  * statements
@@ -512,9 +467,7 @@ Stream& ExprStmt::stream(Stream& s) const {
     return s;
 }
 
-Stream& AsmStmt::Elem::stream(Stream& s) const {
-    return s.fmt("\"{}\"({})", constraint(), expr());
-}
+Stream& AsmStmt::Elem::stream(Stream& s) const { return s.fmt("\"{}\"({})", constraint(), expr()); }
 
 Stream& AsmStmt::stream(Stream& s) const {
     return s.fmt("asm(\"{}\"\t\n: {, }\n: {, }\n: {, }\n: {, })\b\n", asm_template(), outputs(), inputs(), clobbers(), options());
