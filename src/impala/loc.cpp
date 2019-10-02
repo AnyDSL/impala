@@ -16,18 +16,18 @@ Stream& operator<<(Stream& os, Loc l) {
 
     if (l.front_col() == uint16_t(-1) || l.back_col() == uint16_t(-1)) {
         if (l.front_line() != l.back_line())
-            return os.streamf("{} - {}", l.front_line(), l.back_line());
+            return os.fmt("{} - {}", l.front_line(), l.back_line());
         else
-            return os.streamf("{}", l.front_line());
+            return os.fmt("{}", l.front_line());
     }
 
     if (l.front_line() != l.back_line())
-        return os.streamf("{} col {} - {} col {}", l.front_line(), l.front_col(), l.back_line(), l.back_col());
+        return os.fmt("{} col {} - {} col {}", l.front_line(), l.front_col(), l.back_line(), l.back_col());
 
     if (l.front_col() != l.back_col())
-        return os.streamf("{} col {} - {}", l.front_line(), l.front_col(), l.back_col());
+        return os.fmt("{} col {} - {}", l.front_line(), l.front_col(), l.back_col());
 
-    return os.streamf("{} col {}", l.front_line(), l.front_col());
+    return os.fmt("{} col {}", l.front_line(), l.front_col());
 #endif // _MSC_VER
 }
 
