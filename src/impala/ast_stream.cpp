@@ -64,10 +64,7 @@ Stream& Typeof::stream(Stream& s) const {
 
 Stream& Identifier::stream(Stream& s) const { return s << symbol(); }
 Stream& Path::Elem::stream(Stream& s) const { return s << symbol(); }
-Stream& Path::stream(Stream& s) const {
-    s << (is_global() ? "::" : "");
-    return s.fmt("{::}", elems());
-}
+Stream& Path::stream(Stream& s) const { return s.fmt("{}{::}", is_global() ? "::" : "", elems()); }
 
 /*
  * parameters
@@ -89,7 +86,7 @@ Stream& ASTTypeParamList::stream_ast_type_params(Stream& s) const {
  */
 
 Stream& Fn::stream_params(Stream& s, bool returning) const {
-    return s.fmt("({, })", returning ? params().skip_back() : params());
+    return s.fmt("{, }", returning ? params().skip_back() : params());
 }
 
 Stream& LocalDecl::stream(Stream& s) const {
@@ -122,28 +119,19 @@ Stream& Param::stream(Stream& s) const {
  * items + item helpers
  */
 
-Stream& Module::stream(Stream& s) const {
-    return s.fmt("{\n}", items());
-}
-
-Stream& ModuleDecl::stream(Stream& s) const {
-    return stream_ast_type_params(s << "mod " << symbol()) << ';';
-}
+Stream& Module::stream(Stream& s) const { return s.fmt("{\n}", items()); }
+Stream& ModuleDecl::stream(Stream& s) const { return stream_ast_type_params(s.fmt("mod {}", symbol())) << ';'; }
 
 Stream& ExternBlock::stream(Stream& s) const {
-    s.fmt("extern {}{{", !abi_.empty() ? abi_.str() + " " : std::string()).indent().endl();
-    return s.fmt("{\n}", fn_decls()).dedent().endl() << '}';
+    return s.fmt("extern {}{{\t\n{\n}\b\n}}", abi_.empty() ? std::string() : abi_.str() + " ", fn_decls());
 }
 
 Stream& FnDecl::stream(Stream& s) const {
-    if (is_extern())
-        s << "extern ";
-    s << "fn ";
-    if (filter())
-        s << '@' << filter() << ' ';
-    if (export_name_)
-        s << export_name_ << ' ';
-    stream_ast_type_params(s << symbol());
+    s.fmt("{}fn", is_extern() ? "extern " : "");
+    if (filter()) s.fmt(" @{} ", filter());
+
+    s.fmt("{}{}", export_name_ ? (export_name_ + " ") : Symbol(), symbol());
+    stream_ast_type_params(s);
 
     const FnASTType* ret = nullptr;
     if (!params().empty() && params().back()->symbol() == "return" && params().back()->ast_type()) {
@@ -161,12 +149,9 @@ Stream& FnDecl::stream(Stream& s) const {
             s.fmt("({, })", ret->ast_type_args());
     }
 
-    if (body()) {
-        s << ' ' << body();
-    } else
-        s << ';';
-
-    return s;
+    if (body())
+        return s << ' ' << body();
+    return s << ';';
 }
 
 Stream& FieldDecl::stream(Stream& s) const {
@@ -196,13 +181,13 @@ Stream& StaticItem::stream(Stream& s) const {
 }
 
 Stream& StructDecl::stream(Stream& s) const {
-    (stream_ast_type_params(s.fmt("{}struct {}", visibility().str(), symbol())) << " {").indent().endl();
-    return s.fmt("{\n}", field_decls()).dedent().endl() << "}";
+    stream_ast_type_params(s.fmt("{}struct {}", visibility().str(), symbol()));
+    return s.fmt(" {{\t\n{,\n}\b\n}}", field_decls());
 }
 
 Stream& EnumDecl::stream(Stream& s) const {
-    (stream_ast_type_params(s.fmt("{}enum {}", visibility().str(), symbol())) << " {").indent().endl();
-    return s.fmt("{\n}", option_decls()).dedent().endl() << "}";
+    stream_ast_type_params(s.fmt("{}enum {}", visibility().str(), symbol()));
+    return s.fmt("{{\t\n{,\n}\b\n", option_decls());
 }
 
 Stream& Typedef::stream(Stream& s) const {
@@ -210,23 +195,19 @@ Stream& Typedef::stream(Stream& s) const {
 }
 
 Stream& TraitDecl::stream(Stream& s) const {
-    s << "trait " << symbol();
-    stream_ast_type_params(s);
+    stream_ast_type_params(s.fmt("trait {}", symbol()));
 
     if (!super_traits().empty())
         s.fmt(" : {, }", super_traits());
 
-    (s << " {").indent().endl();
-    return s.fmt("{\n}", methods()).dedent().endl() << '}';
+    return s.fmt(" {{\t\n{\n}\b\n}}", methods());
 }
 
 Stream& ImplItem::stream(Stream& s) const {
     s << "impl";
     stream_ast_type_params(s) << ' ';
-    if (trait())
-        s << trait() << " for ";
-    (s << ast_type() << " {").indent().endl();
-    return s.fmt("{\n}", methods()).dedent().endl() << '}';
+    if (trait()) s << trait() << " for ";
+    return s.fmt("{} {{\t\n{\n}\b\n}}", ast_type(), methods());
 }
 
 /*
@@ -235,18 +216,16 @@ Stream& ImplItem::stream(Stream& s) const {
 
 Stream& BlockExpr::stream(Stream& s) const {
     s << '{';
-    if (empty())
-        return s.endl() << '}';
+    if (empty()) return s.endl() << '}';
 
-    s.indent().endl().fmt("{\n}", stmts());
+    s.fmt("\t\n{\n}", stmts());
 
     if (!expr()->isa<EmptyExpr>()) {
-        if (!stmts().empty())
-            s.endl();
+        if (!stmts().empty()) s.endl();
         s << expr();
     }
 
-    return s.dedent().endl() << "}";
+    return s.fmt("\b\n}}");
 }
 
 Stream& LiteralExpr::stream(Stream& s) const {
@@ -274,7 +253,7 @@ Stream& CharExpr::stream(Stream& s) const {
 Stream& StrExpr::stream(Stream& s) const {
     if (symbols().size() == 1)
         return s << '\'' << symbols().front().remove_quotation() << '\'';
-    return s.indent().endl().fmt("{\n}", symbols()).dedent().endl();
+    return s.fmt("\t\n{\n}\b\n", symbols());
 }
 
 Stream& PathExpr ::stream(Stream& s) const { return s << path(); }
@@ -458,7 +437,7 @@ Stream& FnExpr::stream(Stream& s) const {
 Stream& IfExpr::stream(Stream& s) const {
     s.fmt("if {} {}", cond(), then_expr());
     if (has_else())
-        s << " else " << else_expr();
+        s.fmt(" else {}", else_expr());
     return s;
 }
 
@@ -538,12 +517,7 @@ Stream& AsmStmt::Elem::stream(Stream& s) const {
 }
 
 Stream& AsmStmt::stream(Stream& s) const {
-    s.fmt("asm(\"{}\"", asm_template()).indent().endl() << ": ";
-    s.fmt("{, }", outputs());
-    s.fmt("{, }",  inputs());
-    s.fmt("{, }",clobbers());
-    s.fmt("{, }", options());
-    return (s << ");").dedent().endl();
+    return s.fmt("asm(\"{}\"\t\n: {, }\n: {, }\n: {, }\n: {, })\b\n", asm_template(), outputs(), inputs(), clobbers(), options());
 }
 
 }

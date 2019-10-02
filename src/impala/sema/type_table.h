@@ -91,7 +91,7 @@ using Type2Type = TypeMap<const Type*>;
 
 /// Base class for all \p Type%s.
 template <class TypeTable>
-class TypeBase : public RTTICast<TypeBase<TypeTable>> {
+class TypeBase : public RTTICast<TypeBase<TypeTable>>, public thorin::Streamable<TypeBase<TypeTable>> {
 protected:
     using Type2Type = GIDMap<const TypeBase*, const TypeBase*>;
     using Types     = ArrayRef<const TypeBase*>;
