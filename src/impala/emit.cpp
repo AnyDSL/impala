@@ -144,14 +144,14 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_tag()) {
             case PrimType_bool: return world.type_bool();
-            case PrimType_i8  :
-            case PrimType_u8  : return world.type_int( 8);
-            case PrimType_i16 :
-            case PrimType_u16 : return world.type_int(16);
-            case PrimType_i32 :
-            case PrimType_u32 : return world.type_int(32);
-            case PrimType_i64 :
-            case PrimType_u64 : return world.type_int(64);
+            case PrimType_i8  : return world.type_sint( 8);
+            case PrimType_u8  : return world.type_int(  8);
+            case PrimType_i16 : return world.type_sint(16);
+            case PrimType_u16 : return world.type_int( 16);
+            case PrimType_i32 : return world.type_sint(32);
+            case PrimType_u32 : return world.type_int( 32);
+            case PrimType_i64 : return world.type_sint(64);
+            case PrimType_u64 : return world.type_int( 64);
             case PrimType_f16 : return world.type_real(16);
             case PrimType_f32 : return world.type_real(32);
             case PrimType_f64 : return world.type_real(64);
@@ -385,10 +385,10 @@ const Def* EmptyExpr::remit(CodeGen& cg) const { return cg.world.tuple(); }
 const Def* LiteralExpr::remit(CodeGen& cg) const {
     switch (tag()) {
         case LIT_bool: return cg.world.lit_bool(get<bool>());
-        case LIT_i8  : return cg.world.lit_int (get<  s8>(), cg.loc2dbg(loc()));
-        case LIT_i16 : return cg.world.lit_int (get< s16>(), cg.loc2dbg(loc()));
-        case LIT_i32 : return cg.world.lit_int (get< s32>(), cg.loc2dbg(loc()));
-        case LIT_i64 : return cg.world.lit_int (get< s64>(), cg.loc2dbg(loc()));
+        case LIT_i8  : return cg.world.lit_sint(get<  s8>(), cg.loc2dbg(loc()));
+        case LIT_i16 : return cg.world.lit_sint(get< s16>(), cg.loc2dbg(loc()));
+        case LIT_i32 : return cg.world.lit_sint(get< s32>(), cg.loc2dbg(loc()));
+        case LIT_i64 : return cg.world.lit_sint(get< s64>(), cg.loc2dbg(loc()));
         case LIT_u8  : return cg.world.lit_int (get<  u8>(), cg.loc2dbg(loc()));
         case LIT_u16 : return cg.world.lit_int (get< u16>(), cg.loc2dbg(loc()));
         case LIT_u32 : return cg.world.lit_int (get< u32>(), cg.loc2dbg(loc()));
@@ -414,11 +414,13 @@ const Def* StrExpr::remit(CodeGen& cg) const {
 
 const Def* CastExpr::remit(CodeGen& cg) const {
     auto def = src()->remit(cg);
-    auto src_type = src()->type();
-    auto dst_type = type();
-    auto dst = cg.convert(dst_type);
+    //auto src_type = src()->type();
+    //auto dst_type = type();
+    auto dst = cg.convert(type());
     auto dbg = cg.loc2dbg(loc());
+    return cg.world.op_cast(dst, def, dbg);
 
+#if 0
     if (src_type->isa<PtrType>() || dst_type->isa<PtrType>()) {
         return cg.world.op_bitcast(dst, def, dbg);
     } else if (is_int(src_type) || is_bool(src_type)) {
@@ -448,6 +450,7 @@ const Def* CastExpr::remit(CodeGen& cg) const {
         }
     }
     THORIN_UNREACHABLE;
+#endif
 }
 
 const Def* RValueExpr::lemit(CodeGen& cg) const {
@@ -599,7 +602,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             auto result    = cg.basicblock(cg.world.type_bool(), cg.loc2dbg("infix_result", loc().back()));
             auto jump_type = cg.world.cn({ cg.world.type_mem() });
             auto jump_t    = cg.world.lam(jump_type, cg.loc2dbg("jump_t", loc().back()));
-            auto jump_f    = cg.world.lam(jump_type, cg.loc2dbg("jump_t", loc().back()));
+            auto jump_f    = cg.world.lam(jump_type, cg.loc2dbg("jump_f", loc().back()));
             emit_branch(cg, jump_t, jump_f);
             jump_t->app(result, { jump_t->param(0), cg.world.lit_true() });
             jump_f->app(result, { jump_f->param(0), cg.world.lit_false() });
@@ -694,14 +697,14 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                 if (thorin::isa<thorin::Tag::Ptr>(rdef->type())) rdef = cg.world.op_bitcast(cg.world.type_int(64), rdef);
 
                 switch (op) {
-                    case  LT: return cg.world.op(s ? ICmp::  sl : ICmp::  ul, ldef, rdef, dbg);
-                    case  LE: return cg.world.op(s ? ICmp:: sle : ICmp:: ule, ldef, rdef, dbg);
-                    case  GT: return cg.world.op(s ? ICmp::  sg : ICmp::  ug, ldef, rdef, dbg);
-                    case  GE: return cg.world.op(s ? ICmp:: sge : ICmp:: uge, ldef, rdef, dbg);
-                    case SHR: return cg.world.op(s ? IOp ::ashr : IOp ::lshr, ldef, rdef, dbg);
-                    case  EQ: return cg.world.op(ICmp::   e, ldef, rdef, dbg);
-                    case  NE: return cg.world.op(ICmp::  ne, ldef, rdef, dbg);
+                    case  LT: return cg.world.op(World::Cmp::lt, ldef, rdef, dbg);
+                    case  LE: return cg.world.op(World::Cmp::le, ldef, rdef, dbg);
+                    case  GT: return cg.world.op(World::Cmp::gt, ldef, rdef, dbg);
+                    case  GE: return cg.world.op(World::Cmp::ge, ldef, rdef, dbg);
+                    case  EQ: return cg.world.op(World::Cmp::eq, ldef, rdef, dbg);
+                    case  NE: return cg.world.op(World::Cmp::ne, ldef, rdef, dbg);
                     case  OR: return cg.world.op(IOp :: ior, ldef, rdef, dbg);
+                    case SHR: return cg.world.op(s ? IOp ::ashr : IOp ::lshr, ldef, rdef, dbg);
                     case XOR: return cg.world.op(IOp ::ixor, ldef, rdef, dbg);
                     case AND: return cg.world.op(IOp ::iand, ldef, rdef, dbg);
                     case ADD: return cg.world.op(WOp :: add, mode, ldef, rdef, dbg);
