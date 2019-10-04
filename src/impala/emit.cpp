@@ -788,8 +788,8 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         auto name = fn_decl->fn_symbol().remove_quotation();
                         if (name == "bitcast") {
                             return cg.world.op_bitcast(cg.convert(type_expr->type_arg(0)), arg(0)->remit(cg), cg.loc2dbg(loc()));
-                        //} else if (name == "select") {
-                            //return cg.world.op_select(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
+                        } else if (name == "select") {
+                            return cg.world.extract(cg.world.tuple({arg(2)->remit(cg), arg(1)->remit(cg)}), arg(0)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "insert") {
                             return cg.world.insert_unsafe(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "sizeof") {
