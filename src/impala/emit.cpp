@@ -1086,7 +1086,7 @@ const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) con
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
             auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? variant : cg.world.extract(variant, i, cg.loc2dbg(loc())));
-            cond = cg.world.op(IOp::iand, cond, arg_cond, cg.loc2dbg(loc()));
+            cond = cg.world.extract_and(cond, arg_cond, cg.loc2dbg(loc()));
         }
     }
     return cond;
