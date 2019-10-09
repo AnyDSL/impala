@@ -107,8 +107,8 @@ public:
         auto result = world.extract(alloc, 1, dbg);
         auto ptr = as<thorin::Tag::Ptr>(result->type());
         auto [pointee, addr_space] = ptr->args<2>();
-        if (auto variadic = pointee->isa<Variadic>())
-            return world.op_bitcast(world.type_ptr(world.variadic_unsafe(variadic->codomain()), addr_space), result);
+        if (auto arr = pointee->isa<Arr>())
+            return world.op_bitcast(world.type_ptr(world.arr_unsafe(arr->codomain()), addr_space), result);
         return result;
     }
 
@@ -196,9 +196,9 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
     } else if (auto ptr = type->isa<PtrType>()) {
         return world.type_ptr(convert(ptr->pointee()), ptr->addr_space());
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
-        return world.variadic(definite_array_type->dim(), convert(definite_array_type->elem_type()));
+        return world.arr(definite_array_type->dim(), convert(definite_array_type->elem_type()));
     } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {
-        return world.variadic_unsafe(convert(indefinite_array_type->elem_type()));
+        return world.arr_unsafe(convert(indefinite_array_type->elem_type()));
     } else if (type->isa<NoRetType>()) {
         return nullptr; // TODO use bottom type - once it is available in thorin
     }
@@ -826,7 +826,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             dst = cont;
                         } else if (name == "pe_info") {
                             auto poly_type = cg.convert(arg(1)->type());
-                            auto string_type = cg.world.type_ptr(cg.world.variadic_unsafe(cg.world.type_int(8)));
+                            auto string_type = cg.world.type_ptr(cg.world.arr_unsafe(cg.world.type_int(8)));
                             auto cn = cg.world.cn({
                                 cg.world.type_mem(), string_type, poly_type,
                                 cg.world.cn({ cg.world.type_mem() }) });

@@ -6,6 +6,7 @@
 #ifdef LLVM_SUPPORT
 #include "thorin/be/llvm/llvm.h"
 #endif
+#include "thorin/error.h"
 #include "thorin/rewrite.h"
 #include "thorin/analyses/schedule.h"
 #include "thorin/pass/optimize.h"
@@ -125,6 +126,7 @@ int main(int argc, char** argv) {
 
         thorin::World world(module_name);
         impala::init();
+        world.set(std::make_unique<thorin::DefaultHandler>());
 
         std::ofstream log_stream;
         auto ostream = open(log_stream, log_name);
