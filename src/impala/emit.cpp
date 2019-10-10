@@ -515,7 +515,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
         case NOT:
             if (is_bool(type()))
                 return cg.world.extract_not(rhs()->remit(cg), cg.loc2dbg(loc()));
-            return cg.world.op_Bit_not(rhs()->remit(cg), cg.loc2dbg(loc()));
+            return cg.world.op_bit_not(rhs()->remit(cg), cg.loc2dbg(loc()));
         case TILDE: {
             auto def = rhs()->remit(cg);
             auto ptr = cg.alloc(def->type(), cg.loc2dbg(loc()));
