@@ -104,6 +104,7 @@ IMPALA_KEY(TYPEDEF,   "type")
 IMPALA_KEY(TYPEOF,    "typeof")
 IMPALA_KEY(WHILE,     "while")
 IMPALA_KEY(SIMD,      "simd")
+IMPALA_KEY(GRAD,      "grad")
 
 #undef IMPALA_KEY
 

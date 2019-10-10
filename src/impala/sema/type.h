@@ -212,6 +212,8 @@ public:
     bool is_returning() const;
     virtual std::ostream& stream(std::ostream&) const override;
 
+    // TODO: Iterator for arguments
+
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
 

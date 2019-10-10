@@ -68,7 +68,8 @@
     case Token::L_PAREN: \
     case Token::L_BRACE: \
     case Token::L_BRACKET: \
-    case Token::SIMD
+    case Token::SIMD: \
+    case Token::GRAD
 
 #define STMT \
          Token::LET: \
@@ -247,6 +248,7 @@ public:
     const BlockExpr*    parse_block_expr();
     const BlockExpr*    try_block_expr(const std::string& context);
     const Expr*         parse_filter(const char* context);
+    const GradExpr*     parse_grad_expr();
 
     // patterns
     const Ptrn*        parse_ptrn();
@@ -999,6 +1001,7 @@ const Expr* Parser::parse_primary_expr() {
         case Token::WITH:       return parse_with_expr();
         case Token::WHILE:      return parse_while_expr();
         case Token::L_BRACE:    return parse_block_expr();
+        case Token::GRAD:       return parse_grad_expr();
         default:                error("expression", ""); return new EmptyExpr(lex().loc());
     }
 }
@@ -1208,6 +1211,7 @@ const BlockExpr* Parser::parse_block_expr() {
                     case Token::WITH:       expr = parse_with_expr(); break;
                     case Token::WHILE:      expr = parse_while_expr(); break;
                     case Token::L_BRACE:    expr = parse_block_expr(); break;
+                    case Token::GRAD:       expr = parse_grad_expr(); break;
                     default:                expr = parse_expr(); stmt_like = false;
                 }
 
@@ -1252,6 +1256,15 @@ const Expr* Parser::parse_filter(const char* context) {
         filter = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, false);
 
     return filter;
+}
+
+const GradExpr* Parser::parse_grad_expr() {
+    auto tracker = track();
+    eat(Token::GRAD);
+    expect(Token::L_PAREN, "grad expression");
+    auto expr = parse_expr();
+    expect(Token::R_PAREN, "grad expression");
+    return new GradExpr(tracker, expr);
 }
 
 /*

@@ -116,6 +116,8 @@ bool MatchExpr::has_side_effect() const {
 bool WhileExpr::has_side_effect() const { return true; }
 bool ForExpr::has_side_effect() const { return true; }
 
+bool GradExpr::has_side_effect() const { return expr()->has_side_effect(); }
+
 //------------------------------------------------------------------------------
 
 /*

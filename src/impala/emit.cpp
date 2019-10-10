@@ -1035,6 +1035,10 @@ const Def* FnExpr::remit(CodeGen& cg) const {
     return lam;
 }
 
+const Def* GradExpr::remit(CodeGen& cg) const {
+    return nullptr; // TODO
+}
+
 /*
  * patterns
  */

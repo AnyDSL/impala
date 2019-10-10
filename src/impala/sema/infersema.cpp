@@ -1011,6 +1011,21 @@ const Type* ForExpr::infer(InferSema& sema) const {
     return sema.unit();
 }
 
+const Type* GradExpr::infer(InferSema& sema) const {
+    if (auto fn_type = sema.infer(expr())->isa<FnType>()) {
+        auto true_params = fn_type->domain()->ops().skip_back(); // params without return continuation
+
+	Array<const Type*> types(true_params.size() + 1);
+	for (size_t i = 0, e = true_params.size(); i != e; ++i)
+	    types[i] = fn_type->param(i);
+	types.back() = sema.fn_type(true_params); // TODO: Use tangent vectors
+
+	return sema.fn_type(types);
+    }
+
+    return sema.type_error();
+}
+
 //------------------------------------------------------------------------------
 
 /*

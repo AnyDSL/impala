@@ -491,6 +491,10 @@ std::ostream& ForExpr::stream(std::ostream& os) const {
     return os << expr() << ' ' << fn_expr()->body();
 }
 
+std::ostream& GradExpr::stream(std::ostream& os) const {
+    return streamf(os, "grad({})", expr());
+}
+
 /*
  * patterns
  */

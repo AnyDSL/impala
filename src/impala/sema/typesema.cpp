@@ -724,6 +724,33 @@ void ForExpr::check(TypeSema& sema) const {
     error(expr(), "the looping expression does not support the 'for' protocol");
 }
 
+void GradExpr::check(TypeSema& sema) const {
+    auto fn_type = sema.check(expr())->isa<FnType>();
+
+    if (!fn_type) {
+        error(expr(), "the expression is not a function");
+	return;
+    }
+
+    if (!fn_type->is_returning()) {
+	error(expr(), "the function is not returning");
+	return;
+    }
+
+    if (!is_float(fn_type->return_type())) {
+        error(expr(), "the function does not return a float scalar");
+	return;
+    }
+
+    auto param_types = fn_type->domain()->ops();
+    auto has_no_tangent = [](const Type* type){ return !is_float(type); };
+
+    if (std::all_of(param_types.begin(), param_types.end(), has_no_tangent)) {
+        error(expr(), "has no arguments to be derived");
+        return;
+    }
+}
+
 //------------------------------------------------------------------------------
 
 /*
