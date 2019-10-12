@@ -177,6 +177,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
             s->set(i++, convert(op));
         thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
         return s;
+#if 0
     } else if (auto enum_type = type->isa<EnumType>()) {
         auto s = world.sigma(2, {enum_type->enum_decl()->symbol().c_str()});
         thorin_enum_type(enum_type) = s;
@@ -193,6 +194,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
         s->set(1, world.variant_type(ops));
         thorin_type(enum_type) = nullptr;
         return s;
+#endif
     } else if (auto ptr = type->isa<PtrType>()) {
         return world.type_ptr(convert(ptr->pointee()), ptr->addr_space());
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
@@ -344,7 +346,8 @@ void StructDecl::emit_head(CodeGen& cg) const {
     cg.convert(type());
 }
 
-void OptionDecl::emit(CodeGen& cg) const {
+void OptionDecl::emit(CodeGen& /*cg*/) const {
+#if 0
     auto enum_type = enum_decl()->type()->as<EnumType>();
     auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
     auto id = cg.world.lit_int(index(), cg.loc2dbg(loc()));
@@ -363,6 +366,7 @@ void OptionDecl::emit(CodeGen& cg) const {
         lam->app(ret, { mem, enum_val }, cg.loc2dbg(loc()));
         def_ = lam;
     }
+#endif
 }
 
 void EnumDecl::emit_head(CodeGen& cg) const {
@@ -912,7 +916,8 @@ const Def* IfExpr::remit(CodeGen& cg) const {
     return nullptr; // TODO use bottom type
 }
 
-const Def* MatchExpr::remit(CodeGen& cg) const {
+const Def* MatchExpr::remit(CodeGen& /*cg*/) const {
+#if 0
     auto thorin_type = cg.convert(type());
 
     auto join = thorin_type ? cg.basicblock(thorin_type, cg.loc2dbg("match_join", loc().back())) : nullptr; // TODO rewrite with bottom type
@@ -991,6 +996,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 
     if (thorin_type)
         return cg.enter(join)->param(1);
+#endif
     return nullptr; // TODO use bottom type
 }
 

@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
 
         thorin::World world(module_name);
         impala::init();
-        world.set(std::make_unique<thorin::DefaultHandler>());
+        world.set(std::make_unique<thorin::ErrorHandler>());
 
         std::ofstream log_stream;
         auto ostream = open(log_stream, log_name);
