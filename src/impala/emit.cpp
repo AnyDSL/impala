@@ -42,44 +42,22 @@ public:
         }
     }
 
-    std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, Debug dbg) {
+    std::pair<Lam*, const Def*> call(const Def* callee, const Def* mem, const Def* arg, const thorin::Def* ret_type, Debug dbg) {
         if (ret_type == nullptr) {
-            cur_bb->app(callee, args, dbg);
+            cur_bb->app(callee, {mem, arg}, dbg);
             auto next = basicblock({"unreachable"});
             return std::make_pair(next, nullptr);
         }
 
-        std::vector<const thorin::Def*> cont_args;
-        cont_args.push_back(world.type_mem());
-
-        // if the return type is a sigma, flatten it
-        auto sigma = ret_type->isa<thorin::Sigma>();
-        if (sigma && !sigma->isa_nominal()) {
-            for (auto op : sigma->ops())
-                cont_args.push_back(op);
-        } else
-            cont_args.push_back(ret_type);
-
         // next is the return lam
-        auto next = world.lam(world.cn(cont_args), dbg);
+        auto next = world.lam(world.cn({world.type_mem(), ret_type}), dbg);
         next->param(0, {"mem"});
 
         // create jump to next
-        size_t csize = args.size() + 1;
-        Array<const Def*> cargs(csize);
-        *std::copy(args.begin(), args.end(), cargs.begin()) = next;
-        cur_bb->app(callee, cargs, dbg);
+        cur_bb->app(callee, {mem, arg, next}, dbg);
 
         // determine return value
-        const Def* ret = nullptr;
-        if (sigma) {
-            Array<const Def*> params(next->num_params() - 1);
-            for (size_t i = 1, e = next->num_params(); i != e; ++i)
-                params[i - 1] = next->param(i);
-            ret = world.tuple(ret_type, params, {callee->name()});
-        } else
-            ret = next->param(1, {callee->name()});
-
+        const Def* ret = next->param(1, {callee->name()});
         return std::make_pair(next, ret);
     }
 
@@ -854,14 +832,14 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         dst = dst ? dst : lhs()->remit(cg);
 
         std::vector<const Def*> defs;
-        defs.push_back(nullptr);    // reserve for mem but set later - some other args may update mem
         for (auto&& arg : args())
             defs.push_back(arg.get()->remit(cg));
-        defs.front() = cg.cur_mem; // now get the current memory value
+        auto arg = cg.world.tuple(defs);
+        auto mem = cg.cur_mem;
 
         auto ret_type = num_args() == cn->num_params() ? nullptr : cg.convert(cn->return_type());
         const Def* ret;
-        std::tie(cg.cur_bb, ret) = cg.call(dst, defs, ret_type, cg.loc2dbg((dst->name() + "_cont").c_str(), loc()));
+        std::tie(cg.cur_bb, ret) = cg.call(dst, mem, arg, ret_type, cg.loc2dbg((dst->name() + "_cont").c_str(), loc()));
         if (ret_type)
             cg.cur_mem = cg.cur_bb->param(0);
 
@@ -1031,7 +1009,6 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
 
 const Def* ForExpr::remit(CodeGen& cg) const {
     std::vector<const Def*> args;
-    args.push_back(nullptr); // reserve for mem but set later - some other args may update the monad
 
     auto break_bb = cg.create_lam(break_decl());
 
@@ -1042,19 +1019,13 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     args.push_back(fn_expr()->remit(cg));
     args.push_back(break_bb);
     auto fun = map_expr->lhs()->remit(cg);
+    auto arg = cg.world.tuple(args);
 
-    args.front() = cg.cur_mem; // now get the current memory monad
-    cg.call(fun, args, nullptr, cg.loc2dbg(map_expr->loc()));
+    auto mem = cg.cur_mem; // now get the current memory monad
+    cg.call(fun, mem, arg, nullptr, cg.loc2dbg(map_expr->loc()));
 
     cg.enter(break_bb);
-    if (break_bb->num_params() == 2)
-        return break_bb->param(1);
-    else {
-        Array<const Def*> args(break_bb->num_params()-1);
-        for (size_t i = 0, e = args.size(); i != e; ++i)
-            args[i] = break_bb->param(i+1);
-        return cg.world.tuple(args, cg.loc2dbg(loc()));
-    }
+    return break_bb->param(1);
 }
 
 const Def* FnExpr::remit(CodeGen& cg) const {
