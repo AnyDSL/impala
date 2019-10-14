@@ -742,13 +742,8 @@ void GradExpr::check(TypeSema& sema) const {
 	return;
     }
 
-    auto param_types = fn_type->domain()->ops();
-    auto has_no_tangent = [](const Type* type){ return !is_float(type); };
-
-    if (std::all_of(param_types.begin(), param_types.end(), has_no_tangent)) {
-        error(expr(), "has no arguments to be derived");
-        return;
-    }
+    // For now we ignore if the function has no parameters to be derived
+    // This just causes the gradient to be an empty tuple or a tuple of empty tuples
 }
 
 //------------------------------------------------------------------------------

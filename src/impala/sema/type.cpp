@@ -323,4 +323,86 @@ const InferError* TypeTable::infer_error(const Type* dst, const Type* src) {
     return unify(new InferError(*this, dst, src));
 }
 
+//------------------------------------------------------------------------------
+
+/*
+ * gradients
+ */
+
+const Type* FnType::grad_fn_type() const {
+    if (!is_returning()) return table().type_error();
+
+    Array<const Type*> params(domain()->ops());
+    params.back() = table().fn_type(grad_return_type());
+    return table().fn_type(params);
+}
+
+const Type* FnType::grad_with_val_fn_type() const {
+    if (!is_returning()) return table().type_error();
+
+    Array<const Type*> params(domain()->ops());
+    params.back() = table().fn_type(grad_with_val_return_type());
+    return table().fn_type(params);
+}
+
+const Type* FnType::params_without_return_continuation() const {
+    auto types = is_returning() ? domain()->ops().skip_back()
+                                : domain()->ops();
+    return table().tuple_type(types);
+}
+
+const Type* FnType::grad_return_type() const {
+    if (!is_returning()) return table().type_error();
+
+    return params_without_return_continuation()->tangent_vector();
+}
+
+const Type* FnType::grad_with_val_return_type() const {
+    if (!is_returning()) return table().type_error();
+
+    return table().tuple_type({ return_type(), grad_return_type() });
+}
+
+/*
+ * tangent_vector
+ */
+
+const Type* PrimType::tangent_vector() const {
+    return is_float(this) ? this : nullptr;
+}
+
+const Type* TupleType::tangent_vector() const {
+    Array<const Type*> types(num_ops());
+    for (size_t i = 0, e = num_ops(); i != e; ++i) {
+        types[i] = op(i)->tangent_vector();
+
+        // TODO: Decide what to do with non-differentiable elements.
+        //       Also what if all elements are non-differentiable?
+        if (types[i] == nullptr) {
+            types[i] = table().unit();
+        }
+    }
+
+    return table().tuple_type(types);
+}
+
+const Type* StructType::tangent_vector() const {
+    // TODO
+    return nullptr;
+}
+
+const Type* IndefiniteArrayType::tangent_vector() const {
+    auto elem_tangent_vector = elem_type()->tangent_vector();
+    return elem_tangent_vector != nullptr
+            ? table().indefinite_array_type(elem_tangent_vector)
+            : nullptr;
+}
+
+const Type* DefiniteArrayType::tangent_vector() const {
+    auto elem_tangent_vector = elem_type()->tangent_vector();
+    return elem_tangent_vector != nullptr
+            ? table().definite_array_type(elem_tangent_vector, dim())
+            : nullptr;
+}
+
 }

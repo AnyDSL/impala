@@ -71,6 +71,7 @@ public:
     PrimTypeTag primtype_tag() const { return (PrimTypeTag) tag(); }
 
     virtual std::ostream& stream(std::ostream&) const override;
+    virtual const Type* tangent_vector() const override;
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
@@ -212,10 +213,15 @@ public:
     bool is_returning() const;
     virtual std::ostream& stream(std::ostream&) const override;
 
-    // TODO: Iterator for arguments
+    const Type* grad_fn_type() const;          ///< Type of the function that calculates the gradients
+    const Type* grad_with_val_fn_type() const; ///< Type of the function that calculates the gradients and the original value
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
+
+    const Type* params_without_return_continuation() const;
+    const Type* grad_return_type() const;
+    const Type* grad_with_val_return_type() const;
 
     friend class TypeTable;
 };
@@ -297,6 +303,7 @@ private:
 public:
     virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
     virtual std::ostream& stream(std::ostream&) const override;
+    virtual const Type* tangent_vector() const override;
 
     friend class TypeTable;
 };
@@ -313,6 +320,8 @@ private:
 public:
     const StructDecl* struct_decl() const { return decl_; }
     void set(size_t i, const Type* type) const { return const_cast<StructType*>(this)->Type::set(i, type); }
+
+    virtual const Type* tangent_vector() const override;
 
 private:
     virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
@@ -366,6 +375,7 @@ public:
     {}
 
     virtual std::ostream& stream(std::ostream&) const override;
+    virtual const Type* tangent_vector() const override;
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
@@ -387,6 +397,7 @@ public:
     }
 
     virtual std::ostream& stream(std::ostream&) const override;
+    virtual const Type* tangent_vector() const override;
 
 private:
     virtual const Type* vrebuild(TypeTable&, Types) const override;
