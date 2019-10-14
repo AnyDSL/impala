@@ -1852,12 +1852,16 @@ private:
 
 class GradExpr : public Expr {
 public:
-    GradExpr(Loc loc, const Expr *expr)
+    enum class Flavor { GRAD_ONLY, GRAD_WITH_VAL };
+
+    GradExpr(Loc loc, const Expr *expr, GradExpr::Flavor flavor)
         : Expr(loc)
         , expr_(dock(expr_, expr))
+        , flavor_(flavor)
     {}
 
     const Expr *expr() const { return expr_.get(); }
+    GradExpr::Flavor flavor() const { return flavor_; }
 
     bool has_side_effect() const override;
     void bind(NameSema &) const override;
@@ -1869,6 +1873,7 @@ private:
     const thorin::Def *remit(CodeGen &) const override;
 
     std::unique_ptr<const Expr> expr_;
+    GradExpr::Flavor flavor_;
 };
 
 //------------------------------------------------------------------------------

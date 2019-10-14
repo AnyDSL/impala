@@ -1018,9 +1018,17 @@ const Type* GradExpr::infer(InferSema& sema) const {
 	Array<const Type*> types(true_params.size() + 1);
 	for (size_t i = 0, e = true_params.size(); i != e; ++i)
 	    types[i] = fn_type->param(i);
-	types.back() = sema.fn_type(true_params); // TODO: Use tangent vectors
 
-	return sema.fn_type(types);
+        // TODO: Use tangent vectors
+	switch (flavor()) {
+            case GradExpr::Flavor::GRAD_ONLY:
+                types.back() = sema.fn_type(true_params);
+                break;
+            case GradExpr::Flavor::GRAD_WITH_VAL:
+                types.back() = sema.fn_type({ fn_type->return_type(), sema.tuple_type(true_params) });
+                break;
+        }
+        return sema.fn_type(types);
     }
 
     return sema.type_error();
