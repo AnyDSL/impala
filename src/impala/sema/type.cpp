@@ -332,23 +332,31 @@ const InferError* TypeTable::infer_error(const Type* dst, const Type* src) {
 const Type* FnType::grad_fn_type() const {
     if (!is_returning()) return table().type_error();
 
-    Array<const Type*> params(domain()->ops());
-    params.back() = table().fn_type(grad_return_type());
-    return table().fn_type(params);
+    if (auto type = grad_return_type()) {
+        Array<const Type*> params(domain()->ops());
+        params.back() = table().fn_type(type);
+        return table().fn_type(params);
+    }
+
+    return table().type_error();
 }
 
 const Type* FnType::grad_with_val_fn_type() const {
     if (!is_returning()) return table().type_error();
 
-    Array<const Type*> params(domain()->ops());
-    params.back() = table().fn_type(grad_with_val_return_type());
-    return table().fn_type(params);
+    if (auto type = grad_with_val_return_type()) {
+        Array<const Type*> params(domain()->ops());
+        params.back() = table().fn_type(type);
+        return table().fn_type(params);
+    }
+
+    return table().type_error();
 }
 
 const Type* FnType::params_without_return_continuation() const {
     auto types = is_returning() ? domain()->ops().skip_back()
                                 : domain()->ops();
-    return table().tuple_type(types);
+    return types.size() == 1 ? types[0] : table().tuple_type(types);
 }
 
 const Type* FnType::grad_return_type() const {
@@ -373,17 +381,21 @@ const Type* PrimType::tangent_vector() const {
 
 const Type* TupleType::tangent_vector() const {
     Array<const Type*> types(num_ops());
+    bool no_op_has_tangent = true;
     for (size_t i = 0, e = num_ops(); i != e; ++i) {
         types[i] = op(i)->tangent_vector();
 
-        // TODO: Decide what to do with non-differentiable elements.
-        //       Also what if all elements are non-differentiable?
+        // In case one of the elements is non-differentiable, we replace it by
+        // unit. This makes sure the position of tuple-elements matches the
+        // positions of their tangent vectors.
         if (types[i] == nullptr) {
             types[i] = table().unit();
+        } else {
+            no_op_has_tangent = false;
         }
     }
 
-    return table().tuple_type(types);
+    return no_op_has_tangent ? nullptr : table().tuple_type(types);
 }
 
 const Type* StructType::tangent_vector() const {
