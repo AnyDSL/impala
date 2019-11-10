@@ -8,6 +8,8 @@
 #include "impala/ast.h"
 #include "impala/impala.h"
 
+using thorin::Stream;
+
 // extract intrinsic names for overloaded intrinsics
 static const char * const IntrinsicNameTable[] = {
   "not_intrinsic",
@@ -28,7 +30,9 @@ int main() {
     llvm::LLVMContext context;
     int num = llvm::Intrinsic::num_intrinsics - 1;
 
-    std::cout << "extern \"device\" {" << thorin::up;
+    Stream s(std::cout);
+
+    (s << "extern \"device\" {").indent();
     for (int i = 1; i != num; ++i) {
         auto id = (llvm::Intrinsic::ID) i;
         std::string llvm_name;
@@ -46,27 +50,27 @@ int main() {
         std::transform(name.begin(), name.end(), name.begin(), [] (char c) { return c == '.' ? '_' : c; });
 
         if (llvm::Intrinsic::isOverloaded(id)) {
-            std::cout << thorin::endl;
-            std::cout << "// fn \"" << llvm_name << "\" " << name;
-            std::cout << " (...) -> (...); // is overloaded";
+            s.endl();
+            s << "// fn \"" << llvm_name << "\" " << name;
+            s << " (...) -> (...); // is overloaded";
         } else {
             if (auto itype = llvm2impala(*typetable, llvm::Intrinsic::getType(context, id))) {
-                std::cout << thorin::endl;
+                s.endl();
                 auto fn = itype->as<impala::FnType>();
-                std::cout << "fn \"" << llvm_name << "\" " << name << "(";
+                s << "fn \"" << llvm_name << "\" " << name << "(";
                 for (size_t i = 0, e = fn->num_params()-1; i != e; ++i) {
-                    std::cout << fn->param(i);
+                    s << fn->param(i);
                     if (i != e-1)
-                        std::cout << ", ";
+                        s << ", ";
                 }
                 if (fn->return_type()->isa<impala::NoRetType>())
-                    std::cout << ") -> !;";
+                    s << ") -> !;";
                 else
-                    std::cout << ") -> " << fn->return_type() << ';';
+                    s << ") -> " << fn->return_type() << ';';
             }
         }
     }
-    std::cout << thorin::down << thorin::endl << '}' << thorin::endl;
+    (s.dedent().endl() << '}').endl();
 }
 
 const impala::Type* llvm2impala(impala::TypeTable& tt, llvm::Type* type) {

@@ -6,15 +6,17 @@
 #ifdef LLVM_SUPPORT
 #include "thorin/be/llvm/llvm.h"
 #endif
+#include "thorin/error.h"
 #include "thorin/rewrite.h"
 #include "thorin/analyses/schedule.h"
 #include "thorin/pass/optimize.h"
 #include "thorin/util/args.h"
-#include "thorin/util/log.h"
 
 #include "impala/ast.h"
 #include "impala/cgen.h"
 #include "impala/impala.h"
+
+using thorin::Stream;
 
 //------------------------------------------------------------------------------
 
@@ -82,20 +84,6 @@ int main(int argc, char** argv) {
 
         impala::fancy() = fancy;
 
-        std::ofstream log_stream;
-        if (log_level == "error") {
-            thorin::Log::set(thorin::Log::Error, open(log_stream, log_name));
-        } else if (log_level == "warn") {
-            thorin::Log::set(thorin::Log::Warn, open(log_stream, log_name));
-        } else if (log_level == "info") {
-            thorin::Log::set(thorin::Log::Info, open(log_stream, log_name));
-        } else if (log_level == "verbose") {
-            thorin::Log::set(thorin::Log::Verbose, open(log_stream, log_name));
-        } else if (log_level == "debug") {
-            thorin::Log::set(thorin::Log::Debug, open(log_stream, log_name));
-        } else
-            throw std::invalid_argument("log level must be one of " LOG_LEVELS);
-
         // check optimization levels
         if (opt_s + opt_0 + opt_1 + opt_2 + opt_3 > 1)
             throw std::invalid_argument("multiple optimization levels specified");
@@ -107,12 +95,12 @@ int main(int argc, char** argv) {
         else if (opt_3) opt = 3;
 
         if (infiles.empty() && !help) {
-            thorin::errf("no input files\n");
+            thorin::errf("no input files");
             return EXIT_FAILURE;
         }
 
         if (help) {
-            thorin::outf("Usage: {} [options] file...\n", prgname);
+            thorin::outf("Usage: {} [options] file...", prgname);
             cmd_parser.print_help();
             return EXIT_SUCCESS;
         }
@@ -136,8 +124,21 @@ int main(int argc, char** argv) {
             }
         }
 
-        thorin::World world(0, module_name);
+        thorin::World world(module_name);
         impala::init();
+        world.set(std::make_unique<thorin::ErrorHandler>());
+
+        std::ofstream log_stream;
+        auto ostream = open(log_stream, log_name);
+        Stream s(*ostream);
+
+        if (false) {}
+        else if (log_level == "error")   world.set(thorin::LogLevel::Error,   s);
+        else if (log_level == "warn")    world.set(thorin::LogLevel::Warn,    s);
+        else if (log_level == "info")    world.set(thorin::LogLevel::Info,    s);
+        else if (log_level == "verbose") world.set(thorin::LogLevel::Verbose, s);
+        else if (log_level == "debug")   world.set(thorin::LogLevel::Debug,   s);
+        else throw std::invalid_argument("log level must be one of " LOG_LEVELS);
 
 #if THORIN_ENABLE_CHECKS && !defined(NDEBUG)
         for (auto b : breakpoints) {
@@ -175,14 +176,14 @@ int main(int argc, char** argv) {
         auto module = std::make_unique<const impala::Module>(infiles.front().c_str(), std::move(items));
 
         if (emit_ast)
-            module->stream(std::cout);
+            module->dump();
 
         std::unique_ptr<impala::TypeTable> typetable;
         impala::check(typetable, module.get());
         bool result = impala::num_errors() == 0;
 
         if (emit_annotated)
-            module->stream(std::cout);
+            module->dump();
 
         if (result && emit_cint) {
             impala::CGenOptions opts;
@@ -202,7 +203,7 @@ int main(int argc, char** argv) {
 
             std::ofstream out_file(module_name + ".h");
             if (!out_file) {
-                thorin::errf("cannot open file '{}' for writing\n", opts.file_name);
+                thorin::errf("cannot open file '{}' for writing", opts.file_name);
                 return EXIT_FAILURE;
             }
             impala::generate_c_interface(module.get(), opts, out_file);
@@ -239,7 +240,7 @@ int main(int argc, char** argv) {
                 emit_to_file(backends.hls_cg.get(),    ".hls");
 #endif
 #else
-                thorin::outf("warning: built without LLVM support - I don't emit an LLVM file\n");
+                thorin::outf("warning: built without LLVM support - I don't emit an LLVM file");
 #endif
             }
         } else
@@ -247,10 +248,10 @@ int main(int argc, char** argv) {
 
         return EXIT_SUCCESS;
     } catch (std::exception const& e) {
-        thorin::errf("{}\n", e.what());
+        thorin::errf("{}", e.what());
         return EXIT_FAILURE;
     } catch (...) {
-        thorin::errf("unknown exception\n");
+        thorin::errf("unknown exception");
         return EXIT_FAILURE;
     }
 }

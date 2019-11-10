@@ -91,7 +91,7 @@ using Type2Type = TypeMap<const Type*>;
 
 /// Base class for all \p Type%s.
 template <class TypeTable>
-class TypeBase : public RTTICast<TypeBase<TypeTable>>, public Streamable {
+class TypeBase : public RTTICast<TypeBase<TypeTable>>, public thorin::Streamable<TypeBase<TypeTable>> {
 protected:
     using Type2Type = GIDMap<const TypeBase*, const TypeBase*>;
     using Types     = ArrayRef<const TypeBase*>;
@@ -110,6 +110,8 @@ protected:
     }
 
 public:
+    virtual ~TypeBase() {}
+
     int tag() const { return tag_; }
     TypeTable& table() const { return *table_; }
 
@@ -136,6 +138,7 @@ public:
     virtual const TypeBase* tangent_vector() const { return nullptr; }
 
     static size_t gid_counter() { return gid_counter_; }
+    virtual Stream& stream(Stream&) const = 0;
 
 protected:
     virtual uint32_t vhash() const;

@@ -1,6 +1,7 @@
 set(IMPALA_SOURCES
     ast.cpp
     ast.h
+    ast_stream.cpp
     cgen.cpp
     cgen.h
     emit.cpp
@@ -13,16 +14,15 @@ set(IMPALA_SOURCES
     parser.cpp
     symbol.cpp
     symbol.h
+    token.cpp
+    token.h
+    tokenlist.h
     sema/infersema.cpp
     sema/namesema.cpp
     sema/type.cpp
     sema/type.h
     sema/type_table.h
     sema/typesema.cpp
-    stream.cpp
-    token.cpp
-    token.h
-    tokenlist.h
 )
 
 add_library(libimpala ${IMPALA_SOURCES})

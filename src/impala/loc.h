@@ -1,10 +1,11 @@
 #ifndef IMPALA_LOC_H
 #define IMPALA_LOC_H
 
-#include <ostream>
-#include <string>
+#include "thorin/util/stream.h"
 
 namespace impala {
+
+using thorin::Stream;
 
 class Loc {
 public:
@@ -40,7 +41,7 @@ protected:
 };
 
 Loc operator+(Loc l1, Loc l2);
-std::ostream& operator<<(std::ostream&, Loc);
+Stream& operator<<(Stream&, Loc);
 
 }
 

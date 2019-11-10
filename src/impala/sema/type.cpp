@@ -8,7 +8,7 @@
 
 namespace impala {
 
-using thorin::streamf;
+using thorin::Stream;
 
 //------------------------------------------------------------------------------
 
@@ -155,10 +155,10 @@ bool UnknownType::equal(const Type* other) const { return this == other; }
  * stream
  */
 
-std::ostream& Lambda::stream(std::ostream& os) const { return streamf(os, "[{}].{}", name(), body()); }
-std::ostream& UnknownType::stream(std::ostream& os) const { return os << '?' << gid(); }
+Stream& Lambda::stream(Stream& os) const { return os.fmt("[{}].{}", name(), body()); }
+Stream& UnknownType::stream(Stream& os) const { return os << '?' << gid(); }
 
-std::ostream& PrimType::stream(std::ostream& os) const {
+Stream& PrimType::stream(Stream& os) const {
     switch (primtype_tag()) {
 #define IMPALA_TYPE(itype, atype) case PrimType_##itype: return os << #itype;
 #include "impala/tokenlist.h"
@@ -166,41 +166,39 @@ std::ostream& PrimType::stream(std::ostream& os) const {
     }
 }
 
-std::ostream& NoRetType::stream(std::ostream& os) const { return os << "<no-return>"; }
-std::ostream& InferError::stream(std::ostream& os) const { return streamf(os, "<infer error: {}, {}>", dst(), src()); }
-std::ostream& TypeError::stream(std::ostream& os) const { return os << "<type error>"; }
+Stream& NoRetType::stream(Stream& os) const { return os << "<no-return>"; }
+Stream& InferError::stream(Stream& os) const { return os.fmt("<infer error: {}, {}>", dst(), src()); }
+Stream& TypeError::stream(Stream& os) const { return os << "<type error>"; }
 
-std::ostream& FnType::stream(std::ostream& os) const {
+Stream& FnType::stream(Stream& os) const {
     os << "fn";
     if (auto tuple = op(0)->isa<TupleType>())
-        streamf(os, "{}", tuple);
+        os.fmt("{}", tuple);
     else
-        streamf(os, "({})", op(0));
+        os.fmt("({})", op(0));
     auto ret_type = return_type();
-    return !ret_type->isa<NoRetType>() ? streamf(os, " -> {}", ret_type) : os;
+    return !ret_type->isa<NoRetType>() ? os.fmt(" -> {}", ret_type) : os;
 }
 
-std::ostream& Var::stream(std::ostream& os) const {
-    return streamf(os, "<{}>", depth());
+Stream& Var::stream(Stream& os) const {
+    return os.fmt("<{}>", depth());
 }
 
-std::ostream& App::stream(std::ostream& os) const { return streamf(os, "{}[{}]", callee(), arg()); }
+Stream& App::stream(Stream& os) const { return os.fmt("{}[{}]", callee(), arg()); }
 
-std::ostream& RefTypeBase::stream(std::ostream& os) const {
+Stream& RefTypeBase::stream(Stream& os) const {
     os << prefix();
     if (addr_space() != 0)
         os << '[' << addr_space() << ']';
     return os << pointee();
 }
 
-std::ostream& DefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[{} * {}]", elem_type(), dim()); }
-std::ostream& IndefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[{}]", elem_type()); }
-std::ostream& SimdType::stream(std::ostream& os) const { return streamf(os, "simd[{} * {}]", elem_type(), dim()); }
-std::ostream& StructType::stream(std::ostream& os) const { return os << struct_decl()->symbol(); }
-std::ostream& EnumType::stream(std::ostream& os) const { return os << enum_decl()->symbol(); }
-std::ostream& TupleType::stream(std::ostream& os) const {
-    return stream_list(os, ops(), [&](const Type* type) { os << type; }, "(", ")");
-}
+Stream& DefiniteArrayType::stream(Stream& os) const { return os.fmt("[{} * {}]", elem_type(), dim()); }
+Stream& IndefiniteArrayType::stream(Stream& os) const { return os.fmt("[{}]", elem_type()); }
+Stream& SimdType::stream(Stream& os) const { return os.fmt("simd[{} * {}]", elem_type(), dim()); }
+Stream& StructType::stream(Stream& os) const { return os << struct_decl()->symbol(); }
+Stream& EnumType::stream(Stream& os) const { return os << enum_decl()->symbol(); }
+Stream& TupleType::stream(Stream& os) const { return os.fmt("({, }", ops()); }
 
 //------------------------------------------------------------------------------
 
@@ -418,3 +416,5 @@ const Type* DefiniteArrayType::tangent_vector() const {
 }
 
 }
+
+template void thorin::Streamable<thorin::TypeBase<impala::TypeTable>>::dump() const;

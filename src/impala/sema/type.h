@@ -12,6 +12,8 @@
 
 namespace impala {
 
+using thorin::Stream;
+
 enum Tag {
 #define IMPALA_TYPE(itype, atype) Tag_##itype,
 #include "impala/tokenlist.h"
@@ -70,11 +72,12 @@ private:
 public:
     PrimTypeTag primtype_tag() const { return (PrimTypeTag) tag(); }
 
-    virtual std::ostream& stream(std::ostream&) const override;
+    Stream& stream(Stream&) const override;
+
     virtual const Type* tangent_vector() const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
@@ -82,9 +85,9 @@ private:
 bool is(const Type*, PrimTypeTag tag);
 #define IMPALA_TYPE(itype, atype) inline bool is_##itype(const Type* t) { return is(t, PrimType_##itype); }
 #include "impala/tokenlist.h"
-inline bool is_float(const Type* t) { return             is_f16(t) || is_f32(t) || is_f64(t); }
-inline bool is_int  (const Type* t) { return is_i8(t) || is_i16(t) || is_i32(t) || is_i64(t)
-                                          || is_u8(t) || is_u16(t) || is_u32(t) || is_u64(t); }
+inline bool is_float (const Type* t) { return             is_f16(t) || is_f32(t) || is_f64(t); }
+inline bool is_int   (const Type* t) { return is_i8(t) || is_i16(t) || is_i32(t) || is_i64(t)
+                                           || is_u8(t) || is_u16(t) || is_u32(t) || is_u64(t); }
 inline bool is_signed(const Type* t) { return is_i8(t) || is_i16(t) || is_i32(t) || is_i64(t); }
 bool is_void(const Type*);
 bool is_subtype(const Type* dst, const Type* src);
@@ -106,9 +109,9 @@ public:
     bool is_mut() const { return mut_; }
     uint64_t addr_space() const { return addr_space_; }
 
-    virtual std::ostream& stream(std::ostream&) const override;
-    virtual uint32_t vhash() const override;
-    virtual bool equal(const Type* other) const override;
+    Stream& stream(Stream&) const override;
+    uint32_t vhash() const override;
+    bool equal(const Type* other) const override;
     virtual std::string prefix() const = 0;
 
 private:
@@ -125,7 +128,7 @@ protected:
         : RefTypeBase(typetable, tag, pointee, mut, addr_space)
     {}
 
-    std::ostream& stream_ptr_type(std::ostream&, std::string prefix, uint64_t addr_space, const Type* ref_type) const;
+    Stream& stream_ptr_type(Stream&, std::string prefix, uint64_t addr_space, const Type* ref_type) const;
 
 private:
     uint64_t addr_space_;
@@ -139,10 +142,10 @@ public:
         : PtrType(typetable, Tag_borrowed_ptr, pointee, mut, addr_space)
     {}
 
-    virtual std::string prefix() const override { return is_mut() ? "&mut " : "&"; }
+    std::string prefix() const override { return is_mut() ? "&mut " : "&"; }
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 };
 
 class OwnedPtrType : public PtrType {
@@ -151,10 +154,10 @@ public:
         : PtrType(typetable, Tag_owned_ptr, pointee, true, addr_space)
     {}
 
-    virtual std::string prefix() const override { return "~"; }
+    std::string prefix() const override { return "~"; }
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 };
 
 class RefType : public RefTypeBase {
@@ -164,10 +167,10 @@ protected:
     {}
 
 public:
-    virtual std::string prefix() const override { return is_mut() ? "lvalue of " : "reference of "; }
+    std::string prefix() const override { return is_mut() ? "lvalue of " : "reference of "; }
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
@@ -211,13 +214,13 @@ public:
     const Type* last_param() const;
     const Type* return_type() const;
     bool is_returning() const;
-    virtual std::ostream& stream(std::ostream&) const override;
+    Stream& stream(Stream&) const override;
 
     const Type* grad_fn_type() const;          ///< Type of the function that calculates the gradients
     const Type* grad_with_val_fn_type() const; ///< Type of the function that calculates the gradients and the original value
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     const Type* params_without_return_continuation() const;
     const Type* grad_return_type() const;
@@ -238,11 +241,11 @@ private:
 public:
     const char* name() const { return name_; }
     const Type* body() const { return op(0); }
-    virtual std::ostream& stream(std::ostream&) const override;
+    Stream& stream(Stream&) const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
+    const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     const char* name_;
 
@@ -260,13 +263,13 @@ private:
 
 public:
     int depth() const { return depth_; }
-    virtual std::ostream& stream(std::ostream&) const override;
+    Stream& stream(Stream&) const override;
 
 private:
-    virtual uint32_t vhash() const override;
-    virtual bool equal(const Type*) const override;
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+    uint32_t vhash() const override;
+    bool equal(const Type*) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
+    const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     int depth_;
 
@@ -282,10 +285,10 @@ private:
 public:
     const Type* callee() const { return Type::op(0); }
     const Type* arg() const { return Type::op(1); }
-    virtual std::ostream& stream(std::ostream&) const override;
+    Stream& stream(Stream&) const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
 
     mutable const Type* cache_ = nullptr;
 
@@ -301,8 +304,9 @@ private:
     {}
 
 public:
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
-    virtual std::ostream& stream(std::ostream&) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
+    Stream& stream(Stream&) const override;
+
     virtual const Type* tangent_vector() const override;
 
     friend class TypeTable;
@@ -324,9 +328,9 @@ public:
     virtual const Type* tangent_vector() const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
-    virtual std::ostream& stream(std::ostream&) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
+    const Type* vreduce(int, const Type*, Type2Type&) const override;
+    Stream& stream(Stream&) const override;
 
     const StructDecl* decl_;
 
@@ -347,9 +351,9 @@ public:
     void set(size_t i, const Type* type) const { return const_cast<EnumType*>(this)->Type::set(i, type); }
 
 private:
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
-    virtual std::ostream& stream(std::ostream&) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
+    const Type* vreduce(int, const Type*, Type2Type&) const override;
+    Stream& stream(Stream&) const override;
 
     const EnumDecl* decl_;
 
@@ -374,11 +378,11 @@ public:
         : ArrayType(typetable, Tag_indefinite_array, elem_type)
     {}
 
-    virtual std::ostream& stream(std::ostream&) const override;
-    virtual const Type* tangent_vector() const override;
+    Stream& stream(Stream&) const override;
 
+    virtual const Type* tangent_vector() const override;
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
@@ -391,16 +395,17 @@ public:
     {}
 
     uint64_t dim() const { return dim_; }
-    virtual uint32_t vhash() const override { return thorin::hash_combine(Type::vhash(), dim()); }
-    virtual bool equal(const Type* other) const override {
+    uint32_t vhash() const override { return thorin::hash_combine(Type::vhash(), dim()); }
+    bool equal(const Type* other) const override {
         return Type::equal(other) && this->dim() == other->as<DefiniteArrayType>()->dim();
     }
 
-    virtual std::ostream& stream(std::ostream&) const override;
+    Stream& stream(Stream&) const override;
+
     virtual const Type* tangent_vector() const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     uint64_t dim_;
 
@@ -415,15 +420,15 @@ public:
     {}
 
     uint64_t dim() const { return dim_; }
-    virtual uint32_t vhash() const override { return thorin::hash_combine(Type::vhash(), dim()); }
-    virtual bool equal(const Type* other) const override {
+    uint32_t vhash() const override { return thorin::hash_combine(Type::vhash(), dim()); }
+    bool equal(const Type* other) const override {
         return Type::equal(other) && this->dim() == other->as<SimdType>()->dim();
     }
 
-    virtual std::ostream& stream(std::ostream&) const override;
+    Stream& stream(Stream&) const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     uint64_t dim_;
 
@@ -437,10 +442,10 @@ private:
     {}
 
 public:
-    virtual std::ostream& stream(std::ostream&) const override;
+    Stream& stream(Stream&) const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
@@ -454,12 +459,12 @@ private:
     }
 
 public:
-    virtual std::ostream& stream(std::ostream&) const override;
+    Stream& stream(Stream&) const override;
 
 private:
-    virtual bool equal(const Type*) const override;
-    virtual uint32_t vhash() const override { return this->gid(); }
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    bool equal(const Type*) const override;
+    uint32_t vhash() const override { return this->gid(); }
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
@@ -471,10 +476,10 @@ private:
     {}
 
 public:
-    virtual std::ostream& stream(std::ostream&) const override;
+    Stream& stream(Stream&) const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
 
     friend class TypeTable;
 };
@@ -487,10 +492,10 @@ class InferError : public Type {
 public:
     const Type* dst() const { return op(0); }
     const Type* src() const { return op(1); }
-    virtual std::ostream& stream(std::ostream&) const override;
+    Stream& stream(Stream&) const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
