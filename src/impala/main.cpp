@@ -88,12 +88,6 @@ int main(int argc, char** argv) {
         if (opt_s + opt_0 + opt_1 + opt_2 + opt_3 > 1)
             throw std::invalid_argument("multiple optimization levels specified");
 
-        int opt = 0;
-        if (opt_s) opt = -1;
-        else if (opt_1) opt = 1;
-        else if (opt_2) opt = 2;
-        else if (opt_3) opt = 3;
-
         if (infiles.empty() && !help) {
             thorin::errf("no input files");
             return EXIT_FAILURE;
