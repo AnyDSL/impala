@@ -112,7 +112,7 @@ public:
         return result;
     }
 
-  const thorin::Def* grad(const thorin::Def* primal) { return world.grad(primal); }
+    const thorin::Def* grad(const thorin::Def* primal) { return world.op_grad(primal); }
 
     const thorin::Def* convert(const Type* type) {
         if (auto t = thorin_type(type))
