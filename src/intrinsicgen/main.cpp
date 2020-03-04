@@ -35,7 +35,7 @@ int main() {
         if (llvm::Intrinsic::isOverloaded(id))
             llvm_name = IntrinsicNameTable[i];
         else
-            llvm_name = llvm::Intrinsic::getName(id);
+            llvm_name = llvm::Intrinsic::getName(id).str();
 
         // skip "experimental" intrinsics
         if (llvm_name.find("experimental")!=std::string::npos)
