@@ -1027,7 +1027,8 @@ const Type* ForExpr::infer(InferSema& sema) const {
                 args[i] = map->arg(i);
             args.back() = fn_expr();
             return sema.infer_call(map->lhs(), args, type_);
-        }
+        } else
+            return sema.find_type(this);
     }
 
     return sema.unit();
