@@ -731,17 +731,17 @@ void GradExpr::check(TypeSema& sema) const {
 
     if (!fn_type) {
         error(expr(), "the expression is not a function");
-	return;
+	    return;
     }
 
     if (!fn_type->is_returning()) {
-	error(expr(), "the function is not returning");
-	return;
+	    error(expr(), "the function is not returning");
+	    return;
     }
 
     if (!is_float(fn_type->return_type())) {
         error(expr(), "the function does not return a float scalar");
-	return;
+	    return;
     }
 
     // For now we ignore if the function has no parameters to be derived

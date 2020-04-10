@@ -106,6 +106,8 @@ IMPALA_KEY(WHILE,         "while")
 IMPALA_KEY(SIMD,          "simd")
 IMPALA_KEY(GRAD,          "grad")
 IMPALA_KEY(GRAD_WITH_VAL, "grad_with_val")
+IMPALA_KEY(PULLBACK,          "pullback")
+IMPALA_KEY(PULLBACK_WITH_VAL, "pullback_with_val")
 
 #undef IMPALA_KEY
 

@@ -1854,7 +1854,7 @@ private:
 
 class GradExpr : public Expr {
 public:
-    enum class Flavor { GRAD_ONLY, GRAD_WITH_VAL };
+    enum class Flavor { GRAD_ONLY, GRAD_WITH_VAL, PULLBACK_ONLY, PULLBACK_WITH_VAL };
 
     GradExpr(Loc loc, const Expr *expr, GradExpr::Flavor flavor)
         : Expr(loc)

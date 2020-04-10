@@ -1017,6 +1017,10 @@ const Type* GradExpr::infer(InferSema& sema) const {
                 return fn_type->grad_fn_type();
             case GradExpr::Flavor::GRAD_WITH_VAL:
                 return fn_type->grad_with_val_fn_type();
+            case GradExpr::Flavor::PULLBACK_ONLY:
+                return fn_type->pullback_fn_type();
+            case GradExpr::Flavor::PULLBACK_WITH_VAL:
+                return fn_type->pullback_with_val_fn_type();
         }
     }
 

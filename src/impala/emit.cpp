@@ -112,7 +112,10 @@ public:
         return result;
     }
 
-    const thorin::Def* grad(const thorin::Def* primal) { return world.op_grad(primal); }
+    const thorin::Def *grad(const thorin::Def *primal) { return world.op_grad(primal); }
+    const thorin::Def *grad_with_val(const thorin::Def *primal) { return world.op_grad_with_val(primal); }
+    const thorin::Def *pullback(const thorin::Def *primal) { return world.op_pullback(primal); }
+    const thorin::Def *pullback_with_val(const thorin::Def *primal) { return world.op_pullback_with_val(primal); }
 
     const thorin::Def* convert(const Type* type) {
         if (auto t = thorin_type(type))
@@ -1067,7 +1070,16 @@ const Def* FnExpr::remit(CodeGen& cg) const {
 }
 
 const Def* GradExpr::remit(CodeGen& cg) const {
-    return cg.grad(expr()->remit(cg));
+    switch (flavor()) {
+    case GradExpr::Flavor::GRAD_ONLY:
+        return cg.grad(expr()->remit(cg));
+    case GradExpr::Flavor::GRAD_WITH_VAL:
+        return cg.grad_with_val(expr()->remit(cg));
+    case GradExpr::Flavor::PULLBACK_ONLY:
+        return cg.pullback(expr()->remit(cg));
+    case GradExpr::Flavor::PULLBACK_WITH_VAL:
+        return cg.pullback_with_val(expr()->remit(cg));
+    }
 }
 
 /*

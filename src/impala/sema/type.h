@@ -216,8 +216,10 @@ public:
     bool is_returning() const;
     Stream& stream(Stream&) const override;
 
-    const Type* grad_fn_type() const;          ///< Type of the function that calculates the gradients
-    const Type* grad_with_val_fn_type() const; ///< Type of the function that calculates the gradients and the original value
+    const Type* grad_fn_type() const;
+    const Type* grad_with_val_fn_type() const;
+    const Type* pullback_fn_type() const;
+    const Type* pullback_with_val_fn_type() const;
 
 private:
     const Type* vrebuild(TypeTable&, Types) const override;
@@ -225,6 +227,8 @@ private:
     const Type* params_without_return_continuation() const;
     const Type* grad_return_type() const;
     const Type* grad_with_val_return_type() const;
+    const Type* pullback_return_type() const;
+    const Type* pullback_with_val_return_type() const;
 
     friend class TypeTable;
 };

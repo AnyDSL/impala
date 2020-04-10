@@ -70,7 +70,9 @@
     case Token::L_BRACKET: \
     case Token::SIMD: \
     case Token::GRAD: \
-    case Token::GRAD_WITH_VAL
+    case Token::GRAD_WITH_VAL: \
+    case Token::PULLBACK: \
+    case Token::PULLBACK_WITH_VAL
 
 #define STMT \
          Token::LET: \
@@ -1004,6 +1006,8 @@ const Expr* Parser::parse_primary_expr() {
         case Token::L_BRACE:       return parse_block_expr();
         case Token::GRAD:          return parse_grad_expr(GradExpr::Flavor::GRAD_ONLY);
         case Token::GRAD_WITH_VAL: return parse_grad_expr(GradExpr::Flavor::GRAD_WITH_VAL);
+        case Token::PULLBACK:          return parse_grad_expr(GradExpr::Flavor::PULLBACK_ONLY);
+        case Token::PULLBACK_WITH_VAL: return parse_grad_expr(GradExpr::Flavor::PULLBACK_WITH_VAL);
         default:                   error("expression", ""); return new EmptyExpr(lex().loc());
     }
 }
@@ -1215,6 +1219,8 @@ const BlockExpr* Parser::parse_block_expr() {
                     case Token::L_BRACE:       expr = parse_block_expr(); break;
                     case Token::GRAD:          expr = parse_grad_expr(GradExpr::Flavor::GRAD_ONLY); break;
                     case Token::GRAD_WITH_VAL: expr = parse_grad_expr(GradExpr::Flavor::GRAD_WITH_VAL); break;
+                    case Token::PULLBACK:          expr = parse_grad_expr(GradExpr::Flavor::PULLBACK_ONLY); break;
+                    case Token::PULLBACK_WITH_VAL: expr = parse_grad_expr(GradExpr::Flavor::PULLBACK_WITH_VAL); break;
                     default:                   expr = parse_expr(); stmt_like = false;
                 }
 
@@ -1270,6 +1276,12 @@ const GradExpr* Parser::parse_grad_expr(GradExpr::Flavor flavor) {
             break;
         case GradExpr::Flavor::GRAD_WITH_VAL:
             eat(Token::GRAD_WITH_VAL);
+            break;
+        case GradExpr::Flavor::PULLBACK_ONLY:
+            eat(Token::PULLBACK);
+            break;
+        case GradExpr::Flavor::PULLBACK_WITH_VAL:
+            eat(Token::PULLBACK_WITH_VAL);
             break;
     }
 
