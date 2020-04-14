@@ -726,7 +726,7 @@ void ForExpr::check(TypeSema& sema) const {
     error(expr(), "the looping expression does not support the 'for' protocol");
 }
 
-void GradExpr::check(TypeSema& sema) const {
+void RevDiffExpr::check(TypeSema& sema) const {
     auto fn_type = sema.check(expr())->isa<FnType>();
 
     if (!fn_type) {
@@ -743,9 +743,6 @@ void GradExpr::check(TypeSema& sema) const {
         error(expr(), "the function does not return a float scalar");
 	    return;
     }
-
-    // For now we ignore if the function has no parameters to be derived
-    // This just causes the gradient to be an empty tuple or a tuple of empty tuples
 }
 
 //------------------------------------------------------------------------------

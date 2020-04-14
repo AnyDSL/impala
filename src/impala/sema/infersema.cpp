@@ -1010,18 +1010,9 @@ const Type* ForExpr::infer(InferSema& sema) const {
     return sema.unit();
 }
 
-const Type* GradExpr::infer(InferSema& sema) const {
+const Type* RevDiffExpr::infer(InferSema& sema) const {
     if (auto fn_type = sema.infer(expr())->isa<FnType>()) {
-	switch (flavor()) {
-            case GradExpr::Flavor::GRAD_ONLY:
-                return fn_type->grad_fn_type();
-            case GradExpr::Flavor::GRAD_WITH_VAL:
-                return fn_type->grad_with_val_fn_type();
-            case GradExpr::Flavor::PULLBACK_ONLY:
-                return fn_type->pullback_fn_type();
-            case GradExpr::Flavor::PULLBACK_WITH_VAL:
-                return fn_type->pullback_with_val_fn_type();
-        }
+        return fn_type->pullback_with_val_fn_type();
     }
 
     return sema.type_error();

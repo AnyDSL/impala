@@ -408,7 +408,7 @@ void ForExpr::bind(NameSema& sema) const {
     sema.pop_scope();
 }
 
-void GradExpr::bind(NameSema &sema) const { expr()->bind(sema); }
+void RevDiffExpr::bind(NameSema &sema) const { expr()->bind(sema); }
 
 //------------------------------------------------------------------------------
 

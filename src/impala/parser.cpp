@@ -69,10 +69,7 @@
     case Token::L_BRACE: \
     case Token::L_BRACKET: \
     case Token::SIMD: \
-    case Token::GRAD: \
-    case Token::GRAD_WITH_VAL: \
-    case Token::PULLBACK: \
-    case Token::PULLBACK_WITH_VAL
+    case Token::REV_DIFF
 
 #define STMT \
          Token::LET: \
@@ -249,9 +246,9 @@ public:
     const ForExpr*      parse_with_expr();
     const WhileExpr*    parse_while_expr();
     const BlockExpr*    parse_block_expr();
+    const RevDiffExpr*  parse_rev_diff_expr();
     const BlockExpr*    try_block_expr(const std::string& context);
     const Expr*         parse_filter(const char* context);
-    const GradExpr*     parse_grad_expr(GradExpr::Flavor flavor);
 
     // patterns
     const Ptrn*        parse_ptrn();
@@ -1004,10 +1001,7 @@ const Expr* Parser::parse_primary_expr() {
         case Token::WITH:          return parse_with_expr();
         case Token::WHILE:         return parse_while_expr();
         case Token::L_BRACE:       return parse_block_expr();
-        case Token::GRAD:          return parse_grad_expr(GradExpr::Flavor::GRAD_ONLY);
-        case Token::GRAD_WITH_VAL: return parse_grad_expr(GradExpr::Flavor::GRAD_WITH_VAL);
-        case Token::PULLBACK:          return parse_grad_expr(GradExpr::Flavor::PULLBACK_ONLY);
-        case Token::PULLBACK_WITH_VAL: return parse_grad_expr(GradExpr::Flavor::PULLBACK_WITH_VAL);
+        case Token::REV_DIFF:      return parse_rev_diff_expr();
         default:                   error("expression", ""); return new EmptyExpr(lex().loc());
     }
 }
@@ -1217,10 +1211,7 @@ const BlockExpr* Parser::parse_block_expr() {
                     case Token::WITH:          expr = parse_with_expr(); break;
                     case Token::WHILE:         expr = parse_while_expr(); break;
                     case Token::L_BRACE:       expr = parse_block_expr(); break;
-                    case Token::GRAD:          expr = parse_grad_expr(GradExpr::Flavor::GRAD_ONLY); break;
-                    case Token::GRAD_WITH_VAL: expr = parse_grad_expr(GradExpr::Flavor::GRAD_WITH_VAL); break;
-                    case Token::PULLBACK:          expr = parse_grad_expr(GradExpr::Flavor::PULLBACK_ONLY); break;
-                    case Token::PULLBACK_WITH_VAL: expr = parse_grad_expr(GradExpr::Flavor::PULLBACK_WITH_VAL); break;
+                    case Token::REV_DIFF:      expr = parse_rev_diff_expr(); break;
                     default:                   expr = parse_expr(); stmt_like = false;
                 }
 
@@ -1267,28 +1258,14 @@ const Expr* Parser::parse_filter(const char* context) {
     return filter;
 }
 
-const GradExpr* Parser::parse_grad_expr(GradExpr::Flavor flavor) {
+const RevDiffExpr *Parser::parse_rev_diff_expr() {
     auto tracker = track();
 
-    switch (flavor) {
-        case GradExpr::Flavor::GRAD_ONLY:
-            eat(Token::GRAD);
-            break;
-        case GradExpr::Flavor::GRAD_WITH_VAL:
-            eat(Token::GRAD_WITH_VAL);
-            break;
-        case GradExpr::Flavor::PULLBACK_ONLY:
-            eat(Token::PULLBACK);
-            break;
-        case GradExpr::Flavor::PULLBACK_WITH_VAL:
-            eat(Token::PULLBACK_WITH_VAL);
-            break;
-    }
-
+    eat(Token::REV_DIFF);
     expect(Token::L_PAREN, "grad expression");
     auto expr = parse_expr();
     expect(Token::R_PAREN, "grad expression");
-    return new GradExpr(tracker, expr, flavor);
+    return new RevDiffExpr(tracker, expr);
 }
 
 /*

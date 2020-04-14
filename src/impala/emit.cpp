@@ -112,10 +112,7 @@ public:
         return result;
     }
 
-    const thorin::Def *grad(const thorin::Def *primal) { return world.op_grad(primal); }
-    const thorin::Def *grad_with_val(const thorin::Def *primal) { return world.op_grad_with_val(primal); }
-    const thorin::Def *pullback(const thorin::Def *primal) { return world.op_pullback(primal); }
-    const thorin::Def *pullback_with_val(const thorin::Def *primal) { return world.op_pullback_with_val(primal); }
+    const thorin::Def *rev_diff(const thorin::Def *primal) { return world.op_rev_diff(primal); }
 
     const thorin::Def* convert(const Type* type) {
         if (auto t = thorin_type(type))
@@ -295,7 +292,7 @@ static bool is_primop(const Symbol& name) {
     else if (name == "sizeof")   return true;
     else if (name == "bitcast")  return true;
     else if (name == "insert")   return true;
-    else if (name == "grad")     return true;
+    else if (name == "rev_diff") return true;
     return false;
 }
 
@@ -1069,17 +1066,8 @@ const Def* FnExpr::remit(CodeGen& cg) const {
     return lam;
 }
 
-const Def* GradExpr::remit(CodeGen& cg) const {
-    switch (flavor()) {
-    case GradExpr::Flavor::GRAD_ONLY:
-        return cg.grad(expr()->remit(cg));
-    case GradExpr::Flavor::GRAD_WITH_VAL:
-        return cg.grad_with_val(expr()->remit(cg));
-    case GradExpr::Flavor::PULLBACK_ONLY:
-        return cg.pullback(expr()->remit(cg));
-    case GradExpr::Flavor::PULLBACK_WITH_VAL:
-        return cg.pullback_with_val(expr()->remit(cg));
-    }
+const Def* RevDiffExpr::remit(CodeGen& cg) const {
+    return cg.rev_diff(expr()->remit(cg));
 }
 
 /*
