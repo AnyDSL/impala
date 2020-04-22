@@ -664,6 +664,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                 if (auto fn_decl = path->value_decl()->isa<FnDecl>()) {
                     if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {
                         auto name = fn_decl->fn_symbol().remove_quotation();
+                        auto string_type = cg.world.ptr_type(cg.world.indefinite_array_type(cg.world.type_pu8()));
                         if (name == "bitcast") {
                             return cg.world.bitcast(cg.convert(type_expr->type_arg(0)), arg(0)->remit(cg), location());
                         } else if (name == "select") {
@@ -686,7 +687,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto poly_type = cg.convert(type());
                             auto ptr_type = cg.convert(arg(1)->type());
                             auto fn_type = cg.world.fn_type({
-                                cg.world.mem_type(), cg.world.type_pu32(), ptr_type, poly_type,
+                                cg.world.mem_type(), cg.world.type_pu32(), ptr_type, poly_type, cg.world.type_pu32(), string_type,
                                 cg.world.fn_type({ cg.world.mem_type(), poly_type }) });
                             auto cont = cg.world.continuation(fn_type, {location(), "atomic"});
                             cont->set_intrinsic();
@@ -694,7 +695,6 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         } else if (name == "atomic_load") {
                             auto ptr_type = cg.convert(arg(0)->type());
                             auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
-                            auto string_type = cg.world.ptr_type(cg.world.indefinite_array_type(cg.world.type_pu8()));
                             auto fn_type = cg.world.fn_type({
                                 cg.world.mem_type(), ptr_type, cg.world.type_pu32(), string_type,
                                 cg.world.fn_type({ cg.world.mem_type(), poly_type })
@@ -705,7 +705,6 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         } else if (name == "atomic_store") {
                             auto ptr_type = cg.convert(arg(0)->type());
                             auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
-                            auto string_type = cg.world.ptr_type(cg.world.indefinite_array_type(cg.world.type_pu8()));
                             auto fn_type = cg.world.fn_type({
                                 cg.world.mem_type(), ptr_type, poly_type, cg.world.type_pu32(), string_type,
                                 cg.world.fn_type({ cg.world.mem_type() })
@@ -717,7 +716,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto ptr_type = cg.convert(arg(0)->type());
                             auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
                             auto fn_type = cg.world.fn_type({
-                                cg.world.mem_type(), ptr_type, poly_type, poly_type,
+                                cg.world.mem_type(), ptr_type, poly_type, poly_type, cg.world.type_pu32(), string_type,
                                 cg.world.fn_type({ cg.world.mem_type(), poly_type, cg.world.type_bool() })
                             });
                             auto cont = cg.world.continuation(fn_type, {location(), "cmpxchg"});
@@ -725,7 +724,6 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             dst = cont;
                         } else if (name == "pe_info") {
                             auto poly_type = cg.convert(arg(1)->type());
-                            auto string_type = cg.world.ptr_type(cg.world.indefinite_array_type(cg.world.type_pu8()));
                             auto fn_type = cg.world.fn_type({
                                 cg.world.mem_type(), string_type, poly_type,
                                 cg.world.fn_type({ cg.world.mem_type() }) });
