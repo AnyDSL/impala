@@ -691,6 +691,28 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto cont = cg.world.continuation(fn_type, {location(), "atomic"});
                             cont->set_intrinsic();
                             dst = cont;
+                        } else if (name == "atomic_load") {
+                            auto ptr_type = cg.convert(arg(0)->type());
+                            auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
+                            auto string_type = cg.world.ptr_type(cg.world.indefinite_array_type(cg.world.type_pu8()));
+                            auto fn_type = cg.world.fn_type({
+                                cg.world.mem_type(), ptr_type, cg.world.type_pu32(), string_type,
+                                cg.world.fn_type({ cg.world.mem_type(), poly_type })
+                            });
+                            auto cont = cg.world.continuation(fn_type, {location(), "atomic_load"});
+                            cont->set_intrinsic();
+                            dst = cont;
+                        } else if (name == "atomic_store") {
+                            auto ptr_type = cg.convert(arg(0)->type());
+                            auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
+                            auto string_type = cg.world.ptr_type(cg.world.indefinite_array_type(cg.world.type_pu8()));
+                            auto fn_type = cg.world.fn_type({
+                                cg.world.mem_type(), ptr_type, poly_type, cg.world.type_pu32(), string_type,
+                                cg.world.fn_type({ cg.world.mem_type() })
+                            });
+                            auto cont = cg.world.continuation(fn_type, {location(), "atomic_store"});
+                            cont->set_intrinsic();
+                            dst = cont;
                         } else if (name == "cmpxchg") {
                             auto ptr_type = cg.convert(arg(0)->type());
                             auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
