@@ -304,10 +304,11 @@ void Module::emit(CodeGen& cg) const {
 }
 
 static bool is_primop(const Symbol& name) {
-    if      (name == "select")   return true;
-    else if (name == "sizeof")   return true;
-    else if (name == "bitcast")  return true;
-    else if (name == "insert")   return true;
+    if      (name == "alignof") return true;
+    else if (name == "bitcast") return true;
+    else if (name == "insert")  return true;
+    else if (name == "select")  return true;
+    else if (name == "sizeof")  return true;
     return false;
 }
 
@@ -658,19 +659,21 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         const Def* dst = nullptr;
 
         // Handle primops here
-        if (auto type_expr = lhs()->isa<TypeAppExpr>()) { // Bitcast, sizeof and select are all polymorphic
+        if (auto type_expr = lhs()->isa<TypeAppExpr>()) { // alignof, bitcast, sizeof, and select are all polymorphic
             auto callee = type_expr->lhs()->skip_rvalue();
             if (auto path = callee->isa<PathExpr>()) {
                 if (auto fn_decl = path->value_decl()->isa<FnDecl>()) {
                     if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {
                         auto name = fn_decl->fn_symbol().remove_quotation();
                         auto string_type = cg.world.ptr_type(cg.world.indefinite_array_type(cg.world.type_pu8()));
-                        if (name == "bitcast") {
+                        if (name == "alignof") {
+                            return cg.world.algin_of(cg.convert(type_expr->type_arg(0)), location());
+                        } else if (name == "bitcast") {
                             return cg.world.bitcast(cg.convert(type_expr->type_arg(0)), arg(0)->remit(cg), location());
-                        } else if (name == "select") {
-                            return cg.world.select(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), location());
                         } else if (name == "insert") {
                             return cg.world.insert(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), location());
+                        } else if (name == "select") {
+                            return cg.world.select(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), location());
                         } else if (name == "sizeof") {
                             return cg.world.size_of(cg.convert(type_expr->type_arg(0)), location());
                         } else if (name == "undef") {
