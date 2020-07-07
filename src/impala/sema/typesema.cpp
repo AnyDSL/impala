@@ -510,6 +510,10 @@ void ExplicitCastExpr::check(TypeSema& sema) const {
 }
 
 void RValueExpr::check(TypeSema& sema) const {
+    auto inner_type = src()->type();
+    if (auto ref_type = inner_type->isa<RefType>())
+        inner_type = ref_type->pointee();
+    sema.expect_type(inner_type, this, "expression");
     sema.check(src());
 }
 

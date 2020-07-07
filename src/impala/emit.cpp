@@ -304,10 +304,11 @@ void Module::emit(CodeGen& cg) const {
 }
 
 static bool is_primop(const Symbol& name) {
-    if      (name == "select")   return true;
-    else if (name == "sizeof")   return true;
-    else if (name == "bitcast")  return true;
-    else if (name == "insert")   return true;
+    if      (name == "alignof") return true;
+    else if (name == "bitcast") return true;
+    else if (name == "insert")  return true;
+    else if (name == "select")  return true;
+    else if (name == "sizeof")  return true;
     return false;
 }
 
@@ -658,18 +659,21 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         const Def* dst = nullptr;
 
         // Handle primops here
-        if (auto type_expr = lhs()->isa<TypeAppExpr>()) { // Bitcast, sizeof and select are all polymorphic
+        if (auto type_expr = lhs()->isa<TypeAppExpr>()) { // alignof, bitcast, sizeof, and select are all polymorphic
             auto callee = type_expr->lhs()->skip_rvalue();
             if (auto path = callee->isa<PathExpr>()) {
                 if (auto fn_decl = path->value_decl()->isa<FnDecl>()) {
                     if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {
                         auto name = fn_decl->fn_symbol().remove_quotation();
-                        if (name == "bitcast") {
+                        auto string_type = cg.world.ptr_type(cg.world.indefinite_array_type(cg.world.type_pu8()));
+                        if (name == "alignof") {
+                            return cg.world.algin_of(cg.convert(type_expr->type_arg(0)), location());
+                        } else if (name == "bitcast") {
                             return cg.world.bitcast(cg.convert(type_expr->type_arg(0)), arg(0)->remit(cg), location());
-                        } else if (name == "select") {
-                            return cg.world.select(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), location());
                         } else if (name == "insert") {
                             return cg.world.insert(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), location());
+                        } else if (name == "select") {
+                            return cg.world.select(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), location());
                         } else if (name == "sizeof") {
                             return cg.world.size_of(cg.convert(type_expr->type_arg(0)), location());
                         } else if (name == "undef") {
@@ -686,16 +690,36 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto poly_type = cg.convert(type());
                             auto ptr_type = cg.convert(arg(1)->type());
                             auto fn_type = cg.world.fn_type({
-                                cg.world.mem_type(), cg.world.type_pu32(), ptr_type, poly_type,
+                                cg.world.mem_type(), cg.world.type_pu32(), ptr_type, poly_type, cg.world.type_pu32(), string_type,
                                 cg.world.fn_type({ cg.world.mem_type(), poly_type }) });
                             auto cont = cg.world.continuation(fn_type, {location(), "atomic"});
+                            cont->set_intrinsic();
+                            dst = cont;
+                        } else if (name == "atomic_load") {
+                            auto ptr_type = cg.convert(arg(0)->type());
+                            auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
+                            auto fn_type = cg.world.fn_type({
+                                cg.world.mem_type(), ptr_type, cg.world.type_pu32(), string_type,
+                                cg.world.fn_type({ cg.world.mem_type(), poly_type })
+                            });
+                            auto cont = cg.world.continuation(fn_type, {location(), "atomic_load"});
+                            cont->set_intrinsic();
+                            dst = cont;
+                        } else if (name == "atomic_store") {
+                            auto ptr_type = cg.convert(arg(0)->type());
+                            auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
+                            auto fn_type = cg.world.fn_type({
+                                cg.world.mem_type(), ptr_type, poly_type, cg.world.type_pu32(), string_type,
+                                cg.world.fn_type({ cg.world.mem_type() })
+                            });
+                            auto cont = cg.world.continuation(fn_type, {location(), "atomic_store"});
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "cmpxchg") {
                             auto ptr_type = cg.convert(arg(0)->type());
                             auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
                             auto fn_type = cg.world.fn_type({
-                                cg.world.mem_type(), ptr_type, poly_type, poly_type,
+                                cg.world.mem_type(), ptr_type, poly_type, poly_type, cg.world.type_pu32(), string_type,
                                 cg.world.fn_type({ cg.world.mem_type(), poly_type, cg.world.type_bool() })
                             });
                             auto cont = cg.world.continuation(fn_type, {location(), "cmpxchg"});
@@ -703,7 +727,6 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             dst = cont;
                         } else if (name == "pe_info") {
                             auto poly_type = cg.convert(arg(1)->type());
-                            auto string_type = cg.world.ptr_type(cg.world.indefinite_array_type(cg.world.type_pu8()));
                             auto fn_type = cg.world.fn_type({
                                 cg.world.mem_type(), string_type, poly_type,
                                 cg.world.fn_type({ cg.world.mem_type() }) });
