@@ -667,7 +667,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         auto name = fn_decl->fn_symbol().remove_quotation();
                         auto string_type = cg.world.ptr_type(cg.world.indefinite_array_type(cg.world.type_pu8()));
                         if (name == "alignof") {
-                            return cg.world.algin_of(cg.convert(type_expr->type_arg(0)), location());
+                            return cg.world.align_of(cg.convert(type_expr->type_arg(0)), location());
                         } else if (name == "bitcast") {
                             return cg.world.bitcast(cg.convert(type_expr->type_arg(0)), arg(0)->remit(cg), location());
                         } else if (name == "insert") {
