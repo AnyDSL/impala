@@ -116,14 +116,10 @@ public:
     const thorin::Type* convert_rec(const Type*);
 
     const thorin::Type*& thorin_type(const Type* type) { return impala2thorin_[type]; }
-    const thorin::StructType*& thorin_struct_type(const StructType* type) { return struct_type_impala2thorin_[type]; }
-    const thorin::VariantType*& thorin_enum_type(const EnumType* type) { return enum_type_impala2thorin_[type]; }
 
     World& world;
     const Fn* cur_fn = nullptr;
     TypeMap<const thorin::Type*> impala2thorin_;
-    GIDMap<const StructType*, const thorin::StructType*> struct_type_impala2thorin_;
-    GIDMap<const EnumType*,   const thorin::VariantType*> enum_type_impala2thorin_;
     Continuation* cur_bb = nullptr;
     const Def* cur_mem = nullptr;
 };
@@ -157,12 +153,10 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         return world.tuple_type(nops);
     } else if (auto struct_type = type->isa<StructType>()) {
         auto s = world.struct_type(struct_type->struct_decl()->symbol(), struct_type->num_ops());
-        thorin_struct_type(struct_type) = s;
         thorin_type(type) = s;
         size_t i = 0;
         for (auto&& op : struct_type->ops())
             s->set(i++, convert(op));
-        thorin_type(type) = nullptr; // will be set again by CodeGen's wrapper
         return s;
     } else if (auto enum_type = type->isa<EnumType>()) {
         const auto& decl = enum_type->enum_decl();
@@ -171,25 +165,8 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
             e->set(i, decl->option_decl(i)->variant_type(*this));
         }
 
-        thorin_enum_type(enum_type) = e;
-        thorin_type(enum_type) = nullptr;
+        thorin_type(enum_type) = e;
         return e;
-
-        /*auto s = world.struct_type(enum_type->enum_decl()->symbol(), 2);
-        thorin_enum_type(enum_type) = s;
-        thorin_type(enum_type) = s;
-
-        auto enum_decl = enum_type->enum_decl();
-        thorin::TypeSet variants;
-        for (auto&& option : enum_decl->option_decls())
-            variants.insert(option->variant_type(*this));
-        thorin::Array<const thorin::Type*> ops(variants.size());
-        std::copy(variants.begin(), variants.end(), ops.begin());
-
-        s->set(0, world.type_qu32());
-        s->set(1, world.variant_type(ops));
-        thorin_type(enum_type) = nullptr;
-        return s;*/
     } else if (auto ptr_type = type->isa<PtrType>()) {
         return world.ptr_type(convert(ptr_type->pointee()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
@@ -380,7 +357,7 @@ void OptionDecl::emit(CodeGen& cg) const {
     auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
     if (num_args() == 0) {
         auto bot = cg.world.bottom(variant_type);
-        def_ = cg.world.variant(cg.thorin_enum_type(enum_type), bot, index());
+        def_ = cg.world.variant(cg.thorin_type(enum_type)->as<VariantType>(), bot, index());
     } else {
         auto continuation = cg.world.continuation(cg.convert(type())->as<thorin::FnType>(), {location(), symbol()});
         auto ret = continuation->param(continuation->num_params() - 1);
@@ -389,7 +366,7 @@ void OptionDecl::emit(CodeGen& cg) const {
         for (size_t i = 1, e = continuation->num_params(); i + 1 < e; i++)
             defs[i-1] = continuation->param(i);
         auto option_val = num_args() == 1 ? defs.back() : cg.world.tuple(defs);
-        auto enum_val = cg.world.variant(cg.thorin_enum_type(enum_type), option_val, index());
+        auto enum_val = cg.world.variant(cg.thorin_type(enum_type)->as<VariantType>(), option_val, index());
         continuation->jump(ret, { mem, enum_val }, location());
         def_ = continuation;
     }
