@@ -354,10 +354,10 @@ void StructDecl::emit_head(CodeGen& cg) const {
 
 void OptionDecl::emit(CodeGen& cg) const {
     auto enum_type = enum_decl()->type()->as<EnumType>();
-    auto variant_type = cg.convert(enum_type)->op(1)->as<VariantType>();
+    auto variant_type = cg.convert(enum_type)->as<VariantType>();
     if (num_args() == 0) {
-        auto bot = cg.world.bottom(variant_type);
-        def_ = cg.world.variant(cg.thorin_type(enum_type)->as<VariantType>(), bot, index());
+        auto bot = cg.world.bottom(variant_type->op(index()));
+        def_ = cg.world.variant(variant_type, bot, index());
     } else {
         auto continuation = cg.world.continuation(cg.convert(type())->as<thorin::FnType>(), {location(), symbol()});
         auto ret = continuation->param(continuation->num_params() - 1);
@@ -366,7 +366,7 @@ void OptionDecl::emit(CodeGen& cg) const {
         for (size_t i = 1, e = continuation->num_params(); i + 1 < e; i++)
             defs[i-1] = continuation->param(i);
         auto option_val = num_args() == 1 ? defs.back() : cg.world.tuple(defs);
-        auto enum_val = cg.world.variant(cg.thorin_type(enum_type)->as<VariantType>(), option_val, index());
+        auto enum_val = cg.world.variant(variant_type, option_val, index());
         continuation->jump(ret, { mem, enum_val }, location());
         def_ = continuation;
     }
@@ -828,7 +828,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
                 } else {
                     auto enum_ptrn = arm(i)->ptrn()->as<EnumPtrn>();
                     auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
-                    defs[i] = cg.world.literal_qu32(option_decl->index(), arm(i)->ptrn()->location());
+                    defs[i] = cg.world.literal_qu64(option_decl->index(), arm(i)->ptrn()->location());
                 }
                 targets[i] = cg.basicblock({arm(i)->location().front(), "case"});
             }
@@ -837,7 +837,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
         targets.shrink(num_targets);
         defs.shrink(num_targets);
 
-        auto matcher_int = is_integer ? matcher : cg.world.extract(matcher, 0_u32, matcher->debug());
+        auto matcher_int = is_integer ? matcher : cg.world.variant_index(matcher, matcher->debug());
         cg.cur_bb->match(matcher_int, otherwise, defs, targets, {location().front(), "match"});
         auto mem = cg.cur_mem;
 
@@ -962,20 +962,19 @@ const thorin::Def* IdPtrn::emit_cond(CodeGen& cg, const thorin::Def*) const {
 void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     if (num_args() == 0) return;
     auto index = path()->decl()->as<OptionDecl>()->index();
-    auto variant = cg.world.variant_extract(init, index, location());
-    for (size_t i = 0, e = num_args(); i != e; ++i) {
-        arg(i)->emit(cg, num_args() == 1 ? variant : cg.world.extract(variant, i, location()));
-    }
+    auto val = cg.world.variant_extract(init, index, location());
+    for (size_t i = 0, e = num_args(); i != e; ++i)
+        arg(i)->emit(cg, num_args() == 1 ? val : cg.world.extract(val, i, location()));
 }
 
 const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     auto index = path()->decl()->as<OptionDecl>()->index();
     auto cond = cg.world.cmp_eq(cg.world.variant_index(init, location()), cg.world.literal_qu64(index, location()));
     if (num_args() > 0) {
-        auto variant = cg.world.variant_extract(init, index, location());
+        auto val = cg.world.variant_extract(init, index, location());
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
-            auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? variant : cg.world.extract(variant, i, location()));
+            auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? val : cg.world.extract(val, i, location()));
             cond = cg.world.arithop_and(cond, arg_cond, location());
         }
     }
