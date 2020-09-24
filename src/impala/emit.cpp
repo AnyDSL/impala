@@ -17,11 +17,11 @@ public:
     {}
 
     /// Continuation of type cn()
-    Continuation* basicblock(Debug dbg) { return world.continuation(world.fn_type(), CC::C, Intrinsic::None, dbg); }
+    Continuation* basicblock(Debug dbg) { return world.continuation(world.fn_type(), dbg); }
 
     /// Continuation of type cn(mem, type) - a point in the program where control flow *j*oins
     Continuation* basicblock(const thorin::Type* type, Debug dbg) {
-        auto bb = world.continuation(world.fn_type({world.mem_type(), type}), CC::C, Intrinsic::None, dbg);
+        auto bb = world.continuation(world.fn_type({world.mem_type(), type}), dbg);
         bb->param(0)->debug().set("mem");
         return bb;
     }
@@ -308,11 +308,11 @@ void FnDecl::emit_head(CodeGen& cg) const {
     // create thorin function
     def_ = fn_emit_head(cg, location());
     if (is_extern() && abi() == "")
-        continuation_->make_external();
+        continuation_->make_exported();
 
     // handle main function
     if (symbol() == "main")
-        continuation()->make_external();
+        continuation()->make_exported();
 }
 
 void FnDecl::emit(CodeGen& cg) const {
@@ -325,9 +325,9 @@ void ExternBlock::emit_head(CodeGen& cg) const {
         fn_decl->emit_head(cg);
         auto continuation = fn_decl->continuation();
         if (abi() == "\"C\"")
-            continuation->cc() = thorin::CC::C;
+            continuation->make_imported();
         else if (abi() == "\"device\"")
-            continuation->cc() = thorin::CC::Device;
+            continuation->attributes().cc = thorin::CC::Device;
         else if (abi() == "\"thorin\"" && continuation) // no continuation for primops
             continuation->set_intrinsic();
     }
@@ -883,7 +883,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 }
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
-    auto head_bb = cg.world.continuation(cg.world.fn_type({cg.world.mem_type()}), CC::C, Intrinsic::None, {location().front(), "while_head"});
+    auto head_bb = cg.world.continuation(cg.world.fn_type({cg.world.mem_type()}), {location().front(), "while_head"});
     head_bb->param(0)->debug().set("mem");
 
     auto jump_type = cg.world.fn_type({ cg.world.mem_type() });
