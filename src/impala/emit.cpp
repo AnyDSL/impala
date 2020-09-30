@@ -17,11 +17,11 @@ public:
     {}
 
     /// Continuation of type cn()
-    Continuation* basicblock(Debug dbg) { return world.continuation(world.fn_type(), CC::C, Intrinsic::None, dbg); }
+    Continuation* basicblock(Debug dbg) { return world.continuation(world.fn_type(), dbg); }
 
     /// Continuation of type cn(mem, type) - a point in the program where control flow *j*oins
     Continuation* basicblock(const thorin::Type* type, Debug dbg) {
-        auto bb = world.continuation(world.fn_type({world.mem_type(), type}), CC::C, Intrinsic::None, dbg);
+        auto bb = world.continuation(world.fn_type({world.mem_type(), type}), dbg);
         bb->param(0)->debug().set("mem");
         return bb;
     }
@@ -152,20 +152,22 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
             nops.push_back(convert(op));
         return world.tuple_type(nops);
     } else if (auto struct_type = type->isa<StructType>()) {
-        auto s = world.struct_type(struct_type->struct_decl()->symbol(), struct_type->num_ops());
+        const auto& decl = struct_type->struct_decl();
+        auto s = world.struct_type(decl->symbol(), struct_type->num_ops());
         thorin_type(type) = s;
-        size_t i = 0;
-        for (auto&& op : struct_type->ops())
-            s->set(i++, convert(op));
+        for(size_t i = 0, n = struct_type->num_ops(); i < n; i++) {
+            s->set(i, convert(struct_type->op(i)));
+            s->set_op_name(i, decl->field_decl(i)->symbol());
+        }
         return s;
     } else if (auto enum_type = type->isa<EnumType>()) {
         const auto& decl = enum_type->enum_decl();
-        auto e = world.variant_type(decl->symbol(), decl->num_option_decls());
-        for(size_t i = 0; i < decl->num_option_decls(); i++) {
-            e->set(i, decl->option_decl(i)->variant_type(*this));
-        }
-
+        auto e = world.variant_type(decl->symbol(), enum_type->num_ops());
         thorin_type(enum_type) = e;
+        for(size_t i = 0, n = enum_type->num_ops(); i < n; i++) {
+            e->set(i, decl->option_decl(i)->variant_type(*this));
+            e->set_op_name(i, decl->option_decl(i)->symbol());
+        }
         return e;
     } else if (auto ptr_type = type->isa<PtrType>()) {
         return world.ptr_type(convert(ptr_type->pointee()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
@@ -308,11 +310,11 @@ void FnDecl::emit_head(CodeGen& cg) const {
     // create thorin function
     def_ = fn_emit_head(cg, location());
     if (is_extern() && abi() == "")
-        continuation_->make_external();
+        continuation_->make_exported();
 
     // handle main function
     if (symbol() == "main")
-        continuation()->make_external();
+        continuation()->make_exported();
 }
 
 void FnDecl::emit(CodeGen& cg) const {
@@ -325,9 +327,9 @@ void ExternBlock::emit_head(CodeGen& cg) const {
         fn_decl->emit_head(cg);
         auto continuation = fn_decl->continuation();
         if (abi() == "\"C\"")
-            continuation->cc() = thorin::CC::C;
+            continuation->make_imported();
         else if (abi() == "\"device\"")
-            continuation->cc() = thorin::CC::Device;
+            continuation->attributes().cc = thorin::CC::Device;
         else if (abi() == "\"thorin\"" && continuation) // no continuation for primops
             continuation->set_intrinsic();
     }
@@ -883,7 +885,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
 }
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
-    auto head_bb = cg.world.continuation(cg.world.fn_type({cg.world.mem_type()}), CC::C, Intrinsic::None, {location().front(), "while_head"});
+    auto head_bb = cg.world.continuation(cg.world.fn_type({cg.world.mem_type()}), {location().front(), "while_head"});
     head_bb->param(0)->debug().set("mem");
 
     auto jump_type = cg.world.fn_type({ cg.world.mem_type() });
