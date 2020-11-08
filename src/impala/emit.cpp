@@ -567,14 +567,8 @@ const Def* PrefixExpr::lemit(CodeGen& cg) const {
 }
 
 void Expr::emit_branch(CodeGen& cg, Lam* jump_t, Lam* jump_f) const {
-    auto expr_t = cg.basicblock(cg.loc2dbg("expr_t", loc().back()));
-    auto expr_f = cg.basicblock(cg.loc2dbg("expr_f", loc().back()));
     auto cond = remit(cg);
-    cg.cur_bb->branch(cond, expr_t, expr_f, cg.cur_mem, cg.loc2dbg(loc().back()));
-    cg.enter(expr_t);
-    expr_t->app(jump_t, { cg.cur_mem });
-    cg.enter(expr_f);
-    expr_f->app(jump_f, { cg.cur_mem });
+    cg.cur_bb->branch(cond, jump_t, jump_f, cg.cur_mem, cg.loc2dbg(loc().back()));
 }
 
 void InfixExpr::emit_branch(CodeGen& cg, Lam* jump_t, Lam* jump_f) const {
