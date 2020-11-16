@@ -41,6 +41,7 @@ int main(int argc, char** argv) {
         Names infiles;
 #ifndef NDEBUG
         Names breakpoints;
+        Names use_breakpoints;
         bool track_history;
 #endif
         std::string out_name, log_name, log_level;
@@ -61,6 +62,7 @@ int main(int argc, char** argv) {
             .add_option<std::string>     ("log",                "<arg>", "specifies log file; use '-' for stdout (default)", log_name, "-")
 #ifndef NDEBUG
             .add_option<Names>           ("break",              "<args>", "breakpoint at definition generation with global id <arg>; may be used multiple times separated by space or '_'", breakpoints)
+            .add_option<Names>           ("use-break",          "<args>", "breakpoint when using definition with global id <arg>; may be used multiple times separated by space or '_'", use_breakpoints)
             .add_option<bool>            ("track-history",      "", "track hisotry of names - useful for debugging", track_history, false)
 #endif
             .add_option<std::string>     ("o",                  "", "specifies the output module name", out_name, "")
@@ -141,27 +143,33 @@ int main(int argc, char** argv) {
         else throw std::invalid_argument("log level must be one of " LOG_LEVELS);
 
 #if THORIN_ENABLE_CHECKS && !defined(NDEBUG)
-        for (auto b : breakpoints) {
-            assert(b.size() > 0);
-            size_t num = 0;
-            for (size_t i = 0, e = b.size(); i != e; ++i) {
-                char c = b[i];
-                if (c == '_') {
-                    if (num != 0) {
-                        world.breakpoint(num);
-                        num = 0;
+        auto set_breakpoints = [&](auto breakpoints, auto setter) {
+            for (auto b : breakpoints) {
+                assert(b.size() > 0);
+                size_t num = 0;
+                for (size_t i = 0, e = b.size(); i != e; ++i) {
+                    char c = b[i];
+                    if (c == '_') {
+                        if (num != 0) {
+                            std::invoke(setter, world, num);
+                            num = 0;
+                        }
+                    } else if (std::isdigit(c)) {
+                        num = num*10 + c - '0';
+                    } else {
+                        std::cerr << "invalid breakpoint '" << b << "'" << std::endl;
+                        return false;
                     }
-                } else if (std::isdigit(c)) {
-                    num = num*10 + c - '0';
-                } else {
-                    std::cerr << "invalid breakpoint '" << b << "'" << std::endl;
-                    return EXIT_FAILURE;
                 }
+
+                if (num != 0) std::invoke(setter, world, num);
             }
 
-            if (num != 0)
-                world.breakpoint(num);
-        }
+            return true;
+        };
+
+        if (!set_breakpoints(    breakpoints, &thorin::World::    breakpoint)) return EXIT_FAILURE;
+        if (!set_breakpoints(use_breakpoints, &thorin::World::use_breakpoint)) return EXIT_FAILURE;
 
         world.enable_history(track_history);
 #endif
