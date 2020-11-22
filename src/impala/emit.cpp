@@ -509,14 +509,12 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
         case SUB:
             if (is_int(type())) {
                 auto mode = type2wmode(type());
-                return cg.world.op_WOp_minus(mode, rhs()->remit(cg), cg.loc2dbg(loc()));
+                return cg.world.op_wminus(mode, rhs()->remit(cg), cg.loc2dbg(loc()));
             } else {
-                return cg.world.op_ROp_minus(RMode::none, rhs()->remit(cg), cg.loc2dbg(loc()));
+                return cg.world.op_rminus(RMode::none, rhs()->remit(cg), cg.loc2dbg(loc()));
             }
         case NOT:
-            if (is_bool(type()))
-                return cg.world.extract_not(rhs()->remit(cg), cg.loc2dbg(loc()));
-            return cg.world.op_bit_not(rhs()->remit(cg), cg.loc2dbg(loc()));
+            return cg.world.op_neg(rhs()->remit(cg), cg.loc2dbg(loc()));
         case TILDE: {
             auto def = rhs()->remit(cg);
             auto ptr = cg.alloc(def->type(), cg.loc2dbg(loc()));
@@ -629,9 +627,9 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     }
                 } else if (is_bool(rhs()->type())) {
                     switch (op) {
-                        case AND_ASGN: rdef = cg.world.extract(Bit::_and, ldef, rdef, dbg); break;
-                        case  OR_ASGN: rdef = cg.world.extract(Bit:: _or, ldef, rdef, dbg); break;
-                        case XOR_ASGN: rdef = cg.world.extract(Bit::_xor, ldef, rdef, dbg); break;
+                        case AND_ASGN: rdef = cg.world.op(Bit::_and, ldef, rdef, dbg); break;
+                        case  OR_ASGN: rdef = cg.world.op(Bit:: _or, ldef, rdef, dbg); break;
+                        case XOR_ASGN: rdef = cg.world.op(Bit::_xor, ldef, rdef, dbg); break;
                         default: THORIN_UNREACHABLE;
                     }
                 } else {
@@ -679,9 +677,9 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                 switch (op) {
                     case  EQ: return cg.world.op(ICmp:: e, ldef, rdef, dbg);
                     case  NE: return cg.world.op(ICmp::ne, ldef, rdef, dbg);
-                    case AND: return cg.world.extract(Bit::_and, ldef, rdef, dbg);
-                    case  OR: return cg.world.extract(Bit:: _or, ldef, rdef, dbg);
-                    case XOR: return cg.world.extract(Bit::_xor, ldef, rdef, dbg);
+                    case AND: return cg.world.op(Bit::_and, ldef, rdef, dbg);
+                    case  OR: return cg.world.op(Bit:: _or, ldef, rdef, dbg);
+                    case XOR: return cg.world.op(Bit::_xor, ldef, rdef, dbg);
                     default: THORIN_UNREACHABLE;
                 }
             } else {
@@ -1084,7 +1082,7 @@ const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) con
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
             auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? variant : cg.world.extract(variant, i, cg.loc2dbg(loc())));
-            cond = cg.world.extract(Bit::_and, cond, arg_cond, cg.loc2dbg(loc()));
+            cond = cg.world.op(Bit::_and, cond, arg_cond, cg.loc2dbg(loc()));
         }
     }
     return cond;
@@ -1110,9 +1108,9 @@ const thorin::Def* LiteralPtrn::emit(CodeGen& cg) const {
     auto def = literal()->remit(cg);
     if (has_minus()) {
         if (is_float(type()))
-            return cg.world.op_ROp_minus(def, def->debug());
+            return cg.world.op_rminus(def, def->debug());
         else
-            return cg.world.op_WOp_minus(type2wmode(type()), def, def->debug());
+            return cg.world.op_wminus(type2wmode(type()), def, def->debug());
     } else {
         return def;
     }
