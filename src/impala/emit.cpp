@@ -499,9 +499,9 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             auto val = cg.load(var, loc());
             auto one = cg.lit_one(type(), cg.loc2dbg(loc()));
             if (is_int(type()))
-                val = cg.world.op(tag() == INC ? WOp::add : WOp::sub, type2wmode(type()), val, one, cg.loc2dbg(loc()));
+                val = cg.world.op(tag() == INC ? Wrap::add : Wrap::sub, type2wmode(type()), val, one, cg.loc2dbg(loc()));
             else
-                val = cg.world.op(tag() == INC ? ROp::add : ROp::sub, RMode::none, val, one, cg.loc2dbg(loc()));
+                val = cg.world.op(tag() == INC ? ROp ::add : ROp ::sub, RMode::none, val, one, cg.loc2dbg(loc()));
             cg.store(var, val, loc());
             return val;
         }
@@ -640,13 +640,13 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case AND_ASGN: rdef = cg.world.op(Bit::_and, ldef, rdef, dbg); break;
                         case  OR_ASGN: rdef = cg.world.op(Bit:: _or, ldef, rdef, dbg); break;
                         case XOR_ASGN: rdef = cg.world.op(Bit::_xor, ldef, rdef, dbg); break;
-                        case ADD_ASGN: rdef = cg.world.op(WOp:: add, mode, ldef, rdef, dbg); break;
-                        case SUB_ASGN: rdef = cg.world.op(WOp:: sub, mode, ldef, rdef, dbg); break;
-                        case MUL_ASGN: rdef = cg.world.op(WOp:: mul, mode, ldef, rdef, dbg); break;
-                        case SHL_ASGN: rdef = cg.world.op(WOp:: shl, mode, ldef, rdef, dbg); break;
-                        case SHR_ASGN: rdef = cg.world.op(s ? Shr::a : Shr::l, ldef, rdef, dbg); break;
-                        case DIV_ASGN: rdef = cg.handle_mem_res(cg.world.op(s ? ZOp::sdiv : ZOp::udiv, cg.cur_mem, ldef, rdef, dbg)); break;
-                        case REM_ASGN: rdef = cg.handle_mem_res(cg.world.op(s ? ZOp::smod : ZOp::umod, cg.cur_mem, ldef, rdef, dbg)); break;
+                        case ADD_ASGN: rdef = cg.world.op(Wrap:: add, mode, ldef, rdef, dbg); break;
+                        case SUB_ASGN: rdef = cg.world.op(Wrap:: sub, mode, ldef, rdef, dbg); break;
+                        case MUL_ASGN: rdef = cg.world.op(Wrap:: mul, mode, ldef, rdef, dbg); break;
+                        case SHL_ASGN: rdef = cg.world.op(Wrap:: shl, mode, ldef, rdef, dbg); break;
+                        case SHR_ASGN: rdef = cg.world.op(s ? Shr::ashr : Shr::lshr, ldef, rdef, dbg); break;
+                        case DIV_ASGN: rdef = cg.handle_mem_res(cg.world.op(s ? Div::sdiv : Div::udiv, cg.cur_mem, ldef, rdef, dbg)); break;
+                        case REM_ASGN: rdef = cg.handle_mem_res(cg.world.op(s ? Div::smod : Div::umod, cg.cur_mem, ldef, rdef, dbg)); break;
                         default: THORIN_UNREACHABLE;
                     }
                 }
@@ -694,18 +694,18 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case  LE: return cg.world.op(s ? ICmp:: sle : ICmp:: ule, ldef, rdef, dbg);
                     case  GT: return cg.world.op(s ? ICmp::  sg : ICmp::  ug, ldef, rdef, dbg);
                     case  GE: return cg.world.op(s ? ICmp:: sge : ICmp:: uge, ldef, rdef, dbg);
-                    case SHR: return cg.world.op(s ? Shr ::   a : Shr ::   l, ldef, rdef, dbg);
+                    case SHR: return cg.world.op(s ? Shr ::ashr : Shr ::lshr, ldef, rdef, dbg);
                     case  EQ: return cg.world.op(ICmp::   e, ldef, rdef, dbg);
                     case  NE: return cg.world.op(ICmp::  ne, ldef, rdef, dbg);
                     case  OR: return cg.world.op(Bit :: _or, ldef, rdef, dbg);
                     case XOR: return cg.world.op(Bit ::_xor, ldef, rdef, dbg);
                     case AND: return cg.world.op(Bit ::_and, ldef, rdef, dbg);
-                    case ADD: return cg.world.op(WOp :: add, mode, ldef, rdef, dbg);
-                    case SUB: return cg.world.op(WOp :: sub, mode, ldef, rdef, dbg);
-                    case MUL: return cg.world.op(WOp :: mul, mode, ldef, rdef, dbg);
-                    case SHL: return cg.world.op(WOp :: shl, mode, ldef, rdef, dbg);
-                    case DIV: return cg.handle_mem_res(cg.world.op(s ? ZOp::sdiv : ZOp::udiv, cg.cur_mem, ldef, rdef, dbg));
-                    case REM: return cg.handle_mem_res(cg.world.op(s ? ZOp::smod : ZOp::umod, cg.cur_mem, ldef, rdef, dbg));
+                    case ADD: return cg.world.op(Wrap:: add, mode, ldef, rdef, dbg);
+                    case SUB: return cg.world.op(Wrap:: sub, mode, ldef, rdef, dbg);
+                    case MUL: return cg.world.op(Wrap:: mul, mode, ldef, rdef, dbg);
+                    case SHL: return cg.world.op(Wrap:: shl, mode, ldef, rdef, dbg);
+                    case DIV: return cg.handle_mem_res(cg.world.op(s ? Div::sdiv : Div::udiv, cg.cur_mem, ldef, rdef, dbg));
+                    case REM: return cg.handle_mem_res(cg.world.op(s ? Div::smod : Div::umod, cg.cur_mem, ldef, rdef, dbg));
                     default: THORIN_UNREACHABLE;
                 }
             }
@@ -720,9 +720,9 @@ const Def* PostfixExpr::remit(CodeGen& cg) const {
     const Def* val = nullptr;
 
     if (is_int(type()))
-        val = cg.world.op(tag() == INC ? WOp::add : WOp::sub, type2wmode(type()), res, one, cg.loc2dbg(loc()));
+        val = cg.world.op(tag() == INC ? Wrap::add : Wrap::sub, type2wmode(type()), res, one, cg.loc2dbg(loc()));
     else
-        val = cg.world.op(tag() == INC ? ROp::add : ROp::sub, RMode::none, res, one, cg.loc2dbg(loc()));
+        val = cg.world.op(tag() == INC ? ROp ::add : ROp ::sub, RMode::none, res, one, cg.loc2dbg(loc()));
     cg.store(var, val, loc());
     return res;
 }
