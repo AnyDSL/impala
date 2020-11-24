@@ -1,6 +1,5 @@
 #include "impala/ast.h"
 
-#include "thorin/util.h"
 #include "thorin/world.h"
 #include "thorin/util/array.h"
 
@@ -14,17 +13,17 @@ public:
         : world(world)
     {}
 
-    Debug loc2dbg(Loc loc)                { return {   loc.file(), loc.begin_row(), loc.begin_col(), loc.finis_row(), loc.finis_col()}; }
-    Debug loc2dbg(const char* s, Loc loc) { return {s, loc.file(), loc.begin_row(), loc.begin_col(), loc.finis_row(), loc.finis_col()}; }
+    Dbg loc2dbg(Loc loc)                { return {   {loc.file(), {loc.begin_row(), loc.begin_col()}, {loc.finis_row(), loc.finis_col()}}}; }
+    Dbg loc2dbg(const char* s, Loc loc) { return {s, {loc.file(), {loc.begin_row(), loc.begin_col()}, {loc.finis_row(), loc.finis_col()}}}; }
 
     /// Lam of type { @c cn(mem) } or { @c cn(mem, type) } depending on whether @p type is @c nullptr.
-    Lam* basicblock(const thorin::Def* type, Debug dbg) {
+    Lam* basicblock(const thorin::Def* type, Dbg dbg) {
         auto cn = type ? world.cn({world.type_mem(), type}) : world.cn(world.type_mem());
         auto bb = world.nom_lam(cn, Lam::CC::C, Lam::Intrinsic::None, dbg);
         bb->param(0, {"mem"});
         return bb;
     }
-    Lam* basicblock(Debug dbg) { return basicblock(nullptr, dbg); }
+    Lam* basicblock(Dbg dbg) { return basicblock(nullptr, dbg); }
 
     Lam* enter(Lam* bb) {
         cur_bb = bb;
@@ -32,7 +31,7 @@ public:
         return bb;
     }
 
-    const Def* lit_one(const Type* type, Debug dbg) {
+    const Def* lit_one(const Type* type, Dbg dbg) {
         if (is_int(type)) return world.lit(convert(type), 1, dbg);
         switch (type->tag()) {
             case PrimType_f16: return world.lit_real(1._r16, dbg);
@@ -42,7 +41,7 @@ public:
         }
     }
 
-    std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, Debug dbg) {
+    std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, Dbg dbg) {
         if (ret_type == nullptr) {
             cur_bb->app(callee, args, dbg);
             auto next = basicblock({"unreachable"});
@@ -76,9 +75,9 @@ public:
             Array<const Def*> params(next->num_params() - 1);
             for (size_t i = 1, e = next->num_params(); i != e; ++i)
                 params[i - 1] = next->param(i);
-            ret = world.tuple(ret_type, params, {callee->name()});
+            ret = world.tuple(ret_type, params, {callee->dbg().name()});
         } else
-            ret = next->param(1, {callee->name()});
+            ret = next->param(1, {callee->dbg().name()});
 
         return std::make_pair(next, ret);
     }
@@ -97,11 +96,11 @@ public:
     }
 
     const Def* load(const Def*  ptr,   Loc loc) { return handle_mem_res(world.op_load(cur_mem, ptr, loc2dbg(loc))); }
-    const Def* slot(const Def* type, Debug dbg) { return handle_mem_res(world.op_slot(type, cur_mem, dbg)); }
+    const Def* slot(const Def* type, Dbg dbg) { return handle_mem_res(world.op_slot(type, cur_mem, dbg)); }
 
     void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = world.op_store(cur_mem, ptr, val, loc2dbg(loc)); }
 
-    const Def* alloc(const thorin::Def* type, Debug dbg) {
+    const Def* alloc(const thorin::Def* type, Dbg dbg) {
         auto alloc = world.op_alloc(type, cur_mem, dbg);
         cur_mem = world.extract(alloc, 0_u32, dbg);
         auto result = world.extract(alloc, 1, dbg);
@@ -851,7 +850,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
 
         auto ret_type = num_args() == cn->num_params() ? nullptr : cg.convert(cn->return_type());
         const Def* ret;
-        std::tie(cg.cur_bb, ret) = cg.call(dst, defs, ret_type, cg.loc2dbg((dst->name() + "_cont").c_str(), loc()));
+        std::tie(cg.cur_bb, ret) = cg.call(dst, defs, ret_type, cg.loc2dbg((dst->dbg().name() + "_cont").c_str(), loc()));
         if (ret_type)
             cg.cur_mem = cg.cur_bb->param(0);
 
