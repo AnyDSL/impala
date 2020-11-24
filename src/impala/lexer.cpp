@@ -111,7 +111,7 @@ Token Lexer::lex() {
 #define IMPALA_WITHIN_COMMENT(delim) \
         while (true) { \
             if (accept(std::istream::traits_type::eof())) { \
-                error(loc().front(), "unterminated comment"); \
+                error(loc().begin(), "unterminated comment"); \
                 return {loc(), Token::Eof}; \
             } \
             if (delim) break; \

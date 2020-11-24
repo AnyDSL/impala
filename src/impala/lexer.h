@@ -21,7 +21,7 @@ private:
     int next();
     int peek() const { return stream_.peek(); }
     Loc loc() const { return {filename_, front_line_, front_col_, back_line_, back_col_}; }
-    Loc curr() const { return loc().back(); }
+    Loc curr() const { return loc().finis(); }
 
     template<class Pred>
     bool accept(std::string& str, Pred pred) {

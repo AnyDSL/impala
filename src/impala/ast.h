@@ -524,7 +524,7 @@ public:
     bool is_anonymous() const { assert(!is_no_decl()); return symbol() == Symbol() || symbol().c_str()[0] == '<'; }
     size_t depth() const { assert(!is_no_decl()); return depth_; }
     const Decl* shadows() const { assert(!is_no_decl()); return shadows_; }
-    thorin::Debug debug() const { return {symbol().c_str(), loc().filename(), loc().front_line(), loc().front_col(), loc().back_line(), loc().back_col()}; }
+    thorin::Debug debug() const { return {symbol().c_str(), loc().file(), loc().begin_row(), loc().begin_col(), loc().finis_row(), loc().finis_col()}; }
 
     // ValueDecl
     const ASTType* ast_type() const { assert(is_value_decl()); return ast_type_.get(); } ///< Original @p ASTType.

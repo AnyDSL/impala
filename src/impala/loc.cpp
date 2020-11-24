@@ -5,29 +5,29 @@
 namespace impala {
 
 Loc operator+(Loc l1, Loc l2) {
-    return {l1.filename(), l1.front_line(), l1.front_col(), l2.back_line(), l2.back_col()};
+    return {l1.file(), l1.begin_row(), l1.begin_col(), l2.finis_row(), l2.finis_col()};
 }
 
 Stream& operator<<(Stream& os, Loc l) {
 #ifdef _MSC_VER
-    return os << l.filename() << "(" << l.front_line() << ")";
+    return os << l.file() << "(" << l.begin_row() << ")";
 #else // _MSC_VER
-    os << l.filename() << ':';
+    os << l.file() << ':';
 
-    if (l.front_col() == uint16_t(-1) || l.back_col() == uint16_t(-1)) {
-        if (l.front_line() != l.back_line())
-            return os.fmt("{} - {}", l.front_line(), l.back_line());
+    if (l.begin_col() == uint16_t(-1) || l.finis_col() == uint16_t(-1)) {
+        if (l.begin_row() != l.finis_row())
+            return os.fmt("{} - {}", l.begin_row(), l.finis_row());
         else
-            return os.fmt("{}", l.front_line());
+            return os.fmt("{}", l.begin_row());
     }
 
-    if (l.front_line() != l.back_line())
-        return os.fmt("{} col {} - {} col {}", l.front_line(), l.front_col(), l.back_line(), l.back_col());
+    if (l.begin_row() != l.finis_row())
+        return os.fmt("{} col {} - {} col {}", l.begin_row(), l.begin_col(), l.finis_row(), l.finis_col());
 
-    if (l.front_col() != l.back_col())
-        return os.fmt("{} col {} - {}", l.front_line(), l.front_col(), l.back_col());
+    if (l.begin_col() != l.finis_col())
+        return os.fmt("{} col {} - {}", l.begin_row(), l.begin_col(), l.finis_col());
 
-    return os.fmt("{} col {}", l.front_line(), l.front_col());
+    return os.fmt("{} col {}", l.begin_row(), l.begin_col());
 #endif // _MSC_VER
 }
 

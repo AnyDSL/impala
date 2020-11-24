@@ -136,14 +136,14 @@ public:
             : parser_(parser), loc_(loc)
         {}
 
-        operator Loc() const { return {loc_.front(), parser_.prev_loc().back()}; }
+        operator Loc() const { return {loc_.begin(), parser_.prev_loc().finis()}; }
 
     private:
         Parser& parser_;
         Loc loc_;
     };
 
-    Tracker track() { return Tracker(*this, lookahead().loc().front()); }
+    Tracker track() { return Tracker(*this, lookahead().loc().begin()); }
     Tracker track(const Loc& loc) { return Tracker(*this, loc); }
 
     template<class T, class... Args>
