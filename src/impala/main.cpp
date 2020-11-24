@@ -221,8 +221,6 @@ int main(int argc, char** argv) {
             impala::emit(world, module.get());
 
         if (result) {
-            thorin::verify_mem(world);
-            thorin::cleanup(world);
             if (opt_thorin)
                 optimize_old(world);
             if (emit_thorin)
