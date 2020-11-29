@@ -24,7 +24,7 @@ public:
     /// Lam of type { @c cn(mem) } or { @c cn(mem, type) } depending on whether @p type is @c nullptr.
     Lam* basicblock(const thorin::Def* type, const Def* dbg) {
         auto cn = type ? world.cn({world.type_mem(), type}) : world.cn(world.type_mem());
-        auto bb = world.nom_lam(cn, Lam::CC::C, Lam::Intrinsic::None, dbg);
+        auto bb = world.nom_lam(cn, Lam::CC::C, dbg);
         bb->param(0, world.dbg("mem"));
         return bb;
     }
@@ -326,8 +326,10 @@ void ExternBlock::emit_head(CodeGen& cg) const {
             lam->set_cc(thorin::Lam::CC::C);
         else if (abi() == "\"device\"")
             lam->set_cc(thorin::Lam::CC::Device);
-        else if (abi() == "\"thorin\"" && lam) // no lam for primops
-            lam->set_intrinsic();
+        else if (abi() == "\"thorin\"" && lam) {
+            // TODO
+            // no lam for primops
+        }
     }
 }
 
@@ -800,7 +802,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                                 cg.world.type_mem(), cg.world.type_int_width(32),
                                 cg.world.cn({ cg.world.type_mem(), ptr }) });
                             auto cont = cg.world.nom_lam(cn, cg.loc2dbg("reserve_shared", loc()));
-                            cont->set_intrinsic();
+                            //cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "atomic") {
                             auto poly_type = cg.convert(type());
@@ -809,7 +811,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                                 cg.world.type_mem(), cg.world.type_int_width(32), ptr, poly_type,
                                 cg.world.cn({ cg.world.type_mem(), poly_type }) });
                             auto cont = cg.world.nom_lam(cn, cg.loc2dbg("atomic", loc()));
-                            cont->set_intrinsic();
+                            //cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "cmpxchg") {
                             auto ptr = thorin::as<thorin::Tag::Ptr>(cg.convert(arg(0)->type()));
@@ -820,7 +822,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                                 cg.world.cn({ cg.world.type_mem(), poly_type, cg.world.type_bool() })
                             });
                             auto cont = cg.world.nom_lam(cn, cg.loc2dbg("cmpxchg", loc()));
-                            cont->set_intrinsic();
+                            //cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "pe_info") {
                             auto poly_type = cg.convert(arg(1)->type());
@@ -829,7 +831,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                                 cg.world.type_mem(), string_type, poly_type,
                                 cg.world.cn({ cg.world.type_mem() }) });
                             auto cont = cg.world.nom_lam(cn, cg.loc2dbg("pe_info", loc()));
-                            cont->set_intrinsic();
+                            //cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "pe_known") {
                             auto poly_type = cg.convert(arg(0)->type());
@@ -837,7 +839,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                                 cg.world.type_mem(), poly_type,
                                 cg.world.cn({ cg.world.type_mem(), cg.world.type_bool() }) });
                             auto cont = cg.world.nom_lam(cn, cg.loc2dbg("pe_known", loc()));
-                            cont->set_intrinsic();
+                            //cont->set_intrinsic();
                             dst = cont;
                         }
                     }
@@ -996,7 +998,7 @@ const Def* MatchExpr::remit(CodeGen& /*cg*/) const {
 }
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
-    auto head_bb = cg.world.nom_lam(cg.world.cn({cg.world.type_mem()}), Lam::CC::C, Lam::Intrinsic::None, cg.loc2dbg("while_head", loc().begin()));
+    auto head_bb = cg.world.nom_lam(cg.world.cn({cg.world.type_mem()}), Lam::CC::C, cg.loc2dbg("while_head", loc().begin()));
     head_bb->param(0, cg.world.dbg("mem"));
 
     auto jump_type = cg.world.cn({ cg.world.type_mem() });
