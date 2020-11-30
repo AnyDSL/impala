@@ -520,7 +520,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
                 return cg.world.op_rminus(RMode::none, rhs()->remit(cg), cg.loc2dbg(loc()));
             }
         case NOT:
-            return cg.world.op_neg(rhs()->remit(cg), cg.loc2dbg(loc()));
+            return cg.world.op_negate(rhs()->remit(cg), cg.loc2dbg(loc()));
         case TILDE: {
             auto def = rhs()->remit(cg);
             auto ptr = cg.alloc(def->type(), cg.loc2dbg(loc()));
