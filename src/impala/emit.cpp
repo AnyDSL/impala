@@ -129,11 +129,7 @@ public:
  */
 
 const thorin::Type* CodeGen::convert_rec(const Type* type) {
-    if (auto lambda = type->isa<Lambda>()) {
-        return world.lambda(convert(lambda->body()), lambda->name());
-    } else if (auto var = type->isa<Var>()) {
-        return world.var(var->depth());
-    } else if (auto prim_type = type->isa<PrimType>()) {
+    if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_tag()) {
 #define IMPALA_TYPE(itype, ttype) \
             case PrimType_##itype: return world.type_##ttype();
@@ -176,7 +172,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
     } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {
         return world.indefinite_array_type(convert(indefinite_array_type->elem_type()));
     } else if (auto simd_type = type->isa<SimdType>()) {
-        return world.type(convert(simd_type->elem_type())->as<thorin::PrimType>()->primtype_tag(), simd_type->dim());
+        return world.prim_type(convert(simd_type->elem_type())->as<thorin::PrimType>()->primtype_tag(), simd_type->dim());
     } else if (type->isa<NoRetType>()) {
         return nullptr; // TODO use bottom type - once it is available in thorin
     }
