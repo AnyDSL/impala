@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "thorin/world.h"
-#include "thorin/util/log.h"
+#include "thorin/util/location.h"
 #include "thorin/util/stream.h"
 
 #include "impala/token.h"
@@ -71,13 +71,5 @@ std::ostream& error(const thorin::Location& loc, const char* fmt, Args... args) 
 }
 
 }
-
-/// Entry-point for the JIT in the runtime system.
-bool compile(
-    const std::vector<std::string>& file_names,
-    const std::vector<std::string>& file_data,
-    thorin::World& world,
-    thorin::Log::Level log_level,
-    std::ostream& error_stream);
 
 #endif
