@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "thorin/world.h"
+#include "thorin/util/log.h"
 #include "thorin/util/stream.h"
 
 #include "impala/token.h"
@@ -59,16 +60,24 @@ template<typename... Args>
 std::ostream& warning(const thorin::Location& loc, const char* fmt, Args... args) {
     ++num_warnings();
     thorin::streamf(std::cerr, "{}: warning: ", loc);
-    return thorin::streamf(std::cerr, fmt, args...) << std::endl;;
+    return thorin::streamf(std::cerr, fmt, args...) << std::endl;
 }
 
 template<typename... Args>
 std::ostream& error(const thorin::Location& loc, const char* fmt, Args... args) {
     ++num_errors();
     thorin::streamf(std::cerr, "{}: error: ", loc);
-    return thorin::streamf(std::cerr, fmt, args...) << std::endl;;
+    return thorin::streamf(std::cerr, fmt, args...) << std::endl;
 }
 
 }
+
+/// Entry-point for the JIT in the runtime system.
+bool compile(
+    const std::vector<std::string>& file_names,
+    const std::vector<std::string>& file_data,
+    thorin::World& world,
+    thorin::Log::Level log_level,
+    std::ostream& error_stream);
 
 #endif
