@@ -288,19 +288,28 @@ void Module::emit(CodeGen& cg) const {
     for (auto&& item : items()) item->emit(cg);
 }
 
-static bool is_primop(const Symbol& name) {
-    if      (name == "alignof") return true;
-    else if (name == "bitcast") return true;
-    else if (name == "insert")  return true;
-    else if (name == "select")  return true;
-    else if (name == "sizeof")  return true;
-    return false;
+static bool is_primop_or_intrinsic(const std::string& name) {
+    return
+        name == "alignof" ||
+        name == "bitcast" ||
+        name == "insert" ||
+        name == "select" ||
+        name == "sizeof" ||
+        name == "undef" ||
+        name == "reserve_shared" ||
+        name == "atomic" ||
+        name == "atomic_load" ||
+        name == "atomic_store" ||
+        name == "cmpxchg" ||
+        name == "pe_info" ||
+        name == "pe_known";
 }
 
 void FnDecl::emit_head(CodeGen& cg) const {
     assert(def_ == nullptr);
     // no code is emitted for primops
-    if (is_extern() && abi() == "\"thorin\"" && is_primop(symbol()))
+    if (is_extern() && abi() == "\"thorin\"" &&
+        is_primop_or_intrinsic(fn_symbol().remove_quotation()))
         return;
 
     // create thorin function
