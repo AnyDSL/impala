@@ -1,13 +1,13 @@
 // codegen
 
 extern "thorin" {
-    fn sizeof[T]() -> i32;
+    fn sizeof[T]() -> i64;
 }
 
-fn @foo() -> i32 {
+fn @foo() -> i64 {
     sizeof[i32]()
 }
 
 fn main() -> i32 {
-    if foo() == 4 { 0 } else { 1 }
+    if foo() == 4i64 { 0 } else { 1 }
 }
