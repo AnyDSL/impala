@@ -131,15 +131,14 @@ int main(int argc, char** argv) {
         world.set(std::make_unique<thorin::ErrorHandler>());
 
         std::ofstream log_stream;
-        auto ostream = open(log_stream, log_name);
-        Stream s(*ostream);
+        world.set(std::make_unique<thorin::Stream>(*open(log_stream, log_name)));
 
         if (false) {}
-        else if (log_level == "error")   world.set(thorin::LogLevel::Error,   s);
-        else if (log_level == "warn")    world.set(thorin::LogLevel::Warn,    s);
-        else if (log_level == "info")    world.set(thorin::LogLevel::Info,    s);
-        else if (log_level == "verbose") world.set(thorin::LogLevel::Verbose, s);
-        else if (log_level == "debug")   world.set(thorin::LogLevel::Debug,   s);
+        else if (log_level == "error")   world.set(thorin::LogLevel::Error);
+        else if (log_level == "warn")    world.set(thorin::LogLevel::Warn);
+        else if (log_level == "info")    world.set(thorin::LogLevel::Info);
+        else if (log_level == "verbose") world.set(thorin::LogLevel::Verbose);
+        else if (log_level == "debug")   world.set(thorin::LogLevel::Debug);
         else throw std::invalid_argument("log level must be one of " LOG_LEVELS);
 
 #if THORIN_ENABLE_CHECKS && !defined(NDEBUG)
