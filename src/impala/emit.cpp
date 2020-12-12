@@ -244,8 +244,11 @@ Lam* Fn::fn_emit_head(CodeGen& cg, Loc loc) const {
 
 void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
     // setup function nest
-    THORIN_PUSH(cg.cur_fn, this);
-    THORIN_PUSH(cg.cur_bb, lam());
+    auto old_fn = cg.cur_fn;
+    auto old_bb = cg.cur_bb;
+    cg.cur_fn = this;
+    cg.cur_bb = lam();
+
     auto old_mem = cg.cur_mem;
 
     // setup memory
@@ -278,6 +281,9 @@ void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
 
     lam()->set_filter(filter() ? filter()->remit(cg) : cg.world.lit_false());
     cg.cur_mem = old_mem;
+
+    cg.cur_fn = old_fn;
+    cg.cur_bb = old_bb;
 }
 
 /*
@@ -792,8 +798,10 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             return cg.world.extract(cg.world.tuple({arg(2)->remit(cg), arg(1)->remit(cg)}), arg(0)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "insert") {
                             return cg.world.insert_unsafe(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
+                        } else if (name == "alignof") {
+                            return cg.world.op_bitcast(cg.world.type_int_width(32), cg.world.op(Trait::align, cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
                         } else if (name == "sizeof") {
-                            return cg.world.op_bitcast(cg.world.type_int_width(32), cg.world.op(Trait::size, cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
+                            return cg.world.op_bitcast(cg.world.type_int_width(32), cg.world.op(Trait::size , cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
                         } else if (name == "undef") {
                             return cg.world.bot(cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc()));
                         } else if (name == "reserve_shared") {
