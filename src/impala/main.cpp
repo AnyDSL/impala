@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
         world.set(std::make_unique<thorin::ErrorHandler>());
 
         std::ofstream log_stream;
-        world.set(std::make_unique<thorin::Stream>(*open(log_stream, log_name)));
+        world.set(std::make_shared<thorin::Stream>(*open(log_stream, log_name)));
 
         if (false) {}
         else if (log_level == "error")   world.set(thorin::LogLevel::Error);
@@ -221,7 +221,7 @@ int main(int argc, char** argv) {
 
         if (result) {
             if (opt_thorin)
-                optimize_old(world);
+                optimize(world);
             if (emit_thorin)
                 world.dump();
             if (emit_llvm) {
