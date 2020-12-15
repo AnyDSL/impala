@@ -25,14 +25,14 @@ public:
     Lam* basicblock(const thorin::Def* type, const Def* dbg) {
         auto cn = type ? world.cn({world.type_mem(), type}) : world.cn(world.type_mem());
         auto bb = world.nom_lam(cn, Lam::CC::C, dbg);
-        bb->param(0, world.dbg("mem"));
+        bb->var(0, world.dbg("mem"));
         return bb;
     }
     Lam* basicblock(const Def* dbg) { return basicblock(nullptr, dbg); }
 
     Lam* enter(Lam* bb) {
         cur_bb = bb;
-        cur_mem = bb->param(0_s);
+        cur_mem = bb->var(0_s);
         return bb;
     }
 
@@ -58,7 +58,7 @@ public:
 
         // if the return type is a sigma, flatten it
         auto sigma = ret_type->isa<thorin::Sigma>();
-        if (sigma && !sigma->isa_nominal()) {
+        if (sigma && !sigma->isa_nom()) {
             for (auto op : sigma->ops())
                 cont_args.push_back(op);
         } else
@@ -66,7 +66,7 @@ public:
 
         // next is the return lam
         auto next = world.nom_lam(world.cn(cont_args), dbg);
-        next->param(0, world.dbg("mem"));
+        next->var(0, world.dbg("mem"));
 
         // create jump to next
         size_t csize = args.size() + 1;
@@ -77,19 +77,19 @@ public:
         // determine return value
         const Def* ret = nullptr;
         if (sigma) {
-            Array<const Def*> params(next->num_params() - 1);
-            for (size_t i = 1, e = next->num_params(); i != e; ++i)
-                params[i - 1] = next->param(i);
-            ret = world.tuple(ret_type, params, callee->dbg());
+            Array<const Def*> vars(next->num_vars() - 1);
+            for (size_t i = 1, e = next->num_vars(); i != e; ++i)
+                vars[i - 1] = next->var(i);
+            ret = world.tuple(ret_type, vars, callee->dbg());
         } else
-            ret = next->param(1, callee->dbg());
+            ret = next->var(1, callee->dbg());
 
         return std::make_pair(next, ret);
     }
 
     Lam* create_lam(const LocalDecl* decl) {
         auto result = world.nom_lam(convert(decl->type())->as<thorin::Pi>(), debug(decl));
-        result->param(0, world.dbg("mem"));
+        result->var(0, world.dbg("mem"));
         decl->def_ = result;
         return result;
     }
@@ -253,17 +253,17 @@ void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
 
     // setup memory
     size_t i = 0;
-    auto mem_param = lam()->param(i++, cg.world.dbg("mem"));
+    auto mem_param = lam()->var(i++, cg.world.dbg("mem"));
     cg.cur_mem = mem_param;
 
-    // name params and setup store locs
+    // name vars and setup store locs
     for (auto&& param : params()) {
-        auto p = lam()->param(i++, cg.loc2dbg(param->symbol().c_str(), param->loc()));
-        param->emit(cg, p);
+        auto var = lam()->var(i++, cg.loc2dbg(param->symbol().c_str(), param->loc()));
+        param->emit(cg, var);
     }
 
-    if (lam()->num_params() != 0 && lam()->params().back()->type()->isa<Pi>())
-        ret_param_ = lam()->params().back();
+    if (lam()->num_vars() != 0 && lam()->vars().back()->type()->isa<Pi>())
+        ret_param_ = lam()->vars().back();
 
     // descend into body
     auto def = body()->remit(cg);
@@ -368,11 +368,11 @@ void OptionDecl::emit(CodeGen& /*cg*/) const {
         def_ = cg.world.tuple(cg.thorin_enum_type(enum_type), { id, bot });
     } else {
         auto lam = cg.world.nom_lam(cg.convert(type())->as<thorin::Pi>(), cg.loc2dbg(symbol().c_str(), loc()));
-        auto ret = lam->param(lam->num_params() - 1);
-        auto mem = lam->param(0);
+        auto ret = lam->var(lam->num_vars() - 1);
+        auto mem = lam->var(0);
         Array<const Def*> defs(num_args());
-        for (size_t i = 1, e = lam->num_params(); i + 1 < e; i++)
-            defs[i-1] = lam->param(i);
+        for (size_t i = 1, e = lam->num_vars(); i + 1 < e; i++)
+            defs[i-1] = lam->var(i);
         auto option_val = num_args() == 1 ? defs.back() : cg.world.tuple(defs);
         auto enum_val = cg.world.tuple(cg.thorin_enum_type(enum_type), { id, cg.world.variant(variant_type, option_val) });
         lam->app(ret, { mem, enum_val }, cg.loc2dbg(loc()));
@@ -609,9 +609,9 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             auto jump_t    = cg.world.nom_lam(jump_type, cg.loc2dbg("jump_t", loc().finis()));
             auto jump_f    = cg.world.nom_lam(jump_type, cg.loc2dbg("jump_f", loc().finis()));
             emit_branch(cg, jump_t, jump_f);
-            jump_t->app(result, { jump_t->param(0_s), cg.world.lit_true() });
-            jump_f->app(result, { jump_f->param(0_s), cg.world.lit_false() });
-            return cg.enter(result)->param(1);
+            jump_t->app(result, { jump_t->var(0_s), cg.world.lit_true() });
+            jump_f->app(result, { jump_f->var(0_s), cg.world.lit_false() });
+            return cg.enter(result)->var(1);
         }
         default: {
             auto op = tag();
@@ -634,7 +634,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case SUB_ASGN: rdef = cg.world.op(ROp::sub, RMode::none, ldef, rdef, dbg); break;
                         case MUL_ASGN: rdef = cg.world.op(ROp::mul, RMode::none, ldef, rdef, dbg); break;
                         case DIV_ASGN: rdef = cg.world.op(ROp::div, RMode::none, ldef, rdef, dbg); break;
-                        case REM_ASGN: rdef = cg.world.op(ROp::mod, RMode::none, ldef, rdef, dbg); break;
+                        case REM_ASGN: rdef = cg.world.op(ROp::rem, RMode::none, ldef, rdef, dbg); break;
                         default: THORIN_UNREACHABLE;
                     }
                 } else if (is_bool(rhs()->type())) {
@@ -658,7 +658,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case SHL_ASGN: rdef = cg.world.op(Wrap:: shl, mode, ldef, rdef, dbg); break;
                         case SHR_ASGN: rdef = cg.world.op(s ? Shr::ashr : Shr::lshr, ldef, rdef, dbg); break;
                         case DIV_ASGN: rdef = cg.handle_mem_res(cg.world.op(s ? Div::sdiv : Div::udiv, cg.cur_mem, ldef, rdef, dbg)); break;
-                        case REM_ASGN: rdef = cg.handle_mem_res(cg.world.op(s ? Div::smod : Div::umod, cg.cur_mem, ldef, rdef, dbg)); break;
+                        case REM_ASGN: rdef = cg.handle_mem_res(cg.world.op(s ? Div::srem : Div::urem, cg.cur_mem, ldef, rdef, dbg)); break;
                         default: THORIN_UNREACHABLE;
                     }
                 }
@@ -682,7 +682,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case SUB: return cg.world.op(ROp ::sub, RMode::none, ldef, rdef, dbg);
                     case MUL: return cg.world.op(ROp ::mul, RMode::none, ldef, rdef, dbg);
                     case DIV: return cg.world.op(ROp ::div, RMode::none, ldef, rdef, dbg);
-                    case REM: return cg.world.op(ROp ::mod, RMode::none, ldef, rdef, dbg);
+                    case REM: return cg.world.op(ROp ::rem, RMode::none, ldef, rdef, dbg);
                     default: THORIN_UNREACHABLE;
                 }
             } else if (is_bool(rhs()->type())) {
@@ -717,7 +717,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case MUL: return cg.world.op(Wrap:: mul, mode, ldef, rdef, dbg);
                     case SHL: return cg.world.op(Wrap:: shl, mode, ldef, rdef, dbg);
                     case DIV: return cg.handle_mem_res(cg.world.op(s ? Div::sdiv : Div::udiv, cg.cur_mem, ldef, rdef, dbg));
-                    case REM: return cg.handle_mem_res(cg.world.op(s ? Div::smod : Div::umod, cg.cur_mem, ldef, rdef, dbg));
+                    case REM: return cg.handle_mem_res(cg.world.op(s ? Div::srem : Div::urem, cg.cur_mem, ldef, rdef, dbg));
                     default: THORIN_UNREACHABLE;
                 }
             }
@@ -867,7 +867,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         const Def* ret;
         std::tie(cg.cur_bb, ret) = cg.call(dst, defs, ret_type, cg.loc2dbg((dst->debug().name + "_cont").c_str(), loc()));
         if (ret_type)
-            cg.cur_mem = cg.cur_bb->param(0_s);
+            cg.cur_mem = cg.cur_bb->var(0_s);
 
         return ret;
     } else if (ltype->isa<ArrayType>() || ltype->isa<TupleType>()) {
@@ -917,7 +917,7 @@ const Def* IfExpr::remit(CodeGen& cg) const {
         cg.cur_bb->app(if_join, {cg.cur_mem, fdef}, cg.loc2dbg(loc().finis()));
 
     if (thorin_type)
-        return cg.enter(if_join)->param(1);
+        return cg.enter(if_join)->var(1);
     return nullptr; // TODO use bottom type
 }
 
@@ -1000,14 +1000,14 @@ const Def* MatchExpr::remit(CodeGen& /*cg*/) const {
     }
 
     if (thorin_type)
-        return cg.enter(join)->param(1);
+        return cg.enter(join)->var(1);
 #endif
     return nullptr; // TODO use bottom type
 }
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
     auto head_bb = cg.world.nom_lam(cg.world.cn({cg.world.type_mem()}), Lam::CC::C, cg.loc2dbg("while_head", loc().begin()));
-    head_bb->param(0, cg.world.dbg("mem"));
+    head_bb->var(0, cg.world.dbg("mem"));
 
     auto jump_type = cg.world.cn({ cg.world.type_mem() });
     auto body_bb = cg.world.nom_lam(jump_type, cg.loc2dbg("while_body", body()->loc().begin()));
@@ -1052,12 +1052,12 @@ const Def* ForExpr::remit(CodeGen& cg) const {
     cg.call(fun, args, nullptr, cg.loc2dbg(map_expr->loc()));
 
     cg.enter(break_bb);
-    if (break_bb->num_params() == 2)
-        return break_bb->param(1);
+    if (break_bb->num_vars() == 2)
+        return break_bb->var(1);
     else {
-        Array<const Def*> args(break_bb->num_params()-1);
+        Array<const Def*> args(break_bb->num_vars()-1);
         for (size_t i = 0, e = args.size(); i != e; ++i)
-            args[i] = break_bb->param(i+1);
+            args[i] = break_bb->var(i+1);
         return cg.world.tuple(args, cg.loc2dbg(loc()));
     }
 }
