@@ -56,14 +56,13 @@ const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
     assert(!symbol.empty() && "symbol is empty");
 
     if (!symbol.is_anonymous()) {
-        auto decl = thorin::find(symbol2decl_, symbol);
-        if (decl == nullptr)
-            error(n, "'{}' not found in current scope", symbol);
-        return decl;
+        if (auto decl = symbol2decl_.lookup(symbol)) return *decl;
+        error(n, "'{}' not found in current scope", symbol);
     } else {
         error(n, "identifier '_' is reserved for anonymous declarations");
-        return nullptr;
     }
+
+    return nullptr;
 }
 
 void NameSema::insert(const Decl* decl) {
@@ -89,8 +88,8 @@ void NameSema::insert(const Decl* decl) {
 
 const Decl* NameSema::clash(Symbol symbol) const {
     assert(!symbol.empty() && "symbol is empty");
-    if (auto decl = thorin::find(symbol2decl_, symbol))
-        return (decl && decl->depth() == depth()) ? decl : nullptr;
+    if (auto decl = symbol2decl_.lookup(symbol))
+        return (*decl)->depth() == depth() ? *decl : nullptr;
     return nullptr;
 }
 

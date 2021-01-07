@@ -384,10 +384,10 @@ const Type* Path::infer(InferSema& sema) const {
             // lookup enum option
             auto enum_decl = enum_type->enum_decl();
             auto option_decl = enum_decl->option_decl(cur_elem->symbol());
-            auto option_type = option_decl ? sema.find_type(option_decl) : sema.type_error();
+            auto option_type = option_decl ? sema.find_type(*option_decl) : sema.type_error();
 
             cur_type = sema.constrain(cur_elem, sema.find_type(option_type));
-            cur_elem->decl_ = option_decl;
+            cur_elem->decl_ = *option_decl;
         } else if (last_type->is_known()) {
             cur_type = sema.constrain(cur_elem, sema.type_error());
         }
@@ -835,7 +835,7 @@ const Type* StructExpr::infer(InferSema& sema) const {
 
     if (auto struct_type = type->isa<StructType>()) {
         for (size_t i = 0, e = num_elems(); i != e; ++i) {
-            elem(i)->field_decl_ = struct_type->struct_decl()->field_decl(elem(i)->symbol());
+            elem(i)->field_decl_ = *struct_type->struct_decl()->field_decl(elem(i)->symbol());
             if (elem(i)->field_decl() != nullptr)
                 sema.coerce(struct_type->op(elem(i)->field_decl()->index()), elem(i)->expr());
         }
@@ -881,7 +881,7 @@ const Type* FieldExpr::infer(InferSema& sema) const {
 
     if (auto struct_type = ltype->isa<StructType>()) {
         if (auto field_decl = struct_type->struct_decl()->field_decl(symbol())) {
-            return sema.wrap_ref(ref, struct_type->op(field_decl->index()));
+            return sema.wrap_ref(ref, struct_type->op((*field_decl)->index()));
         }
     }
 
