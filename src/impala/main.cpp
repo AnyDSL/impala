@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
             impala::emit(world, module.get());
 
         if (result) {
-            thorin::verify_mem(world);
+            //thorin::verify_mem(world);
             if (!nocleanup)
                 world.cleanup();
             if (opt_thorin)
