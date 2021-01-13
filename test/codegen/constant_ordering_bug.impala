@@ -1,0 +1,12 @@
+// codegen
+
+enum E {
+    A,
+    B
+}
+
+extern fn f() -> [[E * 2] * 1] { [[E::A, E::A]] }
+
+fn main() -> int {
+    0
+}
