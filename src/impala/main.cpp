@@ -223,14 +223,14 @@ int main(int argc, char** argv) {
                 world.dump();
             if (emit_llvm) {
 #ifdef LLVM_SUPPORT
-                thorin::Backends backends(world);
+                thorin::Backends backends(world, opt, debug);
                 auto emit_to_file = [&](thorin::CodeGen* cg, std::string ext) {
                     if (cg) {
                         auto name = module_name + ext;
                         std::ofstream file(name);
                         if (!file)
                             throw std::runtime_error("cannot write '" + name + "': " + strerror(errno));
-                        cg->emit(file, opt, debug);
+                        cg->emit(file);
                     }
                 };
                 emit_to_file(backends.cpu_cg.get(),    ".ll");
