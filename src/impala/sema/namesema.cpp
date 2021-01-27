@@ -56,13 +56,14 @@ const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
     assert(!symbol.empty() && "symbol is empty");
 
     if (!symbol.is_anonymous()) {
-        if (auto decl = symbol2decl_.lookup(symbol)) return *decl;
-        error(n, "'{}' not found in current scope", symbol);
+        auto decl = symbol2decl_.lookup(symbol);
+        if (!decl)
+            error(n, "'{}' not found in current scope", symbol);
+        return *decl;
     } else {
         error(n, "identifier '_' is reserved for anonymous declarations");
+        return nullptr;
     }
-
-    return nullptr;
 }
 
 void NameSema::insert(const Decl* decl) {
@@ -89,7 +90,7 @@ void NameSema::insert(const Decl* decl) {
 const Decl* NameSema::clash(Symbol symbol) const {
     assert(!symbol.empty() && "symbol is empty");
     if (auto decl = symbol2decl_.lookup(symbol))
-        return (*decl)->depth() == depth() ? *decl : nullptr;
+        return (*decl && (*decl)->depth() == depth()) ? *decl : nullptr;
     return nullptr;
 }
 
