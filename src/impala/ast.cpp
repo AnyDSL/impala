@@ -8,9 +8,9 @@ size_t ASTNode::gid_counter_ = 1;
 
 //------------------------------------------------------------------------------
 
-ASTNode::ASTNode(Location location)
+ASTNode::ASTNode(Loc loc)
     : gid_(gid_counter_++)
-    , location_(location)
+    , loc_(loc)
 {}
 
 const char* Visibility::str() {
@@ -51,7 +51,7 @@ const Expr* Expr::skip_rvalue() const {
     return this;
 }
 
-uint64_t LiteralExpr::get_u64() const { return thorin::bcast<uint64_t, thorin::Box>(box()); }
+uint64_t LiteralExpr::get_u64() const { return thorin::bitcast<uint64_t, thorin::Box>(box()); }
 
 bool IfExpr::has_else() const {
     if (auto block = else_expr_->isa<BlockExpr>())
@@ -157,7 +157,7 @@ const PrefixExpr* replace_rvalue_by_addrof(const RValueExpr* rvalue) {
     parent->release();
     auto src = rvalue->src()->back_ref_->release();
     src->back_ref_ = nullptr;
-    auto new_expr = new PrefixExpr(rvalue->location(), PrefixExpr::AND, src);
+    auto new_expr = new PrefixExpr(rvalue->loc(), PrefixExpr::AND, src);
     delete rvalue;
     parent->reset(new_expr);
     new_expr->back_ref_ = parent;

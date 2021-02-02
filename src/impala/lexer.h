@@ -3,7 +3,7 @@
 
 #include <istream>
 
-#include "thorin/util/location.h"
+#include "thorin/debug.h"
 
 #include "impala/token.h"
 
@@ -21,8 +21,7 @@ private:
     Token literal_error(std::string&, bool floating);
     int next();
     int peek() const { return stream_.peek(); }
-    Location location() const { return {filename_, front_line_, front_col_, back_line_, back_col_}; }
-    Location curr() const { return location().back(); }
+    Loc curr() const { return loc_.anew_finis(); }
 
     template<class Pred>
     bool accept(std::string& str, Pred pred) {
@@ -48,8 +47,8 @@ private:
     bool accept(std::string& str, char c) { return accept(str, (int) c); }
 
     std::istream& stream_;
-    const char* filename_;
-    uint32_t front_line_ = 1, front_col_ = 1, back_line_ = 1, back_col_ = 1, peek_line_ = 1, peek_col_ = 1;
+    Loc loc_;
+    Pos peek_;
 };
 
 }

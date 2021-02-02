@@ -8,8 +8,6 @@
 
 namespace impala {
 
-using thorin::streamf;
-
 //------------------------------------------------------------------------------
 
 bool is(const Type* type, PrimTypeTag tag) {
@@ -123,12 +121,12 @@ bool is_strict_subtype(const Type* dst, const Type* src) {
  * hash
  */
 
-uint64_t RefTypeBase::vhash() const {
-    return thorin::hash_combine(Type::vhash(), ((uint64_t)addr_space() << 1) | uint64_t(is_mut()));
+hash_t RefTypeBase::vhash() const {
+    return thorin::hash_combine(Type::vhash(), ((hash_t)addr_space() << 1) | hash_t(is_mut()));
 }
 
-uint64_t Var::vhash() const {
-    return thorin::murmur3(uint64_t(tag()) << uint64_t(56) | uint8_t(depth()));
+hash_t Var::vhash() const {
+    return thorin::murmur3(hash_t(tag()) << hash_t(32-8) | uint8_t(depth()));
 }
 
 //------------------------------------------------------------------------------
@@ -155,6 +153,8 @@ bool UnknownType::equal(const Type* other) const { return this == other; }
  * stream
  */
 
+// TODO
+#if 0
 std::ostream& Lambda::stream(std::ostream& os) const { return streamf(os, "[{}].{}", name(), body()); }
 std::ostream& UnknownType::stream(std::ostream& os) const { return os << '?' << gid(); }
 
@@ -201,6 +201,7 @@ std::ostream& EnumType::stream(std::ostream& os) const { return os << enum_decl(
 std::ostream& TupleType::stream(std::ostream& os) const {
     return stream_list(os, ops(), [&](const Type* type) { os << type; }, "(", ")");
 }
+#endif
 
 //------------------------------------------------------------------------------
 

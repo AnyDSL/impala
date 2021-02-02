@@ -22,7 +22,7 @@ static inline bool sgn(int c){ return c == '+' || c == '-'; }
 
 Lexer::Lexer(std::istream& stream, const char* filename)
     : stream_(stream)
-    , filename_(filename)
+    , loc_(filename, {1, 1}, {1, 1})
 {
     if (!stream_)
         throw std::runtime_error("stream is bad");
@@ -33,14 +33,14 @@ Lexer::Lexer(std::istream& stream, const char* filename)
 int Lexer::next() {
     int c = stream_.get();
 
-    back_line_ = peek_line_;
-    back_col_  = peek_col_;
+    loc_.finis.row = peek_.row;
+    loc_.finis.col = peek_.col;
 
     if (c == '\n') {
-        ++peek_line_;
-        peek_col_ = 1;
+        ++peek_.row;
+        peek_.col = 1;
     } else if (c != std::istream::traits_type::eof())
-        ++peek_col_;
+        ++peek_.col;
 
     return c;
 }
@@ -48,12 +48,12 @@ int Lexer::next() {
 Token Lexer::lex() {
     while (true) {
         std::string str; // the token string is concatenated here
-        front_line_ = peek_line_;
-        front_col_ = peek_col_;
+        loc_.begin.row = peek_.row;
+        loc_.begin.col = peek_.col;
 
         // end of file
         if (accept(std::istream::traits_type::eof()))
-            return {location(), Token::Eof};
+            return {loc_, Token::Eof};
 
         // skip whitespace
         if (accept(space)) {
@@ -63,31 +63,31 @@ Token Lexer::lex() {
 
         // +, ++, +=
         if (accept('+')) {
-            if (accept('+')) return {location(), Token::INC};
-            if (accept('=')) return {location(), Token::ADD_ASGN};
-            return {location(), Token::ADD};
+            if (accept('+')) return {loc_, Token::INC};
+            if (accept('=')) return {loc_, Token::ADD_ASGN};
+            return {loc_, Token::ADD};
         }
 
         // -, --, -=, ->
         if (accept('-')) {
-            if (accept('-')) return {location(), Token::DEC};
-            if (accept('=')) return {location(), Token::SUB_ASGN};
-            if (accept('>')) return {location(), Token::ARROW};
-            return {location(), Token::SUB};
+            if (accept('-')) return {loc_, Token::DEC};
+            if (accept('=')) return {loc_, Token::SUB_ASGN};
+            if (accept('>')) return {loc_, Token::ARROW};
+            return {loc_, Token::SUB};
         }
 
         // =, ==, =>
         if (accept('=')) {
-            if (accept('=')) return {location(), Token::EQ};
-            if (accept('>')) return {location(), Token::FAT_ARRROW};
-            return {location(), Token::ASGN};
+            if (accept('=')) return {loc_, Token::EQ};
+            if (accept('>')) return {loc_, Token::FAT_ARRROW};
+            return {loc_, Token::ASGN};
         }
 
         // *, *=, %, %=, ^, ^=, !, !=, :, :=
 #define IMPALA_LEX_OP(op, tok1, tok2) \
         if (accept( op )) { \
-            if (accept('=')) return {location(), Token:: tok2}; \
-            return {location(), Token:: tok1}; \
+            if (accept('=')) return {loc_, Token:: tok2}; \
+            return {loc_, Token:: tok1}; \
         }
         IMPALA_LEX_OP('*', MUL, MUL_ASGN)
         IMPALA_LEX_OP('%', REM, REM_ASGN)
@@ -97,12 +97,12 @@ Token Lexer::lex() {
         // <, <=, <<, <<=, >, >=, >>, >>=
 #define IMPALA_LEX_REL_SHIFT(op, tok_rel, tok_rel_eq, tok_shift, tok_shift_asgn) \
         if (accept( op )) { \
-            if (accept('=')) return {location(), Token:: tok_rel_eq}; \
+            if (accept('=')) return {loc_, Token:: tok_rel_eq}; \
             if (accept(op)) {  \
-                if (accept('=')) return {location(), Token:: tok_shift_asgn}; \
-                return {location(), Token:: tok_shift}; \
+                if (accept('=')) return {loc_, Token:: tok_shift_asgn}; \
+                return {loc_, Token:: tok_shift}; \
             } \
-            return {location(), Token:: tok_rel}; \
+            return {loc_, Token:: tok_rel}; \
         }
         IMPALA_LEX_REL_SHIFT('<', LT, LE, SHL, SHL_ASGN)
         IMPALA_LEX_REL_SHIFT('>', GT, GE, SHR, SHR_ASGN)
@@ -111,15 +111,15 @@ Token Lexer::lex() {
 #define IMPALA_WITHIN_COMMENT(delim) \
         while (true) { \
             if (accept(std::istream::traits_type::eof())) { \
-                error(location().front(), "unterminated comment"); \
-                return {location(), Token::Eof}; \
+                error(loc_.anew_begin(), "unterminated comment"); \
+                return {loc_, Token::Eof}; \
             } \
             if (delim) break; \
             next(); /* eat up char in comment */\
         }
         if (accept('/')) {
             if (accept('='))
-                return {location(), Token::DIV_ASGN};
+                return {loc_, Token::DIV_ASGN};
             if (accept('*')) { // arbitrary comment
                 IMPALA_WITHIN_COMMENT(accept('*') && accept('/'));
                 continue;
@@ -128,59 +128,59 @@ Token Lexer::lex() {
                 IMPALA_WITHIN_COMMENT(accept('\n'));
                 continue;
             }
-            return {location(), Token::DIV};
+            return {loc_, Token::DIV};
         }
 
         // &, &=, &&, |, |=, ||
 #define IMPALA_LEX_AND_OR(op, tok_bit, tok_logic, tok_asgn) \
         if (accept( op )) { \
             if (accept('=')) \
-                return {location(), Token:: tok_asgn}; \
+                return {loc_, Token:: tok_asgn}; \
             if (accept(op)) \
-                return {location(), Token:: tok_logic}; \
-            return {location(), Token:: tok_bit}; \
+                return {loc_, Token:: tok_logic}; \
+            return {loc_, Token:: tok_bit}; \
         }
         IMPALA_LEX_AND_OR('&', AND, ANDAND, AND_ASGN)
         IMPALA_LEX_AND_OR('|',  OR,   OROR,  OR_ASGN)
 
         if (accept(':')) {
             if (accept(':'))
-                return {location(), Token::DOUBLE_COLON};
-            return {location(), Token::COLON};
+                return {loc_, Token::DOUBLE_COLON};
+            return {loc_, Token::COLON};
         }
 
         if (accept('@')) {
             if (accept('@'))
-                return {location(), Token::RUNRUN};
+                return {loc_, Token::RUNRUN};
             if (accept('?'))
-                return {location(), Token::RUNKNOWN};
-            return {location(), Token::RUN};
+                return {loc_, Token::RUNKNOWN};
+            return {loc_, Token::RUN};
         }
 
         // single character tokens
-        if (accept('(')) return {location(), Token::L_PAREN};
-        if (accept(')')) return {location(), Token::R_PAREN};
-        if (accept(',')) return {location(), Token::COMMA};
-        if (accept(';')) return {location(), Token::SEMICOLON};
-        if (accept('$')) return {location(), Token::HLT};
-        if (accept('[')) return {location(), Token::L_BRACKET};
-        if (accept(']')) return {location(), Token::R_BRACKET};
-        if (accept('{')) return {location(), Token::L_BRACE};
-        if (accept('}')) return {location(), Token::R_BRACE};
-        if (accept('~')) return {location(), Token::TILDE};
-        if (accept('?')) return {location(), Token::KNOWN};
+        if (accept('(')) return {loc_, Token::L_PAREN};
+        if (accept(')')) return {loc_, Token::R_PAREN};
+        if (accept(',')) return {loc_, Token::COMMA};
+        if (accept(';')) return {loc_, Token::SEMICOLON};
+        if (accept('$')) return {loc_, Token::HLT};
+        if (accept('[')) return {loc_, Token::L_BRACKET};
+        if (accept(']')) return {loc_, Token::R_BRACKET};
+        if (accept('{')) return {loc_, Token::L_BRACE};
+        if (accept('}')) return {loc_, Token::R_BRACE};
+        if (accept('~')) return {loc_, Token::TILDE};
+        if (accept('?')) return {loc_, Token::KNOWN};
 
         // '.', floats
         if (accept('.')) {
             str += '.';
             if (accept(str, dec)) goto l_fractional_dot_rest;
-            if (accept('.'))      return {location(), Token::DOTDOT};
-            return {location(), Token::DOT};
+            if (accept('.'))      return {loc_, Token::DOTDOT};
+            return {loc_, Token::DOT};
         }
 
         // identifiers/keywords
         if (lex_identifier(str))
-            return {location(), str};
+            return {loc_, str};
 
         // char literal
         if (accept(str , '\'')) {
@@ -193,7 +193,7 @@ Token Lexer::lex() {
                     break;
                 }
             }
-            return {location(), Token::LIT_char, str};
+            return {loc_, Token::LIT_char, str};
         }
 
         // string literal
@@ -207,7 +207,7 @@ Token Lexer::lex() {
                     break;
                 }
             }
-            return {location(), Token::LIT_str, str};
+            return {loc_, Token::LIT_str, str};
         }
 
         /*
@@ -277,26 +277,26 @@ Token Lexer::lex_suffix(std::string& str, bool floating) {
         if (floating) {
             auto lit = Token::sym2flit(suffix);
             if (lit == Token::Error) {
-                error(location(), "invalid suffix on floating constant '{}'", suffix);
-                return {location(), tok, str};
+                error(loc_, "invalid suffix on floating constant '{}'", suffix);
+                return {loc_, tok, str};
             }
             tok = lit;
         } else {
             auto lit = Token::sym2lit(suffix);
             if (lit == Token::Error) {
-                error(location(), "invalid suffix on constant '{}'", suffix);
-                return {location(), tok, str};
+                error(loc_, "invalid suffix on constant '{}'", suffix);
+                return {loc_, tok, str};
             }
             tok = lit;
         }
         str += suffix.c_str();
     }
 
-    return {location(), tok, str};
+    return {loc_, tok, str};
 }
 
 Token Lexer::literal_error(std::string& str, bool floating) {
-    error(location(), "invalid constant '{}'", str);
+    error(loc_, "invalid constant '{}'", str);
     return lex_suffix(str, floating);
 }
 

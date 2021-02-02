@@ -13,14 +13,14 @@ using namespace thorin;
 
 namespace impala {
 
-Token::Token(Location location, Tag tok)
-    : location_(location)
-    , symbol_(tok2sym_[tok])
+Token::Token(Loc loc, Tag tok)
+    : loc_(loc)
+    , symbol_(*tok2sym_[tok])
     , tag_(tok)
 {}
 
-Token::Token(Location location, const std::string& str)
-    : location_(location)
+Token::Token(Loc loc, const std::string& str)
+    : loc_(loc)
     , symbol_(str)
 {
     assert(!str.empty());
@@ -36,8 +36,8 @@ static bool inrange(V val) {
     return std::numeric_limits<T>::lowest() <= val && val <= std::numeric_limits<T>::max();
 }
 
-Token::Token(Location location, Tag tag, const std::string& str)
-    : location_(location)
+Token::Token(Loc loc, Tag tag, const std::string& str)
+    : loc_(loc)
     , symbol_(str)
     , tag_(tag)
 {
@@ -104,7 +104,7 @@ Token::Token(Location location, Tag tag, const std::string& str)
     if (err)
         switch (tag_) {
 #define IMPALA_LIT(itype, atype) \
-            case LIT_##itype: error(location, "literal out of range for type '{}'", #itype); return;
+            case LIT_##itype: error(loc, "literal out of range for type '{}'", #itype); return;
 #include "impala/tokenlist.h"
         default: THORIN_UNREACHABLE;
     }
@@ -275,7 +275,7 @@ std::ostream& operator<<(std::ostream& os, const TokenTag& tag) { return os << T
 std::ostream& operator<<(std::ostream& os, const Token& tok) {
     const char* sym = tok.symbol().c_str();
     if (std::strcmp(sym, "") == 0)
-        return os << Symbol(Token::tok2str_[tok.tag()]).c_str();
+        return os << Symbol(*Token::tok2str_[tok.tag()]).c_str();
     else
         return os << sym;
 }

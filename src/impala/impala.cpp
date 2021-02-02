@@ -2,7 +2,6 @@
 
 #include "impala/impala.h"
 
-#include "thorin/util/log.h"
 #include "thorin/util/symbol.h"
 
 #include "impala/ast.h"
@@ -23,10 +22,10 @@ void init() {
     Token::init();
 }
 
-void check(std::unique_ptr<TypeTable>& typetable, const Module* mod, bool nossa) {
+void check(std::unique_ptr<TypeTable>& typetable, const Module* mod) {
     name_analysis(mod);
     type_inference(typetable, mod);
-    type_analysis(mod, nossa);
+    type_analysis(mod);
     //borrow_check(mod);
 }
 
@@ -41,7 +40,8 @@ void PrecTable::init() {
 }
 
 /// Entry-point for the JIT in the runtime system.
-bool compile(const std::vector<std::string>& file_names, const std::vector<std::string>& file_data, thorin::World& world, thorin::Log::Level log_level, std::ostream& error_stream) {
+bool compile(const std::vector<std::string>& file_names, const std::vector<std::string>& file_data,
+             thorin::World& world, thorin::LogLevel log_level, std::shared_ptr<thorin::Stream> error_stream) {
     static bool initalized = false;
     if (!initalized) {
         impala::init();
@@ -50,7 +50,8 @@ bool compile(const std::vector<std::string>& file_names, const std::vector<std::
     impala::num_warnings() = 0;
     impala::num_errors()   = 0;
 
-    thorin::Log::set(log_level, &error_stream);
+    world.set(log_level);
+    world.set(error_stream);
 
     impala::Items items;
     for (size_t n = file_names.size(), i = 0; i < n; ++i) {
@@ -63,7 +64,7 @@ bool compile(const std::vector<std::string>& file_names, const std::vector<std::
     auto module = std::make_unique<const impala::Module>(file_names.back().c_str(), std::move(items));
 
     std::unique_ptr<impala::TypeTable> typetable;
-    impala::check(typetable, module.get(), false);
+    impala::check(typetable, module.get());
     bool result = impala::num_errors() == 0;
     if (result)
         impala::emit(world, module.get());

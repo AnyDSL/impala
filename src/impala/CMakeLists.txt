@@ -1,6 +1,7 @@
 set(IMPALA_SOURCES
     ast.cpp
     ast.h
+    ast_stream.cpp
     cgen.cpp
     cgen.h
     emit.cpp
@@ -14,7 +15,6 @@ set(IMPALA_SOURCES
     sema/type.cpp
     sema/type.h
     sema/typesema.cpp
-    stream.cpp
     token.cpp
     token.h
     tokenlist.h
