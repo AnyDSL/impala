@@ -5,6 +5,7 @@
 #include <stack>
 
 #include "impala/ast.h"
+#include "impala/sema/type_table.h"
 
 namespace impala {
 
@@ -31,7 +32,6 @@ size_t FnType::num_params() const {
 const Type* FnType::last_param() const {
     return op(0)->isa<TupleType>() ? op(0)->ops().back() : op(0);
 }
-
 
 bool FnType::is_returning() const {
     if (auto tuple = op(0)->isa<TupleType>()) {
@@ -150,62 +150,6 @@ bool UnknownType::equal(const Type* other) const { return this == other; }
 //------------------------------------------------------------------------------
 
 /*
- * stream
- */
-
-// TODO
-#if 0
-std::ostream& Lambda::stream(std::ostream& os) const { return streamf(os, "[{}].{}", name(), body()); }
-std::ostream& UnknownType::stream(std::ostream& os) const { return os << '?' << gid(); }
-
-std::ostream& PrimType::stream(std::ostream& os) const {
-    switch (primtype_tag()) {
-#define IMPALA_TYPE(itype, atype) case PrimType_##itype: return os << #itype;
-#include "impala/tokenlist.h"
-        default: THORIN_UNREACHABLE;
-    }
-}
-
-std::ostream& NoRetType::stream(std::ostream& os) const { return os << "<no-return>"; }
-std::ostream& InferError::stream(std::ostream& os) const { return streamf(os, "<infer error: {}, {}>", dst(), src()); }
-std::ostream& TypeError::stream(std::ostream& os) const { return os << "<type error>"; }
-
-std::ostream& FnType::stream(std::ostream& os) const {
-    os << "fn";
-    if (auto tuple = op(0)->isa<TupleType>())
-        streamf(os, "{}", tuple);
-    else
-        streamf(os, "({})", op(0));
-    auto ret_type = return_type();
-    return !ret_type->isa<NoRetType>() ? streamf(os, " -> {}", ret_type) : os;
-}
-
-std::ostream& Var::stream(std::ostream& os) const {
-    return streamf(os, "<{}>", depth());
-}
-
-std::ostream& App::stream(std::ostream& os) const { return streamf(os, "{}[{}]", callee(), arg()); }
-
-std::ostream& RefTypeBase::stream(std::ostream& os) const {
-    os << prefix();
-    if (addr_space() != 0)
-        os << '[' << addr_space() << ']';
-    return os << pointee();
-}
-
-std::ostream& DefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[{} * {}]", elem_type(), dim()); }
-std::ostream& IndefiniteArrayType::stream(std::ostream& os) const { return streamf(os, "[{}]", elem_type()); }
-std::ostream& SimdType::stream(std::ostream& os) const { return streamf(os, "simd[{} * {}]", elem_type(), dim()); }
-std::ostream& StructType::stream(std::ostream& os) const { return os << struct_decl()->symbol(); }
-std::ostream& EnumType::stream(std::ostream& os) const { return os << enum_decl()->symbol(); }
-std::ostream& TupleType::stream(std::ostream& os) const {
-    return stream_list(os, ops(), [&](const Type* type) { os << type; }, "(", ")");
-}
-#endif
-
-//------------------------------------------------------------------------------
-
-/*
  * rebuild
  */
 
@@ -261,6 +205,49 @@ const Type* EnumType::vreduce(int depth, const Type* type, Type2Type& map) const
     for (size_t i = 0, e = num_ops(); i != e; ++i)
         enum_type->set(i, op(i)->reduce(depth, type, map));
     return enum_type;
+}
+
+//------------------------------------------------------------------------------
+
+/*
+ * stream
+ */
+
+template<>
+Stream& TypeBase<TypeTable>::stream(Stream& s) const {
+    if (auto t = isa<PrimType>()) {
+        switch (t->primtype_tag()) {
+#define IMPALA_TYPE(itype, atype) case PrimType_##itype: return s.fmt(#itype);
+#include "impala/tokenlist.h"
+            default: THORIN_UNREACHABLE;
+        }
+    } else if (auto t = isa<RefTypeBase>()) {
+        s.fmt("{}", t->prefix());
+        if (t->addr_space() != 0) s.fmt("[{}]", t->addr_space());
+        return s.fmt("{}", t->pointee());
+    } else if (auto t = isa<FnType>()) {
+        s.fmt("fn");
+        if (auto tuple = op(0)->isa<TupleType>())
+            s.fmt("{}", tuple);
+        else
+            s.fmt("({})", op(0));
+        auto ret_type = t->return_type();
+        return !ret_type->isa<NoRetType>() ? s.fmt(" -> {}", ret_type) : s;
+    } else if (isa<NoRetType>()) { return s.fmt("<no-return>");
+    } else if (isa<TypeError>()) { return s.fmt("<type error>");
+    } else if (auto t = isa<Lambda>())              { return s.fmt("[{}].{}", t->name(), t->body());
+    } else if (auto t = isa<UnknownType>())         { return s.fmt("?{}", t->gid());
+    } else if (auto t = isa<InferError>())          { return s.fmt("<infer error: {}, {}>", t->dst(), t->src());
+    } else if (auto t = isa<Var>())                 { return s.fmt("<{}>", t->depth());
+    } else if (auto t = isa<App>())                 { return s.fmt("{}[{}]", t->callee(), t->arg());
+    } else if (auto t = isa<DefiniteArrayType>())   { return s.fmt("[{} * {}]", t->elem_type(), t->dim());
+    } else if (auto t = isa<IndefiniteArrayType>()) { return s.fmt("[{}]", t->elem_type());
+    } else if (auto t = isa<SimdType>())            { return s.fmt("simd[{} * {}]", t->elem_type(), t->dim());
+    } else if (auto t = isa<StructType>())          { return s.fmt("{}", t->struct_decl()->symbol().str());
+    } else if (auto t = isa<EnumType>())            { return s.fmt("{}", t->enum_decl()->symbol().str());
+    } else if (auto t = isa<TupleType>())           { return s.fmt("({, })", t->ops());
+    }
+    THORIN_UNREACHABLE;
 }
 
 //------------------------------------------------------------------------------

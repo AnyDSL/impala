@@ -47,12 +47,10 @@ enum PrimTypeTag {
 //------------------------------------------------------------------------------
 
 class TypeTable;
-using Type = thorin::TypeBase<TypeTable>;
+using Type = TypeBase<TypeTable>;
 
 class StructDecl;
 class EnumDecl;
-template<class T> using ArrayRef = thorin::ArrayRef<T>;
-template<class T> using Array    = thorin::Array<T>;
 
 template<class T>
 using TypeMap   = thorin::GIDMap<const Type*, T>;
@@ -71,8 +69,6 @@ private:
 
 public:
     PrimTypeTag primtype_tag() const { return (PrimTypeTag) tag(); }
-
-    Stream& stream(Stream&) const override;
 
 private:
     const Type* vrebuild(TypeTable&, Types) const override;
@@ -106,7 +102,6 @@ public:
     bool is_mut() const { return mut_; }
     uint64_t addr_space() const { return addr_space_; }
 
-    Stream& stream(Stream&) const override;
     hash_t vhash() const override;
     bool equal(const Type* other) const override;
     virtual std::string prefix() const = 0;
@@ -124,8 +119,6 @@ protected:
     PtrType(TypeTable& typetable, int tag, const Type* pointee, bool mut, uint64_t addr_space)
         : RefTypeBase(typetable, tag, pointee, mut, addr_space)
     {}
-
-    Stream& stream_ptr_type(Stream&, std::string prefix, uint64_t addr_space, const Type* ref_type) const;
 
 private:
     uint64_t addr_space_;
@@ -211,7 +204,6 @@ public:
     const Type* last_param() const;
     const Type* return_type() const;
     bool is_returning() const;
-    Stream& stream(Stream&) const override;
 
 private:
     const Type* vrebuild(TypeTable&, Types) const override;
@@ -231,7 +223,6 @@ private:
 public:
     const char* name() const { return name_; }
     const Type* body() const { return op(0); }
-    Stream& stream(Stream&) const override;
 
 private:
     const Type* vrebuild(TypeTable& to, Types ops) const override;
@@ -253,7 +244,6 @@ private:
 
 public:
     int depth() const { return depth_; }
-    Stream& stream(Stream&) const override;
 
 private:
     hash_t vhash() const override;
@@ -275,7 +265,6 @@ private:
 public:
     const Type* callee() const { return Type::op(0); }
     const Type* arg() const { return Type::op(1); }
-    Stream& stream(Stream&) const override;
 
 private:
     const Type* vrebuild(TypeTable& to, Types ops) const override;
@@ -295,7 +284,6 @@ private:
 
 public:
     const Type* vrebuild(TypeTable& to, Types ops) const override;
-    Stream& stream(Stream&) const override;
 
     friend class TypeTable;
 };
@@ -316,7 +304,6 @@ public:
 private:
     const Type* vrebuild(TypeTable& to, Types ops) const override;
     const Type* vreduce(int, const Type*, Type2Type&) const override;
-    Stream& stream(Stream&) const override;
 
     const StructDecl* decl_;
 
@@ -339,7 +326,6 @@ public:
 private:
     const Type* vrebuild(TypeTable& to, Types ops) const override;
     const Type* vreduce(int, const Type*, Type2Type&) const override;
-    Stream& stream(Stream&) const override;
 
     const EnumDecl* decl_;
 
@@ -364,8 +350,6 @@ public:
         : ArrayType(typetable, Tag_indefinite_array, elem_type)
     {}
 
-    Stream& stream(Stream&) const override;
-
 private:
     const Type* vrebuild(TypeTable&, Types) const override;
 
@@ -384,8 +368,6 @@ public:
     bool equal(const Type* other) const override {
         return Type::equal(other) && this->dim() == other->as<DefiniteArrayType>()->dim();
     }
-
-    Stream& stream(Stream&) const override;
 
 private:
     const Type* vrebuild(TypeTable&, Types) const override;
@@ -408,8 +390,6 @@ public:
         return Type::equal(other) && this->dim() == other->as<SimdType>()->dim();
     }
 
-    Stream& stream(Stream&) const override;
-
 private:
     const Type* vrebuild(TypeTable&, Types) const override;
 
@@ -424,10 +404,6 @@ private:
         : Type(typetable, Tag_noret, {})
     {}
 
-public:
-    Stream& stream(Stream&) const override;
-
-private:
     const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
@@ -441,10 +417,6 @@ private:
         known_ = false;
     }
 
-public:
-    Stream& stream(Stream&) const override;
-
-private:
     bool equal(const Type*) const override;
     hash_t vhash() const override { return this->gid(); }
     const Type* vrebuild(TypeTable&, Types) const override;
@@ -458,10 +430,6 @@ private:
         : Type(table, Tag_error, {})
     {}
 
-public:
-    Stream& stream(Stream&) const override;
-
-private:
     const Type* vrebuild(TypeTable& to, Types ops) const override;
 
     friend class TypeTable;
@@ -475,7 +443,6 @@ class InferError : public Type {
 public:
     const Type* dst() const { return op(0); }
     const Type* src() const { return op(1); }
-    Stream& stream(Stream&) const override;
 
 private:
     const Type* vrebuild(TypeTable&, Types) const override;
@@ -493,7 +460,7 @@ inline bool is_unit(const Type* t) {
 
 //------------------------------------------------------------------------------
 
-class TypeTable : public thorin::TypeTableBase<Type> {
+class TypeTable : public TypeTableBase<Type> {
 public:
     TypeTable();
 

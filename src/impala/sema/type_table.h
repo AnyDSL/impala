@@ -6,15 +6,20 @@
 #include "thorin/util/array.h"
 #include "thorin/util/stream.h"
 
-namespace thorin {
+namespace impala {
+
+template<class T> using ArrayRef = thorin::ArrayRef<T>;
+template<class T> using Array    = thorin::Array<T>;
+using thorin::hash_t;
+using thorin::Stream;
 
 //------------------------------------------------------------------------------
 
 /// Base class for all \p Type%s.
 template <class TypeTable>
-class TypeBase : public RuntimeCast<TypeBase<TypeTable>>, public Streamable<TypeBase<TypeTable>> {
+class TypeBase : public thorin::RuntimeCast<TypeBase<TypeTable>>, public thorin::Streamable<TypeBase<TypeTable>> {
 protected:
-    using Type2Type = GIDMap<const TypeBase*, const TypeBase*>;
+    using Type2Type = thorin::GIDMap<const TypeBase*, const TypeBase*>;
     using Types     = ArrayRef<const TypeBase*>;
 
     TypeBase(const TypeBase&) = delete;
@@ -49,7 +54,7 @@ public:
     size_t gid() const { return gid_; }
     hash_t hash() const { return hash_ == 0 ? hash_ = vhash() : hash_; }
     virtual bool equal(const TypeBase*) const;
-    virtual Stream& stream(Stream&) const;
+    Stream& stream(Stream&) const;
 
     const TypeBase* reduce(int, const TypeBase*, Type2Type&) const;
     const TypeBase* rebuild(TypeTable& to, Types ops) const;
@@ -72,7 +77,7 @@ private:
 
     mutable TypeTable* table_;
     int tag_;
-    thorin::Array<const TypeBase*> ops_;
+    Array<const TypeBase*> ops_;
     mutable size_t gid_;
     static size_t gid_counter_;
 
