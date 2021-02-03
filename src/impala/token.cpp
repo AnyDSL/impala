@@ -190,8 +190,6 @@ TokenTag Token::sym2flit(Symbol sym) {
 }
 
 void Token::init() {
-    THORIN_CALL_ONCE;
-
     /*
      * - set pre-/in-/postfix operators
      * - register literals

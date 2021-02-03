@@ -15,6 +15,7 @@ Stream& ErrorASTType::stream(Stream& s) const { return s << "<error>"; }
 Stream& DefiniteArrayASTType::stream(Stream& s) const { return s.fmt("[{} * {}]", elem_ast_type(), dim()); }
 Stream& IndefiniteArrayASTType::stream(Stream& s) const { return s.fmt("[{}]", elem_ast_type()); }
 Stream& TupleASTType::stream(Stream& s) const { return s.fmt("({, })", ast_type_args()); }
+Stream& SimdASTType::stream(Stream& s) const { return s.fmt("simd[{} * {}]", elem_ast_type(), size()); }
 
 Stream& PtrASTType::stream(Stream& s) const {
     s << prefix();
@@ -252,12 +253,14 @@ Stream& StrExpr::stream(Stream& s) const {
     return s.fmt("\t\n{\n}\b\n", symbols());
 }
 
-Stream& PathExpr ::stream(Stream& s) const { return s << path(); }
-Stream& EmptyExpr::stream(Stream& s) const { return s << "/*empty*/"; }
-Stream& TupleExpr::stream(Stream& s) const { return s.fmt("({, })", args()); }
-Stream& DefiniteArrayExpr::stream(Stream& s) const { return s.fmt("([{, }]", args()); }
+Stream& PathExpr                 ::stream(Stream& s) const { return s.fmt("{}", path()); }
+Stream& EmptyExpr                ::stream(Stream& s) const { return s.fmt("/*empty*/"); }
+Stream& TupleExpr                ::stream(Stream& s) const { return s.fmt("({, })", args()); }
+Stream& DefiniteArrayExpr        ::stream(Stream& s) const { return s.fmt("([{, }]", args()); }
 Stream& RepeatedDefiniteArrayExpr::stream(Stream& s) const { return s.fmt("[{}, .. {}]", value(), count()); }
-Stream& IndefiniteArrayExpr::stream(Stream& s) const { return s.fmt("[{}: {}]", dim(), elem_ast_type()); }
+Stream& IndefiniteArrayExpr      ::stream(Stream& s) const { return s.fmt("[{}: {}]", dim(), elem_ast_type()); }
+Stream& SimdExpr                 ::stream(Stream& s) const { return s.fmt("simd[{, }]", args()); }
+
 
 static std::pair<Prec, bool> open(Stream& s, Prec l) {
     std::pair<Prec, bool> result;
