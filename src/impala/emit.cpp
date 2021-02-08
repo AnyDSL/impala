@@ -125,9 +125,9 @@ public:
 
     const thorin::Def* convert_rec(const Type*);
 
-    const thorin::Def*& thorin_type(const Type* type) { return impala2thorin_[type]; }
-    const thorin::Sigma*& thorin_struct_type(const StructType* type) { return struct_type_impala2thorin_[type]; }
-    const thorin::Sigma*& thorin_enum_type(const EnumType* type) { return enum_type_impala2thorin_[type]; }
+    const thorin::Def*& thorin_type(const Type* type) { return *impala2thorin_[type]; }
+    const thorin::Sigma*& thorin_struct_type(const StructType* type) { return *struct_type_impala2thorin_[type]; }
+    const thorin::Sigma*& thorin_enum_type(const EnumType* type) { return *enum_type_impala2thorin_[type]; }
 
     World& world;
     const Fn* cur_fn = nullptr;
