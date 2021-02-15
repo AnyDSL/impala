@@ -485,7 +485,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
                 return rhs()->lemit(cg);
 
             auto def = rhs()->remit(cg);
-            if (is_const(def))
+            if (def->dep() == thorin::Dep::Bot)
                 return cg.world.global(def, /*mutable*/ false, loc());
 
             auto slot = cg.world.slot(cg.convert(rhs()->type()), cg.frame(), loc());
