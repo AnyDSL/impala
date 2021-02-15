@@ -118,7 +118,7 @@ Stream& Param::stream(Stream& s) const {
  * items + item helpers
  */
 
-Stream& Module::stream(Stream& s) const { return s.fmt("{\n}", items()); }
+Stream& Module::stream(Stream& s) const { return s.fmt("{\n\n}", items()); }
 Stream& ModuleDecl::stream(Stream& s) const { return stream_ast_type_params(s.fmt("mod {}", symbol())) << ';'; }
 
 Stream& ExternBlock::stream(Stream& s) const {
@@ -168,7 +168,7 @@ Stream& StaticItem::stream(Stream& s) const {
     s.fmt("static {}{}", is_mut() ? "mut " : "", identifier());
     if (type())
         s << type();
-    else
+    else if (ast_type())
         s << ast_type();
 
     if (init())
