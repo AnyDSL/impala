@@ -1,4 +1,5 @@
 set(IMPALA_SOURCES
+    args.h
     ast.cpp
     ast.h
     ast_stream.cpp

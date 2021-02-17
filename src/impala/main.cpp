@@ -7,9 +7,10 @@
 #include "thorin/be/llvm/llvm.h"
 #endif
 #include "thorin/analyses/schedule.h"
-#include "thorin/util/args.h"
 
 #include "impala/ast.h"
+#include "impala/args.h"
+
 #include "impala/cgen.h"
 #include "impala/impala.h"
 
@@ -51,7 +52,7 @@ int main(int argc, char** argv) {
 #define LOG_LEVELS "{error|warn|info}"
 #endif
 
-        auto cmd_parser = thorin::ArgParser()
+        auto cmd_parser = impala::ArgParser()
             .implicit_option             (                      "<infiles>", "input files", infiles)
             .add_option<bool>            ("help",               "",          "produce this help message", help, false)
             .add_option<std::string>     ("log-level",          LOG_LEVELS,  "set log level", log_level, "error")
