@@ -6,6 +6,7 @@
 #ifdef LLVM_SUPPORT
 #include "thorin/be/llvm/llvm.h"
 #endif
+#include "thorin/be/c/c.h"
 #include "thorin/analyses/schedule.h"
 
 #include "impala/ast.h"
@@ -42,8 +43,8 @@ int main(int argc, char** argv) {
 #endif
         std::string out_name, log_name, log_level;
         bool help,
-             emit_cint, emit_thorin, emit_ast, emit_annotated,
-             emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
+             emit_c, emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm,
+             opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
              nocleanup, fancy;
 
 #ifndef NDEBUG
@@ -71,6 +72,7 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("Othorin",            "", "optimize at Thorin level", opt_thorin, false)
             .add_option<bool>            ("emit-annotated",     "", "emit AST of Impala program after semantic analysis", emit_annotated, false)
             .add_option<bool>            ("emit-ast",           "", "emit AST of Impala program", emit_ast, false)
+            .add_option<bool>            ("emit-c",             "", "emit C from Thorin representation (implies -Othorin)", emit_c, false)
             .add_option<bool>            ("emit-c-interface",   "", "emit C interface from Impala code (experimental)", emit_cint, false)
             .add_option<bool>            ("emit-llvm",          "", "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
             .add_option<bool>            ("emit-thorin",        "", "emit textual Thorin representation of Impala program", emit_thorin, false)
@@ -80,7 +82,7 @@ int main(int argc, char** argv) {
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
-        opt_thorin |= emit_llvm;
+        opt_thorin |= emit_llvm | emit_c;
 
         impala::fancy() = fancy;
 
@@ -213,7 +215,7 @@ int main(int argc, char** argv) {
             impala::generate_c_interface(module.get(), opts, out_file);
         }
 
-        if (result && (emit_llvm || emit_thorin))
+        if (result && (emit_c || emit_llvm || emit_thorin))
             impala::emit(world, module.get());
 
         if (result) {
@@ -224,6 +226,12 @@ int main(int argc, char** argv) {
                 world.opt();
             if (emit_thorin)
                 world.dump();
+            if (emit_c) {
+                auto name = module_name + ".c";
+                std::ofstream file(name);
+                thorin::Stream stream(file);
+                thorin::c::emit_c_int(world, stream);
+            }
             if (emit_llvm) {
 #ifdef LLVM_SUPPORT
                 thorin::Backends backends(world, opt, debug);
