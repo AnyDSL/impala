@@ -3,11 +3,11 @@
 #include <cctype>
 #include <stdexcept>
 
-#ifdef LLVM_SUPPORT
-#include "thorin/be/llvm/llvm.h"
-#endif
+#include "thorin/be/codegen.h"
 #include "thorin/be/c/c.h"
-#include "thorin/analyses/schedule.h"
+#ifdef LLVM_SUPPORT
+#include "thorin/be/llvm/cpu.h"
+#endif
 
 #include "impala/ast.h"
 #include "impala/args.h"
@@ -226,36 +226,34 @@ int main(int argc, char** argv) {
                 world.opt();
             if (emit_thorin)
                 world.dump();
-            if (emit_c) {
-                auto name = module_name + ".c";
-                std::ofstream file(name);
-                thorin::Stream stream(file);
-                thorin::c::emit_c_int(world, stream);
-            }
-            if (emit_llvm) {
-#ifdef LLVM_SUPPORT
-                thorin::Backends backends(world, opt, debug);
-                auto emit_to_file = [&](thorin::CodeGen* cg, std::string ext) {
-                    if (cg) {
-                        auto name = module_name + ext;
-                        std::ofstream file(name);
-                        if (!file)
-                            throw std::runtime_error("cannot write '" + name + "': " + strerror(errno));
-                        cg->emit(file);
-                    }
+            if (emit_c || emit_llvm) {
+                thorin::DeviceBackends backends(world, opt, debug);
+                auto emit_to_file = [&] (thorin::CodeGen& cg) {
+                    auto name = module_name + cg.file_ext();
+                    std::ofstream file(name);
+                    if (!file)
+                        throw std::runtime_error("cannot write '" + name + "': " + strerror(errno));
+                    else
+                        cg.emit(file);
                 };
-                emit_to_file(backends.cpu_cg.get(),    ".ll");
-                //emit_to_file(backends.cuda_cg.get(),   ".cu");
-                //emit_to_file(backends.nvvm_cg.get(),   ".nvvm");
-                //emit_to_file(backends.opencl_cg.get(), ".cl");
-                //emit_to_file(backends.amdgpu_cg.get(), ".amdgpu");
-                //emit_to_file(backends.hls_cg.get(),    ".hls");
-#else
-                thorin::outf("warning: built without LLVM support - I don't emit an LLVM file");
+                if (emit_c) {
+                    thorin::Cont2Config kernel_configs;
+                    thorin::c::CodeGen cg(world, kernel_configs, thorin::c::Lang::C99, debug);
+                    emit_to_file(cg);
+                }
+#ifdef LLVM_SUPPORT
+                if (emit_llvm) {
+                    thorin::llvm::CPUCodeGen cg(world, opt, debug);
+                    emit_to_file(cg);
+                }
 #endif
+                for (auto& cg : backends.cgs) {
+                    if (cg) emit_to_file(*cg);
+                }
             }
-        } else
+        } else {
             return EXIT_FAILURE;
+        }
 
         return EXIT_SUCCESS;
     } catch (std::exception const& e) {
