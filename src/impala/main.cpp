@@ -234,7 +234,7 @@ int main(int argc, char** argv) {
                     if (!file)
                         throw std::runtime_error("cannot write '" + name + "': " + strerror(errno));
                     else
-                        cg.emit(file);
+                        cg.emit_stream(file);
                 };
                 if (emit_c) {
                     thorin::Cont2Config kernel_configs;
