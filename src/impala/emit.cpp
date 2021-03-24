@@ -114,7 +114,7 @@ public:
     }
 
     const thorin::Type* convert_rec(const Type*);
-    const thorin::Type*& thorin_type(const Type* type) { return *impala2thorin_[type]; }
+    const thorin::Type*& thorin_type(const Type* type) { return impala2thorin_[type]; }
 
     World& world;
     const Fn* cur_fn = nullptr;

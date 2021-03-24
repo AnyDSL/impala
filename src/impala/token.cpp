@@ -15,7 +15,7 @@ namespace impala {
 
 Token::Token(Loc loc, Tag tok)
     : loc_(loc)
-    , symbol_(*tok2sym_[tok])
+    , symbol_(tok2sym_[tok])
     , tag_(tok)
 {}
 
@@ -273,7 +273,7 @@ std::ostream& operator<<(std::ostream& os, const TokenTag& tag) { return os << T
 std::ostream& operator<<(std::ostream& os, const Token& tok) {
     const char* sym = tok.symbol().c_str();
     if (std::strcmp(sym, "") == 0)
-        return os << Symbol(*Token::tok2str_[tok.tag()]).c_str();
+        return os << Symbol(Token::tok2str_[tok.tag()]).c_str();
     else
         return os << sym;
 }
