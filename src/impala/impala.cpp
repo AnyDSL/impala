@@ -40,18 +40,23 @@ void PrecTable::init() {
 }
 
 /// Entry-point for the JIT in the runtime system.
-bool compile(const std::vector<std::string>& file_names, const std::vector<std::string>& file_data,
-             thorin::World& world, thorin::LogLevel log_level, std::shared_ptr<thorin::Stream> error_stream) {
-    static bool initalized = false;
-    if (!initalized) {
+bool compile(
+    const std::vector<std::string>& file_names,
+    const std::vector<std::string>& file_data,
+    thorin::World& world,
+    thorin::LogLevel log_level,
+    std::ostream& error_stream)
+{
+    static bool initialized = false;
+    if (!initialized) {
         impala::init();
-        initalized = true;
+        initialized = true;
     }
     impala::num_warnings() = 0;
     impala::num_errors()   = 0;
 
     world.set(log_level);
-    world.set(error_stream);
+    world.set(std::make_shared<thorin::Stream>(error_stream));
 
     impala::Items items;
     for (size_t n = file_names.size(), i = 0; i < n; ++i) {
