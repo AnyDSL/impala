@@ -332,9 +332,10 @@ void ExternBlock::emit_head(CodeGen& cg) const {
         auto continuation = fn_decl->continuation();
         if (abi() == "\"C\"")
             continuation->make_external();
-        else if (abi() == "\"device\"")
+        else if (abi() == "\"device\"") {
+            continuation->make_external();
             continuation->attributes().cc = thorin::CC::Device;
-        else if (abi() == "\"thorin\"" && continuation) // no continuation for primops
+        } else if (abi() == "\"thorin\"" && continuation) // no continuation for primops
             continuation->set_intrinsic();
     }
 }
