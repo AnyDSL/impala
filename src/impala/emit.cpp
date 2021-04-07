@@ -314,11 +314,11 @@ void FnDecl::emit_head(CodeGen& cg) const {
     // create thorin function
     def_ = fn_emit_head(cg, loc());
     if (is_extern() && abi() == "")
-        continuation_->make_exported();
+        continuation_->make_external();
 
     // handle main function
     if (symbol() == "main")
-        continuation()->make_exported();
+        continuation()->make_external();
 }
 
 void FnDecl::emit(CodeGen& cg) const {
@@ -331,7 +331,7 @@ void ExternBlock::emit_head(CodeGen& cg) const {
         fn_decl->emit_head(cg);
         auto continuation = fn_decl->continuation();
         if (abi() == "\"C\"")
-            continuation->make_imported();
+            continuation->make_external();
         else if (abi() == "\"device\"")
             continuation->attributes().cc = thorin::CC::Device;
         else if (abi() == "\"thorin\"" && continuation) // no continuation for primops
