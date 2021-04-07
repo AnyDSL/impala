@@ -4,9 +4,8 @@ type char = u8;
 type str = [char];
 
 extern "C" {
-    fn atoi(&str) -> int;
+    fn anydsl_memset(&mut i8, i32, u64) -> ();
     fn drand48() -> f64;
-    fn memset(&mut i8, i32, u64) -> ();
     fn sqrt(f64) -> f64;
     fn fabs(f64) -> f64;
     fn cos(f64) -> f64;
@@ -216,7 +215,7 @@ fn clamp(f: f64) -> u8 {
 
 fn render(img: &mut [u8], w: int, h: int, nsubsamples: int) -> () {
     let mut fimg = ~[w*h*3:f64];
-    memset(fimg as &mut i8, 0, (w*h*3*8) as u64);
+    anydsl_memset(fimg as &mut i8, 0, (w*h*3*8) as u64);
 
     for y in range(0, h) {
         for x in range(0, w) {
