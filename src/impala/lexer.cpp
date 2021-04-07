@@ -52,7 +52,7 @@ Token Lexer::lex() {
 
         loc_.begin.row = peek_.row;
         loc_.begin.col = peek_.col;
-        assert(loc_.begin.row != -1);
+        assert(loc_.begin.row != static_cast<uint32_t>(-1));
 
         // end of file
         if (accept(std::istream::traits_type::eof()))
