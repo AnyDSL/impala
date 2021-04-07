@@ -22,7 +22,8 @@ static inline bool sgn(int c){ return c == '+' || c == '-'; }
 
 Lexer::Lexer(std::istream& stream, const char* filename)
     : stream_(stream)
-    , loc_(filename, {1, 1}, {1, 1})
+    , loc_(filename, {1, 1})
+    , peek_({1, 1})
 {
     if (!stream_)
         throw std::runtime_error("stream is bad");
@@ -48,8 +49,10 @@ int Lexer::next() {
 Token Lexer::lex() {
     while (true) {
         std::string str; // the token string is concatenated here
+
         loc_.begin.row = peek_.row;
         loc_.begin.col = peek_.col;
+        assert(loc_.begin.row != -1);
 
         // end of file
         if (accept(std::istream::traits_type::eof()))
