@@ -4,7 +4,7 @@ type char = u8;
 type str = [char];
 
 extern "C" {
-    fn atoi(&str) -> int;
+    fn anydsl_atoi(&str) -> int;
     fn sqrt(f64) -> f64;
     fn print_f64(f64) -> ();
 }
@@ -111,7 +111,7 @@ fn offset_momentum(bodies: &mut [planet]) -> () {
 }
 
 fn main(argc: int, argv: &[&str]) -> int {
-    let n = if argc >= 2 { atoi(argv(1)) } else { 0 };
+    let n = if argc >= 2 { anydsl_atoi(argv(1)) } else { 0 };
     offset_momentum(&mut bodies);
     print_f64(energy(&bodies));
     for _ in range(0, n) {

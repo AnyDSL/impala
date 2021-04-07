@@ -3,14 +3,14 @@
 /* The Computer Language Benchmarks Game
  * http://benchmarksgame.alioth.debian.org/
  *
- * contributed by Bob W 
+ * contributed by Bob W
  */
 
 type char = u8;
 type str = [char];
 
 extern "C" {
-    fn atoi(&str) -> int;
+    fn anydsl_atoi(&str) -> int;
     fn printn(&[u8], int) -> ();
     fn print(&[u8]) -> ();
     fn println(&[u8]) -> ();
@@ -33,7 +33,7 @@ fn errex(s: &[u8]) -> () {            // error message+value, return 1
 static EXIT_FAILURE = 1;
 
 fn main(argc: int, argv: &[&str]) -> int {
-    let n = if argc >= 2 { atoi(argv(1)) } else { 0 };
+    let n = if argc >= 2 { anydsl_atoi(argv(1)) } else { 0 };
     let mut jjj: [u8*82];        // allocate input line buffer
     let mut qqq = ~[QBFSIZE: u8];   // output buffer (dyn. size)
     let mut pqstop = QBFSIZE;        // size of qqq
@@ -51,7 +51,7 @@ fn main(argc: int, argv: &[&str]) -> int {
                "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
                "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
                "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"; // char conversion table
-    
+
     let mut pj = read(&mut jjj, JBFSIZE) == 1;                 // fetch 1st line
 
     if (!pj) {
@@ -68,7 +68,7 @@ fn main(argc: int, argv: &[&str]) -> int {
 
         let mut pr = pqstop;
         let mut pq = 1;
-        
+
         while true {                    // LOOP: fill output buffer
             pj = read(&mut jjj, JBFSIZE) == 1;     // get line from stdin
             if !pj || (jjj(0) == '>') {
@@ -94,7 +94,7 @@ fn main(argc: int, argv: &[&str]) -> int {
                     qqq(--pr) = c;
                 }
             }
-            
+
             pq++;
         }
 

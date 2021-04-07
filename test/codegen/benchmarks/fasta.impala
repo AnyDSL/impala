@@ -5,7 +5,7 @@ type char = u8;
 type str = [char];
 
 extern "C" {
-    fn atoi(&str) -> int;
+    fn anydsl_atoi(&str) -> int;
     fn strlen(&str) -> u64;
     fn memcpy(&char, &char, u64) -> &str;
     fn write(&str,u64) -> ();
@@ -159,7 +159,7 @@ fn generate_And_Wrap_Pseudorandom_DNA_Sequence(
 }
 
 fn main(argc: int, argv: &[&str]) -> int {
-    let n = if argc >= 2 { atoi(argv(1)) } else { 0 };
+    let n = if argc >= 2 { anydsl_atoi(argv(1)) } else { 0 };
     println(">ONE Homo sapiens alu");
     let mut homo_Sapiens_Alu =
         "GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGGGAGGCCGAGGCGGGCGGATCACCTGAGGTC"

@@ -10,7 +10,7 @@ type char = u8;
 type str = [char];
 
 extern "C" {
-    fn atoi(&str) -> int;
+    fn anydsl_atoi(&str) -> int;
     fn println(&[u8]) -> ();
     fn printa(&[i8]) -> ();
     fn print_piece_mask(&[u64]) -> ();
@@ -630,7 +630,7 @@ fn pretty(b: &[i8]) -> () {
 }
 
 fn main(argc: int, argv: &[&str]) -> int {
-    let n = if argc >= 2 { atoi(argv(1)) } else { 0 };
+    let n = if argc >= 2 { anydsl_atoi(argv(1)) } else { 0 };
     max_solutions = n;
     calc_pieces();
     calc_rows();

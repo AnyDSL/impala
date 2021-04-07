@@ -134,6 +134,9 @@ int forty_two() {
     return 42;
 }
 
+int32_t anydsl_atoi(char* str) { return atoi(str); }
+void anydsl_memset(char* s, int32_t c, uint64_t n) { memset(s, c, n); }
+
 #ifdef __cplusplus
 }
 #endif
@@ -147,8 +150,8 @@ static std::mt19937_64 std_gen64;
 static std::uniform_real_distribution<double> std_dist64(0., 1.);
 extern "C" void srand48(int64_t seed) { std_gen64.seed(seed); }
 extern "C" double drand48() { return std_dist64(std_gen64); }
-
 static std::uniform_int_distribution<int64_t> std_disti64(-(1 << 31), 1 << 31);
 extern "C" int64_t mrand48() { return std_disti64(std_gen64); }
+
 
 #endif // _MSC_VER
