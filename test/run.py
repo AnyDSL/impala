@@ -185,12 +185,14 @@ def analyze_returncode(returncode):
 def run_tests():
     def worker(testsuit):
         def run_test():
-            test_path = test.path
-            test_name = test.name
-            tmp_log   = test_name +'.tmp.log'
-            tmp_exe   = test_name
-            tmp_ll    = test_name + '.ll'
-            tmp_out   = test_name + '.tmp.out'
+            test_path  = test.path
+            test_name  = test.name
+            tmp_log    = test_name +'.tmp.log'
+            tmp_exe_c  = test_name + '_c'
+            tmp_exe_ll = test_name + '_ll'
+            tmp_c      = test_name + '.c'
+            tmp_ll     = test_name + '.ll'
+            tmp_out    = test_name + '.tmp.out'
 
             def run_codegen_test():
                 def create_logfile():
@@ -209,7 +211,7 @@ def run_tests():
                 tmp_log_file = open(tmp_log, 'w')
 
                 # invoke impala
-                cmd_impala = [args.impala,orig_impala, '-emit-llvm', '-O2', '-log-level', 'warn']
+                cmd_impala = [args.impala,orig_impala, '-emit-llvm', '-emit-c', '-O2', '-log-level', 'warn']
 
                 try:
                     p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.impala_timeout)
@@ -225,67 +227,75 @@ def run_tests():
                     error += 'impala ' + msg
                     return (IMPALA_FAILED, error)
 
-                # invoke clang
-                try:
-                    cmd_clang = [args.clang, tmp_ll, 'rtmock.cpp', '-o', tmp_exe]
-                    cmd_clang.extend(clang_args)
-                    p = subprocess.run(cmd_clang, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.clang_timeout)
-                except subprocess.TimeoutExpired as timeout:
-                    error += 'clang time out'
-                    return (CLANG_TIMEOUT, error)
-                except:
-                    error += 'clang failed'
-                    return (CLANG_FAILED, error)
+                # invoke clang for c/ll
+                for ext in ['c', 'll']:
+                    try:
+                        cmd_clang = [args.clang, test_name + '.' + ext, 'rtmock.cpp', '-o', test_name + '_' + ext]
+                        cmd_clang.extend(clang_args)
+                        p = subprocess.run(cmd_clang, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.clang_timeout)
+                    except subprocess.TimeoutExpired as timeout:
+                        error += ext + ': clang time out'
+                        return (CLANG_TIMEOUT, error)
+                    except:
+                        error += ext + ': clang failed'
+                        return (CLANG_FAILED, error)
+
+                    (passed, msg) = analyze_returncode(p.returncode)
+                    if not passed:
+                        error += ext + ': clang ' + msg
+                        return (CLANG_FAILED, error)
 
                 tmp_log_file.close()
 
-                # execute
-                cmd_exec = ['./' + tmp_exe]
-                cmd_exec.extend(exec_args)
-                try:
-                    orig_in_file = open(orig_in)
-                except:
-                    orig_in_file = None
-                tmp_out_file = open(tmp_out, 'w')
-
-                try:
-                    p = subprocess.run(cmd_exec, stdin = orig_in_file, stdout=tmp_out_file, timeout=args.run_timeout)
-                except subprocess.TimeoutExpired as timeout:
-                    error += 'execution time out'
-                    return (RUN_TIMEOUT, error)
-                except:
-                    error += 'execution failed'
-                    return (RUN_FAILED, error)
-                tmp_out_file.close()
-
-                (passed, msg) = analyze_returncode(p.returncode)
-                if not passed:
-                    error += 'execution ' + msg
-                    return (RUN_FAILED, error)
-
-                # log file
-                if (args.logfile):
-                    create_logfile()
-
-                if not compare_files(tmp_log, orig_log):
-                    error += 'log files differed'
-                    return (LOG_DIFFER, error)
-
-                # out file
-                if not compare_files(tmp_out, orig_out):
-                    error += 'outputs did not match:\n'
+                for ext in ['c', 'll']:
+                    # execute
+                    cmd_exec = ['./' + test_name + '_' + ext]
+                    cmd_exec.extend(exec_args)
                     try:
-                        with open(orig_out) as orig_out_file:
-                            orig_lines = orig_out_file.readlines()
-                        with open(tmp_out) as tmp_out_file:
-                            tmp_lines = tmp_out_file.readlines()
+                        orig_in_file = open(orig_in)
                     except:
-                        error += '(this is a binary output)'
+                        orig_in_file = None
+                    tmp_out_file = open(tmp_out, 'w')
+
+                    try:
+                        p = subprocess.run(cmd_exec, stdin = orig_in_file, stdout=tmp_out_file, timeout=args.run_timeout)
+                    except subprocess.TimeoutExpired as timeout:
+                        error += ext + ': execution time out'
+                        return (RUN_TIMEOUT, error)
+                    except:
+                        error += ext + ': execution failed'
                         return (RUN_FAILED, error)
 
-                    diff = difflib.context_diff(orig_lines, tmp_lines, fromfile=orig_log, tofile=tmp_log)
-                    error += 'outputs differ:\n' + ''.join(list(diff))
-                    return (RUN_FAILED, error)
+                    tmp_out_file.close()
+
+                    (passed, msg) = analyze_returncode(p.returncode)
+                    if not passed:
+                        error += ext + ': execution ' + msg
+                        return (RUN_FAILED, error)
+
+                    # log file
+                    if (args.logfile):
+                        create_logfile()
+
+                    if not compare_files(tmp_log, orig_log):
+                        error += ext + ': log files differed'
+                        return (LOG_DIFFER, error)
+
+                    # out file
+                    if not compare_files(tmp_out, orig_out):
+                        error += ext + ': outputs did not match:\n'
+                        try:
+                            with open(orig_out) as orig_out_file:
+                                orig_lines = orig_out_file.readlines()
+                            with open(tmp_out) as tmp_out_file:
+                                tmp_lines = tmp_out_file.readlines()
+                        except:
+                            error += '(this is a binary output)'
+                            return (RUN_FAILED, error)
+
+                        diff = difflib.context_diff(orig_lines, tmp_lines, fromfile=orig_log, tofile=tmp_log)
+                        error += ext + ': outputs differ:\n' + ''.join(list(diff))
+                        return (RUN_FAILED, error)
 
                 return (PASSED, '')
 
@@ -302,10 +312,12 @@ def run_tests():
 
             # remove tmp files
             if not args.noclean_up:
+                subprocess.run(['rm', '-f', tmp_c ])
                 subprocess.run(['rm', '-f', tmp_ll])
                 subprocess.run(['rm', '-f', tmp_out])
                 subprocess.run(['rm', '-f', tmp_log])
-                subprocess.run(['rm', '-f', tmp_exe])
+                subprocess.run(['rm', '-f', tmp_exe_c ])
+                subprocess.run(['rm', '-f', tmp_exe_ll])
 
         # worker
         global job_counter
