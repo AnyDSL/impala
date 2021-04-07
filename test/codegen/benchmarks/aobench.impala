@@ -1,6 +1,6 @@
 // codegen -lm
 
-type char = u8;
+type char = i8;
 type str = [char];
 
 extern "C" {
