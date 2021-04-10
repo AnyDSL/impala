@@ -223,16 +223,15 @@ def run_tests():
 
                 # invoke impala
                 for ext in exts(args):
-                    cmd_impala = [args.impala,orig_impala, '-emit-c' if ext == 'c' else '-emit-llvm', '-O2', '-log-level', 'warn']
-
-                try:
-                    p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.impala_timeout)
-                except subprocess.TimeoutExpired as timeout:
-                    error += 'impala time out'
-                    return (IMPALA_TIMEOUT, error)
-                except:
-                    error += 'impala failed'
-                    return (IMPALA_FAILED, error)
+                    try:
+                        cmd_impala = [args.impala,orig_impala, '-emit-c' if ext == 'c' else '-emit-llvm', '-O2', '-log-level', 'warn']
+                        p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.impala_timeout)
+                    except subprocess.TimeoutExpired as timeout:
+                        error += 'impala time out'
+                        return (IMPALA_TIMEOUT, error)
+                    except:
+                        error += 'impala failed'
+                        return (IMPALA_FAILED, error)
 
                 (passed, msg) = analyze_returncode(p.returncode)
                 if not passed:
