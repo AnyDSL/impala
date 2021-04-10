@@ -28,6 +28,16 @@ POSITIVE = [PASSED]
 NEGATIVE = [CLANG_FAILED, IMPALA_FAILED, RUN_FAILED, OUTPUT_DIFFER, LOG_DIFFER]
 TIMEOUT = [CLANG_TIMEOUT, IMPALA_TIMEOUT, RUN_TIMEOUT]
 
+def exts(args):
+    if args.extensions == 'c':
+        return ['c']
+    if args.extensions == 'l':
+        return ['ll']
+    if args.extensions == 'cl':
+        return ['c', 'll']
+    if args.extensions == 'lc':
+        return ['ll', 'c']
+
 class test:
     name=''
     path=''
@@ -57,16 +67,17 @@ class test:
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('path', nargs='+',          help='path to test  or test directory',      default='./', type=str)
-    parser.add_argument('-c',  '--clang',           help='path to clang binary',                 default=None, type=str)
-    parser.add_argument('-i',  '--impala',          help='path to impala binary',                default=None, type=str)
-    parser.add_argument('-it', '--impala-timeout',  help='timeout for compiling impala ',        default=5,    type=int)
-    parser.add_argument('-ct', '--clang-timeout',   help='timeout for compiling  clang',         default=5,    type=int)
-    parser.add_argument('-rt', '--run-timeout',     help='timeout for running binary',           default=10,   type=int)
-    parser.add_argument('-j', '--concurrency',      help='numbers of threads to use',            default=1,    type=int)
-    parser.add_argument('-b',  '--broken',          help='also run broken tests',                default=False, action='store_true', dest='broken')
-    parser.add_argument('-n',  '--no-clean_up',     help='keep log files after test run',        default=False, action='store_true', dest='noclean_up')
-    parser.add_argument('-l',  '--logfile',         help='create non existing logfiles',         default=False, action='store_true', dest='logfile')
+    parser.add_argument('path', nargs='+',          help='path to test  or test directory',     default='./', type=str)
+    parser.add_argument('-e',  '--extensions',      help='select backend: {c|l|cl|lc}',         default='cl', type=str)
+    parser.add_argument('-c',  '--clang',           help='path to clang binary',                default=None, type=str)
+    parser.add_argument('-i',  '--impala',          help='path to impala binary',               default=None, type=str)
+    parser.add_argument('-it', '--impala-timeout',  help='timeout for compiling impala ',       default=5,    type=int)
+    parser.add_argument('-ct', '--clang-timeout',   help='timeout for compiling  clang',        default=5,    type=int)
+    parser.add_argument('-rt', '--run-timeout',     help='timeout for running binary',          default=10,   type=int)
+    parser.add_argument('-j', '--concurrency',      help='numbers of threads to use',           default=1,    type=int)
+    parser.add_argument('-b',  '--broken',          help='also run broken tests',               default=False, action='store_true', dest='broken')
+    parser.add_argument('-n',  '--no-clean_up',     help='keep log files after test run',       default=False, action='store_true', dest='noclean_up')
+    parser.add_argument('-l',  '--logfile',         help='create non existing logfiles',        default=False, action='store_true', dest='logfile')
     args = parser.parse_args()
     return args
 
@@ -211,7 +222,8 @@ def run_tests():
                 tmp_log_file = open(tmp_log, 'w')
 
                 # invoke impala
-                cmd_impala = [args.impala,orig_impala, '-emit-llvm', '-emit-c', '-O2', '-log-level', 'warn']
+                for ext in exts(args):
+                    cmd_impala = [args.impala,orig_impala, '-emit-c' if ext == 'c' else '-emit-llvm', '-O2', '-log-level', 'warn']
 
                 try:
                     p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.impala_timeout)
@@ -228,7 +240,7 @@ def run_tests():
                     return (IMPALA_FAILED, error)
 
                 # invoke clang for c/ll
-                for ext in ['c', 'll']:
+                for ext in exts(args):
                     try:
                         cmd_clang = [args.clang, test_name + '.' + ext, 'rtmock.cpp', '-o', test_name + '_' + ext]
                         cmd_clang.extend(clang_args)
@@ -247,7 +259,7 @@ def run_tests():
 
                 tmp_log_file.close()
 
-                for ext in ['c', 'll']:
+                for ext in exts(args):
                     # execute
                     cmd_exec = ['./' + test_name + '_' + ext]
                     cmd_exec.extend(exec_args)
@@ -367,7 +379,7 @@ def run_tests():
     sys.stdout.write('>>> Time out: {}\n'.format(total_timeout_counter))
     sys.stdout.write('>>> Failed:   {}\n'.format(total_failed_counter))
 
-args =  parse_args()
+args = parse_args()
 
 impala = find_impala()
 args.impala = impala
