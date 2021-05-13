@@ -11,6 +11,9 @@
 
 namespace impala {
 
+using thorin::hash_t;
+using thorin::Stream;
+
 enum Tag {
 #define IMPALA_TYPE(itype, atype) Tag_##itype,
 #include "impala/tokenlist.h"
@@ -44,12 +47,10 @@ enum PrimTypeTag {
 //------------------------------------------------------------------------------
 
 class TypeTable;
-using Type = thorin::TypeBase<TypeTable>;
+using Type = TypeBase<TypeTable>;
 
 class StructDecl;
 class EnumDecl;
-template<class T> using ArrayRef = thorin::ArrayRef<T>;
-template<class T> using Array    = thorin::Array<T>;
 
 template<class T>
 using TypeMap   = thorin::GIDMap<const Type*, T>;
@@ -69,10 +70,8 @@ private:
 public:
     PrimTypeTag primtype_tag() const { return (PrimTypeTag) tag(); }
 
-    virtual std::ostream& stream(std::ostream&) const override;
-
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
@@ -92,7 +91,7 @@ bool is_strict_subtype(const Type* dst, const Type* src);
 /// Common base Type for PtrType%s and RefType.
 class RefTypeBase : public Type {
 protected:
-    RefTypeBase(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
+    RefTypeBase(TypeTable& typetable, int tag, const Type* pointee, bool mut, uint64_t addr_space)
         : Type(typetable, tag, {pointee})
         , mut_(mut)
         , addr_space_(addr_space)
@@ -101,16 +100,15 @@ protected:
 public:
     const Type* pointee() const { return op(0); }
     bool is_mut() const { return mut_; }
-    int addr_space() const { return addr_space_; }
+    uint64_t addr_space() const { return addr_space_; }
 
-    virtual std::ostream& stream(std::ostream&) const override;
-    virtual uint64_t vhash() const override;
-    virtual bool equal(const Type* other) const override;
+    hash_t vhash() const override;
+    bool equal(const Type* other) const override;
     virtual std::string prefix() const = 0;
 
 private:
     bool mut_;
-    int addr_space_;
+    uint64_t addr_space_;
 
     friend class TypeTable;
 };
@@ -118,53 +116,51 @@ private:
 /// Pointer @p Type.
 class PtrType : public RefTypeBase {
 protected:
-    PtrType(TypeTable& typetable, int tag, const Type* pointee, bool mut, int addr_space)
+    PtrType(TypeTable& typetable, int tag, const Type* pointee, bool mut, uint64_t addr_space)
         : RefTypeBase(typetable, tag, pointee, mut, addr_space)
     {}
 
-    std::ostream& stream_ptr_type(std::ostream&, std::string prefix, int addr_space, const Type* ref_type) const;
-
 private:
-    int addr_space_;
+    uint64_t addr_space_;
 
     friend class TypeTable;
 };
 
 class BorrowedPtrType : public PtrType {
 public:
-    BorrowedPtrType(TypeTable& typetable, const Type* pointee, bool mut, int addr_space)
+    BorrowedPtrType(TypeTable& typetable, const Type* pointee, bool mut, uint64_t addr_space)
         : PtrType(typetable, Tag_borrowed_ptr, pointee, mut, addr_space)
     {}
 
-    virtual std::string prefix() const override { return is_mut() ? "&mut " : "&"; }
+    std::string prefix() const override { return is_mut() ? "&mut " : "&"; }
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 };
 
 class OwnedPtrType : public PtrType {
 public:
-    OwnedPtrType(TypeTable& typetable, const Type* pointee, int addr_space)
+    OwnedPtrType(TypeTable& typetable, const Type* pointee, uint64_t addr_space)
         : PtrType(typetable, Tag_owned_ptr, pointee, true, addr_space)
     {}
 
-    virtual std::string prefix() const override { return "~"; }
+    std::string prefix() const override { return "~"; }
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 };
 
 class RefType : public RefTypeBase {
 protected:
-    RefType(TypeTable& typetable, const Type* pointee, bool mut, int addr_space)
+    RefType(TypeTable& typetable, const Type* pointee, bool mut, uint64_t addr_space)
         : RefTypeBase(typetable, Tag_ref, pointee, mut, addr_space)
     {}
 
 public:
-    virtual std::string prefix() const override { return is_mut() ? "lvalue of " : "reference of "; }
+    std::string prefix() const override { return is_mut() ? "lvalue of " : "reference of "; }
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
@@ -202,15 +198,15 @@ private:
     }
 
 public:
+    const Type* domain() const { return op(0); }
     const Type* param(size_t) const;
     size_t num_params() const;
     const Type* last_param() const;
     const Type* return_type() const;
     bool is_returning() const;
-    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
@@ -227,11 +223,10 @@ private:
 public:
     const char* name() const { return name_; }
     const Type* body() const { return op(0); }
-    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
+    const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     const char* name_;
 
@@ -249,13 +244,12 @@ private:
 
 public:
     int depth() const { return depth_; }
-    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual uint64_t vhash() const override;
-    virtual bool equal(const Type*) const override;
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
+    hash_t vhash() const override;
+    bool equal(const Type*) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
+    const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     int depth_;
 
@@ -271,10 +265,9 @@ private:
 public:
     const Type* callee() const { return Type::op(0); }
     const Type* arg() const { return Type::op(1); }
-    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
 
     mutable const Type* cache_ = nullptr;
 
@@ -290,8 +283,7 @@ private:
     {}
 
 public:
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
-    virtual std::ostream& stream(std::ostream&) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
 
     friend class TypeTable;
 };
@@ -310,9 +302,8 @@ public:
     void set(size_t i, const Type* type) const { return const_cast<StructType*>(this)->Type::set(i, type); }
 
 private:
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
-    virtual std::ostream& stream(std::ostream&) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
+    const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     const StructDecl* decl_;
 
@@ -333,9 +324,8 @@ public:
     void set(size_t i, const Type* type) const { return const_cast<EnumType*>(this)->Type::set(i, type); }
 
 private:
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
-    virtual const Type* vreduce(int, const Type*, Type2Type&) const override;
-    virtual std::ostream& stream(std::ostream&) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
+    const Type* vreduce(int, const Type*, Type2Type&) const override;
 
     const EnumDecl* decl_;
 
@@ -360,10 +350,8 @@ public:
         : ArrayType(typetable, Tag_indefinite_array, elem_type)
     {}
 
-    virtual std::ostream& stream(std::ostream&) const override;
-
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
@@ -376,15 +364,13 @@ public:
     {}
 
     uint64_t dim() const { return dim_; }
-    virtual uint64_t vhash() const override { return thorin::hash_combine(Type::vhash(), dim()); }
-    virtual bool equal(const Type* other) const override {
+    hash_t vhash() const override { return thorin::hash_combine(Type::vhash(), dim()); }
+    bool equal(const Type* other) const override {
         return Type::equal(other) && this->dim() == other->as<DefiniteArrayType>()->dim();
     }
 
-    virtual std::ostream& stream(std::ostream&) const override;
-
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     uint64_t dim_;
 
@@ -399,15 +385,13 @@ public:
     {}
 
     uint64_t dim() const { return dim_; }
-    virtual uint64_t vhash() const override { return thorin::hash_combine(Type::vhash(), dim()); }
-    virtual bool equal(const Type* other) const override {
+    hash_t vhash() const override { return thorin::hash_combine(Type::vhash(), dim()); }
+    bool equal(const Type* other) const override {
         return Type::equal(other) && this->dim() == other->as<SimdType>()->dim();
     }
 
-    virtual std::ostream& stream(std::ostream&) const override;
-
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     uint64_t dim_;
 
@@ -420,11 +404,7 @@ private:
         : Type(typetable, Tag_noret, {})
     {}
 
-public:
-    virtual std::ostream& stream(std::ostream&) const override;
-
-private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
@@ -437,13 +417,9 @@ private:
         known_ = false;
     }
 
-public:
-    virtual std::ostream& stream(std::ostream&) const override;
-
-private:
-    virtual bool equal(const Type*) const override;
-    virtual uint64_t vhash() const override { return this->gid(); }
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    bool equal(const Type*) const override;
+    hash_t vhash() const override { return this->gid(); }
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
@@ -454,11 +430,7 @@ private:
         : Type(table, Tag_error, {})
     {}
 
-public:
-    virtual std::ostream& stream(std::ostream&) const override;
-
-private:
-    virtual const Type* vrebuild(TypeTable& to, Types ops) const override;
+    const Type* vrebuild(TypeTable& to, Types ops) const override;
 
     friend class TypeTable;
 };
@@ -471,10 +443,9 @@ class InferError : public Type {
 public:
     const Type* dst() const { return op(0); }
     const Type* src() const { return op(1); }
-    virtual std::ostream& stream(std::ostream&) const override;
 
 private:
-    virtual const Type* vrebuild(TypeTable&, Types) const override;
+    const Type* vrebuild(TypeTable&, Types) const override;
 
     friend class TypeTable;
 };
@@ -489,7 +460,7 @@ inline bool is_unit(const Type* t) {
 
 //------------------------------------------------------------------------------
 
-class TypeTable : public thorin::TypeTableBase<Type> {
+class TypeTable : public TypeTableBase<Type> {
 public:
     TypeTable();
 
@@ -514,13 +485,13 @@ public:
         return unify(new IndefiniteArrayType(*this, elem_type));
     }
     const SimdType* simd_type(const Type* elem_type, uint64_t size) { return unify(new SimdType(*this, elem_type, size)); }
-    const BorrowedPtrType* borrowed_ptr_type(const Type* pointee, bool mut, int addr_space) {
+    const BorrowedPtrType* borrowed_ptr_type(const Type* pointee, bool mut, uint64_t addr_space) {
         return unify(new BorrowedPtrType(*this, pointee, mut, addr_space));
     }
-    const OwnedPtrType* owned_ptr_type(const Type* pointee, int addr_space) {
+    const OwnedPtrType* owned_ptr_type(const Type* pointee, uint64_t addr_space) {
         return unify(new OwnedPtrType(*this, pointee, addr_space));
     }
-    const RefType* ref_type(const Type* pointee, bool mut, int addr_space) {
+    const RefType* ref_type(const Type* pointee, bool mut, uint64_t addr_space) {
         return unify(new RefType(*this, pointee, mut, addr_space));
     }
     const NoRetType* type_noret() { return type_noret_; }

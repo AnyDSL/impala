@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "thorin/world.h"
-#include "thorin/util/location.h"
 #include "thorin/util/stream.h"
 
 #include "impala/token.h"
@@ -24,9 +23,9 @@ void init();
 void parse(Items&, std::istream&, const char*);
 void name_analysis(const Module*);
 void type_inference(std::unique_ptr<TypeTable>& typetable, const Module*);
-void type_analysis(const Module*, bool nossa);
+void type_analysis(const Module*);
 //void borrow_check(const ModContents*);
-void check(std::unique_ptr<TypeTable>& typetable, const Module*, bool nossa);
+void check(std::unique_ptr<TypeTable>& typetable, const Module*);
 void emit(thorin::World&, const Module*);
 
 enum class Prec {
@@ -56,19 +55,43 @@ int& num_warnings();
 int& num_errors();
 bool& fancy();
 
-template<typename... Args>
-std::ostream& warning(const thorin::Location& loc, const char* fmt, Args... args) {
+template<class... Args>
+void warning(const Loc& loc, const char* fmt, Args... args) {
     ++num_warnings();
-    thorin::streamf(std::cerr, "{}: warning: ", loc);
-    return thorin::streamf(std::cerr, fmt, args...) << std::endl;
+    Stream s(std::cerr);
+    s.fmt("{}: warning: ", loc).fmt(fmt, std::forward<Args>(args)...).endl();
 }
 
-template<typename... Args>
-std::ostream& error(const thorin::Location& loc, const char* fmt, Args... args) {
+template<class... Args>
+void error(const Loc& loc, const char* fmt, Args... args) {
     ++num_errors();
-    thorin::streamf(std::cerr, "{}: error: ", loc);
-    return thorin::streamf(std::cerr, fmt, args...) << std::endl;
+    Stream s(std::cerr);
+    s.fmt("{}: error: ", loc).fmt(fmt, std::forward<Args>(args)...).endl();
 }
+
+template<class T>
+struct Push {
+    Push(T& t, T new_val)
+        : old_(t)
+        , ref_(t)
+    {
+        t = new_val;
+    }
+    ~Push() { ref_ = old_; }
+
+private:
+    T old_;
+    T& ref_;
+};
+
+template<class T, class U>
+inline Push<T> push(T& t, U new_val) { return Push<T>(t, new_val); }
+
+#define THORIN_LNAME__(name, line) name##__##line
+#define THORIN_LNAME_(name, line)  THORIN_LNAME__(name, line)
+#define THORIN_LNAME(name)         THORIN_LNAME_(name, __LINE__)
+
+#define THORIN_PUSH(what, with) auto THORIN_LNAME(thorin_push) = push((what), (with))
 
 }
 

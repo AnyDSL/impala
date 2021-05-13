@@ -28,6 +28,16 @@ POSITIVE = [PASSED]
 NEGATIVE = [CLANG_FAILED, IMPALA_FAILED, RUN_FAILED, OUTPUT_DIFFER, LOG_DIFFER]
 TIMEOUT = [CLANG_TIMEOUT, IMPALA_TIMEOUT, RUN_TIMEOUT]
 
+def exts(args):
+    if args.extensions == 'c':
+        return ['c']
+    if args.extensions == 'l':
+        return ['ll']
+    if args.extensions == 'cl':
+        return ['c', 'll']
+    if args.extensions == 'lc':
+        return ['ll', 'c']
+
 class test:
     name=''
     path=''
@@ -57,16 +67,17 @@ class test:
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('path', nargs='+',          help='path to test  or test directory',      default='./', type=str)
-    parser.add_argument('-c',  '--clang',           help='path to clang binary',                 default=None, type=str)
-    parser.add_argument('-i',  '--impala',          help='path to impala binary',                default=None, type=str)
-    parser.add_argument('-it', '--impala-timeout',  help='timeout for compiling impala ',        default=5,    type=int)
-    parser.add_argument('-ct', '--clang-timeout',   help='timeout for compiling  clang',         default=5,    type=int)
-    parser.add_argument('-rt', '--run-timeout',     help='timeout for running binary',           default=10,   type=int)
-    parser.add_argument('-j', '--concurrency',      help='numbers of threads to use',            default=1,    type=int)
-    parser.add_argument('-b',  '--broken',          help='also run broken tests',                default=False, action='store_true', dest='broken')
-    parser.add_argument('-n',  '--no-clean_up',     help='keep log files after test run',        default=False, action='store_true', dest='noclean_up')
-    parser.add_argument('-l',  '--logfile',         help='create non existing logfiles',         default=False, action='store_true', dest='logfile')
+    parser.add_argument('path', nargs='+',          help='path to test  or test directory',     default='./', type=str)
+    parser.add_argument('-e',  '--extensions',      help='select backend: {c|l|cl|lc}',         default='cl', type=str)
+    parser.add_argument('-c',  '--clang',           help='path to clang binary',                default=None, type=str)
+    parser.add_argument('-i',  '--impala',          help='path to impala binary',               default=None, type=str)
+    parser.add_argument('-it', '--impala-timeout',  help='timeout for compiling impala ',       default=5,    type=int)
+    parser.add_argument('-ct', '--clang-timeout',   help='timeout for compiling  clang',        default=5,    type=int)
+    parser.add_argument('-rt', '--run-timeout',     help='timeout for running binary',          default=10,   type=int)
+    parser.add_argument('-j', '--concurrency',      help='numbers of threads to use',           default=1,    type=int)
+    parser.add_argument('-b',  '--broken',          help='also run broken tests',               default=False, action='store_true', dest='broken')
+    parser.add_argument('-n',  '--no-clean_up',     help='keep log files after test run',       default=False, action='store_true', dest='noclean_up')
+    parser.add_argument('-l',  '--logfile',         help='create non existing logfiles',        default=False, action='store_true', dest='logfile')
     args = parser.parse_args()
     return args
 
@@ -185,12 +196,14 @@ def analyze_returncode(returncode):
 def run_tests():
     def worker(testsuit):
         def run_test():
-            test_path = test.path
-            test_name = test.name
-            tmp_log   = test_name +'.tmp.log'
-            tmp_exe   = test_name
-            tmp_ll    = test_name + '.ll'
-            tmp_out   = test_name + '.tmp.out'
+            test_path  = test.path
+            test_name  = test.name
+            tmp_log    = test_name +'.tmp.log'
+            tmp_exe_c  = test_name + '_c'
+            tmp_exe_ll = test_name + '_ll'
+            tmp_c      = test_name + '.c'
+            tmp_ll     = test_name + '.ll'
+            tmp_out    = test_name + '.tmp.out'
 
             def run_codegen_test():
                 def create_logfile():
@@ -209,83 +222,91 @@ def run_tests():
                 tmp_log_file = open(tmp_log, 'w')
 
                 # invoke impala
-                cmd_impala = [args.impala,orig_impala, '-emit-llvm', '-O2', '-log-level', 'warn']
-
-                try:
-                    p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.impala_timeout)
-                except subprocess.TimeoutExpired as timeout:
-                    error += 'impala time out'
-                    return (IMPALA_TIMEOUT, error)
-                except:
-                    error += 'impala failed'
-                    return (IMPALA_FAILED, error)
+                for ext in exts(args):
+                    try:
+                        cmd_impala = [args.impala,orig_impala, '-emit-c' if ext == 'c' else '-emit-llvm', '-O2', '-log-level', 'warn']
+                        p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.impala_timeout)
+                    except subprocess.TimeoutExpired as timeout:
+                        error += 'impala time out'
+                        return (IMPALA_TIMEOUT, error)
+                    except:
+                        error += 'impala failed'
+                        return (IMPALA_FAILED, error)
 
                 (passed, msg) = analyze_returncode(p.returncode)
                 if not passed:
                     error += 'impala ' + msg
                     return (IMPALA_FAILED, error)
 
-                # invoke clang
-                try:
-                    cmd_clang = [args.clang, tmp_ll, 'rtmock.cpp', '-o', tmp_exe]
-                    cmd_clang.extend(clang_args)
-                    p = subprocess.run(cmd_clang, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.clang_timeout)
-                except subprocess.TimeoutExpired as timeout:
-                    error += 'clang time out'
-                    return (CLANG_TIMEOUT, error)
-                except:
-                    error += 'clang failed'
-                    return (CLANG_FAILED, error)
+                # invoke clang for c/ll
+                for ext in exts(args):
+                    try:
+                        cmd_clang = [args.clang, test_name + '.' + ext, 'rtmock.cpp', '-o', test_name + '_' + ext]
+                        cmd_clang.extend(clang_args)
+                        p = subprocess.run(cmd_clang, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.clang_timeout)
+                    except subprocess.TimeoutExpired as timeout:
+                        error += ext + ': clang time out'
+                        return (CLANG_TIMEOUT, error)
+                    except:
+                        error += ext + ': clang failed'
+                        return (CLANG_FAILED, error)
+
+                    (passed, msg) = analyze_returncode(p.returncode)
+                    if not passed:
+                        error += ext + ': clang ' + msg
+                        return (CLANG_FAILED, error)
 
                 tmp_log_file.close()
 
-                # execute
-                cmd_exec = ['./' + tmp_exe]
-                cmd_exec.extend(exec_args)
-                try:
-                    orig_in_file = open(orig_in)
-                except:
-                    orig_in_file = None
-                tmp_out_file = open(tmp_out, 'w')
-
-                try:
-                    p = subprocess.run(cmd_exec, stdin = orig_in_file, stdout=tmp_out_file, timeout=args.run_timeout)
-                except subprocess.TimeoutExpired as timeout:
-                    error += 'execution time out'
-                    return (RUN_TIMEOUT, error)
-                except:
-                    error += 'execution failed'
-                    return (RUN_FAILED, error)
-                tmp_out_file.close()
-
-                (passed, msg) = analyze_returncode(p.returncode)
-                if not passed:
-                    error += 'execution ' + msg
-                    return (RUN_FAILED, error)
-
-                # log file
-                if (args.logfile):
-                    create_logfile()
-
-                if not compare_files(tmp_log, orig_log):
-                    error += 'log files differed'
-                    return (LOG_DIFFER, error)
-
-                # out file
-                if not compare_files(tmp_out, orig_out):
-                    error += 'outputs did not match:\n'
+                for ext in exts(args):
+                    # execute
+                    cmd_exec = ['./' + test_name + '_' + ext]
+                    cmd_exec.extend(exec_args)
                     try:
-                        with open(orig_out) as orig_out_file:
-                            orig_lines = orig_out_file.readlines()
-                        with open(tmp_out) as tmp_out_file:
-                            tmp_lines = tmp_out_file.readlines()
+                        orig_in_file = open(orig_in)
                     except:
-                        error += '(this is a binary output)'
+                        orig_in_file = None
+                    tmp_out_file = open(tmp_out, 'w')
+
+                    try:
+                        p = subprocess.run(cmd_exec, stdin = orig_in_file, stdout=tmp_out_file, timeout=args.run_timeout)
+                    except subprocess.TimeoutExpired as timeout:
+                        error += ext + ': execution time out'
+                        return (RUN_TIMEOUT, error)
+                    except:
+                        error += ext + ': execution failed'
                         return (RUN_FAILED, error)
 
-                    diff = difflib.context_diff(orig_lines, tmp_lines, fromfile=orig_log, tofile=tmp_log)
-                    error += 'outputs differ:\n' + ''.join(list(diff))
-                    return (RUN_FAILED, error)
+                    tmp_out_file.close()
+
+                    (passed, msg) = analyze_returncode(p.returncode)
+                    if not passed:
+                        error += ext + ': execution ' + msg
+                        return (RUN_FAILED, error)
+
+                    # log file
+                    if (args.logfile):
+                        create_logfile()
+
+                    if not compare_files(tmp_log, orig_log):
+                        error += ext + ': log files differed'
+                        return (LOG_DIFFER, error)
+
+                    # out file
+                    if not compare_files(tmp_out, orig_out):
+                        error += ext + ': outputs did not match:\n'
+                        try:
+                            with open(orig_out) as orig_out_file:
+                                orig_lines = orig_out_file.readlines()
+                            with open(tmp_out) as tmp_out_file:
+                                tmp_lines = tmp_out_file.readlines()
+                        except:
+                            error += '(this is a binary output)'
+                            return (RUN_FAILED, error)
+
+                        diff = difflib.context_diff(orig_lines, tmp_lines, fromfile=orig_log, tofile=tmp_log)
+                        error += ext + ': outputs differ:\n' + ''.join(list(diff))
+                        return (RUN_FAILED, error)
 
                 return (PASSED, '')
 
@@ -302,10 +323,12 @@ def run_tests():
 
             # remove tmp files
             if not args.noclean_up:
+                subprocess.run(['rm', '-f', tmp_c ])
                 subprocess.run(['rm', '-f', tmp_ll])
                 subprocess.run(['rm', '-f', tmp_out])
                 subprocess.run(['rm', '-f', tmp_log])
-                subprocess.run(['rm', '-f', tmp_exe])
+                subprocess.run(['rm', '-f', tmp_exe_c ])
+                subprocess.run(['rm', '-f', tmp_exe_ll])
 
         # worker
         global job_counter
@@ -355,7 +378,7 @@ def run_tests():
     sys.stdout.write('>>> Time out: {}\n'.format(total_timeout_counter))
     sys.stdout.write('>>> Failed:   {}\n'.format(total_failed_counter))
 
-args =  parse_args()
+args = parse_args()
 
 impala = find_impala()
 args.impala = impala

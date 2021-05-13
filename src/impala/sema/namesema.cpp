@@ -56,10 +56,10 @@ const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
     assert(!symbol.empty() && "symbol is empty");
 
     if (!symbol.is_anonymous()) {
-        auto decl = thorin::find(symbol2decl_, symbol);
-        if (decl == nullptr)
+        auto decl = symbol2decl_.lookup(symbol);
+        if (!decl)
             error(n, "'{}' not found in current scope", symbol);
-        return decl;
+        return *decl;
     } else {
         error(n, "identifier '_' is reserved for anonymous declarations");
         return nullptr;
@@ -89,8 +89,8 @@ void NameSema::insert(const Decl* decl) {
 
 const Decl* NameSema::clash(Symbol symbol) const {
     assert(!symbol.empty() && "symbol is empty");
-    if (auto decl = thorin::find(symbol2decl_, symbol))
-        return (decl && decl->depth() == depth()) ? decl : nullptr;
+    if (auto decl = symbol2decl_.lookup(symbol))
+        return (*decl && (*decl)->depth() == depth()) ? *decl : nullptr;
     return nullptr;
 }
 
@@ -221,10 +221,8 @@ void OptionDecl::bind(NameSema& sema) const {
 }
 
 void StaticItem::bind(NameSema& sema) const {
-    if (ast_type())
-        ast_type()->bind(sema);
-    if (init())
-        init()->bind(sema);
+    if (ast_type()) ast_type()->bind(sema);
+    if (init()) init()->bind(sema);
 }
 
 void Fn::fn_bind(NameSema& sema) const {
@@ -237,16 +235,13 @@ void Fn::fn_bind(NameSema& sema) const {
             param->ast_type()->bind(sema);
     }
 
-    if (pe_expr())
-        pe_expr()->bind(sema);
+    if (filter()) filter()->bind(sema);
 
     for (auto&& param : params()) {
-        if (auto pe_expr = param->pe_expr())
-            pe_expr->bind(sema);
+        if (auto filter = param->filter()) filter->bind(sema);
     }
 
-    if (body() != nullptr)
-        body()->bind(sema);
+    if (body()) body()->bind(sema);
 
     sema.lambda_depth_ -= num_ast_type_params();
     sema.pop_scope();

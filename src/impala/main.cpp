@@ -3,15 +3,15 @@
 #include <cctype>
 #include <stdexcept>
 
+#include "thorin/be/codegen.h"
+#include "thorin/be/c/c.h"
 #ifdef LLVM_SUPPORT
-#include "thorin/be/llvm/llvm.h"
+#include "thorin/be/llvm/cpu.h"
 #endif
-#include "thorin/analyses/schedule.h"
-#include "thorin/util/args.h"
-#include "thorin/util/log.h"
-#include "thorin/util/location.h"
 
 #include "impala/ast.h"
+#include "impala/args.h"
+
 #include "impala/cgen.h"
 #include "impala/impala.h"
 
@@ -38,13 +38,14 @@ int main(int argc, char** argv) {
         Names infiles;
 #ifndef NDEBUG
         Names breakpoints;
+        Names use_breakpoints;
         bool track_history;
 #endif
         std::string out_name, log_name, log_level;
         bool help,
-             emit_cint, emit_thorin, emit_ast, emit_annotated,
-             emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
-             nocleanup, nossa, fancy;
+             emit_c, emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm,
+             opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
+             nocleanup, fancy;
 
 #ifndef NDEBUG
 #define LOG_LEVELS "{error|warn|info|verbose|debug}"
@@ -52,13 +53,14 @@ int main(int argc, char** argv) {
 #define LOG_LEVELS "{error|warn|info}"
 #endif
 
-        auto cmd_parser = thorin::ArgParser()
+        auto cmd_parser = impala::ArgParser()
             .implicit_option             (                      "<infiles>", "input files", infiles)
             .add_option<bool>            ("help",               "",          "produce this help message", help, false)
             .add_option<std::string>     ("log-level",          LOG_LEVELS,  "set log level", log_level, "error")
             .add_option<std::string>     ("log",                "<arg>", "specifies log file; use '-' for stdout (default)", log_name, "-")
 #ifndef NDEBUG
             .add_option<Names>           ("break",              "<args>", "breakpoint at definition generation with global id <arg>; may be used multiple times separated by space or '_'", breakpoints)
+            .add_option<Names>           ("use-break",          "<args>", "breakpoint when using definition with global id <arg>; may be used multiple times separated by space or '_'", use_breakpoints)
             .add_option<bool>            ("track-history",      "", "track hisotry of names - useful for debugging", track_history, false)
 #endif
             .add_option<std::string>     ("o",                  "", "specifies the output module name", out_name, "")
@@ -70,33 +72,19 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("Othorin",            "", "optimize at Thorin level", opt_thorin, false)
             .add_option<bool>            ("emit-annotated",     "", "emit AST of Impala program after semantic analysis", emit_annotated, false)
             .add_option<bool>            ("emit-ast",           "", "emit AST of Impala program", emit_ast, false)
+            .add_option<bool>            ("emit-c",             "", "emit C from Thorin representation (implies -Othorin)", emit_c, false)
             .add_option<bool>            ("emit-c-interface",   "", "emit C interface from Impala code (experimental)", emit_cint, false)
             .add_option<bool>            ("emit-llvm",          "", "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
             .add_option<bool>            ("emit-thorin",        "", "emit textual Thorin representation of Impala program", emit_thorin, false)
             .add_option<bool>            ("f",                  "", "use fancy output: Impala's AST dump uses only parentheses where necessary", fancy, false)
             .add_option<bool>            ("g",                  "", "emit debug information", debug, false)
-            .add_option<bool>            ("nocleanup",          "", "no clean-up phase", nocleanup, false)
-            .add_option<bool>            ("nossa",              "", "use slots + load/store instead of SSA construction", nossa, false);
+            .add_option<bool>            ("nocleanup",          "", "no clean-up phase", nocleanup, false);
 
         // do cmdline parsing
         cmd_parser.parse(argc, argv);
-        opt_thorin |= emit_llvm;
+        opt_thorin |= emit_llvm | emit_c;
 
         impala::fancy() = fancy;
-
-        std::ofstream log_stream;
-        if (log_level == "error") {
-            thorin::Log::set(thorin::Log::Error, open(log_stream, log_name));
-        } else if (log_level == "warn") {
-            thorin::Log::set(thorin::Log::Warn, open(log_stream, log_name));
-        } else if (log_level == "info") {
-            thorin::Log::set(thorin::Log::Info, open(log_stream, log_name));
-        } else if (log_level == "verbose") {
-            thorin::Log::set(thorin::Log::Verbose, open(log_stream, log_name));
-        } else if (log_level == "debug") {
-            thorin::Log::set(thorin::Log::Debug, open(log_stream, log_name));
-        } else
-            throw std::invalid_argument("log level must be one of " LOG_LEVELS);
 
         // check optimization levels
         if (opt_s + opt_0 + opt_1 + opt_2 + opt_3 > 1)
@@ -109,12 +97,12 @@ int main(int argc, char** argv) {
         else if (opt_3) opt = 3;
 
         if (infiles.empty() && !help) {
-            thorin::errf("no input files\n");
+            thorin::errf("no input files");
             return EXIT_FAILURE;
         }
 
         if (help) {
-            thorin::outf("Usage: {} [options] file...\n", prgname);
+            thorin::outf("Usage: {} [options] file...", prgname);
             cmd_parser.print_help();
             return EXIT_SUCCESS;
         }
@@ -141,28 +129,45 @@ int main(int argc, char** argv) {
         thorin::World world(module_name);
         impala::init();
 
+        std::ofstream log_stream;
+        world.set(std::make_shared<thorin::Stream>(*open(log_stream, log_name)));
+
+        if (false) {}
+        else if (log_level == "error")   world.set(thorin::LogLevel::Error);
+        else if (log_level == "warn")    world.set(thorin::LogLevel::Warn);
+        else if (log_level == "info")    world.set(thorin::LogLevel::Info);
+        else if (log_level == "verbose") world.set(thorin::LogLevel::Verbose);
+        else if (log_level == "debug")   world.set(thorin::LogLevel::Debug);
+        else throw std::invalid_argument("log level must be one of " LOG_LEVELS);
+
 #if THORIN_ENABLE_CHECKS && !defined(NDEBUG)
-        for (auto b : breakpoints) {
-            assert(b.size() > 0);
-            size_t num = 0;
-            for (size_t i = 0, e = b.size(); i != e; ++i) {
-                char c = b[i];
-                if (c == '_') {
-                    if (num != 0) {
-                        world.breakpoint(num);
-                        num = 0;
+        auto set_breakpoints = [&](auto breakpoints, auto setter) {
+            for (auto b : breakpoints) {
+                assert(b.size() > 0);
+                size_t num = 0;
+                for (size_t i = 0, e = b.size(); i != e; ++i) {
+                    char c = b[i];
+                    if (c == '_') {
+                        if (num != 0) {
+                            std::invoke(setter, world, num);
+                            num = 0;
+                        }
+                    } else if (std::isdigit(c)) {
+                        num = num*10 + c - '0';
+                    } else {
+                        std::cerr << "invalid breakpoint '" << b << "'" << std::endl;
+                        return false;
                     }
-                } else if (std::isdigit(c)) {
-                    num = num*10 + c - '0';
-                } else {
-                    std::cerr << "invalid breakpoint '" << b << "'" << std::endl;
-                    return EXIT_FAILURE;
                 }
+
+                if (num != 0) std::invoke(setter, world, num);
             }
 
-            if (num != 0)
-                world.breakpoint(num);
-        }
+            return true;
+        };
+
+        if (!set_breakpoints(    breakpoints, &thorin::World::    breakpoint)) return EXIT_FAILURE;
+        if (!set_breakpoints(use_breakpoints, &thorin::World::use_breakpoint)) return EXIT_FAILURE;
 
         world.enable_history(track_history);
 #endif
@@ -177,14 +182,14 @@ int main(int argc, char** argv) {
         auto module = std::make_unique<const impala::Module>(infiles.front().c_str(), std::move(items));
 
         if (emit_ast)
-            module->stream(std::cout);
+            module->dump();
 
         std::unique_ptr<impala::TypeTable> typetable;
-        impala::check(typetable, module.get(), nossa);
+        impala::check(typetable, module.get());
         bool result = impala::num_errors() == 0;
 
         if (emit_annotated)
-            module->stream(std::cout);
+            module->dump();
 
         if (result && emit_cint) {
             impala::CGenOptions opts;
@@ -204,54 +209,58 @@ int main(int argc, char** argv) {
 
             std::ofstream out_file(module_name + ".h");
             if (!out_file) {
-                thorin::errf("cannot open file '{}' for writing\n", opts.file_name);
+                thorin::errf("cannot open file '{}' for writing", opts.file_name);
                 return EXIT_FAILURE;
             }
             impala::generate_c_interface(module.get(), opts, out_file);
         }
 
-        if (result && (emit_llvm || emit_thorin))
+        if (result && (emit_c || emit_llvm || emit_thorin))
             impala::emit(world, module.get());
 
         if (result) {
-            thorin::verify_mem(world);
+            //thorin::verify_mem(world);
             if (!nocleanup)
                 world.cleanup();
             if (opt_thorin)
                 world.opt();
             if (emit_thorin)
                 world.dump();
-            if (emit_llvm) {
-#ifdef LLVM_SUPPORT
-                thorin::Backends backends(world, opt, debug);
-                auto emit_to_file = [&](thorin::CodeGen* cg, std::string ext) {
-                    if (cg) {
-                        auto name = module_name + ext;
-                        std::ofstream file(name);
-                        if (!file)
-                            throw std::runtime_error("cannot write '" + name + "': " + strerror(errno));
-                        cg->emit(file);
-                    }
+            if (emit_c || emit_llvm) {
+                thorin::DeviceBackends backends(world, opt, debug);
+                auto emit_to_file = [&] (thorin::CodeGen& cg) {
+                    auto name = module_name + cg.file_ext();
+                    std::ofstream file(name);
+                    if (!file)
+                        throw std::runtime_error("cannot write '" + name + "': " + strerror(errno));
+                    else
+                        cg.emit_stream(file);
                 };
-                emit_to_file(backends.cpu_cg.get(),    ".ll");
-                emit_to_file(backends.cuda_cg.get(),   ".cu");
-                emit_to_file(backends.nvvm_cg.get(),   ".nvvm");
-                emit_to_file(backends.opencl_cg.get(), ".cl");
-                emit_to_file(backends.amdgpu_cg.get(), ".amdgpu");
-                emit_to_file(backends.hls_cg.get(),    ".hls");
-#else
-                thorin::outf("warning: built without LLVM support - I don't emit an LLVM file\n");
+                if (emit_c) {
+                    thorin::Cont2Config kernel_configs;
+                    thorin::c::CodeGen cg(world, kernel_configs, thorin::c::Lang::C99, debug);
+                    emit_to_file(cg);
+                }
+#ifdef LLVM_SUPPORT
+                if (emit_llvm) {
+                    thorin::llvm::CPUCodeGen cg(world, opt, debug);
+                    emit_to_file(cg);
+                }
 #endif
+                for (auto& cg : backends.cgs) {
+                    if (cg) emit_to_file(*cg);
+                }
             }
-        } else
+        } else {
             return EXIT_FAILURE;
+        }
 
         return EXIT_SUCCESS;
     } catch (std::exception const& e) {
-        thorin::errf("{}\n", e.what());
+        thorin::errf("{}", e.what());
         return EXIT_FAILURE;
     } catch (...) {
-        thorin::errf("unknown exception\n");
+        thorin::errf("unknown exception");
         return EXIT_FAILURE;
     }
 }

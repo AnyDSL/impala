@@ -2,7 +2,6 @@
 
 #include "thorin/util/array.h"
 #include "thorin/util/iterator.h"
-#include "thorin/util/log.h"
 
 #include "impala/ast.h"
 #include "impala/impala.h"
@@ -343,7 +342,7 @@ void type_inference(std::unique_ptr<TypeTable>& typetable, const Module* module)
         sema->infer(module);
     }
 
-    DLOG("iterations needed for type inference: {}", i);
+    //DLOG("iterations needed for type inference: {}", i);
 }
 
 //------------------------------------------------------------------------------
@@ -384,10 +383,10 @@ const Type* Path::infer(InferSema& sema) const {
             // lookup enum option
             auto enum_decl = enum_type->enum_decl();
             auto option_decl = enum_decl->option_decl(cur_elem->symbol());
-            auto option_type = option_decl ? sema.find_type(option_decl) : sema.type_error();
+            auto option_type = option_decl ? sema.find_type(*option_decl) : sema.type_error();
 
             cur_type = sema.constrain(cur_elem, sema.find_type(option_type));
-            cur_elem->decl_ = option_decl;
+            cur_elem->decl_ = *option_decl;
         } else if (last_type->is_known()) {
             cur_type = sema.constrain(cur_elem, sema.type_error());
         }
@@ -574,7 +573,7 @@ const Type* FieldDecl::infer(InferSema& sema) const { return sema.infer(ast_type
 void FnDecl::infer(InferSema& sema) const {
     infer_ast_type_params(sema);
 
-    sema.infer(pe_expr());
+    sema.infer(filter());
 
     Array<const Type*> param_types(num_params());
     size_t e = num_params();
@@ -622,7 +621,7 @@ const Type* StrExpr::infer(InferSema& sema) const {
 const Type* FnExpr::infer(InferSema& sema) const {
     assert(ast_type_params().empty());
 
-    sema.infer(pe_expr());
+    sema.infer(filter());
 
     Array<const Type*> param_types(num_params());
     for (size_t i = 0, e = num_params(); i != e; ++i) {
@@ -835,7 +834,7 @@ const Type* StructExpr::infer(InferSema& sema) const {
 
     if (auto struct_type = type->isa<StructType>()) {
         for (size_t i = 0, e = num_elems(); i != e; ++i) {
-            elem(i)->field_decl_ = struct_type->struct_decl()->field_decl(elem(i)->symbol());
+            elem(i)->field_decl_ = *struct_type->struct_decl()->field_decl(elem(i)->symbol());
             if (elem(i)->field_decl() != nullptr)
                 sema.coerce(struct_type->op(elem(i)->field_decl()->index()), elem(i)->expr());
         }
@@ -881,7 +880,7 @@ const Type* FieldExpr::infer(InferSema& sema) const {
 
     if (auto struct_type = ltype->isa<StructType>()) {
         if (auto field_decl = struct_type->struct_decl()->field_decl(symbol())) {
-            return sema.wrap_ref(ref, struct_type->op(field_decl->index()));
+            return sema.wrap_ref(ref, struct_type->op((*field_decl)->index()));
         }
     }
 
