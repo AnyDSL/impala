@@ -44,7 +44,6 @@ bool compile(
     const std::vector<std::string>& file_names,
     const std::vector<std::string>& file_data,
     thorin::World& world,
-    thorin::LogLevel log_level,
     std::ostream& error_stream)
 {
     static bool initialized = false;
@@ -54,9 +53,6 @@ bool compile(
     }
     impala::num_warnings() = 0;
     impala::num_errors()   = 0;
-
-    world.set(log_level);
-    world.set(std::make_shared<thorin::Stream>(error_stream));
 
     impala::Items items;
     for (size_t n = file_names.size(), i = 0; i < n; ++i) {
