@@ -91,7 +91,7 @@ const impala::Type* llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
         return elem == nullptr ? nullptr : tt.borrowed_ptr_type(elem, false, ptr->getAddressSpace());
     }
 
-    if (auto vector_type = llvm::dyn_cast<llvm::VectorType>(type)) {
+    if (auto vector_type = llvm::dyn_cast<llvm::FixedVectorType>(type)) {
         auto elem = llvm2impala(tt, vector_type->getElementType());
         return elem == nullptr ? nullptr : tt.simd_type(elem, vector_type->getNumElements());
     }
