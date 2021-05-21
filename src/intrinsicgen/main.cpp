@@ -30,7 +30,7 @@ int main() {
 
     thorin::Stream s(std::cout);
 
-    s.fmt("extern \"device\" {\t\n");
+    s.fmt("extern \"device\" {{\t\n");
     for (int i = 1; i != num; ++i) {
         auto id = (llvm::Intrinsic::ID) i;
         std::string llvm_name;
