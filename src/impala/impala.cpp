@@ -44,7 +44,7 @@ bool compile(
     const std::vector<std::string>& file_names,
     const std::vector<std::string>& file_data,
     thorin::World& world,
-    std::ostream& error_stream)
+    std::ostream&)
 {
     static bool initialized = false;
     if (!initialized) {
