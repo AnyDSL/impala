@@ -116,6 +116,8 @@ public:
         return result;
     }
 
+    const thorin::Def *rev_diff(const thorin::Def *primal) { return world.op_rev_diff(primal); }
+
     const thorin::Def* convert(const Type* type) {
         if (auto t = thorin_type(type))
             return t;
@@ -300,6 +302,7 @@ static bool is_primop(const Symbol& name) {
     else if (name == "sizeof")   return true;
     else if (name == "bitcast")  return true;
     else if (name == "insert")   return true;
+    else if (name == "rev_diff") return true;
     return false;
 }
 
@@ -1066,6 +1069,10 @@ const Def* FnExpr::remit(CodeGen& cg) const {
     auto lam = fn_emit_head(cg, loc());
     fn_emit_body(cg, loc());
     return lam;
+}
+
+const Def* RevDiffExpr::remit(CodeGen& cg) const {
+    return cg.rev_diff(expr()->remit(cg));
 }
 
 /*

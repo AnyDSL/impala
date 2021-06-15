@@ -1010,6 +1010,14 @@ const Type* ForExpr::infer(InferSema& sema) const {
     return sema.unit();
 }
 
+const Type* RevDiffExpr::infer(InferSema& sema) const {
+    if (auto fn_type = sema.infer(expr())->isa<FnType>()) {
+        return fn_type->pullback_with_val_fn_type();
+    }
+
+    return sema.type_error();
+}
+
 //------------------------------------------------------------------------------
 
 /*

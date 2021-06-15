@@ -133,6 +133,10 @@ public:
     const TypeBase* rebuild(TypeTable& to, Types ops) const;
     const TypeBase* rebuild(Types ops) const { return rebuild(table(), ops); }
 
+    /// The type of a partial derivative when applying the grad-operator.
+    /// nullptr if the type cannot be derived.
+    virtual const TypeBase* tangent_vector() const { return nullptr; }
+
     static size_t gid_counter() { return gid_counter_; }
     virtual Stream& stream(Stream&) const = 0;
 

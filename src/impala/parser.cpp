@@ -68,7 +68,8 @@
     case Token::L_PAREN: \
     case Token::L_BRACE: \
     case Token::L_BRACKET: \
-    case Token::SIMD
+    case Token::SIMD: \
+    case Token::REV_DIFF
 
 #define STMT \
          Token::LET: \
@@ -245,6 +246,7 @@ public:
     const ForExpr*      parse_with_expr();
     const WhileExpr*    parse_while_expr();
     const BlockExpr*    parse_block_expr();
+    const RevDiffExpr*  parse_rev_diff_expr();
     const BlockExpr*    try_block_expr(const std::string& context);
     const Expr*         parse_filter(const char* context);
 
@@ -993,13 +995,14 @@ const Expr* Parser::parse_primary_expr() {
             }
             return new PathExpr(path);
         }
-        case Token::IF:         return parse_if_expr();
-        case Token::MATCH:      return parse_match_expr();
-        case Token::FOR:        return parse_for_expr();
-        case Token::WITH:       return parse_with_expr();
-        case Token::WHILE:      return parse_while_expr();
-        case Token::L_BRACE:    return parse_block_expr();
-        default:                error("expression", ""); return new EmptyExpr(lex().loc());
+        case Token::IF:            return parse_if_expr();
+        case Token::MATCH:         return parse_match_expr();
+        case Token::FOR:           return parse_for_expr();
+        case Token::WITH:          return parse_with_expr();
+        case Token::WHILE:         return parse_while_expr();
+        case Token::L_BRACE:       return parse_block_expr();
+        case Token::REV_DIFF:      return parse_rev_diff_expr();
+        default:                   error("expression", ""); return new EmptyExpr(lex().loc());
     }
 }
 
@@ -1202,13 +1205,14 @@ const BlockExpr* Parser::parse_block_expr() {
                 const Expr* expr;
                 bool stmt_like = true;
                 switch (lookahead()) {
-                    case Token::IF:         expr = parse_if_expr(); break;
-                    case Token::MATCH:      expr = parse_match_expr(); break;
-                    case Token::FOR:        expr = parse_for_expr(); break;
-                    case Token::WITH:       expr = parse_with_expr(); break;
-                    case Token::WHILE:      expr = parse_while_expr(); break;
-                    case Token::L_BRACE:    expr = parse_block_expr(); break;
-                    default:                expr = parse_expr(); stmt_like = false;
+                    case Token::IF:            expr = parse_if_expr(); break;
+                    case Token::MATCH:         expr = parse_match_expr(); break;
+                    case Token::FOR:           expr = parse_for_expr(); break;
+                    case Token::WITH:          expr = parse_with_expr(); break;
+                    case Token::WHILE:         expr = parse_while_expr(); break;
+                    case Token::L_BRACE:       expr = parse_block_expr(); break;
+                    case Token::REV_DIFF:      expr = parse_rev_diff_expr(); break;
+                    default:                   expr = parse_expr(); stmt_like = false;
                 }
 
                 if (accept(Token::SEMICOLON) || (stmt_like && lookahead() != Token::R_BRACE)) {
@@ -1252,6 +1256,16 @@ const Expr* Parser::parse_filter(const char* context) {
         filter = new LiteralExpr(lookahead().loc(), LiteralExpr::LIT_bool, false);
 
     return filter;
+}
+
+const RevDiffExpr *Parser::parse_rev_diff_expr() {
+    auto tracker = track();
+
+    eat(Token::REV_DIFF);
+    expect(Token::L_PAREN, "grad expression");
+    auto expr = parse_expr();
+    expect(Token::R_PAREN, "grad expression");
+    return new RevDiffExpr(tracker, expr);
 }
 
 /*

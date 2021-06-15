@@ -1851,6 +1851,24 @@ private:
     std::unique_ptr<const LocalDecl> break_decl_;
 };
 
+class RevDiffExpr : public Expr {
+public:
+    RevDiffExpr(Loc loc, const Expr *expr) : Expr(loc) , expr_(dock(expr_, expr)) {}
+
+    const Expr *expr() const { return expr_.get(); }
+
+    bool has_side_effect() const override;
+    void bind(NameSema &) const override;
+    Stream& stream(Stream&) const override;
+
+private:
+    const Type *infer(InferSema &) const override;
+    void check(TypeSema &) const override;
+    const thorin::Def *remit(CodeGen &) const override;
+
+    std::unique_ptr<const Expr> expr_;
+};
+
 //------------------------------------------------------------------------------
 
 /*

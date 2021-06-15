@@ -74,6 +74,8 @@ public:
 
     Stream& stream(Stream&) const override;
 
+    virtual const Type* tangent_vector() const override;
+
 private:
     const Type* vrebuild(TypeTable&, Types) const override;
 
@@ -214,8 +216,19 @@ public:
     bool is_returning() const;
     Stream& stream(Stream&) const override;
 
+    const Type* grad_fn_type() const;
+    const Type* grad_with_val_fn_type() const;
+    const Type* pullback_fn_type() const;
+    const Type* pullback_with_val_fn_type() const;
+
 private:
     const Type* vrebuild(TypeTable&, Types) const override;
+
+    const Type* params_without_return_continuation() const;
+    const Type* grad_return_type() const;
+    const Type* grad_with_val_return_type() const;
+    const Type* pullback_return_type() const;
+    const Type* pullback_with_val_return_type() const;
 
     friend class TypeTable;
 };
@@ -298,6 +311,8 @@ public:
     const Type* vrebuild(TypeTable& to, Types ops) const override;
     Stream& stream(Stream&) const override;
 
+    virtual const Type* tangent_vector() const override;
+
     friend class TypeTable;
 };
 
@@ -313,6 +328,8 @@ private:
 public:
     const StructDecl* struct_decl() const { return decl_; }
     void set(size_t i, const Type* type) const { return const_cast<StructType*>(this)->Type::set(i, type); }
+
+    virtual const Type* tangent_vector() const override;
 
 private:
     const Type* vrebuild(TypeTable& to, Types ops) const override;
@@ -367,6 +384,7 @@ public:
 
     Stream& stream(Stream&) const override;
 
+    virtual const Type* tangent_vector() const override;
 private:
     const Type* vrebuild(TypeTable&, Types) const override;
 
@@ -387,6 +405,8 @@ public:
     }
 
     Stream& stream(Stream&) const override;
+
+    virtual const Type* tangent_vector() const override;
 
 private:
     const Type* vrebuild(TypeTable&, Types) const override;

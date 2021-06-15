@@ -321,6 +321,151 @@ const InferError* TypeTable::infer_error(const Type* dst, const Type* src) {
     return unify(new InferError(*this, dst, src));
 }
 
+//------------------------------------------------------------------------------
+
+/*
+ * gradients
+ */
+
+const Type* FnType::grad_fn_type() const {
+    if (!is_returning()) return table().type_error();
+
+    if (auto type = grad_return_type()) {
+        Array<const Type*> params(domain()->ops());
+        params.back() = table().fn_type(type);
+        return table().fn_type(params);
+    }
+
+    return table().type_error();
+}
+
+const Type* FnType::grad_with_val_fn_type() const {
+    if (!is_returning()) return table().type_error();
+
+    if (auto type = grad_with_val_return_type()) {
+        Array<const Type*> params(domain()->ops());
+        params.back() = table().fn_type(type);
+        return table().fn_type(params);
+    }
+
+    return table().type_error();
+}
+
+const Type* FnType::pullback_fn_type() const {
+    if (!is_returning()) return table().type_error();
+
+    if (auto type = pullback_return_type()) {
+        Array<const Type*> params(domain()->ops());
+        params.back() = table().fn_type(type);
+        return table().fn_type(params);
+    }
+
+    return table().type_error();
+}
+
+const Type* FnType::pullback_with_val_fn_type() const {
+    if (!is_returning()) return table().type_error();
+
+    if (auto type = pullback_with_val_return_type()) {
+        Array<const Type*> params(domain()->ops());
+        params.back() = table().fn_type(type);
+        auto t = table().fn_type(params);
+        return t;
+    }
+
+    return table().type_error();
+}
+
+const Type* FnType::params_without_return_continuation() const {
+    auto types = is_returning() ? domain()->ops().skip_back()
+                                : domain()->ops();
+    return types.size() == 1 ? types.front() : table().tuple_type(types);
+}
+
+const Type* FnType::grad_return_type() const {
+    if (!is_returning()) return table().type_error();
+
+    return params_without_return_continuation()->tangent_vector();
+}
+
+const Type* FnType::grad_with_val_return_type() const {
+    if (!is_returning()) return table().type_error();
+
+    return table().tuple_type({ return_type(), grad_return_type() });
+}
+
+const Type* FnType::pullback_return_type() const {
+    if (!is_returning()) return table().type_error();
+
+    auto in_tan = return_type()->tangent_vector();
+    auto out_tan = params_without_return_continuation()->tangent_vector();
+
+    if (auto t = in_tan->isa<TupleType>()) {
+        Array<const Type*> params(t->num_ops() + 1);
+        for (size_t i = 0; i < t->num_ops(); ++i) {
+            params[i] = t->op(i);
+        }
+        params.back() = table().fn_type(out_tan);
+        return table().fn_type(params);
+    }
+
+    auto t = table().fn_type({in_tan, table().fn_type(out_tan)});
+    return t;
+}
+
+const Type* FnType::pullback_with_val_return_type() const {
+    if (!is_returning()) return table().type_error();
+
+    auto t = table().tuple_type({ return_type(), pullback_return_type() });
+    return t;
+}
+
+/*
+ * tangent_vector
+ */
+
+const Type* PrimType::tangent_vector() const {
+    return is_float(this) ? this : nullptr;
+}
+
+const Type* TupleType::tangent_vector() const {
+    Array<const Type*> types(num_ops());
+    bool no_op_has_tangent = true;
+    for (size_t i = 0, e = num_ops(); i != e; ++i) {
+        types[i] = op(i)->tangent_vector();
+
+        // In case one of the elements is non-differentiable, we replace it by
+        // unit. This makes sure the position of tuple-elements matches the
+        // positions of their tangent vectors.
+        if (types[i] == nullptr) {
+            types[i] = table().unit();
+        } else {
+            no_op_has_tangent = false;
+        }
+    }
+
+    return no_op_has_tangent ? nullptr : table().tuple_type(types);
+}
+
+const Type* StructType::tangent_vector() const {
+    // TODO
+    return nullptr;
+}
+
+const Type* IndefiniteArrayType::tangent_vector() const {
+    auto elem_tangent_vector = elem_type()->tangent_vector();
+    return elem_tangent_vector != nullptr
+            ? table().indefinite_array_type(elem_tangent_vector)
+            : nullptr;
+}
+
+const Type* DefiniteArrayType::tangent_vector() const {
+    auto elem_tangent_vector = elem_type()->tangent_vector();
+    return elem_tangent_vector != nullptr
+            ? table().definite_array_type(elem_tangent_vector, dim())
+            : nullptr;
+}
+
 }
 
 template void thorin::Streamable<thorin::TypeBase<impala::TypeTable>>::dump() const;
