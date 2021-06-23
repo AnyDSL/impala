@@ -386,7 +386,7 @@ const Type* Path::infer(InferSema& sema) const {
             auto option_type = option_decl ? sema.find_type(*option_decl) : sema.type_error();
 
             cur_type = sema.constrain(cur_elem, sema.find_type(option_type));
-            cur_elem->decl_ = *option_decl;
+            cur_elem->decl_ = option_decl.value_or(nullptr);
         } else if (last_type->is_known()) {
             cur_type = sema.constrain(cur_elem, sema.type_error());
         }
@@ -834,7 +834,7 @@ const Type* StructExpr::infer(InferSema& sema) const {
 
     if (auto struct_type = type->isa<StructType>()) {
         for (size_t i = 0, e = num_elems(); i != e; ++i) {
-            elem(i)->field_decl_ = *struct_type->struct_decl()->field_decl(elem(i)->symbol());
+            elem(i)->field_decl_ = struct_type->struct_decl()->field_decl(elem(i)->symbol()).value_or(nullptr);
             if (elem(i)->field_decl() != nullptr)
                 sema.coerce(struct_type->op(elem(i)->field_decl()->index()), elem(i)->expr());
         }
