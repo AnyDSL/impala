@@ -173,7 +173,17 @@ Stream& TypeError::stream(Stream& os) const { return os << "<type error>"; }
 Stream& FnType::stream(Stream& os) const {
     os << "fn";
     if (auto tuple = op(0)->isa<TupleType>())
-        os.fmt("{}", tuple);
+    {
+        if (tuple->ops().size() > 2)
+        {
+            tuple = table().tuple_type(tuple->ops().skip_back());
+            os.fmt("{}", tuple);
+        }
+        else
+        {
+            os.fmt("({})", tuple->ops().front());
+        }
+    }
     else
         os.fmt("({})", op(0));
     auto ret_type = return_type();
