@@ -198,7 +198,7 @@ Stream& IndefiniteArrayType::stream(Stream& os) const { return os.fmt("[{}]", el
 Stream& SimdType::stream(Stream& os) const { return os.fmt("simd[{} * {}]", elem_type(), dim()); }
 Stream& StructType::stream(Stream& os) const { return os << struct_decl()->symbol(); }
 Stream& EnumType::stream(Stream& os) const { return os << enum_decl()->symbol(); }
-Stream& TupleType::stream(Stream& os) const { return os.fmt("({, }", ops()); }
+Stream& TupleType::stream(Stream& os) const { return os.fmt("({, })", ops()); }
 
 //------------------------------------------------------------------------------
 
