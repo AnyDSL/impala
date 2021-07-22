@@ -337,97 +337,40 @@ const InferError* TypeTable::infer_error(const Type* dst, const Type* src) {
  * gradients
  */
 
-const Type* FnType::grad_fn_type() const {
-    if (!is_returning()) return table().type_error();
-
-    if (auto type = grad_return_type()) {
-        Array<const Type*> params(domain()->ops());
-        params.back() = table().fn_type(type);
-        return table().fn_type(params);
-    }
-
-    return table().type_error();
-}
-
-const Type* FnType::grad_with_val_fn_type() const {
-    if (!is_returning()) return table().type_error();
-
-    if (auto type = grad_with_val_return_type()) {
-        Array<const Type*> params(domain()->ops());
-        params.back() = table().fn_type(type);
-        return table().fn_type(params);
-    }
-
-    return table().type_error();
-}
-
-const Type* FnType::pullback_fn_type() const {
-    if (!is_returning()) return table().type_error();
-
-    if (auto type = pullback_return_type()) {
-        Array<const Type*> params(domain()->ops());
-        params.back() = table().fn_type(type);
-        return table().fn_type(params);
-    }
-
-    return table().type_error();
-}
-
-const Type* FnType::pullback_with_val_fn_type() const {
-    if (!is_returning()) return table().type_error();
-
-    if (auto type = pullback_with_val_return_type()) {
-        Array<const Type*> params(domain()->ops());
-        params.back() = table().fn_type(type);
-        auto t = table().fn_type(params);
-        return t;
-    }
-
-    return table().type_error();
-}
-
 const Type* FnType::params_without_return_continuation() const {
     auto types = is_returning() ? domain()->ops().skip_back()
                                 : domain()->ops();
     return types.size() == 1 ? types.front() : table().tuple_type(types);
 }
 
-const Type* FnType::grad_return_type() const {
-    if (!is_returning()) return table().type_error();
-
-    return params_without_return_continuation()->tangent_vector();
-}
-
-const Type* FnType::grad_with_val_return_type() const {
-    if (!is_returning()) return table().type_error();
-
-    return table().tuple_type({ return_type(), grad_return_type() });
-}
-
-const Type* FnType::pullback_return_type() const {
-    if (!is_returning()) return table().type_error();
+const Type* FnType::rev_diffed_type() const {
+    if (!is_returning())
+        return table().type_error();
 
     auto in_tan = return_type()->tangent_vector();
     auto out_tan = params_without_return_continuation()->tangent_vector();
 
-    if (auto t = in_tan->isa<TupleType>()) {
+    // for now, we just say that in_tan is precisely the type of the singular seed value
+    if (auto t = params_without_return_continuation()->isa<TupleType>()) {
+        // fn(f32, f32) -> f32 becomes fn(f32, f32, f32) -> (f32, f32)
         Array<const Type*> params(t->num_ops() + 1);
         for (size_t i = 0; i < t->num_ops(); ++i) {
             params[i] = t->op(i);
         }
-        params.back() = table().fn_type(out_tan);
+        // TODO: we assume that out_tan is a scalar. This may change in the future.
+        auto ret = table().tuple_type({return_type(), out_tan});
+        params.back() = table().fn_type(ret);
+
         return table().fn_type(params);
     }
+    else {
+        Array<const Type*> params(3);
+        params[0] = params_without_return_continuation(); // <- FIXME: relies on assumption that we only
+        params[1] = in_tan;                               //           receive an r32
+        params[2] = table().fn_type(table().tuple_type({return_type(), out_tan}));
 
-    auto t = table().fn_type({in_tan, table().fn_type(out_tan)});
-    return t;
-}
-
-const Type* FnType::pullback_with_val_return_type() const {
-    if (!is_returning()) return table().type_error();
-
-    auto t = table().tuple_type({ return_type(), pullback_return_type() });
-    return t;
+        return table().fn_type(params);
+    }
 }
 
 /*

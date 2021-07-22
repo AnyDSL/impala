@@ -216,11 +216,7 @@ public:
     bool is_returning() const;
     Stream& stream(Stream&) const override;
 
-    const Type* grad_fn_type() const;
-    const Type* grad_with_val_fn_type() const;
-    const Type* pullback_fn_type() const;
-    const Type* pullback_with_val_fn_type() const;
-
+    const Type* rev_diffed_type() const;
 private:
     const Type* vrebuild(TypeTable&, Types) const override;
 

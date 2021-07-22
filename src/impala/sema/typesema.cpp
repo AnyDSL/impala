@@ -739,6 +739,9 @@ void RevDiffExpr::check(TypeSema& sema) const {
 	    return;
     }
 
+    // TODO: Functions may return multidimensional stuff.
+    //       This needs to be patched later on with a more extensive check
+    //       for functions that return an array of r32s.
     if (!is_float(fn_type->return_type())) {
         error(expr(), "the function does not return a float scalar");
 	    return;

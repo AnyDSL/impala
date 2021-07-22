@@ -210,6 +210,9 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
     } else if (type->isa<NoRetType>()) {
         return nullptr; // TODO use bottom type - once it is available in thorin
     }
+    thorin::Stream stream;
+    type->stream(stream);
+    std::cout.flush();
     THORIN_UNREACHABLE;
 }
 
