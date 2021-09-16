@@ -300,6 +300,7 @@ static bool is_primop_or_intrinsic(const std::string& name) {
         name == "atomic_load" ||
         name == "atomic_store" ||
         name == "cmpxchg" ||
+        name == "fence" ||
         name == "pe_info" ||
         name == "pe_known";
 }
