@@ -287,7 +287,7 @@ void Module::emit(CodeGen& cg) const {
     for (auto&& item : items()) item->emit(cg);
 }
 
-static bool is_primop_or_intrinsic(const std::string& name) {
+static bool is_polymorphic_primop_or_intrinsic(const std::string& name) {
     return
         name == "alignof" ||
         name == "bitcast" ||
@@ -300,7 +300,6 @@ static bool is_primop_or_intrinsic(const std::string& name) {
         name == "atomic_load" ||
         name == "atomic_store" ||
         name == "cmpxchg" ||
-        name == "fence" ||
         name == "pe_info" ||
         name == "pe_known";
 }
@@ -309,7 +308,7 @@ void FnDecl::emit_head(CodeGen& cg) const {
     assert(def_ == nullptr);
     // no code is emitted for primops
     if (is_extern() && abi() == "\"thorin\"" &&
-        is_primop_or_intrinsic(fn_symbol().remove_quotation()))
+        is_polymorphic_primop_or_intrinsic(fn_symbol().remove_quotation()))
         return;
 
     // create thorin function
