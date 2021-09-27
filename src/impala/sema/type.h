@@ -121,8 +121,6 @@ protected:
     {}
 
 private:
-    uint64_t addr_space_;
-
     friend class TypeTable;
 };
 
