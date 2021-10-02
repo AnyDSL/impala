@@ -1,6 +1,7 @@
 #ifndef IMPALA_AST_H
 #define IMPALA_AST_H
 
+#include <deque>
 #include <vector>
 
 #include "thorin/util/array.h"
