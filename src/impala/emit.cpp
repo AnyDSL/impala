@@ -146,7 +146,9 @@ public:
 
 const thorin::Def* CodeGen::convert_rec(const Type* type) {
     if (auto lambda = type->isa<Lambda>()) {
-        return world.lam(world.kind(), convert(lambda->body()), world.dbg(lambda->name()));
+        auto body = convert(lambda->body());
+        auto pi = world.pi(world.kind(), body->type());
+        return world.lam(pi, body, world.dbg(lambda->name()));
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_tag()) {
             case PrimType_bool: return world.type_bool();
