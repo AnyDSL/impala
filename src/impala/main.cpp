@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
         Names use_breakpoints;
         bool track_history;
 #endif
-        std::string out_name, log_name, log_level;
+        std::string out_name, log_name, log_level, host_triple, host_cpu, host_attr, hls_flags;
         bool help,
              emit_c, emit_cint, emit_thorin, emit_ast, emit_annotated, emit_llvm,
              opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug,
@@ -76,6 +76,10 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("emit-c-interface",   "", "emit C interface from Impala code (experimental)", emit_cint, false)
             .add_option<bool>            ("emit-llvm",          "", "emit llvm from Thorin representation (implies -Othorin)", emit_llvm, false)
             .add_option<bool>            ("emit-thorin",        "", "emit textual Thorin representation of Impala program", emit_thorin, false)
+            .add_option<std::string>     ("host-triple",        "", "emit llvm target code for the specified target triple", host_triple, "")
+            .add_option<std::string>     ("host-cpu",           "", "emit llvm target code for the specified cpu type", host_cpu, "")
+            .add_option<std::string>     ("host-attr",          "", "emit llvm target code with the specified attributes", host_attr, "")
+            .add_option<std::string>     ("hls-flags",          "", "emit HLS code for the specified flags", hls_flags, "")
             .add_option<bool>            ("f",                  "", "use fancy output: Impala's AST dump uses only parentheses where necessary", fancy, false)
             .add_option<bool>            ("g",                  "", "emit debug information", debug, false)
             .add_option<bool>            ("nocleanup",          "", "no clean-up phase", nocleanup, false);
@@ -227,7 +231,7 @@ int main(int argc, char** argv) {
             if (emit_thorin)
                 world.dump();
             if (emit_c || emit_llvm) {
-                thorin::DeviceBackends backends(world, opt, debug);
+                thorin::DeviceBackends backends(world, opt, debug, hls_flags);
                 auto emit_to_file = [&] (thorin::CodeGen& cg) {
                     auto name = module_name + cg.file_ext();
                     std::ofstream file(name);
@@ -238,12 +242,12 @@ int main(int argc, char** argv) {
                 };
                 if (emit_c) {
                     thorin::Cont2Config kernel_configs;
-                    thorin::c::CodeGen cg(world, kernel_configs, thorin::c::Lang::C99, debug);
+                    thorin::c::CodeGen cg(world, kernel_configs, thorin::c::Lang::C99, debug, hls_flags);
                     emit_to_file(cg);
                 }
 #ifdef LLVM_SUPPORT
                 if (emit_llvm) {
-                    thorin::llvm::CPUCodeGen cg(world, opt, debug);
+                    thorin::llvm::CPUCodeGen cg(world, opt, debug, host_triple, host_cpu, host_attr);
                     emit_to_file(cg);
                 }
 #endif
