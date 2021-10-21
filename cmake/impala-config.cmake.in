@@ -30,7 +30,7 @@ find_path(LLVM_DIR LLVMConfig.cmake PATHS ${LLVM_DIR} $ENV{LLVM_DIR} "@LLVM_DIR@
 
 find_path(Impala_ROOT_DIR
     NAMES cmake/impala-config.cmake.in src/impala/impala.h
-    PATHS ${Impala_DIR} $ENV{Impala_DIR} ${Impala_ROOT_DIR} "@CMAKE_CURRENT_SOURCE_DIR@" "@CMAKE_SOURCE_DIR@")
+    PATHS ${Impala_DIR} $ENV{Impala_DIR} ${Impala_ROOT_DIR} "@CMAKE_CURRENT_SOURCE_DIR@" "@Impala_ROOT_DIR@" "@CMAKE_SOURCE_DIR@")
 
 if(NOT TARGET impala)
     include(${Impala_DIR}/impala-exports.cmake)

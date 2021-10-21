@@ -18,13 +18,17 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_subdirectory(src)
+find_package(Thorin REQUIRED)
 
 message(STATUS "Using Debug flags: ${CMAKE_CXX_FLAGS_DEBUG}")
 message(STATUS "Using Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
 if(DEFINED CMAKE_BUILD_TYPE)
     message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 endif()
+
+set(Impala_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_subdirectory(src)
 
 export(TARGETS libimpala impala FILE ${CMAKE_BINARY_DIR}/share/anydsl/cmake/impala-exports.cmake)
 configure_file(cmake/impala-config.cmake.in ${CMAKE_BINARY_DIR}/share/anydsl/cmake/impala-config.cmake @ONLY)
