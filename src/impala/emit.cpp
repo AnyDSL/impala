@@ -300,6 +300,7 @@ static bool is_polymorphic_primop_or_intrinsic(const std::string& name) {
         name == "atomic_load" ||
         name == "atomic_store" ||
         name == "cmpxchg" ||
+        name == "cmpxchg_weak" ||
         name == "pe_info" ||
         name == "pe_known";
 }
@@ -708,14 +709,14 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto cont = cg.world.continuation(fn_type, {"atomic_store", loc()});
                             cont->set_intrinsic();
                             dst = cont;
-                        } else if (name == "cmpxchg") {
+                        } else if (name == "cmpxchg" || name == "cmpxchg_weak") {
                             auto ptr_type = cg.convert(arg(0)->type());
                             auto poly_type = ptr_type->as<thorin::PtrType>()->pointee();
                             auto fn_type = cg.world.fn_type({
-                                cg.world.mem_type(), ptr_type, poly_type, poly_type, cg.world.type_pu32(), string_type,
+                                cg.world.mem_type(), ptr_type, poly_type, poly_type, cg.world.type_pu32(), cg.world.type_pu32(), string_type,
                                 cg.world.fn_type({ cg.world.mem_type(), poly_type, cg.world.type_bool() })
                             });
-                            auto cont = cg.world.continuation(fn_type, {"cmpxchg", loc()});
+                            auto cont = cg.world.continuation(fn_type, {name, loc()});
                             cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "pe_info") {
