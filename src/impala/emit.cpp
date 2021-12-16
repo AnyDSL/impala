@@ -95,7 +95,7 @@ public:
     }
 
     const Def* handle_mem_res(const Def* mem_res) {
-        auto [mem, res] = mem_res->outs<2>();
+        auto [mem, res] = mem_res->projs<2>();
         cur_mem = mem;
         return res;
     }
