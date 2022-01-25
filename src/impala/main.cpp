@@ -6,6 +6,7 @@
 #ifdef LLVM_SUPPORT
 #include "thorin/be/llvm/llvm.h"
 #endif
+#include "thorin/be/ll/ll.h"
 #include "thorin/error.h"
 #include "thorin/rewrite.h"
 #include "thorin/analyses/schedule.h"
@@ -225,7 +226,10 @@ int main(int argc, char** argv) {
             if (emit_thorin)
                 world.dump();
             if (emit_llvm) {
-#ifdef LLVM_SUPPORT
+                std::ofstream file(module_name + ".ll");
+                Stream s(file);
+                thorin::ll::emit(world, s);
+#if 0
                 thorin::Backends backends(world);
                 auto emit_to_file = [&](thorin::CodeGen* cg, std::string ext) {
                     if (cg) {
@@ -245,7 +249,7 @@ int main(int argc, char** argv) {
                 emit_to_file(backends.hls_cg.get(),    ".hls");
 #endif
 #else
-                thorin::outf("warning: built without LLVM support - I don't emit an LLVM file");
+                //thorin::outf("warning: built without LLVM support - I don't emit an LLVM file");
 #endif
             }
         } else
