@@ -116,7 +116,7 @@ public:
         return result;
     }
 
-    const thorin::Def *rev_diff(const thorin::Def *primal) { return world.op_rev_diff(primal); }
+    const thorin::Def* rev_diff(const thorin::Def *primal) { return nullptr; /*world.op_rev_diff(primal);*/ }
 
     const thorin::Def* convert(const Type* type) {
         if (auto t = thorin_type(type))
@@ -1077,7 +1077,8 @@ const Def* FnExpr::remit(CodeGen& cg) const {
 }
 
 const Def* RevDiffExpr::remit(CodeGen& cg) const {
-    return cg.rev_diff(expr()->remit(cg));
+    return nullptr;
+    //return cg.rev_diff(expr()->remit(cg));
 }
 
 /*
