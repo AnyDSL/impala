@@ -352,7 +352,7 @@ void StaticItem::emit(CodeGen& cg) const {
     if (init()) {
         auto old_def = def_;
         def_ = cg.world.global(init()->remit(cg), is_mut(), debug());
-        old_def->replace(def_);
+        old_def->replace_uses(def_);
     }
 }
 
