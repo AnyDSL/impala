@@ -6,6 +6,7 @@
 #include "thorin/util/hash.h"
 #include "thorin/util/stream.h"
 #include "thorin/util/symbol.h"
+#include "thorin/type.h"
 
 #include "impala/sema/type_table.h"
 
