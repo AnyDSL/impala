@@ -26,11 +26,10 @@ set(IMPALA_SOURCES
 )
 
 add_library(libimpala ${IMPALA_SOURCES})
-target_link_libraries(libimpala PRIVATE ${Thorin_LIBRARIES})
 set_target_properties(libimpala PROPERTIES PREFIX "")
 
 add_executable(impala main.cpp)
-target_link_libraries(impala ${Thorin_LIBRARIES} libimpala)
+target_link_libraries(impala ${PROJECT_SOURCE_DIR}/../thorin/build/lib/libthorin.so libimpala) # HACK
 if(MSVC)
     set_target_properties(impala PROPERTIES LINK_FLAGS /STACK:8388608)
 endif(MSVC)
