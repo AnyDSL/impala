@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "thorin/util/array.h"
-#include "thorin/util/iterator.h"
 
 #include "impala/ast.h"
 #include "impala/impala.h"
