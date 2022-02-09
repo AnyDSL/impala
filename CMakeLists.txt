@@ -18,10 +18,14 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+if(MSVC)
+    add_definitions(-D_SCL_SECURE_NO_WARNINGS)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /wd4800 /wd4520")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /wd4800 /wd4520")
+else()
+    add_definitions("-Wall -Wextra")
+endif()
+
 add_subdirectory(thorin2)
 add_subdirectory(src)
-
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-
-export(TARGETS libimpala impala FILE ${CMAKE_BINARY_DIR}/share/anydsl/cmake/impala-exports.cmake)
-configure_file(cmake/impala-config.cmake.in ${CMAKE_BINARY_DIR}/share/anydsl/cmake/impala-config.cmake @ONLY)

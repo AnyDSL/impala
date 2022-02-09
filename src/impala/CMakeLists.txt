@@ -27,6 +27,8 @@ set(IMPALA_SOURCES
 
 add_library(libimpala ${IMPALA_SOURCES})
 set_target_properties(libimpala PROPERTIES PREFIX "")
+target_link_libraries(libimpala libthorin)
+target_include_directories(libimpala PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 add_executable(impala main.cpp)
 target_link_libraries(impala libthorin libimpala)
