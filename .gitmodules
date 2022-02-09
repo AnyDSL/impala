@@ -1,3 +1,3 @@
 [submodule "thorin2"]
 	path = thorin2
-	url = ../../thorin2.git
+	url = ../../AnyDSL/thorin2.git
