@@ -7,11 +7,4 @@ else()
     add_definitions("-Wall -Wextra")
 endif()
 
-# HACK
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR} 
-    ${PROJECT_SOURCE_DIR}/../thorin/src/ 
-    ${PROJECT_SOURCE_DIR}/../thorin/build/include/
-    ${PROJECT_SOURCE_DIR}/../thorin/half/include/)
-
 add_subdirectory(impala)
