@@ -1,3 +1,4 @@
 [submodule "thorin2"]
 	path = thorin2
 	url = ../../AnyDSL/thorin2.git
+	branch = master
