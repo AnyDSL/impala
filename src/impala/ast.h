@@ -1468,7 +1468,7 @@ public:
         return interlope<ImplicitCastExpr>(src, src, type);
     }
 
-    void bind(NameSema&) const override { THORIN_UNREACHABLE; }
+    void bind(NameSema&) const override { thorin::unreachable(); }
     Stream& stream(Stream&) const override;
 
 private:
@@ -1487,7 +1487,7 @@ public:
 
     bool has_side_effect() const override;
 
-    void bind(NameSema&) const override { THORIN_UNREACHABLE; }
+    void bind(NameSema&) const override { thorin::unreachable(); }
     Stream& stream(Stream&) const override;
 
 private:

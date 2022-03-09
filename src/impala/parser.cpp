@@ -497,7 +497,7 @@ const Item* Parser::parse_item() {
         case Token::STRUCT:  return parse_struct_decl(tracker, vis);
         case Token::TRAIT:   return parse_trait_decl(tracker, vis);
         case Token::TYPEDEF: return parse_typedef(tracker, vis);
-        default: THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
 }
 
@@ -913,7 +913,7 @@ const Expr* Parser::parse_postfix_expr(Tracker tracker, const Expr* lhs) {
             auto identifier = try_identifier("field expression");
             return new FieldExpr(tracker, lhs, identifier);
         }
-        default: THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
 }
 
@@ -995,6 +995,7 @@ const Expr* Parser::parse_primary_expr() {
             }
             return new PathExpr(path);
         }
+        // clang-format off
         case Token::IF:            return parse_if_expr();
         case Token::MATCH:         return parse_match_expr();
         case Token::FOR:           return parse_for_expr();
@@ -1003,6 +1004,7 @@ const Expr* Parser::parse_primary_expr() {
         case Token::L_BRACE:       return parse_block_expr();
         case Token::REV_DIFF:      return parse_rev_diff_expr();
         default:                   error("expression", ""); return new EmptyExpr(lex().loc());
+        // clang-format on
     }
 }
 
@@ -1010,16 +1012,16 @@ const LiteralExpr* Parser::parse_literal_expr() {
     LiteralExpr::Tag tag;
 
     switch (lookahead()) {
-        case Token::TRUE:       return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, 1);
-        case Token::FALSE:      return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, 0);
-#define IMPALA_LIT(itype, atype) \
-        case Token::LIT_##itype: { \
-            tag = LiteralExpr::LIT_##itype; \
-            auto val = lookahead().get(); \
-            return new LiteralExpr(lex().loc(), tag, val); \
-        }
+        case Token::TRUE: return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, 1);
+        case Token::FALSE: return new LiteralExpr(lex().loc(), LiteralExpr::LIT_bool, 0);
+#define IMPALA_LIT(itype, atype)                       \
+    case Token::LIT_##itype: {                         \
+        tag      = LiteralExpr::LIT_##itype;           \
+        auto val = lookahead().get();                  \
+        return new LiteralExpr(lex().loc(), tag, val); \
+    }
 #include "impala/tokenlist.h"
-        default: THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
 }
 
@@ -1027,12 +1029,14 @@ char Parser::char_value(const char*& p) {
     char value = 0;
     if (*p++ == '\\') {
         switch (*p++) {
+        // clang-format off
         case '0':  value = '\0'; break;
         case 'n':  value = '\n'; break;
         case 't':  value = '\t'; break;
         case '\'': value = '\''; break;
         case '\"': value = '\"'; break;
         case '\\': value = '\\'; break;
+        // clang-format on
         default:
             // TODO make loc precise inside strings, reduce redundancy for single chars
             impala::error(lookahead().loc(), "expected valid escape sequence, got '\\{}' while parsing {}", *(p-1), lookahead());
@@ -1124,8 +1128,8 @@ const IfExpr* Parser::parse_if_expr() {
     const Expr* else_expr = nullptr;
     if (accept(Token::ELSE)) {
         switch (lookahead()) {
-            case Token::IF:      else_expr =  parse_if_expr(); break;
-            case Token::L_BRACE: else_expr =  parse_block_expr(); break;
+            case Token::IF: else_expr = parse_if_expr(); break;
+            case Token::L_BRACE: else_expr = parse_block_expr(); break;
             default:
                 error("block or if expression", "alternative of an if expression");
         }
@@ -1190,6 +1194,7 @@ const WhileExpr* Parser::parse_while_expr() {
 }
 
 const BlockExpr* Parser::parse_block_expr() {
+    // clang-format off
     auto tracker = track();
     eat(Token::L_BRACE);
     Stmts stmts;
@@ -1230,6 +1235,7 @@ const BlockExpr* Parser::parse_block_expr() {
                 return new BlockExpr(tracker, std::move(stmts), final_expr);
         }
     }
+    // clang-format on
 }
 
 const BlockExpr* Parser::try_block_expr(const std::string& context) {
@@ -1273,6 +1279,7 @@ const RevDiffExpr *Parser::parse_rev_diff_expr() {
  */
 
 const Ptrn* Parser::parse_ptrn() {
+    // clang-format off
     switch (lookahead()) {
         case Token::SUB:
         case Token::TRUE:
@@ -1295,6 +1302,7 @@ const Ptrn* Parser::parse_ptrn() {
             return parse_id_ptrn(new Identifier(path->loc(), id->symbol()));
         }
     }
+    // clang-format on
 }
 
 const TuplePtrn* Parser::parse_tuple_ptrn() {
@@ -1363,6 +1371,7 @@ const AsmStmt::Elem* Parser::parse_asm_op() {
 }
 
 const AsmStmt* Parser::parse_asm_stmt() {
+    // clang-format off
     static const Array<TokenTag> delimiters = {Token::COLON, Token::DOUBLE_COLON, Token::R_PAREN};
 
     auto tracker = track();
@@ -1400,6 +1409,7 @@ parse_options:
 out:
     return new AsmStmt(tracker, std::move(asm_template), std::move(outputs), std::move(inputs),
                        std::move(clobbers), std::move(options));
+    // clang-format on
 }
 
 // TODO: merge this code with StrExpr
