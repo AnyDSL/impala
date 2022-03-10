@@ -61,7 +61,7 @@ public:
 
     std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, const Def* dbg) {
         if (ret_type == nullptr) {
-            cur_bb->app(callee, args, dbg);
+            cur_bb->app(false, callee, args, dbg);
             auto next = basicblock(world.dbg("unreachable"));
             return std::make_pair(next, nullptr);
         }
@@ -85,7 +85,7 @@ public:
         size_t csize = args.size() + 1;
         Array<const Def*> cargs(csize);
         *std::copy(args.begin(), args.end(), cargs.begin()) = next;
-        cur_bb->app(callee, cargs, dbg);
+        cur_bb->app(false, callee, cargs, dbg);
 
         // determine return value
         const Def* ret = nullptr;
@@ -296,9 +296,9 @@ void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
             for (size_t i = 0, e = tuple->num_ops(); i != e; ++i)
                 ret_values[i + 1] = cg.world.extract(def, e, i);
             ret_values[0] = cg.cur_mem;
-            cg.cur_bb->app(ret_param(), ret_values, cg.loc2dbg(loc.finis()));
+            cg.cur_bb->app(false, ret_param(), ret_values, cg.loc2dbg(loc.finis()));
         } else
-            cg.cur_bb->app(ret_param(), {cg.cur_mem, def}, cg.loc2dbg(loc.finis()));
+            cg.cur_bb->app(false, ret_param(), {cg.cur_mem, def}, cg.loc2dbg(loc.finis()));
     }
 
     lam()->set_filter(filter() ? filter()->remit(cg) : cg.world.lit_false());
@@ -601,7 +601,7 @@ const Def* PrefixExpr::lemit(CodeGen& cg) const {
 
 void Expr::emit_branch(CodeGen& cg, Lam* jump_t, Lam* jump_f) const {
     auto cond = remit(cg);
-    cg.cur_bb->branch(cond, jump_t, jump_f, cg.cur_mem, cg.loc2dbg(loc().finis()));
+    cg.cur_bb->branch(false, cond, jump_t, jump_f, cg.cur_mem, cg.loc2dbg(loc().finis()));
 }
 
 void InfixExpr::emit_branch(CodeGen& cg, Lam* jump_t, Lam* jump_f) const {
@@ -636,8 +636,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             auto jump_t    = cg.world.nom_lam(jump_type, cg.loc2dbg("jump_t", loc().finis()));
             auto jump_f    = cg.world.nom_lam(jump_type, cg.loc2dbg("jump_f", loc().finis()));
             emit_branch(cg, jump_t, jump_f);
-            jump_t->app(result, { jump_t->var(0_s), cg.world.lit_true() });
-            jump_f->app(result, { jump_f->var(0_s), cg.world.lit_false() });
+            jump_t->app(false, result, { jump_t->var(0_s), cg.world.lit_true() });
+            jump_f->app(false, result, { jump_f->var(0_s), cg.world.lit_false() });
             return cg.enter(result)->var(1);
         }
         default: {
@@ -939,11 +939,11 @@ const Def* IfExpr::remit(CodeGen& cg) const {
 
     cg.enter(if_then);
     if (auto tdef = then_expr()->remit(cg))
-        cg.cur_bb->app(if_join, {cg.cur_mem, tdef}, cg.loc2dbg(loc().finis()));
+        cg.cur_bb->app(false, if_join, {cg.cur_mem, tdef}, cg.loc2dbg(loc().finis()));
 
     cg.enter(if_else);
     if (auto fdef = else_expr()->remit(cg))
-        cg.cur_bb->app(if_join, {cg.cur_mem, fdef}, cg.loc2dbg(loc().finis()));
+        cg.cur_bb->app(false, if_join, {cg.cur_mem, fdef}, cg.loc2dbg(loc().finis()));
 
     if (thorin_type)
         return cg.enter(if_join)->var(1);
@@ -996,14 +996,14 @@ const Def* MatchExpr::remit(CodeGen& /*cg*/) const {
         for (size_t i = 0; i != num_targets; ++i) {
             cg.enter(targets[i]);
             if (auto def = arm(i)->expr()->remit(cg))
-                cg.cur_bb->app(join, {cg.cur_mem, def}, cg.loc2dbg(loc().finis()));
+                cg.cur_bb->app(false, join, {cg.cur_mem, def}, cg.loc2dbg(loc().finis()));
         }
 
         bool no_otherwise = num_arms() == num_targets;
         if (!no_otherwise) {
             cg.enter(otherwise);
             if (auto def = arm(num_targets)->expr()->remit(cg))
-                cg.cur_bb->app(join, {cg.cur_mem, def}, cg.loc2dbg(loc().finis()));
+                cg.cur_bb->app(false, join, {cg.cur_mem, def}, cg.loc2dbg(loc().finis()));
         }
     } else {
         // general case: if/else
@@ -1018,11 +1018,11 @@ const Def* MatchExpr::remit(CodeGen& /*cg*/) const {
                 ? cg.world.lit_true()
                 : arm(i)->ptrn()->emit_cond(cg, matcher);
 
-            cg.cur_bb->branch(cond, case_t, case_f, cg.cur_mem, cg.loc2dbg(arm(i)->ptrn()->loc().finis()));
+            cg.cur_bb->branch(false, cond, case_t, case_f, cg.cur_mem, cg.loc2dbg(arm(i)->ptrn()->loc().finis()));
 
             cg.enter(case_t);
             if (auto def = arm(i)->expr()->remit(cg))
-                cg.cur_bb->app(join, {cg.cur_mem, def}, cg.loc2dbg(arm(i)->loc().finis()));
+                cg.cur_bb->app(false, join, {cg.cur_mem, def}, cg.loc2dbg(arm(i)->loc().finis()));
 
             cg.enter(case_f);
         }
@@ -1044,20 +1044,20 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
     auto cont_bb = cg.create_lam(continue_decl());
     auto brk__bb = cg.create_lam(break_decl());
 
-    cg.cur_bb->app(head_bb, {cg.cur_mem}, cg.loc2dbg(cond()->loc().finis()));
+    cg.cur_bb->app(false, head_bb, {cg.cur_mem}, cg.loc2dbg(cond()->loc().finis()));
 
     cg.enter(head_bb);
     cond()->emit_branch(cg, body_bb, exit_bb);
 
     cg.enter(body_bb);
     body()->remit(cg);
-    cg.cur_bb->app(cont_bb, {cg.cur_mem}, cg.loc2dbg(body()->loc().finis()));
+    cg.cur_bb->app(false, cont_bb, {cg.cur_mem}, cg.loc2dbg(body()->loc().finis()));
 
     cg.enter(cont_bb);
-    cg.cur_bb->app(head_bb, {cg.cur_mem}, cg.loc2dbg(body()->loc().finis()));
+    cg.cur_bb->app(false, head_bb, {cg.cur_mem}, cg.loc2dbg(body()->loc().finis()));
 
     cg.enter(exit_bb);
-    cg.cur_bb->app(brk__bb, {cg.cur_mem}, cg.loc2dbg(body()->loc().finis()));
+    cg.cur_bb->app(false, brk__bb, {cg.cur_mem}, cg.loc2dbg(body()->loc().finis()));
 
     cg.enter(brk__bb);
     return cg.world.tuple();
