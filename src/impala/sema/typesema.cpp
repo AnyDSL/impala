@@ -332,6 +332,7 @@ void PathExpr::check(TypeSema& sema) const {
 void PrefixExpr::check(TypeSema& sema) const {
     sema.check(rhs());
 
+    // clang-format off
     switch (tag()) {
         case AND:
             rhs()->take_address();
@@ -364,11 +365,9 @@ void PrefixExpr::check(TypeSema& sema) const {
         case RUNRUN:
             sema.expect_fn(rhs(), "operand of '{}'", tok2str(this));
             return;
-        case OR: case OROR: case RUN: // Lambda
-            THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
-
-    THORIN_UNREACHABLE;
+    // clang-format on
 }
 
 void InfixExpr::check(TypeSema& sema) const {
@@ -392,6 +391,7 @@ void InfixExpr::check(TypeSema& sema) const {
         }
     };
 
+    // clang-format off
     switch (tag()) {
         case EQ: case NE:
         case LT: case GT:
@@ -449,8 +449,9 @@ void InfixExpr::check(TypeSema& sema) const {
             sema.expect_int(rhs(), "right-hand side of binary '{}'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '{}'", tok2str(this));
             return;
-        default: THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
+    // clang-format on
 }
 
 void PostfixExpr::check(TypeSema& sema) const {
@@ -470,6 +471,7 @@ void CastExpr::check(TypeSema& sema) const {
     if (dst_type->isa<BorrowedPtrType>() && dst_type->as<BorrowedPtrType>()->is_mut())
         src()->write();
 
+    // clang-format off
     // TODO be consistent: dst is first argument, src ist second argument
     auto ptr_to_ptr     = [&] (const Type* a, const Type* b) { return a->isa<PtrType>() && b->isa<PtrType>(); };
     auto int_to_int     = [&] (const Type* a, const Type* b) { return is_int(a)         && is_int(b);         };
@@ -478,14 +480,12 @@ void CastExpr::check(TypeSema& sema) const {
     auto int_to_float   = [&] (const Type* a, const Type* b) { return is_int(a)         && is_float(b);       };
     auto int_to_bool    = [&] (const Type* a, const Type* b) { return is_int(a)         && is_bool(b);        };
     auto float_to_bool  = [&] (const Type* a, const Type* b) { return is_float(a)       && is_bool(b);        };
+    // clang-format on
 
-    bool valid_cast = ptr_to_ptr(src_type, dst_type)
-        || float_to_float(src_type, dst_type)
-        || int_to_int(src_type, dst_type)
-        || symmetric(int_to_ptr, src_type, dst_type)
-        || symmetric(int_to_float, src_type, dst_type)
-        || symmetric(int_to_bool, src_type, dst_type)
-        || symmetric(float_to_bool, src_type, dst_type);
+    bool valid_cast = ptr_to_ptr(src_type, dst_type) || float_to_float(src_type, dst_type) ||
+                      int_to_int(src_type, dst_type) || symmetric(int_to_ptr, src_type, dst_type) ||
+                      symmetric(int_to_float, src_type, dst_type) || symmetric(int_to_bool, src_type, dst_type) ||
+                      symmetric(float_to_bool, src_type, dst_type);
 
     if (src_type->is_known() && dst_type->is_known() && !valid_cast && !is_subtype(dst_type, src_type))
         error(this, "invalid source and destination types for cast operator, got '{}' and '{}'", src_type, dst_type);

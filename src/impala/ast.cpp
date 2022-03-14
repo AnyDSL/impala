@@ -22,10 +22,10 @@ const char* Visibility::str() {
 std::string PtrASTType::prefix() const {
     switch (tag()) {
         case Borrowed: return "&";
-        case Mut:      return "&mut";
-        case Owned:    return "~";
+        case Mut: return "&mut";
+        case Owned: return "~";
     }
-    THORIN_UNREACHABLE;
+    thorin::unreachable();
 }
 
 const FnASTType* FnASTType::ret_fn_ast_type() const {
@@ -37,13 +37,15 @@ const FnASTType* FnASTType::ret_fn_ast_type() const {
 }
 
 PrimTypeTag LiteralExpr::literal2type() const {
+    // clang-format off
     switch (tag()) {
 #define IMPALA_LIT(itype, atype) \
         case LIT_##itype: return PrimType_##itype;
 #include "impala/tokenlist.h"
         case LIT_bool:    return PrimType_bool;
-        default: THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
+    // clang-format on
 }
 
 const Expr* Expr::skip_rvalue() const {

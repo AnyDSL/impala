@@ -45,11 +45,13 @@ Stream& ASTTypeApp::stream(Stream& s) const {
 }
 
 Stream& PrimASTType::stream(Stream& s) const {
+    // clang-format off
     switch (tag()) {
 #define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return s << #itype;
 #include "impala/tokenlist.h"
-        default: THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
+    // clang-format on
 }
 
 Stream& Typeof::stream(Stream& s) const {
@@ -226,6 +228,7 @@ Stream& BlockExpr::stream(Stream& s) const {
 
 Stream& LiteralExpr::stream(Stream& s) const {
     switch (tag()) {
+        // clang-format off
         case LIT_bool: return s << (get<bool>() ? "true" : "false");
         case LIT_i8:   return s << (int)get< s8>() << "i8";
         case LIT_i16:  return s <<      get<s16>() << "i16";
@@ -238,7 +241,8 @@ Stream& LiteralExpr::stream(Stream& s) const {
         case LIT_f16:  return s <<      get<r16>() << "h";
         case LIT_f32:  return s <<      get<r32>() << "f";
         case LIT_f64:  return s <<      get<r64>() << "f64";
-        default: THORIN_UNREACHABLE;
+        // clang-format on
+        default: thorin::unreachable();
     }
 }
 
@@ -279,10 +283,13 @@ static Stream& close(Stream& s, std::pair<Prec, bool> pair) {
 Stream& PrefixExpr::stream(Stream& s) const {
     const char* op;
     switch (tag()) {
-#define IMPALA_PREFIX(tok, str) case tok: op = str; break;
+#define IMPALA_PREFIX(tok, str) \
+    case tok:                   \
+        op = str;               \
+        break;
 #include "impala/tokenlist.h"
         case MUT: op = "&mut "; break;
-        default: THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
 
     s << op;
@@ -300,9 +307,11 @@ Stream& InfixExpr::stream(Stream& s) const {
     auto open_state = open(s, PrecTable::infix_l(tag()));
     const char* op;
     switch (tag()) {
+    // clang-format off
 #define IMPALA_INFIX_ASGN(tok, str)       case tok: op = str; break;
 #define IMPALA_INFIX(     tok, str, prec) case tok: op = str; break;
 #include "impala/tokenlist.h"
+    // clang-format on
     }
 
     s << lhs() << " " << op << " ";
@@ -317,7 +326,7 @@ Stream& PostfixExpr::stream(Stream& s) const {
     switch (tag()) {
         case INC: op = "++"; break;
         case DEC: op = "--"; break;
-        default: THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
 
     s << lhs() << op;

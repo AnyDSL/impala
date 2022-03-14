@@ -407,7 +407,7 @@ const Type* PrimASTType::infer(InferSema& sema) const {
     switch (tag()) {
 #define IMPALA_TYPE(itype, atype) case TYPE_##itype: return sema.prim_type(PrimType_##itype);
 #include "impala/tokenlist.h"
-        default: THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
 }
 
@@ -418,7 +418,7 @@ const Type* PtrASTType::infer(InferSema& sema) const {
         case Mut:      return sema.borrowed_ptr_type(pointee,  true, addr_space());
         case Owned:    return sema.   owned_ptr_type(pointee, addr_space());
     }
-    THORIN_UNREACHABLE;
+    thorin::unreachable();
 }
 
 const Type* IndefiniteArrayASTType::infer(InferSema& sema) const { return sema.indefinite_array_type(sema.infer(elem_ast_type())); }
@@ -690,13 +690,15 @@ const Type* PrefixExpr::infer(InferSema& sema) const {
             return sema.type_bool();
         case RUNRUN:
             return sema.infer(rhs());
-        case OR: case OROR: case RUN: // Lambda
-            THORIN_UNREACHABLE;
+        case OR:
+        case OROR:
+        case RUN: thorin::unreachable(); // Lambda
     }
-    THORIN_UNREACHABLE;
+    thorin::unreachable();
 }
 
 const Type* InfixExpr::infer(InferSema& sema) const {
+    // clang-format off
     switch (tag()) {
         case EQ: case NE:
         case LT: case LE:
@@ -736,11 +738,9 @@ const Type* InfixExpr::infer(InferSema& sema) const {
             sema.assign(lhs(), rhs());
             return sema.unit();
         }
-        case AS:
-            THORIN_UNREACHABLE;
+        // clang-format on
+        default: thorin::unreachable();
     }
-
-    THORIN_UNREACHABLE;
 }
 
 const Type* PostfixExpr::infer(InferSema& sema) const {

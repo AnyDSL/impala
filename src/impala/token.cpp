@@ -90,13 +90,16 @@ Token::Token(Loc loc, Tag tag, const std::string& str)
             uval = strtoull(nptr, 0, base);
             err = errno;
             break;
+        // clang-format off
         case LIT_f16: hval = strtof(symbol_.c_str(), 0); err = errno; break; // TODO: errno for half not correctly set
         case LIT_f32: fval = strtof(symbol_.c_str(), 0); err = errno; break;
         case LIT_f64: dval = strtod(symbol_.c_str(), 0); err = errno; break;
-        default: THORIN_UNREACHABLE;
+        // clang-format on
+        default: thorin::unreachable();
     }
 
     switch (tag_) {
+        // clang-format off
         case LIT_i8:  val_ = bitcast<u64>(  int8_t(ival)); err |= !inrange<  int8_t>(ival); break;
         case LIT_i16: val_ = bitcast<u64>( int16_t(ival)); err |= !inrange< int16_t>(ival); break;
         case LIT_i32: val_ = bitcast<u64>( int32_t(ival)); err |= !inrange< int32_t>(ival); break;
@@ -108,15 +111,18 @@ Token::Token(Loc loc, Tag tag, const std::string& str)
         case LIT_f16: val_ = bitcast<u64>(    half(hval)); err |= !inrange<    half>(hval); break;
         case LIT_f32: val_ = bitcast<u64>(   float(fval)); err |= !inrange<   float>(fval); break;
         case LIT_f64: val_ = bitcast<u64>(  double(dval)); err |= !inrange<  double>(dval); break;
-        default: THORIN_UNREACHABLE;
+        // clang-format on
+        default: thorin::unreachable();
     }
 
     if (err)
         switch (tag_) {
-#define IMPALA_LIT(itype, atype) \
-            case LIT_##itype: error(loc, "literal out of range for type '{}'", #itype); return;
+#define IMPALA_LIT(itype, atype)                                  \
+    case LIT_##itype:                                             \
+        error(loc, "literal out of range for type '{}'", #itype); \
+        return;
 #include "impala/tokenlist.h"
-        default: THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
 }
 
@@ -159,7 +165,7 @@ void Token::init() {
 
     for (size_t i = 0; i < Num; ++i)
         tok2op_[i] = None;
-
+    // clang-format off
 #define IMPALA_PREFIX(    tok, str)       insert(tok, str); tok2op_[tok] |= Prefix;
 #define IMPALA_POSTFIX(   tok, str)       insert(tok, str); tok2op_[tok] |= Postfix;
 #define IMPALA_INFIX(     tok, str, prec) insert(tok, str); tok2op_[tok] |= Infix;
@@ -191,10 +197,11 @@ void Token::init() {
     sym2lit_["f64"] = LIT_f64; sym2flit_["f64"] = LIT_f64;
 
     // special tokens
-    tok2str_[ID]         = Symbol("<identifier>").c_str();
+    tok2str_[ID] = Symbol("<identifier>").c_str();
     insert(Eof, "<end of file>");
     insert_key(AS, "as");
     insert_key(MUT, "mut");
+    // clang-format on
 }
 
 void Token::insert_key(TokenTag tok, const char* str) {

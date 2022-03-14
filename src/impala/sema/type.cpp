@@ -162,7 +162,7 @@ Stream& PrimType::stream(Stream& os) const {
     switch (primtype_tag()) {
 #define IMPALA_TYPE(itype, atype) case PrimType_##itype: return os << #itype;
 #include "impala/tokenlist.h"
-        default: THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
 }
 
@@ -313,7 +313,7 @@ const PrimType* TypeTable::prim_type(const PrimTypeTag tag) {
     switch (tag) {
 #define IMPALA_TYPE(itype, atype) case PrimType_##itype: return itype##_;
 #include "impala/tokenlist.h"
-        default: THORIN_UNREACHABLE;
+        default: thorin::unreachable();
     }
 }
 
@@ -387,7 +387,7 @@ const Type* FnType::rev_diffed_type() const {
     else {
         Array<const Type*> params(3);
         params[0] = params_without_return_continuation();
-        params[1] = in_tan;                             
+        params[1] = in_tan;
         params[2] = table().fn_type(table().tuple_type({return_type(), out_tan}));
 
         return table().fn_type(params);
@@ -436,9 +436,7 @@ const Type* IndefiniteArrayType::tangent_vector() const {
 
 const Type* DefiniteArrayType::tangent_vector() const {
     auto elem_tangent_vector = elem_type()->tangent_vector();
-    return elem_tangent_vector != nullptr
-            ? table().definite_array_type(elem_tangent_vector, dim())
-            : nullptr;
+    return elem_tangent_vector != nullptr ? table().definite_array_type(elem_tangent_vector, dim()) : nullptr;
 }
 
 }

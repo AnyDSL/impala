@@ -13,12 +13,25 @@ public:
         : world(world)
     {}
 
-    const Def* loc2dbg(Loc loc)                { return world.dbg({   {loc.file(), {loc.begin_row(), loc.begin_col()}, {loc.finis_row(), loc.finis_col()}}}); }
-    const Def* loc2dbg(const char* s, Loc loc) { return world.dbg({s, {loc.file(), {loc.begin_row(), loc.begin_col()}, {loc.finis_row(), loc.finis_col()}}}); }
+    const Def* loc2dbg(Loc loc) {
+        return world.dbg({
+            {loc.file(), {loc.begin_row(), loc.begin_col()}, {loc.finis_row(), loc.finis_col()}}
+        });
+    }
+    const Def* loc2dbg(const char* s, Loc loc) {
+        return world.dbg({
+            s,
+            {loc.file(), {loc.begin_row(), loc.begin_col()}, {loc.finis_row(), loc.finis_col()}}
+        });
+    }
 
     const Def* debug(const Decl* decl) {
-        return world.dbg({decl->symbol().c_str(), {decl->loc().file(), {decl->loc().begin_row(), decl->loc().begin_col()},
-                                                                       {decl->loc().finis_row(), decl->loc().finis_col()}}});
+        return world.dbg({
+            decl->symbol().c_str(),
+            {decl->loc().file(),
+                                {decl->loc().begin_row(), decl->loc().begin_col()},
+                                {decl->loc().finis_row(), decl->loc().finis_col()}}
+        });
     }
 
     /// Lam of type { @c cn(mem) } or { @c cn(mem, type) } depending on whether @p type is @c nullptr.
@@ -42,13 +55,13 @@ public:
             case PrimType_f16: return world.lit_real(1._r16, dbg);
             case PrimType_f32: return world.lit_real(1._r32, dbg);
             case PrimType_f64: return world.lit_real(1._r64, dbg);
-            default: THORIN_UNREACHABLE;
+            default: thorin::unreachable();
         }
     }
 
     std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, const Def* dbg) {
         if (ret_type == nullptr) {
-            cur_bb->app(callee, args, dbg);
+            cur_bb->app(false, callee, args, dbg);
             auto next = basicblock(world.dbg("unreachable"));
             return std::make_pair(next, nullptr);
         }
@@ -72,7 +85,7 @@ public:
         size_t csize = args.size() + 1;
         Array<const Def*> cargs(csize);
         *std::copy(args.begin(), args.end(), cargs.begin()) = next;
-        cur_bb->app(callee, cargs, dbg);
+        cur_bb->app(false, callee, cargs, dbg);
 
         // determine return value
         const Def* ret = nullptr;
@@ -151,6 +164,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
         return world.lam(pi, body, world.dbg(lambda->name()));
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_tag()) {
+            // clang-format off
             case PrimType_bool: return world.type_bool();
             case PrimType_i8  :
             case PrimType_u8  : return world.type_int_width( 8);
@@ -163,7 +177,8 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
             case PrimType_f16 : return world.type_real(16);
             case PrimType_f32 : return world.type_real(32);
             case PrimType_f64 : return world.type_real(64);
-            default: THORIN_UNREACHABLE;
+            // clang-format on
+            default: thorin::unreachable();
         }
     } else if (auto cn = type->isa<FnType>()) {
         std::vector<const thorin::Def*> nops;
@@ -215,7 +230,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
     thorin::Stream stream;
     type->stream(stream);
     std::cout.flush();
-    THORIN_UNREACHABLE;
+    thorin::unreachable();
 }
 
 /*
@@ -281,9 +296,9 @@ void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
             for (size_t i = 0, e = tuple->num_ops(); i != e; ++i)
                 ret_values[i + 1] = cg.world.extract(def, e, i);
             ret_values[0] = cg.cur_mem;
-            cg.cur_bb->app(ret_param(), ret_values, cg.loc2dbg(loc.finis()));
+            cg.cur_bb->app(false, ret_param(), ret_values, cg.loc2dbg(loc.finis()));
         } else
-            cg.cur_bb->app(ret_param(), {cg.cur_mem, def}, cg.loc2dbg(loc.finis()));
+            cg.cur_bb->app(false, ret_param(), {cg.cur_mem, def}, cg.loc2dbg(loc.finis()));
     }
 
     lam()->set_filter(filter() ? filter()->remit(cg) : cg.world.lit_false());
@@ -303,11 +318,13 @@ void Module::emit(CodeGen& cg) const {
 }
 
 static bool is_primop(const Symbol& name) {
+    // clang-format off
     if      (name == "select")   return true;
     else if (name == "sizeof")   return true;
     else if (name == "bitcast")  return true;
     else if (name == "insert")   return true;
     else if (name == "rev_diff") return true;
+    // clang-format on
     return false;
 }
 
@@ -402,12 +419,13 @@ void Typedef::emit(CodeGen&) const {}
  * expressions
  */
 
-const Def* Expr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
+const Def* Expr::lemit(CodeGen&) const { thorin::unreachable(); }
 const Def* Expr::remit(CodeGen& cg) const { return cg.load(lemit(cg), loc()); }
 const Def* EmptyExpr::remit(CodeGen& cg) const { return cg.world.tuple(); }
 
 const Def* LiteralExpr::remit(CodeGen& cg) const {
     switch (tag()) {
+        // clang-format off
         case LIT_bool: return cg.world.lit_bool(get<bool>());
         case LIT_i8  : return cg.world.lit_int (get<  s8>(), cg.loc2dbg(loc()));
         case LIT_i16 : return cg.world.lit_int (get< s16>(), cg.loc2dbg(loc()));
@@ -420,7 +438,8 @@ const Def* LiteralExpr::remit(CodeGen& cg) const {
         case LIT_f16 : return cg.world.lit_real(get< r16>(), cg.loc2dbg(loc()));
         case LIT_f32 : return cg.world.lit_real(get< r32>(), cg.loc2dbg(loc()));
         case LIT_f64 : return cg.world.lit_real(get< r64>(), cg.loc2dbg(loc()));
-        default: THORIN_UNREACHABLE;
+        // clang-format on
+        default: thorin::unreachable();
     }
 }
 
@@ -471,7 +490,7 @@ const Def* CastExpr::remit(CodeGen& cg) const {
             return cg.world.op_bitcast(dst, def, dbg);
         }
     }
-    THORIN_UNREACHABLE;
+    thorin::unreachable();
 }
 
 const Def* RValueExpr::lemit(CodeGen& cg) const {
@@ -569,8 +588,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             return cg.world.op(PE::known, def, cg.loc2dbg(loc()));
         }
         case OR:
-        case OROR:
-            THORIN_UNREACHABLE;
+        case OROR: thorin::unreachable();
         default:
             return cg.load(lemit(cg), loc());
     }
@@ -583,7 +601,7 @@ const Def* PrefixExpr::lemit(CodeGen& cg) const {
 
 void Expr::emit_branch(CodeGen& cg, Lam* jump_t, Lam* jump_f) const {
     auto cond = remit(cg);
-    cg.cur_bb->branch(cond, jump_t, jump_f, cg.cur_mem, cg.loc2dbg(loc().finis()));
+    cg.cur_bb->branch(false, cond, jump_t, jump_f, cg.cur_mem, cg.loc2dbg(loc().finis()));
 }
 
 void InfixExpr::emit_branch(CodeGen& cg, Lam* jump_t, Lam* jump_f) const {
@@ -609,6 +627,7 @@ void InfixExpr::emit_branch(CodeGen& cg, Lam* jump_t, Lam* jump_f) const {
 }
 
 const Def* InfixExpr::remit(CodeGen& cg) const {
+    // clang-format off
     switch (tag()) {
         case OROR:
         case ANDAND: {
@@ -617,8 +636,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             auto jump_t    = cg.world.nom_lam(jump_type, cg.loc2dbg("jump_t", loc().finis()));
             auto jump_f    = cg.world.nom_lam(jump_type, cg.loc2dbg("jump_f", loc().finis()));
             emit_branch(cg, jump_t, jump_f);
-            jump_t->app(result, { jump_t->var(0_s), cg.world.lit_true() });
-            jump_f->app(result, { jump_f->var(0_s), cg.world.lit_false() });
+            jump_t->app(false, result, { jump_t->var(0_s), cg.world.lit_true() });
+            jump_f->app(false, result, { jump_f->var(0_s), cg.world.lit_false() });
             return cg.enter(result)->var(1);
         }
         default: {
@@ -643,14 +662,14 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case MUL_ASGN: rdef = cg.world.op(ROp::mul, RMode::none, ldef, rdef, dbg); break;
                         case DIV_ASGN: rdef = cg.world.op(ROp::div, RMode::none, ldef, rdef, dbg); break;
                         case REM_ASGN: rdef = cg.world.op(ROp::rem, RMode::none, ldef, rdef, dbg); break;
-                        default: THORIN_UNREACHABLE;
+                        default: thorin::unreachable();
                     }
                 } else if (is_bool(rhs()->type())) {
                     switch (op) {
                         case AND_ASGN: rdef = cg.world.op(Bit::_and, ldef, rdef, dbg); break;
                         case  OR_ASGN: rdef = cg.world.op(Bit:: _or, ldef, rdef, dbg); break;
                         case XOR_ASGN: rdef = cg.world.op(Bit::_xor, ldef, rdef, dbg); break;
-                        default: THORIN_UNREACHABLE;
+                        default: thorin::unreachable();
                     }
                 } else {
                     auto mode = type2wmode(rhs()->type());
@@ -667,7 +686,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case SHR_ASGN: rdef = cg.world.op(s ? Shr::ashr : Shr::lshr, ldef, rdef, dbg); break;
                         case DIV_ASGN: rdef = cg.handle_mem_res(cg.world.op(s ? Div::sdiv : Div::udiv, cg.cur_mem, ldef, rdef, dbg)); break;
                         case REM_ASGN: rdef = cg.handle_mem_res(cg.world.op(s ? Div::srem : Div::urem, cg.cur_mem, ldef, rdef, dbg)); break;
-                        default: THORIN_UNREACHABLE;
+                        default: thorin::unreachable();
                     }
                 }
 
@@ -691,16 +710,17 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case MUL: return cg.world.op(ROp ::mul, RMode::none, ldef, rdef, dbg);
                     case DIV: return cg.world.op(ROp ::div, RMode::none, ldef, rdef, dbg);
                     case REM: return cg.world.op(ROp ::rem, RMode::none, ldef, rdef, dbg);
-                    default: THORIN_UNREACHABLE;
+                    default: thorin::unreachable();
                 }
             } else if (is_bool(rhs()->type())) {
                 switch (op) {
+                    //
                     case  EQ: return cg.world.op(ICmp:: e, ldef, rdef, dbg);
                     case  NE: return cg.world.op(ICmp::ne, ldef, rdef, dbg);
                     case AND: return cg.world.op(Bit::_and, ldef, rdef, dbg);
                     case  OR: return cg.world.op(Bit:: _or, ldef, rdef, dbg);
                     case XOR: return cg.world.op(Bit::_xor, ldef, rdef, dbg);
-                    default: THORIN_UNREACHABLE;
+                    default: thorin::unreachable();
                 }
             } else {
                 auto mode = type2wmode(lhs()->type());
@@ -726,11 +746,12 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case SHL: return cg.world.op(Wrap:: shl, mode, ldef, rdef, dbg);
                     case DIV: return cg.handle_mem_res(cg.world.op(s ? Div::sdiv : Div::udiv, cg.cur_mem, ldef, rdef, dbg));
                     case REM: return cg.handle_mem_res(cg.world.op(s ? Div::srem : Div::urem, cg.cur_mem, ldef, rdef, dbg));
-                    default: THORIN_UNREACHABLE;
+                    default: thorin::unreachable();
                 }
             }
         }
     }
+    // clang-format on
 }
 
 const Def* PostfixExpr::remit(CodeGen& cg) const {
@@ -779,8 +800,8 @@ const Def* StructExpr::remit(CodeGen& cg) const {
     return cg.world.tuple(cg.convert(type())->as<thorin::Sigma>(), defs, cg.loc2dbg(loc()));
 }
 
-const Def* TypeAppExpr::lemit(CodeGen&) const { THORIN_UNREACHABLE; }
-const Def* TypeAppExpr::remit(CodeGen& /*cg*/) const { THORIN_UNREACHABLE; }
+const Def* TypeAppExpr::lemit(CodeGen&) const { thorin::unreachable(); }
+const Def* TypeAppExpr::remit(CodeGen& /*cg*/) const { thorin::unreachable(); }
 
 const Def* MapExpr::lemit(CodeGen& cg) const {
     auto agg = lhs()->lemit(cg);
@@ -882,7 +903,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         auto index = arg(0)->remit(cg);
         return cg.world.extract_unsafe(lhs()->remit(cg), index, cg.loc2dbg(loc()));
     }
-    THORIN_UNREACHABLE;
+    thorin::unreachable();
 }
 
 const Def* FieldExpr::lemit(CodeGen& cg) const {
@@ -918,11 +939,11 @@ const Def* IfExpr::remit(CodeGen& cg) const {
 
     cg.enter(if_then);
     if (auto tdef = then_expr()->remit(cg))
-        cg.cur_bb->app(if_join, {cg.cur_mem, tdef}, cg.loc2dbg(loc().finis()));
+        cg.cur_bb->app(false, if_join, {cg.cur_mem, tdef}, cg.loc2dbg(loc().finis()));
 
     cg.enter(if_else);
     if (auto fdef = else_expr()->remit(cg))
-        cg.cur_bb->app(if_join, {cg.cur_mem, fdef}, cg.loc2dbg(loc().finis()));
+        cg.cur_bb->app(false, if_join, {cg.cur_mem, fdef}, cg.loc2dbg(loc().finis()));
 
     if (thorin_type)
         return cg.enter(if_join)->var(1);
@@ -975,14 +996,14 @@ const Def* MatchExpr::remit(CodeGen& /*cg*/) const {
         for (size_t i = 0; i != num_targets; ++i) {
             cg.enter(targets[i]);
             if (auto def = arm(i)->expr()->remit(cg))
-                cg.cur_bb->app(join, {cg.cur_mem, def}, cg.loc2dbg(loc().finis()));
+                cg.cur_bb->app(false, join, {cg.cur_mem, def}, cg.loc2dbg(loc().finis()));
         }
 
         bool no_otherwise = num_arms() == num_targets;
         if (!no_otherwise) {
             cg.enter(otherwise);
             if (auto def = arm(num_targets)->expr()->remit(cg))
-                cg.cur_bb->app(join, {cg.cur_mem, def}, cg.loc2dbg(loc().finis()));
+                cg.cur_bb->app(false, join, {cg.cur_mem, def}, cg.loc2dbg(loc().finis()));
         }
     } else {
         // general case: if/else
@@ -997,11 +1018,11 @@ const Def* MatchExpr::remit(CodeGen& /*cg*/) const {
                 ? cg.world.lit_true()
                 : arm(i)->ptrn()->emit_cond(cg, matcher);
 
-            cg.cur_bb->branch(cond, case_t, case_f, cg.cur_mem, cg.loc2dbg(arm(i)->ptrn()->loc().finis()));
+            cg.cur_bb->branch(false, cond, case_t, case_f, cg.cur_mem, cg.loc2dbg(arm(i)->ptrn()->loc().finis()));
 
             cg.enter(case_t);
             if (auto def = arm(i)->expr()->remit(cg))
-                cg.cur_bb->app(join, {cg.cur_mem, def}, cg.loc2dbg(arm(i)->loc().finis()));
+                cg.cur_bb->app(false, join, {cg.cur_mem, def}, cg.loc2dbg(arm(i)->loc().finis()));
 
             cg.enter(case_f);
         }
@@ -1023,20 +1044,20 @@ const Def* WhileExpr::remit(CodeGen& cg) const {
     auto cont_bb = cg.create_lam(continue_decl());
     auto brk__bb = cg.create_lam(break_decl());
 
-    cg.cur_bb->app(head_bb, {cg.cur_mem}, cg.loc2dbg(cond()->loc().finis()));
+    cg.cur_bb->app(false, head_bb, {cg.cur_mem}, cg.loc2dbg(cond()->loc().finis()));
 
     cg.enter(head_bb);
     cond()->emit_branch(cg, body_bb, exit_bb);
 
     cg.enter(body_bb);
     body()->remit(cg);
-    cg.cur_bb->app(cont_bb, {cg.cur_mem}, cg.loc2dbg(body()->loc().finis()));
+    cg.cur_bb->app(false, cont_bb, {cg.cur_mem}, cg.loc2dbg(body()->loc().finis()));
 
     cg.enter(cont_bb);
-    cg.cur_bb->app(head_bb, {cg.cur_mem}, cg.loc2dbg(body()->loc().finis()));
+    cg.cur_bb->app(false, head_bb, {cg.cur_mem}, cg.loc2dbg(body()->loc().finis()));
 
     cg.enter(exit_bb);
-    cg.cur_bb->app(brk__bb, {cg.cur_mem}, cg.loc2dbg(body()->loc().finis()));
+    cg.cur_bb->app(false, brk__bb, {cg.cur_mem}, cg.loc2dbg(body()->loc().finis()));
 
     cg.enter(brk__bb);
     return cg.world.tuple();
