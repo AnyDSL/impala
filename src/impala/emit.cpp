@@ -375,7 +375,7 @@ void StaticItem::emit(CodeGen& cg) const {
     if (init()) {
         auto old_def = def_;
         def_ = cg.world.global(init()->remit(cg), is_mut(), cg.debug(this));
-        thorin::outln("TODO: I want to replace {} -> {}", old_def, def_);
+        thorin::unreachable("TODO: I want to replace old_def -> def_");
     }
 }
 
