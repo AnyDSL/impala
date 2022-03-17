@@ -1,0 +1,10 @@
+// codegen
+
+extern fn f(x:int, y:i32) -> i32 {
+    fn g(z:i32) -> i32 {
+        x + y * z
+    }
+    g (42)
+}
+
+fn main() -> int { 0 }

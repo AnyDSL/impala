@@ -1,0 +1,28 @@
+type F = fn(i32)->i32;
+
+// extern "C" {
+//     fn g(F, i32) -> ();
+//     fn print_int(i32) -> ();
+// }
+
+extern fn f(f:F, y:i32) -> () {}
+    // print_int(f(42))
+
+extern fn use1(x:i32) -> i32 {
+    if x == 42  {
+        f(|y:i32|->i32 {x}, 0)
+    } else {
+        f(|y:i32|->i32 {x + y}, 42)
+    }
+    x
+}
+
+// extern fn use2(x:i32) -> i32 {
+//     let mut x : i32 = 0;
+//     if x == 42  {
+//         g(|y:i32|->i32 x + *y, 0)
+//     } else {
+//         g(|y:i32|->i32 *y, 1)
+//     }
+//     x
+// }

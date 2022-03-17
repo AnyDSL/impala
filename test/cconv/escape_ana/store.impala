@@ -1,0 +1,10 @@
+
+extern fn use(x:i32,y:i32, g:fn(i32)->i32) -> () {
+    esc_proc(|z:i32|->i32 g(x+z*y))
+}
+
+fn esc_proc(f:fn(i32)->i32) -> () {
+    let p = 0 as &mut fn(i32)->i32;
+    *p = f;
+}
+

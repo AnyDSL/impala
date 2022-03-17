@@ -1,0 +1,8 @@
+extern "C" {
+    fn g(fn(i32)->i32) -> i32;
+    fn h(i32) -> i32;
+}
+
+fn main() -> i32 {
+    g(h)
+}

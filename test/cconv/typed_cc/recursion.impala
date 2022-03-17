@@ -1,0 +1,7 @@
+// codegen
+
+extern fn f(x:int) -> int {
+    f(x+1)
+}
+
+fn main() -> int { 0 }

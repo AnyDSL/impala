@@ -1,0 +1,11 @@
+// codegen
+
+extern fn choose(n : int, g : fn(int) -> int, f : fn(int) -> int) -> (fn(int) -> int) { 
+    return (|x : int| -> int
+        if n == 0 {
+            g(x)
+        } else {
+            f(x)
+        })
+}
+fn main() -> int { 0 }

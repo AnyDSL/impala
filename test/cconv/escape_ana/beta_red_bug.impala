@@ -1,0 +1,13 @@
+
+extern fn main(x:i32)->i32 {
+    fn f(a:i32) -> i32 {
+       42
+    }
+    fn u1() -> i32 {
+        f(x)
+    }
+    fn u2() -> i32 {
+        f(x)
+    }
+    u1() + u2()
+}

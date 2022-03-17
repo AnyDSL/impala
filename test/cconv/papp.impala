@@ -1,0 +1,13 @@
+// codegen
+
+extern fn p_app(f:fn(i32, i32)->i32) -> fn(i32) -> i32 {
+    |x:i32| -> i32 f (42, x)
+}
+
+extern fn F() -> i32 {
+    let G = p_app (|x:i32,y:i32| -> i32 x*y);
+    G(1) + G(2)
+}
+
+
+fn main() -> int { 0 }

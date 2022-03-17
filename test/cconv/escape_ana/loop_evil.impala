@@ -1,0 +1,13 @@
+
+fn bad(ret:fn()->!) -> ! {
+    *(42 as &mut fn()->!) = ret;
+    ret()
+}
+
+extern fn f(n : i32) -> () {
+    let mut i = 0;
+    while i < n {
+        bad();
+        i++;
+    }
+}

@@ -1,0 +1,32 @@
+// codegen
+
+extern "C" {
+    fn print_int(i32) -> ();
+}
+
+type V2 = (i16, i32);
+
+fn vnom2(t1:V2) -> i32 {
+    let (x,y) = t1;
+    (x as i32) * y
+}
+
+fn vadd_nom(t1:V2, t2:V2) -> i32 {
+    let (x1, y1) = t1;
+    let (x2, y2) = t2;
+    vnom2((x1+x2, y1+y2))
+}
+
+fn f(useless:(), t1:V2, nested:(i32, (i32, V2))) -> i32 {
+    let (a, (b, t2)) = nested;
+    a * b * vadd_nom(t1,t2)
+}
+
+extern fn main_(t1:V2, t2:V2) -> i32 {
+    f((), t1, (2, (3, t2))) + f((), t2, (42, (-42, t1)))
+}
+
+extern fn main() -> int {
+    print_int(main_((42i16, -1i32), (3313i16, 8974229i32)) as i32); 0
+}
+    

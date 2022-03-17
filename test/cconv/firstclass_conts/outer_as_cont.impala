@@ -1,0 +1,10 @@
+
+extern fn g(_:i32) -> i32 { 42 }
+
+extern fn outer(x:i32) -> i32 {
+    let ret = return;
+    fn inner(y:i32) -> i32 {
+        if y > 0 { g(x + y - 1337, ret) } else { x + y }
+    }
+    inner(x - 42) * 2
+}

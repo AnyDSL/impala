@@ -1,0 +1,10 @@
+// codegen
+
+extern fn f(a: i32, g : fn(i32) -> !) -> fn(int) -> int {
+    return (|x:int| -> int g(x+a))
+}
+
+extern fn main() -> int {
+    let g = f(42, |_:int| -> ! return(0));
+    g(0) + g(1)
+}

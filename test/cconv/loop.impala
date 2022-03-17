@@ -1,0 +1,14 @@
+// codegen
+fn fac(i: i32) -> i32 {
+   let mut n : i32 = i;
+   let mut r : i32 = 1;
+   while n > 0 {
+        r = r * n;
+        n = n - 1;
+   }
+   r
+}
+
+extern fn main() -> int {
+   if fac(3) == 6 { 0 } else { 1 }
+}

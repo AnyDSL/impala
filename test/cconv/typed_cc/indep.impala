@@ -1,0 +1,7 @@
+// codegen
+
+extern fn main() -> int {
+    fn f() -> int { 42 }
+    fn g() -> int { f() }
+    if g () == 42 { 0 } else { 1 }
+}

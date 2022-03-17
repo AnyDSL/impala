@@ -1,0 +1,22 @@
+
+
+extern "C" { 
+    fn print_error(&[u8], i32) -> ();
+    fn do_something(i:i32, foo:fn(i32)->!, bar:fn(i32)->!) -> ();
+}
+
+extern fn main() -> () {
+    let mut i = 0;
+    while (i < 42) {
+        fn k1(err_code:i32) -> ! {
+            print_error("Oooopsie!", err_code);
+            break()
+        }
+        fn k2(err_code:i32) -> ! {
+            print_error("Even bigger Oooops!", err_code);
+            break()
+        }
+        do_something(i, k1, k2);
+        i++; ()
+    }
+}

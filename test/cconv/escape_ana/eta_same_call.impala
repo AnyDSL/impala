@@ -1,0 +1,19 @@
+
+type Fn = fn(i32)->i32;
+
+
+extern fn use(f:Fn, g:Fn) -> () {
+    let ptr = 1337 as (&mut Fn);
+    *ptr = g;
+}
+
+
+fn main(x:i32) -> () {
+    fn f(y:i32)->i32 { x + y }
+    fn g(y:i32)->i32 { x - y }
+    fn hide_f() -> fn(i32) -> i32 {
+        f
+    }
+    use(f, g);
+    use(g, hide_f());
+}

@@ -1,0 +1,10 @@
+
+extern fn use() -> i32 {
+    evil() * evil() + 42
+}
+
+fn evil() -> i32 {
+   let p = 0 as &mut fn(i32)->!;
+   *p = return;
+   4
+}

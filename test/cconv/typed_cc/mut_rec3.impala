@@ -1,0 +1,29 @@
+// codegen
+
+extern fn m(x:i32, y:i32, z:i32, d1:i32, d2:i32)->i32 {
+    fn f(a:i32) -> i32 {
+        a + x + g()
+    }
+
+    fn no_dep() -> i32 { 42 }
+
+    fn g() -> i32 {
+        y * h() + no_dep()
+    }
+
+    fn h() -> i32 {
+        42 + f(z)
+    }
+
+    fn u1() -> i32 {
+        f(d1)
+    }
+    fn u2() -> i32 {
+        d2 * h()
+    }
+    u1() + u2(); 0
+}
+
+extern fn main() -> int {
+    m(0, 1, 42, 3, 1337)
+}

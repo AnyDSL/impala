@@ -1,0 +1,29 @@
+type node_t = u64;
+
+extern "C" {
+    fn left(node_t) -> node_t;
+    fn right(node_t) -> node_t;
+    fn id(node_t) -> i32;
+}
+
+
+fn iterate(node: node_t, body: fn(node_t) -> ()) -> () {
+    body(node);
+    let l = left(node);
+    let r = right(node);
+    if (l != 0u64) { iterate(l, body) }
+    if (r != 0u64) { iterate(r, body) }
+}
+
+fn find(tree: node_t, p:fn(node_t) -> bool) -> node_t {
+    for node in iterate(tree) {
+        if p(node) {
+            return(node)
+        }
+    }
+    return (0u64)
+}
+
+extern fn solve(tree: node_t, tok:i32) -> node_t {
+    find(tree, |n:node_t| -> bool id(n) == tok)
+}

@@ -1,0 +1,6 @@
+
+extern fn Test(x:i32) -> () {
+    if x == 0 {
+        Test(0)
+    }
+}

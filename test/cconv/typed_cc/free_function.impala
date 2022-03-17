@@ -1,0 +1,6 @@
+// codegen
+
+extern fn f(a:int, g:fn(int)->int) -> (fn(int)->int) {
+    return (|c:int| -> int g(c + 42)) // %lambda_740
+}
+fn main() -> int { 0 }

@@ -1,0 +1,18 @@
+// codegen
+
+// extern "C" {
+//     fn fancy(i32) -> i32;
+// }
+
+// extern fn addT(t:(i8, i16, i32)) -> i32 {
+//     let (a, b, c) = t; (a as i32) + (b as i32) + (c as i32)
+// }
+
+fn f(x:i16, y:i32) -> i32 {
+   (x as i32) + y
+}
+
+extern fn g(ho:fn(fn(i16, i32)->i32) -> i32) -> i32 {
+    f(1 as i16, 2) + ho(f)
+}
+fn main() -> int { 0 }

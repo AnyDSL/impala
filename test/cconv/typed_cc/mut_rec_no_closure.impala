@@ -1,0 +1,11 @@
+// broken: η-exp diverges
+// codegen
+
+extern fn f(x:int) -> ! {
+    g(x) 
+}
+
+extern fn g(x:int) -> ! {
+    f(x)
+}
+fn main() -> int { 0 }

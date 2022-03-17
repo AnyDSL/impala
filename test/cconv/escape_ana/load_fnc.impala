@@ -1,0 +1,6 @@
+
+extern fn use(f: fn() -> ()) -> () {
+    let p = 0 as &(fn(fn()->())->());
+    let g = *p;
+    g(f)
+}

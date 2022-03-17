@@ -1,0 +1,11 @@
+// codegen
+
+type F = fn((i32, i32)) -> i32;
+
+extern fn f(fs: (F, F)) -> i32 {
+    let (f, g) = fs;
+    let a1 = (0, 42);
+    let a2 = (g(a1), 1);
+    f(a2)
+}
+fn main() -> int { 0 }

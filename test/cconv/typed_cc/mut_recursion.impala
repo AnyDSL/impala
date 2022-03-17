@@ -1,0 +1,24 @@
+
+extern "C" {
+    fn print(&[u8]) -> ();
+}
+
+fn print_n(name : &[u8], a : &[u8], b : &[u8]) -> () {
+    print(name);
+    print(a);
+    print(b);
+    print("-------\n")
+}
+
+extern fn loop(a: &[u8], b : &[u8]) -> () {
+    let mut g : fn()->() = || {};
+    let f = || -> () {
+        print_("f", a, b);
+        g();
+    };
+    g = || -> () {
+        print_("g", b, a);
+        f();
+    };
+    f(); 0
+}

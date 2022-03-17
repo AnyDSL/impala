@@ -1,0 +1,16 @@
+
+extern "thorin" {
+    fn H(fn(i32)->!) -> i32;
+    fn Print(i32) -> ();
+}
+
+extern fn Main(x:i32, y:i32) -> i32 {
+    let main_ret = return;
+
+    fn K(y:i32) -> ! {
+        Print(x*2+y);
+        main_ret(x*4+y*4)
+    }
+
+    H(K)
+}
