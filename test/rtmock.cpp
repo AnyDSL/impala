@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <setjmp.h>
 #include <cstring>
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -123,6 +125,11 @@ void impala_memmove(char* dest, const char* src, int size) {
 // pe_known
 int forty_two() {
     return 42;
+}
+
+// helper for first-class continuations
+int64_t jmpbuf_size() {
+    return sizeof(jmp_buf);
 }
 
 #ifdef __cplusplus
