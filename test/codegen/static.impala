@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 fn main() -> int {
     static mut x = 3;
