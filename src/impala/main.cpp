@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
         std::string out_name, log_name, log_level;
         bool help,
              emit_cint, emit_thorin, emit_ast, emit_annotated,
-             emit_llvm, opt_thorin, opt_s, opt_0, opt_1, opt_2, opt_3, debug, fancy;
+             emit_llvm, opt_thorin, debug, fancy;
 
 #ifndef NDEBUG
 #define LOG_LEVELS "{error|warn|info|verbose|debug}"
@@ -67,11 +67,6 @@ int main(int argc, char** argv) {
             .add_option<bool>            ("track-history",      "", "track hisotry of names - useful for debugging", track_history, false)
 #endif
             .add_option<std::string>     ("o",                  "", "specifies the output module name", out_name, "")
-            .add_option<bool>            ("O0",                 "", "reduce compilation time and make debugging produce the expected results (default)", opt_0, false)
-            .add_option<bool>            ("O1",                 "", "optimize", opt_1, false)
-            .add_option<bool>            ("O2",                 "", "optimize even more", opt_2, false)
-            .add_option<bool>            ("O3",                 "", "optimize yet more", opt_3, false)
-            .add_option<bool>            ("Os",                 "", "optimize for size", opt_s, false)
             .add_option<bool>            ("Othorin",            "", "optimize at Thorin level", opt_thorin, false)
             .add_option<bool>            ("emit-annotated",     "", "emit AST of Impala program after semantic analysis", emit_annotated, false)
             .add_option<bool>            ("emit-ast",           "", "emit AST of Impala program", emit_ast, false)
@@ -86,16 +81,6 @@ int main(int argc, char** argv) {
         opt_thorin |= emit_llvm;
 
         impala::fancy() = fancy;
-
-        // check optimization levels
-        if (opt_s + opt_0 + opt_1 + opt_2 + opt_3 > 1)
-            throw std::invalid_argument("multiple optimization levels specified");
-
-        int opt = 0;
-        if (opt_s) opt = -1;
-        else if (opt_1) opt = 1;
-        else if (opt_2) opt = 2;
-        else if (opt_3) opt = 3;
 
         if (infiles.empty() && !help) {
             thorin::errf("no input files");
