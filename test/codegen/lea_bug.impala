@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 struct Foo {
     data: [i32 * 2],

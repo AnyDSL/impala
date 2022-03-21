@@ -129,7 +129,7 @@ public:
         return result;
     }
 
-    const thorin::Def* rev_diff(const thorin::Def *primal) { return nullptr; /*world.op_rev_diff(primal);*/ }
+    const thorin::Def* rev_diff(const thorin::Def* /*primal*/) { return nullptr; /*world.op_rev_diff(primal);*/ }
 
     const thorin::Def* convert(const Type* type) {
         if (auto t = thorin_type(type))
@@ -368,16 +368,15 @@ void ModuleDecl::emit(CodeGen&) const {}
 void ImplItem::emit(CodeGen&) const {}
 
 void StaticItem::emit_head(CodeGen& cg) const {
-    def_ = cg.world.global(cg.world.bot(cg.convert(type()), cg.loc2dbg(loc())));
+    auto t = cg.convert(type());
+    auto bot = cg.world.bot(t);
+    auto g = cg.world.global(cg.world.type_ptr(t), is_mut(), cg.loc2dbg(loc()));
+    g->set(bot);
+    def_ = g;
 }
 
 void StaticItem::emit(CodeGen& cg) const {
-    if (init()) {
-        auto old_def = def_;
-        def_ = cg.world.global(init()->remit(cg), is_mut(), cg.debug(this));
-        old_def->replace(def_);
-        //thorin::unreachable("TODO: I want to replace old_def -> def_");
-    }
+    if (init()) def_->as_nom<Global>()->set(init()->remit(cg));
 }
 
 void StructDecl::emit_head(CodeGen& cg) const {
@@ -566,8 +565,11 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
                 return rhs()->lemit(cg);
 
             auto def = rhs()->remit(cg);
-            if (def->no_dep())
-                return cg.world.global(def, /*mutable*/ false, cg.loc2dbg(loc()));
+            if (def->no_dep()) {
+                auto g = cg.world.global(cg.world.type_ptr(def->type()), /*mutable*/ false, cg.loc2dbg(loc()));
+                g->set(def);
+                return g;
+            }
 
             auto slot = cg.slot(cg.convert(rhs()->type()), cg.loc2dbg(loc()));
             cg.store(slot, def, loc());

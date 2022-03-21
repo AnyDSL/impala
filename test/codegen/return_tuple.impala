@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 type Blob = (i32, i32);
 fn blobify(i: i32) -> Blob {
