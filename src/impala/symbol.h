@@ -3,18 +3,15 @@
 
 #include <string>
 
+#include <absl/container/flat_hash_map.h>
+#include <absl/container/flat_hash_set.h>
+
 #include "thorin/util/hash.h"
 
-namespace thorin {
+namespace impala {
 
 class Symbol {
 public:
-    struct Hash {
-        static uint32_t hash(Symbol s) { return thorin::hash(s.c_str()); }
-        static bool eq(Symbol s1, Symbol s2) { return s1 == s2; }
-        static Symbol sentinel() { return Symbol(/*dummy*/23); }
-    };
-
     Symbol() { insert(""); }
     Symbol(const char* str) { insert(str); }
     Symbol(const std::string& str) { insert(str.c_str()); }
@@ -37,17 +34,22 @@ private:
 
     struct Table {
         ~Table() {
-            for (auto s : map)
+            for (auto s : set)
                 free((void*) const_cast<char*>(s));
         }
 
-        HashSet<const char*, StrHash> map;
+        absl::flat_hash_set<const char*> set;
     };
 
     void insert(const char* str);
 
     const char* str_;
     static Table table_;
+
+    template<class H>
+    friend H AbslHashValue(H h, Symbol symbol) {
+        return H::combine(std::move(h), symbol.str_);
+    }
 };
 
 inline Symbol operator+(Symbol s1, Symbol s2) { return std::string(s1.c_str()) + s2.str(); }
@@ -56,7 +58,7 @@ inline Symbol operator+(Symbol s1, std::string s2) { return std::string(s1.c_str
 inline std::ostream& operator<<(std::ostream& os, Symbol s) { return os << s.c_str(); }
 
 template<class T>
-using SymbolMap = HashMap<Symbol, T>;
+using SymbolMap = absl::flat_hash_map<Symbol, T>;
 
 }
 

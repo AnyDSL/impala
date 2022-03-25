@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <sstream>
 
-namespace thorin {
+namespace impala {
 
 Symbol::Table Symbol::table_;
 
@@ -14,9 +14,9 @@ static const char* duplicate(const char* s) { return strdup(s); }
 #endif // _MSC_VER
 
 void Symbol::insert(const char* s) {
-    auto i = table_.map.find(s);
-    if (i == table_.map.end())
-        i = table_.map.emplace(duplicate(s)).first;
+    auto i = table_.set.find(s);
+    if (i == table_.set.end())
+        i = table_.set.emplace(duplicate(s)).first;
     str_ = *i;
 }
 

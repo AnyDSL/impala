@@ -42,7 +42,7 @@ public:
 private:
     size_t depth() const { return levels_.size(); }
 
-    thorin::HashMap<Symbol, const Decl*, Symbol::Hash> symbol2decl_;
+    SymbolMap<const Decl*> symbol2decl_;
     std::vector<const Decl*> decl_stack_;
     std::vector<size_t> levels_;
 
@@ -56,10 +56,9 @@ const Decl* NameSema::lookup(const ASTNode* n, Symbol symbol) {
     assert(!symbol.empty() && "symbol is empty");
 
     if (!symbol.is_anonymous()) {
-        auto decl = symbol2decl_.lookup(symbol);
-        if (!decl)
-            error(n, "'{}' not found in current scope", symbol);
-        return *decl;
+        if (auto i = symbol2decl_.find(symbol); i != symbol2decl_.end()) return i->second;
+        error(n, "'{}' not found in current scope", symbol);
+        return nullptr;
     } else {
         error(n, "identifier '_' is reserved for anonymous declarations");
         return nullptr;
@@ -89,8 +88,10 @@ void NameSema::insert(const Decl* decl) {
 
 const Decl* NameSema::clash(Symbol symbol) const {
     assert(!symbol.empty() && "symbol is empty");
-    if (auto decl = symbol2decl_.lookup(symbol))
-        return (*decl && (*decl)->depth() == depth()) ? *decl : nullptr;
+    if (auto i = symbol2decl_.find(symbol); i != symbol2decl_.end()) {
+        auto decl = i->second;
+        return (decl && decl->depth() == depth()) ? decl : nullptr;
+    }
     return nullptr;
 }
 
