@@ -169,12 +169,14 @@ template <class Type>
 class TypeTableBase {
 public:
     struct TypeHash {
-        static uint32_t hash(const Type* t) { return t->hash(); }
-        static bool eq(const Type* t1, const Type* t2) { return t2->equal(t1); }
-        static const Type* sentinel() { return (const Type*)(1); }
+        size_t operator()(const Type* t) const { return t->hash(); }
     };
 
-    typedef thorin::HashSet<const Type*, TypeHash> TypeSet;
+    struct TypeEq {
+        bool operator()(const Type* t1, const Type* t2) const { return t2->equal(t1); }
+    };
+
+    typedef absl::flat_hash_set<const Type*, TypeHash, TypeEq> TypeSet;
 
     TypeTableBase& operator=(const TypeTableBase&) = delete;
     TypeTableBase(const TypeTableBase&) = delete;
@@ -212,8 +214,7 @@ TypeBase<TypeTable>::TypeBase(TypeTable& table, int tag, Types ops)
 
 template <class TypeTable>
 const TypeBase<TypeTable>* TypeBase<TypeTable>::reduce(int depth, const TypeBase* type, Type2Type& map) const {
-    if (auto result = map.lookup(this))
-        return *result;
+    if (auto i = map.find(this); i != map.end()) return i->second;
     if (is_monomorphic())
         return this;
     auto new_type = vreduce(depth, type, map);
