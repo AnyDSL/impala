@@ -35,10 +35,6 @@ public:
         size_t operator()(Tag tag) const { return uint32_t(tag); }
     };
 
-    struct TagEq {
-        bool operator()(Tag k1, Tag k2) const { return k1 == k2; }
-    };
-
     Token() {}
     /// Create an operator token
     Token(Loc loc, Tag tok);
@@ -90,8 +86,8 @@ private:
     uint64_t val_;
 
     typedef SymbolMap<Tag> Sym2Tag;
-    typedef absl::flat_hash_map<Tag, const char*, TagHash, TagEq> Tag2Str;
-    typedef absl::flat_hash_map<Tag, Symbol, TagHash, TagEq> Tag2Sym;
+    typedef absl::flat_hash_map<Tag, const char*, TagHash> Tag2Str;
+    typedef absl::flat_hash_map<Tag, Symbol, TagHash> Tag2Sym;
     static int tok2op_[Num];
     static Tag2Str tok2str_; // TODO do we need this thing?
     static Tag2Sym tok2sym_;

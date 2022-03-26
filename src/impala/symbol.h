@@ -10,6 +10,19 @@
 
 namespace impala {
 
+struct StrHash {
+    size_t operator()(const char* s) const {
+        auto seed = thorin::hash_begin();
+        for (const char* p = s; *p != '\0'; ++p)
+            seed = thorin::hash_combine(seed, *p);
+        return seed;
+    }
+};
+
+struct StrEq {
+    bool operator()(const char* s1, const char* s2) const { return std::strcmp(s1, s2) == 0; }
+};
+
 class Symbol {
 public:
     Symbol() { insert(""); }
@@ -38,7 +51,7 @@ private:
                 free((void*) const_cast<char*>(s));
         }
 
-        absl::flat_hash_set<const char*> set;
+        absl::flat_hash_set<const char*, StrHash, StrEq> set;
     };
 
     void insert(const char* str);
