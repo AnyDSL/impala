@@ -11,12 +11,7 @@
 namespace impala {
 
 struct StrHash {
-    size_t operator()(const char* s) const {
-        auto seed = thorin::hash_begin();
-        for (const char* p = s; *p != '\0'; ++p)
-            seed = thorin::hash_combine(seed, *p);
-        return seed;
-    }
+    size_t operator()(const char* s) const { return thorin::hash(s); }
 };
 
 struct StrEq {
