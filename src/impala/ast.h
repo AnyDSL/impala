@@ -55,10 +55,10 @@ typedef std::vector<std::unique_ptr<const FnDecl>> FnDecls;
 typedef std::vector<std::unique_ptr<const Param>> Params;
 typedef std::vector<std::unique_ptr<const Stmt>> Stmts;
 typedef std::vector<char> Chars;
-typedef thorin::HashMap<Symbol, const FieldDecl*> FieldTable;
-typedef thorin::HashMap<Symbol, const OptionDecl*> OptionTable;
-typedef thorin::HashMap<Symbol, const FnDecl*> MethodTable;
-typedef thorin::HashMap<Symbol, const Item*> Symbol2Item;
+typedef SymbolMap<const FieldDecl*> FieldTable;
+typedef SymbolMap<const OptionDecl*> OptionTable;
+typedef SymbolMap<const FnDecl*> MethodTable;
+typedef SymbolMap<const Item*> Symbol2Item;
 
 /**
  * Assigns @p src's @p Expr::back_ref_ to @p dst and returns @p src.
@@ -849,7 +849,10 @@ public:
     const FieldDecls& field_decls() const { return field_decls_; }
     const FieldTable& field_table() const { return field_table_; }
     const FieldDecl* field_decl(size_t i) const { return field_decls_[i].get(); }
-    std::optional<const FieldDecl*> field_decl(Symbol symbol) const { return field_table_.lookup(symbol); }
+    std::optional<const FieldDecl*> field_decl(Symbol symbol) const {
+        if (auto i = field_table_.find(symbol); i != field_table_.end()) return i->second;
+        return {};
+    }
     std::optional<const FieldDecl*> field_decl(const Identifier* ident) const { return field_decl(ident->symbol()); }
     const StructType* struct_type() const { return type_->as<StructType>(); }
 
@@ -916,7 +919,10 @@ public:
     size_t num_option_decls() const { return option_decls_.size(); }
     const OptionDecls& option_decls() const { return option_decls_; }
     const OptionDecl* option_decl(size_t i) const { return option_decls_[i].get(); }
-    std::optional<const OptionDecl*> option_decl(Symbol symbol) const { return option_table_.lookup(symbol); }
+    std::optional<const OptionDecl*> option_decl(Symbol symbol) const {
+        if (auto i = option_table_.find(symbol); i != option_table_.end()) return i->second;
+        return {};
+    }
     const EnumType* enum_type() const { return type_->as<EnumType>(); }
 
     void bind(NameSema&) const override;
