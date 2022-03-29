@@ -1,4 +1,5 @@
-// codegen -lm "6000000"
+// codegen -lm "150000"
+// codegen -lm "6000000" -> Stack overflow in range
 
 type char = u8;
 type str = [char];

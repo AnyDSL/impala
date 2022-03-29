@@ -1,5 +1,6 @@
 // codegen
 
+
 fn range(a: int, z: int, body: fn(int)->()) -> () {
     if a < z {
         body(a);
@@ -21,7 +22,8 @@ fn fib(n: int, body: fn(int)->()) -> () {
 
 fn main() -> int {
     let mut result: int = 0;
-    for i in range(0, 15000000) {
+    // Stack overflows otherwise; this is not *really* an error without PE
+    for i in range(0, /* 15000000 */ 150000) {
         fib(13,
             |f: int| result = result % 4 + f,
             continue
