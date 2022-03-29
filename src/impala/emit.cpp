@@ -526,12 +526,8 @@ const Def* PrefixExpr::lemit(CodeGen& cg) const {
 }
 
 void Expr::emit_branch(CodeGen& cg, Continuation* jump_true, Continuation* jump_false) const {
-    auto expr_true  = cg.basicblock({ "expr_true",  loc().anew_finis()  });
-    auto expr_false = cg.basicblock({ "expr_false", loc().anew_finis() });
     auto cond = remit(cg);
-    cg.cur_bb->branch(cond, expr_true, expr_false, loc().anew_finis());
-    expr_true->jump(jump_true, { cg.cur_mem });
-    expr_false->jump(jump_false, { cg.cur_mem });
+    cg.cur_bb->branch(cg.cur_mem, cond, jump_true, jump_false, loc().anew_finis());
 }
 
 void InfixExpr::emit_branch(CodeGen& cg, Continuation* jump_true, Continuation* jump_false) const {
@@ -808,6 +804,7 @@ const Def* IfExpr::remit(CodeGen& cg) const {
 
 const Def* MatchExpr::remit(CodeGen& cg) const {
     auto thorin_type = cg.convert(type());
+    auto case_type = cg.world.fn_type({ cg.world.mem_type() });
 
     auto join = thorin_type ? cg.basicblock(thorin_type, {"match_join", loc().anew_finis()}) : nullptr; // TODO rewrite with bottom type
 
@@ -823,12 +820,14 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
         Array<const Def*> defs(num_targets);
         Array<Continuation*> targets(num_targets);
 
+
         for (size_t i = 0, e = num_targets; i != e; ++i) {
             // last pattern will always be taken
+
             if (!arm(i)->ptrn()->is_refutable() || i == e - 1) {
                 num_targets = i;
                 arm(i)->ptrn()->emit(cg, matcher);
-                otherwise = cg.basicblock({"otherwise", arm(i)->loc().anew_begin()});
+                otherwise = cg.world.continuation(case_type, {"otherwise", arm(i)->loc().anew_begin()});
                 break;
             } else {
                 if (is_integer) {
@@ -838,7 +837,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
                     auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
                     defs[i] = cg.world.literal_qu64(option_decl->index(), arm(i)->ptrn()->loc());
                 }
-                targets[i] = cg.basicblock({"case", arm(i)->loc().anew_begin()});
+                targets[i] = cg.world.continuation(case_type, {"case", arm(i)->loc().anew_begin()});
             }
         }
 
@@ -846,26 +845,27 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
         defs.shrink(num_targets);
 
         auto matcher_int = is_integer ? matcher : cg.world.variant_index(matcher, matcher->debug());
-        cg.cur_bb->match(matcher_int, otherwise, defs, targets, {"match", loc().anew_begin()});
+        cg.cur_bb->match(cg.cur_mem, matcher_int, otherwise, defs, targets, {"match", loc().anew_begin()});
         auto mem = cg.cur_mem;
 
         for (size_t i = 0; i != num_targets; ++i) {
-            cg.enter(targets[i], mem);
+            cg.enter(targets[i], targets[i]->param(0));
             if (auto def = arm(i)->expr()->remit(cg))
                 cg.cur_bb->jump(join, {cg.cur_mem, def}, loc().anew_finis());
         }
 
         bool no_otherwise = num_arms() == num_targets;
         if (!no_otherwise) {
-            cg.enter(otherwise, mem);
+            cg.enter(otherwise, otherwise->param(0));
             if (auto def = arm(num_targets)->expr()->remit(cg))
                 cg.cur_bb->jump(join, {cg.cur_mem, def}, loc().anew_finis());
         }
     } else {
         // general case: if/else
+
         for (size_t i = 0, e = num_arms(); i != e; ++i) {
-            auto case_true  = cg.basicblock({"case_true",  arm(i)->loc().anew_begin()});
-            auto case_false = cg.basicblock({"case_false", arm(i)->loc().anew_begin()});
+            auto case_true  = cg.world.continuation(case_type, {"case_true",  arm(i)->loc().anew_begin()});
+            auto case_false = cg.world.continuation(case_type, {"case_false", arm(i)->loc().anew_begin()});
 
             arm(i)->ptrn()->emit(cg, matcher);
 
@@ -874,14 +874,14 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
                 ? cg.world.literal_bool(true, arm(i)->ptrn()->loc())
                 : arm(i)->ptrn()->emit_cond(cg, matcher);
 
-            cg.cur_bb->branch(cond, case_true, case_false, arm(i)->ptrn()->loc().anew_finis());
+            cg.cur_bb->branch(cg.cur_mem, cond, case_true, case_false, arm(i)->ptrn()->loc().anew_finis());
 
             auto mem = cg.cur_mem;
-            cg.enter(case_true, mem);
+            cg.enter(case_true, case_true->param(0));
             if (auto def = arm(i)->expr()->remit(cg))
                 cg.cur_bb->jump(join, {cg.cur_mem, def}, arm(i)->loc().anew_finis());
 
-            cg.enter(case_false, mem);
+            cg.enter(case_false, case_false->param(0));
         }
     }
 
