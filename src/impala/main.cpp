@@ -114,18 +114,10 @@ int main(int argc, char** argv) {
 
         thorin::World world(module_name);
         impala::init();
-        world.set(std::make_unique<thorin::ErrorHandler>());
 
         std::ofstream log_stream;
-        world.set(std::make_shared<thorin::Stream>(*open(log_stream, log_name)));
-
-        if (false) {}
-        else if (log_level == "error")   world.set(thorin::LogLevel::Error);
-        else if (log_level == "warn")    world.set(thorin::LogLevel::Warn);
-        else if (log_level == "info")    world.set(thorin::LogLevel::Info);
-        else if (log_level == "verbose") world.set(thorin::LogLevel::Verbose);
-        else if (log_level == "debug")   world.set(thorin::LogLevel::Debug);
-        else throw std::invalid_argument("log level must be one of " LOG_LEVELS);
+        world.set_log_stream(std::make_shared<thorin::Stream>(*open(log_stream, log_name)));
+        world.set_log_level(log_level);
 
 #if THORIN_ENABLE_CHECKS && !defined(NDEBUG)
         auto set_breakpoints = [&](auto breakpoints, auto setter) {
