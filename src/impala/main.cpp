@@ -17,8 +17,6 @@
 #include "impala/cgen.h"
 #include "impala/impala.h"
 
-using thorin::Stream;
-
 //------------------------------------------------------------------------------
 
 typedef std::vector<std::string> Names;
@@ -116,7 +114,7 @@ int main(int argc, char** argv) {
         impala::init();
 
         std::ofstream log_stream;
-        world.set_log_stream(std::make_shared<thorin::Stream>(*open(log_stream, log_name)));
+        world.set_log_ostream(open(log_stream, log_name));
         world.set_log_level(log_level);
 
 #if THORIN_ENABLE_CHECKS && !defined(NDEBUG)
@@ -203,9 +201,8 @@ int main(int argc, char** argv) {
             if (emit_thorin)
                 world.dump();
             if (emit_llvm) {
-                std::ofstream file(module_name + ".ll");
-                Stream s(file);
-                thorin::ll::emit(world, s);
+                std::ofstream ofs(module_name + ".ll");
+                thorin::ll::emit(world, ofs);
 #if 0
                 thorin::Backends backends(world);
                 auto emit_to_file = [&](thorin::CodeGen* cg, std::string ext) {

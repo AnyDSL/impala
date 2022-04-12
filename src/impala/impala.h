@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "thorin/world.h"
-#include "thorin/util/stream.h"
 
 #include "impala/token.h"
 #include "impala/sema/type.h"
