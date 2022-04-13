@@ -1,0 +1,10 @@
+// codegen
+fn f(a: f32, b: f64) -> (f32, f64) {
+    (a, b)
+}
+
+fn main () -> int {
+    let (a, b) = f(23.f, 42.0);
+    let (c, d) = f(42.f, 23.0);
+    (a + b as f32 + c + d as f32) as int - 130
+}
