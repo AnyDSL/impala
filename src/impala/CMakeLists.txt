@@ -12,6 +12,8 @@ set(IMPALA_SOURCES
     loc.cpp
     loc.h
     parser.cpp
+    stream.cpp
+    stream.h
     symbol.cpp
     symbol.h
     token.cpp

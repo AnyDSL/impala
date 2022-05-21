@@ -1,11 +1,9 @@
 #ifndef IMPALA_LOC_H
 #define IMPALA_LOC_H
 
-#include "thorin/util/stream.h"
+#include "impala/stream.h"
 
 namespace impala {
-
-using thorin::Stream;
 
 class Loc {
 public:

@@ -160,7 +160,7 @@ public:
 const thorin::Def* CodeGen::convert_rec(const Type* type) {
     if (auto lambda = type->isa<Lambda>()) {
         auto body = convert(lambda->body());
-        auto pi = world.pi(world.kind(), body->type());
+        auto pi = world.pi(world.type(), body->type());
         return world.lam(pi, body, world.dbg(lambda->name()));
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_tag()) {
@@ -227,7 +227,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
     } else if (type->isa<NoRetType>()) {
         return nullptr; // TODO use bottom type - once it is available in thorin
     }
-    thorin::Stream stream;
+    Stream stream;
     type->stream(stream);
     std::cout.flush();
     thorin::unreachable();

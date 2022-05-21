@@ -5,14 +5,11 @@
 #include "thorin/util/array.h"
 #include "thorin/util/cast.h"
 #include "thorin/util/hash.h"
-#include "thorin/util/stream.h"
 
 #include "impala/symbol.h"
 #include "impala/sema/type_table.h"
 
 namespace impala {
-
-using thorin::Stream;
 
 enum Tag {
 #define IMPALA_TYPE(itype, atype) Tag_##itype,

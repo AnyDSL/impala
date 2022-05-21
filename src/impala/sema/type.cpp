@@ -8,8 +8,6 @@
 
 namespace impala {
 
-using thorin::Stream;
-
 //------------------------------------------------------------------------------
 
 bool is(const Type* type, PrimTypeTag tag) {
@@ -441,4 +439,4 @@ const Type* DefiniteArrayType::tangent_vector() const {
 
 }
 
-template void thorin::Streamable<thorin::TypeBase<impala::TypeTable>>::dump() const;
+template void impala::Streamable<thorin::TypeBase<impala::TypeTable>>::dump() const;

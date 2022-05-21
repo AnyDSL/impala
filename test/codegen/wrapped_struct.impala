@@ -1,0 +1,13 @@
+// codgen
+struct Pos {
+    pos: (int, int)
+}
+
+extern fn f(p: Pos) -> int {
+    let (x:int, y:int) = p.pos;
+    x
+}
+
+fn main() -> int {
+    f(Pos{pos: (0, 23)})
+}
