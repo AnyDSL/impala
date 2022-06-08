@@ -3,3 +3,4 @@ build*
 html
 test/config*
 test/__pycache__
+.cache

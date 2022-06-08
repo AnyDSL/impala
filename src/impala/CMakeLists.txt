@@ -34,3 +34,4 @@ target_include_directories(libimpala PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 add_executable(impala main.cpp)
 target_link_libraries(impala libthorin libimpala)
+add_dependencies(impala thorin_mem thorin_affine)

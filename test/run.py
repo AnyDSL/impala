@@ -237,6 +237,11 @@ def run_tests():
                     error += 'clang failed'
                     return (CLANG_FAILED, error)
 
+                (passed, msg) = analyze_returncode(p.returncode)
+                if not passed:
+                    error += 'clang ' + msg
+                    return (IMPALA_FAILED, error)
+
                 tmp_log_file.close()
 
                 # execute

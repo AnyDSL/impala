@@ -2,11 +2,13 @@
 #include <vector>
 #include <cctype>
 #include <stdexcept>
+#include "thorin/dialects.h"
+#include "thorin/fe/parser.h"
+#include "thorin/util/sys.h"
 
 #ifdef LLVM_SUPPORT
 #include "thorin/be/llvm/llvm.h"
 #endif
-#include "thorin/be/ll/ll.h"
 #include "thorin/error.h"
 #include "thorin/rewrite.h"
 #include "thorin/analyses/schedule.h"
@@ -109,6 +111,23 @@ int main(int argc, char** argv) {
         }
 
         thorin::World world(module_name);
+
+        std::vector<thorin::Dialect> dialects;
+        std::vector<std::string> dialect_names{"mem", "affine"}, dialect_paths;
+        if (auto path = thorin::sys::path_to_curr_exe()) {
+            dialect_paths.emplace_back(path->parent_path().parent_path() / "thorin2" / "lib" / "thorin");
+        }
+        thorin::Backends backends;
+        thorin::Normalizers normalizers;
+        if (!dialect_names.empty()) {
+            for (const auto& dialect : dialect_names) {
+                dialects.push_back(thorin::Dialect::load(dialect, dialect_paths));
+                dialects.back().register_backends(backends);
+                dialects.back().register_normalizers(normalizers);
+                thorin::Parser::import_module(world, dialect, dialect_paths, &normalizers);
+            }
+        }
+
         impala::init();
 
         std::ofstream log_stream;
@@ -193,13 +212,20 @@ int main(int argc, char** argv) {
             impala::emit(world, module.get());
 
         if (result) {
-            if (opt_thorin)
-                optimize(world);
+            if (opt_thorin) {
+                thorin::PipelineBuilder builder;
+                for (const auto& dialect : dialects) { dialect.register_passes(builder); }
+
+                thorin::optimize(world, builder);
+            }
             if (emit_thorin)
                 world.dump();
             if (emit_llvm) {
-                std::ofstream ofs(module_name + ".ll");
-                thorin::ll::emit(world, ofs);
+                if (auto it = backends.find("ll"); it != backends.end()) {
+                    std::ofstream ofs(module_name + ".ll");
+                    it->second(world, ofs);
+                } else
+                    throw std::runtime_error("error: 'll' emitter not loaded. thorin 'mem' dialect not found?");
 #if 0
                 thorin::Backends backends(world);
                 auto emit_to_file = [&](thorin::CodeGen* cg, std::string ext) {
