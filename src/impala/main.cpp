@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
         thorin::World world(module_name);
 
         std::vector<thorin::Dialect> dialects;
-        std::vector<std::string> dialect_names{"mem", "affine"}, dialect_paths;
+        std::vector<std::string> dialect_names{"mem", "core", "affine"}, dialect_paths;
         if (auto path = thorin::sys::path_to_curr_exe()) {
             dialect_paths.emplace_back(path->parent_path().parent_path() / "thorin2" / "lib" / "thorin");
         }
