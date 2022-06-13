@@ -2,6 +2,7 @@
 
 #include "dialects/mem/mem.h"
 #include "dialects/core/core.h"
+#include "thorin/infer.h"
 #include "thorin/world.h"
 #include "thorin/util/array.h"
 
@@ -689,8 +690,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case MUL_ASGN: rdef = cg.world.op(Wrap:: mul, mode, ldef, rdef, dbg); break;
                         case SHL_ASGN: rdef = cg.world.op(Wrap:: shl, mode, ldef, rdef, dbg); break;
                         case SHR_ASGN: rdef = cg.world.op(s ? Shr::ashr : Shr::lshr, ldef, rdef, dbg); break;
-                        case DIV_ASGN: rdef = cg.handle_mem_res(thorin::core::op(s ? thorin::core::div::sdiv : thorin::core::div::udiv, cg.cur_mem, ldef, rdef, dbg)); break;
-                        case REM_ASGN: rdef = cg.handle_mem_res(thorin::core::op(s ? thorin::core::div::srem : thorin::core::div::urem, cg.cur_mem, ldef, rdef, dbg)); break;
+                        case DIV_ASGN: rdef = cg.handle_mem_res(cg.world.call(s ? thorin::core::div::sdiv : thorin::core::div::udiv, {cg.cur_mem, ldef, rdef}, dbg)); break;
+                        case REM_ASGN: rdef = cg.handle_mem_res(cg.world.call(s ? thorin::core::div::srem : thorin::core::div::urem, {cg.cur_mem, ldef, rdef}, dbg)); break;
                         default: thorin::unreachable();
                     }
                 }
@@ -749,8 +750,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case SUB: return cg.world.op(Wrap:: sub, mode, ldef, rdef, dbg);
                     case MUL: return cg.world.op(Wrap:: mul, mode, ldef, rdef, dbg);
                     case SHL: return cg.world.op(Wrap:: shl, mode, ldef, rdef, dbg);
-                    case DIV: return cg.handle_mem_res(thorin::core::op(s ? thorin::core::div::sdiv : thorin::core::div::udiv, cg.cur_mem, ldef, rdef, dbg));
-                    case REM: return cg.handle_mem_res(thorin::core::op(s ? thorin::core::div::srem : thorin::core::div::urem, cg.cur_mem, ldef, rdef, dbg));
+                    case DIV: return cg.handle_mem_res(cg.world.call(s ? thorin::core::div::sdiv : thorin::core::div::udiv, {cg.cur_mem, ldef, rdef}, dbg));
+                    case REM: return cg.handle_mem_res(cg.world.call(s ? thorin::core::div::srem : thorin::core::div::urem, {cg.cur_mem, ldef, rdef}, dbg));
                     default: thorin::unreachable();
                 }
             }
