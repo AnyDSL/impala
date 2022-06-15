@@ -119,7 +119,8 @@ public:
     const Def* load(const Def*  ptr, Loc loc) { return handle_mem_res(thorin::mem::op_load(cur_mem, ptr, loc2dbg(loc))); }
     const Def* slot(const Def* type, const Def* dbg) { return handle_mem_res(thorin::mem::op_slot(type, cur_mem, dbg)); }
 
-    void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = thorin::mem::op_store(cur_mem, ptr, val, loc2dbg(loc)); }
+    //void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = thorin::mem::op_store(cur_mem, ptr, val, loc2dbg(loc)); }
+    void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = world.call<thorin::mem::store>({cur_mem, ptr, val}, loc2dbg(loc)); }
 
     const Def* alloc(const thorin::Def* type, const Def* dbg) {
         auto alloc = thorin::mem::op_alloc(type, cur_mem, dbg);

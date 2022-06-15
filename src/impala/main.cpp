@@ -254,10 +254,10 @@ int main(int argc, char** argv) {
 
         return EXIT_SUCCESS;
     } catch (std::exception const& e) {
-        thorin::errf("{}", e.what());
+        thorin::errln("{}", e.what());
         return EXIT_FAILURE;
     } catch (...) {
-        thorin::errf("unknown exception");
+        thorin::errln("unknown exception");
         return EXIT_FAILURE;
     }
 }
