@@ -127,7 +127,7 @@ public:
         auto ptr = thorin::match<thorin::mem::Ptr, true>(result->type());
         auto [pointee, addr_space] = ptr->args<2>();
         if (auto arr = pointee->isa<Arr>())
-            return world.op_bitcast(thorin::mem::type_ptr(world.arr_unsafe(arr->body()), addr_space), result);
+            return core::op_bitcast(thorin::mem::type_ptr(world.arr_unsafe(arr->body()), addr_space), result);
         return result;
     }
 
@@ -465,31 +465,31 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     auto dbg = cg.loc2dbg(loc());
 
     if (src_type->isa<PtrType>() || dst_type->isa<PtrType>()) {
-        return cg.world.op_bitcast(dst, def, dbg);
+        return core::op_bitcast(dst, def, dbg);
     } else if (is_int(src_type) || is_bool(src_type)) {
         if (is_signed(src_type)) {
             if (is_int(dst_type) || is_bool(dst_type)) {
-                return cg.world.op(Conv::s2s, dst, def, dbg);
+                return op(core::conv::s2s, dst, def, dbg);
             } else {
-                return cg.world.op(Conv::s2r, dst, def, dbg);
+                return op(core::conv::s2r, dst, def, dbg);
             }
         } else {
             if (is_int(dst_type) || is_bool(dst_type)) {
-                return cg.world.op(Conv::u2u, dst, def, dbg);
+                return op(core::conv::u2u, dst, def, dbg);
             } else {
-                return cg.world.op(Conv::u2r, dst, def, dbg);
+                return op(core::conv::u2r, dst, def, dbg);
             }
         }
     } else {
         if (is_int(dst_type) || is_bool(dst_type)) {
             if (is_signed(dst_type))
-                return cg.world.op(Conv::r2s, dst, def, dbg);
+                return op(core::conv::r2s, dst, def, dbg);
             else
-                return cg.world.op(Conv::r2u, dst, def, dbg);
+                return op(core::conv::r2u, dst, def, dbg);
         } else if (is_float(src_type) && is_float(dst_type)) {
-            return cg.world.op(Conv::r2r, dst, def, dbg);
+            return op(core::conv::r2r, dst, def, dbg);
         } else {
-            return cg.world.op_bitcast(dst, def, dbg);
+            return core::op_bitcast(dst, def, dbg);
         }
     }
     thorin::unreachable();
@@ -731,8 +731,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                 auto mode = type2wmode(lhs()->type());
                 bool s = is_signed(lhs()->type());
 
-                if (thorin::match<thorin::mem::Ptr>(ldef->type())) ldef = cg.world.op_bitcast(cg.world.type_int_width(64), ldef);
-                if (thorin::match<thorin::mem::Ptr>(rdef->type())) rdef = cg.world.op_bitcast(cg.world.type_int_width(64), rdef);
+                if (thorin::match<thorin::mem::Ptr>(ldef->type())) ldef = core::op_bitcast(cg.world.type_int_width(64), ldef);
+                if (thorin::match<thorin::mem::Ptr>(rdef->type())) rdef = core::op_bitcast(cg.world.type_int_width(64), rdef);
 
                 switch (op) {
                     case  LT: return cg.world.op(s ? ICmp::  sl : ICmp::  ul, ldef, rdef, dbg);
@@ -792,8 +792,8 @@ const Def* TupleExpr::remit(CodeGen& cg) const {
 }
 
 const Def* IndefiniteArrayExpr::remit(CodeGen& cg) const {
-    auto dim_int = cg.world.op(Conv::u2u, cg.world.type_int_width(64), dim()->remit(cg));
-    auto arity = cg.world.op_bitcast(cg.world.type_nat(), dim_int);
+    auto dim_int = op(core::conv::u2u, cg.world.type_int_width(64), dim()->remit(cg));
+    auto arity = core::op_bitcast(cg.world.type_nat(), dim_int);
     auto elem = cg.convert(type()->as<IndefiniteArrayType>()->elem_type());
     return cg.world.pack(arity, cg.world.bot(elem), cg.loc2dbg(loc()));
 }
@@ -827,15 +827,15 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                     if (fn_decl->is_extern() && fn_decl->abi() == "\"thorin\"") {
                         auto name = fn_decl->fn_symbol().remove_quotation();
                         if (name == "bitcast") {
-                            return cg.world.op_bitcast(cg.convert(type_expr->type_arg(0)), arg(0)->remit(cg), cg.loc2dbg(loc()));
+                            return core::op_bitcast(cg.convert(type_expr->type_arg(0)), arg(0)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "select") {
                             return cg.world.extract(cg.world.tuple({arg(2)->remit(cg), arg(1)->remit(cg)}), arg(0)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "insert") {
-                            return cg.world.insert_unsafe(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
+                            return core::insert_unsafe(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "alignof") {
-                            return cg.world.op_bitcast(cg.world.type_int_width(32), cg.world.op(Trait::align, cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
+                            return core::op_bitcast(cg.world.type_int_width(32), cg.world.op(Trait::align, cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
                         } else if (name == "sizeof") {
-                            return cg.world.op_bitcast(cg.world.type_int_width(32), cg.world.op(Trait::size , cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
+                            return core::op_bitcast(cg.world.type_int_width(32), cg.world.op(Trait::size , cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
                         } else if (name == "undef") {
                             return cg.world.bot(cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc()));
                         } else if (name == "reserve_shared") {
@@ -906,7 +906,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         return ret;
     } else if (ltype->isa<ArrayType>() || ltype->isa<TupleType>()) {
         auto index = arg(0)->remit(cg);
-        return cg.world.extract_unsafe(lhs()->remit(cg), index, cg.loc2dbg(loc()));
+        return core::extract_unsafe(lhs()->remit(cg), index, cg.loc2dbg(loc()));
     }
     thorin::unreachable();
 }
@@ -1120,7 +1120,7 @@ const thorin::Def* IdPtrn::emit_cond(CodeGen& cg, const thorin::Def*) const { re
 void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     if (num_args() == 0) return;
     auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
-    auto variant = cg.world.op_bitcast(variant_type, cg.world.extract(init, num_args(), 1), cg.loc2dbg(loc()));
+    auto variant = core::op_bitcast(variant_type, cg.world.extract(init, num_args(), 1), cg.loc2dbg(loc()));
     for (size_t i = 0, e = num_args(); i != e; ++i) {
         arg(i)->emit(cg, num_args() == 1 ? variant : cg.world.extract(variant, num_args(), i, cg.loc2dbg(loc())));
     }
@@ -1132,7 +1132,7 @@ const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) con
     auto cond = cg.world.op(ICmp::e, init_0, cg.world.lit_int(u32(index), cg.loc2dbg(loc())));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
-        auto variant = cg.world.op_bitcast(variant_type, cg.world.extract(init, num_args(), 1, cg.loc2dbg(loc())), cg.loc2dbg(loc()));
+        auto variant = core::op_bitcast(variant_type, cg.world.extract(init, num_args(), 1, cg.loc2dbg(loc())), cg.loc2dbg(loc()));
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
             auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? variant : cg.world.extract(variant, num_args(), i, cg.loc2dbg(loc())));
