@@ -303,7 +303,7 @@ void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
             cg.cur_bb->app(false, ret_param(), {cg.cur_mem, def}, cg.loc2dbg(loc.finis()));
     }
 
-    lam()->set_filter(filter() ? filter()->remit(cg) : cg.world.lit_false());
+    lam()->set_filter(filter() ? filter()->remit(cg) : cg.world.lit_ff());
     cg.cur_mem = old_mem;
 
     cg.cur_fn = old_fn;
@@ -641,8 +641,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             auto jump_t    = cg.world.nom_lam(jump_type, cg.loc2dbg("jump_t", loc().finis()));
             auto jump_f    = cg.world.nom_lam(jump_type, cg.loc2dbg("jump_f", loc().finis()));
             emit_branch(cg, jump_t, jump_f);
-            jump_t->app(false, result, { jump_t->var(0_s), cg.world.lit_true() });
-            jump_f->app(false, result, { jump_f->var(0_s), cg.world.lit_false() });
+            jump_t->app(false, result, { jump_t->var(0_s), cg.world.lit_tt() });
+            jump_f->app(false, result, { jump_f->var(0_s), cg.world.lit_ff() });
             return cg.enter(result)->var(1);
         }
         default: {
@@ -1020,7 +1020,7 @@ const Def* MatchExpr::remit(CodeGen& /*cg*/) const {
 
             // last pattern will always be taken
             auto cond = i == e - 1
-                ? cg.world.lit_true()
+                ? cg.world.lit_tt()
                 : arm(i)->ptrn()->emit_cond(cg, matcher);
 
             cg.cur_bb->branch(false, cond, case_t, case_f, cg.cur_mem, cg.loc2dbg(arm(i)->ptrn()->loc().finis()));
@@ -1115,7 +1115,7 @@ void IdPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     local()->emit(cg, init);
 }
 
-const thorin::Def* IdPtrn::emit_cond(CodeGen& cg, const thorin::Def*) const { return cg.world.lit_true(); }
+const thorin::Def* IdPtrn::emit_cond(CodeGen& cg, const thorin::Def*) const { return cg.world.lit_tt(); }
 
 void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
     if (num_args() == 0) return;
@@ -1155,7 +1155,7 @@ const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) co
         auto next = elem(i)->emit_cond(cg, cg.world.extract(init, num_elems(), i, cg.loc2dbg(loc())));
         cond = cond ? cg.world.op(Bit::_and, cond, next) : next;
     }
-    return cond ? cond : cg.world.lit_true();
+    return cond ? cond : cg.world.lit_tt();
 }
 
 const thorin::Def* LiteralPtrn::emit(CodeGen& cg) const {
