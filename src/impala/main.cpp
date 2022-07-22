@@ -131,8 +131,8 @@ int main(int argc, char** argv) {
         impala::init();
 
         std::ofstream log_stream;
-        world.set_log_ostream(open(log_stream, log_name));
-        world.set_log_level(log_level);
+        world.log.ostream = open(log_stream, log_name);
+        world.log.level   = thorin::Log::str2level(log_level);
 
 #if THORIN_ENABLE_CHECKS && !defined(NDEBUG)
         auto set_breakpoints = [&](auto breakpoints, auto setter) {
