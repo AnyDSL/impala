@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
                 dialects.push_back(thorin::Dialect::load(dialect, dialect_paths));
                 dialects.back().register_backends(backends);
                 dialects.back().register_normalizers(normalizers);
-                thorin::Parser::import_module(world, dialect, dialect_paths, &normalizers);
+                thorin::fe::Parser::import_module(world, dialect, dialect_paths, &normalizers);
             }
         }
 
