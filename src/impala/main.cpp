@@ -42,7 +42,6 @@ int main(int argc, char** argv) {
         Names infiles;
 #ifndef NDEBUG
         Names breakpoints;
-        bool track_history;
 #endif
         std::string out_name, log_name, log_level;
         bool help,
@@ -62,7 +61,6 @@ int main(int argc, char** argv) {
             .add_option<std::string>     ("log",                "<arg>", "specifies log file; use '-' for stdout (default)", log_name, "-")
 #ifndef NDEBUG
             .add_option<Names>           ("break",              "<args>", "breakpoint at definition generation with global id <arg>; may be used multiple times separated by space or '_'", breakpoints)
-            .add_option<bool>            ("track-history",      "", "track hisotry of names - useful for debugging", track_history, false)
 #endif
             .add_option<std::string>     ("o",                  "", "specifies the output module name", out_name, "")
             .add_option<bool>            ("Othorin",            "", "optimize at Thorin level", opt_thorin, false)
@@ -161,8 +159,6 @@ int main(int argc, char** argv) {
         };
 
         if (!set_breakpoints(breakpoints, &thorin::World::breakpoint)) return EXIT_FAILURE;
-
-        world.enable_history(track_history);
 #endif
 
         impala::Items items;
