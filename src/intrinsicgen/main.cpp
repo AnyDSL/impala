@@ -87,7 +87,7 @@ const impala::Type* llvm2impala(impala::TypeTable& tt, llvm::Type* type) {
     if (type->isDoubleTy()) return tt.type_f64();
 
     if (auto ptr = llvm::dyn_cast<llvm::PointerType>(type)) {
-        auto elem = llvm2impala(tt, ptr->getElementType());
+        auto elem = llvm2impala(tt, ptr->getPointerElementType());
         return elem == nullptr ? nullptr : tt.borrowed_ptr_type(elem, false, ptr->getAddressSpace());
     }
 
