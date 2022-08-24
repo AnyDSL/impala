@@ -9,8 +9,14 @@
 
 namespace impala {
 
-class ArgsIterator : public std::iterator<std::forward_iterator_tag, const char*> {
+class ArgsIterator {
 public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = char;
+    using difference_type = char;
+    using pointer = char*;
+    using reference = char&;
+
     ArgsIterator(int pos, char** argv)
         : pos_(pos)
         , argv_(argv)
