@@ -567,7 +567,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
                 return rhs()->lemit(cg);
 
             auto def = rhs()->remit(cg);
-            if (def->no_dep()) {
+            if (def->dep_const()) {
                 auto g = cg.world.global(thorin::mem::type_ptr(def->type()), /*mutable*/ false, cg.loc2dbg(loc()));
                 g->set(def);
                 return g;
