@@ -529,7 +529,7 @@ const Def* PathExpr::remit(CodeGen& cg) const {
 }
 
 static flags_t type2wmode(const Type* type) {
-    return is_bool(type) ? WMode::nuw : (is_signed(type) ? WMode::nsw : WMode::none);
+    return is_bool(type) ? core::WMode::nuw : (is_signed(type) ? core::WMode::nsw : core::WMode::none);
 }
 
 const Def* PrefixExpr::remit(CodeGen& cg) const {
@@ -542,7 +542,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             if (is_int(type()))
                 val = core::op(tag() == INC ? core::wrap::add : core::wrap::sub, type2wmode(type()), val, one, cg.loc2dbg(loc()));
             else
-                val = core::op(tag() == INC ? core::rop ::add : core::rop ::sub, RMode::none, val, one, cg.loc2dbg(loc()));
+                val = core::op(tag() == INC ? core::rop ::add : core::rop ::sub, core::RMode::none, val, one, cg.loc2dbg(loc()));
             cg.store(var, val, loc());
             return val;
         }
@@ -552,7 +552,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
                 auto mode = type2wmode(type());
                 return core::op_wminus(mode, rhs()->remit(cg), cg.loc2dbg(loc()));
             } else {
-                return core::op_rminus(RMode::none, rhs()->remit(cg), cg.loc2dbg(loc()));
+                return core::op_rminus(core::RMode::none, rhs()->remit(cg), cg.loc2dbg(loc()));
             }
         case NOT:
             return core::op_negate(rhs()->remit(cg), cg.loc2dbg(loc()));
@@ -582,15 +582,15 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
         }
         case RUNRUN: {
             auto def = rhs()->skip_rvalue()->remit(cg);
-            return cg.world.op(PE::run, def, cg.loc2dbg(loc()));
+            return core::op(core::pe::run, def, cg.loc2dbg(loc()));
         }
         case HLT: {
             auto def = rhs()->skip_rvalue()->remit(cg);
-            return cg.world.op(PE::hlt, def, cg.loc2dbg(loc()));
+            return core::op(core::pe::hlt, def, cg.loc2dbg(loc()));
         }
         case KNOWN: {
             auto def = rhs()->skip_rvalue()->remit(cg);
-            return cg.world.op(PE::known, def, cg.loc2dbg(loc()));
+            return core::op(core::pe::known, def, cg.loc2dbg(loc()));
         }
         case OR:
         case OROR: thorin::unreachable();
@@ -662,11 +662,11 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
                 if (is_float(rhs()->type())) {
                     switch (op) {
-                        case ADD_ASGN: rdef = core::op(core::rop::add, RMode::none, ldef, rdef, dbg); break;
-                        case SUB_ASGN: rdef = core::op(core::rop::sub, RMode::none, ldef, rdef, dbg); break;
-                        case MUL_ASGN: rdef = core::op(core::rop::mul, RMode::none, ldef, rdef, dbg); break;
-                        case DIV_ASGN: rdef = core::op(core::rop::div, RMode::none, ldef, rdef, dbg); break;
-                        case REM_ASGN: rdef = core::op(core::rop::rem, RMode::none, ldef, rdef, dbg); break;
+                        case ADD_ASGN: rdef = core::op(core::rop::add, core::RMode::none, ldef, rdef, dbg); break;
+                        case SUB_ASGN: rdef = core::op(core::rop::sub, core::RMode::none, ldef, rdef, dbg); break;
+                        case MUL_ASGN: rdef = core::op(core::rop::mul, core::RMode::none, ldef, rdef, dbg); break;
+                        case DIV_ASGN: rdef = core::op(core::rop::div, core::RMode::none, ldef, rdef, dbg); break;
+                        case REM_ASGN: rdef = core::op(core::rop::rem, core::RMode::none, ldef, rdef, dbg); break;
                         default: thorin::unreachable();
                     }
                 } else if (is_bool(rhs()->type())) {
@@ -688,7 +688,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case SUB_ASGN: rdef = core::op(core::wrap:: sub, mode, ldef, rdef, dbg); break;
                         case MUL_ASGN: rdef = core::op(core::wrap:: mul, mode, ldef, rdef, dbg); break;
                         case SHL_ASGN: rdef = core::op(core::wrap:: shl, mode, ldef, rdef, dbg); break;
-                        case SHR_ASGN: rdef = core::op(s ? core::shr::ashr : core::shr::lshr, ldef, rdef, dbg); break;
+                        case SHR_ASGN: rdef = core::op(s ? core::shr::a : core::shr::l, ldef, rdef, dbg); break;
                         case DIV_ASGN: rdef = cg.handle_mem_res(core::op(s ? core::div::sdiv : core::div::udiv, cg.cur_mem, ldef, rdef, dbg)); break;
                         case REM_ASGN: rdef = cg.handle_mem_res(core::op(s ? core::div::srem : core::div::urem, cg.cur_mem, ldef, rdef, dbg)); break;
                         default: thorin::unreachable();
@@ -704,17 +704,17 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
             if (is_float(rhs()->type())) {
                 switch (op) {
-                    case  EQ: return core::op(core::rcmp::  e, RMode::none, ldef, rdef, dbg);
-                    case  NE: return core::op(core::rcmp::une, RMode::none, ldef, rdef, dbg);
-                    case  LT: return core::op(core::rcmp::  l, RMode::none, ldef, rdef, dbg);
-                    case  LE: return core::op(core::rcmp:: le, RMode::none, ldef, rdef, dbg);
-                    case  GT: return core::op(core::rcmp::  g, RMode::none, ldef, rdef, dbg);
-                    case  GE: return core::op(core::rcmp:: ge, RMode::none, ldef, rdef, dbg);
-                    case ADD: return core::op(core::rop ::add, RMode::none, ldef, rdef, dbg);
-                    case SUB: return core::op(core::rop ::sub, RMode::none, ldef, rdef, dbg);
-                    case MUL: return core::op(core::rop ::mul, RMode::none, ldef, rdef, dbg);
-                    case DIV: return core::op(core::rop ::div, RMode::none, ldef, rdef, dbg);
-                    case REM: return core::op(core::rop ::rem, RMode::none, ldef, rdef, dbg);
+                    case  EQ: return core::op(core::rcmp::  e, core::RMode::none, ldef, rdef, dbg);
+                    case  NE: return core::op(core::rcmp::une, core::RMode::none, ldef, rdef, dbg);
+                    case  LT: return core::op(core::rcmp::  l, core::RMode::none, ldef, rdef, dbg);
+                    case  LE: return core::op(core::rcmp:: le, core::RMode::none, ldef, rdef, dbg);
+                    case  GT: return core::op(core::rcmp::  g, core::RMode::none, ldef, rdef, dbg);
+                    case  GE: return core::op(core::rcmp:: ge, core::RMode::none, ldef, rdef, dbg);
+                    case ADD: return core::op(core::rop ::add, core::RMode::none, ldef, rdef, dbg);
+                    case SUB: return core::op(core::rop ::sub, core::RMode::none, ldef, rdef, dbg);
+                    case MUL: return core::op(core::rop ::mul, core::RMode::none, ldef, rdef, dbg);
+                    case DIV: return core::op(core::rop ::div, core::RMode::none, ldef, rdef, dbg);
+                    case REM: return core::op(core::rop ::rem, core::RMode::none, ldef, rdef, dbg);
                     default: thorin::unreachable();
                 }
             } else if (is_bool(rhs()->type())) {
@@ -739,7 +739,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case  LE: return core::op(s ? core::icmp:: sle : core::icmp:: ule, ldef, rdef, dbg);
                     case  GT: return core::op(s ? core::icmp::  sg : core::icmp::  ug, ldef, rdef, dbg);
                     case  GE: return core::op(s ? core::icmp:: sge : core::icmp:: uge, ldef, rdef, dbg);
-                    case SHR: return core::op(s ? core::shr ::ashr : core::shr ::lshr, ldef, rdef, dbg);
+                    case SHR: return core::op(s ? core::shr ::a    : core::shr ::   l, ldef, rdef, dbg);
                     case  EQ: return core::op(core::icmp::   e, ldef, rdef, dbg);
                     case  NE: return core::op(core::icmp::  ne, ldef, rdef, dbg);
                     case  OR: return core::op(core::bit2:: _or, ldef, rdef, dbg);
@@ -768,7 +768,7 @@ const Def* PostfixExpr::remit(CodeGen& cg) const {
     if (is_int(type()))
         val = core::op(tag() == INC ? core::wrap::add : core::wrap::sub, type2wmode(type()), res, one, cg.loc2dbg(loc()));
     else
-        val = core::op(tag() == INC ? core::rop ::add : core::rop ::sub, RMode::none, res, one, cg.loc2dbg(loc()));
+        val = core::op(tag() == INC ? core::rop ::add : core::rop ::sub, core::RMode::none, res, one, cg.loc2dbg(loc()));
     cg.store(var, val, loc());
     return res;
 }
