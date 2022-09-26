@@ -342,7 +342,7 @@ void FnDecl::emit_head(CodeGen& cg) const {
         lam_->make_external();
 
     // handle main function
-    if (symbol() == "main")
+    if (symbol() == "main" && !lam()->is_external())
         lam()->make_external();
 }
 
