@@ -688,9 +688,9 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case SUB_ASGN: rdef = core::op(core::wrap:: sub, mode, ldef, rdef, dbg); break;
                         case MUL_ASGN: rdef = core::op(core::wrap:: mul, mode, ldef, rdef, dbg); break;
                         case SHL_ASGN: rdef = core::op(core::wrap:: shl, mode, ldef, rdef, dbg); break;
-                        case SHR_ASGN: rdef = core::op(s ? core::shr::a : core::shr::l, ldef, rdef, dbg); break;
-                        case DIV_ASGN: rdef = cg.handle_mem_res(core::op(s ? core::div::sdiv : core::div::udiv, cg.cur_mem, ldef, rdef, dbg)); break;
-                        case REM_ASGN: rdef = cg.handle_mem_res(core::op(s ? core::div::srem : core::div::urem, cg.cur_mem, ldef, rdef, dbg)); break;
+                        case SHR_ASGN: rdef = cg.world.call(s ? core::shr::a : core::shr::l, {ldef, rdef}, dbg); break;
+                        case DIV_ASGN: rdef = cg.handle_mem_res(cg.world.call(s ? core::div::sdiv : core::div::udiv, {cg.cur_mem, ldef, rdef}, dbg)); break;
+                        case REM_ASGN: rdef = cg.handle_mem_res(cg.world.call(s ? core::div::srem : core::div::urem, {cg.cur_mem, ldef, rdef}, dbg)); break;
                         default: thorin::unreachable();
                     }
                 }
@@ -739,7 +739,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case  LE: return core::op(s ? core::icmp:: sle : core::icmp:: ule, ldef, rdef, dbg);
                     case  GT: return core::op(s ? core::icmp::  sg : core::icmp::  ug, ldef, rdef, dbg);
                     case  GE: return core::op(s ? core::icmp:: sge : core::icmp:: uge, ldef, rdef, dbg);
-                    case SHR: return core::op(s ? core::shr ::a    : core::shr ::   l, ldef, rdef, dbg);
+                    case SHR: return cg.world.call(s ? core::shr::a : core::shr::l, {ldef, rdef}, dbg);
                     case  EQ: return core::op(core::icmp::   e, ldef, rdef, dbg);
                     case  NE: return core::op(core::icmp::  ne, ldef, rdef, dbg);
                     case  OR: return core::op(core::bit2:: _or, ldef, rdef, dbg);
@@ -749,8 +749,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case SUB: return core::op(core::wrap:: sub, mode, ldef, rdef, dbg);
                     case MUL: return core::op(core::wrap:: mul, mode, ldef, rdef, dbg);
                     case SHL: return core::op(core::wrap:: shl, mode, ldef, rdef, dbg);
-                    case DIV: return cg.handle_mem_res(core::op(s ? core::div::sdiv : core::div::udiv, cg.cur_mem, ldef, rdef, dbg));
-                    case REM: return cg.handle_mem_res(core::op(s ? core::div::srem : core::div::urem, cg.cur_mem, ldef, rdef, dbg));
+                    case DIV: return cg.handle_mem_res(cg.world.call(s ? core::div::sdiv : core::div::udiv, {cg.cur_mem, ldef, rdef}, dbg));
+                    case REM: return cg.handle_mem_res(cg.world.call(s ? core::div::srem : core::div::urem, {cg.cur_mem, ldef, rdef}, dbg));
                     default: thorin::unreachable();
                 }
             }
