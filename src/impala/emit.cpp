@@ -169,13 +169,13 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
             // clang-format off
             case PrimType_bool: return world.type_bool();
             case PrimType_i8  :
-            case PrimType_u8  : return world.type_int_( 8);
+            case PrimType_u8  : return world.type_int( 8);
             case PrimType_i16 :
-            case PrimType_u16 : return world.type_int_(16);
+            case PrimType_u16 : return world.type_int(16);
             case PrimType_i32 :
-            case PrimType_u32 : return world.type_int_(32);
+            case PrimType_u32 : return world.type_int(32);
             case PrimType_i64 :
-            case PrimType_u64 : return world.type_int_(64);
+            case PrimType_u64 : return world.type_int(64);
             case PrimType_f16 : return core::type_real(world, 16);
             case PrimType_f32 : return core::type_real(world, 32);
             case PrimType_f64 : return core::type_real(world, 64);
@@ -215,7 +215,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
         thorin::Array<const thorin::Def*> ops(variants.size());
         std::copy(variants.begin(), variants.end(), ops.begin());
 
-        s->set(0, world.type_int_(32));
+        s->set(0, world.type_int(32));
         s->set(1, world.variant_type(ops));
         thorin_type(enum_type) = nullptr;
         return s;
@@ -731,8 +731,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                 auto mode = type2wmode(lhs()->type());
                 bool s = is_signed(lhs()->type());
 
-                if (thorin::match<mem::Ptr>(ldef->type())) ldef = core::op_bitcast(cg.world.type_int_(64), ldef);
-                if (thorin::match<mem::Ptr>(rdef->type())) rdef = core::op_bitcast(cg.world.type_int_(64), rdef);
+                if (thorin::match<mem::Ptr>(ldef->type())) ldef = core::op_bitcast(cg.world.type_int(64), ldef);
+                if (thorin::match<mem::Ptr>(rdef->type())) rdef = core::op_bitcast(cg.world.type_int(64), rdef);
 
                 switch (op) {
                     case  LT: return core::op(s ? core::icmp::  sl : core::icmp::  ul, ldef, rdef, dbg);
@@ -792,7 +792,7 @@ const Def* TupleExpr::remit(CodeGen& cg) const {
 }
 
 const Def* IndefiniteArrayExpr::remit(CodeGen& cg) const {
-    auto dim_int = op(core::conv::u2u, cg.world.type_int_(64), dim()->remit(cg));
+    auto dim_int = op(core::conv::u2u, cg.world.type_int(64), dim()->remit(cg));
     auto arity = core::op_bitcast(cg.world.type_nat(), dim_int);
     auto elem = cg.convert(type()->as<IndefiniteArrayType>()->elem_type());
     return cg.world.pack(arity, cg.world.bot(elem), cg.loc2dbg(loc()));
@@ -833,15 +833,15 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                         } else if (name == "insert") {
                             return core::insert_unsafe(arg(0)->remit(cg), arg(1)->remit(cg), arg(2)->remit(cg), cg.loc2dbg(loc()));
                         } else if (name == "alignof") {
-                            return core::op_bitcast(cg.world.type_int_(32), core::op(core::trait::align, cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
+                            return core::op_bitcast(cg.world.type_int(32), core::op(core::trait::align, cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
                         } else if (name == "sizeof") {
-                            return core::op_bitcast(cg.world.type_int_(32), core::op(core::trait::size , cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
+                            return core::op_bitcast(cg.world.type_int(32), core::op(core::trait::size , cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc())));
                         } else if (name == "undef") {
                             return cg.world.bot(cg.convert(type_expr->type_arg(0)), cg.loc2dbg(loc()));
                         } else if (name == "reserve_shared") {
                             auto ptr = cg.convert(type());
                             auto cn = cg.world.cn({
-                                mem::type_mem(cg.world), cg.world.type_int_(32),
+                                mem::type_mem(cg.world), cg.world.type_int(32),
                                 cg.world.cn({ mem::type_mem(cg.world), ptr }) });
                             auto cont = cg.world.nom_lam(cn, cg.loc2dbg("reserve_shared", loc()));
                             //cont->set_intrinsic();
@@ -850,7 +850,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             auto poly_type = cg.convert(type());
                             auto ptr = cg.convert(arg(1)->type());
                             auto cn = cg.world.cn({
-                                mem::type_mem(cg.world), cg.world.type_int_(32), ptr, poly_type,
+                                mem::type_mem(cg.world), cg.world.type_int(32), ptr, poly_type,
                                 cg.world.cn({ mem::type_mem(cg.world), poly_type }) });
                             auto cont = cg.world.nom_lam(cn, cg.loc2dbg("atomic", loc()));
                             //cont->set_intrinsic();
@@ -868,7 +868,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             dst = cont;
                         } else if (name == "pe_info") {
                             auto poly_type = cg.convert(arg(1)->type());
-                            auto string_type = mem::type_ptr(cg.world.arr_unsafe(cg.world.type_int_(8)));
+                            auto string_type = mem::type_ptr(cg.world.arr_unsafe(cg.world.type_int(8)));
                             auto cn = cg.world.cn({
                                 mem::type_mem(cg.world), string_type, poly_type,
                                 cg.world.cn({ mem::type_mem(cg.world) }) });
