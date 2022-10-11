@@ -720,8 +720,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
             } else if (is_bool(rhs()->type())) {
                 switch (op) {
                     //
-                    case  EQ: return core::op(core::icmp:: e, ldef, rdef, dbg);
-                    case  NE: return core::op(core::icmp::ne, ldef, rdef, dbg);
+                    case  EQ: return cg.world.call(core::icmp:: e, {ldef, rdef}, dbg);
+                    case  NE: return cg.world.call(core::icmp::ne, {ldef, rdef}, dbg);
                     case AND: return core::op(core::bit2::_and, ldef, rdef, dbg);
                     case  OR: return core::op(core::bit2:: _or, ldef, rdef, dbg);
                     case XOR: return core::op(core::bit2::_xor, ldef, rdef, dbg);
@@ -735,13 +735,13 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                 if (thorin::match<mem::Ptr>(rdef->type())) rdef = core::op_bitcast(cg.world.type_int(64), rdef);
 
                 switch (op) {
-                    case  LT: return core::op(s ? core::icmp::  sl : core::icmp::  ul, ldef, rdef, dbg);
-                    case  LE: return core::op(s ? core::icmp:: sle : core::icmp:: ule, ldef, rdef, dbg);
-                    case  GT: return core::op(s ? core::icmp::  sg : core::icmp::  ug, ldef, rdef, dbg);
-                    case  GE: return core::op(s ? core::icmp:: sge : core::icmp:: uge, ldef, rdef, dbg);
+                    case  LT: return cg.world.call(s ? core::icmp::  sl : core::icmp::  ul, {ldef, rdef}, dbg);
+                    case  LE: return cg.world.call(s ? core::icmp:: sle : core::icmp:: ule, {ldef, rdef}, dbg);
+                    case  GT: return cg.world.call(s ? core::icmp::  sg : core::icmp::  ug, {ldef, rdef}, dbg);
+                    case  GE: return cg.world.call(s ? core::icmp:: sge : core::icmp:: uge, {ldef, rdef}, dbg);
                     case SHR: return cg.world.call(s ? core::shr::a : core::shr::l, {ldef, rdef}, dbg);
-                    case  EQ: return core::op(core::icmp::   e, ldef, rdef, dbg);
-                    case  NE: return core::op(core::icmp::  ne, ldef, rdef, dbg);
+                    case  EQ: return cg.world.call(core::icmp:: e, {ldef, rdef}, dbg);
+                    case  NE: return cg.world.call(core::icmp::ne, {ldef, rdef}, dbg);
                     case  OR: return core::op(core::bit2:: _or, ldef, rdef, dbg);
                     case XOR: return core::op(core::bit2::_xor, ldef, rdef, dbg);
                     case AND: return core::op(core::bit2::_and, ldef, rdef, dbg);
@@ -1129,7 +1129,7 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     auto index = path()->decl()->as<OptionDecl>()->index();
     auto init_0 = cg.world.extract(init, num_args(), 0_u32, cg.loc2dbg(loc()));
-    auto cond = core::op(core::icmp::e, init_0, cg.world.lit_idx(u32(index), cg.loc2dbg(loc())));
+    auto cond = cg.world.call(core::icmp::e, {init_0, cg.world.lit_idx(u32(index))}, cg.loc2dbg(loc()));
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
         auto variant = core::op_bitcast(variant_type, cg.world.extract(init, num_args(), 1, cg.loc2dbg(loc())), cg.loc2dbg(loc()));
@@ -1173,7 +1173,7 @@ const thorin::Def* LiteralPtrn::emit(CodeGen& cg) const {
 void LiteralPtrn::emit(CodeGen&, const thorin::Def*) const {}
 
 const thorin::Def* LiteralPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
-    return core::op(core::icmp::e, init, emit(cg));
+    return cg.world.call(core::icmp::e, {init, emit(cg)});
 }
 
 const thorin::Def* CharPtrn::emit(CodeGen& cg) const {
@@ -1183,7 +1183,7 @@ const thorin::Def* CharPtrn::emit(CodeGen& cg) const {
 void CharPtrn::emit(CodeGen&, const thorin::Def*) const {}
 
 const thorin::Def* CharPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
-    return core::op(core::icmp::e, init, emit(cg));
+    return cg.world.call(core::icmp::e, {init, emit(cg)});
 }
 
 /*
