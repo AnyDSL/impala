@@ -115,10 +115,10 @@ public:
         return res;
     }
 
-    const Def* load(const Def*  ptr, Loc loc) { return handle_mem_res(mem::op_load(cur_mem, ptr, loc2dbg(loc))); }
+    const Def* load(const Def*  ptr, Loc loc) { return handle_mem_res(world.call<mem::load>({cur_mem, ptr}, loc2dbg(loc))); }
     const Def* slot(const Def* type, const Def* dbg) { return handle_mem_res(mem::op_slot(type, cur_mem, dbg)); }
 
-    void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = mem::op_store(cur_mem, ptr, val, loc2dbg(loc)); }
+    void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = world.call<mem::store>({cur_mem, ptr, val}, loc2dbg(loc)); }
 
     const Def* alloc(const thorin::Def* type, const Def* dbg) {
         auto alloc = mem::op_alloc(type, cur_mem, dbg);
@@ -247,7 +247,7 @@ void LocalDecl::emit(CodeGen& cg, const Def* init) const {
 
     if (is_mut()) {
         def_ = cg.slot(thorin_type, cg.debug(this));
-        cg.cur_mem = mem::op_store(cg.cur_mem, def_, init, cg.loc2dbg(loc()));
+        cg.cur_mem = cg.world.call<mem::store>({cg.cur_mem, def_, init}, cg.loc2dbg(loc()));
     } else {
         def_ = init;
     }
