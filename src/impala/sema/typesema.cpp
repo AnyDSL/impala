@@ -96,7 +96,7 @@ public:
     const Type* check(const Expr* expr) { expr->check(*this); return expr->type(); }
     const Type* check(const Ptrn* p) { p->check(*this); return p->type(); }
     void check(const Stmt* n) { n->check(*this); }
-    void check_call(const Expr* expr, ArrayRef<const Expr*> args);
+    void check_call(const Expr* expr, Span<const Expr*> args);
     void check_call(const Expr* expr, const Exprs& args) {
         Array<const Expr*> array(args.size());
         for (size_t i = 0, e = args.size(); i != e; ++i)
@@ -603,7 +603,7 @@ void MapExpr::check(TypeSema& sema) const {
         error(this, "incorrect type for map expression");
 }
 
-void TypeSema::check_call(const Expr* expr, ArrayRef<const Expr*> args) {
+void TypeSema::check_call(const Expr* expr, Span<const Expr*> args) {
     auto fn_type = expr->type()->as<FnType>();
 
     if (fn_type->num_params() == args.size() ||

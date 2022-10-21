@@ -75,7 +75,7 @@ public:
         return constrain(ast_type, ast_type->infer(*this));
     }
 
-    const Type* infer_call(const Expr* lhs, ArrayRef<const Expr*> args, const Type* call_type);
+    const Type* infer_call(const Expr* lhs, Span<const Expr*> args, const Type* call_type);
     const Type* infer_call(const Expr* lhs, const Exprs& args, const Type* call_type) {
         Array<const Expr*> array(args.size());
         for (size_t i = 0, e = args.size(); i != e; ++i)
@@ -823,7 +823,7 @@ const Type* StructExpr::infer(InferSema& sema) const {
     return type;
 }
 
-const Type* InferSema::infer_call(const Expr* lhs, ArrayRef<const Expr*> args, const Type* call_type) {
+const Type* InferSema::infer_call(const Expr* lhs, Span<const Expr*> args, const Type* call_type) {
     auto fn_type = lhs->type()->as<FnType>();
 
     if (args.size() == fn_type->num_params()) {

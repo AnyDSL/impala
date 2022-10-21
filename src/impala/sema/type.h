@@ -48,14 +48,14 @@ using Type = thorin::TypeBase<TypeTable>;
 
 class StructDecl;
 class EnumDecl;
-template<class T> using ArrayRef = thorin::ArrayRef<T>;
-template<class T> using Array    = thorin::Array<T>;
+template<class T> using Span  = thorin::Span<T>;
+template<class T> using Array = thorin::Array<T>;
 
 template<class T>
 using TypeMap   = thorin::GIDMap<const Type*, T>;
 using TypeSet   = thorin::GIDSet<const Type*>;
 using Type2Type = TypeMap<const Type*>;
-using Types     = ArrayRef<const Type*>;
+using Types     = Span<const Type*>;
 
 //------------------------------------------------------------------------------
 

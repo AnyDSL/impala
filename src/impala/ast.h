@@ -40,7 +40,7 @@ class InferSema;
 class TypeSema;
 class CodeGen;
 
-typedef ArrayRef<std::unique_ptr<const ASTType>> ASTTypeArgs;
+typedef Span<std::unique_ptr<const ASTType>> ASTTypeArgs;
 typedef std::deque<std::unique_ptr<const Expr>> Exprs;
 typedef std::deque<std::unique_ptr<const Ptrn>> Ptrns;
 typedef std::vector<Symbol> Symbols;
@@ -635,7 +635,7 @@ public:
 
     const Expr* filter() const { return filter_.get(); }
     const Param* param(size_t i) const { return params_[i].get(); }
-    ArrayRef<std::unique_ptr<const Param>> params() const { return params_; }
+    Span<std::unique_ptr<const Param>> params() const { return params_; }
     size_t num_params() const { return params_.size(); }
     const Expr* body() const { return body_.get(); }
     thorin::Lam* lam() const { return lam_; }
@@ -2149,8 +2149,8 @@ public:
     const Elem*  input(size_t i) const { return  inputs_[i].get(); }
     size_t num_outputs() const { return outputs().size(); }
     size_t  num_inputs() const { return  inputs().size(); }
-    ArrayRef<std::string> clobbers() const { return clobbers_; }
-    ArrayRef<std::string> options() const { return options_; }
+    Span<std::string> clobbers() const { return clobbers_; }
+    Span<std::string> options() const { return options_; }
 
     Array<std::string> output_constraints() const {
         Array<std::string> result(num_outputs());

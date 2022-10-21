@@ -95,7 +95,7 @@ template <class TypeTable>
 class TypeBase : public RTTICast<TypeBase<TypeTable>>, public impala::Streamable<TypeBase<TypeTable>> {
 protected:
     using Type2Type = GIDMap<const TypeBase*, const TypeBase*>;
-    using Types     = ArrayRef<const TypeBase*>;
+    using Types     = Span<const TypeBase*>;
 
     TypeBase(const TypeBase&) = delete;
     TypeBase& operator=(const TypeBase&) = delete;
