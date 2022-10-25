@@ -209,7 +209,10 @@ def run_tests():
                 tmp_log_file = open(tmp_log, 'w')
 
                 # invoke impala
-                cmd_impala = [args.impala,orig_impala, '-emit-llvm', '-log-level', 'warn']
+                cmd_impala = [args.impala, orig_impala, '-emit-llvm', '-log-level', 'warn']
+
+                if 'cconv' in test_path:
+                    cmd_impala.append('--clos')
 
                 try:
                     p = subprocess.run(cmd_impala, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.impala_timeout)
@@ -227,7 +230,7 @@ def run_tests():
 
                 # invoke clang
                 try:
-                    cmd_clang = [args.clang, tmp_ll, 'rtmock.cpp', '-O3', '-o', tmp_exe]
+                    cmd_clang = [args.clang, tmp_ll, 'rtmock.cpp', '-O3', '-Wno-override-module', '-o', tmp_exe]
                     cmd_clang.extend(clang_args)
                     p = subprocess.run(cmd_clang, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.clang_timeout)
                 except subprocess.TimeoutExpired as timeout:

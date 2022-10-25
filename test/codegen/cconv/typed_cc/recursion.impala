@@ -1,4 +1,4 @@
-// codegen
+// codegen broken
 
 extern fn f(x:int) -> int {
     f(x+1)
