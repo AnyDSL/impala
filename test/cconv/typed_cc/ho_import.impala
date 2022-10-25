@@ -1,0 +1,12 @@
+// codegen
+
+extern fn f(_:fn(i32)->!) -> i32 {
+    0
+}
+
+extern fn main(x:i32, cn:fn(i32)->!) -> i32 {
+    fn lam(y:i32) -> ! {
+        cn(x+y)
+    }
+    f(lam)
+}

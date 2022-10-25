@@ -1,0 +1,12 @@
+// codegen
+
+extern fn apply_bb(g: fn(int)->!, n:int) -> () {
+    g(n)
+}
+
+extern fn apply_fn(g:fn(int)->int, n:int) -> int {
+    g(n)
+}
+
+
+fn main() -> int { 0 }

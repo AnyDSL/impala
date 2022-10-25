@@ -1,0 +1,25 @@
+
+fn prod(low: i32, up:i32, gen:fn(i32, i32)->i32, early_ret:fn(i32)->!) -> i32 {
+    let mut res = 1;
+    let mut l = low;
+    while (l < up) {
+        let cur = gen(l, res);
+        if (cur == 0) {
+            early_ret(0)
+        } else {
+            res *= cur;
+            l++;
+        }
+    }
+    res
+}
+
+extern fn use(fancy_compute:fn(i32, i32)->i32) -> i32 {
+    let mut res = 1;
+    let mut j = 0;
+    while (j < 100) {
+        res *= prod(-j, j, fancy_compute, return);
+        j++;
+    }
+    res
+}

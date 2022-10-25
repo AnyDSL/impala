@@ -1,0 +1,41 @@
+
+extern "C" { 
+    fn print_int(i32) -> (); 
+}
+
+struct List { hd : i32, tl : &List }
+
+type Iter = fn() -> (i32, bool);
+
+fn null() -> &List {
+    0 as &List
+}
+
+fn cons(x:i32, xs:&List) -> &List {
+    ~ List {hd:x, tl:xs}
+}
+
+fn make_iter(xs: &List) -> Iter {
+    let mut p = xs;
+    fn next() -> (i32, bool) {
+        if (xs == 0 as &List) {
+            (0, false)
+        } else {
+            let res = (p.hd, true);
+            p = p.tl;
+            res
+        }
+    }
+    next
+}
+
+extern fn test() -> () {
+    let xs : &List = cons(1, cons(2, cons(3, null())));
+    let next : Iter = make_iter(xs);
+    while(true) {
+        match next() {
+            (_, false) => break(),
+            (x, true) => { print_int(x); continue() }
+        }
+    }
+}

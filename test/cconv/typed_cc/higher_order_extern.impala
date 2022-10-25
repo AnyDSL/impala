@@ -1,0 +1,11 @@
+// codegen
+
+extern fn iter(n : int, f : fn(int) -> int) -> (fn(int) -> int) {
+    if n <= 0 {
+        |x: int| x
+    } else {
+        let g = iter(n - 1, f);
+        |x: int| f(g(x))
+    }
+}
+fn main() -> int { 0 }

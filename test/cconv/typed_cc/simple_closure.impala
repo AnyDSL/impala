@@ -1,0 +1,6 @@
+// codegen
+
+extern fn toplevel(n : int) -> (fn(int) -> int) {
+    return (|a:int| -> int n)
+}
+fn main() -> int { 0 }

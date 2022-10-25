@@ -1,0 +1,20 @@
+// codegen
+
+extern "C" {
+    fn print_int(i32) -> ();
+    fn print_f64(f64) -> ();
+}
+
+extern fn for_each(n:i32, f:fn(i32)->())->() {
+    let mut i = 0;
+    while i < n {
+        f(i++)
+    }
+}
+
+extern fn main(x:i32, y:i32) -> int {
+    for_each(42, |i:i32|->() print_int(x*i+y));
+    for_each(42, |_:i32|->() print_int(x));
+    for_each(42, |_:i32|->() print_f64(x as f64));
+    0
+}

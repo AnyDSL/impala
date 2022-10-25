@@ -1,0 +1,14 @@
+
+fn fac(i: i32) -> i32 {
+   let mut n : i32 = i;
+   let mut r : i32 = 1;
+   while n > 0 {
+        r = r * n;
+        n = n - 1;
+   }
+   r
+}
+
+extern fn f(n:i32) -> i32 {
+   fac(n + 42) 
+}

@@ -1,0 +1,18 @@
+// codegen
+
+static mut a : i32 = 1337;
+
+type fn_ptr = &mut (fn() -> i32);
+
+extern fn f(x:i32, y:i32, p:fn_ptr) -> i32 {
+    fn g() -> i32 { x * 42 + y * a}
+    *p = g;
+    (*p)()
+}
+
+fn main() -> int { 
+    let mut g : fn() -> i32;
+    f(42, 1337, &mut g);
+    g() - g() as int
+
+}

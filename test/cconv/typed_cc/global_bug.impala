@@ -1,0 +1,21 @@
+// codegen
+
+type char = u8;
+type str = [char];
+
+static mut n : i32 = 1;
+
+fn range(a : i32, b: i32, body: fn(i32) -> ()) -> () {
+    if (a < b) {
+        body(a);
+        range(a + 1, b, body)
+    }
+}
+
+fn main(argc:i32, argv: &[&str]) -> i32 {
+    for i in range(1, 6) {
+        n = n * i;
+    }
+
+    if ( n == 120 ) { 0 } else { 1 }
+}

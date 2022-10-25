@@ -1,0 +1,8 @@
+// codegen
+extern "C" {
+    fn print(&[u8]) -> ();
+}
+
+extern fn main() -> int {
+    print("hello wordlld!"); 0
+}

@@ -1,0 +1,14 @@
+
+fn dreaded_m(f: fn(i32) -> i32) -> (i32, fn(i32) -> i32) {
+    let x = f(42);
+    (x, f)
+}
+
+fn use() -> i32 {
+    let (_, f) = dreaded_m(|x:i32| -> i32 x-42);
+    (f(1) + f(2)) * 3
+}
+
+extern fn main() -> () {
+    use(); ()
+}

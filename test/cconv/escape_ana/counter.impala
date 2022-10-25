@@ -1,0 +1,7 @@
+
+extern fn make() -> fn() -> i32 {
+    let mut x = 0;
+    || -> i32 {
+        x++
+    }
+}

@@ -1,0 +1,18 @@
+// codegen
+
+extern "C" {
+    fn print_int(int)->();
+}
+
+fn print(a:int, b:int) -> () {
+    print_int(a); print_int(b)
+}
+
+extern fn main(x:i32, y:i32, z:i32) -> i32 {
+    if x == 42  {
+        print(y, x)
+    } else {
+        print(x, y)
+    }
+    print(z, 42); 0
+}

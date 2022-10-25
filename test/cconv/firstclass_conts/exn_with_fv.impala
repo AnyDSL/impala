@@ -1,0 +1,10 @@
+
+extern "C" {
+    fn H(fn(i32)->!, i32) -> i32;
+}
+
+extern fn F(x:i32) -> i32 {
+    let F_ret = return;
+    let K = |y:i32|->! F_ret(y*x+42);
+    H(K, x-1337)
+}

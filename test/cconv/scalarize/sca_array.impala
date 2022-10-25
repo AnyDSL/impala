@@ -1,0 +1,13 @@
+// codegen
+extern fn f(x:&mut[u64], y:i64, z:i64) -> u64 {
+    fn g() -> u64 {
+        x(z*y)
+    }
+    1u64 + g()
+}
+
+extern fn main() -> int {
+    let mut a = [1u64, 2u64, 3u64, 4u64];
+    let x = f(&mut a, 1i64, 0i64);
+    (x - x) as int
+}

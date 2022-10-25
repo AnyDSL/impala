@@ -1,0 +1,15 @@
+
+extern "C" {
+    fn escape (i32, fn(i32)->()) -> ();
+    fn print_int(i32) -> ();
+}
+
+extern fn f(x : i32) -> () {
+    fn g(y:i32) -> () { print_int(x + y) }
+    let mut i : i32 = 0;
+    while i < 42 {
+        escape(i, g);
+        i++;
+    }
+    
+}

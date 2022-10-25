@@ -1,0 +1,10 @@
+extern fn F(i:i32, arr:&[i32], k: fn(i32)->!) -> i32 {
+    if i == 42 {
+        k(42)
+    } else if i == 24 {
+        return(i)
+    } else {
+        F(i+1, arr, return, k)
+    }
+}
+

@@ -1,0 +1,8 @@
+
+extern {
+    fn do_stuff(fn(i32)->i32)->();
+}
+
+extern fn use(x:i32, y:i32) -> () {
+    do_stuff(|z:i32|->i32 x*z+y)
+}

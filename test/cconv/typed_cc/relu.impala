@@ -1,0 +1,16 @@
+
+fn f(a: f32) -> f32 {
+    if a <= 0f
+        {0f}
+    else
+        {a}
+}
+fn main() -> i32 {
+    let Df = rev_diff(f);
+    let yp = Df(4f);
+    let y  = yp(0);
+    let yP = yp(1);
+    let r = y as i32;
+    let q = yP(1f) as i32;
+    1000 * r + q
+}

@@ -1,0 +1,13 @@
+
+extern "C" {
+    fn use_a([i32 * 4]) -> (); 
+    fn use_f(_:fn()->()) -> ();
+}
+
+
+extern fn main(x:[i32 * 4]) -> fn() -> () {
+    fn f() -> () { use_a(x) }
+    fn g() -> () { use_f(f) }
+    g();
+    f
+}

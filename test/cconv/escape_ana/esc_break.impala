@@ -1,0 +1,69 @@
+
+// fn dead1(x:i32) -> ! {
+//     dead2()
+// }
+
+// fn dead2() -> ! {
+//     dead1(0)
+// }
+
+// extern fn h(n:i32) -> (i32, fn(i32)->!) {
+//     let mut x : i32 = 0;
+//     while (true) {
+//         fn cn2(_:i32) -> ! {
+//             x = x + 1;
+//             continue()
+//         }
+//         return (x, cn2) 
+//     }
+//     (0, dead1)
+// }
+
+// extern fn esc(p : &mut (fn() -> !)) -> i32 {
+//     let mut x : i32 = 0;
+//     while(true) {
+//         fn c() -> ! { x = x + 1; continue() }
+//         *p = c;
+//     }
+//     x
+// }
+
+fn shift (x:i32, f: fn(fn(i32)->!, fn(i32)->!) -> !, ret : fn(i32)->!) -> ! {
+    if x > 0 {
+        f (ret, ret)
+    } else {
+        ret(42)
+    }
+}
+
+extern fn use(x:i32) -> i32 {
+    fn choice(r0: fn(i32)->!, r1: fn(i32)->!) -> ! {
+        if x > 0 { r0(0) } else { r1(1) }
+    }
+    shift(x, choice)
+}
+
+// extern fn reset(r: fn() -> i32, g: fn(i32) -> !) -> ! {
+    
+// }
+
+// extern fn explicit(x:i32, r: fn(i32)->!) -> !{
+//     r(x+42)
+// }
+
+// extern fn g(y:i32)->i32 {
+//     explicit(42 * y)
+// }
+
+// extern fn f() -> ! {
+//     let mut F = dead1;
+//     while(true) {
+//         let p = h(42); ()
+//         // g(42, |p : (i32, fn(i32)->!)| -> ! {
+//         //     let (_, F2) = p;
+//         //     F = F2;
+//         //     continue()
+//         // });
+//     }
+//     dead1(0)
+// }

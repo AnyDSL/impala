@@ -1,0 +1,31 @@
+
+struct vec2 {
+    x : f32,
+    y : f32
+}
+
+// fn iter(f : fn(vec2)->vec2, x:f32, a:i32, b:i32) -> f32 {
+//     if a > b { x } else { f(iter, x, a+1, b) }
+// }
+
+fn f(a: f32) -> f32 {
+    // if a <= 0f
+    //     {0f}
+    // else
+    //     {a}
+    fn G(x:f32) -> f32 { a * x + a / x }
+    G(42f) + G(43f)
+}
+
+extern fn main(x:f32, y:f32) -> i32 {
+    // fn f(x:f32) -> f32 {
+    //     x*y+2f
+    // }
+    let Df = rev_diff(f);
+    let yp = Df(4f);
+    let y  = yp(0);
+    let yP = yp(1);
+    let r = y as i32;
+    let q = yP(1f) as i32;
+    1000 * r + q
+}

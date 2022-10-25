@@ -1,0 +1,14 @@
+
+extern "thorin" {
+    fn print(i32) -> ();
+}
+
+fn print(_:i32) -> () {}
+
+extern fn f() -> (){
+    let mut x = 0;
+    while (x < 42) {
+        print(x);
+        x++;
+    }
+}

@@ -1,0 +1,9 @@
+// broken: toplevel def \wo ret-var
+// codegen
+
+extern fn f(h:(fn(int)->!)) -> (fn(int) -> (fn(int) -> !)){
+    return (|a:int| -> (fn(int)->!)
+                |b:int| -> ! h(a+b))
+}
+
+fn main() -> int { 0 }

@@ -1,0 +1,7 @@
+
+extern fn loop(a : int, b: int) -> () {
+    let mut g : fn(int) -> () = |a| {};
+    let f = |c:int| -> () g(b+a+c);
+    g = |c:int| -> () f(b+a+c);
+    f(0)
+}

@@ -138,7 +138,7 @@ def set_up_test_suit():
     categories['codegen']=1
     categories['sema']=2
     categories['type_inferr']=3
-    tests = [[],[],[],[]]
+    tests = [[], [], [], [], []]
 
     if args.path == []:
         args.path.append('./')

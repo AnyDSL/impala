@@ -1,0 +1,4 @@
+
+extern fn main(a:int, b:int, h:fn(int,int,int,int)->!) -> (fn(int) -> !) {
+    return (|c:int| -> ! h(c,a,c,b))
+}

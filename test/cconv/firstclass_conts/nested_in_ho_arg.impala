@@ -1,0 +1,14 @@
+
+extern fn higher_order_fun(fn(i32)->i32) -> i32 { 42 }
+
+extern fn outer(x:i32) -> i32 {
+    let ret = return;
+    fn k(x:i32) -> ! { ret(x - 1337) }
+    fn inner1(y:i32) -> i32 {
+         k(x + y + 42)
+    }
+    fn inner2(y:i32) -> i32 {
+         k(x + y - 42)
+    }
+    higher_order_fun(inner1) + higher_order_fun(inner2)
+}

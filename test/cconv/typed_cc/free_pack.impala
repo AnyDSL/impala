@@ -1,0 +1,11 @@
+// codegen
+
+
+extern fn f(x:i32) -> (fn(i32)->i32) {
+    fn g(y:i32) -> i32 { x + y }
+    let p = [g(42), .. 4];
+    fn h(i:i32) -> i32 { p(i) }
+    h
+}
+
+fn main() -> int { 0 }
