@@ -227,7 +227,7 @@ def run_tests():
 
                 # invoke clang
                 try:
-                    cmd_clang = [args.clang, tmp_ll, 'rtmock.cpp', '-o', tmp_exe]
+                    cmd_clang = [args.clang, tmp_ll, 'rtmock.cpp', '-O3', '-o', tmp_exe]
                     cmd_clang.extend(clang_args)
                     p = subprocess.run(cmd_clang, stderr=tmp_log_file, stdout=tmp_log_file, timeout=args.clang_timeout)
                 except subprocess.TimeoutExpired as timeout:
