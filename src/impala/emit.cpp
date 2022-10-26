@@ -39,7 +39,7 @@ public:
     /// Lam of type { @c cn(mem) } or { @c cn(mem, type) } depending on whether @p type is @c nullptr.
     Lam* basicblock(const thorin::Def* type, const Def* dbg) {
         auto cn = type ? world.cn({mem::type_mem(world), type}) : world.cn(mem::type_mem(world));
-        auto bb = world.nom_lam(cn, Lam::CC::C, dbg);
+        auto bb = world.nom_lam(cn, dbg);
         bb->var(0, world.dbg("mem"));
         return bb;
     }
@@ -355,13 +355,12 @@ void ExternBlock::emit_head(CodeGen& cg) const {
     for (auto&& fn_decl : fn_decls()) {
         fn_decl->emit_head(cg);
         auto lam = fn_decl->lam();
-        if (abi() == "\"C\"")
-            lam->set_cc(thorin::Lam::CC::C);
-        else if (abi() == "\"device\"")
-            lam->set_cc(thorin::Lam::CC::Device);
+        if (abi() == "\"C\"") {
+            // do nothing
+        } else if (abi() == "\"device\"")
+            assert(false && "TODO");
         else if (abi() == "\"thorin\"" && lam) {
-            // TODO
-            // no lam for primops
+            assert(false && "TODO");
         }
     }
 }
@@ -1040,7 +1039,7 @@ const Def* MatchExpr::remit(CodeGen& /*cg*/) const {
 }
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
-    auto head_bb = cg.world.nom_lam(cg.world.cn({mem::type_mem(cg.world)}), Lam::CC::C, cg.loc2dbg("while_head", loc().begin()));
+    auto head_bb = cg.world.nom_lam(cg.world.cn({mem::type_mem(cg.world)}), cg.loc2dbg("while_head", loc().begin()));
     head_bb->var(0, cg.world.dbg("mem"));
 
     auto jump_type = cg.world.cn({mem::type_mem(cg.world)});
