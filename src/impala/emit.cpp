@@ -530,7 +530,7 @@ const Def* PathExpr::remit(CodeGen& cg) const {
 }
 
 static flags_t type2wmode(const Type* type) {
-    return is_bool(type) ? core::WMode::nuw : (is_signed(type) ? core::WMode::nsw : core::WMode::none);
+    return is_bool(type) ? core::Mode::nuw : (is_signed(type) ? core::Mode::nsw : core::Mode::none);
 }
 
 const Def* PrefixExpr::remit(CodeGen& cg) const {
@@ -553,7 +553,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
                 auto mode = type2wmode(type());
                 return core::op_wminus(mode, rhs()->remit(cg), cg.loc2dbg(loc()));
             } else {
-                return math::op_rminus(core::RMode::none, rhs()->remit(cg), cg.loc2dbg(loc()));
+                return math::op_rminus(math::Mode::none, rhs()->remit(cg), cg.loc2dbg(loc()));
             }
         case NOT:
             return core::op_negate(rhs()->remit(cg), cg.loc2dbg(loc()));
@@ -663,11 +663,11 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
                 if (is_float(rhs()->type())) {
                     switch (op) {
-                        case ADD_ASGN: rdef = core::op(math::arith::add, core::RMode::none, ldef, rdef, dbg); break;
-                        case SUB_ASGN: rdef = core::op(math::arith::sub, core::RMode::none, ldef, rdef, dbg); break;
-                        case MUL_ASGN: rdef = core::op(math::arith::mul, core::RMode::none, ldef, rdef, dbg); break;
-                        case DIV_ASGN: rdef = core::op(math::arith::div, core::RMode::none, ldef, rdef, dbg); break;
-                        case REM_ASGN: rdef = core::op(math::arith::rem, core::RMode::none, ldef, rdef, dbg); break;
+                        case ADD_ASGN: rdef = core::op(math::arith::add, math::Mode::none, ldef, rdef, dbg); break;
+                        case SUB_ASGN: rdef = core::op(math::arith::sub, math::Mode::none, ldef, rdef, dbg); break;
+                        case MUL_ASGN: rdef = core::op(math::arith::mul, math::Mode::none, ldef, rdef, dbg); break;
+                        case DIV_ASGN: rdef = core::op(math::arith::div, math::Mode::none, ldef, rdef, dbg); break;
+                        case REM_ASGN: rdef = core::op(math::arith::rem, math::Mode::none, ldef, rdef, dbg); break;
                         default: thorin::unreachable();
                     }
                 } else if (is_bool(rhs()->type())) {
