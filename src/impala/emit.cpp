@@ -1,7 +1,9 @@
 #include "impala/ast.h"
 
+#include "dialects/math/math.h"
 #include "dialects/mem/mem.h"
 #include "dialects/core/core.h"
+#include "dialects/math/math.h"
 #include "thorin/world.h"
 #include "thorin/util/array.h"
 
@@ -54,9 +56,9 @@ public:
     const Def* lit_one(const Type* type, const Def* dbg) {
         if (is_int(type)) return world.lit(convert(type), 1, dbg);
         switch (type->tag()) {
-            case PrimType_f16: return core::lit_real(world, 1._r16, dbg);
-            case PrimType_f32: return core::lit_real(world, 1._r32, dbg);
-            case PrimType_f64: return core::lit_real(world, 1._r64, dbg);
+            case PrimType_f16: return math::lit_f(world, 1._f16, dbg);
+            case PrimType_f32: return math::lit_f(world, 1._f32, dbg);
+            case PrimType_f64: return math::lit_f(world, 1._f64, dbg);
             default: thorin::unreachable();
         }
     }
@@ -176,9 +178,9 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
             case PrimType_u32 : return world.type_int(32);
             case PrimType_i64 :
             case PrimType_u64 : return world.type_int(64);
-            case PrimType_f16 : return core::type_real(world, 16);
-            case PrimType_f32 : return core::type_real(world, 32);
-            case PrimType_f64 : return core::type_real(world, 64);
+            case PrimType_f16 : return math::type_f16(world);
+            case PrimType_f32 : return math::type_f32(world);
+            case PrimType_f64 : return math::type_f64(world);
             // clang-format on
             default: thorin::unreachable();
         }
@@ -436,9 +438,9 @@ const Def* LiteralExpr::remit(CodeGen& cg) const {
         case LIT_u16 : return cg.world.lit_idx (get< u16>(), cg.loc2dbg(loc()));
         case LIT_u32 : return cg.world.lit_idx (get< u32>(), cg.loc2dbg(loc()));
         case LIT_u64 : return cg.world.lit_idx (get< u64>(), cg.loc2dbg(loc()));
-        case LIT_f16 : return core::lit_real(cg.world, get< r16>(), cg.loc2dbg(loc()));
-        case LIT_f32 : return core::lit_real(cg.world, get< r32>(), cg.loc2dbg(loc()));
-        case LIT_f64 : return core::lit_real(cg.world, get< r64>(), cg.loc2dbg(loc()));
+        case LIT_f16 : return math::lit_f(cg.world, get<f16>(), cg.loc2dbg(loc()));
+        case LIT_f32 : return math::lit_f(cg.world, get<f32>(), cg.loc2dbg(loc()));
+        case LIT_f64 : return math::lit_f(cg.world, get<f64>(), cg.loc2dbg(loc()));
         // clang-format on
         default: thorin::unreachable();
     }
@@ -470,23 +472,23 @@ const Def* CastExpr::remit(CodeGen& cg) const {
             if (is_int(dst_type) || is_bool(dst_type)) {
                 return op(core::conv::s2s, dst, def, dbg);
             } else {
-                return op(core::conv::s2r, dst, def, dbg);
+                return op(math::conv::s2f, dst, def, dbg);
             }
         } else {
             if (is_int(dst_type) || is_bool(dst_type)) {
                 return op(core::conv::u2u, dst, def, dbg);
             } else {
-                return op(core::conv::u2r, dst, def, dbg);
+                return op(math::conv::u2f, dst, def, dbg);
             }
         }
     } else {
         if (is_int(dst_type) || is_bool(dst_type)) {
             if (is_signed(dst_type))
-                return op(core::conv::r2s, dst, def, dbg);
+                return op(math::conv::f2s, dst, def, dbg);
             else
-                return op(core::conv::r2u, dst, def, dbg);
+                return op(math::conv::f2u, dst, def, dbg);
         } else if (is_float(src_type) && is_float(dst_type)) {
-            return op(core::conv::r2r, dst, def, dbg);
+            return op(math::conv::f2f, dst, def, dbg);
         } else {
             return core::op_bitcast(dst, def, dbg);
         }
@@ -539,9 +541,9 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             auto val = cg.load(var, loc());
             auto one = cg.lit_one(type(), cg.loc2dbg(loc()));
             if (is_int(type()))
-                val = core::op(tag() == INC ? core::wrap::add : core::wrap::sub, type2wmode(type()), val, one, cg.loc2dbg(loc()));
+                val = core::op(tag() == INC ? core::wrap ::add : core::wrap ::sub, type2wmode(type()), val, one, cg.loc2dbg(loc()));
             else
-                val = core::op(tag() == INC ? core::rop ::add : core::rop ::sub, core::RMode::none, val, one, cg.loc2dbg(loc()));
+                val = core::op(tag() == INC ? math::arith::add : math::arith::sub, math::Mode::none, val, one, cg.loc2dbg(loc()));
             cg.store(var, val, loc());
             return val;
         }
@@ -551,7 +553,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
                 auto mode = type2wmode(type());
                 return core::op_wminus(mode, rhs()->remit(cg), cg.loc2dbg(loc()));
             } else {
-                return core::op_rminus(core::RMode::none, rhs()->remit(cg), cg.loc2dbg(loc()));
+                return math::op_rminus(core::RMode::none, rhs()->remit(cg), cg.loc2dbg(loc()));
             }
         case NOT:
             return core::op_negate(rhs()->remit(cg), cg.loc2dbg(loc()));
@@ -661,11 +663,11 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
                 if (is_float(rhs()->type())) {
                     switch (op) {
-                        case ADD_ASGN: rdef = core::op(core::rop::add, core::RMode::none, ldef, rdef, dbg); break;
-                        case SUB_ASGN: rdef = core::op(core::rop::sub, core::RMode::none, ldef, rdef, dbg); break;
-                        case MUL_ASGN: rdef = core::op(core::rop::mul, core::RMode::none, ldef, rdef, dbg); break;
-                        case DIV_ASGN: rdef = core::op(core::rop::div, core::RMode::none, ldef, rdef, dbg); break;
-                        case REM_ASGN: rdef = core::op(core::rop::rem, core::RMode::none, ldef, rdef, dbg); break;
+                        case ADD_ASGN: rdef = core::op(math::arith::add, core::RMode::none, ldef, rdef, dbg); break;
+                        case SUB_ASGN: rdef = core::op(math::arith::sub, core::RMode::none, ldef, rdef, dbg); break;
+                        case MUL_ASGN: rdef = core::op(math::arith::mul, core::RMode::none, ldef, rdef, dbg); break;
+                        case DIV_ASGN: rdef = core::op(math::arith::div, core::RMode::none, ldef, rdef, dbg); break;
+                        case REM_ASGN: rdef = core::op(math::arith::rem, core::RMode::none, ldef, rdef, dbg); break;
                         default: thorin::unreachable();
                     }
                 } else if (is_bool(rhs()->type())) {
@@ -703,17 +705,17 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
             if (is_float(rhs()->type())) {
                 switch (op) {
-                    case  EQ: return core::op(core::rcmp::  e, core::RMode::none, ldef, rdef, dbg);
-                    case  NE: return core::op(core::rcmp::une, core::RMode::none, ldef, rdef, dbg);
-                    case  LT: return core::op(core::rcmp::  l, core::RMode::none, ldef, rdef, dbg);
-                    case  LE: return core::op(core::rcmp:: le, core::RMode::none, ldef, rdef, dbg);
-                    case  GT: return core::op(core::rcmp::  g, core::RMode::none, ldef, rdef, dbg);
-                    case  GE: return core::op(core::rcmp:: ge, core::RMode::none, ldef, rdef, dbg);
-                    case ADD: return core::op(core::rop ::add, core::RMode::none, ldef, rdef, dbg);
-                    case SUB: return core::op(core::rop ::sub, core::RMode::none, ldef, rdef, dbg);
-                    case MUL: return core::op(core::rop ::mul, core::RMode::none, ldef, rdef, dbg);
-                    case DIV: return core::op(core::rop ::div, core::RMode::none, ldef, rdef, dbg);
-                    case REM: return core::op(core::rop ::rem, core::RMode::none, ldef, rdef, dbg);
+                    case  EQ: return core::op(math::cmp::    e, math::Mode::none, ldef, rdef, dbg);
+                    case  NE: return core::op(math::cmp::  une, math::Mode::none, ldef, rdef, dbg);
+                    case  LT: return core::op(math::cmp::    l, math::Mode::none, ldef, rdef, dbg);
+                    case  LE: return core::op(math::cmp::   le, math::Mode::none, ldef, rdef, dbg);
+                    case  GT: return core::op(math::cmp::    g, math::Mode::none, ldef, rdef, dbg);
+                    case  GE: return core::op(math::cmp::   ge, math::Mode::none, ldef, rdef, dbg);
+                    case ADD: return core::op(math::arith::add, math::Mode::none, ldef, rdef, dbg);
+                    case SUB: return core::op(math::arith::sub, math::Mode::none, ldef, rdef, dbg);
+                    case MUL: return core::op(math::arith::mul, math::Mode::none, ldef, rdef, dbg);
+                    case DIV: return core::op(math::arith::div, math::Mode::none, ldef, rdef, dbg);
+                    case REM: return core::op(math::arith::rem, math::Mode::none, ldef, rdef, dbg);
                     default: thorin::unreachable();
                 }
             } else if (is_bool(rhs()->type())) {
@@ -765,9 +767,9 @@ const Def* PostfixExpr::remit(CodeGen& cg) const {
     const Def* val = nullptr;
 
     if (is_int(type()))
-        val = core::op(tag() == INC ? core::wrap::add : core::wrap::sub, type2wmode(type()), res, one, cg.loc2dbg(loc()));
+        val = core::op(tag() == INC ? core::wrap ::add : core::wrap ::sub, type2wmode(type()), res, one, cg.loc2dbg(loc()));
     else
-        val = core::op(tag() == INC ? core::rop ::add : core::rop ::sub, core::RMode::none, res, one, cg.loc2dbg(loc()));
+        val = core::op(tag() == INC ? math::arith::add : math::arith::sub, math::Mode::none, res, one, cg.loc2dbg(loc()));
     cg.store(var, val, loc());
     return res;
 }
@@ -1161,7 +1163,7 @@ const thorin::Def* LiteralPtrn::emit(CodeGen& cg) const {
     auto def = literal()->remit(cg);
     if (has_minus()) {
         if (is_float(type()))
-            return core::op_rminus(def, def->dbg());
+            return math::op_rminus(def, def->dbg());
         else
             return core::op_wminus(type2wmode(type()), def, def->dbg());
     } else {
