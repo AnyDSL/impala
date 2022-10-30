@@ -238,9 +238,9 @@ Stream& LiteralExpr::stream(Stream& s) const {
         case LIT_u16:  return s <<      get<u16>() << "u16";
         case LIT_u32:  return s <<      get<u32>() << "u";
         case LIT_u64:  return s <<      get<u64>() << "u64";
-        case LIT_f16:  return s <<      get<r16>() << "h";
-        case LIT_f32:  return s <<      get<r32>() << "f";
-        case LIT_f64:  return s <<      get<r64>() << "f64";
+        case LIT_f16:  return s <<      get<f16>() << "h";
+        case LIT_f32:  return s <<      get<f32>() << "f";
+        case LIT_f64:  return s <<      get<f64>() << "f64";
         // clang-format on
         default: thorin::unreachable();
     }
