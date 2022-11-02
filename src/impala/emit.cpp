@@ -543,7 +543,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             if (is_int(type()))
                 val = core::op(tag() == INC ? core::wrap ::add : core::wrap ::sub, type2wmode(type()), val, one, cg.loc2dbg(loc()));
             else
-                val = core::op(tag() == INC ? math::arith::add : math::arith::sub, math::Mode::none, val, one, cg.loc2dbg(loc()));
+                val = math::op(tag() == INC ? math::arith::add : math::arith::sub, math::Mode::none, val, one, cg.loc2dbg(loc()));
             cg.store(var, val, loc());
             return val;
         }
@@ -663,11 +663,11 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
                 if (is_float(rhs()->type())) {
                     switch (op) {
-                        case ADD_ASGN: rdef = core::op(math::arith::add, math::Mode::none, ldef, rdef, dbg); break;
-                        case SUB_ASGN: rdef = core::op(math::arith::sub, math::Mode::none, ldef, rdef, dbg); break;
-                        case MUL_ASGN: rdef = core::op(math::arith::mul, math::Mode::none, ldef, rdef, dbg); break;
-                        case DIV_ASGN: rdef = core::op(math::arith::div, math::Mode::none, ldef, rdef, dbg); break;
-                        case REM_ASGN: rdef = core::op(math::arith::rem, math::Mode::none, ldef, rdef, dbg); break;
+                        case ADD_ASGN: rdef = math::op(math::arith::add, math::Mode::none, ldef, rdef, dbg); break;
+                        case SUB_ASGN: rdef = math::op(math::arith::sub, math::Mode::none, ldef, rdef, dbg); break;
+                        case MUL_ASGN: rdef = math::op(math::arith::mul, math::Mode::none, ldef, rdef, dbg); break;
+                        case DIV_ASGN: rdef = math::op(math::arith::div, math::Mode::none, ldef, rdef, dbg); break;
+                        case REM_ASGN: rdef = math::op(math::arith::rem, math::Mode::none, ldef, rdef, dbg); break;
                         default: thorin::unreachable();
                     }
                 } else if (is_bool(rhs()->type())) {
@@ -705,17 +705,17 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
             if (is_float(rhs()->type())) {
                 switch (op) {
-                    case  EQ: return core::op(math::cmp::    e, math::Mode::none, ldef, rdef, dbg);
-                    case  NE: return core::op(math::cmp::  une, math::Mode::none, ldef, rdef, dbg);
-                    case  LT: return core::op(math::cmp::    l, math::Mode::none, ldef, rdef, dbg);
-                    case  LE: return core::op(math::cmp::   le, math::Mode::none, ldef, rdef, dbg);
-                    case  GT: return core::op(math::cmp::    g, math::Mode::none, ldef, rdef, dbg);
-                    case  GE: return core::op(math::cmp::   ge, math::Mode::none, ldef, rdef, dbg);
-                    case ADD: return core::op(math::arith::add, math::Mode::none, ldef, rdef, dbg);
-                    case SUB: return core::op(math::arith::sub, math::Mode::none, ldef, rdef, dbg);
-                    case MUL: return core::op(math::arith::mul, math::Mode::none, ldef, rdef, dbg);
-                    case DIV: return core::op(math::arith::div, math::Mode::none, ldef, rdef, dbg);
-                    case REM: return core::op(math::arith::rem, math::Mode::none, ldef, rdef, dbg);
+                    case  EQ: return math::op(math::cmp::    e, math::Mode::none, ldef, rdef, dbg);
+                    case  NE: return math::op(math::cmp::  une, math::Mode::none, ldef, rdef, dbg);
+                    case  LT: return math::op(math::cmp::    l, math::Mode::none, ldef, rdef, dbg);
+                    case  LE: return math::op(math::cmp::   le, math::Mode::none, ldef, rdef, dbg);
+                    case  GT: return math::op(math::cmp::    g, math::Mode::none, ldef, rdef, dbg);
+                    case  GE: return math::op(math::cmp::   ge, math::Mode::none, ldef, rdef, dbg);
+                    case ADD: return math::op(math::arith::add, math::Mode::none, ldef, rdef, dbg);
+                    case SUB: return math::op(math::arith::sub, math::Mode::none, ldef, rdef, dbg);
+                    case MUL: return math::op(math::arith::mul, math::Mode::none, ldef, rdef, dbg);
+                    case DIV: return math::op(math::arith::div, math::Mode::none, ldef, rdef, dbg);
+                    case REM: return math::op(math::arith::rem, math::Mode::none, ldef, rdef, dbg);
                     default: thorin::unreachable();
                 }
             } else if (is_bool(rhs()->type())) {
@@ -769,7 +769,7 @@ const Def* PostfixExpr::remit(CodeGen& cg) const {
     if (is_int(type()))
         val = core::op(tag() == INC ? core::wrap ::add : core::wrap ::sub, type2wmode(type()), res, one, cg.loc2dbg(loc()));
     else
-        val = core::op(tag() == INC ? math::arith::add : math::arith::sub, math::Mode::none, res, one, cg.loc2dbg(loc()));
+        val = math::op(tag() == INC ? math::arith::add : math::arith::sub, math::Mode::none, res, one, cg.loc2dbg(loc()));
     cg.store(var, val, loc());
     return res;
 }
