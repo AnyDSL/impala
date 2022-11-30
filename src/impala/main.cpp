@@ -119,11 +119,13 @@ int main(int argc, char** argv) {
         }
         thorin::Backends backends;
         thorin::Normalizers normalizers;
+        thorin::Passes passes;
         if (!dialect_names.empty()) {
             for (const auto& dialect : dialect_names) {
                 dialects.push_back(thorin::Dialect::load(dialect, dialect_paths));
                 dialects.back().register_backends(backends);
                 dialects.back().register_normalizers(normalizers);
+                dialects.back().register_passes(passes);
                 thorin::fe::Parser::import_module(world, dialect, dialect_paths, &normalizers);
             }
         }
@@ -212,9 +214,9 @@ int main(int argc, char** argv) {
         if (result) {
             if (opt_thorin) {
                 thorin::PipelineBuilder builder;
-                for (const auto& dialect : dialects) { dialect.register_passes(builder); }
+                for (const auto& dialect : dialects) dialect.add_passes(builder);
 
-                thorin::optimize(world, builder);
+                thorin::optimize(world, passes, builder);
             }
             if (emit_thorin)
                 world.dump();
