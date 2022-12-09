@@ -112,11 +112,12 @@ int main(int argc, char** argv) {
         thorin::World world(module_name);
 
         std::vector<thorin::Dialect> dialects;
-        std::vector<std::string> dialect_names{"affine", "core", "math", "mem"}, dialect_paths;
+        std::vector<std::string> dialect_names{"affine", "core", "mem", "compile", "opt", "math"}, dialect_paths;
         if (clos) dialect_names.emplace_back("clos");
         if (auto path = thorin::sys::path_to_curr_exe()) {
             dialect_paths.emplace_back(path->parent_path().parent_path() / "thorin2" / "lib" / "thorin");
         }
+
         thorin::Backends backends;
         thorin::Normalizers normalizers;
         thorin::Passes passes;
@@ -212,42 +213,14 @@ int main(int argc, char** argv) {
             impala::emit(world, module.get());
 
         if (result) {
-            if (opt_thorin) {
-                thorin::PipelineBuilder builder;
-                for (const auto& dialect : dialects) dialect.add_passes(builder);
-
-                thorin::optimize(world, passes, builder);
-            }
-            if (emit_thorin)
-                world.dump();
+            if (opt_thorin) thorin::optimize(world, passes, dialects);
+            if (emit_thorin) world.dump();
             if (emit_llvm) {
                 if (auto it = backends.find("ll"); it != backends.end()) {
                     std::ofstream ofs(module_name + ".ll");
                     it->second(world, ofs);
                 } else
                     throw std::runtime_error("error: 'll' emitter not loaded. thorin 'mem' dialect not found?");
-#if 0
-                thorin::Backends backends(world);
-                auto emit_to_file = [&](thorin::CodeGen* cg, std::string ext) {
-                    if (cg) {
-                        auto name = module_name + ext;
-                        std::ofstream file(name);
-                        if (!file)
-                            throw std::runtime_error("cannot write '" + name + "': " + strerror(errno));
-                        cg->emit(file, opt, debug);
-                    }
-                };
-                emit_to_file(backends.codegens[thorin::Backends::CPU].get(), ".ll");
-#if 0
-                emit_to_file(backends.cuda_cg.get(),   ".cu");
-                emit_to_file(backends.nvvm_cg.get(),   ".nvvm");
-                emit_to_file(backends.opencl_cg.get(), ".cl");
-                emit_to_file(backends.amdgpu_cg.get(), ".amdgpu");
-                emit_to_file(backends.hls_cg.get(),    ".hls");
-#endif
-#else
-                //thorin::outf("warning: built without LLVM support - I don't emit an LLVM file");
-#endif
             }
         } else
             return EXIT_FAILURE;
