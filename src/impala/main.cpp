@@ -111,13 +111,13 @@ int main(int argc, char** argv) {
 
         thorin::World world(module_name);
 
-        std::vector<thorin::Dialect> dialects;
         std::vector<std::string> dialect_names{"affine", "core", "mem", "compile", "opt", "math"}, dialect_paths;
         if (clos) dialect_names.emplace_back("clos");
         if (auto path = thorin::sys::path_to_curr_exe()) {
             dialect_paths.emplace_back(path->parent_path().parent_path() / "thorin2" / "lib" / "thorin");
         }
 
+        std::vector<thorin::Dialect> dialects;
         thorin::Backends backends;
         thorin::Normalizers normalizers;
         thorin::Passes passes;
@@ -127,9 +127,11 @@ int main(int argc, char** argv) {
                 dialects.back().register_backends(backends);
                 dialects.back().register_normalizers(normalizers);
                 dialects.back().register_passes(passes);
-                thorin::fe::Parser::import_module(world, dialect, dialect_paths, &normalizers);
             }
         }
+
+        for (const auto& dialect : dialects)
+                thorin::fe::Parser::import_module(world, dialect.name(), dialect_paths, &normalizers);
 
         impala::init();
 
