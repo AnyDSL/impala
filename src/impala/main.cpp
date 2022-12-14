@@ -9,7 +9,6 @@
 #ifdef LLVM_SUPPORT
 #include "thorin/be/llvm/llvm.h"
 #endif
-#include "thorin/error.h"
 #include "thorin/rewrite.h"
 #include "thorin/analyses/schedule.h"
 #include "thorin/pass/optimize.h"
@@ -110,6 +109,7 @@ int main(int argc, char** argv) {
         }
 
         thorin::World world(module_name);
+        //world.flags().dump_recursive = true;
 
         std::vector<std::string> dialect_names{"affine", "core", "mem", "compile", "opt", "math"}, dialect_paths;
         if (clos) dialect_names.emplace_back("clos");
@@ -229,10 +229,10 @@ int main(int argc, char** argv) {
 
         return EXIT_SUCCESS;
     } catch (std::exception const& e) {
-        thorin::errf("{}", e.what());
+        thorin::errln("{}", e.what());
         return EXIT_FAILURE;
     } catch (...) {
-        thorin::errf("unknown exception");
+        thorin::errln("unknown exception");
         return EXIT_FAILURE;
     }
 }
