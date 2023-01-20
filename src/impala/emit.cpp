@@ -117,10 +117,10 @@ public:
         return res;
     }
 
-    const Def* load(const Def*  ptr, Loc loc) { return handle_mem_res(world.dcall<mem::load>(loc2dbg(loc), Defs({cur_mem, ptr}))); }
+    const Def* load(const Def*  ptr, Loc loc) { return handle_mem_res(world.dcall<mem::load>(loc2dbg(loc), Defs{cur_mem, ptr})); }
     const Def* slot(const Def* type, const Def* dbg) { return handle_mem_res(mem::op_slot(type, cur_mem, dbg)); }
 
-    void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = world.dcall<mem::store>(loc2dbg(loc), Defs({cur_mem, ptr, val})); }
+    void store(const Def* ptr, const Def* val, Loc loc) { cur_mem = world.dcall<mem::store>(loc2dbg(loc), Defs{cur_mem, ptr, val}); }
 
     const Def* alloc(const thorin::Def* type, const Def* dbg) {
         auto alloc = mem::op_alloc(type, cur_mem, dbg);
@@ -249,7 +249,7 @@ void LocalDecl::emit(CodeGen& cg, const Def* init) const {
 
     if (is_mut()) {
         def_ = cg.slot(thorin_type, cg.debug(this));
-        cg.cur_mem = cg.world.dcall<mem::store>(cg.loc2dbg(loc()), Defs({cg.cur_mem, def_, init}));
+        cg.cur_mem = cg.world.dcall<mem::store>(cg.loc2dbg(loc()), Defs{cg.cur_mem, def_, init});
     } else {
         def_ = init;
     }
@@ -541,9 +541,9 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             auto val = cg.load(var, loc());
             auto one = cg.lit_one(type(), cg.loc2dbg(loc()));
             if (is_int(type()))
-                val = core::op(tag() == INC ? core::wrap ::add : core::wrap ::sub, type2wmode(type()), val, one, cg.loc2dbg(loc()));
+                val = cg.world.dcall(cg.loc2dbg(loc()), tag() == INC ? core::wrap ::add : core::wrap ::sub, type2wmode(type()), Defs{val, one});
             else
-                val = cg.world.dcall(cg.loc2dbg(loc()), tag() == INC ? math::arith::add : math::arith::sub, math::Mode::none, Defs({val, one}));
+                val = cg.world.dcall(cg.loc2dbg(loc()), tag() == INC ? math::arith::add : math::arith::sub, math::Mode::none, Defs{val, one});
             cg.store(var, val, loc());
             return val;
         }
@@ -664,18 +664,18 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
                 if (is_float(rhs()->type())) {
                     switch (op) {
-                        case ADD_ASGN: rdef = w.dcall(dbg, math::arith::add, math::Mode::none, Defs({ldef, rdef})); break;
-                        case SUB_ASGN: rdef = w.dcall(dbg, math::arith::sub, math::Mode::none, Defs({ldef, rdef})); break;
-                        case MUL_ASGN: rdef = w.dcall(dbg, math::arith::mul, math::Mode::none, Defs({ldef, rdef})); break;
-                        case DIV_ASGN: rdef = w.dcall(dbg, math::arith::div, math::Mode::none, Defs({ldef, rdef})); break;
-                        case REM_ASGN: rdef = w.dcall(dbg, math::arith::rem, math::Mode::none, Defs({ldef, rdef})); break;
+                        case ADD_ASGN: rdef = w.dcall(dbg, math::arith::add, math::Mode::none, Defs{ldef, rdef}); break;
+                        case SUB_ASGN: rdef = w.dcall(dbg, math::arith::sub, math::Mode::none, Defs{ldef, rdef}); break;
+                        case MUL_ASGN: rdef = w.dcall(dbg, math::arith::mul, math::Mode::none, Defs{ldef, rdef}); break;
+                        case DIV_ASGN: rdef = w.dcall(dbg, math::arith::div, math::Mode::none, Defs{ldef, rdef}); break;
+                        case REM_ASGN: rdef = w.dcall(dbg, math::arith::rem, math::Mode::none, Defs{ldef, rdef}); break;
                         default: thorin::unreachable();
                     }
                 } else if (is_bool(rhs()->type())) {
                     switch (op) {
-                        case AND_ASGN: rdef = w.dcall(dbg, core::bit2::and_, Defs({ldef, rdef})); break;
-                        case  OR_ASGN: rdef = w.dcall(dbg, core::bit2:: or_, Defs({ldef, rdef})); break;
-                        case XOR_ASGN: rdef = w.dcall(dbg, core::bit2::xor_, Defs({ldef, rdef})); break;
+                        case AND_ASGN: rdef = w.dcall(dbg, core::bit2::and_, Defs{ldef, rdef}); break;
+                        case  OR_ASGN: rdef = w.dcall(dbg, core::bit2:: or_, Defs{ldef, rdef}); break;
+                        case XOR_ASGN: rdef = w.dcall(dbg, core::bit2::xor_, Defs{ldef, rdef}); break;
                         default: thorin::unreachable();
                     }
                 } else {
@@ -683,16 +683,16 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     bool s = is_signed(rhs()->type());
 
                     switch (op) {
-                        case AND_ASGN: rdef = w.dcall(dbg, core::bit2::and_, Defs({ldef, rdef})); break;
-                        case  OR_ASGN: rdef = w.dcall(dbg, core::bit2:: or_, Defs({ldef, rdef})); break;
-                        case XOR_ASGN: rdef = w.dcall(dbg, core::bit2::xor_, Defs({ldef, rdef})); break;
-                        case ADD_ASGN: rdef = core::op(core::wrap:: add, mode, ldef, rdef, dbg); break;
-                        case SUB_ASGN: rdef = core::op(core::wrap:: sub, mode, ldef, rdef, dbg); break;
-                        case MUL_ASGN: rdef = core::op(core::wrap:: mul, mode, ldef, rdef, dbg); break;
-                        case SHL_ASGN: rdef = core::op(core::wrap:: shl, mode, ldef, rdef, dbg); break;
-                        case SHR_ASGN: rdef = w.dcall(dbg, s ? core::shr::a : core::shr::l, Defs({ldef, rdef})); break;
-                        case DIV_ASGN: rdef = cg.handle_mem_res(w.dcall(dbg, s ? core::div::sdiv : core::div::udiv, Defs({cg.cur_mem, ldef, rdef}))); break;
-                        case REM_ASGN: rdef = cg.handle_mem_res(w.dcall(dbg, s ? core::div::srem : core::div::urem, Defs({cg.cur_mem, ldef, rdef}))); break;
+                        case AND_ASGN: rdef = w.dcall(dbg, core::bit2::and_, Defs{ldef, rdef}); break;
+                        case  OR_ASGN: rdef = w.dcall(dbg, core::bit2:: or_, Defs{ldef, rdef}); break;
+                        case XOR_ASGN: rdef = w.dcall(dbg, core::bit2::xor_, Defs{ldef, rdef}); break;
+                        case ADD_ASGN: rdef = w.dcall(dbg, core::wrap:: add, mode, Defs{ldef, rdef}); break;
+                        case SUB_ASGN: rdef = w.dcall(dbg, core::wrap:: sub, mode, Defs{ldef, rdef}); break;
+                        case MUL_ASGN: rdef = w.dcall(dbg, core::wrap:: mul, mode, Defs{ldef, rdef}); break;
+                        case SHL_ASGN: rdef = w.dcall(dbg, core::wrap:: shl, mode, Defs{ldef, rdef}); break;
+                        case SHR_ASGN: rdef = w.dcall(dbg, s ? core::shr::a : core::shr::l, Defs{ldef, rdef}); break;
+                        case DIV_ASGN: rdef = cg.handle_mem_res(w.dcall(dbg, s ? core::div::sdiv : core::div::udiv, Defs{cg.cur_mem, ldef, rdef})); break;
+                        case REM_ASGN: rdef = cg.handle_mem_res(w.dcall(dbg, s ? core::div::srem : core::div::urem, Defs{cg.cur_mem, ldef, rdef})); break;
                         default: thorin::unreachable();
                     }
                 }
@@ -706,27 +706,27 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
 
             if (is_float(rhs()->type())) {
                 switch (op) {
-                    case  EQ: return w.dcall(dbg, math::cmp::    e, math::Mode::none, Defs({ldef, rdef}));
-                    case  NE: return w.dcall(dbg, math::cmp::  une, math::Mode::none, Defs({ldef, rdef}));
-                    case  LT: return w.dcall(dbg, math::cmp::    l, math::Mode::none, Defs({ldef, rdef}));
-                    case  LE: return w.dcall(dbg, math::cmp::   le, math::Mode::none, Defs({ldef, rdef}));
-                    case  GT: return w.dcall(dbg, math::cmp::    g, math::Mode::none, Defs({ldef, rdef}));
-                    case  GE: return w.dcall(dbg, math::cmp::   ge, math::Mode::none, Defs({ldef, rdef}));
-                    case ADD: return w.dcall(dbg, math::arith::add, math::Mode::none, Defs({ldef, rdef}));
-                    case SUB: return w.dcall(dbg, math::arith::sub, math::Mode::none, Defs({ldef, rdef}));
-                    case MUL: return w.dcall(dbg, math::arith::mul, math::Mode::none, Defs({ldef, rdef}));
-                    case DIV: return w.dcall(dbg, math::arith::div, math::Mode::none, Defs({ldef, rdef}));
-                    case REM: return w.dcall(dbg, math::arith::rem, math::Mode::none, Defs({ldef, rdef}));
+                    case  EQ: return w.dcall(dbg, math::cmp::    e, math::Mode::none, Defs{ldef, rdef});
+                    case  NE: return w.dcall(dbg, math::cmp::  une, math::Mode::none, Defs{ldef, rdef});
+                    case  LT: return w.dcall(dbg, math::cmp::    l, math::Mode::none, Defs{ldef, rdef});
+                    case  LE: return w.dcall(dbg, math::cmp::   le, math::Mode::none, Defs{ldef, rdef});
+                    case  GT: return w.dcall(dbg, math::cmp::    g, math::Mode::none, Defs{ldef, rdef});
+                    case  GE: return w.dcall(dbg, math::cmp::   ge, math::Mode::none, Defs{ldef, rdef});
+                    case ADD: return w.dcall(dbg, math::arith::add, math::Mode::none, Defs{ldef, rdef});
+                    case SUB: return w.dcall(dbg, math::arith::sub, math::Mode::none, Defs{ldef, rdef});
+                    case MUL: return w.dcall(dbg, math::arith::mul, math::Mode::none, Defs{ldef, rdef});
+                    case DIV: return w.dcall(dbg, math::arith::div, math::Mode::none, Defs{ldef, rdef});
+                    case REM: return w.dcall(dbg, math::arith::rem, math::Mode::none, Defs{ldef, rdef});
                     default: thorin::unreachable();
                 }
             } else if (is_bool(rhs()->type())) {
                 switch (op) {
                     //
-                    case  EQ: return w.dcall(dbg, core::icmp::   e, Defs({ldef, rdef}));
-                    case  NE: return w.dcall(dbg, core::icmp::  ne, Defs({ldef, rdef}));
-                    case AND: return w.dcall(dbg, core::bit2::and_, Defs({ldef, rdef}));
-                    case  OR: return w.dcall(dbg, core::bit2:: or_, Defs({ldef, rdef}));
-                    case XOR: return w.dcall(dbg, core::bit2::xor_, Defs({ldef, rdef}));
+                    case  EQ: return w.dcall(dbg, core::icmp::   e, Defs{ldef, rdef});
+                    case  NE: return w.dcall(dbg, core::icmp::  ne, Defs{ldef, rdef});
+                    case AND: return w.dcall(dbg, core::bit2::and_, Defs{ldef, rdef});
+                    case  OR: return w.dcall(dbg, core::bit2:: or_, Defs{ldef, rdef});
+                    case XOR: return w.dcall(dbg, core::bit2::xor_, Defs{ldef, rdef});
                     default: thorin::unreachable();
                 }
             } else {
@@ -737,22 +737,22 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                 if (thorin::match<mem::Ptr>(rdef->type())) rdef = core::op_bitcast(w.type_int(64), rdef);
 
                 switch (op) {
-                    case  LT: return w.dcall(dbg, s ? core::icmp::  sl : core::icmp::  ul, Defs({ldef, rdef}));
-                    case  LE: return w.dcall(dbg, s ? core::icmp:: sle : core::icmp:: ule, Defs({ldef, rdef}));
-                    case  GT: return w.dcall(dbg, s ? core::icmp::  sg : core::icmp::  ug, Defs({ldef, rdef}));
-                    case  GE: return w.dcall(dbg, s ? core::icmp:: sge : core::icmp:: uge, Defs({ldef, rdef}));
-                    case SHR: return w.dcall(dbg, s ? core::shr::a : core::shr::l, Defs({ldef, rdef}));
-                    case  EQ: return w.dcall(dbg, core::icmp::   e, Defs({ldef, rdef}));
-                    case  NE: return w.dcall(dbg, core::icmp::  ne, Defs({ldef, rdef}));
-                    case  OR: return w.dcall(dbg, core::bit2:: or_, Defs({ldef, rdef}));
-                    case XOR: return w.dcall(dbg, core::bit2::xor_, Defs({ldef, rdef}));
-                    case AND: return w.dcall(dbg, core::bit2::and_, Defs({ldef, rdef}));
-                    case ADD: return core::op(core::wrap:: add, mode, ldef, rdef, dbg);
-                    case SUB: return core::op(core::wrap:: sub, mode, ldef, rdef, dbg);
-                    case MUL: return core::op(core::wrap:: mul, mode, ldef, rdef, dbg);
-                    case SHL: return core::op(core::wrap:: shl, mode, ldef, rdef, dbg);
-                    case DIV: return cg.handle_mem_res(w.dcall(dbg, s ? core::div::sdiv : core::div::udiv, Defs({cg.cur_mem, ldef, rdef})));
-                    case REM: return cg.handle_mem_res(w.dcall(dbg, s ? core::div::srem : core::div::urem, Defs({cg.cur_mem, ldef, rdef})));
+                    case  LT: return w.dcall(dbg, s ? core::icmp::  sl : core::icmp::  ul, Defs{ldef, rdef});
+                    case  LE: return w.dcall(dbg, s ? core::icmp:: sle : core::icmp:: ule, Defs{ldef, rdef});
+                    case  GT: return w.dcall(dbg, s ? core::icmp::  sg : core::icmp::  ug, Defs{ldef, rdef});
+                    case  GE: return w.dcall(dbg, s ? core::icmp:: sge : core::icmp:: uge, Defs{ldef, rdef});
+                    case SHR: return w.dcall(dbg, s ? core::shr::a : core::shr::l, Defs{ldef, rdef});
+                    case  EQ: return w.dcall(dbg, core::icmp::   e, Defs{ldef, rdef});
+                    case  NE: return w.dcall(dbg, core::icmp::  ne, Defs{ldef, rdef});
+                    case  OR: return w.dcall(dbg, core::bit2:: or_, Defs{ldef, rdef});
+                    case XOR: return w.dcall(dbg, core::bit2::xor_, Defs{ldef, rdef});
+                    case AND: return w.dcall(dbg, core::bit2::and_, Defs{ldef, rdef});
+                    case ADD: return w.dcall(dbg, core::wrap:: add, mode, Defs{ldef, rdef});
+                    case SUB: return w.dcall(dbg, core::wrap:: sub, mode, Defs{ldef, rdef});
+                    case MUL: return w.dcall(dbg, core::wrap:: mul, mode, Defs{ldef, rdef});
+                    case SHL: return w.dcall(dbg, core::wrap:: shl, mode, Defs{ldef, rdef});
+                    case DIV: return cg.handle_mem_res(w.dcall(dbg, s ? core::div::sdiv : core::div::udiv, Defs{cg.cur_mem, ldef, rdef}));
+                    case REM: return cg.handle_mem_res(w.dcall(dbg, s ? core::div::srem : core::div::urem, Defs{cg.cur_mem, ldef, rdef}));
                     default: thorin::unreachable();
                 }
             }
@@ -768,9 +768,9 @@ const Def* PostfixExpr::remit(CodeGen& cg) const {
     const Def* val = nullptr;
 
     if (is_int(type()))
-        val = core::op(tag() == INC ? core::wrap::add : core::wrap::sub, type2wmode(type()), res, one, cg.loc2dbg(loc()));
+        val = cg.world.dcall(cg.loc2dbg(loc()), tag() == INC ? core::wrap::add : core::wrap::sub, type2wmode(type()), Defs{res, one});
     else
-        val = cg.world.dcall(cg.loc2dbg(loc()), tag() == INC ? math::arith::add : math::arith::sub, math::Mode::none, Defs({res, one}));
+        val = cg.world.dcall(cg.loc2dbg(loc()), tag() == INC ? math::arith::add : math::arith::sub, math::Mode::none, Defs{res, one});
     cg.store(var, val, loc());
     return res;
 }
@@ -1131,14 +1131,14 @@ void EnumPtrn::emit(CodeGen& cg, const thorin::Def* init) const {
 const thorin::Def* EnumPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
     auto index = path()->decl()->as<OptionDecl>()->index();
     auto init_0 = cg.world.extract(init, num_args(), 0_u32, cg.loc2dbg(loc()));
-    auto cond = cg.world.dcall(cg.loc2dbg(loc()), core::icmp::e, Defs({init_0, cg.world.lit_idx(u32(index))}));
+    auto cond = cg.world.dcall(cg.loc2dbg(loc()), core::icmp::e, Defs{init_0, cg.world.lit_idx(u32(index))});
     if (num_args() > 0) {
         auto variant_type = path()->decl()->as<OptionDecl>()->variant_type(cg);
         auto variant = core::op_bitcast(variant_type, cg.world.extract(init, num_args(), 1, cg.loc2dbg(loc())), cg.loc2dbg(loc()));
         for (size_t i = 0, e = num_args(); i != e; ++i) {
             if (!arg(i)->is_refutable()) continue;
             auto arg_cond = arg(i)->emit_cond(cg, num_args() == 1 ? variant : cg.world.extract(variant, num_args(), i, cg.loc2dbg(loc())));
-            cond = cg.world.dcall(cg.loc2dbg(loc()), core::bit2::and_, Defs({cond, arg_cond}));
+            cond = cg.world.dcall(cg.loc2dbg(loc()), core::bit2::and_, Defs{cond, arg_cond});
         }
     }
     return cond;
@@ -1155,7 +1155,7 @@ const thorin::Def* TuplePtrn::emit_cond(CodeGen& cg, const thorin::Def* init) co
         if (!elem(i)->is_refutable()) continue;
 
         auto next = elem(i)->emit_cond(cg, cg.world.extract(init, num_elems(), i, cg.loc2dbg(loc())));
-        cond = cond ? cg.world.dcall({}, core::bit2::and_, Defs({cond, next})) : next;
+        cond = cond ? cg.world.call(core::bit2::and_, Defs{cond, next}) : next;
     }
     return cond ? cond : cg.world.lit_tt();
 }
@@ -1175,7 +1175,7 @@ const thorin::Def* LiteralPtrn::emit(CodeGen& cg) const {
 void LiteralPtrn::emit(CodeGen&, const thorin::Def*) const {}
 
 const thorin::Def* LiteralPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
-    return cg.world.dcall({}, core::icmp::e, Defs({init, emit(cg)}));
+    return cg.world.call(core::icmp::e, Defs{init, emit(cg)});
 }
 
 const thorin::Def* CharPtrn::emit(CodeGen& cg) const {
@@ -1185,7 +1185,7 @@ const thorin::Def* CharPtrn::emit(CodeGen& cg) const {
 void CharPtrn::emit(CodeGen&, const thorin::Def*) const {}
 
 const thorin::Def* CharPtrn::emit_cond(CodeGen& cg, const thorin::Def* init) const {
-    return cg.world.dcall({}, core::icmp::e, Defs({init, emit(cg)}));
+    return cg.world.call(core::icmp::e, Defs{init, emit(cg)});
 }
 
 /*
