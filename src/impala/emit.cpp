@@ -470,13 +470,13 @@ const Def* CastExpr::remit(CodeGen& cg) const {
     } else if (is_int(src_type) || is_bool(src_type)) {
         if (is_signed(src_type)) {
             if (is_int(dst_type) || is_bool(dst_type)) {
-                return cg.world.dcall(dbg, core::conv::s2s, Idx::size(dst), def);
+                return cg.world.dcall(dbg, core::conv::s, Idx::size(dst), def);
             } else {
                 return cg.world.dcall(dbg, math::conv::s2f, match<math::F>(dst)->arg(), def);
             }
         } else {
             if (is_int(dst_type) || is_bool(dst_type)) {
-                return cg.world.dcall(dbg, core::conv::u2u, Idx::size(dst), def);
+                return cg.world.dcall(dbg, core::conv::u, Idx::size(dst), def);
             } else {
                 return cg.world.dcall(dbg, math::conv::u2f, match<math::F>(dst)->arg(), def);
             }
@@ -794,7 +794,7 @@ const Def* TupleExpr::remit(CodeGen& cg) const {
 }
 
 const Def* IndefiniteArrayExpr::remit(CodeGen& cg) const {
-    auto dim_int = op(core::conv::u2u, cg.world.type_int(64), dim()->remit(cg));
+    auto dim_int = cg.world.call(core::conv::u, /*2^64*/0, dim()->remit(cg));
     auto arity = core::op_bitcast(cg.world.type_nat(), dim_int);
     auto elem = cg.convert(type()->as<IndefiniteArrayType>()->elem_type());
     return cg.world.pack(arity, cg.world.bot(elem), cg.loc2dbg(loc()));
