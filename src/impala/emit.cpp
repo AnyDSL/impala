@@ -16,35 +16,17 @@ public:
     CodeGen(World& world)
         : world(world) {}
 
-    const Def* loc2dbg(Loc loc) {
-        return world.dbg({
-            {loc.file(), {loc.begin_row(), loc.begin_col()}, {loc.finis_row(), loc.finis_col()}}
-        });
-    }
-    const Def* loc2dbg(const char* s, Loc loc) {
-        return world.dbg({
-            s,
-            {loc.file(), {loc.begin_row(), loc.begin_col()}, {loc.finis_row(), loc.finis_col()}}
-        });
-    }
-
-    const Def* debug(const Decl* decl) {
-        return world.dbg({
-            decl->symbol().c_str(),
-            {decl->loc().file(),
-                                {decl->loc().begin_row(), decl->loc().begin_col()},
-                                {decl->loc().finis_row(), decl->loc().finis_col()}}
-        });
-    }
+    thorin::Loc loc(Loc l) { return {world.sym(l.file()), {l.begin_row(), l.begin_col()}, {l.finis_row(), l.finis_col()}}; }
+    Dbg debug(const Decl* decl) { return {loc(decl->loc()), world.sym(decl->symbol().str())}; }
 
     /// Lam of type { @c cn(mem) } or { @c cn(mem, type) } depending on whether @p type is @c nullptr.
-    Lam* basicblock(const thorin::Def* type, const Def* dbg) {
+    Lam* basicblock(const thorin::Def* type) {
         auto cn = type ? world.cn({mem::type_mem(world), type}) : world.cn(mem::type_mem(world));
-        auto bb = world.nom_lam(cn, dbg);
-        bb->var(0, world.dbg("mem"));
+        auto bb = world.nom_lam(cn);
+        bb->var(0_s)->set(world.sym("mem"));
         return bb;
     }
-    Lam* basicblock(const Def* dbg) { return basicblock(nullptr, dbg); }
+    Lam* basicblock() { return basicblock(nullptr); }
 
     Lam* enter(Lam* bb) {
         cur_bb  = bb;
@@ -52,20 +34,20 @@ public:
         return bb;
     }
 
-    const Def* lit_one(const Type* type, const Def* dbg) {
-        if (is_int(type)) return world.lit(convert(type), 1, dbg);
+    const Def* lit_one(const Type* type) {
+        if (is_int(type)) return world.lit(convert(type), 1);
         switch (type->tag()) {
-            case PrimType_f16: return math::lit_f(world, 1._f16, dbg);
-            case PrimType_f32: return math::lit_f(world, 1._f32, dbg);
-            case PrimType_f64: return math::lit_f(world, 1._f64, dbg);
+            case PrimType_f16: return math::lit_f(world, 1._f16);
+            case PrimType_f32: return math::lit_f(world, 1._f32);
+            case PrimType_f64: return math::lit_f(world, 1._f64);
             default: thorin::unreachable();
         }
     }
 
-    std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type, const Def* dbg) {
+    std::pair<Lam*, const Def*> call(const Def* callee, Defs args, const thorin::Def* ret_type) {
         if (ret_type == nullptr) {
-            cur_bb->app(false, callee, args, dbg);
-            auto next = basicblock(world.dbg("unreachable"));
+            cur_bb->app(false, callee, args);
+            auto next = basicblock()->set(world.sym("unreachable"));
             return std::make_pair(next, nullptr);
         }
 
@@ -80,30 +62,30 @@ public:
             cont_args.push_back(ret_type);
 
         // next is the return lam
-        auto next = world.nom_lam(world.cn(cont_args), dbg);
-        next->var(0, world.dbg("mem"));
+        auto next = world.nom_lam(world.cn(cont_args));
+        next->var(0_s)->set(world.sym("mem"));
 
         // create jump to next
         size_t csize = args.size() + 1;
         Array<const Def*> cargs(csize);
         *std::copy(args.begin(), args.end(), cargs.begin()) = next;
-        cur_bb->app(false, callee, cargs, dbg);
+        cur_bb->app(false, callee, cargs);
 
         // determine return value
         const Def* ret = nullptr;
         if (sigma) {
             Array<const Def*> vars(next->num_vars() - 1);
             for (size_t i = 1, e = next->num_vars(); i != e; ++i) vars[i - 1] = next->var(i);
-            ret = world.tuple(ret_type, vars, callee->dbg());
+            ret = world.tuple(ret_type, vars)->set(callee->dbg());
         } else
-            ret = next->var(1, callee->dbg());
+            ret = next->var(1_s)->set(callee->dbg());
 
         return std::make_pair(next, ret);
     }
 
     Lam* create_lam(const LocalDecl* decl) {
-        auto result = world.nom_lam(convert(decl->type())->as<thorin::Pi>(), debug(decl));
-        result->var(0, world.dbg("mem"));
+        auto result = world.nom_lam(convert(decl->type())->as<thorin::Pi>())->set(debug(decl));
+        result->var(0)->set(world.sym("mem"));
         decl->def_ = result;
         return result;
     }
@@ -165,7 +147,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
     if (auto lambda = type->isa<Lambda>()) {
         auto body = convert(lambda->body());
         auto pi   = world.pi(world.type(), body->type());
-        return world.lam(pi, body, world.dbg(lambda->name()));
+        return world.lam(pi, body, world.dbg(lambda->sym()));
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_tag()) {
             // clang-format off
