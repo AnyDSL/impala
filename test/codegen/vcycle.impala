@@ -25,6 +25,8 @@ fn sort(num: int, arr: &mut [i64]) -> () {
 fn main() -> int {
     let levels = 2;
     let mut times = ~[2:i64];
+    times(0) = 0i64;
+    times(1) = 0i64;
 
     fn @vcycle_dsl_intern(level: int) -> () {
         sort(2, times);
@@ -38,4 +40,3 @@ fn main() -> int {
     vcycle_dsl_intern(0);
     if true { 0 } else { 1 }
 }
-
