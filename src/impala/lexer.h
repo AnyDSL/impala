@@ -48,7 +48,7 @@ private:
 
     std::istream& stream_;
     const char* filename_;
-    uint32_t front_line_ = 1, front_col_ = 1, back_line_ = 1, back_col_ = 1, peek_line_ = 1, peek_col_ = 1;
+    uint16_t front_line_ = 1, front_col_ = 1, back_line_ = 1, back_col_ = 1, peek_line_ = 1, peek_col_ = 1;
 };
 
 }

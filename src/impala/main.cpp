@@ -9,7 +9,7 @@
 #ifdef LLVM_SUPPORT
 #include "thorin/be/llvm/llvm.h"
 #endif
-#include "thorin/rewrite.h"
+#include "thorin/driver.h"
 #include "thorin/analyses/schedule.h"
 #include "thorin/pass/optimize.h"
 
@@ -108,7 +108,9 @@ int main(int argc, char** argv) {
             }
         }
 
-        thorin::World world(module_name);
+        thorin::Driver driver;
+        auto& world = driver.world;
+        world.set(world.sym(module_name));
         //world.flags().dump_recursive = true;
 
         std::vector<std::string> dialect_names{"affine", "core", "mem", "compile", "opt", "math"}, dialect_paths;
@@ -131,7 +133,7 @@ int main(int argc, char** argv) {
         }
 
         for (const auto& dialect : dialects)
-                thorin::fe::Parser::import_module(world, dialect.name(), dialect_paths, &normalizers);
+                thorin::fe::Parser::import_module(world, world.sym(dialect.name()), dialect_paths, &normalizers);
 
         impala::init();
 
