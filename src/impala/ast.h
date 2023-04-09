@@ -726,7 +726,7 @@ public:
         , items_(std::move(items))
     {}
 
-    Module(const char* first_file_name, Items&& items = Items())
+    Module(const std::filesystem::path* first_file_name, Items&& items = Items())
         : Module(items.empty() ? Loc(first_file_name, 1, 1) : Loc(items.front()->loc(), items.back()->loc()),
                  Visibility::Pub, nullptr, ASTTypeParams(), std::move(items))
     {}

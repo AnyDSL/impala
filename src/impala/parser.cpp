@@ -108,7 +108,7 @@ class Parser;
 
 class Parser {
 public:
-    Parser(std::istream& stream, const char* filename)
+    Parser(std::istream& stream, const std::filesystem::path* filename)
         : lexer_(stream, filename)
     {
         lookahead_[0] = lexer_.lex();
@@ -284,7 +284,7 @@ private:
 
 //------------------------------------------------------------------------------
 
-void parse(Items& items, std::istream& is, const char* filename) {
+void parse(Items& items, std::istream& is, const std::filesystem::path* filename) {
     Parser parser(is, filename);
     parser.parse_items(items);
     if (parser.lookahead() != Token::Eof)

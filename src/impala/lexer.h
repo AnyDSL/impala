@@ -2,6 +2,7 @@
 #define IMPALA_LEXER_H
 
 #include <istream>
+#include <filesystem>
 
 #include "impala/loc.h"
 #include "impala/token.h"
@@ -10,7 +11,7 @@ namespace impala {
 
 class Lexer {
 public:
-    Lexer(std::istream& stream, const char* filename);
+    Lexer(std::istream& stream, const std::filesystem::path* filename);
 
     Token lex(); ///< Get next \p Token in stream.
 
@@ -47,7 +48,7 @@ private:
     bool accept(std::string& str, char c) { return accept(str, (int) c); }
 
     std::istream& stream_;
-    const char* filename_;
+    const std::filesystem::path* filename_;
     uint16_t front_line_ = 1, front_col_ = 1, back_line_ = 1, back_col_ = 1, peek_line_ = 1, peek_col_ = 1;
 };
 

@@ -19,7 +19,7 @@ class Module;
 typedef std::vector<std::unique_ptr<const Item>> Items;
 
 void init();
-void parse(Items&, std::istream&, const char*);
+void parse(Items&, std::istream&, const std::filesystem::path*);
 void name_analysis(const Module*);
 void type_inference(std::unique_ptr<TypeTable>& typetable, const Module*);
 void type_analysis(const Module*);

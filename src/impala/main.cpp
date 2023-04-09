@@ -2,7 +2,6 @@
 #include <vector>
 #include <cctype>
 #include <stdexcept>
-#include "thorin/dialects.h"
 #include "thorin/fe/parser.h"
 #include "thorin/util/sys.h"
 
@@ -109,37 +108,20 @@ int main(int argc, char** argv) {
         }
 
         thorin::Driver driver;
-        auto& world = driver.world;
+        std::ofstream log_stream;
+        driver.log().set(open(log_stream, log_name)).set(thorin::Log::str2level(log_level));
+
+        auto& world = driver.world();
         world.set(world.sym(module_name));
-        //world.flags().dump_recursive = true;
+        auto parser = thorin::fe::Parser(world);
 
-        std::vector<std::string> dialect_names{"affine", "core", "mem", "compile", "opt", "math"}, dialect_paths;
-        if (clos) dialect_names.emplace_back("clos");
-        if (auto path = thorin::sys::path_to_curr_exe()) {
-            dialect_paths.emplace_back(path->parent_path().parent_path() / "thorin2" / "lib" / "thorin");
-        }
+        if (auto path = thorin::sys::path_to_curr_exe())
+            driver.add_search_path(path->parent_path().parent_path() / "thorin2" / "lib" / "thorin");
 
-        std::vector<thorin::Dialect> dialects;
-        thorin::Backends backends;
-        thorin::Normalizers normalizers;
-        thorin::Passes passes;
-        if (!dialect_names.empty()) {
-            for (const auto& dialect : dialect_names) {
-                dialects.push_back(thorin::Dialect::load(dialect, dialect_paths));
-                dialects.back().register_backends(backends);
-                dialects.back().register_normalizers(normalizers);
-                dialects.back().register_passes(passes);
-            }
-        }
-
-        for (const auto& dialect : dialects)
-                thorin::fe::Parser::import_module(world, world.sym(dialect.name()), dialect_paths, &normalizers);
+        for (auto plugin : {"compile", "core", "mem", "opt", "math", "affine"}) parser.plugin(plugin);
+        if (clos) parser.plugin("clos");
 
         impala::init();
-
-        std::ofstream log_stream;
-        world.log().ostream = open(log_stream, log_name);
-        world.log().level   = thorin::Log::str2level(log_level);
 
 #if THORIN_ENABLE_CHECKS && !defined(NDEBUG)
         auto set_breakpoints = [&](auto breakpoints, auto setter) {
@@ -171,16 +153,15 @@ int main(int argc, char** argv) {
 #endif
 
         impala::Items items;
+        std::deque<std::filesystem::path> inpaths;
         for (const auto& infile : infiles) {
-            auto filename = infile.c_str();
-            std::ifstream file(filename);
-            impala::parse(items, file, filename);
+            inpaths.emplace_back(infile);
+            std::ifstream file(inpaths.back());
+            impala::parse(items, file, &inpaths.back());
         }
 
-        auto module = std::make_unique<const impala::Module>(infiles.front().c_str(), std::move(items));
-
-        if (emit_ast)
-            module->dump();
+        auto module = std::make_unique<const impala::Module>(&inpaths.front(), std::move(items));
+        if (emit_ast) module->dump();
 
         std::unique_ptr<impala::TypeTable> typetable;
         impala::check(typetable, module.get());
@@ -217,12 +198,12 @@ int main(int argc, char** argv) {
             impala::emit(world, module.get());
 
         if (result) {
-            if (opt_thorin) thorin::optimize(world, passes, dialects);
+            if (opt_thorin) thorin::optimize(world);
             if (emit_thorin) world.dump();
             if (emit_llvm) {
-                if (auto it = backends.find("ll"); it != backends.end()) {
+                if (auto backend = driver.backend("ll")) {
                     std::ofstream ofs(module_name + ".ll");
-                    it->second(world, ofs);
+                    backend(world, ofs);
                 } else
                     throw std::runtime_error("error: 'll' emitter not loaded. thorin 'mem' dialect not found?");
             }
