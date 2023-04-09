@@ -110,6 +110,7 @@ int main(int argc, char** argv) {
         thorin::Driver driver;
         std::ofstream log_stream;
         driver.log().set(open(log_stream, log_name)).set(thorin::Log::str2level(log_level));
+        driver.flags().aggressive_lam_spec = true;
 
         auto& world = driver.world();
         world.set(world.sym(module_name));
