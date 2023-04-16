@@ -865,7 +865,7 @@ const Def* FieldExpr::lemit(CodeGen& cg) const {
 
 const Def* FieldExpr::remit(CodeGen& cg) const {
     auto tup = lhs()->remit(cg);
-    return cg.world.extract(tup, as_lit(tup->arity()), index())->set(cg.loc(loc()));
+    return cg.world.extract(tup, Lit::as(tup->arity()), index())->set(cg.loc(loc()));
 }
 
 const Def* BlockExpr::remit(CodeGen& cg) const {
