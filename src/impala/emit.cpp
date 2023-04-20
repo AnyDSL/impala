@@ -200,7 +200,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
         return s;
 #endif
     } else if (auto ptr = type->isa<PtrType>()) {
-        return mem::type_ptr(convert(ptr->pointee()), ptr->addr_space());
+        return mem::type_ptr(convert(ptr->pointee()), mem::AddrSpace(ptr->addr_space()));
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
         return world.arr(definite_array_type->dim(), convert(definite_array_type->elem_type()));
     } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {
@@ -865,7 +865,7 @@ const Def* FieldExpr::lemit(CodeGen& cg) const {
 
 const Def* FieldExpr::remit(CodeGen& cg) const {
     auto tup = lhs()->remit(cg);
-    return cg.world.extract(tup, as_lit(tup->arity()), index())->set(cg.loc(loc()));
+    return cg.world.extract(tup, Lit::as(tup->arity()), index())->set(cg.loc(loc()));
 }
 
 const Def* BlockExpr::remit(CodeGen& cg) const {
