@@ -491,7 +491,7 @@ const Def* PathExpr::remit(CodeGen& cg) const {
     return value_decl()->is_mut() || global ? cg.load(def)->set(cg.loc(loc())) : def;
 }
 
-static flags_t type2wmode(const Type* type) {
+static core::Mode type2wmode(const Type* type) {
     return is_bool(type) ? core::Mode::nuw : (is_signed(type) ? core::Mode::nsw : core::Mode::none);
 }
 
