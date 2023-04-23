@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
 
         impala::init();
 
-#if THORIN_ENABLE_CHECKS && !defined(NDEBUG)
+#if defined(THORIN_ENABLE_CHECKS) && !defined(NDEBUG)
         auto set_breakpoints = [&](auto breakpoints, auto setter) {
             for (auto b : breakpoints) {
                 assert(b.size() > 0);
