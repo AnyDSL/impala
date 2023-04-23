@@ -279,7 +279,7 @@ void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
             cg.cur_bb->app(false, ret_param(), {cg.cur_mem, def})->set(cg.loc(loc.finis()));
     }
 
-    lam()->reset(filter() ? filter()->remit(cg) : cg.world.lit_ff(), lam()->body());
+    lam()->reset({filter() ? filter()->remit(cg) : cg.world.lit_ff(), lam()->body()});
     cg.cur_mem = old_mem;
 
     cg.cur_fn = old_fn;
