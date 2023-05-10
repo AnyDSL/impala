@@ -279,7 +279,7 @@ void Fn::fn_emit_body(CodeGen& cg, Loc loc) const {
             cg.cur_bb->app(false, ret_param(), {cg.cur_mem, def})->set(cg.loc(loc.finis()));
     }
 
-    lam()->set_filter(filter() ? filter()->remit(cg) : cg.world.lit_ff());
+    lam()->reset({filter() ? filter()->remit(cg) : cg.world.lit_ff(), lam()->body()});
     cg.cur_mem = old_mem;
 
     cg.cur_fn = old_fn;
@@ -347,7 +347,11 @@ void StaticItem::emit_head(CodeGen& cg) const {
 }
 
 void StaticItem::emit(CodeGen& cg) const {
-    if (init()) def_->as_mut<Global>()->set(init()->remit(cg));
+    if (init()) {
+        auto global = def_->as_mut<Global>();
+        if (global->is_set()) global->unset();
+        global->set(init()->remit(cg));
+    }
 }
 
 void StructDecl::emit_head(CodeGen& cg) const { cg.convert(type()); }
