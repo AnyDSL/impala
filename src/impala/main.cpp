@@ -109,7 +109,15 @@ int main(int argc, char** argv) {
 
         thorin::Driver driver;
         std::ofstream log_stream;
-        driver.log().set(open(log_stream, log_name)).set(thorin::Log::str2level(log_level));
+
+        thorin::Log::Level lvl;
+        if (log_level == "error")   lvl = thorin::Log::Level::Error;
+        if (log_level == "warn")    lvl = thorin::Log::Level::Warn;
+        if (log_level == "info")    lvl = thorin::Log::Level::Info;
+        if (log_level == "verbose") lvl = thorin::Log::Level::Verbose;
+        if (log_level == "debug")   lvl = thorin::Log::Level::Debug;
+
+        driver.log().set(open(log_stream, log_name)).set(lvl);
         driver.flags().aggressive_lam_spec = true;
 
         auto& world = driver.world();
@@ -119,8 +127,11 @@ int main(int argc, char** argv) {
         if (auto path = thorin::sys::path_to_curr_exe())
             driver.add_search_path(path->parent_path().parent_path() / "thorin2" / "lib" / "thorin");
 
-        for (auto plugin : {"compile", "core", "mem", "opt", "math", "affine"}) parser.plugin(plugin);
+        if (clos) driver.load("clos");
+        for (auto plugin : {"core", "mem", "compile", "opt", "math", "affine"}) driver.load(plugin);
+
         if (clos) parser.plugin("clos");
+        for (auto plugin : {"core", "mem", "compile", "opt", "math", "affine"}) parser.plugin(plugin);
 
         impala::init();
 

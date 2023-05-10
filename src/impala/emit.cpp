@@ -21,7 +21,7 @@ public:
 
     /// Lam of type { @c cn(mem) } or { @c cn(mem, type) } depending on whether @p type is @c nullptr.
     Lam* basicblock(const thorin::Def* type) {
-        auto cn = type ? world.cn({mem::type_mem(world), type}) : world.cn(mem::type_mem(world));
+        auto cn = type ? world.cn({world.annex<mem::M>(), type}) : world.cn(world.annex<mem::M>());
         auto bb = world.mut_lam(cn);
         bb->var(0_s)->set("mem");
         return bb;
@@ -52,7 +52,7 @@ public:
         }
 
         std::vector<const thorin::Def*> cont_args;
-        cont_args.push_back(mem::type_mem(world));
+        cont_args.push_back(world.annex<mem::M>());
 
         // if the return type is a sigma, flatten it
         auto sigma = ret_type->isa<thorin::Sigma>();
@@ -104,13 +104,13 @@ public:
     }
 
     const Def* alloc(const thorin::Def* type) {
-        auto alloc                 = mem::op_alloc(type, cur_mem);
-        cur_mem                    = world.extract(alloc, 2_s, 0_s);
-        auto result                = world.extract(alloc, 2, 1);
-        auto ptr                   = thorin::match<mem::Ptr, true>(result->type());
-        auto [pointee, addr_space] = ptr->args<2>();
+        auto alloc         = mem::op_alloc(type, cur_mem);
+        cur_mem            = world.extract(alloc, 2_s, 0_s);
+        auto result        = world.extract(alloc, 2, 1);
+        auto ptr           = thorin::force<mem::Ptr>(result->type());
+        auto [pointee, as] = ptr->args<2>();
         if (auto arr = pointee->isa<Arr>())
-            return world.call<core::bitcast>(mem::type_ptr(world.arr_unsafe(arr->body()), addr_space), result);
+            return world.call<core::bitcast>(world.call<mem::Ptr>(Defs{world.arr_unsafe(arr->body()), as}), result);
         return result;
     }
 
@@ -158,15 +158,15 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
             case PrimType_u32 : return world.type_int(32);
             case PrimType_i64 :
             case PrimType_u64 : return world.type_int(64);
-            case PrimType_f16 : return math::type_f16(world);
-            case PrimType_f32 : return math::type_f32(world);
-            case PrimType_f64 : return math::type_f64(world);
+            case PrimType_f16 : return world.annex<math::F16>();
+            case PrimType_f32 : return world.annex<math::F32>();
+            case PrimType_f64 : return world.annex<math::F64>();
             // clang-format on
             default: thorin::unreachable();
         }
     } else if (auto cn = type->isa<FnType>()) {
         std::vector<const thorin::Def*> nops;
-        nops.push_back(mem::type_mem(world));
+        nops.push_back(world.annex<mem::M>());
         for (size_t i = 0, e = cn->num_params(); i != e; ++i) nops.push_back(convert(cn->param(i)));
         return world.cn(nops);
     } else if (auto tuple_type = type->isa<TupleType>()) {
@@ -200,7 +200,8 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
         return s;
 #endif
     } else if (auto ptr = type->isa<PtrType>()) {
-        return mem::type_ptr(convert(ptr->pointee()), mem::AddrSpace(ptr->addr_space()));
+        auto as = world.lit_nat((nat_t)mem::AddrSpace(ptr->addr_space()));
+        return world.call<mem::Ptr>(Defs{convert(ptr->pointee()), as});
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
         return world.arr(definite_array_type->dim(), convert(definite_array_type->elem_type()));
     } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {
@@ -313,10 +314,10 @@ void FnDecl::emit_head(CodeGen& cg) const {
 
     // create thorin function
     def_ = fn_emit_head(cg, loc());
-    if (is_extern() && abi() == "") lam_->make_external();
+    if (is_extern() && abi() == "") lam_->make_external(true);
 
     // handle main function
-    if (symbol() == "main" && !lam()->is_external()) lam()->make_external();
+    if (symbol() == "main" && !lam()->is_external()) lam()->make_external(true);
 }
 
 void FnDecl::emit(CodeGen& cg) const {
@@ -341,7 +342,7 @@ void ImplItem::emit(CodeGen&) const {}
 void StaticItem::emit_head(CodeGen& cg) const {
     auto t   = cg.convert(type());
     auto bot = cg.world.bot(t);
-    auto g   = cg.world.global(mem::type_ptr(t), is_mut())->set(cg.loc(loc()));
+    auto g   = cg.world.global(cg.world.call<mem::Ptr0>(t), is_mut())->set(cg.loc(loc()));
     g->set(bot);
     def_ = g;
 }
@@ -518,9 +519,9 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
         case SUB:
             if (is_int(type())) {
                 auto mode = type2wmode(type());
-                return core::op_wminus(mode, rhs()->remit(cg))->set(loc);
+                return cg.world.call<core::minus>(mode, rhs()->remit(cg))->set(loc);
             } else {
-                return math::op_rminus(math::Mode::none, rhs()->remit(cg))->set(loc);
+                return cg.world.call<math::minus>(math::Mode::none, rhs()->remit(cg))->set(loc);
             }
         case NOT: return cg.world.call(core::bit1::neg, 0, rhs()->remit(cg))->set(loc);
         case TILDE: {
@@ -534,7 +535,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
 
             auto def = rhs()->remit(cg);
             if (def->dep_const()) {
-                auto g = cg.world.global(mem::type_ptr(def->type()), /*mutable*/ false)->set(loc);
+                auto g = cg.world.global(cg.world.call<mem::Ptr0>(def->type()), /*mutable*/ false)->set(loc);
                 g->set(def);
                 return g;
             }
@@ -600,7 +601,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
         case OROR:
         case ANDAND: {
             auto result    = cg.basicblock(w.type_bool())->set(cg.loc(loc().finis()), "infix_result");
-            auto jump_type = w.cn(mem::type_mem(w));
+            auto jump_type = w.cn(w.annex<mem::M>());
             auto jump_t    = w.mut_lam(jump_type)->set(cg.loc(loc().finis()), "jump_t");
             auto jump_f    = w.mut_lam(jump_type)->set(cg.loc(loc().finis()), "jump_f");
             emit_branch(cg, jump_t, jump_f);
@@ -801,37 +802,37 @@ const Def* MapExpr::remit(CodeGen& cg) const {
                             return w.bot(cg.convert(type_expr->type_arg(0)))->set(loc);
                         } else if (name == "reserve_shared") {
                             auto ptr  = cg.convert(type());
-                            auto cn   = w.cn({mem::type_mem(w), w.type_int(32), w.cn({mem::type_mem(w), ptr})});
+                            auto cn   = w.cn({w.annex<mem::M>(), w.type_int(32), w.cn({w.annex<mem::M>(), ptr})});
                             auto cont = w.mut_lam(cn)->set(loc, "reserve_shared");
                             // cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "atomic") {
                             auto poly_type = cg.convert(type());
                             auto ptr       = cg.convert(arg(1)->type());
-                            auto cn        = w.cn({mem::type_mem(w), w.type_int(32), ptr, poly_type,
-                                                   w.cn({mem::type_mem(w), poly_type})});
+                            auto cn        = w.cn({w.annex<mem::M>(), w.type_int(32), ptr, poly_type,
+                                                   w.cn({w.annex<mem::M>(), poly_type})});
                             auto cont      = w.mut_lam(cn)->set(loc, "atomic");
                             // cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "cmpxchg") {
-                            auto ptr                   = thorin::match<mem::Ptr, true>(cg.convert(arg(0)->type()));
+                            auto ptr                   = thorin::force<mem::Ptr>(cg.convert(arg(0)->type()));
                             auto [pointee, addr_space] = ptr->args<2>();
                             auto poly_type             = pointee;
-                            auto cn                    = w.cn({mem::type_mem(w), ptr, poly_type, poly_type,
-                                                               w.cn({mem::type_mem(w), poly_type, w.type_bool()})});
+                            auto cn                    = w.cn({w.annex<mem::M>(), ptr, poly_type, poly_type,
+                                                               w.cn({w.annex<mem::M>(), poly_type, w.type_bool()})});
                             auto cont                  = w.mut_lam(cn)->set(loc, "cmpxchg");
                             // cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "pe_info") {
                             auto poly_type   = cg.convert(arg(1)->type());
-                            auto string_type = mem::type_ptr(w.arr_unsafe(w.type_int(8)));
-                            auto cn          = w.cn({mem::type_mem(w), string_type, poly_type, w.cn(mem::type_mem(w))});
+                            auto string_type = cg.world.call<mem::Ptr0>(w.arr_unsafe(w.type_int(8)));
+                            auto cn          = w.cn({w.annex<mem::M>(), string_type, poly_type, w.cn(w.annex<mem::M>())});
                             auto cont        = w.mut_lam(cn)->set(loc, "pe_info");
                             // cont->set_intrinsic();
                             dst = cont;
                         } else if (name == "pe_known") {
                             auto poly_type = cg.convert(arg(0)->type());
-                            auto cn   = w.cn({mem::type_mem(w), poly_type, w.cn({mem::type_mem(w), w.type_bool()})});
+                            auto cn   = w.cn({w.annex<mem::M>(), poly_type, w.cn({w.annex<mem::M>(), w.type_bool()})});
                             auto cont = w.mut_lam(cn)->set(loc, "pe_known");
                             // cont->set_intrinsic();
                             dst = cont;
@@ -885,7 +886,7 @@ const Def* BlockExpr::remit(CodeGen& cg) const {
 const Def* IfExpr::remit(CodeGen& cg) const {
     auto thorin_type = cg.convert(type());
 
-    auto jump_type = cg.world.cn(mem::type_mem(cg.world));
+    auto jump_type = cg.world.cn(cg.world.annex<mem::M>());
     auto if_then   = cg.world.mut_lam(jump_type)->set(cg.loc(then_expr()->loc().begin()), "if_then");
     auto if_else   = cg.world.mut_lam(jump_type)->set(cg.loc(else_expr()->loc().begin()), "if_else");
     auto if_join   = thorin_type ? cg.basicblock(thorin_type)->set(cg.loc(loc().finis()), "if_join")
@@ -990,10 +991,10 @@ const Def* MatchExpr::remit(CodeGen& /*cg*/) const {
 }
 
 const Def* WhileExpr::remit(CodeGen& cg) const {
-    auto head_bb = cg.world.mut_lam(cg.world.cn(mem::type_mem(cg.world)))->set(cg.loc(loc().begin()), "while_head");
+    auto head_bb = cg.world.mut_lam(cg.world.cn(cg.world.annex<mem::M>()))->set(cg.loc(loc().begin()), "while_head");
     head_bb->var(0)->set("mem");
 
-    auto jump_type = cg.world.cn(mem::type_mem(cg.world));
+    auto jump_type = cg.world.cn(cg.world.annex<mem::M>());
     auto body_bb   = cg.world.mut_lam(jump_type)->set(cg.loc(body()->loc().begin()), "while_body");
     auto exit_bb   = cg.world.mut_lam(jump_type)->set(cg.loc(body()->loc().finis()), "while_exit");
     auto cont_bb   = cg.create_lam(continue_decl());
@@ -1109,9 +1110,9 @@ const thorin::Def* LiteralPtrn::emit(CodeGen& cg) const {
     auto def = literal()->remit(cg);
     if (has_minus()) {
         if (is_float(type()))
-            return math::op_rminus(math::VMode{0_n}, def)->set(def->dbg());
+            return cg.world.call<math::minus>(0_n, def)->set(def->dbg());
         else
-            return core::op_wminus(type2wmode(type()), def)->set(def->dbg());
+            return cg.world.call<core::minus>(type2wmode(type()), def)->set(def->dbg());
     } else {
         return def;
     }
