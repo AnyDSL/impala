@@ -653,8 +653,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case MUL_ASGN: rdef = w.call(core::wrap:: mul, mode, Defs{ldef, rdef})->set(loc); break;
                         case SHL_ASGN: rdef = w.call(core::wrap:: shl, mode, Defs{ldef, rdef})->set(loc); break;
                         case SHR_ASGN: rdef = w.call(s ? core::shr::a : core::shr::l, Defs{ldef, rdef})->set(loc); break;
-                        case DIV_ASGN: rdef = cg.handle_mem_res(w.call(s ? core::div::sdiv : core::div::udiv, Defs{cg.cur_mem, ldef, rdef})->set(loc)); break;
-                        case REM_ASGN: rdef = cg.handle_mem_res(w.call(s ? core::div::srem : core::div::urem, Defs{cg.cur_mem, ldef, rdef})->set(loc)); break;
+                        case DIV_ASGN: rdef = cg.handle_mem_res(w.call(s ? core::div::sdiv : core::div::udiv, Defs{cg.cur_mem, w.tuple({ldef, rdef})})->set(loc)); break;
+                        case REM_ASGN: rdef = cg.handle_mem_res(w.call(s ? core::div::srem : core::div::urem, Defs{cg.cur_mem, w.tuple({ldef, rdef})})->set(loc)); break;
                         default: thorin::unreachable();
                     }
                 }
@@ -713,8 +713,8 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case SUB: return w.call(core::wrap:: sub, mode, Defs{ldef, rdef})->set(loc);
                     case MUL: return w.call(core::wrap:: mul, mode, Defs{ldef, rdef})->set(loc);
                     case SHL: return w.call(core::wrap:: shl, mode, Defs{ldef, rdef})->set(loc);
-                    case DIV: return cg.handle_mem_res(w.call(s ? core::div::sdiv : core::div::udiv, Defs{cg.cur_mem, ldef, rdef})->set(loc));
-                    case REM: return cg.handle_mem_res(w.call(s ? core::div::srem : core::div::urem, Defs{cg.cur_mem, ldef, rdef})->set(loc));
+                    case DIV: return cg.handle_mem_res(w.call(s ? core::div::sdiv : core::div::udiv, Defs{cg.cur_mem, w.tuple({ldef, rdef})})->set(loc));
+                    case REM: return cg.handle_mem_res(w.call(s ? core::div::srem : core::div::urem, Defs{cg.cur_mem, w.tuple({ldef, rdef})})->set(loc));
                     default: thorin::unreachable();
                 }
             }
