@@ -145,7 +145,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
     if (auto lambda = type->isa<Lambda>()) {
         auto body = convert(lambda->body());
         auto pi   = world.pi(world.type(), body->type());
-        return world.lam(pi, body)->set(lambda->name());
+        return world.lam(pi, true, body)->set(lambda->name());
     } else if (auto prim_type = type->isa<PrimType>()) {
         switch (prim_type->primtype_tag()) {
             // clang-format off
@@ -314,10 +314,10 @@ void FnDecl::emit_head(CodeGen& cg) const {
 
     // create thorin function
     def_ = fn_emit_head(cg, loc());
-    if (is_extern() && abi() == "") lam_->make_external(true);
+    if (is_extern() && abi() == "") lam_->make_external();
 
     // handle main function
-    if (symbol() == "main" && !lam()->is_external()) lam()->make_external(true);
+    if (symbol() == "main" && !lam()->is_external()) lam()->make_external();
 }
 
 void FnDecl::emit(CodeGen& cg) const {
