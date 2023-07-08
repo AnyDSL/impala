@@ -10,9 +10,9 @@ Loc operator+(Loc l1, Loc l2) {
 
 Stream& operator<<(Stream& os, Loc l) {
 #ifdef _MSC_VER
-    return os << l.file() << "(" << l.begin_row() << ")";
+    return os << *l.file() << "(" << l.begin_row() << ")";
 #else // _MSC_VER
-    os << l.file() << ':';
+    os << *l.file() << ':';
 
     if (l.begin_col() == uint16_t(-1) || l.finis_col() == uint16_t(-1)) {
         if (l.begin_row() != l.finis_row())

@@ -461,9 +461,17 @@ const Def* CastExpr::remit(CodeGen& cg) const {
                 return cg.world.call(math::conv::f2u, Idx::size(dst), def)->set(loc);
         } else if (is_float(src_type) && is_float(dst_type)) {
             return cg.world.call(math::conv::f2f, match<math::F>(dst)->arg(), def)->set(loc);
-        } else {
-            return cg.world.call<core::bitcast>(dst, def)->set(loc);
+        } else if (auto src_tup = src_type->isa<TupleType>()) {
+            if (auto dst_tup = dst_type->isa<TupleType>()) {
+                if (src_tup->num_ops() && dst_tup->num_ops()) {
+                    size_t n = src_tup->num_ops();
+                    DefArray new_ops(n, [&](size_t i) { return cg.world.call<core::bitcast>(dst->proj(n, i), def->proj(n, i))->set(loc); });
+                    return cg.world.tuple(new_ops);
+                }
+            }
         }
+
+        return cg.world.call<core::bitcast>(dst, def)->set(loc);
     }
     thorin::unreachable();
 }
