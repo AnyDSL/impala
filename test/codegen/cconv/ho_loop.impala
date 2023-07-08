@@ -1,4 +1,4 @@
-// codegen broken
+// codegen
 
 extern "C" {
     fn print_int(i32) -> ();

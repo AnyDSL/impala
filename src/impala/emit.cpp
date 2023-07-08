@@ -54,11 +54,14 @@ public:
         std::vector<const thorin::Def*> cont_args;
         cont_args.push_back(world.annex<mem::M>());
 
-        // if the return type is a sigma, flatten it
-        auto sigma = ret_type->isa<thorin::Sigma>();
-        if (sigma && !sigma->isa_mut()) {
+        auto sigma = ret_type->isa_imm<thorin::Sigma>(); // if the return type is a sigma, flatten it
+        auto arr   = ret_type->isa<thorin::Arr>();         // ditto: for arr with known arity
+        auto arity = arr ? arr->isa_lit_arity() : std::nullopt;
+        if (sigma)
             for (auto op : sigma->ops()) cont_args.push_back(op);
-        } else
+        else if (arity)
+            for (size_t i = 0, e = *arity; i != e; ++i) cont_args.push_back(arr->body());
+        else
             cont_args.push_back(ret_type);
 
         // next is the return lam
@@ -73,12 +76,13 @@ public:
 
         // determine return value
         const Def* ret = nullptr;
-        if (sigma) {
+        if (sigma || arity) {
             Array<const Def*> vars(next->num_vars() - 1);
             for (size_t i = 1, e = next->num_vars(); i != e; ++i) vars[i - 1] = next->var(i);
             ret = world.tuple(ret_type, vars)->set(callee->dbg());
-        } else
+        } else {
             ret = next->var(1_s)->set(callee->dbg());
+        }
 
         return std::make_pair(next, ret);
     }
