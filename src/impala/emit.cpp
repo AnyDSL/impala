@@ -331,9 +331,10 @@ void ExternBlock::emit_head(CodeGen& cg) const {
     for (auto&& fn_decl : fn_decls()) {
         fn_decl->emit_head(cg);
         auto continuation = fn_decl->continuation();
-        if (abi() == "\"C\"")
+        if (abi() == "\"C\"") {
             cg.world.make_external(continuation);
-        else if (abi() == "\"device\"") {
+            continuation->attributes().cc = thorin::CC::C;
+        } else if (abi() == "\"device\"") {
             cg.world.make_external(continuation);
             continuation->attributes().cc = thorin::CC::Device;
         } else if (abi() == "\"thorin\"" && continuation) // no continuation for primops
