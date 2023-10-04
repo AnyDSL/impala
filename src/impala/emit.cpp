@@ -52,7 +52,7 @@ public:
         // if the return type is a tuple, flatten it
         auto tuple = ret_type->isa<thorin::TupleType>();
         if (tuple) {
-            for (auto op : tuple->ops())
+            for (auto op : tuple->types())
                 cont_args.push_back(op);
         } else
             cont_args.push_back(ret_type);
@@ -151,7 +151,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         auto s = world.struct_type(decl->symbol(), struct_type->num_ops());
         thorin_type(type) = s;
         for(size_t i = 0, n = struct_type->num_ops(); i < n; i++) {
-            s->set(i, convert(struct_type->op(i)));
+            s->set_op(i, convert(struct_type->op(i)));
             s->set_op_name(i, decl->field_decl(i)->symbol());
         }
         return s;
@@ -160,7 +160,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         auto e = world.variant_type(decl->symbol(), enum_type->num_ops());
         thorin_type(enum_type) = e;
         for(size_t i = 0, n = enum_type->num_ops(); i < n; i++) {
-            e->set(i, decl->option_decl(i)->variant_type(*this));
+            e->set_op(i, decl->option_decl(i)->variant_type(*this));
             e->set_op_name(i, decl->option_decl(i)->symbol());
         }
         return e;
@@ -364,7 +364,7 @@ void OptionDecl::emit(CodeGen& cg) const {
     auto enum_type = enum_decl()->type()->as<EnumType>();
     auto variant_type = cg.convert(enum_type)->as<VariantType>();
     if (num_args() == 0) {
-        auto bot = cg.world.bottom(variant_type->op(index()));
+        auto bot = cg.world.bottom(variant_type->types()[index()]);
         def_ = cg.world.variant(variant_type, bot, index());
     } else {
         auto continuation = cg.world.continuation(cg.convert(type())->as<thorin::FnType>(), {symbol().str(), loc()});
@@ -526,12 +526,8 @@ const Def* PrefixExpr::lemit(CodeGen& cg) const {
 }
 
 void Expr::emit_branch(CodeGen& cg, Continuation* jump_true, Continuation* jump_false) const {
-    auto expr_true  = cg.basicblock({ "expr_true",  loc().anew_finis()  });
-    auto expr_false = cg.basicblock({ "expr_false", loc().anew_finis() });
     auto cond = remit(cg);
-    cg.cur_bb->branch(cond, expr_true, expr_false, loc().anew_finis());
-    expr_true->jump(jump_true, { cg.cur_mem });
-    expr_false->jump(jump_false, { cg.cur_mem });
+    cg.cur_bb->branch(cg.cur_mem, cond,  jump_true, jump_false, loc().anew_finis());
 }
 
 void InfixExpr::emit_branch(CodeGen& cg, Continuation* jump_true, Continuation* jump_false) const {
@@ -846,7 +842,7 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
         defs.shrink(num_targets);
 
         auto matcher_int = is_integer ? matcher : cg.world.variant_index(matcher, matcher->debug());
-        cg.cur_bb->match(matcher_int, otherwise, defs, targets, {"match", loc().anew_begin()});
+        cg.cur_bb->match(cg.cur_mem, matcher_int, otherwise, defs, targets, {"match", loc().anew_begin()});
         auto mem = cg.cur_mem;
 
         for (size_t i = 0; i != num_targets; ++i) {
@@ -865,7 +861,9 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
         // general case: if/else
         for (size_t i = 0, e = num_arms(); i != e; ++i) {
             auto case_true  = cg.basicblock({"case_true",  arm(i)->loc().anew_begin()});
+            auto ct_param = case_true->append_param(cg.world.mem_type());
             auto case_false = cg.basicblock({"case_false", arm(i)->loc().anew_begin()});
+            auto cf_param = case_false->append_param(cg.world.mem_type());
 
             arm(i)->ptrn()->emit(cg, matcher);
 
@@ -874,14 +872,13 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
                 ? cg.world.literal_bool(true, arm(i)->ptrn()->loc())
                 : arm(i)->ptrn()->emit_cond(cg, matcher);
 
-            cg.cur_bb->branch(cond, case_true, case_false, arm(i)->ptrn()->loc().anew_finis());
+            cg.cur_bb->branch(cg.cur_mem, cond, case_true, case_false, arm(i)->ptrn()->loc().anew_finis());
 
-            auto mem = cg.cur_mem;
-            cg.enter(case_true, mem);
+            cg.enter(case_true, ct_param);
             if (auto def = arm(i)->expr()->remit(cg))
                 cg.cur_bb->jump(join, {cg.cur_mem, def}, arm(i)->loc().anew_finis());
 
-            cg.enter(case_false, mem);
+            cg.enter(case_false, cf_param);
         }
     }
 
