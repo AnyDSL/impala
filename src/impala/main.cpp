@@ -229,7 +229,7 @@ int main(int argc, char** argv) {
             if (opt_thorin)
                 thorin.opt();
             if (emit_thorin)
-                thorin.world().dump();
+                thorin.world().dump_scoped();
             if (emit_c || emit_llvm) {
                 thorin::DeviceBackends backends(thorin.world(), opt, debug, hls_flags);
                 auto emit_to_file = [&] (thorin::CodeGen& cg) {
