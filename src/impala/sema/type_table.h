@@ -5,11 +5,12 @@
 
 #include <type_traits>
 
+#include <fe/cast.h>
+
 #include "impala/stream.h"
 
 #include "thorin/def.h"
 #include "thorin/util/hash.h"
-#include "thorin/util/cast.h"
 #include "thorin/util/array.h"
 
 namespace thorin {
@@ -54,7 +55,7 @@ using Type2Type = TypeMap<const Type*>;
 
 /// Base class for all \p Type%s.
 template <class TypeTable>
-class TypeBase : public RuntimeCast<TypeBase<TypeTable>>, public impala::Streamable<TypeBase<TypeTable>> {
+class TypeBase : public fe::RuntimeCast<TypeBase<TypeTable>>, public impala::Streamable<TypeBase<TypeTable>> {
 protected:
     using Type2Type = GIDMap<const TypeBase*, const TypeBase*>;
     using Types     = Span<const TypeBase*>;

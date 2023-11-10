@@ -24,12 +24,12 @@ Stream& Stream::fmt(const char* s) {
                 while (*s && *s != '}') s++;
 
                 assert(*s != '}' && "invalid format string for 'streamf': missing argument(s)");
-                thorin::unreachable();
+                fe::unreachable();
                 break;
             case '}':
                 if (match2nd(next, s, '}')) continue;
                 assert(false && "unmatched/unescaped closing brace '}' in format string");
-                thorin::unreachable();
+                fe::unreachable();
             default: (*this) << *s++;
         }
     }

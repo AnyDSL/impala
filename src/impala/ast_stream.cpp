@@ -49,7 +49,7 @@ Stream& PrimASTType::stream(Stream& s) const {
     switch (tag()) {
 #define IMPALA_TYPE(itype, atype) case Token::TYPE_##itype: return s << #itype;
 #include "impala/tokenlist.h"
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
     // clang-format on
 }
@@ -242,7 +242,7 @@ Stream& LiteralExpr::stream(Stream& s) const {
         case LIT_f32:  return s <<      get<f32>() << "f";
         case LIT_f64:  return s <<      get<f64>() << "f64";
         // clang-format on
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
 }
 
@@ -289,7 +289,7 @@ Stream& PrefixExpr::stream(Stream& s) const {
         break;
 #include "impala/tokenlist.h"
         case MUT: op = "&mut "; break;
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
 
     s << op;
@@ -326,7 +326,7 @@ Stream& PostfixExpr::stream(Stream& s) const {
     switch (tag()) {
         case INC: op = "++"; break;
         case DEC: op = "--"; break;
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
 
     s << lhs() << op;

@@ -497,7 +497,7 @@ const Item* Parser::parse_item() {
         case Token::STRUCT:  return parse_struct_decl(tracker, vis);
         case Token::TRAIT:   return parse_trait_decl(tracker, vis);
         case Token::TYPEDEF: return parse_typedef(tracker, vis);
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
 }
 
@@ -913,7 +913,7 @@ const Expr* Parser::parse_postfix_expr(Tracker tracker, const Expr* lhs) {
             auto identifier = try_identifier("field expression");
             return new FieldExpr(tracker, lhs, identifier);
         }
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
 }
 
@@ -1021,7 +1021,7 @@ const LiteralExpr* Parser::parse_literal_expr() {
         return new LiteralExpr(lex().loc(), tag, val); \
     }
 #include "impala/tokenlist.h"
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
 }
 

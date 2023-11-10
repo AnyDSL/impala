@@ -160,7 +160,7 @@ Stream& PrimType::stream(Stream& os) const {
     switch (primtype_tag()) {
 #define IMPALA_TYPE(itype, atype) case PrimType_##itype: return os << #itype;
 #include "impala/tokenlist.h"
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
 }
 
@@ -311,7 +311,7 @@ const PrimType* TypeTable::prim_type(const PrimTypeTag tag) {
     switch (tag) {
 #define IMPALA_TYPE(itype, atype) case PrimType_##itype: return itype##_;
 #include "impala/tokenlist.h"
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
 }
 

@@ -11,7 +11,7 @@
 #include <sstream>
 #include <string>
 
-#include "thorin/util/assert.h"
+#include <fe/assert.h>
 
 namespace impala {
 
@@ -214,13 +214,13 @@ Stream& Stream::fmt(const char* s, T&& t, Args&&... args) {
             case '}':
                 if (match2nd(next, s, '}')) continue;
                 assert(false && "unmatched/unescaped closing brace '}' in format string");
-                thorin::unreachable();
+                fe::unreachable();
             default: (*this) << *s++;
         }
     }
 
     assert(false && "invalid format string for 's'");
-    thorin::unreachable();
+    fe::unreachable();
 }
 
 template<class R, class F, bool use_rangei>

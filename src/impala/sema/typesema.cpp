@@ -365,7 +365,7 @@ void PrefixExpr::check(TypeSema& sema) const {
         case RUNRUN:
             sema.expect_fn(rhs(), "operand of '{}'", tok2str(this));
             return;
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
     // clang-format on
 }
@@ -449,7 +449,7 @@ void InfixExpr::check(TypeSema& sema) const {
             sema.expect_int(rhs(), "right-hand side of binary '{}'", tok2str(this));
             sema.expect_lvalue(lhs(), "assignment '{}'", tok2str(this));
             return;
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
     // clang-format on
 }

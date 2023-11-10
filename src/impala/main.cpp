@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
 
         auto& world = driver.world();
         world.set(world.sym(module_name));
-        auto parser = thorin::fe::Parser(world);
+        auto parser = thorin::Parser(world);
 
         if (auto path = thorin::sys::path_to_curr_exe())
             driver.add_search_path(path->parent_path().parent_path() / "thorin2" / "lib" / "thorin");

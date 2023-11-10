@@ -85,7 +85,7 @@ private:
                     else return false;
                     break;
                 case PrimType_f16:
-                    thorin::unreachable();
+                    fe::unreachable();
                 case PrimType_f32:
                     if (simd_type->dim() == 4) ctype_prefix = "__m128";
                     else if (simd_type->dim() == 8) ctype_prefix = "__m256";

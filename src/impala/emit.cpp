@@ -40,7 +40,7 @@ public:
             case PrimType_f16: return math::lit_f(world, 1._f16);
             case PrimType_f32: return math::lit_f(world, 1._f32);
             case PrimType_f64: return math::lit_f(world, 1._f64);
-            default: thorin::unreachable();
+            default: fe::unreachable();
         }
     }
 
@@ -166,7 +166,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
             case PrimType_f32 : return world.annex<math::F32>();
             case PrimType_f64 : return world.annex<math::F64>();
             // clang-format on
-            default: thorin::unreachable();
+            default: fe::unreachable();
         }
     } else if (auto cn = type->isa<FnType>()) {
         std::vector<const thorin::Def*> nops;
@@ -216,7 +216,7 @@ const thorin::Def* CodeGen::convert_rec(const Type* type) {
     Stream stream;
     type->stream(stream);
     std::cout.flush();
-    thorin::unreachable();
+    fe::unreachable();
 }
 
 /*
@@ -396,7 +396,7 @@ void Typedef::emit(CodeGen&) const {}
  * expressions
  */
 
-const Def* Expr::lemit(CodeGen&) const { thorin::unreachable(); }
+const Def* Expr::lemit(CodeGen&) const { fe::unreachable(); }
 const Def* Expr::remit(CodeGen& cg) const { return cg.load(lemit(cg)); }
 const Def* EmptyExpr::remit(CodeGen& cg) const { return cg.world.tuple(); }
 
@@ -417,7 +417,7 @@ const Def* LiteralExpr::remit(CodeGen& cg) const {
         case LIT_f32 : return math::lit_f(cg.world, get<f32>())->set(loc);
         case LIT_f64 : return math::lit_f(cg.world, get<f64>())->set(loc);
         // clang-format on
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
 }
 
@@ -473,7 +473,7 @@ const Def* CastExpr::remit(CodeGen& cg) const {
 
         return cg.world.call<core::bitcast>(dst, def)->set(loc);
     }
-    thorin::unreachable();
+    fe::unreachable();
 }
 
 const Def* RValueExpr::lemit(CodeGen& cg) const {
@@ -572,7 +572,7 @@ const Def* PrefixExpr::remit(CodeGen& cg) const {
             return core::op(core::pe::known, def)->set(loc);
         }
         case OR:
-        case OROR: thorin::unreachable();
+        case OROR: fe::unreachable();
         default: return cg.load(lemit(cg))->set(loc);
     }
 }
@@ -643,14 +643,14 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case MUL_ASGN: rdef = w.call(math::arith::mul, math::Mode::none, Defs{ldef, rdef})->set(loc); break;
                         case DIV_ASGN: rdef = w.call(math::arith::div, math::Mode::none, Defs{ldef, rdef})->set(loc); break;
                         case REM_ASGN: rdef = w.call(math::arith::rem, math::Mode::none, Defs{ldef, rdef})->set(loc); break;
-                        default: thorin::unreachable();
+                        default: fe::unreachable();
                     }
                 } else if (is_bool(rhs()->type())) {
                     switch (op) {
                         case AND_ASGN: rdef = w.call(core::bit2::and_, 0, Defs{ldef, rdef})->set(loc); break;
                         case  OR_ASGN: rdef = w.call(core::bit2:: or_, 0, Defs{ldef, rdef})->set(loc); break;
                         case XOR_ASGN: rdef = w.call(core::bit2::xor_, 0, Defs{ldef, rdef})->set(loc); break;
-                        default: thorin::unreachable();
+                        default: fe::unreachable();
                     }
                 } else {
                     auto mode = type2wmode(rhs()->type());
@@ -667,7 +667,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                         case SHR_ASGN: rdef = w.call(s ? core::shr::a : core::shr::l, Defs{ldef, rdef})->set(loc); break;
                         case DIV_ASGN: rdef = cg.handle_mem_res(w.call(s ? core::div::sdiv : core::div::udiv, Defs{cg.cur_mem, w.tuple({ldef, rdef})})->set(loc)); break;
                         case REM_ASGN: rdef = cg.handle_mem_res(w.call(s ? core::div::srem : core::div::urem, Defs{cg.cur_mem, w.tuple({ldef, rdef})})->set(loc)); break;
-                        default: thorin::unreachable();
+                        default: fe::unreachable();
                     }
                 }
 
@@ -691,7 +691,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case MUL: return w.call(math::arith::mul, math::Mode::none, Defs{ldef, rdef})->set(loc);
                     case DIV: return w.call(math::arith::div, math::Mode::none, Defs{ldef, rdef})->set(loc);
                     case REM: return w.call(math::arith::rem, math::Mode::none, Defs{ldef, rdef})->set(loc);
-                    default: thorin::unreachable();
+                    default: fe::unreachable();
                 }
             } else if (is_bool(rhs()->type())) {
                 switch (op) {
@@ -701,7 +701,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case AND: return w.call(core::bit2::and_, 0, Defs{ldef, rdef})->set(loc);
                     case  OR: return w.call(core::bit2:: or_, 0, Defs{ldef, rdef})->set(loc);
                     case XOR: return w.call(core::bit2::xor_, 0, Defs{ldef, rdef})->set(loc);
-                    default: thorin::unreachable();
+                    default: fe::unreachable();
                 }
             } else {
                 auto mode = type2wmode(lhs()->type());
@@ -727,7 +727,7 @@ const Def* InfixExpr::remit(CodeGen& cg) const {
                     case SHL: return w.call(core::wrap:: shl, mode, Defs{ldef, rdef})->set(loc);
                     case DIV: return cg.handle_mem_res(w.call(s ? core::div::sdiv : core::div::udiv, Defs{cg.cur_mem, w.tuple({ldef, rdef})})->set(loc));
                     case REM: return cg.handle_mem_res(w.call(s ? core::div::srem : core::div::urem, Defs{cg.cur_mem, w.tuple({ldef, rdef})})->set(loc));
-                    default: thorin::unreachable();
+                    default: fe::unreachable();
                 }
             }
         }
@@ -777,8 +777,8 @@ const Def* StructExpr::remit(CodeGen& cg) const {
     return cg.world.tuple(cg.convert(type())->as<thorin::Sigma>(), defs)->set(cg.loc(this->loc()));
 }
 
-const Def* TypeAppExpr::lemit(CodeGen&) const { thorin::unreachable(); }
-const Def* TypeAppExpr::remit(CodeGen& /*cg*/) const { thorin::unreachable(); }
+const Def* TypeAppExpr::lemit(CodeGen&) const { fe::unreachable(); }
+const Def* TypeAppExpr::remit(CodeGen& /*cg*/) const { fe::unreachable(); }
 
 const Def* MapExpr::lemit(CodeGen& cg) const {
     auto agg = lhs()->lemit(cg);
@@ -864,7 +864,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         auto ret_type = num_args() == cn->num_params() ? nullptr : cg.convert(cn->return_type());
         const Def* ret;
         std::tie(cg.cur_bb, ret) = cg.call(dst, defs, ret_type);
-        cg.cur_bb->set(loc, *dst->sym() + "_cont");
+        cg.cur_bb->set(loc, dst->sym().str() + "_cont");
         if (ret_type) cg.cur_mem = cg.cur_bb->var(0_s);
 
         return ret;
@@ -872,7 +872,7 @@ const Def* MapExpr::remit(CodeGen& cg) const {
         auto index = arg(0)->remit(cg);
         return core::extract_unsafe(lhs()->remit(cg), index)->set(loc);
     }
-    thorin::unreachable();
+    fe::unreachable();
 }
 
 const Def* FieldExpr::lemit(CodeGen& cg) const {

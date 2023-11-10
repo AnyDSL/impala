@@ -25,7 +25,7 @@ std::string PtrASTType::prefix() const {
         case Mut: return "&mut";
         case Owned: return "~";
     }
-    thorin::unreachable();
+    fe::unreachable();
 }
 
 const FnASTType* FnASTType::ret_fn_ast_type() const {
@@ -43,7 +43,7 @@ PrimTypeTag LiteralExpr::literal2type() const {
         case LIT_##itype: return PrimType_##itype;
 #include "impala/tokenlist.h"
         case LIT_bool:    return PrimType_bool;
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
     // clang-format on
 }

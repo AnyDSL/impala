@@ -1,9 +1,10 @@
 #ifndef IMPALA_SEMA_TYPE_H
 #define IMPALA_SEMA_TYPE_H
 
+#include <fe/cast.h>
+
 #include "thorin/def.h"
 #include "thorin/util/array.h"
-#include "thorin/util/cast.h"
 #include "thorin/util/hash.h"
 
 #include "impala/symbol.h"

@@ -4,8 +4,9 @@
 #include <deque>
 #include <vector>
 
+#include <fe/cast.h>
+
 #include "thorin/util/array.h"
-#include "thorin/util/cast.h"
 #include "thorin/util/types.h"
 
 #include "impala/impala.h"
@@ -128,7 +129,7 @@ protected:
 
 //------------------------------------------------------------------------------
 
-class ASTNode : public thorin::RuntimeCast<ASTNode>, public Streamable<ASTNode> {
+class ASTNode : public fe::RuntimeCast<ASTNode>, public Streamable<ASTNode> {
 public:
     ASTNode() = delete;
     ASTNode(const ASTNode&) = delete;
@@ -1474,7 +1475,7 @@ public:
         return interlope<ImplicitCastExpr>(src, src, type);
     }
 
-    void bind(NameSema&) const override { thorin::unreachable(); }
+    void bind(NameSema&) const override { fe::unreachable(); }
     Stream& stream(Stream&) const override;
 
 private:
@@ -1493,7 +1494,7 @@ public:
 
     bool has_side_effect() const override;
 
-    void bind(NameSema&) const override { thorin::unreachable(); }
+    void bind(NameSema&) const override { fe::unreachable(); }
     Stream& stream(Stream&) const override;
 
 private:

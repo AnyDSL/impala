@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <limits>
 
-#include "thorin/util/cast.h"
+#include <fe/cast.h>
 
 #include "impala/impala.h"
 
@@ -95,7 +95,7 @@ Token::Token(Loc loc, Tag tag, const std::string& str)
         case LIT_f32: fval = strtof(symbol_.c_str(), 0); err = errno; break;
         case LIT_f64: dval = strtod(symbol_.c_str(), 0); err = errno; break;
         // clang-format on
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
 
     switch (tag_) {
@@ -112,7 +112,7 @@ Token::Token(Loc loc, Tag tag, const std::string& str)
         case LIT_f32: val_ = bitcast<u64>(   float(fval)); err |= !inrange<   float>(fval); break;
         case LIT_f64: val_ = bitcast<u64>(  double(dval)); err |= !inrange<  double>(dval); break;
         // clang-format on
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
 
     if (err)
@@ -122,7 +122,7 @@ Token::Token(Loc loc, Tag tag, const std::string& str)
         error(loc, "literal out of range for type '{}'", #itype); \
         return;
 #include "impala/tokenlist.h"
-        default: thorin::unreachable();
+        default: fe::unreachable();
     }
 }
 
