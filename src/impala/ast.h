@@ -10,7 +10,6 @@
 #include "thorin/util/types.h"
 
 #include "impala/impala.h"
-#include "impala/loc.h"
 #include "impala/token.h"
 #include "impala/sema/type.h"
 
@@ -135,7 +134,7 @@ public:
     ASTNode(const ASTNode&) = delete;
     ASTNode(ASTNode&&) = delete;
     ASTNode(Loc loc);
-    virtual ~ASTNode() { assert(loc_.is_set()); }
+    virtual ~ASTNode() { assert(loc_); }
 
     size_t gid() const { return gid_; }
     Loc loc() const { return loc_; }
@@ -149,9 +148,9 @@ private:
 };
 
 template<class... Args>
-void warning(const ASTNode* n, const char* fmt, Args... args) { warning(n->loc(), fmt, args...); }
+void warning(const ASTNode* n, const char* fmt, Args... args) { impala::warning(n->loc(), fmt, args...); }
 template<class... Args>
-void error  (const ASTNode* n, const char* fmt, Args... args) { error  (n->loc(), fmt, args...); }
+void error  (const ASTNode* n, const char* fmt, Args... args) { impala::error  (n->loc(), fmt, args...); }
 
 class Identifier : public ASTNode {
 public:
@@ -728,7 +727,7 @@ public:
     {}
 
     Module(const std::filesystem::path* first_file_name, Items&& items = Items())
-        : Module(items.empty() ? Loc(first_file_name, 1, 1) : Loc(items.front()->loc(), items.back()->loc()),
+        : Module(items.empty() ? Loc(first_file_name, 1, 1) : Loc(items.front()->loc().path, items.front()->loc().begin, items.back()->loc().finis),
                  Visibility::Pub, nullptr, ASTTypeParams(), std::move(items))
     {}
 

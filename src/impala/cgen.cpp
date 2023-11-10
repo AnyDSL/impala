@@ -7,7 +7,6 @@
 #include "impala/ast.h"
 #include "impala/cgen.h"
 #include "impala/impala.h"
-#include "impala/loc.h"
 
 namespace impala {
 

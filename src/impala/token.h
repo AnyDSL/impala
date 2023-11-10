@@ -4,11 +4,14 @@
 #include <ostream>
 #include <string>
 
-#include "impala/loc.h"
+#include <fe/loc.h>
+
 #include "impala/symbol.h"
 #include "impala/sema/type_table.h"
 
 namespace impala {
+
+using Loc = fe::Loc;
 
 class Token {
 public:

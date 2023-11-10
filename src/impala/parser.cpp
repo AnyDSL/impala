@@ -108,13 +108,13 @@ class Parser;
 
 class Parser {
 public:
-    Parser(std::istream& stream, const std::filesystem::path* filename)
-        : lexer_(stream, filename)
+    Parser(std::istream& stream, const std::filesystem::path* path)
+        : lexer_(stream, path)
     {
         lookahead_[0] = lexer_.lex();
         lookahead_[1] = lexer_.lex();
         lookahead_[2] = lexer_.lex();
-        prev_loc_ = Loc(filename, 1, 1, 1, 1);
+        prev_loc_ = Loc(path, {1, 1}, {1, 1});
     }
 
     const Token& lookahead(size_t i = 0) const { assert(i < 3); return lookahead_[i]; }
@@ -137,14 +137,14 @@ public:
             : parser_(parser), loc_(loc)
         {}
 
-        operator Loc() const { return {loc_.begin(), parser_.prev_loc().finis()}; }
+        operator Loc() const { return {loc_.begin, parser_.prev_loc().finis}; }
 
     private:
         Parser& parser_;
         Loc loc_;
     };
 
-    Tracker track() { return Tracker(*this, lookahead().loc().begin()); }
+    Tracker track() { return Tracker(*this, lookahead().loc().begin); }
     Tracker track(const Loc& loc) { return Tracker(*this, loc); }
 
     template<class T, class... Args>
@@ -284,8 +284,8 @@ private:
 
 //------------------------------------------------------------------------------
 
-void parse(Items& items, std::istream& is, const std::filesystem::path* filename) {
-    Parser parser(is, filename);
+void parse(Items& items, std::istream& is, const std::filesystem::path* path) {
+    Parser parser(is, path);
     parser.parse_items(items);
     if (parser.lookahead() != Token::Eof)
         parser.error("module item", "module contents");

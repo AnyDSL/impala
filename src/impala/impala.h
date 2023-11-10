@@ -55,14 +55,14 @@ int& num_errors();
 bool& fancy();
 
 template<class... Args>
-void warning(const Loc& loc, const char* fmt, Args... args) {
+void warning(Loc loc, const char* fmt, Args... args) {
     ++num_warnings();
     Stream s(std::cerr);
     s.fmt("{}: warning: ", loc).fmt(fmt, std::forward<Args>(args)...).endl();
 }
 
 template<class... Args>
-void error(const Loc& loc, const char* fmt, Args... args) {
+void error(Loc loc, const char* fmt, Args... args) {
     ++num_errors();
     Stream s(std::cerr);
     s.fmt("{}: error: ", loc).fmt(fmt, std::forward<Args>(args)...).endl();

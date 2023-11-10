@@ -4,7 +4,6 @@
 #include <istream>
 #include <filesystem>
 
-#include "impala/loc.h"
 #include "impala/token.h"
 
 namespace impala {
@@ -21,8 +20,8 @@ private:
     Token literal_error(std::string&, bool floating);
     int next();
     int peek() const { return stream_.peek(); }
-    Loc loc() const { return {filename_, front_line_, front_col_, back_line_, back_col_}; }
-    Loc curr() const { return loc().finis(); }
+    Loc loc() const { return {filename_, {front_line_, front_col_}, {back_line_, back_col_}}; }
+    Loc curr() const { return loc().anew_finis(); }
 
     template<class Pred>
     bool accept(std::string& str, Pred pred) {

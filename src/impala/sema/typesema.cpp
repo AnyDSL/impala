@@ -72,10 +72,10 @@ public:
         if (expected == node->type()) {
             // note: for type inference errors, it is unclear which one of 'src' and 'dst' is the correct type
             if (auto infer_error = expected->isa<InferError>())
-                error(node, "incompatible types: '{}' and '{}' found as {}", infer_error->src(), infer_error->dst(), context);
+                impala::error(node, "incompatible types: '{}' and '{}' found as {}", infer_error->src(), infer_error->dst(), context);
         } else {
             if (expected->is_known() && node->type()->is_known() && !node->type()->isa<TypeError>())
-                error(node, "mismatched types: expected '{}' but found '{}' as {}", expected, node->type(), context);
+                impala::error(node, "mismatched types: expected '{}' but found '{}' as {}", expected, node->type(), context);
         }
     }
 
