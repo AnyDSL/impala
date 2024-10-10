@@ -1,0 +1,7 @@
+@PACKAGE_INIT@
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+
+include(../mim/mim-config)
+include(impala-targets)
+set(MIM_TARGET_NAMESPACE "impala::")
