@@ -9,97 +9,93 @@
 
 #include "impala/impala.h"
 
-using namespace thorin;
+using namespace mim;
 
 namespace impala {
 
-Token::Token(Loc loc, Tag tok)
-    : loc_(loc)
-    , symbol_(tok2sym_[tok])
-    , tag_(tok)
-{}
+Token::Token(Loc loc, Tag tok) : loc_(loc), symbol_(tok2sym_[tok]), tag_(tok) {}
 
-Token::Token(Loc loc, const std::string& str)
-    : loc_(loc)
-    , symbol_(str)
-{
-    assert(!str.empty());
-    auto i = keywords_.find(str);
-    if (i == keywords_.end())
-        tag_ = Token::ID;
-    else
-        tag_ = i->second;
+Token::Token(Loc loc, const std::string &str) : loc_(loc), symbol_(str) {
+  assert(!str.empty());
+  auto i = keywords_.find(str);
+  if (i == keywords_.end())
+    tag_ = Token::ID;
+  else
+    tag_ = i->second;
 }
 
-template<class T, class V>
-static bool inrange(V val) {
-    return std::numeric_limits<T>::lowest() <= val && val <= std::numeric_limits<T>::max();
+template <class T, class V> static bool inrange(V val) {
+  return std::numeric_limits<T>::lowest() <= val &&
+         val <= std::numeric_limits<T>::max();
 }
 
-Token::Token(Loc loc, Tag tag, const std::string& str)
-    : loc_(loc)
-    , symbol_(str)
-    , tag_(tag)
-{
-    using namespace std;
-    using thorin::half;
+Token::Token(Loc loc, Tag tag, const std::string &str)
+    : loc_(loc), symbol_(str), tag_(tag) {
+  using namespace std;
+  using thorin::half;
 
-    if (tag_ == LIT_str || tag_ == LIT_char)
-        return;
+  if (tag_ == LIT_str || tag_ == LIT_char)
+    return;
 
-    std::string literal;
-    int base = 10;
-    auto begin = str.begin();
+  std::string literal;
+  int base = 10;
+  auto begin = str.begin();
 
-    // find out base and move begin iterator to the actual number
-    if (str.size() >= 2) {
-        if (str[0] == '0') {
-            if (str[1] == 'b') {
-                base = 2;
-                begin += 2;
-            } else if (str[1] == 'o') {
-                base = 8;
-                begin += 2;
-            } else if (str[1] == 'x') {
-                base = 16;
-                begin += 2;
-            }
-        }
+  // find out base and move begin iterator to the actual number
+  if (str.size() >= 2) {
+    if (str[0] == '0') {
+      if (str[1] == 'b') {
+        base = 2;
+        begin += 2;
+      } else if (str[1] == 'o') {
+        base = 8;
+        begin += 2;
+      } else if (str[1] == 'x') {
+        base = 16;
+        begin += 2;
+      }
     }
+  }
 
-    // remove underscores and '0b'/'0o'/'0x' prefix if applicable
-    std::copy_if(begin, str.end(), std::back_inserter(literal), [](char c) { return c != '_'; });
-    auto nptr = &literal.front();
+  // remove underscores and '0b'/'0o'/'0x' prefix if applicable
+  std::copy_if(begin, str.end(), std::back_inserter(literal),
+               [](char c) { return c != '_'; });
+  auto nptr = &literal.front();
 
-    bool err = 0;
-    errno = 0;
-    int64_t ival; uint64_t uval; half hval; float fval; double dval;
+  bool err = 0;
+  errno = 0;
+  int64_t ival;
+  uint64_t uval;
+  half hval;
+  float fval;
+  double dval;
 
-    switch (tag_) {
-        case LIT_i8:
-        case LIT_i16:
-        case LIT_i32:
-        case LIT_i64:
-            ival = strtoll(nptr, 0, base);
-            err = errno;
-            break;
-        case LIT_u8:
-        case LIT_u16:
-        case LIT_u32:
-        case LIT_u64:
-            uval = strtoull(nptr, 0, base);
-            err = errno;
-            break;
-        // clang-format off
+  switch (tag_) {
+  case LIT_i8:
+  case LIT_i16:
+  case LIT_i32:
+  case LIT_i64:
+    ival = strtoll(nptr, 0, base);
+    err = errno;
+    break;
+  case LIT_u8:
+  case LIT_u16:
+  case LIT_u32:
+  case LIT_u64:
+    uval = strtoull(nptr, 0, base);
+    err = errno;
+    break;
+    // clang-format off
         case LIT_f16: hval = strtof(symbol_.c_str(), 0); err = errno; break; // TODO: errno for half not correctly set
         case LIT_f32: fval = strtof(symbol_.c_str(), 0); err = errno; break;
         case LIT_f64: dval = strtod(symbol_.c_str(), 0); err = errno; break;
-        // clang-format on
-        default: fe::unreachable();
-    }
+  // clang-format on
+  default:
+    fe::unreachable();
+  }
 
-    switch (tag_) {
-        // clang-format off
+  switch (tag_) {
+    // clang-format off
         case LIT_i8:  val_ = bitcast<u64>(  int8_t(ival)); err |= !inrange<  int8_t>(ival); break;
         case LIT_i16: val_ = bitcast<u64>( int16_t(ival)); err |= !inrange< int16_t>(ival); break;
         case LIT_i32: val_ = bitcast<u64>( int32_t(ival)); err |= !inrange< int32_t>(ival); break;
@@ -111,18 +107,20 @@ Token::Token(Loc loc, Tag tag, const std::string& str)
         case LIT_f16: val_ = bitcast<u64>(    half(hval)); err |= !inrange<    half>(hval); break;
         case LIT_f32: val_ = bitcast<u64>(   float(fval)); err |= !inrange<   float>(fval); break;
         case LIT_f64: val_ = bitcast<u64>(  double(dval)); err |= !inrange<  double>(dval); break;
-        // clang-format on
-        default: fe::unreachable();
-    }
+  // clang-format on
+  default:
+    fe::unreachable();
+  }
 
-    if (err)
-        switch (tag_) {
-#define IMPALA_LIT(itype, atype)                                  \
-    case LIT_##itype:                                             \
-        error(loc, "literal out of range for type '{}'", #itype); \
-        return;
+  if (err)
+    switch (tag_) {
+#define IMPALA_LIT(itype, atype)                                               \
+  case LIT_##itype:                                                            \
+    error(loc, "literal out of range for type '{}'", #itype);                  \
+    return;
 #include "impala/tokenlist.h"
-        default: fe::unreachable();
+    default:
+      fe::unreachable();
     }
 }
 
@@ -142,29 +140,29 @@ Token::Sym2Tag Token::sym2flit_;
  */
 
 TokenTag Token::sym2lit(Symbol sym) {
-    auto i = sym2lit_.find(sym);
-    if (i != sym2lit_.end())
-        return i->second;
-    return Error;
+  auto i = sym2lit_.find(sym);
+  if (i != sym2lit_.end())
+    return i->second;
+  return Error;
 }
 
 TokenTag Token::sym2flit(Symbol sym) {
-    auto i = sym2flit_.find(sym);
-    if (i != sym2flit_.end())
-        return i->second;
-    return Error;
+  auto i = sym2flit_.find(sym);
+  if (i != sym2flit_.end())
+    return i->second;
+  return Error;
 }
 
 void Token::init() {
-    /*
-     * - set pre-/in-/postfix operators
-     * - register literals
-     * - register keywords
-     * - register misc tokens
-     */
+  /*
+   * - set pre-/in-/postfix operators
+   * - register literals
+   * - register keywords
+   * - register misc tokens
+   */
 
-    for (size_t i = 0; i < Num; ++i)
-        tok2op_[i] = None;
+  for (size_t i = 0; i < Num; ++i)
+    tok2op_[i] = None;
     // clang-format off
 #define IMPALA_PREFIX(    tok, str)       insert(tok, str); tok2op_[tok] |= Prefix;
 #define IMPALA_POSTFIX(   tok, str)       insert(tok, str); tok2op_[tok] |= Postfix;
@@ -201,50 +199,52 @@ void Token::init() {
     insert(Eof, "<end of file>");
     insert_key(AS, "as");
     insert_key(MUT, "mut");
-    // clang-format on
+  // clang-format on
 }
 
-void Token::insert_key(TokenTag tok, const char* str) {
-    Symbol s = str;
-    assert(keywords_.find(s) == keywords_.end() && "already inserted");
-    keywords_[s] = tok;
-    tok2str_ [tok] = s.c_str();
+void Token::insert_key(TokenTag tok, const char *str) {
+  Symbol s = str;
+  assert(keywords_.find(s) == keywords_.end() && "already inserted");
+  keywords_[s] = tok;
+  tok2str_[tok] = s.c_str();
 }
 
-Symbol Token::insert(TokenTag tok, const char* str) {
-    Symbol s = str;
-    const auto& p = tok2sym_.emplace(tok, s);
+Symbol Token::insert(TokenTag tok, const char *str) {
+  Symbol s = str;
+  const auto &p = tok2sym_.emplace(tok, s);
 
 #ifndef NDEBUG
-    if (!p.second) {
-        Tag   oldTok = p.first->first;
-        Symbol oldSym = p.first->second;
-        assert(s == oldSym && tok == oldTok && "inserted ambiguous duplicate");
-    }
+  if (!p.second) {
+    Tag oldTok = p.first->first;
+    Symbol oldSym = p.first->second;
+    assert(s == oldSym && tok == oldTok && "inserted ambiguous duplicate");
+  }
 #endif
 
-    tok2str_[tok] = s.c_str();
-    return p.first->second;
+  tok2str_[tok] = s.c_str();
+  return p.first->second;
 }
 
 //------------------------------------------------------------------------------
 
-const char* Token::tok2str(TokenTag tag) {
-    auto i = Token::tok2str_.find(tag);
-    assert(i != Token::tok2str_.end() && "must be found");
-    return Symbol(i->second).c_str();
+const char *Token::tok2str(TokenTag tag) {
+  auto i = Token::tok2str_.find(tag);
+  assert(i != Token::tok2str_.end() && "must be found");
+  return Symbol(i->second).c_str();
 }
 
-std::ostream& operator<<(std::ostream& os, const TokenTag& tag) { return os << Token::tok2str(tag); }
+std::ostream &operator<<(std::ostream &os, const TokenTag &tag) {
+  return os << Token::tok2str(tag);
+}
 
-std::ostream& operator<<(std::ostream& os, const Token& tok) {
-    const char* sym = tok.symbol().c_str();
-    if (std::strcmp(sym, "") == 0)
-        return os << Symbol(Token::tok2str_[tok.tag()]).c_str();
-    else
-        return os << sym;
+std::ostream &operator<<(std::ostream &os, const Token &tok) {
+  const char *sym = tok.symbol().c_str();
+  if (std::strcmp(sym, "") == 0)
+    return os << Symbol(Token::tok2str_[tok.tag()]).c_str();
+  else
+    return os << sym;
 }
 
 //------------------------------------------------------------------------------
 
-}
+} // namespace impala
