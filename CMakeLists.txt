@@ -27,5 +27,5 @@ else()
     add_definitions("-Wall -Wextra")
 endif()
 
-add_subdirectory(thorin2)
+add_subdirectory(MimIR)
 add_subdirectory(src)
