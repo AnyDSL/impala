@@ -3,7 +3,7 @@
 
 namespace impala {
 
-using namespace thorin;
+using namespace mim;
 
 Prec prec = Prec::Bottom;
 
@@ -25,7 +25,7 @@ Stream& PtrASTType::stream(Stream& s) const {
 Stream& FnASTType::stream(Stream& s) const {
     auto ret = ret_fn_ast_type();
     stream_ast_type_params(s << "fn");
-    s.fmt("({, })", ret != nullptr ? ast_type_args().skip_back() : ast_type_args());
+    s.fmt("({, })", ret != nullptr ? ast_type_args().subspan(0, ast_type_args().size() - 1) : ast_type_args());
     if (ret != nullptr) {
         s << " -> ";
         if (ret->num_ast_type_args() == 1)
@@ -81,7 +81,7 @@ Stream& ASTTypeParamList::stream_ast_type_params(Stream& s) const {
  */
 
 Stream& Fn::stream_params(Stream& s, bool returning) const {
-    return s.fmt("{, }", returning ? params().skip_back() : params());
+    return s.fmt("{, }", returning ? params().subspan(0, params().size() - 1) : params());
 }
 
 Stream& LocalDecl::stream(Stream& s) const {
@@ -411,7 +411,7 @@ Stream& MatchExpr::Arm::stream(Stream& s) const { return s.fmt("{} => {}", ptrn(
 Stream& MatchExpr::stream(Stream& s) const { return s.fmt("match {} {{\t\n{,\n}\b\t}}", expr(), arms()); }
 Stream& WhileExpr::stream(Stream& s) const { return s.fmt("while {} {}", cond(), body()); }
 Stream& ForExpr::stream(Stream& s) const {
-    return s.fmt("for {} in {} {}", fn_expr()->params().skip_back(), expr(), fn_expr()->body());
+    return s.fmt("for {} in {} {}", fn_expr()->params().subspan(0, fn_expr()->params().size() - 1), expr(), fn_expr()->body());
 }
 
 Stream& RevDiffExpr::stream(Stream& s) const { return s.fmt("rev_diff of {}", expr()); }

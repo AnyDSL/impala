@@ -5,6 +5,7 @@
 
 namespace impala {
 
+class Module;
 struct CGenOptions {
     CGenOptions()
         : structs_only(false)

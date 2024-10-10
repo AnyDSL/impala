@@ -4,19 +4,19 @@
 #include <stdexcept>
 #include <vector>
 
-#include "thorin/fe/parser.h"
-#include "thorin/util/sys.h"
+#include "mim/ast/parser.h"
+#include "mim/util/sys.h"
 
 #ifdef LLVM_SUPPORT
-#    include "thorin/be/llvm/llvm.h"
+#    include "mim/be/llvm/llvm.h"
 #endif
 #include "impala/args.h"
 #include "impala/ast.h"
 #include "impala/cgen.h"
 #include "impala/impala.h"
-#include "thorin/analyses/schedule.h"
-#include "thorin/driver.h"
-#include "thorin/pass/optimize.h"
+#include "mim/analyses/schedule.h"
+#include "mim/driver.h"
+#include "mim/pass/optimize.h"
 
 //------------------------------------------------------------------------------
 
@@ -86,12 +86,12 @@ int main(int argc, char** argv) {
         impala::fancy() = fancy;
 
         if (infiles.empty() && !help) {
-            thorin::errf("no input files");
+            mim::errf("no input files");
             return EXIT_FAILURE;
         }
 
         if (help) {
-            thorin::outf("Usage: {} [options] file...", prgname);
+            mim::outf("Usage: {} [options] file...", prgname);
             cmd_parser.print_help();
             return EXIT_SUCCESS;
         }
@@ -112,25 +112,26 @@ int main(int argc, char** argv) {
             }
         }
 
-        thorin::Driver driver;
+        mim::Driver driver;
         std::ofstream log_stream;
 
-        thorin::Log::Level lvl;
-        if (log_level == "error") lvl = thorin::Log::Level::Error;
-        if (log_level == "warn") lvl = thorin::Log::Level::Warn;
-        if (log_level == "info") lvl = thorin::Log::Level::Info;
-        if (log_level == "verbose") lvl = thorin::Log::Level::Verbose;
-        if (log_level == "debug") lvl = thorin::Log::Level::Debug;
+        mim::Log::Level lvl;
+        if (log_level == "error") lvl = mim::Log::Level::Error;
+        if (log_level == "warn") lvl = mim::Log::Level::Warn;
+        if (log_level == "info") lvl = mim::Log::Level::Info;
+        if (log_level == "verbose") lvl = mim::Log::Level::Verbose;
+        if (log_level == "debug") lvl = mim::Log::Level::Debug;
 
         driver.log().set(open(log_stream, log_name)).set(lvl);
         driver.flags().aggressive_lam_spec = true;
 
         auto& world = driver.world();
         world.set(world.sym(module_name));
-        auto parser = thorin::Parser(world);
+        auto ast = mim::ast::AST(world);
+        auto parser = mim::ast::Parser(ast);
 
-        if (auto path = thorin::sys::path_to_curr_exe())
-            driver.add_search_path(path->parent_path().parent_path() / "thorin2" / "lib" / "thorin");
+        if (auto path = mim::sys::path_to_curr_exe())
+            driver.add_search_path(path->parent_path().parent_path() / "lib" / "mim");
 
         if (clos) driver.load("clos");
         for (auto plugin : {"core", "mem", "compile", "opt", "math", "affine"}) driver.load(plugin);
@@ -166,7 +167,7 @@ int main(int argc, char** argv) {
             return true;
         };
 
-        if (!set_breakpoints(breakpoints, &thorin::World::breakpoint)) return EXIT_FAILURE;
+        if (!set_breakpoints(breakpoints, &mim::World::breakpoint)) return EXIT_FAILURE;
 #endif
 
         impala::Items items;
@@ -204,7 +205,7 @@ int main(int argc, char** argv) {
 
             std::ofstream out_file(module_name + ".h");
             if (!out_file) {
-                thorin::errf("cannot open file '{}' for writing", opts.file_name);
+                mim::errf("cannot open file '{}' for writing", opts.file_name);
                 return EXIT_FAILURE;
             }
             impala::generate_c_interface(module.get(), opts, out_file);
@@ -213,7 +214,7 @@ int main(int argc, char** argv) {
         if (result && (emit_llvm || emit_thorin)) impala::emit(world, module.get());
 
         if (result) {
-            if (opt_thorin) thorin::optimize(world);
+            if (opt_thorin) mim::optimize(world);
             if (emit_thorin) world.dump();
             if (emit_llvm) {
                 if (auto backend = driver.backend("ll")) {
@@ -227,10 +228,10 @@ int main(int argc, char** argv) {
 
         return EXIT_SUCCESS;
     } catch (std::exception const& e) {
-        thorin::errln("{}", e.what());
+        mim::errln("{}", e.what());
         return EXIT_FAILURE;
     } catch (...) {
-        thorin::errln("unknown exception");
+        mim::errln("unknown exception");
         return EXIT_FAILURE;
     }
 }

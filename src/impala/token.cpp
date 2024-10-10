@@ -39,7 +39,7 @@ Token::Token(Loc loc, Tag tag, const std::string& str)
     , symbol_(str)
     , tag_(tag) {
     using namespace std;
-    using thorin::half;
+    using mim::half;
 
     if (tag_ == LIT_str || tag_ == LIT_char) return;
 
