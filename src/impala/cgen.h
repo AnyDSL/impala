@@ -10,11 +10,10 @@ struct CGenOptions {
         : structs_only(false)
         , fns_only(false)
         , file_name("interface.h")
-        , guard("INTERFACE_H")
-    {}
+        , guard("INTERFACE_H") {}
 
     bool structs_only : 1;
-    bool fns_only : 1;
+    bool fns_only     : 1;
     std::string file_name;
     std::string guard;
 };
@@ -30,6 +29,6 @@ struct CGenOptions {
  */
 bool generate_c_interface(const Module* mod, const CGenOptions& opts = CGenOptions(), std::ostream& o = std::cout);
 
-}
+} // namespace impala
 
 #endif

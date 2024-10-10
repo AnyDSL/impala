@@ -18,8 +18,7 @@ Stream& TupleASTType::stream(Stream& s) const { return s.fmt("({, })", ast_type_
 
 Stream& PtrASTType::stream(Stream& s) const {
     s << prefix();
-    if (addr_space() != 0)
-        s << '[' << addr_space() << ']';
+    if (addr_space() != 0) s << '[' << addr_space() << ']';
     return s << referenced_ast_type();
 }
 
@@ -39,8 +38,7 @@ Stream& FnASTType::stream(Stream& s) const {
 
 Stream& ASTTypeApp::stream(Stream& s) const {
     s << symbol();
-    if (num_ast_type_args() != 0)
-        s.fmt("[{, }]", ast_type_args());
+    if (num_ast_type_args() != 0) s.fmt("[{, }]", ast_type_args());
     return s;
 }
 
@@ -54,9 +52,7 @@ Stream& PrimASTType::stream(Stream& s) const {
     // clang-format on
 }
 
-Stream& Typeof::stream(Stream& s) const {
-    return s.fmt("typeof({})", expr());
-}
+Stream& Typeof::stream(Stream& s) const { return s.fmt("typeof({})", expr()); }
 
 /*
  * paths
@@ -76,8 +72,7 @@ Stream& ASTTypeParam::stream(Stream& s) const {
 }
 
 Stream& ASTTypeParamList::stream_ast_type_params(Stream& s) const {
-    if (!ast_type_params().empty())
-        s.fmt("[{, }]", ast_type_params());
+    if (!ast_type_params().empty()) s.fmt("[{, }]", ast_type_params());
     return s;
 }
 
@@ -90,7 +85,7 @@ Stream& Fn::stream_params(Stream& s, bool returning) const {
 }
 
 Stream& LocalDecl::stream(Stream& s) const {
-    s << (is_mut() ? "mut " : "" );
+    s << (is_mut() ? "mut " : "");
     if (!is_anonymous()) {
         s << symbol();
         if (type())
@@ -103,9 +98,7 @@ Stream& LocalDecl::stream(Stream& s) const {
 }
 
 Stream& Param::stream(Stream& s) const {
-    if (!is_anonymous())
-        s << (is_mut() ? "mut " : "") << symbol() <<
-            ((ast_type() || type()) ? ": " : "");
+    if (!is_anonymous()) s << (is_mut() ? "mut " : "") << symbol() << ((ast_type() || type()) ? ": " : "");
 
     if (type())
         s << type();
@@ -135,8 +128,7 @@ Stream& FnDecl::stream(Stream& s) const {
 
     const FnASTType* ret = nullptr;
     if (!params().empty() && params().back()->symbol() == "return" && params().back()->ast_type()) {
-        if (auto fn_type = params().back()->ast_type()->isa<FnASTType>())
-            ret = fn_type;
+        if (auto fn_type = params().back()->ast_type()->isa<FnASTType>()) ret = fn_type;
     }
 
     stream_params(s << '(', ret != nullptr) << ")";
@@ -149,19 +141,15 @@ Stream& FnDecl::stream(Stream& s) const {
             s.fmt("({, })", ret->ast_type_args());
     }
 
-    if (body())
-        return s << ' ' << body();
+    if (body()) return s << ' ' << body();
     return s << ';';
 }
 
-Stream& FieldDecl::stream(Stream& s) const {
-    return s.fmt("{}{}: {}", visibility().str(), symbol(), ast_type());
-}
+Stream& FieldDecl::stream(Stream& s) const { return s.fmt("{}{}: {}", visibility().str(), symbol(), ast_type()); }
 
 Stream& OptionDecl::stream(Stream& s) const {
     s.fmt("{}", symbol());
-    if (num_args() > 0)
-        return s.fmt("({, })", args());
+    if (num_args() > 0) return s.fmt("({, })", args());
     return s;
 }
 
@@ -172,8 +160,7 @@ Stream& StaticItem::stream(Stream& s) const {
     else
         s << ast_type();
 
-    if (init())
-        s.fmt(" = {}", init());
+    if (init()) s.fmt(" = {}", init());
 
     return s << ";";
 }
@@ -195,8 +182,7 @@ Stream& Typedef::stream(Stream& s) const {
 Stream& TraitDecl::stream(Stream& s) const {
     stream_ast_type_params(s.fmt("trait {}", symbol()));
 
-    if (!super_traits().empty())
-        s.fmt(" : {, }", super_traits());
+    if (!super_traits().empty()) s.fmt(" : {, }", super_traits());
 
     return s.fmt(" {{\t\n{\n}\b\n}}", methods());
 }
@@ -228,7 +214,7 @@ Stream& BlockExpr::stream(Stream& s) const {
 
 Stream& LiteralExpr::stream(Stream& s) const {
     switch (tag()) {
-        // clang-format off
+            // clang-format off
         case LIT_bool: return s << (get<bool>() ? "true" : "false");
         case LIT_i8:   return s << (int)get< s8>() << "i8";
         case LIT_i16:  return s <<      get<s16>() << "i16";
@@ -246,13 +232,10 @@ Stream& LiteralExpr::stream(Stream& s) const {
     }
 }
 
-Stream& CharExpr::stream(Stream& s) const {
-    return s << symbol();
-}
+Stream& CharExpr::stream(Stream& s) const { return s << symbol(); }
 
 Stream& StrExpr::stream(Stream& s) const {
-    if (symbols().size() == 1)
-        return s << '\'' << symbols().front().remove_quotation() << '\'';
+    if (symbols().size() == 1) return s << '\'' << symbols().front().remove_quotation() << '\'';
     return s.fmt("\t\n{\n}\b\n", symbols());
 }
 
@@ -265,18 +248,16 @@ Stream& IndefiniteArrayExpr::stream(Stream& s) const { return s.fmt("[{}: {}]", 
 
 static std::pair<Prec, bool> open(Stream& s, Prec l) {
     std::pair<Prec, bool> result;
-    result.first = prec;
+    result.first  = prec;
     result.second = !fancy() || prec > l;
-    if (result.second)
-        s << "(";
+    if (result.second) s << "(";
     prec = l;
     return result;
 }
 
 static Stream& close(Stream& s, std::pair<Prec, bool> pair) {
     prec = pair.first;
-    if (pair.second)
-        s << ")";
+    if (pair.second) s << ")";
     return s;
 }
 
@@ -284,9 +265,7 @@ Stream& PrefixExpr::stream(Stream& s) const {
     const char* op;
     switch (tag()) {
 #define IMPALA_PREFIX(tok, str) \
-    case tok:                   \
-        op = str;               \
-        break;
+    case tok: op = str; break;
 #include "impala/tokenlist.h"
         case MUT: op = "&mut "; break;
         default: fe::unreachable();
@@ -294,8 +273,7 @@ Stream& PrefixExpr::stream(Stream& s) const {
 
     s << op;
     if (auto prefix_expr = rhs()->isa<PrefixExpr>()) {
-        if ((tag() == ADD || tag() == SUB) && tag() == prefix_expr->tag())
-            s << ' ';
+        if ((tag() == ADD || tag() == SUB) && tag() == prefix_expr->tag()) s << ' ';
     }
 
     auto open_state = open(s, Prec::Unary);
@@ -307,11 +285,11 @@ Stream& InfixExpr::stream(Stream& s) const {
     auto open_state = open(s, PrecTable::infix_l(tag()));
     const char* op;
     switch (tag()) {
-    // clang-format off
+        // clang-format off
 #define IMPALA_INFIX_ASGN(tok, str)       case tok: op = str; break;
 #define IMPALA_INFIX(     tok, str, prec) case tok: op = str; break;
 #include "impala/tokenlist.h"
-    // clang-format on
+        // clang-format on
     }
 
     s << lhs() << " " << op << " ";
@@ -364,8 +342,8 @@ Stream& StructExpr::Elem::stream(Stream& s) const { return s.fmt("{}: {}", symbo
 Stream& StructExpr::stream(Stream& s) const { return s.fmt("{}{{{, }}}", ast_type_app(), elems()); }
 
 Stream& TypeAppExpr::stream(Stream& s) const {
-    Prec l = Prec::Unary;
-    Prec old = prec;
+    Prec l     = Prec::Unary;
+    Prec old   = prec;
     bool paren = !fancy() || prec > l;
     if (paren) s << "(";
 
@@ -382,8 +360,8 @@ Stream& TypeAppExpr::stream(Stream& s) const {
 }
 
 Stream& MapExpr::stream(Stream& s) const {
-    Prec l = Prec::Unary;
-    Prec old = prec;
+    Prec l     = Prec::Unary;
+    Prec old   = prec;
     bool paren = !fancy() || prec > l;
     if (paren) s << "(";
 
@@ -425,15 +403,16 @@ Stream& FnExpr::stream(Stream& s) const {
 
 Stream& IfExpr::stream(Stream& s) const {
     s.fmt("if {} {}", cond(), then_expr());
-    if (has_else())
-        s.fmt(" else {}", else_expr());
+    if (has_else()) s.fmt(" else {}", else_expr());
     return s;
 }
 
 Stream& MatchExpr::Arm::stream(Stream& s) const { return s.fmt("{} => {}", ptrn(), expr()); }
 Stream& MatchExpr::stream(Stream& s) const { return s.fmt("match {} {{\t\n{,\n}\b\t}}", expr(), arms()); }
 Stream& WhileExpr::stream(Stream& s) const { return s.fmt("while {} {}", cond(), body()); }
-Stream& ForExpr::stream(Stream& s) const { return s.fmt("for {} in {} {}", fn_expr()->params().skip_back(), expr(), fn_expr()->body()); }
+Stream& ForExpr::stream(Stream& s) const {
+    return s.fmt("for {} in {} {}", fn_expr()->params().skip_back(), expr(), fn_expr()->body());
+}
 
 Stream& RevDiffExpr::stream(Stream& s) const { return s.fmt("rev_diff of {}", expr()); }
 
@@ -445,11 +424,10 @@ Stream& TuplePtrn::stream(Stream& s) const { return s.fmt("({, })", elems()); }
 Stream& IdPtrn::stream(Stream& s) const { return s << local(); }
 
 Stream& EnumPtrn::stream(Stream& s) const {
-    if (num_args() > 0) {
+    if (num_args() > 0)
         return s.fmt("{}({, })", path(), args());
-    } else {
+    else
         return s << path();
-    }
 }
 
 Stream& LiteralPtrn::stream(Stream& s) const { return s << literal(); }
@@ -463,23 +441,22 @@ Stream& ItemStmt::stream(Stream& s) const { return s << item(); }
 
 Stream& LetStmt::stream(Stream& s) const {
     s << "let " << ptrn();
-    if (init())
-        s << " = " << init();
+    if (init()) s << " = " << init();
     return s << ';';
 }
 
 Stream& ExprStmt::stream(Stream& s) const {
     bool no_semi = expr()->isa<IfExpr>() || expr()->isa<ForExpr>();
     s << expr();
-    if (!no_semi)
-        s << ';';
+    if (!no_semi) s << ';';
     return s;
 }
 
 Stream& AsmStmt::Elem::stream(Stream& s) const { return s.fmt("\"{}\"({})", constraint(), expr()); }
 
 Stream& AsmStmt::stream(Stream& s) const {
-    return s.fmt("asm(\"{}\"\t\n: {, }\n: {, }\n: {, }\n: {, })\b\n", asm_template(), outputs(), inputs(), clobbers(), options());
+    return s.fmt("asm(\"{}\"\t\n: {, }\n: {, }\n: {, }\n: {, })\b\n", asm_template(), outputs(), inputs(), clobbers(),
+                 options());
 }
 
-}
+} // namespace impala

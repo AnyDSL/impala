@@ -63,24 +63,12 @@ public:
     /// s.fmt("({\n})", list)
     /// ```
     /// Finally, you can use @c "\n", "\t", and "\b" to @p endl, @p indent, or @p dedent, respectively.
-    template<class T, class... Args>
-    Stream& fmt(const char* s, T&& t, Args&&... args);
-    template<class R, class F, bool rangei = false>
-    Stream& range(const R& r, const char* sep, F f);
-    template<class R, class F, bool rangei = false>
-    Stream& range(const R& r, F f) {
-        return range(r, ", ", f);
-    }
-    template<class R, class F>
-    Stream& rangei(const R& r, const char* sep, F f) {
-        return range<R, F, true>(r, sep, f);
-    }
-    template<class R, class F>
-    Stream& rangei(const R& r, F f) {
-        return range<R, F, true>(r, ", ", f);
-    }
-    template<class R>
-    Stream& range(const R& r, const char* sep = ", ") {
+    template<class T, class... Args> Stream& fmt(const char* s, T&& t, Args&&... args);
+    template<class R, class F, bool rangei = false> Stream& range(const R& r, const char* sep, F f);
+    template<class R, class F, bool rangei = false> Stream& range(const R& r, F f) { return range(r, ", ", f); }
+    template<class R, class F> Stream& rangei(const R& r, const char* sep, F f) { return range<R, F, true>(r, sep, f); }
+    template<class R, class F> Stream& rangei(const R& r, F f) { return range<R, F, true>(r, ", ", f); }
+    template<class R> Stream& range(const R& r, const char* sep = ", ") {
         return range(r, sep, [&](const auto& x) { (*this) << x; });
     }
     ///@}
@@ -120,27 +108,22 @@ private:
     std::ostringstream oss_;
 };
 
-template<class... Args>
-auto outf(const char* fmt, Args&&... args) {
+template<class... Args> auto outf(const char* fmt, Args&&... args) {
     return Stream(std::cout).fmt(fmt, std::forward<Args&&>(args)...);
 }
-template<class... Args>
-auto errf(const char* fmt, Args&&... args) {
+template<class... Args> auto errf(const char* fmt, Args&&... args) {
     return Stream(std::cerr).fmt(fmt, std::forward<Args&&>(args)...);
 }
-template<class... Args>
-auto outln(const char* fmt, Args&&... args) {
+template<class... Args> auto outln(const char* fmt, Args&&... args) {
     return outf(fmt, std::forward<Args&&>(args)...).endl();
 }
-template<class... Args>
-auto errln(const char* fmt, Args&&... args) {
+template<class... Args> auto errln(const char* fmt, Args&&... args) {
     return errf(fmt, std::forward<Args&&>(args)...).endl();
 }
 
-template<class C>
-class Streamable {
+template<class C> class Streamable {
 private:
-    constexpr const C& child() const { return *static_cast<const C*>(this); };
+    constexpr const C& child() const { return *static_cast<const C*>(this); }
 
 public:
     /// Writes to a file with name @p filename.
@@ -164,32 +147,30 @@ public:
 };
 
 template<typename T>
-concept PtrStream = requires(T x) {
-    x->stream(std::declval<Stream&>());
-};
+concept PtrStream = requires(T x) { x->stream(std::declval<Stream&>()); };
 template<typename T>
-concept RefStream = requires(T x) {
-    x.stream(std::declval<Stream&>());
-};
+concept RefStream = requires(T x) { x.stream(std::declval<Stream&>()); };
 
-template<class T>
-requires PtrStream<T> Stream& operator<<(Stream& s, const T& x) { return x->stream(s); }
-template<class T>
-requires RefStream<T> Stream& operator<<(Stream& s, const T& x) { return x.stream(s); }
-/// Fallback uses `std::ostream operator<<`.
-template<class T>
+template<class T> requires PtrStream<T>
 Stream& operator<<(Stream& s, const T& x) {
+    return x->stream(s);
+}
+template<class T> requires RefStream<T>
+Stream& operator<<(Stream& s, const T& x) {
+    return x.stream(s);
+}
+/// Fallback uses `std::ostream operator<<`.
+template<class T> Stream& operator<<(Stream& s, const T& x) {
     s.ostream() << x;
     return s;
 }
 
-template<class T, class... Args>
-Stream& Stream::fmt(const char* s, T&& t, Args&&... args) {
+template<class T, class... Args> Stream& Stream::fmt(const char* s, T&& t, Args&&... args) {
     while (*s != '\0') {
         auto next = s + 1;
 
         switch (*s) {
-            // clang-format off
+                // clang-format off
             case '\n': s++; endl();   break;
             case '\t': s++; indent(); break;
             case '\b': s++; dedent(); break;
@@ -202,11 +183,10 @@ Stream& Stream::fmt(const char* s, T&& t, Args&&... args) {
                 while (*s != '\0' && *s != '}') spec.push_back(*s++);
                 assert(*s == '}' && "unmatched closing brace '}' in format string");
 
-                if constexpr (std::ranges::range<decltype(t)>) {
+                if constexpr (std::ranges::range<decltype(t)>)
                     range(t, spec.c_str());
-                } else {
+                else
                     (*this) << t;
-                }
 
                 ++s;                                          // skip closing brace '}'
                 return fmt(s, std::forward<Args&&>(args)...); // call even when *s == '\0' to detect extra arguments
@@ -223,22 +203,19 @@ Stream& Stream::fmt(const char* s, T&& t, Args&&... args) {
     fe::unreachable();
 }
 
-template<class R, class F, bool use_rangei>
-Stream& Stream::range(const R& r, const char* sep, F f) {
+template<class R, class F, bool use_rangei> Stream& Stream::range(const R& r, const char* sep, F f) {
     const char* cur_sep = "";
     size_t j            = 0;
     for (const auto& elem : r) {
-        for (auto i = cur_sep; *i != '\0'; ++i) {
+        for (auto i = cur_sep; *i != '\0'; ++i)
             if (*i == '\n')
                 this->endl();
             else
                 (*this) << *i;
-        }
-        if constexpr (use_rangei) {
+        if constexpr (use_rangei)
             f(j++);
-        } else {
+        else
             f(elem);
-        }
         cur_sep = sep;
     }
     return *this;

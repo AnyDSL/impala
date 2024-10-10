@@ -1,8 +1,8 @@
 #ifndef IMPALA_LEXER_H
 #define IMPALA_LEXER_H
 
-#include <istream>
 #include <filesystem>
+#include <istream>
 
 #include "impala/token.h"
 
@@ -20,11 +20,16 @@ private:
     Token literal_error(std::string&, bool floating);
     int next();
     int peek() const { return stream_.peek(); }
-    Loc loc() const { return {filename_, {front_line_, front_col_}, {back_line_, back_col_}}; }
+    Loc loc() const {
+        return {
+            filename_,
+            {front_line_, front_col_},
+            { back_line_,  back_col_}
+        };
+    }
     Loc curr() const { return loc().anew_finis(); }
 
-    template<class Pred>
-    bool accept(std::string& str, Pred pred) {
+    template<class Pred> bool accept(std::string& str, Pred pred) {
         if (pred(peek())) {
             str += next();
             return true;
@@ -32,8 +37,7 @@ private:
         return false;
     }
 
-    template<class Pred>
-    bool accept(Pred pred) {
+    template<class Pred> bool accept(Pred pred) {
         if (pred(peek())) {
             next();
             return true;
@@ -41,16 +45,20 @@ private:
         return false;
     }
 
-    bool accept(int expect) { return accept([&] (int got) { return got == expect; }); }
-    bool accept(std::string& str, int expect) { return accept(str, [&] (int got) { return got == expect; }); }
-    bool accept(char c) { return accept((int) c); }
-    bool accept(std::string& str, char c) { return accept(str, (int) c); }
+    bool accept(int expect) {
+        return accept([&](int got) { return got == expect; });
+    }
+    bool accept(std::string& str, int expect) {
+        return accept(str, [&](int got) { return got == expect; });
+    }
+    bool accept(char c) { return accept((int)c); }
+    bool accept(std::string& str, char c) { return accept(str, (int)c); }
 
     std::istream& stream_;
     const std::filesystem::path* filename_;
     uint16_t front_line_ = 1, front_col_ = 1, back_line_ = 1, back_col_ = 1, peek_line_ = 1, peek_col_ = 1;
 };
 
-}
+} // namespace impala
 
 #endif
