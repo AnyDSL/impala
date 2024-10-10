@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "mim/ast/parser.h"
+#include "mim/ast/ast.h"
 #include "mim/util/sys.h"
 
 #ifdef LLVM_SUPPORT
@@ -127,17 +127,12 @@ int main(int argc, char** argv) {
 
         auto& world = driver.world();
         world.set(world.sym(module_name));
-        auto ast = mim::ast::AST(world);
-        auto parser = mim::ast::Parser(ast);
 
         if (auto path = mim::sys::path_to_curr_exe())
             driver.add_search_path(path->parent_path().parent_path() / "lib" / "mim");
 
-        if (clos) driver.load("clos");
-        for (auto plugin : {"core", "mem", "compile", "opt", "math", "affine"}) driver.load(plugin);
-
-        if (clos) parser.plugin("clos");
-        for (auto plugin : {"core", "mem", "compile", "opt", "math", "affine"}) parser.plugin(plugin);
+        if (clos) mim::ast::load_plugins(world, "clos");
+        mim::ast::load_plugins(world, {"core", "mem", "compile", "opt", "math", "affine"});        
 
         impala::init();
 
