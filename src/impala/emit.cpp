@@ -7,6 +7,7 @@
 #include "impala/ast.h"
 
 using namespace mim;
+using namespace mim::plug;
 
 namespace impala {
 
@@ -459,7 +460,7 @@ const Def* CastExpr::remit(CodeGen& cg) const {
             if (auto dst_tup = dst_type->isa<TupleType>()) {
                 if (src_tup->num_ops() && dst_tup->num_ops()) {
                     size_t n = src_tup->num_ops();
-                    DefArray new_ops(n, [&](size_t i) {
+                    DefVec new_ops(n, [&](size_t i) {
                         return cg.world.call<core::bitcast>(dst->proj(n, i), def->proj(n, i))->set(loc());
                     });
                     return cg.world.tuple(new_ops);

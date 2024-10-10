@@ -173,7 +173,7 @@ private:
     enum GenState { NOT_GEN, CUR_GEN, GEN };
 
     // Computes the order of generation of C structures
-    void compute_struct_order(thorin::GIDMap<const StructDecl*, GenState>& struct_decls,
+    void compute_struct_order(mim::GIDMap<const StructDecl*, GenState>& struct_decls,
                               std::vector<const StructDecl*>& order,
                               const StructDecl* cur_gen) {
         struct_decls[cur_gen] = CUR_GEN;
@@ -207,7 +207,7 @@ private:
         if (should_export) export_fns.push_back(fn_decl);
     }
 
-    thorin::GIDSet<const StructDecl*> export_structs;
+    mim::GIDSet<const StructDecl*> export_structs;
     std::vector<const FnDecl*> export_fns;
 
 public:
@@ -243,7 +243,7 @@ public:
         // We have to make sure every structure is generated after each
         // of its dependencies has already been generated (otherwise the C
         // compiler will complain)
-        thorin::GIDMap<const StructDecl*, GenState> struct_decls;
+        mim::GIDMap<const StructDecl*, GenState> struct_decls;
         std::vector<const StructDecl*> order;
 
         for (auto st : export_structs) struct_decls.insert(std::make_pair(st, NOT_GEN));

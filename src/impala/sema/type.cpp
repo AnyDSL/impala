@@ -106,10 +106,10 @@ bool is_strict_subtype(const Type* dst, const Type* src) { return dst != src && 
  */
 
 uint32_t RefTypeBase::vhash() const {
-    return thorin::hash_combine(Type::vhash(), ((uint32_t)addr_space() << uint32_t(1)) | uint32_t(is_mut()));
+    return mim::hash_combine(Type::vhash(), ((uint32_t)addr_space() << uint32_t(1)) | uint32_t(is_mut()));
 }
 
-uint32_t Var::vhash() const { return thorin::murmur3(uint32_t(tag()) << uint32_t(24) | uint32_t(depth())); }
+uint32_t Var::vhash() const { return mim::murmur3(uint32_t(tag()) << uint32_t(24) | uint32_t(depth())); }
 
 //------------------------------------------------------------------------------
 
@@ -154,7 +154,7 @@ Stream& FnType::stream(Stream& os) const {
     os << "fn";
     if (auto tuple = op(0)->isa<TupleType>()) {
         if (tuple->ops().size() > 2) {
-            tuple = table().tuple_type(tuple->ops().skip_back());
+            tuple = table().tuple_type(tuple->ops().subspan(0, tuple->ops().size() - 1));
             os.fmt("{}", tuple);
         } else {
             os.fmt("({})", tuple->ops().front());
@@ -311,7 +311,7 @@ const InferError* TypeTable::infer_error(const Type* dst, const Type* src) {
  */
 
 const Type* FnType::params_without_return_continuation() const {
-    auto types = is_returning() ? domain()->ops().skip_back() : domain()->ops();
+    auto types = is_returning() ? domain()->ops().subspan(0, domain()->ops().size() - 1) : domain()->ops();
     return types.size() == 1 ? types.front() : table().tuple_type(types);
 }
 
@@ -404,4 +404,4 @@ const Type* DefiniteArrayType::tangent_vector() const {
 
 } // namespace impala
 
-template void impala::Streamable<thorin::TypeBase<impala::TypeTable>>::dump() const;
+template void impala::Streamable<mim::TypeBase<impala::TypeTable>>::dump() const;

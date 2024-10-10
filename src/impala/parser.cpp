@@ -92,7 +92,7 @@ VISIBILITY:          \
     case Token::ANDAND:              \
     case Token::SIMD
 
-using namespace thorin;
+using namespace mim;
 
 namespace impala {
 

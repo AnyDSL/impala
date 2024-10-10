@@ -3,7 +3,7 @@
 #include "impala/ast.h"
 #include "impala/impala.h"
 
-using namespace thorin;
+using namespace mim;
 
 namespace impala {
 
@@ -268,7 +268,7 @@ void StructDecl::check(TypeSema& sema) const {
 void FieldDecl::check(TypeSema& sema) const { sema.check(ast_type()); }
 
 void FnDecl::check(TypeSema& sema) const {
-    THORIN_PUSH(sema.cur_fn_, this);
+    MIM_PUSH(sema.cur_fn_, this);
     check_ast_type_params(sema);
     for (auto&& param : params()) sema.check(param.get());
 
@@ -312,7 +312,7 @@ void CharExpr::check(TypeSema&) const {}
 void StrExpr::check(TypeSema&) const {}
 
 void FnExpr::check(TypeSema& sema) const {
-    THORIN_PUSH(sema.cur_fn_, this);
+    MIM_PUSH(sema.cur_fn_, this);
     assert(ast_type_params().empty());
 
     for (size_t i = 0, e = num_params(); i != e; ++i) sema.check(param(i));
@@ -529,7 +529,7 @@ void StructExpr::check(TypeSema& sema) const {
     auto type = sema.check(ast_type_app());
     if (auto struct_type = type->isa<StructType>()) {
         auto struct_decl = struct_type->struct_decl();
-        thorin::GIDSet<const FieldDecl*> done;
+        mim::GIDSet<const FieldDecl*> done;
         for (auto&& elem : elems()) {
             sema.check(elem->expr());
 
@@ -608,7 +608,7 @@ void TypeSema::check_call(const Expr* expr, Span<const Expr*> args) {
 }
 
 void BlockExpr::check(TypeSema& sema) const {
-    THORIN_PUSH(sema.cur_block_, this);
+    MIM_PUSH(sema.cur_block_, this);
     for (auto&& stmt : stmts()) sema.check(stmt.get());
 
     sema.check(expr());
