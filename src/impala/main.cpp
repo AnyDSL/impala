@@ -10,13 +10,15 @@
 #ifdef LLVM_SUPPORT
 #    include "mim/be/llvm/llvm.h"
 #endif
+#include "mim/driver.h"
+
+#include "mim/analyses/schedule.h"
+#include "mim/pass/optimize.h"
+
 #include "impala/args.h"
 #include "impala/ast.h"
 #include "impala/cgen.h"
 #include "impala/impala.h"
-#include "mim/analyses/schedule.h"
-#include "mim/driver.h"
-#include "mim/pass/optimize.h"
 
 //------------------------------------------------------------------------------
 
@@ -131,8 +133,11 @@ int main(int argc, char** argv) {
         if (auto path = mim::sys::path_to_curr_exe())
             driver.add_search_path(path->parent_path().parent_path() / "lib" / "mim");
 
-        if (clos) mim::ast::load_plugins(world, "clos");
-        mim::ast::load_plugins(world, {"core", "mem", "compile", "opt", "math", "affine"});        
+        std::vector<std::string> plugins{
+            {"core", "mem", "compile", "opt", "math", "affine"}
+        };
+        if (clos) plugins.push_back("clos");
+        mim::ast::load_plugins(world, plugins);
 
         impala::init();
 
@@ -222,6 +227,9 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
 
         return EXIT_SUCCESS;
+    } catch (const mim::Error& e) { // e.loc.path doesn't exist anymore in outer scope so catch Error here
+        std::cerr << e;
+        return EXIT_FAILURE;
     } catch (std::exception const& e) {
         mim::errln("{}", e.what());
         return EXIT_FAILURE;
