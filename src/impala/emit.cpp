@@ -314,12 +314,16 @@ void FnDecl::emit_head(CodeGen& cg) const {
 
     // create thorin function
     def_ = fn_emit_head(cg, loc());
-    if (is_extern() && abi() == "")
+    if (is_extern() && abi() == "") {
         cg.world.make_external(continuation());
+        continuation()->attributes().cc = thorin::CC::C;
+    }
 
     // handle main function
-    if (symbol() == "main")
+    if (symbol() == "main") {
         cg.world.make_external(continuation());
+        continuation()->attributes().cc = thorin::CC::C;
+    }
 }
 
 void FnDecl::emit(CodeGen& cg) const {
@@ -825,7 +829,8 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
             if (!arm(i)->ptrn()->is_refutable() || i == e - 1) {
                 num_targets = i;
                 arm(i)->ptrn()->emit(cg, matcher);
-                otherwise = cg.basicblock({"otherwise", arm(i)->loc().anew_begin()});
+                otherwise = cg.world.continuation(cg.world.fn_type({cg.world.mem_type()}), {"otherwise", arm(i)->loc().anew_begin()});
+                otherwise->param(0)->set_name("mem");
                 break;
             } else {
                 if (is_integer) {
@@ -835,7 +840,9 @@ const Def* MatchExpr::remit(CodeGen& cg) const {
                     auto option_decl = enum_ptrn->path()->decl()->as<OptionDecl>();
                     defs[i] = cg.world.literal_qu64(option_decl->index(), arm(i)->ptrn()->loc());
                 }
-                targets[i] = cg.basicblock({"case", arm(i)->loc().anew_begin()});
+                //targets[i] = cg.basicblock({"case", arm(i)->loc().anew_begin()});
+                targets[i] = cg.world.continuation(cg.world.fn_type({cg.world.mem_type()}), {"case", arm(i)->loc().anew_begin()});
+                targets[i]->param(0)->set_name("mem");
             }
         }
 
