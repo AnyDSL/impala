@@ -165,7 +165,7 @@ const thorin::Type* CodeGen::convert_rec(const Type* type) {
         }
         return e;
     } else if (auto ptr_type = type->isa<PtrType>()) {
-        return world.ptr_type(convert(ptr_type->pointee()), 1, -1, thorin::AddrSpace(ptr_type->addr_space()));
+        return world.ptr_type(convert(ptr_type->pointee()), 1, thorin::AddrSpace(ptr_type->addr_space()));
     } else if (auto definite_array_type = type->isa<DefiniteArrayType>()) {
         return world.definite_array_type(convert(definite_array_type->elem_type()), definite_array_type->dim());
     } else if (auto indefinite_array_type = type->isa<IndefiniteArrayType>()) {
