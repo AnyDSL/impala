@@ -4,17 +4,15 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
+#include <llvm/ADT/StringTable.h>
 
 #include "impala/ast.h"
 #include "impala/impala.h"
 
 // extract intrinsic names for overloaded intrinsics
-static const char * const IntrinsicNameTable[] = {
-  "not_intrinsic",
 #define GET_INTRINSIC_NAME_TABLE
 #include <llvm/IR/IntrinsicImpl.inc>
 #undef GET_INTRINSIC_NAME_TABLE
-};
 
 const impala::Type* llvm2impala(impala::TypeTable&, llvm::Type*);
 
